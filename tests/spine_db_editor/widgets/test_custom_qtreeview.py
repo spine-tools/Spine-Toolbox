@@ -281,7 +281,7 @@ class TestObjectTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_object
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         self.assertEqual(model.columnCount(root_index), 2)
@@ -289,7 +289,7 @@ class TestObjectTreeViewWithExistingData(_EntityTreeViewTestBase):
         self.assertEqual(model.headerData(0, Qt.Horizontal), "name")
         self.assertEqual(model.headerData(1, Qt.Horizontal), "database")
         class_index = model.index(0, 0, root_index)
-        view.expand(class_index)
+        model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         self.assertEqual(model.columnCount(class_index), 2)
@@ -329,11 +329,11 @@ class TestObjectTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_object
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
-        view.expand(class_index)
+        model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         object_index = model.index(0, 0, class_index)
@@ -366,11 +366,11 @@ class TestObjectTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_object
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
-        view.expand(class_index)
+        model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         object_index = model.index(0, 0, class_index)
@@ -505,7 +505,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         self.assertEqual(model.columnCount(root_index), 2)
@@ -513,7 +513,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         self.assertEqual(model.headerData(0, Qt.Horizontal), "name")
         self.assertEqual(model.headerData(1, Qt.Horizontal), "database")
         class_index = model.index(0, 0, root_index)
-        view.expand(class_index)
+        model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         self.assertEqual(model.columnCount(class_index), 2)
@@ -537,7 +537,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
@@ -556,11 +556,11 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
-        view.expand(class_index)
+        model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         relationship_index = model.index(0, 0, class_index)
@@ -578,11 +578,11 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
-        view.expand(class_index)
+        model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         relationship_index = model.index(0, 0, class_index)
@@ -601,7 +601,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
@@ -618,11 +618,11 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
-        view.expand(class_index)
+        model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         relationship_index = model.index(0, 0, class_index)
@@ -640,7 +640,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         object_tree_view = self._db_editor.ui.treeView_object
         object_model = object_tree_view.model()
         root_index = object_model.index(0, 0)
-        object_tree_view.expand(root_index)
+        object_model.fetchMore(root_index)
         while object_model.rowCount(root_index) != 2:
             QApplication.processEvents()
         class_index = object_model.index(0, 0, root_index)
@@ -649,7 +649,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         QApplication.processEvents()
         self.assertEqual(model.rowCount(root_index), 0)
         self._commit_changes_to_database("Remove object class.")
@@ -660,12 +660,12 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         object_tree_view = self._db_editor.ui.treeView_object
         object_model = object_tree_view.model()
         root_index = object_model.index(0, 0)
-        object_tree_view.expand(root_index)
+        object_model.fetchMore(root_index)
         while object_model.rowCount(root_index) != 2:
             QApplication.processEvents()
         class_index = object_model.index(1, 0, root_index)
         self.assertEqual(class_index.data(), "object_class_2")
-        object_tree_view.expand(class_index)
+        object_model.fetchMore(class_index)
         while object_model.rowCount(class_index) != 2:
             QApplication.processEvents()
         object_index = object_model.index(0, 0, class_index)
@@ -675,7 +675,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
-        view.expand(root_index)
+        model.fetchMore(root_index)
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
