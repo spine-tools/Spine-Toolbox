@@ -211,12 +211,13 @@ class MultiDBTreeItem(FetchParent, TreeItem):
                 # No match
                 existing_children[new_child.display_id] = new_child
                 unmerged.append(new_child)
+        if not unmerged:
+            self._refresh_child_map()
+            return
         self._insert_children_sorted(unmerged)
 
     def _insert_children_sorted(self, new_children):
         """Inserts and sorts children."""
-        if not new_children:
-            return
         new_children = sorted(new_children, key=lambda x: x.display_id)
         for chunk, pos in bisect_chunks(self.children, new_children, key=self._children_sort_key):
             self.insert_children(pos, chunk)
@@ -250,10 +251,10 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         if self.can_fetch_more():
             self.fetch_more()
 
-    def get_children_ids(self, db_map):
-        if self.fetch_item_type is None:
-            return []
-        return list(self._child_map.get(db_map, {}))
+    def get_children_ids(self):
+        for db_map, ids in self._child_map.items():
+            for id_ in ids:
+                yield (db_map, id_)
 
     def append_children_by_id(self, db_map_ids):
         """

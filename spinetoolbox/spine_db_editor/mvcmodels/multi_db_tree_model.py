@@ -65,8 +65,7 @@ class MultiDBTreeModel(MinimalTreeModel):
         return None
 
     def find_items(self, db_map, path_prefix, fetch=False):
-        """Returns items at given path prefix.
-        """
+        """Returns items at given path prefix."""
         # Start from the root node
         parent_items = [self.root_item]
         for id_ in path_prefix:

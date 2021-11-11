@@ -932,9 +932,9 @@ class SpineDBManager(QObject):
             macro = AgedUndoCommand()
             macro.setText(command_text)
             child_cmds = []
+            self.signaller.pause(db_map)
             # NOTE: we push the import macro before adding the children,
             # because we *need* to call redo() on the children one by one so the data gets in gradually
-            self.signaller.pause(db_map)
             self.undo_stack[db_map].push(macro)
             for item_type, (to_add, to_update, import_error_log) in data_for_import:
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
