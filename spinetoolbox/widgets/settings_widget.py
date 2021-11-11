@@ -276,7 +276,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_use_python_jupyter_console.toggled.connect(self._update_python_widgets_enabled)
         self.ui.radioButton_use_julia_jupyter_console.toggled.connect(self._update_julia_widgets_enabled)
         self.ui.user_defined_engine_process_limit_radio_button.toggled.connect(
-            self.ui.engine_process_limit_controls.setEnabled
+            self.ui.engine_process_limit_spin_box.setEnabled
+        )
+        self.ui.user_defined_persistent_process_limit_radio_button.toggled.connect(
+            self.ui.persistent_process_limit_spin_box.setEnabled
         )
 
     @Slot(bool)
@@ -588,17 +591,26 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     def _read_engine_settings(self):
         """Reads Engine settings and sets the corresponding UI elements."""
-        engine_parallel_process_limit_choice = self._qsettings.value(
-            "engineSettings/processLimiter", defaultValue="auto"
-        )
-        engine_parallel_process_limit = int(
-            self._qsettings.value("engineSettings/maxProcesses", defaultValue=os.cpu_count())
-        )
-        if engine_parallel_process_limit_choice == "auto":
+        parallel_process_limit_choice = self._qsettings.value("engineSettings/processLimiter", defaultValue="auto")
+        if parallel_process_limit_choice == "auto":
             self.ui.automatic_engine_process_limit_radio_button.setChecked(True)
         else:
             self.ui.user_defined_engine_process_limit_radio_button.setChecked(True)
-        self.ui.engine_process_limit_spin_box.setValue(engine_parallel_process_limit)
+        parallel_process_limit = int(self._qsettings.value("engineSettings/maxProcesses", defaultValue=os.cpu_count()))
+        self.ui.engine_process_limit_spin_box.setValue(parallel_process_limit)
+        persistent_process_limit_choice = self._qsettings.value(
+            "engineSettings/persistentLimiter", defaultValue="unlimited"
+        )
+        if persistent_process_limit_choice == "unlimited":
+            self.ui.unlimited_persistent_process_radio_button.setChecked(True)
+        elif persistent_process_limit_choice == "auto":
+            self.ui.automatic_persistent_process_limit_radio_button.setChecked(True)
+        else:
+            self.ui.user_defined_persistent_process_limit_radio_button.setChecked(True)
+        persistent_process_limit = int(
+            self._qsettings.value("engineSettings/maxPersistentProcesses", defaultValue=os.cpu_count())
+        )
+        self.ui.persistent_process_limit_spin_box.setValue(persistent_process_limit)
 
     @Slot()
     def save_settings(self):
@@ -705,10 +717,21 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             bool: True if settings were stored successfully, False otherwise
         """
         if self.ui.automatic_engine_process_limit_radio_button.isChecked():
-            self._qsettings.setValue("engineSettings/processLimiter", "auto")
+            limiter = "auto"
         else:
-            self._qsettings.setValue("engineSettings/processLimiter", "user")
+            limiter = "user"
+        self._qsettings.setValue("engineSettings/processLimiter", limiter)
         self._qsettings.setValue("engineSettings/maxProcesses", str(self.ui.engine_process_limit_spin_box.value()))
+        if self.ui.unlimited_persistent_process_radio_button.isChecked():
+            limiter = "unlimited"
+        elif self.ui.automatic_persistent_process_limit_radio_button.isChecked():
+            limiter = "auto"
+        else:
+            limiter = "user"
+        self._qsettings.setValue("engineSettings/persistentLimiter", limiter)
+        self._qsettings.setValue(
+            "engineSettings/maxPersistentProcesses", str(self.ui.persistent_process_limit_spin_box.value())
+        )
         return True
 
     def _get_julia_settings(self):
