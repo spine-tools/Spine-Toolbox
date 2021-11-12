@@ -922,7 +922,7 @@ class SpineToolboxProject(MetaObject):
         self.execute_dags(dags, execution_permit_list, "Executing All Directed Acyclic Graphs")
 
     def stop(self):
-        """Stops execution. Slot for the main window Stop tool button in the toolbar."""
+        """Stops execution."""
         if self._execution_stopped:
             self._logger.msg.emit("No execution in progress")
             return

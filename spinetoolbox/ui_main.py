@@ -1658,7 +1658,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(True)
 
     def tear_down_consoles(self):
-        """CLoses the 'base' Python and Juliö Consoles if running."""
+        """Closes the 'base' Python and Julia Consoles if running."""
         if self._base_julia_console is not None:
             self._base_julia_console.close()
         if self._base_python_console is not None:

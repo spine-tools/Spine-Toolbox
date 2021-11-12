@@ -334,7 +334,12 @@ class SpineEngineWorker(QObject):
         item = self._project_items[item_name]
         if item_state == ItemExecutionFinishState.SUCCESS:
             self.successful_executions.append((item, direction, state))
-        self._executing_items.remove(item)
+        try:
+            self._executing_items.remove(item)
+        except ValueError:
+            # A single item may seemingly finish multiple times
+            # when the execution is stopped by user during filtered execution.
+            pass
         self._node_execution_finished.emit(item, direction, state, item_state)
 
     def clean_up(self):
