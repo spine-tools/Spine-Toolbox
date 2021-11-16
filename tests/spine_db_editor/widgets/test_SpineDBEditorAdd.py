@@ -56,8 +56,8 @@ class TestSpineDBEditorAddMixin:
         """Test that relationship classes are added to the object tree model."""
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
-        self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
+        self.put_mock_relationship_classes_in_db_mngr()
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item, fish_item = root_item.children

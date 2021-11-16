@@ -441,12 +441,17 @@ class CommandIssuer(PersistentRunnableBase):
 
     def run(self):
         for msg in self._engine_mngr.issue_persistent_command(self._persistent_key, self._command):
-            if msg["type"] == "stdin":
+            msg_type = msg["type"]
+            if msg_type == "stdin":
                 self.stdin_msg.emit(msg["data"])
-            elif msg["type"] == "stdout":
+            elif msg_type == "stdout":
                 self.stdout_msg.emit(msg["data"])
-            elif msg["type"] == "stderr":
+            elif msg_type == "stderr":
                 self.stderr_msg.emit(msg["data"])
-            elif msg["type"] == "command_finished":
+            elif msg_type == "process_dead":
+                self.stderr_msg.emit("Console process has been killed.")
+                self.finished.emit(True)
+                break
+            elif msg_type == "command_finished":
                 self.finished.emit(msg["is_complete"])
                 break

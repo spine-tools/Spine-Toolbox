@@ -18,7 +18,6 @@ Provides pivot table models for the Tabular View.
 
 from PySide2.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
-
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier
 from .pivot_model import PivotModel
@@ -29,40 +28,35 @@ from ..widgets.custom_delegates import (
     ParameterPivotTableDelegate,
     ScenarioAlternativeTableDelegate,
 )
+from ...helpers import ItemTypeFetchParent
 
 
-class _FetchParent:
-    def fetch_successful(self, db_map, item):
-        raise NotImplementedError()
-
-
-class _SimpleFetchParent(_FetchParent):
-    def fetch_successful(self, db_map, item):
-        return True
-
-
-class _ParameterFetchParent(_FetchParent):
-    def __init__(self, parent):
+class _ParameterFetchParent(ItemTypeFetchParent):
+    def __init__(self, fetch_item_type, parent):
+        super().__init__(fetch_item_type)
         self._parent = parent
 
-    def fetch_successful(self, db_map, item):
-        return item["entity_class_id"] == self._parent.current_class_id[db_map]
+    def filter_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.entity_class_id == self._parent.current_class_id[db_map])
 
 
-class _EntityFetchParent(_FetchParent):
-    def __init__(self, parent):
+class _EntityFetchParent(ItemTypeFetchParent):
+    def __init__(self, fetch_item_type, parent):
+        super().__init__(fetch_item_type)
         self._parent = parent
 
-    def fetch_successful(self, db_map, item):
-        return item["class_id"] == self._parent.current_class_id[db_map]
+    def filter_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.class_id == self._parent.current_class_id[db_map])
 
 
-class _MemberObjectFetchParent(_FetchParent):
-    def __init__(self, parent):
+class _MemberObjectFetchParent(ItemTypeFetchParent):
+    def __init__(self, fetch_item_type, parent):
+        super().__init__(fetch_item_type)
         self._parent = parent
 
-    def fetch_successful(self, db_map, item):
-        return item["class_id"] in {x[db_map] for x in self._parent.current_object_class_id_list}
+    def filter_query(self, query, subquery, db_map):
+        object_class_id_list = {x[db_map] for x in self._parent.current_object_class_id_list}
+        return query.filter(db_map.in_(subquery.c.class_id, object_class_id_list))
 
 
 class PivotTableModelBase(QAbstractTableModel):
@@ -91,41 +85,27 @@ class PivotTableModelBase(QAbstractTableModel):
         self.modelAboutToBeReset.connect(self.reset_data_count)
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
-    def _fetch_item_types(self):
-        """Yields item types to fetch for this model.
+    def _fetch_parents(self):
+        """Yields fetch parents for this model.
 
         Yields:
-            str
+            FetchParent
         """
         raise NotImplementedError()
 
-    def _fetch_parent(self, item_type):
-        """Returns a parent to fetch items of given type.
-
-        Args:
-            item_type (str):
-
-        Returns:
-            _FetchParent
-        """
-        raise NotImplementedError()
-
-    def _can_fetch_more_item_type(self, item_type):
-        return any(
-            self.db_mngr.can_fetch_more(db_map, item_type, parent=self._fetch_parent(item_type))
-            for db_map in self._parent.db_maps
-        )
+    def _can_fetch_more_parent(self, parent):
+        return any(self.db_mngr.can_fetch_more(db_map, parent) for db_map in self._parent.db_maps)
 
     def canFetchMore(self, _parent):
-        return any(self._can_fetch_more_item_type(item_type) for item_type in self._fetch_item_types())
+        return any(self._can_fetch_more_parent(parent) for parent in self._fetch_parents())
 
-    def _fetch_more_item_type(self, item_type):
+    def _fetch_more_parent(self, parent):
         for db_map in self._parent.db_maps:
-            self.db_mngr.fetch_more(db_map, item_type, parent=self._fetch_parent(item_type))
+            self.db_mngr.fetch_more(db_map, parent)
 
     def fetchMore(self, _parent):
-        for item_type in self._fetch_item_types():
-            self._fetch_more_item_type(item_type)
+        for parent in self._fetch_parents():
+            self._fetch_more_parent(parent)
 
     @property
     def item_type(self):
@@ -772,31 +752,24 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._entity_fetch_parent = _EntityFetchParent(self._parent)
-        self._parameter_fetch_parent = _ParameterFetchParent(self._parent)
-        self._alternative_fetch_parent = _SimpleFetchParent()
+        self._object_fetch_parent = _EntityFetchParent("object", self._parent)
+        self._relationship_fetch_parent = _EntityFetchParent("relationship", self._parent)
+        self._parameter_value_fetch_parent = _ParameterFetchParent("parameter_value", self._parent)
+        self._parameter_definition_fetch_parent = _ParameterFetchParent("parameter_definition", self._parent)
+        self._alternative_fetch_parent = ItemTypeFetchParent("alternative")
 
     @property
     def item_type(self):
         return "parameter_value"
 
-    def _fetch_item_types(self):
-        yield "parameter_value"
-        yield "alternative"
-        yield "parameter_definition"
+    def _fetch_parents(self):
+        yield self._parameter_value_fetch_parent
+        yield self._alternative_fetch_parent
+        yield self._parameter_definition_fetch_parent
         if self._parent.current_class_type == "object_class":
-            yield "object"
+            yield self._object_fetch_parent
         elif self._parent.current_class_type == "relationship_class":
-            yield "relationship"
-
-    def _fetch_parent(self, item_type):
-        return {
-            "parameter_value": self._parameter_fetch_parent,
-            "parameter_definition": self._parameter_fetch_parent,
-            "alternative": self._alternative_fetch_parent,
-            "object": self._entity_fetch_parent,
-            "relationship": self._entity_fetch_parent,
-        }[item_type]
+            yield self._relationship_fetch_parent
 
     def db_map_object_ids(self, index):
         """
@@ -1182,19 +1155,16 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._relationship_fetch_parent = _EntityFetchParent(self._parent)
-        self._object_fetch_parent = _MemberObjectFetchParent(self._parent)
+        self._relationship_fetch_parent = _EntityFetchParent("relationship", self._parent)
+        self._object_fetch_parent = _MemberObjectFetchParent("object", self._parent)
 
     @property
     def item_type(self):
         return "relationship"
 
-    def _fetch_item_types(self):
-        yield "object"
-        yield "relationship"
-
-    def _fetch_parent(self, item_type):
-        return {"relationship": self._relationship_fetch_parent, "object": self._object_fetch_parent}[item_type]
+    def _fetch_parents(self):
+        yield self._object_fetch_parent
+        yield self._relationship_fetch_parent
 
     def call_reset_model(self, pivot=None):
         """See base class."""
@@ -1294,19 +1264,18 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._simple_fetch_parent = _SimpleFetchParent()
+        self._scenario_fetch_parent = ItemTypeFetchParent("scenario")
+        self._alternative_fetch_parent = ItemTypeFetchParent("alternative")
+        self._scenario_alternative_fetch_parent = ItemTypeFetchParent("scenario_alternative")
 
     @property
     def item_type(self):
         return "scenario_alternative"
 
-    def _fetch_item_types(self):
-        yield "scenario"
-        yield "alternative"
-        yield "scenario_alternative"
-
-    def _fetch_parent(self, item_type):
-        return self._simple_fetch_parent
+    def _fetch_parents(self):
+        yield self._scenario_fetch_parent
+        yield self._alternative_fetch_parent
+        yield self._scenario_alternative_fetch_parent
 
     def call_reset_model(self, pivot=None):
         """See base class."""

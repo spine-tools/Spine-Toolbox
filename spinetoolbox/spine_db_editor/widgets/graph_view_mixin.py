@@ -21,7 +21,7 @@ from PySide2.QtCore import Slot, QTimer, QThreadPool
 from PySide2.QtWidgets import QHBoxLayout
 from spinedb_api import from_database
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ...helpers import get_save_file_name_in_last_dir
+from ...helpers import get_save_file_name_in_last_dir, ItemTypeFetchParent
 from ..graphics_items import (
     EntityItem,
     ObjectItem,
@@ -40,7 +40,7 @@ class GraphViewMixin:
 
     VERTEX_EXTENT = 64
     _ARC_WIDTH = 0.15 * VERTEX_EXTENT
-    _ARC_LENGTH_HINT = 1.5 * VERTEX_EXTENT
+    _ARC_LENGTH_HINT = 1.0 * VERTEX_EXTENT
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,6 +73,8 @@ class GraphViewMixin:
         self._extend_graph_timer.setInterval(100)
         self._extend_graph_timer.timeout.connect(self.build_graph)
         self._extending_graph = False
+        self._object_fetch_parent = ItemTypeFetchParent("object")
+        self._relationship_fetch_parent = ItemTypeFetchParent("relationship")
 
     @Slot(bool)
     def _stop_extending_graph(self, _=False):
@@ -272,7 +274,7 @@ class GraphViewMixin:
         self._progress_bar.set_layout_generator(layout_gen)
         self._progress_bar.show()
         layout_gen.layout_available.connect(self._complete_graph)
-        layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_))  # Lambda to avoid issues in Python 3.7
+        layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_, None))  # Lambda to avoid issues in Python 3.7
         self._thread_pool.start(layout_gen)
 
     def _stop_layout_generators(self):
@@ -310,9 +312,9 @@ class GraphViewMixin:
         """
         if "root" in self.selected_tree_inds:
             for db_map in self.db_maps:
-                for item_type in ("object", "relationship"):
-                    if self.db_mngr.can_fetch_more(db_map, item_type):
-                        self.db_mngr.fetch_more(db_map, item_type)
+                for fetch_parent in (self._object_fetch_parent, self._relationship_fetch_parent):
+                    if self.db_mngr.can_fetch_more(db_map, fetch_parent):
+                        self.db_mngr.fetch_more(db_map, fetch_parent)
             return (
                 set((db_map, x["id"]) for db_map in self.db_maps for x in self.db_mngr.get_items(db_map, "object")),
                 set(),
@@ -330,15 +332,11 @@ class GraphViewMixin:
         for index in self.selected_tree_inds.get("object_class", {}):
             item = index.model().item_from_index(index)
             item.fetch_more_if_possible()
-            for db_map in item.db_maps:
-                object_ids = set((db_map, id_) for id_ in item.get_children_ids(db_map))
-                selected_object_ids.update(object_ids)
+            selected_object_ids.update(item.get_children_ids())
         for index in self.selected_tree_inds.get("relationship_class", {}):
             item = index.model().item_from_index(index)
             item.fetch_more_if_possible()
-            for db_map in item.db_maps:
-                relationship_ids = set((db_map, id_) for id_ in item.get_children_ids(db_map))
-                selected_relationship_ids.update(relationship_ids)
+            selected_relationship_ids.update(item.get_children_ids())
         return selected_object_ids, selected_relationship_ids
 
     def _get_all_relationships_for_graph(self, object_ids, relationship_ids):
@@ -346,7 +344,7 @@ class GraphViewMixin:
         return [
             (db_map, x)
             for db_map in self.db_maps
-            for x in self.db_mngr.get_items(db_map, "relationship")
+            for x in self.db_mngr.get_items(db_map, "relationship", only_visible=False)
             if cond([(db_map, int(id_)) in object_ids for id_ in x["object_id_list"].split(",")])
         ] + [(db_map, self.db_mngr.get_item(db_map, "relationship", id_)) for db_map, id_ in relationship_ids]
 

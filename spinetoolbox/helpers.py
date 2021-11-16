@@ -29,7 +29,7 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import matplotlib
-from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
+from PySide2.QtCore import Qt, Signal, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
@@ -1407,3 +1407,41 @@ def bisect_chunks(current_data, new_data, key=None):
         chunk = [item]
         lo = row + count
     yield chunk, lo
+
+
+class FetchParent:
+    @property
+    def fetch_item_type(self):
+        """Returns the type of item to fetch, e.g., "object_class".
+        Used to create an initial query for this item.
+
+        Returns:
+            str
+        """
+        raise NotImplementedError
+
+    # pylint: disable=no-self-use
+    def filter_query(self, query, subquery, db_map):
+        """Filters the initial query created using the ``fetch_item_type`` property.
+
+        Args:
+            query (Query): The query
+            subquery (Alias): The source of the query
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            Query
+        """
+        return query
+
+    def restart_fetching(self):
+        """Restarts fetching this item. Can be called from a different thread than ``qApp.thread()``."""
+
+
+class ItemTypeFetchParent(FetchParent):
+    def __init__(self, fetch_item_type):
+        self._fetch_item_type = fetch_item_type
+
+    @property
+    def fetch_item_type(self):
+        return self._fetch_item_type

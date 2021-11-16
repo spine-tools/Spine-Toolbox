@@ -50,13 +50,7 @@ class Ui_SettingsForm(object):
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.splitter = QSplitter(SettingsForm)
         self.splitter.setObjectName(u"splitter")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.splitter.sizePolicy().hasHeightForWidth())
-        self.splitter.setSizePolicy(sizePolicy1)
         self.splitter.setOrientation(Qt.Horizontal)
-        self.splitter.setChildrenCollapsible(False)
         self.listWidget = QListWidget(self.splitter)
         icon = QIcon()
         icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -81,11 +75,11 @@ class Ui_SettingsForm(object):
         __qlistwidgetitem4 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem4.setIcon(icon4);
         self.listWidget.setObjectName(u"listWidget")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        sizePolicy2.setHorizontalStretch(1)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.listWidget.sizePolicy().hasHeightForWidth())
-        self.listWidget.setSizePolicy(sizePolicy2)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy1.setHorizontalStretch(1)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.listWidget.sizePolicy().hasHeightForWidth())
+        self.listWidget.setSizePolicy(sizePolicy1)
         self.listWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustIgnored)
         self.listWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.listWidget.setProperty("showDropIndicator", True)
@@ -105,22 +99,22 @@ class Ui_SettingsForm(object):
         self.splitter.addWidget(self.listWidget)
         self.stackedWidget = QStackedWidget(self.splitter)
         self.stackedWidget.setObjectName(u"stackedWidget")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        sizePolicy3.setHorizontalStretch(2)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.stackedWidget.sizePolicy().hasHeightForWidth())
-        self.stackedWidget.setSizePolicy(sizePolicy3)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy2.setHorizontalStretch(2)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.stackedWidget.sizePolicy().hasHeightForWidth())
+        self.stackedWidget.setSizePolicy(sizePolicy2)
         self.General = QWidget()
         self.General.setObjectName(u"General")
         self.verticalLayout_6 = QVBoxLayout(self.General)
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
         self.groupBox_general = QGroupBox(self.General)
         self.groupBox_general.setObjectName(u"groupBox_general")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.groupBox_general.sizePolicy().hasHeightForWidth())
-        self.groupBox_general.setSizePolicy(sizePolicy4)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.groupBox_general.sizePolicy().hasHeightForWidth())
+        self.groupBox_general.setSizePolicy(sizePolicy3)
         self.groupBox_general.setMinimumSize(QSize(0, 0))
         self.groupBox_general.setMaximumSize(QSize(16777215, 16777215))
         self.groupBox_general.setAutoFillBackground(False)
@@ -188,11 +182,11 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_work = QToolButton(self.groupBox_general)
         self.toolButton_browse_work.setObjectName(u"toolButton_browse_work")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        sizePolicy5.setHorizontalStretch(0)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
-        self.toolButton_browse_work.setSizePolicy(sizePolicy5)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
+        self.toolButton_browse_work.setSizePolicy(sizePolicy4)
         icon5 = QIcon()
         icon5.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_browse_work.setIcon(icon5)
@@ -289,11 +283,11 @@ class Ui_SettingsForm(object):
 
         self.checkBox_open_previous_project = QCheckBox(self.groupBox_general)
         self.checkBox_open_previous_project.setObjectName(u"checkBox_open_previous_project")
-        sizePolicy6 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        sizePolicy6.setHorizontalStretch(0)
-        sizePolicy6.setVerticalStretch(0)
-        sizePolicy6.setHeightForWidth(self.checkBox_open_previous_project.sizePolicy().hasHeightForWidth())
-        self.checkBox_open_previous_project.setSizePolicy(sizePolicy6)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.checkBox_open_previous_project.sizePolicy().hasHeightForWidth())
+        self.checkBox_open_previous_project.setSizePolicy(sizePolicy5)
 
         self.gridLayout.addWidget(self.checkBox_open_previous_project, 1, 0, 1, 1)
 
@@ -416,19 +410,19 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.comboBox_julia_kernel = CustomQComboBox(self.groupBox_julia)
         self.comboBox_julia_kernel.setObjectName(u"comboBox_julia_kernel")
-        sizePolicy7 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy7.setHorizontalStretch(0)
-        sizePolicy7.setVerticalStretch(0)
-        sizePolicy7.setHeightForWidth(self.comboBox_julia_kernel.sizePolicy().hasHeightForWidth())
-        self.comboBox_julia_kernel.setSizePolicy(sizePolicy7)
+        sizePolicy6 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy6.setHorizontalStretch(0)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.comboBox_julia_kernel.sizePolicy().hasHeightForWidth())
+        self.comboBox_julia_kernel.setSizePolicy(sizePolicy6)
         self.comboBox_julia_kernel.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLength)
 
         self.horizontalLayout_9.addWidget(self.comboBox_julia_kernel)
 
         self.pushButton_open_kernel_editor_julia = QPushButton(self.groupBox_julia)
         self.pushButton_open_kernel_editor_julia.setObjectName(u"pushButton_open_kernel_editor_julia")
-        sizePolicy6.setHeightForWidth(self.pushButton_open_kernel_editor_julia.sizePolicy().hasHeightForWidth())
-        self.pushButton_open_kernel_editor_julia.setSizePolicy(sizePolicy6)
+        sizePolicy5.setHeightForWidth(self.pushButton_open_kernel_editor_julia.sizePolicy().hasHeightForWidth())
+        self.pushButton_open_kernel_editor_julia.setSizePolicy(sizePolicy5)
 
         self.horizontalLayout_9.addWidget(self.pushButton_open_kernel_editor_julia)
 
@@ -523,16 +517,16 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
         self.comboBox_python_kernel = CustomQComboBox(self.groupBox_python)
         self.comboBox_python_kernel.setObjectName(u"comboBox_python_kernel")
-        sizePolicy7.setHeightForWidth(self.comboBox_python_kernel.sizePolicy().hasHeightForWidth())
-        self.comboBox_python_kernel.setSizePolicy(sizePolicy7)
+        sizePolicy6.setHeightForWidth(self.comboBox_python_kernel.sizePolicy().hasHeightForWidth())
+        self.comboBox_python_kernel.setSizePolicy(sizePolicy6)
         self.comboBox_python_kernel.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLength)
 
         self.horizontalLayout_11.addWidget(self.comboBox_python_kernel)
 
         self.pushButton_open_kernel_editor_python = QPushButton(self.groupBox_python)
         self.pushButton_open_kernel_editor_python.setObjectName(u"pushButton_open_kernel_editor_python")
-        sizePolicy6.setHeightForWidth(self.pushButton_open_kernel_editor_python.sizePolicy().hasHeightForWidth())
-        self.pushButton_open_kernel_editor_python.setSizePolicy(sizePolicy6)
+        sizePolicy5.setHeightForWidth(self.pushButton_open_kernel_editor_python.sizePolicy().hasHeightForWidth())
+        self.pushButton_open_kernel_editor_python.setSizePolicy(sizePolicy5)
         self.pushButton_open_kernel_editor_python.setMinimumSize(QSize(0, 0))
 
         self.horizontalLayout_11.addWidget(self.pushButton_open_kernel_editor_python)
@@ -581,11 +575,11 @@ class Ui_SettingsForm(object):
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
         self.groupBox_spine_db_editor = QGroupBox(self.SpineDBEditor)
         self.groupBox_spine_db_editor.setObjectName(u"groupBox_spine_db_editor")
-        sizePolicy8 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        sizePolicy8.setHorizontalStretch(0)
-        sizePolicy8.setVerticalStretch(0)
-        sizePolicy8.setHeightForWidth(self.groupBox_spine_db_editor.sizePolicy().hasHeightForWidth())
-        self.groupBox_spine_db_editor.setSizePolicy(sizePolicy8)
+        sizePolicy7 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        sizePolicy7.setHorizontalStretch(0)
+        sizePolicy7.setVerticalStretch(0)
+        sizePolicy7.setHeightForWidth(self.groupBox_spine_db_editor.sizePolicy().hasHeightForWidth())
+        self.groupBox_spine_db_editor.setSizePolicy(sizePolicy7)
         self.verticalLayout_4 = QVBoxLayout(self.groupBox_spine_db_editor)
         self.verticalLayout_4.setSpacing(6)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
@@ -664,11 +658,11 @@ class Ui_SettingsForm(object):
         self.Engine.setObjectName(u"Engine")
         self.verticalLayout_19 = QVBoxLayout(self.Engine)
         self.verticalLayout_19.setObjectName(u"verticalLayout_19")
-        self.groupBox_3 = QGroupBox(self.Engine)
-        self.groupBox_3.setObjectName(u"groupBox_3")
-        self.verticalLayout_2 = QVBoxLayout(self.groupBox_3)
+        self.process_limits_group_box = QGroupBox(self.Engine)
+        self.process_limits_group_box.setObjectName(u"process_limits_group_box")
+        self.verticalLayout_2 = QVBoxLayout(self.process_limits_group_box)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.automatic_engine_process_limit_radio_button = QRadioButton(self.groupBox_3)
+        self.automatic_engine_process_limit_radio_button = QRadioButton(self.process_limits_group_box)
         self.engine_processes_button_group = QButtonGroup(SettingsForm)
         self.engine_processes_button_group.setObjectName(u"engine_processes_button_group")
         self.engine_processes_button_group.addButton(self.automatic_engine_process_limit_radio_button)
@@ -676,41 +670,73 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_2.addWidget(self.automatic_engine_process_limit_radio_button)
 
-        self.user_defined_engine_process_limit_radio_button = QRadioButton(self.groupBox_3)
+        self.horizontalLayout_16 = QHBoxLayout()
+        self.horizontalLayout_16.setObjectName(u"horizontalLayout_16")
+        self.user_defined_engine_process_limit_radio_button = QRadioButton(self.process_limits_group_box)
         self.engine_processes_button_group.addButton(self.user_defined_engine_process_limit_radio_button)
         self.user_defined_engine_process_limit_radio_button.setObjectName(u"user_defined_engine_process_limit_radio_button")
 
-        self.verticalLayout_2.addWidget(self.user_defined_engine_process_limit_radio_button)
+        self.horizontalLayout_16.addWidget(self.user_defined_engine_process_limit_radio_button)
 
-        self.engine_process_limit_controls = QWidget(self.groupBox_3)
-        self.engine_process_limit_controls.setObjectName(u"engine_process_limit_controls")
-        self.engine_process_limit_controls.setEnabled(False)
-        self.horizontalLayout_13 = QHBoxLayout(self.engine_process_limit_controls)
-        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Fixed, QSizePolicy.Minimum)
-
-        self.horizontalLayout_13.addItem(self.horizontalSpacer_2)
-
-        self.label_2 = QLabel(self.engine_process_limit_controls)
-        self.label_2.setObjectName(u"label_2")
-
-        self.horizontalLayout_13.addWidget(self.label_2)
-
-        self.engine_process_limit_spin_box = QSpinBox(self.engine_process_limit_controls)
+        self.engine_process_limit_spin_box = QSpinBox(self.process_limits_group_box)
         self.engine_process_limit_spin_box.setObjectName(u"engine_process_limit_spin_box")
+        self.engine_process_limit_spin_box.setEnabled(False)
         self.engine_process_limit_spin_box.setMinimum(1)
 
-        self.horizontalLayout_13.addWidget(self.engine_process_limit_spin_box)
+        self.horizontalLayout_16.addWidget(self.engine_process_limit_spin_box)
 
-        self.horizontalSpacer_3 = QSpacerItem(205, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_7 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        self.horizontalLayout_13.addItem(self.horizontalSpacer_3)
-
-
-        self.verticalLayout_2.addWidget(self.engine_process_limit_controls)
+        self.horizontalLayout_16.addItem(self.horizontalSpacer_7)
 
 
-        self.verticalLayout_19.addWidget(self.groupBox_3)
+        self.verticalLayout_2.addLayout(self.horizontalLayout_16)
+
+
+        self.verticalLayout_19.addWidget(self.process_limits_group_box)
+
+        self.persistent_process_limits_group_box = QGroupBox(self.Engine)
+        self.persistent_process_limits_group_box.setObjectName(u"persistent_process_limits_group_box")
+        self.verticalLayout_17 = QVBoxLayout(self.persistent_process_limits_group_box)
+        self.verticalLayout_17.setObjectName(u"verticalLayout_17")
+        self.unlimited_persistent_process_radio_button = QRadioButton(self.persistent_process_limits_group_box)
+        self.persistent_processes_button_group = QButtonGroup(SettingsForm)
+        self.persistent_processes_button_group.setObjectName(u"persistent_processes_button_group")
+        self.persistent_processes_button_group.addButton(self.unlimited_persistent_process_radio_button)
+        self.unlimited_persistent_process_radio_button.setObjectName(u"unlimited_persistent_process_radio_button")
+
+        self.verticalLayout_17.addWidget(self.unlimited_persistent_process_radio_button)
+
+        self.automatic_persistent_process_limit_radio_button = QRadioButton(self.persistent_process_limits_group_box)
+        self.persistent_processes_button_group.addButton(self.automatic_persistent_process_limit_radio_button)
+        self.automatic_persistent_process_limit_radio_button.setObjectName(u"automatic_persistent_process_limit_radio_button")
+
+        self.verticalLayout_17.addWidget(self.automatic_persistent_process_limit_radio_button)
+
+        self.horizontalLayout_15 = QHBoxLayout()
+        self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
+        self.user_defined_persistent_process_limit_radio_button = QRadioButton(self.persistent_process_limits_group_box)
+        self.persistent_processes_button_group.addButton(self.user_defined_persistent_process_limit_radio_button)
+        self.user_defined_persistent_process_limit_radio_button.setObjectName(u"user_defined_persistent_process_limit_radio_button")
+
+        self.horizontalLayout_15.addWidget(self.user_defined_persistent_process_limit_radio_button)
+
+        self.persistent_process_limit_spin_box = QSpinBox(self.persistent_process_limits_group_box)
+        self.persistent_process_limit_spin_box.setObjectName(u"persistent_process_limit_spin_box")
+        self.persistent_process_limit_spin_box.setEnabled(False)
+        self.persistent_process_limit_spin_box.setMinimum(1)
+
+        self.horizontalLayout_15.addWidget(self.persistent_process_limit_spin_box)
+
+        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_15.addItem(self.horizontalSpacer_6)
+
+
+        self.verticalLayout_17.addLayout(self.horizontalLayout_15)
+
+
+        self.verticalLayout_19.addWidget(self.persistent_process_limits_group_box)
 
         self.groupBox_4 = QGroupBox(self.Engine)
         self.groupBox_4.setObjectName(u"groupBox_4")
@@ -728,15 +754,15 @@ class Ui_SettingsForm(object):
 
         self.gridLayout_3.addWidget(self.label_12, 3, 0, 1, 1)
 
-        self.horizontalLayout_16 = QHBoxLayout()
-        self.horizontalLayout_16.setObjectName(u"horizontalLayout_16")
+        self.horizontalLayout_18 = QHBoxLayout()
+        self.horizontalLayout_18.setObjectName(u"horizontalLayout_18")
         self.lineEdit_secfolder = QLineEdit(self.groupBox_4)
         self.lineEdit_secfolder.setObjectName(u"lineEdit_secfolder")
         self.lineEdit_secfolder.setCursor(QCursor(Qt.ArrowCursor))
         self.lineEdit_secfolder.setReadOnly(False)
         self.lineEdit_secfolder.setClearButtonEnabled(True)
 
-        self.horizontalLayout_16.addWidget(self.lineEdit_secfolder)
+        self.horizontalLayout_18.addWidget(self.lineEdit_secfolder)
 
         self.toolButton_pick_secfolder = QToolButton(self.groupBox_4)
         self.toolButton_pick_secfolder.setObjectName(u"toolButton_pick_secfolder")
@@ -744,10 +770,10 @@ class Ui_SettingsForm(object):
         self.toolButton_pick_secfolder.setMaximumSize(QSize(22, 22))
         self.toolButton_pick_secfolder.setIcon(icon5)
 
-        self.horizontalLayout_16.addWidget(self.toolButton_pick_secfolder)
+        self.horizontalLayout_18.addWidget(self.toolButton_pick_secfolder)
 
 
-        self.gridLayout_3.addLayout(self.horizontalLayout_16, 4, 2, 1, 1)
+        self.gridLayout_3.addLayout(self.horizontalLayout_18, 4, 2, 1, 1)
 
         self.label_13 = QLabel(self.groupBox_4)
         self.label_13.setObjectName(u"label_13")
@@ -808,20 +834,13 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_7.addWidget(self.splitter)
 
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setSpacing(6)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(11, 11, 11, 11)
         self.buttonBox = QDialogButtonBox(SettingsForm)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
         self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
         self.buttonBox.setCenterButtons(False)
 
-        self.horizontalLayout.addWidget(self.buttonBox)
-
-
-        self.verticalLayout_7.addLayout(self.horizontalLayout)
+        self.verticalLayout_7.addWidget(self.buttonBox)
 
         QWidget.setTabOrder(self.checkBox_open_previous_project, self.checkBox_exit_prompt)
         QWidget.setTabOrder(self.checkBox_exit_prompt, self.checkBox_save_project_before_closing)
@@ -1055,10 +1074,19 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.checkBox_save_spec_before_closing.setText(QCoreApplication.translate("SettingsForm", u"Save specification before closing", None))
         self.checkBox_spec_show_undo.setText(QCoreApplication.translate("SettingsForm", u"Show undo notifications", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("SettingsForm", u"Parallel Engine processes", None))
+        self.process_limits_group_box.setTitle(QCoreApplication.translate("SettingsForm", u"Parallel Engine processes", None))
         self.automatic_engine_process_limit_radio_button.setText(QCoreApplication.translate("SettingsForm", u"Limit to available CPU cores", None))
         self.user_defined_engine_process_limit_radio_button.setText(QCoreApplication.translate("SettingsForm", u"User defined limit:", None))
-        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"Max parallel processes:", None))
+        self.persistent_process_limits_group_box.setTitle(QCoreApplication.translate("SettingsForm", u"Persistent consoles", None))
+        self.unlimited_persistent_process_radio_button.setText(QCoreApplication.translate("SettingsForm", u"Unlimited", None))
+#if QT_CONFIG(tooltip)
+        self.automatic_persistent_process_limit_radio_button.setToolTip(QCoreApplication.translate("SettingsForm", u"Kills console processes randomly if limit is exceeded.", None))
+#endif // QT_CONFIG(tooltip)
+        self.automatic_persistent_process_limit_radio_button.setText(QCoreApplication.translate("SettingsForm", u"Limit to available CPU cores", None))
+#if QT_CONFIG(tooltip)
+        self.user_defined_persistent_process_limit_radio_button.setToolTip(QCoreApplication.translate("SettingsForm", u"Kills console processes randomly if limit is exceeded.", None))
+#endif // QT_CONFIG(tooltip)
+        self.user_defined_persistent_process_limit_radio_button.setText(QCoreApplication.translate("SettingsForm", u"User defined limit:", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("SettingsForm", u"Remote execution", None))
         self.checkBox_enable_remote_exec.setText(QCoreApplication.translate("SettingsForm", u"Enabled", None))
         self.label_12.setText(QCoreApplication.translate("SettingsForm", u"Security", None))

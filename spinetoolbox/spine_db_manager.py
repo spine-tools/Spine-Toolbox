@@ -48,14 +48,13 @@ from spinedb_api import (
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_icon_manager import SpineDBIconManager
-from .helpers import busy_effect
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, CacheItem, signal_waiter
+from .helpers import get_upgrade_db_promt_text, CacheItem, signal_waiter, busy_effect
 
 
 @busy_effect
@@ -101,6 +100,7 @@ class SpineDBManager(QObject):
     tools_removed = Signal(object)
     tool_features_removed = Signal(object)
     tool_feature_methods_removed = Signal(object)
+    items_removed = Signal(object)
     # Updated
     scenarios_updated = Signal(object)
     alternatives_updated = Signal(object)
@@ -202,6 +202,8 @@ class SpineDBManager(QObject):
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
         for item_type, signal in self.updated_signals.items():
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        # Uncache
+        self.items_removed.connect(self.uncache_items)
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
@@ -230,6 +232,8 @@ class SpineDBManager(QObject):
         self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
+        self.entity_groups_added.connect(self._cascade_refresh_objects_by_group)
+        self.entity_groups_added.connect(self._cascade_refresh_relationships_by_group)
         self._worker.session_rolled_back.connect(self._finish_rolling_back)
         self._worker.connect_signals()
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
@@ -247,41 +251,30 @@ class SpineDBManager(QObject):
             self._fetchers[db_map] = SpineDBFetcher(self, db_map)
         return self._fetchers[db_map]
 
-    def can_fetch_more(self, db_map, item_type, parent=None):
+    def can_fetch_more(self, db_map, parent):
         """Whether or not we can fetch more items of given type from given db.
 
         Args:
             db_map (DiffDatabaseMapping)
-            item_type (str): the type of items to fetch, e.g. "object_class"
-            parent (object, optional): The object that requests the fetching.
-                Can implement ``fetch_successful``, i.e., a function that receives a db_map and a dictionary-item
-                and returns a Boolean indicating whether or not to stop fetching.
+            parent (FetchParent): The object that requests the fetching.
 
         Returns:
             bool
         """
         if db_map.connection.closed:
             return False
-        return self._get_fetcher(db_map).can_fetch_more(item_type, parent=parent)
+        return self._get_fetcher(db_map).can_fetch_more(parent)
 
-    def fetch_more(self, db_map, item_type, parent=None):
+    def fetch_more(self, db_map, parent):
         """Fetches more items of given type from given db.
 
         Args:
             db_map (DiffDatabaseMapping)
-            item_type (str): the type of items to fetch, e.g. "object_class"
-            parent (object, optional): The object that requests the fetching.
-                Can implement ``fetch_successful``, i.e., a function that receives a db_map and a dictionary-item
-                and returns a Boolean indicating whether or not to stop fetching.
-                If not implemented, then fetching is stopped immediately after one step.
-                Can also provide ``fully_fetched``, a ``Signal`` that gets emitted whenever fetching is complete.
+            parent (FetchParent): The object that requests the fetching.
         """
         if db_map.connection.closed:
             return
-        self._get_fetcher(db_map).fetch_more(item_type, parent=parent)
-
-    def cache_items_for_fetching(self, db_map, item_type, items):
-        self._get_fetcher(db_map).cache_items(item_type, items)
+        self._get_fetcher(db_map).fetch_more(parent)
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
@@ -309,24 +302,22 @@ class SpineDBManager(QObject):
             db_map_data = {}
             for db_map, ids_per_type in db_map_typed_ids.items():
                 ids = ids_per_type.get(item_type, [])
-                for id_ in ids:
-                    item = self._pop_item(db_map, item_type, id_)
-                    if item:
-                        item["visible"] = True
-                        db_map_data.setdefault(db_map, []).append(item)
-                        continue
-                    item = self._get_fetcher(db_map).cache.get(item_type, {}).pop(id_, {})
-                    if item:
-                        db_map_data.setdefault(db_map, []).append(item)
-            typed_db_map_data[item_type] = db_map_data
-            signal.emit(db_map_data)
-        self.items_removed_from_cache.emit(typed_db_map_data)
+                items = [item for item in (self._pop_item(db_map, item_type, id_) for id_ in ids) if item]
+                if items:
+                    db_map_data[db_map] = items
+                    fetcher = self._get_fetcher(db_map)
+                    fetcher.reset_queries(item_type)
+            if db_map_data:
+                typed_db_map_data[item_type] = db_map_data
+                signal.emit(db_map_data)
+        if typed_db_map_data:
+            self.items_removed_from_cache.emit(typed_db_map_data)
 
     @busy_effect
     def get_db_map_cache(self, db_map, item_types=None, only_descendants=False, include_ancestors=False):
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types=item_types, only_descendants=only_descendants, include_ancestors=include_ancestors)
-        return CombinedCache(self._cache.setdefault(db_map, {}), fetcher.cache)
+        return self._cache.setdefault(db_map, {})
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -674,7 +665,7 @@ class SpineDBManager(QObject):
             return item
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types={item_type})
-        return item or fetcher.get_item(item_type, id_)
+        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
 
     def get_field(self, db_map, item_type, id_, field, only_visible=True):
         return self.get_item(db_map, item_type, id_, only_visible=only_visible).get(field)
@@ -695,9 +686,7 @@ class SpineDBManager(QObject):
             return items
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types={item_type})
-        return list(self._cache.get(db_map, {}).get(item_type, {}).values()) + list(
-            fetcher.cache.get(item_type, {}).values()
-        )
+        return list(self._cache.get(db_map, {}).get(item_type, {}).values())
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
         """Returns a list of items of the given type in the given db map that have the given value
@@ -943,6 +932,7 @@ class SpineDBManager(QObject):
             macro = AgedUndoCommand()
             macro.setText(command_text)
             child_cmds = []
+            self.signaller.pause(db_map)
             # NOTE: we push the import macro before adding the children,
             # because we *need* to call redo() on the children one by one so the data gets in gradually
             self.undo_stack[db_map].push(macro)
@@ -960,10 +950,11 @@ class SpineDBManager(QObject):
                         upd_cmd.redo()
                         waiter.wait()
                     child_cmds.append(upd_cmd)
-            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
+            if not child_cmds or all(cmd.isObsolete() for cmd in child_cmds):
                 # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
                 macro.setObsolete(True)
                 self.undo_stack[db_map].undo()
+            self.signaller.resume(db_map)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
@@ -1261,13 +1252,17 @@ class SpineDBManager(QObject):
             items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data, cache=cache)
             if ids_to_remove:
                 rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove}, parent=macro)
-                rm_cmd.redo()
+                with signal_waiter(rm_cmd.completed_signal) as waiter:
+                    rm_cmd.redo()
+                    waiter.wait()
                 child_cmds.append(rm_cmd)
             if items_to_add:
                 add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative", parent=macro)
-                add_cmd.redo()
+                with signal_waiter(add_cmd.completed_signal) as waiter:
+                    add_cmd.redo()
+                    waiter.wait()
                 child_cmds.append(add_cmd)
-            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
+            if not child_cmds or all(cmd.isObsolete() for cmd in child_cmds):
                 macro.setObsolete(True)
                 self.undo_stack[db_map].undo()
 
@@ -1519,7 +1514,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def _refresh_scenario_alternatives(self, db_map_data, only_visible=True):
+    def _refresh_scenario_alternatives(self, db_map_data):
         """Refreshes cached scenarios when updating scenario alternatives.
 
         Args:
@@ -1527,24 +1522,39 @@ class SpineDBManager(QObject):
         """
         db_map_scenario_data = {}
         for db_map, data in db_map_data.items():
-            alternative_id_lists = {}
-            for item in data:
-                alternative_id_list = alternative_id_lists.setdefault(item["scenario_id"], {})
-                item = self.get_item(db_map, "scenario_alternative", item["id"], only_visible=only_visible)
-                if item:
-                    alternative_id_list[item["rank"]] = item["alternative_id"]
-            for scenario_id, alternative_id_list in alternative_id_lists.items():
-                sorted_ranks = sorted(alternative_id_list)
-                alternative_id_list = [alternative_id_list[r] for r in sorted_ranks]
+            scenario_ids = {item["scenario_id"] for item in data}
+            for scenario_id in scenario_ids:
+                sorted_scenario_alternatives = sorted(
+                    self.get_items_by_field(
+                        db_map, "scenario_alternative", "scenario_id", scenario_id, only_visible=False
+                    ),
+                    key=lambda x: x["rank"],
+                )
+                alternative_id_list = [x["alternative_id"] for x in sorted_scenario_alternatives]
                 alternative_name_list = [
-                    self.get_item(db_map, "alternative", id_, only_visible=only_visible)["name"]
-                    for id_ in alternative_id_list
+                    self.get_item(db_map, "alternative", id_, only_visible=False)["name"] for id_ in alternative_id_list
                 ]
-                scenario = self.get_item(db_map, "scenario", scenario_id, only_visible=only_visible)
+                scenario = self.get_item(db_map, "scenario", scenario_id, only_visible=False)
                 scenario["alternative_id_list"] = ",".join(str(id_) for id_ in alternative_id_list)
                 scenario["alternative_name_list"] = ",".join(alternative_name_list)
                 db_map_scenario_data.setdefault(db_map, []).append(scenario)
         self.scenarios_updated.emit(db_map_scenario_data)
+
+    def _cascade_refresh_objects_by_group(self, db_map_data):
+        self._cascade_refresh_entities_by_group(db_map_data, "object", self.objects_updated)
+
+    def _cascade_refresh_relationships_by_group(self, db_map_data):
+        self._cascade_refresh_entities_by_group(db_map_data, "relationship", self.relationships_updated)
+
+    def _cascade_refresh_entities_by_group(self, db_map_data, item_type, updated_signal):
+        db_map_entity_data = {}
+        for db_map, data in db_map_data.items():
+            for item in data:
+                entity = self.get_item(db_map, item_type, item["group_id"])
+                if entity:
+                    entity["group_id"] = item["group_id"]
+                    db_map_entity_data.setdefault(db_map, []).append(entity)
+        updated_signal.emit(db_map_entity_data)
 
     def _cascade_refresh_relationship_classes(self, db_map_data):
         """Refreshes cached relationship classes when updating object classes.
@@ -1867,6 +1877,7 @@ class SpineDBManager(QObject):
             item["display_icon"] = item.get("display_icon")
         elif item_type == "object":
             item["class_name"] = self.get_item(db_map, "object_class", item["class_id"])["name"]
+            item["group_id"] = self.get_item_by_field(db_map, "entity_group", "entity_id", item["id"]).get("entity_id")
         elif item_type == "relationship_class":
             item["object_class_name_list"] = ",".join(
                 self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
@@ -1962,18 +1973,6 @@ class SpineDBManager(QObject):
             item["parameter_value_list_name"] = par_val_lst["name"]
             item["required"] = item.get("required", False)
         return item
-
-
-class CombinedCache:
-    def __init__(self, d1, d2):
-        self._d1 = d1
-        self._d2 = d2
-
-    def __getitem__(self, key):
-        return self.get(key, {})
-
-    def get(self, key, default):
-        return {**self._d1.get(key, default), **self._d2.get(key, default)}
 
 
 def _split_and_parse_value_list(item):

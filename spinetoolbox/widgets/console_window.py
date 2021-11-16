@@ -32,7 +32,7 @@ class ConsoleWindow(QMainWindow):
             spine_console (JupyterConsoleWidget): Qt Console
             language (str): 'python' or 'julia'
         """
-        super().__init__()  # Setting the parent inherits the stylesheet
+        super().__init__()
         self._toolbox = toolbox
         self._console = spine_console
         self._language = language

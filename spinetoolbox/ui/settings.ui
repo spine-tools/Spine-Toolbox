@@ -61,17 +61,8 @@
   <layout class="QVBoxLayout" name="verticalLayout_7">
    <item>
     <widget class="QSplitter" name="splitter">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="childrenCollapsible">
-      <bool>false</bool>
      </property>
      <widget class="QListWidget" name="listWidget">
       <property name="sizePolicy">
@@ -1154,7 +1145,7 @@
       <widget class="QWidget" name="Engine">
        <layout class="QVBoxLayout" name="verticalLayout_19">
         <item>
-         <widget class="QGroupBox" name="groupBox_3">
+         <widget class="QGroupBox" name="process_limits_group_box">
           <property name="title">
            <string>Parallel Engine processes</string>
           </property>
@@ -1170,66 +1161,113 @@
             </widget>
            </item>
            <item>
-            <widget class="QRadioButton" name="user_defined_engine_process_limit_radio_button">
+            <layout class="QHBoxLayout" name="horizontalLayout_16">
+             <item>
+              <widget class="QRadioButton" name="user_defined_engine_process_limit_radio_button">
+               <property name="text">
+                <string>User defined limit:</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">engine_processes_button_group</string>
+               </attribute>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="engine_process_limit_spin_box">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_7">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="persistent_process_limits_group_box">
+          <property name="title">
+           <string>Persistent consoles</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_17">
+           <item>
+            <widget class="QRadioButton" name="unlimited_persistent_process_radio_button">
              <property name="text">
-              <string>User defined limit:</string>
+              <string>Unlimited</string>
              </property>
              <attribute name="buttonGroup">
-              <string notr="true">engine_processes_button_group</string>
+              <string notr="true">persistent_processes_button_group</string>
              </attribute>
             </widget>
            </item>
            <item>
-            <widget class="QWidget" name="engine_process_limit_controls" native="true">
-             <property name="enabled">
-              <bool>false</bool>
+            <widget class="QRadioButton" name="automatic_persistent_process_limit_radio_button">
+             <property name="toolTip">
+              <string>Kills console processes randomly if limit is exceeded.</string>
              </property>
-             <layout class="QHBoxLayout" name="horizontalLayout_13">
-              <item>
-               <spacer name="horizontalSpacer_2">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::Fixed</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_2">
-                <property name="text">
-                 <string>Max parallel processes:</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QSpinBox" name="engine_process_limit_spin_box">
-                <property name="minimum">
-                 <number>1</number>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="horizontalSpacer_3">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>205</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-             </layout>
+             <property name="text">
+              <string>Limit to available CPU cores</string>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">persistent_processes_button_group</string>
+             </attribute>
             </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_15">
+             <item>
+              <widget class="QRadioButton" name="user_defined_persistent_process_limit_radio_button">
+               <property name="toolTip">
+                <string>Kills console processes randomly if limit is exceeded.</string>
+               </property>
+               <property name="text">
+                <string>User defined limit:</string>
+               </property>
+               <attribute name="buttonGroup">
+                <string notr="true">persistent_processes_button_group</string>
+               </attribute>
+              </widget>
+             </item>
+             <item>
+              <widget class="QSpinBox" name="persistent_process_limit_spin_box">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="minimum">
+                <number>1</number>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_6">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
            </item>
           </layout>
          </widget>
@@ -1257,7 +1295,7 @@
               </widget>
              </item>
              <item row="4" column="2">
-              <layout class="QHBoxLayout" name="horizontalLayout_16">
+              <layout class="QHBoxLayout" name="horizontalLayout_18">
                <item>
                 <widget class="QLineEdit" name="lineEdit_secfolder">
                  <property name="cursor">
@@ -1406,36 +1444,17 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <property name="spacing">
-      <number>6</number>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
-     <property name="leftMargin">
-      <number>11</number>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
-     <property name="topMargin">
-      <number>11</number>
+     <property name="centerButtons">
+      <bool>false</bool>
      </property>
-     <property name="rightMargin">
-      <number>11</number>
-     </property>
-     <property name="bottomMargin">
-      <number>11</number>
-     </property>
-     <item>
-      <widget class="QDialogButtonBox" name="buttonBox">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="standardButtons">
-        <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-       </property>
-       <property name="centerButtons">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -1518,5 +1537,6 @@
  </connections>
  <buttongroups>
   <buttongroup name="engine_processes_button_group"/>
+  <buttongroup name="persistent_processes_button_group"/>
  </buttongroups>
 </ui>

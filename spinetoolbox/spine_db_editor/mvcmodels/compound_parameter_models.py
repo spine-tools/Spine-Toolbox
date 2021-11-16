@@ -19,7 +19,7 @@ These models concatenate several 'single' models and one 'empty' model.
 from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
-from ...helpers import rows_to_row_count_tuples, parameter_identifier
+from ...helpers import rows_to_row_count_tuples, parameter_identifier, FetchParent
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -36,7 +36,7 @@ from .single_parameter_models import (
 )
 
 
-class CompoundParameterModel(CompoundWithEmptyTableModel):
+class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
     """A model that concatenates several single parameter models
     and one empty parameter model.
     """
@@ -55,28 +55,27 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.db_maps = db_maps
         self._filter_class_ids = {}
         self._auto_filter_menus = {}
-        self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
+        self._auto_filter = {}  # Maps field to db map, to entity id, to *accepted* item ids
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
         self._filter_timer.setInterval(100)
         self._filter_timer.timeout.connect(self.refresh)
 
+    @property
+    def fetch_item_type(self):
+        return self.item_type
+
     def canFetchMore(self, _parent):
-        return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self.db_maps)
+        return any(self.db_mngr.can_fetch_more(db_map, self) for db_map in self.db_maps)
 
     def fetchMore(self, _parent):
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
+            self.db_mngr.fetch_more(db_map, self)
 
-    def fetch_successful(self, db_map, item):
-        entity_class_id = item.get(self.entity_class_id_key)
-        if entity_class_id is None:
-            return False
-        model = self._create_single_model(db_map, entity_class_id, committed=None)
-        return self.filter_accepts_model(model) and model.filter_accepts_item(item)
-
-    def fetch_id(self):
-        return str(self.__dict__)
+    def filter_query(self, query, subquery, db_map):
+        return query.filter(getattr(subquery.c, self.entity_class_id_key).isnot(None)).order_by(
+            subquery.c.entity_class_name
+        )
 
     def _make_header(self):
         raise NotImplementedError()
@@ -157,6 +156,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Initializes the model."""
         super().init_model()
         self._filter_class_ids = {}
+        self._auto_filter = {}
         self.empty_model.fetchMore(QModelIndex())
         self._make_auto_filter_menus()
 
@@ -404,6 +404,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return model
 
     def _add_parameter_data(self, db_map, entity_class_id, ids, committed):
+        if not ids:
+            return
         if committed:
             existing = next(
                 (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None

@@ -32,6 +32,26 @@ class SpineDBSignaller(QObject):
         super().__init__()
         self.db_mngr = db_mngr
         self.listeners = dict()
+        self._deferred_notifications = dict()
+
+    def pause(self, *db_maps):
+        """Defers notifications from db_maps until ``resume`` is called."""
+        for db_map in db_maps:
+            self._deferred_notifications.setdefault(db_map, [])
+
+    def resume(self, *db_maps):
+        """Performs deferred notifications."""
+        for db_map in db_maps:
+            for data, method in self._deferred_notifications.pop(db_map, []):
+                method({db_map: data})
+
+    def _defer_notification(self, db_map, data, method):
+        """Defer notification if db_map is paused, and returns True. Otherwise returns False."""
+        deferred = self._deferred_notifications.get(db_map)
+        if deferred is None:
+            return False
+        deferred.append((data, method))
+        return True
 
     def add_db_map_listener(self, db_map, listener):
         """Adds listener for given db_map."""
@@ -280,7 +300,10 @@ class SpineDBSignaller(QObject):
                     method = getattr(listener, callback)
                 except AttributeError:
                     continue
-                method(shared_db_map_data)
+                for db_map, data in shared_db_map_data.items():
+                    if self._defer_notification(db_map, data, method):
+                        continue
+                    method({db_map: data})
 
     @Slot(set)
     def receive_session_refreshed(self, db_maps):

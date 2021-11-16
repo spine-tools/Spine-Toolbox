@@ -282,7 +282,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.checkBox_enable_remote_exec.clicked.connect(self._update_remote_execution_page_widget_status)
         self.ui.lineEdit_host.textEdited.connect(self._edit_remote_host)
         self.ui.user_defined_engine_process_limit_radio_button.toggled.connect(
-            self.ui.engine_process_limit_controls.setEnabled
+            self.ui.engine_process_limit_spin_box.setEnabled
+        )
+        self.ui.user_defined_persistent_process_limit_radio_button.toggled.connect(
+            self.ui.persistent_process_limit_spin_box.setEnabled
         )
 
     @Slot(bool)
@@ -609,33 +612,42 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     def _read_engine_settings(self):
         """Reads Engine settings and sets the corresponding UI elements."""
-        engine_parallel_process_limit_choice = self._qsettings.value(
-            "engineSettings/processLimiter", defaultValue="auto"
-        )
-        engine_parallel_process_limit = int(
-            self._qsettings.value("engineSettings/maxProcesses", defaultValue=os.cpu_count())
-        )
         # Remote execution settings
         enable_remote_exec = self._qsettings.value("engineSettings/remoteExecutionEnabled", defaultValue="false")
-        remote_host = self._qsettings.value("engineSettings/remoteHost", defaultValue="")
-        remote_port = int(self._qsettings.value("engineSettings/remotePort", defaultValue="49152"))
-        security = self._qsettings.value("engineSettings/remoteSecurityModel", defaultValue="")
-        sec_folder = self._qsettings.value("engineSettings/remoteSecurityFolder", defaultValue="")
-        # Set UI elements
-        if engine_parallel_process_limit_choice == "auto":
-            self.ui.automatic_engine_process_limit_radio_button.setChecked(True)
-        else:
-            self.ui.user_defined_engine_process_limit_radio_button.setChecked(True)
-        self.ui.engine_process_limit_spin_box.setValue(engine_parallel_process_limit)
         if enable_remote_exec == "true":
             self.ui.checkBox_enable_remote_exec.setCheckState(Qt.Checked)
+        remote_host = self._qsettings.value("engineSettings/remoteHost", defaultValue="")
         self._edit_remote_host(remote_host)
+        remote_port = int(self._qsettings.value("engineSettings/remotePort", defaultValue="49152"))
         self.ui.spinBox_port.setValue(remote_port)
+        security = self._qsettings.value("engineSettings/remoteSecurityModel", defaultValue="")
         if not security:
             self.ui.comboBox_security.setCurrentIndex(0)
         else:
             self.ui.comboBox_security.setCurrentIndex(1)
+        sec_folder = self._qsettings.value("engineSettings/remoteSecurityFolder", defaultValue="")
         self.ui.lineEdit_secfolder.setText(sec_folder)
+        # Parallel process limits
+        parallel_process_limit_choice = self._qsettings.value("engineSettings/processLimiter", defaultValue="auto")
+        if parallel_process_limit_choice == "auto":
+            self.ui.automatic_engine_process_limit_radio_button.setChecked(True)
+        else:
+            self.ui.user_defined_engine_process_limit_radio_button.setChecked(True)
+        parallel_process_limit = int(self._qsettings.value("engineSettings/maxProcesses", defaultValue=os.cpu_count()))
+        self.ui.engine_process_limit_spin_box.setValue(parallel_process_limit)
+        persistent_process_limit_choice = self._qsettings.value(
+            "engineSettings/persistentLimiter", defaultValue="unlimited"
+        )
+        if persistent_process_limit_choice == "unlimited":
+            self.ui.unlimited_persistent_process_radio_button.setChecked(True)
+        elif persistent_process_limit_choice == "auto":
+            self.ui.automatic_persistent_process_limit_radio_button.setChecked(True)
+        else:
+            self.ui.user_defined_persistent_process_limit_radio_button.setChecked(True)
+        persistent_process_limit = int(
+            self._qsettings.value("engineSettings/maxPersistentProcesses", defaultValue=os.cpu_count())
+        )
+        self.ui.persistent_process_limit_spin_box.setValue(persistent_process_limit)
 
     @Slot()
     def save_settings(self):
@@ -741,11 +753,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         Returns:
             bool: True if settings were stored successfully, False otherwise
         """
-        if self.ui.automatic_engine_process_limit_radio_button.isChecked():
-            self._qsettings.setValue("engineSettings/processLimiter", "auto")
-        else:
-            self._qsettings.setValue("engineSettings/processLimiter", "user")
-        self._qsettings.setValue("engineSettings/maxProcesses", str(self.ui.engine_process_limit_spin_box.value()))
         # Remote execution settings
         remote_exec = "true" if int(self.ui.checkBox_enable_remote_exec.checkState()) else "false"
         self._qsettings.setValue("engineSettings/remoteExecutionEnabled", remote_exec)
@@ -757,6 +764,23 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             sec_str = self.ui.comboBox_security.currentText()
         self._qsettings.setValue("engineSettings/remoteSecurityModel", sec_str)
         self._qsettings.setValue("engineSettings/remoteSecurityFolder", self.ui.lineEdit_secfolder.text())
+        # Parallel process limits
+        if self.ui.automatic_engine_process_limit_radio_button.isChecked():
+            limiter = "auto"
+        else:
+            limiter = "user"
+        self._qsettings.setValue("engineSettings/processLimiter", limiter)
+        self._qsettings.setValue("engineSettings/maxProcesses", str(self.ui.engine_process_limit_spin_box.value()))
+        if self.ui.unlimited_persistent_process_radio_button.isChecked():
+            limiter = "unlimited"
+        elif self.ui.automatic_persistent_process_limit_radio_button.isChecked():
+            limiter = "auto"
+        else:
+            limiter = "user"
+        self._qsettings.setValue("engineSettings/persistentLimiter", limiter)
+        self._qsettings.setValue(
+            "engineSettings/maxPersistentProcesses", str(self.ui.persistent_process_limit_spin_box.value())
+        )
         return True
 
     def _get_julia_settings(self):

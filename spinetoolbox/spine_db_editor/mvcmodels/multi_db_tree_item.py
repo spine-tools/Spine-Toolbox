@@ -15,12 +15,12 @@ Base classes to represent items from multiple databases in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:    17.6.2020
 """
-from PySide2.QtCore import Qt
-from ...helpers import rows_to_row_count_tuples, bisect_chunks
+from PySide2.QtCore import Qt, QTimer
+from ...helpers import rows_to_row_count_tuples, bisect_chunks, FetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
 
 
-class MultiDBTreeItem(TreeItem):
+class MultiDBTreeItem(FetchParent, TreeItem):
     """A tree item that may belong in multiple databases."""
 
     item_type = None
@@ -39,6 +39,16 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
+
+    def child_number(self):
+        try:
+            db_map, id_ = next(iter(self._db_map_ids.items()))
+        except StopIteration:
+            return -1
+        try:
+            return self.parent_item.find_row(db_map, id_)
+        except AttributeError:
+            return super().child_number()
 
     def set_data(self, column, value, role):
         raise NotImplementedError()
@@ -201,23 +211,25 @@ class MultiDBTreeItem(TreeItem):
                 # No match
                 existing_children[new_child.display_id] = new_child
                 unmerged.append(new_child)
+        if not unmerged:
+            self._refresh_child_map()
+            return
         self._insert_children_sorted(unmerged)
 
     def _insert_children_sorted(self, new_children):
         """Inserts and sorts children."""
-        if not new_children:
-            return
         new_children = sorted(new_children, key=lambda x: x.display_id)
-        for chunk, pos in bisect_chunks(self.children, new_children, key=lambda c: c.display_id):
+        for chunk, pos in bisect_chunks(self.children, new_children, key=self._children_sort_key):
             self.insert_children(pos, chunk)
 
-    def fetch_successful(self, db_map, item):  # pylint: disable=no-self-use
-        return True
+    @property
+    def _children_sort_key(self):
+        return lambda item: item.display_id
 
-    def _handle_fully_fetched(self):
+    def restart_fetching(self):
         """Notifies the view that the model's layout has changed.
         This triggers a repaint so this item may be painted gray if no children."""
-        self.model.layoutChanged.emit()
+        QTimer.singleShot(0, self.model.layoutChanged)
 
     @property
     def fetch_item_type(self):
@@ -226,41 +238,23 @@ class MultiDBTreeItem(TreeItem):
     def can_fetch_more(self):
         if self.fetch_item_type is None:
             return False
-        return any(
-            self.db_mngr.can_fetch_more(db_map, self.fetch_item_type, parent=self)
-            or self._get_pending_children_ids(db_map)
-            for db_map in self.db_maps
-        )
+        return any(self.db_mngr.can_fetch_more(db_map, self) for db_map in self.db_maps)
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
         if self.fetch_item_type is None:
             return
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self.fetch_item_type, parent=self)
-        # Create and append children from SpineDBManager cache, in case the db items were fetched elsewhere.
-        # This is needed for object items that are created *after* the relationship classes are fetched.
-        db_map_ids = {db_map: self._get_pending_children_ids(db_map) for db_map in self.db_maps}
-        self.append_children_by_id(db_map_ids)
-
-    def _get_pending_children_ids(self, db_map):
-        """Returns a list of children ids that are in the cache but not added."""
-        if self.fetch_item_type is None:
-            return []
-        return [
-            x["id"]
-            for x in self.db_mngr.get_items(db_map, self.fetch_item_type)
-            if x["id"] not in self._child_map.get(db_map, {}) and self.fetch_successful(db_map, x)
-        ]
+            self.db_mngr.fetch_more(db_map, self)
 
     def fetch_more_if_possible(self):
         if self.can_fetch_more():
             self.fetch_more()
 
-    def get_children_ids(self, db_map):
-        if self.fetch_item_type is None:
-            return []
-        return list(self._child_map.get(db_map, {}))
+    def get_children_ids(self):
+        for db_map, ids in self._child_map.items():
+            for id_ in ids:
+                yield (db_map, id_)
 
     def append_children_by_id(self, db_map_ids):
         """
@@ -310,8 +304,8 @@ class MultiDBTreeItem(TreeItem):
         db_map_ids_to_add = dict()
         for db_map, ids in db_map_ids.items():
             for id_ in ids:
-                row = self._child_map.get(db_map, {}).get(id_, None)
-                if row is not None:
+                row = self.find_row(db_map, id_)
+                if row != -1:
                     rows_to_update.add(row)
                 else:
                     db_map_ids_to_add.setdefault(db_map, set()).add(id_)
@@ -379,6 +373,9 @@ class MultiDBTreeItem(TreeItem):
                 id_ = child.db_map_id(db_map)
                 self._child_map.setdefault(db_map, dict())[id_] = row
 
+    def find_row(self, db_map, id_):
+        return self._child_map.get(db_map, {}).get(id_, -1)
+
     def find_children_by_id(self, db_map, *ids, reverse=True):
         """Generates children with the given ids in the given db_map.
         If the first id is None, then generates *all* children with the given db_map."""
@@ -398,8 +395,8 @@ class MultiDBTreeItem(TreeItem):
         else:
             # Yield all children with the db_map *and* the id
             for id_ in ids:
-                row = self._child_map.get(db_map, {}).get(id_, None)
-                if row is not None:
+                row = self.find_row(db_map, id_)
+                if row != -1:
                     yield row
 
     def data(self, column, role=Qt.DisplayRole):

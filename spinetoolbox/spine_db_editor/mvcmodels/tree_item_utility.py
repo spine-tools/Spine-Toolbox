@@ -19,10 +19,10 @@ A tree model for parameter_value lists.
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine, bisect_chunks
+from spinetoolbox.helpers import CharIconEngine, bisect_chunks, FetchParent
 
 
-class StandardTreeItem(TreeItem):
+class StandardTreeItem(FetchParent, TreeItem):
     """A tree item that fetches their children as they are inserted."""
 
     @property
@@ -69,6 +69,14 @@ class StandardTreeItem(TreeItem):
     @property
     def non_empty_children(self):
         return self.children
+
+    @property
+    def children_ids(self):
+        for child in self.non_empty_children:
+            try:
+                yield child.id
+            except AttributeError:
+                pass
 
 
 class EditableMixin:
@@ -134,10 +142,10 @@ class FetchMoreMixin:
         return self.item_type
 
     def can_fetch_more(self):
-        return self.db_mngr.can_fetch_more(self.db_map, self.fetch_item_type)
+        return self.db_mngr.can_fetch_more(self.db_map, self)
 
     def fetch_more(self):
-        self.db_mngr.fetch_more(self.db_map, self.fetch_item_type)
+        self.db_mngr.fetch_more(self.db_map, self)
 
 
 class StandardDBItem(SortsChildrenMixin, StandardTreeItem):

@@ -145,8 +145,8 @@ class TestSpineDBFetcher(unittest.TestCase):
             'class_id': 1,
             'class_name': 'oc',
             'name': 'obj',
-            "group_id": None,
             'description': None,
+            'group_id': None,
             'commit_id': 2,
         }
         self._listener.receive_objects_added.assert_any_call({self._db_map: [item]})

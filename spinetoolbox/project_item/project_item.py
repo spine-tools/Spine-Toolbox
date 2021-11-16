@@ -282,24 +282,24 @@ class ProjectItem(MetaObject):
             resources (list of ProjectItemResource): new resources from upstream
         """
 
-    def replace_resource_from_upstream(self, old, new):
-        """Replaces an existing resource from direct predecessor by a new one.
+    def replace_resources_from_upstream(self, old, new):
+        """Replaces existing resources from direct predecessor by a new ones.
 
         Args:
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
+            old (list of ProjectItemResource): old resources
+            new (list of ProjectItemResource): new resources
         """
 
     def _resources_to_successors_changed(self):
         """Notifies direct successors that item's resources have changed."""
         self._project.notify_resource_changes_to_successors(self)
 
-    def _resource_to_successors_replaced(self, old, new):
+    def _resources_to_successors_replaced(self, old, new):
         """Notifies direct successors that one of item's resources has been replaced.
 
         Args:
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
+            old (list of ProjectItemResource): old resources
+            new (list of ProjectItemResource): new resources
         """
         self._project.notify_resource_replacement_to_successors(self, old, new)
 
@@ -310,12 +310,12 @@ class ProjectItem(MetaObject):
             resources (list of ProjectItemResource): new resources from downstream
         """
 
-    def replace_resource_from_downstream(self, old, new):
-        """Replaces an existing resource from direct successor by a new one.
+    def replace_resources_from_downstream(self, old, new):
+        """Replaces existing resources from direct successor by a new ones.
 
         Args:
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
+            old (list of ProjectItemResource): old resources
+            new (list of ProjectItemResource): new resources
         """
 
     def invalidate_workflow(self, edges):

@@ -150,16 +150,7 @@ class SpineDBWorker(QObject):
         signal = getattr(self._db_mngr, signal_name)
         for db_map, items in db_map_data.items():
             getattr(db_map, method_name)(*items, readd=True)
-            visible = []
-            hidden = []
-            for item in items:
-                item = self._db_mngr.db_to_cache(db_map, item_type, item)
-                if item.pop("visible", True):
-                    visible.append(item)
-                else:
-                    hidden.append(item)
-            self._db_mngr.cache_items_for_fetching(db_map, item_type, hidden)
-            signal.emit({db_map: visible})
+            signal.emit({db_map: [self._db_mngr.db_to_cache(db_map, item_type, item) for item in items]})
 
     def remove_items(self, db_map_typed_ids):
         """Removes items from database.
@@ -184,7 +175,7 @@ class SpineDBWorker(QObject):
                 continue
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
-        self._db_mngr.uncache_items(db_map_typed_ids)
+        self._db_mngr.items_removed.emit(db_map_typed_ids)
 
     def commit_session(self, dirty_db_maps, commit_msg, cookie=None):
         """Initiates commit session action for given database maps in the worker thread.
