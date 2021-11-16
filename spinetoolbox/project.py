@@ -528,11 +528,9 @@ class SpineToolboxProject(MetaObject):
             if connection.destination == previous_name:
                 connection.destination = new_name
         new_resources_to_predecessors = item.resources_for_direct_predecessors()
-        for old, new in zip(resources_to_predecessors, new_resources_to_predecessors):
-            self.notify_resource_replacement_to_predecessors(item, old, new)
+        self.notify_resource_replacement_to_predecessors(item, resources_to_predecessors, new_resources_to_predecessors)
         new_resources_to_successors = item.resources_for_direct_successors()
-        for old, new in zip(resources_to_successors, new_resources_to_successors):
-            self.notify_resource_replacement_to_successors(item, old, new)
+        self.notify_resource_replacement_to_successors(item, resources_to_successors, new_resources_to_successors)
         self.item_renamed.emit(previous_name, new_name)
         self._logger.msg_success.emit(f"Project item <b>{previous_name}</b> renamed to <b>{new_name}</b>.")
         return True
@@ -985,31 +983,35 @@ class SpineToolboxProject(MetaObject):
             update_resources(target_item, connections, resource_cache)
 
     def notify_resource_replacement_to_successors(self, item, old, new):
-        """Replaces a resource for direct successors and outgoing connections of given item.
+        """Replaces resources for direct successors and outgoing connections of given item.
 
         Args:
             item (ProjectItem): item whose resources have changed
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
+            old (list of ProjectItemResource): old resource
+            new (list of ProjectItemResource): new resource
         """
+        if not old:
+            return
         for connection in self._connections:
             if connection.source != item.name:
                 continue
-            self.get_item(connection.destination).replace_resource_from_upstream(old, new)
-            connection.replace_resource_from_source(old, new)
+            connection.replace_resources_from_source(old, new)
+            old_converted = connection.convert_resources(old, old[0].provider_name)
+            new_converted = connection.convert_resources(new)
+            self.get_item(connection.destination).replace_resources_from_upstream(old_converted, new_converted)
 
     def notify_resource_replacement_to_predecessors(self, item, old, new):
-        """Replaces a resource for direct predecessors.
+        """Replaces resources for direct predecessors.
 
         Args:
             item (ProjectItem): item whose resources have changed
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
+            old (list of ProjectItemResource): old resources
+            new (list of ProjectItemResource): new resources
         """
         for connection in self._connections:
             if connection.destination != item.name:
                 continue
-            self.get_item(connection.source).replace_resource_from_downstream(old, new)
+            self.get_item(connection.source).replace_resources_from_downstream(old, new)
 
     def _update_item_resources(self, target_item, direction):
         """Updates up or downstream resources for a single project item.
