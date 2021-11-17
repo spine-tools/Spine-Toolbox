@@ -15,7 +15,6 @@ SpineDBFetcher class.
 :authors: M. Marin (KTH)
 :date:   13.3.2020
 """
-
 import itertools
 from PySide2.QtCore import Signal, Slot, QObject, QTimer
 from spinetoolbox.helpers import busy_effect, signal_waiter
@@ -83,10 +82,16 @@ class SpineDBFetcher(QObject):
 
     @busy_effect
     def _do_init_query(self, parent):
-        query = self._get_query(parent)
-        if self._query_count(query) == 0:
-            self._fetched_parents.add(parent)
-            parent.restart_fetching()
+        lock = self._db_mngr.db_map_locks.get(self._db_map)
+        if lock is None or not lock.tryLock():
+            return
+        try:
+            query = self._get_query(parent)
+            if self._query_count(query) == 0:
+                self._fetched_parents.add(parent)
+                parent.restart_fetching()
+        finally:
+            lock.unlock()
 
     def _get_query(self, parent):
         """Creates a query for parent. Stores both the query and the count."""
@@ -121,10 +126,16 @@ class SpineDBFetcher(QObject):
 
     @busy_effect
     def _do_fetch_more(self, parent):
-        query = self._get_query(parent)
-        iterator = self._get_iterator(parent, query)
-        chunk = next(iterator, [])
-        self._chunk_available.emit(parent, chunk)
+        lock = self._db_mngr.db_map_locks.get(self._db_map)
+        if lock is None or not lock.tryLock():
+            return
+        try:
+            query = self._get_query(parent)
+            iterator = self._get_iterator(parent, query)
+            chunk = next(iterator, [])
+            self._chunk_available.emit(parent, chunk)
+        finally:
+            lock.unlock()
 
     def receive_chunk(self, parent, chunk):
         if chunk:
@@ -184,13 +195,20 @@ class SpineDBFetcher(QObject):
 
     @busy_effect
     def _do_fetch_all(self, item_types):
-        for item_type in item_types:
-            query, _ = self._make_query_for_item_type(item_type)
-            for chunk in _make_iterator(query):
-                self._populate_commit_cache(item_type, chunk)
-                self._db_mngr.cache_items(item_type, {self._db_map: chunk})
-            self._fetched_item_types.add(item_type)
-        self._fetch_all_finished.emit()
+        lock = self._db_mngr.db_map_locks.get(self._db_map)
+        if lock is None or not lock.tryLock():
+            self._fetch_all_finished.emit()
+            return
+        try:
+            for item_type in item_types:
+                query, _ = self._make_query_for_item_type(item_type)
+                for chunk in _make_iterator(query):
+                    self._populate_commit_cache(item_type, chunk)
+                    self._db_mngr.cache_items(item_type, {self._db_map: chunk})
+                self._fetched_item_types.add(item_type)
+            self._fetch_all_finished.emit()
+        finally:
+            lock.unlock()
 
     def _populate_commit_cache(self, item_type, items):
         if item_type == "commit":
