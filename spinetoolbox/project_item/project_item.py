@@ -266,12 +266,12 @@ class ProjectItem(MetaObject):
         """Notifies direct predecessors that item's resources have changed."""
         self._project.notify_resource_changes_to_predecessors(self)
 
-    def _resource_to_predecessors_replaced(self, old, new):
-        """Notifies direct predecessors that one of item's resources has been replaced.
+    def _resources_to_predecessors_replaced(self, old, new):
+        """Notifies direct predecessors that item's resources have been replaced.
 
         Args:
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
+            old (list of ProjectItemResource): old resources
+            new (list of ProjectItemResource): new resources
         """
         self._project.notify_resource_replacement_to_predecessors(self, old, new)
 
