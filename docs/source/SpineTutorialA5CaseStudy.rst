@@ -187,7 +187,7 @@ Setting up a project
 #. Repeat the procedure to create a path from ‘Data Connection’ to ‘output’. Now the 
    project should look similar to this as shown below:
 
-   .. image:: img/item_connections.png
+   .. image:: img/items_connections.png
          :align: center
 
 #. Setup the arguments for the *SpineOpt* Tool:
@@ -251,7 +251,7 @@ ________________________________________
 #. Select the *input* Data Store item in the Design View. Go to *Data Store Properties* and click on 
    **Open editor**. This will open the newly created database in the Spine DB editor, looking similar to this:
 
-   .. image:: img/case_study_a5_spine_db_editor_import.png
+   .. image:: img/case_study_a5_db_editor_import.png
       :align: center
 
    |

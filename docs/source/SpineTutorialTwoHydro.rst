@@ -65,7 +65,7 @@ elements:
 
 Below is a schematic of the model. For clarity, the schematic only presents one power station:
 
-   .. image:: img/two_hydro_schematic.png
+   .. image:: img/two_hydro_schema.png
          :align: center
 
 Guide
@@ -162,7 +162,7 @@ Setting up a project
 #. Repeat the procedure to create a path from ‘Data Connection’ to ‘output’. Now the 
    project should look similar to this as shown below:
 
-   .. image:: img/two_hydro_item_connections.png
+   .. image:: img/items_connections.png
          :align: center
 
 #. Setup the arguments for the *SpineOpt* Tool:
