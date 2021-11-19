@@ -363,7 +363,7 @@
             {
               "map_type": "ParameterValue",
               "position": "hidden",
-              "value": "{\"data\": {\"2021-01-01T00:00:00\": 1000.0, \"2021-01-02T00:00:00\": 1000.0}}::time_series"
+              "value": "{\"data\": {\"2021-01-01T00:00:00\": 1000.0, \"2021-01-02T00:00:00\": 2644.0}}::time_series"
             }
           ]
         }
@@ -420,7 +420,7 @@
             {
               "map_type": "ParameterValue",
               "position": "hidden",
-              "value": "{\"data\": {\"2021-01-01T00:00:00\": 1200.0, \"2021-01-02T00:00:00\": 1200.0}}::time_series"
+              "value": "{\"data\": {\"2021-01-01T00:00:00\": 1200.0, \"2021-01-02T00:00:00\": 768.0}}::time_series"
             }
           ]
         }
@@ -2721,7 +2721,7 @@
       "12": "datetime",
       "13": "datetime",
       "14": "duration",
-      "15": "float",
+      "15": "string",
       "16": "string",
       "17": "string",
       "18": "string",
