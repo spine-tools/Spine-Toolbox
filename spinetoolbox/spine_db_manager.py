@@ -18,7 +18,7 @@ The SpineDBManager class
 
 import json
 import os
-from PySide2.QtCore import Qt, QObject, Signal, QThread
+from PySide2.QtCore import Qt, QObject, Signal, QThread, QMutex
 from PySide2.QtWidgets import QMessageBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont, QWindow
 from sqlalchemy.engine.url import URL
@@ -123,6 +123,9 @@ class SpineDBManager(QObject):
     scenario_alternatives_removed = Signal(object)
     # Fetched
     db_map_fetched = Signal(object)
+    # Closing
+    waiting_for_fetcher = Signal()
+    fetcher_waiting_over = Signal()
 
     def __init__(self, settings, parent):
         """Initializes the instance.
@@ -134,6 +137,7 @@ class SpineDBManager(QObject):
         super().__init__(parent)
         self.qsettings = settings
         self._db_maps = {}
+        self.db_map_locks = {}
         self._worker_thread = QThread()
         self._worker = SpineDBWorker(self)
         self._fetchers = {}
@@ -396,13 +400,25 @@ class SpineDBManager(QObject):
         db_map = self._db_maps.pop(url, None)
         if db_map is None:
             return
-        self._worker.close_db_map(db_map)
-        del self.undo_stack[db_map]
-        del self.undo_action[db_map]
-        del self.redo_action[db_map]
-        fetcher = self._fetchers.pop(db_map, None)
-        if fetcher is not None:
-            fetcher.deleteLater()
+        lock = self.db_map_locks.pop(db_map)
+        lock_failed_reported = False
+        while not lock.tryLock(50):
+            if not lock_failed_reported:
+                self.waiting_for_fetcher.emit()
+                lock_failed_reported = True
+            qApp.processEvents()
+        try:
+            fetcher = self._fetchers.pop(db_map, None)
+            if fetcher is not None:
+                fetcher.deleteLater()
+            self._worker.close_db_map(db_map)
+            del self.undo_stack[db_map]
+            del self.undo_action[db_map]
+            del self.redo_action[db_map]
+        finally:
+            lock.unlock()
+            if lock_failed_reported:
+                self.fetcher_waiting_over.emit()
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
@@ -476,6 +492,7 @@ class SpineDBManager(QObject):
         if err is not None:
             raise err
         self._db_maps[url] = db_map
+        self.db_map_locks[db_map] = QMutex(QMutex.Recursive)
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
         self.undo_action[db_map] = stack.createUndoAction(self)
         self.redo_action[db_map] = stack.createRedoAction(self)
@@ -1801,7 +1818,7 @@ class SpineDBManager(QObject):
         for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
             if isinstance(window, QWindow):
                 widget = QWidget.find(window.winId())
-                if isinstance(widget, MultiSpineDBEditor):
+                if isinstance(widget, MultiSpineDBEditor) and widget.accepting_new_tabs:
                     yield widget
 
     def get_all_spine_db_editors(self):

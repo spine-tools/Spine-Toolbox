@@ -17,7 +17,7 @@ Contains the MultiSpineDBEditor class.
 """
 
 import os
-from PySide2.QtWidgets import QToolBar, QWidget, QSizePolicy, QMenu
+from PySide2.QtWidgets import QMessageBox, QToolBar, QWidget, QSizePolicy, QMenu
 from PySide2.QtCore import Qt, Slot, QPoint, QSize
 from PySide2.QtGui import QIcon
 from .spine_db_editor import SpineDBEditor
@@ -40,6 +40,9 @@ class MultiSpineDBEditor(MultiTabWindow):
         """
         super().__init__(db_mngr.qsettings, "spineDBEditor")
         self.db_mngr = db_mngr
+        self.db_mngr.waiting_for_fetcher.connect(self._show_waiting_for_fetcher)
+        self.db_mngr.fetcher_waiting_over.connect(self._close_waiting_for_fetcher)
+        self._waiting_box = None
         self.settings_form = SpineDBEditorSettingsWidget(self)
         self.setStyleSheet(MAINWINDOW_SS)
         self.setWindowTitle("Spine DB Editor")
@@ -152,6 +155,25 @@ class MultiSpineDBEditor(MultiTabWindow):
         doc_url = f"{ONLINE_DOCUMENTATION_URL}/spine_db_editor/index.html"
         if not open_url(doc_url):
             self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
+
+    @Slot()
+    def _show_waiting_for_fetcher(self):
+        """Shows a message box to user informing that a tab is waiting for fetcher to finish working."""
+        if self._waiting_box is not None:
+            return
+        self._waiting_box = QMessageBox(
+            QMessageBox.Information, "Closing database", "Waiting for database to close...", QMessageBox.Ok, parent=self
+        )
+        self._waiting_box.button(QMessageBox.Ok).setText("I wait patiently")
+        self._waiting_box.open()
+
+    @Slot()
+    def _close_waiting_for_fetcher(self):
+        if self._waiting_box is None:
+            return
+        self._waiting_box.close()
+        self._waiting_box.deleteLater()
+        self._waiting_box = None
 
 
 class _FileOpenToolBar(QToolBar):

@@ -44,10 +44,15 @@ class MultiTabWindow(QMainWindow):
         self._hot_spot = None
         self._timer_id = None
         self._others = None
+        self._accepting_new_tabs = True
         self.restore_ui()
         self.connect_signals()
         for w in self.findChildren(QWidget):
             w.setFocusPolicy(Qt.ClickFocus)
+
+    @property
+    def accepting_new_tabs(self):
+        return self._accepting_new_tabs
 
     def _make_other(self):
         """Creates a new MultiTabWindow of this type.
@@ -123,6 +128,8 @@ class MultiTabWindow(QMainWindow):
             *args: parameters forwarded to :func:`MutliTabWindow._make_new_tab`
             **kwargs: parameters forwarded to :func:`MultiTabwindow._make_new_tab`
         """
+        if not self._accepting_new_tabs:
+            return
         tab = self._make_new_tab(*args, **kwargs)
         self._add_connect_tab(tab, self.new_tab_title)
 
@@ -134,6 +141,8 @@ class MultiTabWindow(QMainWindow):
             *args: parameters forwarded to :func:`MutliTabWindow._make_new_tab`
             **kwargs: parameters forwarded to :func:`MultiTabwindow._make_new_tab`
         """
+        if not self._accepting_new_tabs:
+            return
         tab = self._make_new_tab(*args, **kwargs)
         self._insert_connect_tab(index, tab, self.new_tab_title)
 
@@ -421,6 +430,7 @@ class MultiTabWindow(QMainWindow):
         self.qsettings.endGroup()
 
     def closeEvent(self, event):
+        self._accepting_new_tabs = False
         for k in range(self.tab_widget.count()):
             editor = self.tab_widget.widget(k)
             editor.close()
