@@ -226,7 +226,7 @@ ________________________________________
 #. Select the *input* Data Store item in the Design View. Go to *Data Store Properties* and click on 
    **Open editor**. This will open the newly created database in the Spine DB editor, looking similar to this:
 
-   .. image:: img/two_hydro_spine_db_editor.png
+   .. image:: img/two_hydro_db_editor.png
       :align: center
 
    |
@@ -263,7 +263,7 @@ class, and select electricity_load. Next, go to Relationship parameter value and
 cell under value. The Parameter value editor will pop up. You should see something like this:
 
 
-   .. image:: img/two_hydro_output_electricity_load_unit_flow.png
+   .. image:: img/two_hydro_output_electricity_unit_flow.png
       :align: center
 
 
