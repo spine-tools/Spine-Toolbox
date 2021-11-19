@@ -20,7 +20,7 @@
 Spine Tutorial - Simple Hydro Power Planning
 ********************************************
 
-Welcome to the Spine Toolbox's tutorial of a simple hydro power planning problem. 
+Welcome to this Spine Toolbox tutorial of a simple hydro power planning problem. 
 The tutorial models one day of operation of two hydrodologically-coupled hydro power power plants.
 
 .. contents::
@@ -33,19 +33,19 @@ Model assumptions
 -----------------
 For each hydro power plant, the following information is known.
 
-- The capacity, or the maximum electricity output.
-- The maximum amount of water the reservoir can hold.
+- The capacity, or the maximal electricity output.
+- The maximal amount of water the reservoirs can store.
 - The content of the reservoir at the beginning of the simulation period.
-- The minimum amount of spilled water required. Spilled water does not produce any electricity as it 
+- The minimal amount of spilled water required. Spilled water does not produce any electricity as it 
   it does not go through the turbine; it helps the fish to pass the hydro power plant.
-- The minimum amount of total water flow, spilled + discharged required. 
+- The minimal amount of total water flow, spilled + discharged required. 
 - The water delay time between power plants is neglected.
 - The local inflow, or amount of water that naturally enters the reservoir at every hour. In this 
   study, it is assumed constant over the entire simulation period.
 
-The system is operated so as to maximize total profit over the day. As a simple exercise the 
+The system is operated so as to maximize total profit over the day. In this simple exercise, the 
 value of stored water (contained in the reservoirs at the end of the planning period) is not taken into account. Capacity 
-constraints, maximum reservoir level constrains, and so on are limits the system.
+constraints, maximal reservoir level constrains, and so on are limits the system.
 
 Modelling choices
 -----------------
@@ -90,7 +90,7 @@ settings, etc.
 
 To create a new project, select **File -> New project…** from Spine Toolbox main
 menu. Browse to a location where you want to create the project and create a new
-folder for it, e.g. ‘Two_hydro’, and then click **Select Folder**.
+folder for it, e.g., ‘Two_hydro’, and then click **Select Folder**.
 
 Configuring SpineOpt
 ____________________
@@ -127,7 +127,7 @@ Setting up a project
 --------------------
 
 #. Drag the Data Store icon |ds_icon| from the tool bar and drop it into the
-   *Design View*. This will open the *Add Data Store* dialog. Type ‘input’ as the Data
+   *Design View*. This will open the *Add Data Store* dialogue. Type ‘input’ as the Data
    Store name and click **Ok**.
 #. Repeat the above procedure to create a Data Store called ‘output’.
 #. Create a database for the ‘input’ Data Store:
@@ -140,13 +140,13 @@ Setting up a project
 #. Repeat the above procedure to create a database for the ‘output’ Data Store.
 #. Click on the small arrow next to the Tool icon |tool_icon| and drag the
    ‘SpineOpt’ item from the drop-down menu into the *Design View*. This will open the
-   Add *Tool dialog*. Type ‘SpineOpt’ as the Tool name and click **Ok**.
+   Add *Tool dialogue*. Type ‘SpineOpt’ as the Tool name and click **Ok**.
 
    .. note:: Each item in the *Design view* is equipped with three *connectors*
       (the small squares at the item boundaries).
 
 #. Drag the Data Connection icon |dc_icon| from the tool bar and drop it into the
-   Design View. This will open the *Add Data connection dialog*. Type in ‘Data
+   Design View. This will open the *Add Data connection dialogue*. Type in ‘Data
    Connection’ and click on **Ok**.
 #. To import the model of the planning problem into the Spine database, you need
    to create an *Import specification*. Create an *Import specification* by clicking
@@ -155,7 +155,7 @@ Setting up a project
 #. Type ‘Import Model’ as the name of the specification. Save the specification by 
    using **Ctrl+S** and close the window.
 #. Drag the newly created Import Model Importer item icon |importer_icon| from the tool bar and
-   drop it into the *Design View*. This will open the Add Importer dialog. Type in
+   drop it into the *Design View*. This will open the Add Importer dialogue. Type in
    ‘Import Model’ and click on **Ok**.
 #. Connect ‘Data Connection’ with ‘Import Model’ by first clicking on one of the
    Data Connection’s connectors and then on one of the Importer’s connectors.
@@ -240,13 +240,12 @@ ________________________________________
    then see classes like ‘commodity’, ‘connection’ and ‘model’ under the root node in the *Object tree* (on
    the left) with colourful icons.
 #. From the menu in the top right corner, select **Session -> Commit**. Enter ‘Import SpineOpt
-   template’ as message in the popup dialog and click **Commit**. Exit the Spine DB editor.
+   template’ as message in the popup dialogue and click **Commit**. Exit the Spine DB editor.
 
    .. note:: The SpineOpt template contains the fundamental object and relationship classes,
       as well as parameter definitions, that SpineOpt recognizes and expects.
       You can think of it as the *generic structure* of the model,
       as opposed to the *specific data* for a particular instance.
-      In the remainder of this section, we will add that specific data for the Skellefte river.
 
 Execute the model
 _________________
@@ -258,10 +257,9 @@ click on Execute selection |execute_selection|.
 Examining the results
 ---------------------
 
-Select the output data store and open the Spine DB editor.
-
-To checkout the flow on the electricity load (i.e., the total electricity production in the system), go to Object tree, expand the unit object 
-class, and select electricity_load, as illustrated in the picture above. Next, go to Relationship parameter value and double-click the first 
+Select the output data store and open the Spine DB editor. To checkout the flow on the electricity load 
+(i.e., the total electricity production in the system), go to Object tree, expand the unit object 
+class, and select electricity_load. Next, go to Relationship parameter value and double-click the first 
 cell under value. The Parameter value editor will pop up. You should see something like this:
 
 

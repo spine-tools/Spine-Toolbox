@@ -22,7 +22,7 @@
 Case Study A5 tutorial using the Importer
 *****************************************
 
-Welcome to Spine Toolbox's Case Study A5 tutorial.
+Welcome to this Spine Toolbox Case Study tutorial.
 Case Study A5 is one of the Spine Project case studies designed to verify
 Toolbox and Model capabilities.
 To this end, it *reproduces* an already existing study about hydropower
@@ -43,19 +43,19 @@ Model assumptions
 -----------------
 For each power station in the river, the following information is known:
 
-- The capacity, or maximum electricity output. This datum also provides the maximum water discharge
+- The capacity, or maximal electricity output. This datum also provides the maximal water discharge
   as per the efficiency curve (see next point).
 - The efficiency curve, or conversion rate from water to electricity.
   In this study, a piece-wise linear efficiency with two segments is assumed.
   Moreover, this curve is monotonically decreasing, i.e., the efficiency in the first segment is strictly greater
   than the efficiency in the second segment.
-- The maximum magazine level, or amount of water that can be stored in the reservoir.
-- The magazine level at the beginning of the simulation period, and at the end.
-- The minimum amount of water that the plant needs to discharge at every hour.
+- The maximal reservoir level (maximal amount of water that can be stored in the reservoir).
+- The reservoir level at the beginning of the simulation period and at the end.
+- The minimal amount of water that the plant must discharge at every hour.
   This is usually zero (except for one of the plants).
-- The minimum amount of water that needs to be *spilled* at every hour.
-  Spilled water does not go through the turbine and thus does not serve to produce electricity;
-  it just helps keeping the magazine level at bay.
+- The minimal amount of water that needs to be *spilled* at every hour.
+  Spilled water does not go through the turbine and thus is not used for producing electricity;
+  it just helps keeping the reservoir level at bay.
 - The downstream plant, or next plant in the river course.
 - The time that it takes for the water to reach the downstream plant.
   This time can be different depending on whether the water is discharged (goes through the turbine) or spilled.
@@ -64,12 +64,9 @@ For each power station in the river, the following information is known:
 - The hourly average water discharge. It is assumed that before the beginning of the simulation,
   this amount of water has constantly been discharged at every hour.
 
-The system is operated so as to maximize total profit over the week,
-while respecting capacity constraints, maximum magazine level constrains, and so on.
-Hourly profit per plant is simply computed as the product of the electricity price and the production,
-minus a penalty for changes on the water discharge in two consecutive hours.
-This penalty is computed as the product of a constant penalty factor, common to all plants,
-and the absolute value of the difference in discharge with respect to the previous hour.
+The system is operated so as to maximize the total profit over the planning week,
+while respecting capacity constraints, maximal reservoir level constrains, etc.
+Hourly profit per plant is simply computed as the product of the electricity price and the production.
 
 Modelling choices
 -----------------
@@ -118,7 +115,7 @@ settings, etc.
 
 To create a new project, select **File -> New project…** from Spine Toolbox main
 menu. Browse to a location where you want to create the project and create a new
-folder for it, e.g. ‘Exercise 6.16’, and then click **Select Folder**.
+folder for it, e.g. ‘cs_a5_importer’, and then click **Select Folder**.
 
 Configuring SpineOpt
 ____________________
@@ -155,7 +152,7 @@ Setting up a project
 --------------------
 
 #. Drag the Data Store icon |ds_icon| from the tool bar and drop it into the
-   *Design View*. This will open the *Add Data Store* dialog. Type ‘input’ as the Data
+   *Design View*. This will open the *Add Data Store* dialogue. Type ‘input’ as the Data
    Store name and click **Ok**.
 #. Repeat the above procedure to create a Data Store called ‘output’.
 #. Create a database for the ‘input’ Data Store:
@@ -168,9 +165,9 @@ Setting up a project
 #. Repeat the above procedure to create a database for the ‘output’ Data Store.
 #. Click on the small arrow next to the Tool icon |tool_icon| and drag the
    ‘SpineOpt’ item from the drop-down menu into the *Design View*. This will open the
-   Add *Tool dialog*. Type ‘SpineOpt’ as the Tool name and click **Ok**.
+   Add *Tool dialogue*. Type ‘SpineOpt’ as the Tool name and click **Ok**.
 #. Drag the Data Connection icon |dc_icon| from the tool bar and drop it into the
-   Design View. This will open the *Add Data connection dialog*. Type in ‘Data
+   Design View. This will open the *Add Data connection dialogue*. Type in ‘Data
    Connection’ and click on **Ok**.
 #. To import the model of the planning problem into the Spine database, you need
    to create an *Import specification*. Create an *Import specification* by clicking
@@ -179,7 +176,7 @@ Setting up a project
 #. Type ‘Import Model’ as the name of the specification. Save the specification by 
    using **Ctrl+S** and close the window.
 #. Drag the newly created Import Model Importer item icon |importer_icon| from the tool bar and
-   drop it into the *Design View*. This will open the Add Importer dialog. Type in
+   drop it into the *Design View*. This will open the Add Importer dialogue. Type in
    ‘Import Model’ and click on **Ok**.
 
    .. note:: Each item in the *Design view* is equipped with three *connectors*
@@ -266,9 +263,9 @@ ________________________________________
    select the template file you previously downloaded. (Tip: Make sure you search for a folder with .json 
    ending.) The contents of that file will be imported into the current database, and you should 
    then see classes like ‘commodity’, ‘connection’ and ‘model’ under the root node in the *Object tree* (on
-   the left) with colorfull icons.
+   the left) with colourful icons.
 #. From the menu in the top right corner, select **Session -> Commit**. Enter ‘Import SpineOpt
-   template’ as message in the popup dialog and click **Commit**. Exit the Spine DB editor.
+   template’ as message in the popup dialogue and click **Commit**. Exit the Spine DB editor.
 
    .. note:: The SpineOpt template contains the fundamental object and relationship classes,
       as well as parameter definitions, that SpineOpt recognizes and expects.
@@ -279,8 +276,8 @@ ________________________________________
 Execute the model
 _________________
 
-Finally, the project is ready to be executed. Hold **Ctrl**, select *SpineOpt* and *output*. Directly, 
-click on Excecute selection |execute_selection|.
+Finally, the project is ready to be executed. Hold **Ctrl**, select *SpineOpt* and *output*. Directly 
+click on Execute selection |execute_selection|.
 
 
 Examining the results
