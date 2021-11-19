@@ -1818,7 +1818,7 @@ class SpineDBManager(QObject):
         for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
             if isinstance(window, QWindow):
                 widget = QWidget.find(window.winId())
-                if isinstance(widget, MultiSpineDBEditor):
+                if isinstance(widget, MultiSpineDBEditor) and widget.accepting_new_tabs:
                     yield widget
 
     def get_all_spine_db_editors(self):
