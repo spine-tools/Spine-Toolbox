@@ -43,8 +43,8 @@ For each hydro power plant, the following information is known.
 - The local inflow, or amount of water that naturally enters the reservoir at every hour. In this 
   study, it is assumed constant over the entire simulation period.
 
-The system is operated so as to maximize total profit over the day, while taking into account the 
-value of the water contained in the reservoirs at the end of the day. Capacity 
+The system is operated so as to maximize total profit over the day. As a simple exercise the 
+value of stored water (contained in the reservoirs at the end of the planning period) is not taken into account. Capacity 
 constraints, maximum reservoir level constrains, and so on are limits the system.
 
 Modelling choices
