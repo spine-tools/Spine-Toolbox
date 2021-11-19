@@ -55,9 +55,11 @@ updated with new releases.
 
         python -m pipx install spinetoolbox
 
-That’s it!
+   or get the latest development version using
 
-To launch Spine Toolbox, open a terminal and run
+        python -m pipx install git+https://github.com/Spine-project/spinetoolbox-dev
+
+That’s it! To launch Spine Toolbox, open a terminal and run
 
     spinetoolbox
 
@@ -67,6 +69,9 @@ If for some reason the command is not found, the executable can be found under
 To update Spine Toolbox to the latest available release, open a terminal and run
 
     python -m pipx upgrade spinetoolbox
+
+Here, replace `spinetoolbox` with `spinetoolbox-dev` if you installed the latest
+development version.
 
 
 ### Windows 64-bit installer package
