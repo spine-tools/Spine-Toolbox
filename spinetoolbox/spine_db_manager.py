@@ -43,7 +43,6 @@ from spinedb_api import (
     get_data_for_import,
     import_data,
     export_data,
-    create_new_spine_database,
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
