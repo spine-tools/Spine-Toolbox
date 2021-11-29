@@ -48,7 +48,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.selected_items = list()
         self.removed_items = list()
         self.hidden_items = dict()
-        self.pruned_entity_ids = dict()
+        self.pruned_db_map_entity_ids = dict()
         self.heat_map_items = list()
         self._point_value_tuples_per_parameter_name = dict()  # Used in the heat map menu
         self._hovered_obj_item = None
@@ -187,8 +187,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._show_hidden_menu.setEnabled(any(self.hidden_items.values()))
         self._show_all_hidden_action.setEnabled(bool(self.hidden_items))
         self._prune_selected_action.setEnabled(bool(self.selected_items))
-        self._restore_pruned_menu.setEnabled(any(self.pruned_entity_ids.values()))
-        self._restore_all_pruned_action.setEnabled(any(self.pruned_entity_ids.values()))
+        self._restore_pruned_menu.setEnabled(any(self.pruned_db_map_entity_ids.values()))
+        self._restore_all_pruned_action.setEnabled(any(self.pruned_db_map_entity_ids.values()))
         self._prune_selected_action.setText(f"Prune {self._get_selected_entity_names()}")
         self._rebuild_action.setEnabled(has_graph)
         self._zoom_action.setEnabled(has_graph)
@@ -196,7 +196,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._export_as_pdf_action.setEnabled(has_graph)
         self._items_per_db_map_class = {}
         for item in self.entity_items:
-            key = f"{item.entity_class_name}@{item.db_map.codename}"
+            key = f"{item.entity_class_name}@{item.display_database}"
             self._items_per_db_map_class.setdefault(key, list()).append(item)
         self._hide_classes_menu.clear()
         self._hide_classes_menu.setEnabled(bool(self._items_per_db_map_class))
@@ -204,7 +204,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._prune_classes_menu.setEnabled(bool(self._items_per_db_map_class))
         for key in sorted(self._items_per_db_map_class - self.hidden_items.keys()):
             self._hide_classes_menu.addAction(key)
-        for key in sorted(self._items_per_db_map_class.keys() - self.pruned_entity_ids.keys()):
+        for key in sorted(self._items_per_db_map_class.keys() - self.pruned_db_map_entity_ids.keys()):
             self._prune_classes_menu.addAction(key)
         # FIXME: The heap map doesn't seem to be working nicely
         # self._parameter_heat_map_menu.setEnabled(has_graph)
@@ -247,11 +247,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Removes selected items."""
         if not self.selected_items:
             return
-        db_map_typed_data = {}
-        for item in self.selected_items:
-            db_map, entity_id = item.db_map_entity_id
-            db_map_typed_data.setdefault(db_map, {}).setdefault(item.entity_type, set()).add(entity_id)
-        self.db_mngr.remove_items(db_map_typed_data)
+        selected = {
+            "object": [item for item in self.selected_items if isinstance(item, ObjectItem)],
+            "relationship": [item for item in self.selected_items if isinstance(item, RelationshipItem)],
+        }
+        self._spine_db_editor.show_remove_entity_tree_items_form(selected)
 
     def _get_selected_entity_names(self):
         if not self.selected_items:
@@ -306,7 +306,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Prunes selected items."""
         entity_ids = {x.db_map_entity_id for x in self.selected_items}
         key = self._get_selected_entity_names()
-        self.pruned_entity_ids[key] = entity_ids
+        self.pruned_db_map_entity_ids[key] = entity_ids
         self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
 
@@ -317,7 +317,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         item = next(iter(self._items_per_db_map_class[key]))
         class_id = item.entity_class_id
         db_map = item.db_map
-        self.pruned_entity_ids[key] = {
+        self.pruned_db_map_entity_ids[key] = {
             (db_map, x["id"])
             for item_type in ("object", "relationship")
             for x in self.db_mngr.get_items_by_field(db_map, item_type, "class_id", class_id, only_visible=False)
@@ -328,14 +328,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def restore_all_pruned_items(self, checked=False):
         """Reinstates all pruned items."""
-        self.pruned_entity_ids.clear()
+        self.pruned_db_map_entity_ids.clear()
         self._spine_db_editor.build_graph()
 
     @Slot("QAction")
     def restore_pruned_items(self, action):
         """Reinstates some pruned items."""
         key = action.text()
-        if self.pruned_entity_ids.pop(key, None) is not None:
+        if self.pruned_db_map_entity_ids.pop(key, None) is not None:
             action = next(iter(a for a in self._restore_pruned_menu.actions() if a.text() == key))
             self._restore_pruned_menu.removeAction(action)
             self._spine_db_editor.build_graph()

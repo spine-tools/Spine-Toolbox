@@ -94,7 +94,7 @@ class SpineDBFetcher(QObject):
             lock.unlock()
 
     def _get_query(self, parent):
-        """Creates a query for parent. Stores both the query and the count."""
+        """Creates a query for parent. Stores both the query and whether or not it has elements."""
         if parent not in self._queries:
             query = self._make_query_for_parent(parent)
             key = self._make_query_key(query)

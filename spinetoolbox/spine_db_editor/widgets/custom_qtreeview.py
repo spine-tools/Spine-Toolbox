@@ -185,7 +185,7 @@ class EntityTreeView(CopyTreeView):
 
     def remove_selected(self):
         """Removes selected indexes using the connected Spine db editor."""
-        self._spine_db_editor.show_remove_entity_tree_items_form(self._selected_indexes)
+        self._spine_db_editor.remove_entity_tree_items(self._selected_indexes)
 
     def manage_relationships(self):
         self._spine_db_editor.show_manage_relationships_form(self._context_item)

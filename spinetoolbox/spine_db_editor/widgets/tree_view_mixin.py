@@ -190,16 +190,6 @@ class TreeViewMixin:
         dialog = EditRelationshipClassesDialog(self, self.db_mngr, items)
         dialog.show()
 
-    @Slot()
-    def show_remove_alternative_tree_items_form(self):
-        """Shows form to remove items from object treeview."""
-        selected = {
-            item_type: [ind.model().item_from_index(ind) for ind in indexes]
-            for item_type, indexes in self.alternative_scenario_model.selected_indexes.items()
-        }
-        dialog = RemoveEntitiesDialog(self, self.db_mngr, selected)
-        dialog.show()
-
     def show_edit_relationships_form(self, items):
         if not items:
             return
@@ -215,12 +205,15 @@ class TreeViewMixin:
             dialog.show()
 
     @Slot(dict)
-    def show_remove_entity_tree_items_form(self, selected_indexes):
+    def remove_entity_tree_items(self, selected_indexes):
         """Shows form to remove items from object treeview."""
         selected = {
             item_type: [ind.model().item_from_index(ind) for ind in indexes]
             for item_type, indexes in selected_indexes.items()
         }
+        self.show_remove_entity_tree_items_form(selected)
+
+    def show_remove_entity_tree_items_form(self, selected):
         dialog = RemoveEntitiesDialog(self, self.db_mngr, selected)
         dialog.show()
 

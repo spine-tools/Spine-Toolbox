@@ -149,13 +149,15 @@ class ParameterViewMixin:
         rel_items = selected_items["relationship"]
         active_objs = {}
         for x in obj_items:
-            active_objs.setdefault(x.db_map, []).append(x.db_representation)
+            for db_map in x.db_maps:
+                active_objs.setdefault(db_map, []).append(x.db_representation(db_map))
         cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr.db_map_ids(active_objs))
         active_rels = {}
         for x in rel_items:
-            active_rels.setdefault(x.db_map, []).append(x.db_representation)
+            for db_map in x.db_maps:
+                active_rels.setdefault(db_map, []).append(x.db_representation(db_map))
         for db_map, rels in cascading_rels.items():
-            active_rels.setdefault(x.db_map, []).extend(rels)
+            active_rels.setdefault(db_map, []).extend(rels)
         self._filter_class_ids = {}
         for db_map, items in active_objs.items():
             self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})

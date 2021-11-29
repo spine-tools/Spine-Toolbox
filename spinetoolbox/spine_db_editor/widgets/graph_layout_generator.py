@@ -86,7 +86,7 @@ class ProgressBarWidget(QWidget):
             self.stop_button.clicked.disconnect(self._layout_gen.stop)
         self._layout_gen = layout_generator
         self._label.setText(f"Processing {self._layout_gen.vertex_count} elements")
-        self._progress_bar.setRange(0, self._layout_gen.iterations - 1)
+        self._progress_bar.setRange(0, self._layout_gen.max_iters - 1)
         self._previews_button.toggled.connect(self._layout_gen.set_show_previews)
         self.stop_button.clicked.connect(self._layout_gen.stop)
         self._layout_gen.finished.connect(self.hide)
@@ -117,7 +117,7 @@ class GraphLayoutGenerator(QRunnable):
         dst_inds=(),
         spread=0,
         heavy_positions=None,
-        iterations=12,
+        max_iters=12,
         weight_exp=-2,
     ):
         super().__init__()
@@ -132,7 +132,7 @@ class GraphLayoutGenerator(QRunnable):
         self.dst_inds = dst_inds
         self.spread = spread
         self.heavy_positions = heavy_positions
-        self.iterations = max(3, round(iterations * (1 - len(heavy_positions) / self.vertex_count)))
+        self.max_iters = max(3, round(max_iters * (1 - len(heavy_positions) / self.vertex_count)))
         self.weight_exp = weight_exp
         self.initial_diameter = (self.vertex_count ** (0.5)) * self.spread
         self._signals = self.Signals()
@@ -161,10 +161,9 @@ class GraphLayoutGenerator(QRunnable):
         self.finished.emit(self._id)
 
     def shortest_path_matrix(self):
-        """Returns the shortest-path matrix.
-        """
+        """Returns the shortest-path matrix."""
         if not self.src_inds:
-            # Introduce fake pair of links to help 'spreadness'
+            # Graph with no edges, just vertices. Introduce fake pair of edges to help 'spreadness'.
             self.src_inds = [self.vertex_count, self.vertex_count]
             self.dst_inds = [np.random.randint(0, self.vertex_count), np.random.randint(0, self.vertex_count)]
             self.vertex_count += 1
@@ -195,8 +194,7 @@ class GraphLayoutGenerator(QRunnable):
         return matrix
 
     def sets(self):
-        """Returns sets of vertex pairs indices.
-        """
+        """Returns sets of vertex pairs indices."""
         sets = []
         for n in range(1, self.vertex_count):
             pairs = np.zeros((self.vertex_count - n, 2), int)  # pairs on diagonal n
@@ -239,10 +237,10 @@ class GraphLayoutGenerator(QRunnable):
         weights = matrix ** self.weight_exp  # bus-pair weights (lower for distant buses)
         maxstep = 1 / np.min(weights[mask])
         minstep = 1 / np.max(weights[mask])
-        lambda_ = np.log(minstep / maxstep) / (self.iterations - 1)  # exponential decay of allowed adjustment
+        lambda_ = np.log(minstep / maxstep) / (self.max_iters - 1)  # exponential decay of allowed adjustment
         sets = self.sets()  # construct sets of bus pairs
         self.msg.emit("Step 2 of 2: Generating layout...")
-        for iteration in range(self.iterations):
+        for iteration in range(self.max_iters):
             if self._stopped:
                 break
             if self._show_previews:
