@@ -178,7 +178,7 @@ class UrlToolBar(QToolBar):
 
     def set_current_urls(self, urls):
         filtered = any(filter_configs(url) for url in urls)
-        color = Qt.blue if filtered else None
+        color = Qt.magenta if filtered else None
         self._filter_action.setIcon(QIcon(CharIconEngine("\uf0b0", color=color)))
         self._line_edit.setText("; ".join(urls))
 

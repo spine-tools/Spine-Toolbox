@@ -42,7 +42,7 @@ class SpineDBFetcher(QObject):
         self._db_map = db_map
         self._parents = {}
         self._queries = {}
-        self._query_counts = {}
+        self._query_has_elements_by_key = {}
         self._query_keys = {}
         self._iterators = {}
         self._busy_parents = set()
@@ -62,7 +62,7 @@ class SpineDBFetcher(QObject):
             self._iterators.pop(parent, None)
             query = self._queries.pop(parent)
             key = self._query_keys.pop(query)
-            self._query_counts.pop(key, None)
+            self._query_has_elements_by_key.pop(key, None)
             parent.restart_fetching()
 
     def can_fetch_more(self, parent):
@@ -73,7 +73,7 @@ class SpineDBFetcher(QObject):
             # Query not made yet. Init query and return True
             self._init_query_requested.emit(parent)
             return True
-        return self._query_count(query) > 0
+        return self._query_has_elements(query)
 
     @Slot(object)
     def _init_query(self, parent):
@@ -87,7 +87,7 @@ class SpineDBFetcher(QObject):
             return
         try:
             query = self._get_query(parent)
-            if self._query_count(query) == 0:
+            if not self._query_has_elements(query):
                 self._fetched_parents.add(parent)
                 parent.restart_fetching()
         finally:
@@ -98,13 +98,13 @@ class SpineDBFetcher(QObject):
         if parent not in self._queries:
             query = self._make_query_for_parent(parent)
             key = self._make_query_key(query)
-            if key not in self._query_counts:
-                self._query_counts[key] = query.count()
+            if key not in self._query_has_elements_by_key:
+                self._query_has_elements_by_key[key] = bool(query.first())
             self._queries[parent] = query
         return self._queries[parent]
 
-    def _query_count(self, query):
-        return self._query_counts[self._make_query_key(query)]
+    def _query_has_elements(self, query):
+        return self._query_has_elements_by_key[self._make_query_key(query)]
 
     def _make_query_key(self, query):
         if query not in self._query_keys:
