@@ -212,6 +212,16 @@ class SpineDBEditorSettingsMixin:
         self.set_auto_expand_objects(auto_expand_objects)
         self.set_merge_dbs(merge_dbs)
 
+    @Slot(bool)
+    def set_auto_expand_objects(self, checked=False):
+        for db_editor in self.db_mngr.get_all_spine_db_editors():
+            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
+
+    @Slot(bool)
+    def set_merge_dbs(self, checked=False):
+        for db_editor in self.db_mngr.get_all_spine_db_editors():
+            db_editor.ui.graphicsView.set_merge_dbs(checked)
+
 
 class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     """A widget to change user's preferred settings, but only for the Spine db editor."""
@@ -228,15 +238,9 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
         super().show()
         self.read_settings()
 
-    @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
-        for db_editor in self._multi_db_editor.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
-
-    @Slot(bool)
-    def set_merge_dbs(self, checked=False):
-        for db_editor in self._multi_db_editor.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_merge_dbs(checked)
+    @property
+    def db_mngr(self):
+        return self._multi_db_editor.db_mngr
 
 
 class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
@@ -332,10 +336,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         wizard = AddUpSpineOptWizard(self, julia_exe, julia_project)
         wizard.show()
 
-    @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
-        for db_editor in self._toolbox.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
+    @property
+    def db_mngr(self):
+        return self._toolbox.db_mngr
 
     @Slot(bool)
     def browse_gams_button_clicked(self, checked=False):
