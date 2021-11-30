@@ -522,7 +522,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.viewport().unsetCursor()
 
     def _cross_hairs_has_valid_target(self):
-        db_map = self.cross_hairs_items[0].first_db_map
+        db_map = self.relationship_class["db_map"]
         return self._hovered_obj_item.entity_class_id(db_map) in self.relationship_class["object_class_ids_to_go"]
 
     def mousePressEvent(self, event):
@@ -535,7 +535,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self.clear_cross_hairs_items()
             return
         if self._cross_hairs_has_valid_target():
-            db_map = self.cross_hairs_items[0].first_db_map
+            db_map = self.relationship_class["db_map"]
             self.relationship_class["object_class_ids_to_go"].remove(self._hovered_obj_item.entity_class_id(db_map))
             if self.relationship_class["object_class_ids_to_go"]:
                 # Add hovered as member and keep going, we're not done yet
