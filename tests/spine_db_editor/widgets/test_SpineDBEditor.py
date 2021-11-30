@@ -45,7 +45,7 @@ class TestSpineDBEditor(
 
     @staticmethod
     def _object(*args):
-        return dict(zip(["id", "class_id", "name", "description"], args))
+        return dict(zip(["id", "class_id", "class_name", "name", "description"], args))
 
     @staticmethod
     def _relationship_class(*args):
@@ -55,7 +55,16 @@ class TestSpineDBEditor(
     def _relationship(*args):
         return dict(
             zip(
-                ["id", "class_id", "name", "class_name", "object_class_id_list", "object_id_list", "object_name_list"],
+                [
+                    "id",
+                    "class_id",
+                    "name",
+                    "class_name",
+                    "object_class_id_list",
+                    "object_class_name_list",
+                    "object_id_list",
+                    "object_name_list",
+                ],
                 args,
             )
         )
@@ -162,15 +171,16 @@ class TestSpineDBEditor(
             cls.dog_class["name"] + "," + cls.fish_class["name"],
             None,
         )
-        cls.nemo_object = cls._object(1, cls.fish_class["id"], 'nemo', 'The lost one.')
-        cls.pluto_object = cls._object(2, cls.dog_class["id"], 'pluto', "Mickey's.")
-        cls.scooby_object = cls._object(3, cls.dog_class["id"], 'scooby', 'Scooby-Dooby-Doo.')
+        cls.nemo_object = cls._object(1, cls.fish_class["id"], cls.fish_class["name"], 'nemo', 'The lost one.')
+        cls.pluto_object = cls._object(2, cls.dog_class["id"], cls.dog_class["name"], 'pluto', "Mickey's.")
+        cls.scooby_object = cls._object(3, cls.dog_class["id"], cls.dog_class["name"], 'scooby', 'Scooby-Dooby-Doo.')
         cls.pluto_nemo_rel = cls._relationship(
             4,
             cls.dog_fish_class["id"],
             "dog__fish_pluto__nemo",
             cls.dog_fish_class["name"],
             str(cls.dog_class["id"]) + "," + str(cls.fish_class["id"]),
+            cls.dog_class["name"] + "," + cls.fish_class["name"],
             str(cls.pluto_object["id"]) + "," + str(cls.nemo_object["id"]),
             cls.pluto_object["name"] + "," + cls.nemo_object["name"],
         )
@@ -180,6 +190,7 @@ class TestSpineDBEditor(
             "fish__dog_nemo__pluto",
             cls.fish_dog_class["name"],
             str(cls.fish_class["id"]) + "," + str(cls.dog_class["id"]),
+            cls.fish_class["name"] + "," + cls.dog_class["name"],
             str(cls.nemo_object["id"]) + "," + str(cls.pluto_object["id"]),
             cls.nemo_object["name"] + "," + cls.pluto_object["name"],
         )
@@ -189,6 +200,7 @@ class TestSpineDBEditor(
             "fish__dog_nemo__scooby",
             cls.fish_dog_class["name"],
             str(cls.fish_class["id"]) + "," + str(cls.dog_class["id"]),
+            cls.fish_class["name"] + "," + cls.dog_class["name"],
             str(cls.nemo_object["id"]) + "," + str(cls.scooby_object["id"]),
             cls.nemo_object["name"] + "," + cls.scooby_object["name"],
         )

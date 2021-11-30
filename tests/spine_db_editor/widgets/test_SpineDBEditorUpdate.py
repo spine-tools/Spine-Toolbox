@@ -41,7 +41,9 @@ class TestSpineDBEditorUpdateMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
-        self.nemo_object = self._object(1, self.fish_class["id"], 'dory', 'The one that forgets.')
+        self.nemo_object = self._object(
+            1, self.fish_class["id"], self.fish_class["name"], 'dory', 'The one that forgets.'
+        )
         self.db_mngr.objects_updated.emit({self.mock_db_map: [self.nemo_object]})
         root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(1)
