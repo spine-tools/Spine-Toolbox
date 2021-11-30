@@ -206,7 +206,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>4</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="General">
        <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1099,6 +1099,13 @@
              </property>
              <property name="text">
               <string>Auto-expand objects by default in Entity graph</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="checkBox_merge_dbs">
+             <property name="text">
+              <string>Merge databases by default in Entity graph</string>
              </property>
             </widget>
            </item>

@@ -55,7 +55,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.relationship_class = None
         self.cross_hairs_items = []
         self.auto_expand_objects = None
+        self.merge_dbs = None
         self._auto_expand_objects_action = None
+        self._merge_dbs_action = None
         self._add_objects_action = None
         self._select_pos_param_action = None
         self._save_pos_action = None
@@ -108,13 +110,16 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.populate_context_menu()
 
     def populate_context_menu(self):
+        self.auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
+        self.merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
         self._auto_expand_objects_action = self._menu.addAction("Auto-expand objects")
         self._auto_expand_objects_action.setCheckable(True)
-        self.auto_expand_objects = (
-            self._spine_db_editor.qsettings.value("appSettings/autoExpandObjects", defaultValue="false") == "true"
-        )
         self._auto_expand_objects_action.setChecked(self.auto_expand_objects)
-        self._auto_expand_objects_action.toggled.connect(self.set_auto_expand_objects)
+        self._auto_expand_objects_action.triggered.connect(self.set_auto_expand_objects)
+        self._merge_dbs_action = self._menu.addAction("Merge databases")
+        self._merge_dbs_action.setCheckable(True)
+        self._merge_dbs_action.setChecked(self.merge_dbs)
+        self._merge_dbs_action.triggered.connect(self.set_merge_dbs)
         self._menu.addSeparator()
         self._add_objects_action = self._menu.addAction("Add objects", self.add_objects_at_position)
         self._menu.addSeparator()
@@ -225,9 +230,19 @@ class EntityQGraphicsView(CustomQGraphicsView):
         return menu
 
     @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
-        self.auto_expand_objects = checked
+    def set_auto_expand_objects(self, checked=False, save_setting=True):
+        if save_setting:
+            self._qsettings.setValue("appSettings/autoExpandObjects", "true" if checked else "false")
         self._auto_expand_objects_action.setChecked(checked)
+        self.auto_expand_objects = checked
+        self._spine_db_editor.build_graph()
+
+    @Slot(bool)
+    def set_merge_dbs(self, checked=False, save_setting=True):
+        if save_setting:
+            self._qsettings.setValue("appSettings/mergeDBs", "true" if checked else "false")
+        self._merge_dbs_action.setChecked(checked)
+        self.merge_dbs = checked
         self._spine_db_editor.build_graph()
 
     @Slot(bool)

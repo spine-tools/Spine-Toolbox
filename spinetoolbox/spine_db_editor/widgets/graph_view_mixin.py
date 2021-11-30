@@ -405,12 +405,18 @@ class GraphViewMixin:
     def _get_object_key(self, db_map_object_id):
         db_map, object_id = db_map_object_id
         object_ = self.db_mngr.get_item(db_map, "object", object_id)
-        return (object_["class_name"], object_["name"])
+        key = (object_["class_name"], object_["name"])
+        if not self.ui.graphicsView.merge_dbs:
+            key += (db_map.codename,)
+        return key
 
     def _get_relationship_key(self, db_map_relationship_id):
         db_map, relationship_id = db_map_relationship_id
         relationship = self.db_mngr.get_item(db_map, "relationship", relationship_id)
-        return (relationship["class_name"], relationship["object_class_name_list"], relationship["object_name_list"])
+        key = (relationship["class_name"], relationship["object_class_name_list"], relationship["object_name_list"])
+        if not self.ui.graphicsView.merge_dbs:
+            key += (db_map.codename,)
+        return key
 
     def _update_src_dst_inds(self, db_map_object_id_lists):
         self.src_inds = list()

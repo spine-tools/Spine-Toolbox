@@ -156,6 +156,7 @@ class SpineDBEditorSettingsMixin:
         """Connect signals."""
         super().connect_signals()
         self.ui.checkBox_auto_expand_objects.clicked.connect(self.set_auto_expand_objects)
+        self.ui.checkBox_merge_dbs.clicked.connect(self.set_merge_dbs)
 
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
@@ -165,6 +166,7 @@ class SpineDBEditorSettingsMixin:
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
         auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true")
+        merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true")
         db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
@@ -177,6 +179,7 @@ class SpineDBEditorSettingsMixin:
         self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
         self.ui.checkBox_relationship_items_follow.setChecked(relationship_items_follow == "true")
         self.ui.checkBox_auto_expand_objects.setChecked(auto_expand_objects == "true")
+        self.ui.checkBox_merge_dbs.setChecked(merge_dbs == "true")
         if db_editor_show_undo == 2:
             self.ui.checkBox_db_editor_show_undo.setChecked(True)
 
@@ -196,6 +199,8 @@ class SpineDBEditorSettingsMixin:
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
         auto_expand_objects = "true" if int(self.ui.checkBox_auto_expand_objects.checkState()) else "false"
         self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_objects)
+        merge_dbs = "true" if int(self.ui.checkBox_merge_dbs.checkState()) else "false"
+        self._qsettings.setValue("appSettings/mergeDBs", merge_dbs)
         db_editor_show_undo = str(int(self.ui.checkBox_db_editor_show_undo.checkState()))
         self._qsettings.setValue("appSettings/dbEditorShowUndo", db_editor_show_undo)
         return True
@@ -203,7 +208,9 @@ class SpineDBEditorSettingsMixin:
     def update_ui(self):
         super().update_ui()
         auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
+        merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
         self.set_auto_expand_objects(auto_expand_objects)
+        self.set_merge_dbs(merge_dbs)
 
 
 class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
@@ -224,7 +231,12 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
     @Slot(bool)
     def set_auto_expand_objects(self, checked=False):
         for db_editor in self._multi_db_editor.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
+            db_editor.ui.graphicsView.set_auto_expand_objects(checked, save_setting=False)
+
+    @Slot(bool)
+    def set_merge_dbs(self, checked=False):
+        for db_editor in self._multi_db_editor.db_mngr.get_all_spine_db_editors():
+            db_editor.ui.graphicsView.set_merge_dbs(checked, save_setting=False)
 
 
 class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):

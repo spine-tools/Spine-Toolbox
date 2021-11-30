@@ -627,6 +627,11 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_4.addWidget(self.checkBox_auto_expand_objects)
 
+        self.checkBox_merge_dbs = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_merge_dbs.setObjectName(u"checkBox_merge_dbs")
+
+        self.verticalLayout_4.addWidget(self.checkBox_merge_dbs)
+
 
         self.verticalLayout_9.addWidget(self.groupBox_spine_db_editor)
 
@@ -817,7 +822,7 @@ class Ui_SettingsForm(object):
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(4)
+        self.stackedWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -992,6 +997,7 @@ class Ui_SettingsForm(object):
         self.checkBox_auto_expand_objects.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_auto_expand_objects.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand objects by default in Entity graph", None))
+        self.checkBox_merge_dbs.setText(QCoreApplication.translate("SettingsForm", u"Merge databases by default in Entity graph", None))
         self.groupBox.setTitle(QCoreApplication.translate("SettingsForm", u"Specification editors", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_save_spec_before_closing.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Don't save specification and don't show message box</p><p>Partially checked: Show message box (default)</p><p>Checked: Save specification and don't show message box</p></body></html>", None))
