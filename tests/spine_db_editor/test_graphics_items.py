@@ -38,7 +38,6 @@ class TestRelationshipItem(unittest.TestCase):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             cls._db_mngr = TestSpineDBManager(mock_settings, None)
-            cls._db_mngr.fetch_db_maps_for_listener = lambda *args: None
 
             logger = mock.MagicMock()
             cls._db_map = cls._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
@@ -78,7 +77,7 @@ class TestRelationshipItem(unittest.TestCase):
                 ]
             },
         )
-        self._item = RelationshipItem(self._spine_db_editor, 0.0, 0.0, 0, (self._db_map, 4))
+        self._item = RelationshipItem(self._spine_db_editor, 0.0, 0.0, 0, ((self._db_map, 4),))
 
     def test_entity_type(self):
         self.assertEqual(self._item.entity_type, "relationship")
@@ -90,16 +89,16 @@ class TestRelationshipItem(unittest.TestCase):
         self.assertEqual(self._item.entity_class_type, "relationship_class")
 
     def test_entity_class_id(self):
-        self.assertEqual(self._item.entity_class_id, 2)
+        self.assertEqual(self._item.entity_class_id(self._db_map), 2)
 
     def test_entity_class_name(self):
         self.assertEqual(self._item.entity_class_name, "rc")
 
     def test_db_map(self):
-        self.assertIs(self._item.db_map, self._db_map)
+        self.assertIs(self._item.first_db_map, self._db_map)
 
     def test_entity_id(self):
-        self.assertEqual(self._item.entity_id, 4)
+        self.assertEqual(self._item.entity_id(self._db_map), 4)
 
     def test_first_db_map(self):
         self.assertIs(self._item.first_db_map, self._db_map)
@@ -111,7 +110,7 @@ class TestRelationshipItem(unittest.TestCase):
         self.assertEqual(self._item.display_database, "database")
 
     def test_db_maps(self):
-        self.assertEqual(self._item.db_maps, (self._db_map,))
+        self.assertEqual(self._item.db_maps, [self._db_map])
 
     def test_db_map_data(self):
         self.assertEqual(
@@ -120,7 +119,7 @@ class TestRelationshipItem(unittest.TestCase):
         )
 
     def test_db_map_id_equals_entity_id(self):
-        self.assertEqual(self._item.db_map_id(self._db_map), self._item.entity_id)
+        self.assertEqual(self._item.db_map_id(self._db_map), self._item.entity_id(self._db_map))
 
     def test_add_arc_item(self):
         arc = mock.MagicMock()
