@@ -15,7 +15,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QLineF, QPointF
+from PySide2.QtCore import Qt, Signal, Slot, QLineF
 from PySide2.QtSvg import QGraphicsSvgItem
 from PySide2.QtWidgets import (
     QAction,
@@ -78,7 +78,8 @@ class EntityItem(QGraphicsRectItem):
         super().__init__()
         self._spine_db_editor = spine_db_editor
         self.db_mngr = spine_db_editor.db_mngr
-        self.db_map_ids = db_map_ids
+        self._db_map_ids = db_map_ids
+        self._removed_db_map_ids = ()
         self.arc_items = list()
         self._extent = extent
         self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
@@ -113,28 +114,42 @@ class EntityItem(QGraphicsRectItem):
         raise NotImplementedError()
 
     @property
-    def entity_name(self):
-        return self.db_mngr.get_item(self.first_db_map, self.entity_type, self.first_id)["name"]
+    def db_map_ids(self):
+        return tuple(x for x in self._db_map_ids if x not in self._removed_db_map_ids)
+
+    @property
+    def original_db_map_ids(self):
+        return self._db_map_ids
 
     @property
     def entity_class_type(self):
         return {"relationship": "relationship_class", "object": "object_class"}[self.entity_type]
 
     @property
+    def entity_name(self):
+        return self.db_mngr.get_item(self.first_db_map, self.entity_type, self.first_id).get("name", "")
+
+    @property
     def first_entity_class_id(self):
-        return self.db_mngr.get_item(self.first_db_map, self.entity_type, self.first_id)["class_id"]
+        return self.db_mngr.get_item(self.first_db_map, self.entity_type, self.first_id).get("class_id")
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.first_db_map, self.entity_class_type, self.first_entity_class_id)["name"]
+        return self.db_mngr.get_item(self.first_db_map, self.entity_class_type, self.first_entity_class_id).get(
+            "name", ""
+        )
+
+    @property
+    def first_db_map_id(self):
+        return next(iter(self.db_map_ids), (None, None))
 
     @property
     def first_id(self):
-        return self.db_map_ids[0][1]
+        return self.first_db_map_id[1]
 
     @property
     def first_db_map(self):
-        return self.db_map_ids[0][0]
+        return self.first_db_map_id[0]
 
     @property
     def display_data(self):
@@ -149,19 +164,18 @@ class EntityItem(QGraphicsRectItem):
         return list(db_map for db_map, _id in self.db_map_ids)
 
     def entity_class_id(self, db_map):
-        id_ = dict(self.db_map_ids)[db_map]
-        return self.db_mngr.get_item(db_map, self.entity_type, id_)["class_id"]
+        return self.db_mngr.get_item(db_map, self.entity_type, self.entity_id(db_map)).get("class_id")
 
     def entity_id(self, db_map):
-        return dict(self.db_map_ids)[db_map]
+        return dict(self.db_map_ids).get(db_map)
 
     def db_map_data(self, db_map):
         # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
-        return self.db_mngr.get_item(db_map, self.entity_type, self.db_map_id(db_map))
+        return self.db_mngr.get_item(db_map, self.entity_type, self.entity_id(db_map))
 
     def db_map_id(self, db_map):
         # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
-        return dict(self.db_map_ids)[db_map]
+        return self.entity_id(db_map)
 
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
@@ -309,6 +323,19 @@ class EntityItem(QGraphicsRectItem):
         menu = self._make_menu()
         menu.popup(e.screenPos())
 
+    def remove_db_map_ids(self, db_map_ids):
+        """Removes db_map_ids."""
+        self._removed_db_map_ids += tuple(db_map_ids)
+        self.setToolTip(self._make_tool_tip())
+
+    def add_db_map_ids(self, db_map_ids):
+        for db_map_id in db_map_ids:
+            if db_map_id not in self._db_map_ids:
+                self._db_map_ids += (db_map_id,)
+            else:
+                self._removed_db_map_ids = tuple(x for x in self._removed_db_map_ids if x != db_map_id)
+        self.setToolTip(self._make_tool_tip())
+
 
 class RelationshipItem(EntityItem):
     """Represents a relationship in the Entity graph."""
@@ -340,17 +367,16 @@ class RelationshipItem(EntityItem):
     @property
     def object_class_id_list(self):
         # FIXME: where is this used?
-        return self.db_mngr.get_item(self.first_db_map, "relationship_class", self.first_entity_class_id)[
+        return self.db_mngr.get_item(self.first_db_map, "relationship_class", self.first_entity_class_id).get(
             "object_class_id_list"
-        ]
+        )
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.first_db_map, "relationship", self.first_id)["object_name_list"]
+        return self.db_mngr.get_item(self.first_db_map, "relationship", self.first_id).get("object_name_list", "")
 
     def object_id_list(self, db_map):
-        id_ = dict(self.db_map_ids)[db_map]
-        return self.db_mngr.get_item(db_map, "relationship", id_)["object_id_list"]
+        return self.db_mngr.get_item(db_map, "relationship", self.entity_id(db_map)).get("object_id_list")
 
     def db_representation(self, db_map):
         return dict(
@@ -446,7 +472,8 @@ class ObjectItem(EntityItem):
             name = next(iter(db_map_ids_by_name))
             self.label_item.setPlainText(name)
             return True
-        self.db_map_ids = tuple(next(iter(db_map_ids_by_name.values())))
+        current_name = self.label_item.toPlainText()
+        self.db_map_ids = tuple(db_map_ids_by_name.get(current_name, ()))
         return False
 
     def _make_tool_tip(self):

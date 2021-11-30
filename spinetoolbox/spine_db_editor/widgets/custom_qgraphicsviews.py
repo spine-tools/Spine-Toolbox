@@ -46,7 +46,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.pos_x_parameter = "x"
         self.pos_y_parameter = "y"
         self.selected_items = list()
-        self.removed_items = list()
+        self.removed_items = set()
         self.hidden_items = dict()
         self.pruned_db_map_entity_ids = dict()
         self.heat_map_items = list()
@@ -196,7 +196,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._export_as_pdf_action.setEnabled(has_graph)
         self._items_per_db_map_class = {}
         for item in self.entity_items:
-            key = f"{item.entity_class_name}@{item.display_database}"
+            key = f"{item.entity_class_name}"
             self._items_per_db_map_class.setdefault(key, list()).append(item)
         self._hide_classes_menu.clear()
         self._hide_classes_menu.setEnabled(bool(self._items_per_db_map_class))
@@ -304,7 +304,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def prune_selected_items(self, checked=False):
         """Prunes selected items."""
-        entity_ids = {x.db_map_entity_id for x in self.selected_items}
+        entity_ids = {db_map_id for x in self.selected_items for db_map_id in x.db_map_ids}
         key = self._get_selected_entity_names()
         self.pruned_db_map_entity_ids[key] = entity_ids
         self._restore_pruned_menu.addAction(key)
@@ -314,13 +314,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def _prune_class(self, action):
         """Prunnes some class."""
         key = action.text()
-        item = next(iter(self._items_per_db_map_class[key]))
-        class_id = item.entity_class_id
-        db_map = item.db_map
         self.pruned_db_map_entity_ids[key] = {
             (db_map, x["id"])
+            for item in self._items_per_db_map_class[key]
+            for db_map in item.db_maps
             for item_type in ("object", "relationship")
-            for x in self.db_mngr.get_items_by_field(db_map, item_type, "class_id", class_id, only_visible=False)
+            for x in self.db_mngr.get_items_by_field(
+                db_map, item_type, "class_id", item.entity_class_id(db_map), only_visible=False
+            )
         }
         self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()

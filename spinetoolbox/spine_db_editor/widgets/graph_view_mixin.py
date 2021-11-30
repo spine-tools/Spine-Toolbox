@@ -100,19 +100,17 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_objects_added(db_map_data)
-        added_ids = {(db_map, x["id"]) for db_map, objects in db_map_data.items() for x in objects}
-        restored_ids = self.restore_removed_entities(added_ids)
-        added_ids -= restored_ids
-        if not added_ids:
+        new_db_map_id_sets = self.add_db_map_ids_to_items(db_map_data, ObjectItem)
+        if not new_db_map_id_sets:
             return
         if self._pos_for_added_objects is not None:
             spread = self.VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
-            gen = GraphLayoutGenerator(None, len(added_ids), spread=spread)
+            gen = GraphLayoutGenerator(None, len(new_db_map_id_sets), spread=spread)
             gen.run()
             x = self._pos_for_added_objects.x()
             y = self._pos_for_added_objects.y()
-            for dx, dy, object_id in zip(gen.x, gen.y, added_ids):
-                object_item = ObjectItem(self, x + dx, y + dy, self.VERTEX_EXTENT, object_id)
+            for dx, dy, db_map_ids in zip(gen.x, gen.y, new_db_map_id_sets):
+                object_item = ObjectItem(self, x + dx, y + dy, self.VERTEX_EXTENT, tuple(db_map_ids))
                 self.scene.addItem(object_item)
                 object_item.apply_zoom(self.ui.graphicsView.zoom_factor)
             self._pos_for_added_objects = None
@@ -127,13 +125,11 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_relationships_added(db_map_data)
-        added_ids = {(db_map, x["id"]) for db_map, relationships in db_map_data.items() for x in relationships}
-        restored_ids = self.restore_removed_entities(added_ids)
-        added_ids -= restored_ids
-        if not added_ids:
+        new_db_map_id_sets = self.add_db_map_ids_to_items(db_map_data, RelationshipItem)
+        if not new_db_map_id_sets:
             return
         if self._adding_relationships:
-            self.added_relationship_ids.update(added_ids)
+            self.added_relationship_ids.update(new_db_map_id_sets)
             self.build_graph(persistent=True)
             self._end_add_relationships()
         elif self._extending_graph:
@@ -166,7 +162,7 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_objects_removed(db_map_data)
-        self.hide_removed_entities(db_map_data)
+        self.hide_removed_entities(db_map_data, ObjectItem)
 
     def receive_relationships_updated(self, db_map_data):
         """Runs when relationships are updated in the db.
@@ -188,39 +184,59 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_relationships_removed(db_map_data)
-        self.hide_removed_entities(db_map_data)
+        self.hide_removed_entities(db_map_data, RelationshipItem)
 
-    def restore_removed_entities(self, added_ids):
-        """Restores any entities that have been previously removed and returns their ids.
-        This happens in the context of undo/redo.
+    def add_db_map_ids_to_items(self, db_map_data, type_):
+        """Goes through items of given type and adds the corresponding db_map ids.
+        This could mean either restoring removed (db_map, id) tuples previously removed,
+        or adding new (db_map, id) tuples.
 
         Args:
-            added_ids (set(int)): Set of newly added ids.
+            db_map_data (dict(DiffDatabaseMapping, list)): List of added items keyed by db_map
 
         Returns:
-            set(int)
+            list: tuples (db_map, id) that didn't match any item in the view.
         """
-        restored_items = [
-            item for item in self.ui.graphicsView.removed_items if added_ids.intersection(item.db_map_ids)
-        ]
+        get_key = {ObjectItem: self._get_object_key, RelationshipItem: self._get_relationship_key}[type_]
+        added_db_map_ids_by_key = {}
+        for db_map, entities in db_map_data.items():
+            for entity in entities:
+                db_map_id = (db_map, entity["id"])
+                key = get_key(db_map_id)
+                added_db_map_ids_by_key.setdefault(key, set()).add(db_map_id)
+        restored_items = set()
+        for item in self.ui.graphicsView.items():
+            if not isinstance(item, type_):
+                continue
+            for db_map_id in item.original_db_map_ids:
+                try:
+                    key = get_key(db_map_id)
+                except KeyError:
+                    continue
+                db_map_ids = added_db_map_ids_by_key.pop(key, None)
+                if db_map_ids:
+                    item.add_db_map_ids(db_map_ids)
+                    restored_items.add(item)
         for item in restored_items:
-            self.ui.graphicsView.removed_items.remove(item)
+            self.ui.graphicsView.removed_items.discard(item)
             item.setVisible(True)
-        return {db_map_id for item in restored_items for db_map_id in item.db_map_ids}
+        return list(added_db_map_ids_by_key.values())
 
-    def hide_removed_entities(self, db_map_data):
-        """Hides removed entities while saving them into a list attribute.
+    def hide_removed_entities(self, db_map_data, type_):
+        """Hides removed entities while saving them into a set.
         This allows entities to be restored in case the user undoes the operation."""
-        removed_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
-        self.added_relationship_ids -= removed_ids
-        removed_items = [
-            item
-            for item in self.ui.graphicsView.items()
-            if isinstance(item, EntityItem) and removed_ids.intersection(item.db_map_ids)
-        ]
+        removed_db_map_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
+        self.added_relationship_ids -= removed_db_map_ids  # FIXME
+        removed_items = set()
+        for item in self.ui.graphicsView.items():
+            if not isinstance(item, type_):
+                continue
+            item.remove_db_map_ids(removed_db_map_ids)
+            if not item.db_map_ids:
+                removed_items.add(item)
         if not removed_items:
             return
-        self.ui.graphicsView.removed_items.extend(removed_items)
+        self.ui.graphicsView.removed_items |= removed_items
         scene = self.scene
         self.scene = None
         for item in removed_items:
@@ -374,19 +390,26 @@ class GraphViewMixin:
             db_map_object_id_lists[db_map, relationship["id"]] = db_map_object_id_list
         db_map_object_ids_by_key = {}
         db_map_relationship_ids_by_key = {}
+        # NOTE: To have a different item for each database, we just need to include the db in the key computation below
         for db_map_object_id in db_map_object_ids:
-            db_map, object_id = db_map_object_id
-            object_ = self.db_mngr.get_item(db_map, "object", object_id)
-            key = (object_["class_name"], object_["name"])
+            key = self._get_object_key(db_map_object_id)
             db_map_object_ids_by_key.setdefault(key, set()).add(db_map_object_id)
         for db_map_relationship_id in db_map_object_id_lists:
-            db_map, relationship_id = db_map_relationship_id
-            relationship = self.db_mngr.get_item(db_map, "relationship", relationship_id)
-            key = (relationship["class_name"], relationship["object_class_name_list"], relationship["object_name_list"])
+            key = self._get_relationship_key(db_map_relationship_id)
             db_map_relationship_ids_by_key.setdefault(key, set()).add(db_map_relationship_id)
         self.db_map_object_id_sets = list(db_map_object_ids_by_key.values())
         self.db_map_relationship_id_sets = list(db_map_relationship_ids_by_key.values())
         self._update_src_dst_inds(db_map_object_id_lists)
+
+    def _get_object_key(self, db_map_object_id):
+        db_map, object_id = db_map_object_id
+        object_ = self.db_mngr.get_item(db_map, "object", object_id)
+        return (object_["class_name"], object_["name"])
+
+    def _get_relationship_key(self, db_map_relationship_id):
+        db_map, relationship_id = db_map_relationship_id
+        relationship = self.db_mngr.get_item(db_map, "relationship", relationship_id)
+        return (relationship["class_name"], relationship["object_class_name_list"], relationship["object_name_list"])
 
     def _update_src_dst_inds(self, db_map_object_id_lists):
         self.src_inds = list()
