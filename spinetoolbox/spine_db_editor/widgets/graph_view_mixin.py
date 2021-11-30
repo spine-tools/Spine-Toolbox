@@ -129,7 +129,8 @@ class GraphViewMixin:
         if not new_db_map_id_sets:
             return
         if self._adding_relationships:
-            self.added_db_map_relationship_ids.update(new_db_map_id_sets)
+            for db_map_ids in new_db_map_id_sets:
+                self.added_db_map_relationship_ids.update(db_map_ids)
             self.build_graph(persistent=True)
             self._end_add_relationships()
         elif self._extending_graph:
@@ -514,22 +515,24 @@ class GraphViewMixin:
         for item in self.object_items + self.relationship_items + self.arc_items:
             self.scene.addItem(item)
 
-    def start_relationship(self, relationship_class, obj_item):
+    def start_relationship(self, db_map, relationship_class, obj_item):
         """Starts a relationship from the given object item.
 
         Args:
+            db_map (DiffDatabaseMapping)
             relationship_class (dict)
             obj_item (..graphics_items.ObjectItem)
         """
-        db_map = obj_item.db_map
         object_class_ids_to_go = relationship_class["object_class_id_list"].copy()
-        object_class_ids_to_go.remove(obj_item.entity_class_id)
+        object_class_ids_to_go.remove(obj_item.entity_class_id(db_map))
         relationship_class["object_class_ids_to_go"] = object_class_ids_to_go
+        relationship_class["db_map"] = db_map
+        db_map_ids = ((db_map, None),)
         ch_item = CrossHairsItem(
-            self, obj_item.pos().x(), obj_item.pos().y(), 0.8 * self.VERTEX_EXTENT, db_map_entity_id=(db_map, None)
+            self, obj_item.pos().x(), obj_item.pos().y(), 0.8 * self.VERTEX_EXTENT, db_map_ids=db_map_ids
         )
         ch_rel_item = CrossHairsRelationshipItem(
-            self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self.VERTEX_EXTENT, db_map_entity_id=(db_map, None)
+            self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self.VERTEX_EXTENT, db_map_ids=db_map_ids
         )
         ch_arc_item1 = CrossHairsArcItem(ch_rel_item, obj_item, self._ARC_WIDTH)
         ch_arc_item2 = CrossHairsArcItem(ch_rel_item, ch_item, self._ARC_WIDTH)
@@ -545,11 +548,11 @@ class GraphViewMixin:
             relationship_class (dict)
             object_items (..graphics_items.ObjectItem)
         """
-        db_map = object_items[0].db_map
+        db_map = relationship_class["db_map"]
         relationships = set()
         object_class_id_list = relationship_class["object_class_id_list"]
         for item_permutation in itertools.permutations(object_items):
-            if [item.entity_class_id for item in item_permutation] == object_class_id_list:
+            if [item.entity_class_id(db_map) for item in item_permutation] == object_class_id_list:
                 relationship = tuple(item.entity_name for item in item_permutation)
                 relationships.add(relationship)
         dialog = AddReadyRelationshipsDialog(self, relationship_class, list(relationships), self.db_mngr, db_map)

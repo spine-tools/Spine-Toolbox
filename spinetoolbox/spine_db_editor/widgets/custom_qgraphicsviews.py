@@ -522,10 +522,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.viewport().unsetCursor()
 
     def _cross_hairs_has_valid_target(self):
-        return (
-            self._hovered_obj_item.db_map == self.cross_hairs_items[0].db_map
-            and self._hovered_obj_item.entity_class_id in self.relationship_class["object_class_ids_to_go"]
-        )
+        db_map = self.cross_hairs_items[0].first_db_map
+        return self._hovered_obj_item.entity_class_id(db_map) in self.relationship_class["object_class_ids_to_go"]
 
     def mousePressEvent(self, event):
         """Handles relationship creation if one it's in process."""
@@ -537,7 +535,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self.clear_cross_hairs_items()
             return
         if self._cross_hairs_has_valid_target():
-            self.relationship_class["object_class_ids_to_go"].remove(self._hovered_obj_item.entity_class_id)
+            db_map = self.cross_hairs_items[0].first_db_map
+            self.relationship_class["object_class_ids_to_go"].remove(self._hovered_obj_item.entity_class_id(db_map))
             if self.relationship_class["object_class_ids_to_go"]:
                 # Add hovered as member and keep going, we're not done yet
                 ch_rel_item = self.cross_hairs_items[1]

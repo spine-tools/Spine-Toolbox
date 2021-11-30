@@ -439,7 +439,7 @@ class ObjectItem(EntityItem):
             db_map_ids (tuple): tuple of (db_map, id) tuples
         """
         super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
-        self._relationship_classes = {}
+        self._db_map_relationship_class_lists = {}
         self.label_item = ObjectLabelItem(self)
         self.setZValue(0.5)
         self.update_name()
@@ -526,7 +526,7 @@ class ObjectItem(EntityItem):
         self._spine_db_editor.duplicate_object(self)
 
     def _refresh_relationship_classes(self):
-        self._relationship_classes.clear()
+        self._db_map_relationship_class_lists.clear()
         db_map_object_ids = {db_map: {id_} for db_map, id_ in self.db_map_ids}
         relationship_ids_per_class = {}
         for db_map, rels in self.db_mngr.find_cascading_relationships(db_map_object_ids).items():
@@ -538,7 +538,7 @@ class ObjectItem(EntityItem):
                 rel_cls = rel_cls.copy()
                 rel_cls["object_class_id_list"] = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
                 rel_cls["relationship_ids"] = relationship_ids_per_class.get((db_map, rel_cls["id"]), set())
-                self._relationship_classes.setdefault(rel_cls["name"], []).append((db_map, rel_cls))
+                self._db_map_relationship_class_lists.setdefault(rel_cls["name"], []).append((db_map, rel_cls))
 
     def _populate_expand_collapse_menu(self, menu):
         """
@@ -547,17 +547,17 @@ class ObjectItem(EntityItem):
         Args:
             menu (QMenu)
         """
-        if not self._relationship_classes:
+        if not self._db_map_relationship_class_lists:
             menu.setEnabled(False)
             return
         menu.setEnabled(True)
         menu.addAction("All")
         menu.addSeparator()
-        for name, db_map_rel_clss in self._relationship_classes.items():
-            db_map, rel_cls = next(iter(db_map_rel_clss))
+        for name, db_map_rel_cls_lst in self._db_map_relationship_class_lists.items():
+            db_map, rel_cls = next(iter(db_map_rel_cls_lst))
             icon = self.db_mngr.entity_class_icon(db_map, "relationship_class", rel_cls["id"])
             menu.addAction(icon, name).setEnabled(
-                any(rel_cls["relationship_ids"] for (db_map, rel_cls) in db_map_rel_clss)
+                any(rel_cls["relationship_ids"] for (db_map, rel_cls) in db_map_rel_cls_lst)
             )
 
     def _populate_add_relationships_menu(self, menu):
@@ -573,24 +573,22 @@ class ObjectItem(EntityItem):
                 continue
             for db_map in item.db_maps:
                 object_class_ids_in_graph.setdefault(db_map, set()).add(item.entity_class_id(db_map))
-        for name, db_map_rel_clss in self._relationship_classes.items():
-            db_map, rel_cls = next(iter(db_map_rel_clss))
-            icon = self.db_mngr.entity_class_icon(db_map, "relationship_class", rel_cls["id"])
-            menu.addAction(icon, name).setEnabled(
-                any(
+        for name, db_map_rel_cls_lst in self._db_map_relationship_class_lists.items():
+            for db_map, rel_cls in db_map_rel_cls_lst:
+                icon = self.db_mngr.entity_class_icon(db_map, "relationship_class", rel_cls["id"])
+                action_name = name + "@" + db_map.codename
+                menu.addAction(icon, action_name).setEnabled(
                     set(rel_cls["object_class_id_list"]) <= object_class_ids_in_graph.get(db_map, set())
-                    for (db_map, rel_cls) in db_map_rel_clss
                 )
-            )
-        menu.setEnabled(bool(self._relationship_classes))
+        menu.setEnabled(bool(self._db_map_relationship_class_lists))
 
     def _get_db_map_relationship_ids_to_expand_or_collapse(self, action):
-        db_map_rel_clss = self._relationship_classes.get(action.text())
+        db_map_rel_clss = self._db_map_relationship_class_lists.get(action.text())
         if db_map_rel_clss is not None:
             return {(db_map, id_) for db_map, rel_cls in db_map_rel_clss for id_ in rel_cls["relationship_ids"]}
         return {
             (db_map, id_)
-            for db_map, rel_cls in self._relationship_classes.values()
+            for db_map, rel_cls in self._db_map_relationship_class_lists.values()
             for id_ in rel_cls["relationship_ids"]
         }
 
@@ -608,7 +606,12 @@ class ObjectItem(EntityItem):
 
     @Slot(QAction)
     def _start_relationship(self, action):
-        self._spine_db_editor.start_relationship(self._relationship_classes[action.text()], self)
+        class_name, db_name = action.text().split("@")
+        db_map_rel_cls_lst = self._db_map_relationship_class_lists[class_name]
+        db_map, rel_cls = next(
+            iter((db_map, rel_cls) for db_map, rel_cls in db_map_rel_cls_lst if db_map.codename == db_name)
+        )
+        self._spine_db_editor.start_relationship(db_map, rel_cls, self)
 
 
 class ArcItem(QGraphicsPathItem):
@@ -706,7 +709,7 @@ class CrossHairsItem(RelationshipItem):
         return "<p>Click on an object to add it to the relationship.</p>"
 
     def refresh_icon(self):
-        renderer = self.db_mngr.get_icon_mngr(self.db_map).icon_renderer("\uf05b", 0)
+        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer("\uf05b", 0)
         self._set_renderer(renderer)
 
     def set_plus_icon(self):
@@ -725,7 +728,7 @@ class CrossHairsItem(RelationshipItem):
         """Refreshes the icon."""
         if (unicode, color) == self._current_icon:
             return
-        renderer = self.db_mngr.get_icon_mngr(self.db_map).icon_renderer(unicode, color)
+        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer(unicode, color)
         self._set_renderer(renderer)
         self._current_icon = (unicode, color)
 
@@ -760,7 +763,9 @@ class CrossHairsRelationshipItem(RelationshipItem):
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         ]
         object_class_name_list = ",".join(object_class_name_list)
-        renderer = self.db_mngr.get_icon_mngr(self.db_map).relationship_class_renderer(None, object_class_name_list)
+        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).relationship_class_renderer(
+            None, object_class_name_list
+        )
         self._set_renderer(renderer)
 
     def contextMenuEvent(self, e):
