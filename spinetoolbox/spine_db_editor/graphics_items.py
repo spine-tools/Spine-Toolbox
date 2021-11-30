@@ -553,7 +553,7 @@ class ObjectItem(EntityItem):
         menu.setEnabled(True)
         menu.addAction("All")
         menu.addSeparator()
-        for name, db_map_rel_cls_lst in self._db_map_relationship_class_lists.items():
+        for name, db_map_rel_cls_lst in sorted(self._db_map_relationship_class_lists.items()):
             db_map, rel_cls = next(iter(db_map_rel_cls_lst))
             icon = self.db_mngr.entity_class_icon(db_map, "relationship_class", rel_cls["id"])
             menu.addAction(icon, name).setEnabled(
@@ -573,13 +573,15 @@ class ObjectItem(EntityItem):
                 continue
             for db_map in item.db_maps:
                 object_class_ids_in_graph.setdefault(db_map, set()).add(item.entity_class_id(db_map))
+        action_name_icon_enabled = []
         for name, db_map_rel_cls_lst in self._db_map_relationship_class_lists.items():
             for db_map, rel_cls in db_map_rel_cls_lst:
                 icon = self.db_mngr.entity_class_icon(db_map, "relationship_class", rel_cls["id"])
                 action_name = name + "@" + db_map.codename
-                menu.addAction(icon, action_name).setEnabled(
-                    set(rel_cls["object_class_id_list"]) <= object_class_ids_in_graph.get(db_map, set())
-                )
+                enabled = set(rel_cls["object_class_id_list"]) <= object_class_ids_in_graph.get(db_map, set())
+                action_name_icon_enabled.append((action_name, icon, enabled))
+        for action_name, icon, enabled in sorted(action_name_icon_enabled):
+            menu.addAction(icon, action_name).setEnabled(enabled)
         menu.setEnabled(bool(self._db_map_relationship_class_lists))
 
     def _get_db_map_relationship_ids_to_expand_or_collapse(self, action):
