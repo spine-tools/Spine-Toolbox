@@ -28,7 +28,7 @@ import functools
 from numbers import Number
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from PySide2.QtCore import QModelIndex
+from PySide2.QtCore import Qt, QModelIndex
 from spinedb_api import (
     Array,
     convert_leaf_maps_to_specialized_containers,
@@ -227,6 +227,34 @@ class PlottingHints:
     def x_label(self, model):
         """Returns a label for the x axis."""
         raise NotImplementedError()
+
+
+class MapTablePlottingHints(PlottingHints):
+    """Support for plotting data in Parameter table views."""
+
+    def cell_label(self, model, index):
+        """Returns a label build from the columns on the left from the data column."""
+        return model.index_name(index)
+
+    def column_label(self, model, column):
+        """Returns the column header."""
+        return model.headerData(column, orientation=Qt.Horizontal)
+
+    def filter_columns(self, selections, model):
+        """Returns the selections unaltered."""
+        return selections
+
+    def is_index_in_data(self, model, index):
+        """Always returns True."""
+        return True
+
+    def special_x_values(self, model, column, rows):
+        """Always returns None."""
+        return None
+
+    def x_label(self, model):
+        """Returns an empty string for the x axis label."""
+        return ""
 
 
 class ParameterTablePlottingHints(PlottingHints):

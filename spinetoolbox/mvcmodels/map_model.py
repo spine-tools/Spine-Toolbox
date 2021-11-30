@@ -26,13 +26,13 @@ from spinedb_api import (
     convert_map_to_table,
     DateTime,
     Duration,
-    IndexedValue,
     Map,
     ParameterValueFormatError,
     TimePattern,
     TimeSeries,
 )
 from .indexed_value_table_model import EXPANSE_COLOR
+from .shared import PARSED_ROLE
 
 
 empty = object()
@@ -138,7 +138,7 @@ class MapModel(QAbstractTableModel):
             if column_index >= data_length:
                 return self._EMTPY_COLOR
             return None
-        if role == Qt.EditRole:
+        if role in (Qt.EditRole, PARSED_ROLE):
             if self._is_in_expanse(row_index, column_index):
                 return ""
             value = self._rows[row_index][column_index]
@@ -424,6 +424,17 @@ class MapModel(QAbstractTableModel):
         map_value = _reconstruct_map(tree)
         _apply_index_names(map_value, self._index_names)
         return map_value
+
+    def index_name(self, index):
+        return (
+            self.headerData(index.column(), Qt.Horizontal)
+            + "("
+            + ", ".join(
+                f"{self.headerData(c, Qt.Horizontal)}={self.data(index.siblingAtColumn(c))}"
+                for c in range(index.column())
+            )
+            + ")"
+        )
 
 
 def _rows_to_dict(rows):

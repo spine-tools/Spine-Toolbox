@@ -85,7 +85,6 @@ class SpineDBEditorBase(QMainWindow):
         self.db_urls = []
         self._change_notifiers = []
         self._changelog = []
-        self.db_url = None
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -164,7 +163,6 @@ class SpineDBEditorBase(QMainWindow):
         ]
         self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.url_toolbar.set_current_urls(self.db_urls)
-        self.db_url = self.db_urls[0]
         self.db_mngr.register_listener(self, *self.db_maps)
         self.init_models()
         self.init_add_undo_redo_actions()

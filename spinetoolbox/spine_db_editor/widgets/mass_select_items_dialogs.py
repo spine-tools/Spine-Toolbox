@@ -77,7 +77,6 @@ class MassSelectItemsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(top_widget)
         layout.addWidget(button_box)
-        layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
         self._ok_button = button_box.button(QDialogButtonBox.Ok)
         self.db_map_check_boxes = {db_map: QCheckBox(db_map.codename, db_maps_group_box) for db_map in self.db_maps}
         self.item_check_boxes = {item_type: QCheckBox(item_type, items_group_box) for item_type in self._ITEM_TYPES}

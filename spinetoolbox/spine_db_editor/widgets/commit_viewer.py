@@ -41,10 +41,10 @@ class _DBCommitViewer(QWidget):
         self._commit_list.setIndentation(0)
         self.splitter = QSplitter(self)
         self.splitter.setSizes([0.3, 0.7])
-        self._commit_contents = QTreeWidget(self)
-        self._commit_contents.setHeaderLabel("Affected items")
+        self._affected_items = QTreeWidget(self)
+        self._affected_items.setHeaderLabel("Affected items")
         self.splitter.addWidget(self._commit_list)
-        self.splitter.addWidget(self._commit_contents)
+        self.splitter.addWidget(self._affected_items)
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
         layout = QVBoxLayout(self)
@@ -68,20 +68,22 @@ class _DBCommitViewer(QWidget):
     @Slot(QTreeWidgetItem, QTreeWidgetItem)
     def _select_commit(self, current, previous):
         commit_id = current.data(0, Qt.UserRole + 1)
-        self._commit_contents.clear()
+        self._affected_items.clear()
         for item_type, ids in self._db_mngr.get_items_for_commit(self._db_map, commit_id).items():
             top_level_item = QTreeWidgetItem([item_type])
-            self._commit_contents.addTopLevelItem(top_level_item)
+            self._affected_items.addTopLevelItem(top_level_item)
             bottom_level_item = QTreeWidgetItem(top_level_item)
             bottom_level_item.setFlags(bottom_level_item.flags() & ~Qt.ItemIsSelectable)
-            index = self._commit_contents.indexFromItem(bottom_level_item)
+            index = self._affected_items.indexFromItem(bottom_level_item)
             items = [self._db_mngr.get_item(self._db_map, item_type, id_, only_visible=False) for id_ in ids]
-            widget = _CommitContents(items, parent=self._commit_contents)
-            self._commit_contents.setIndexWidget(index, widget)
+            widget = _AffectedItemsFromOneTable(items, parent=self._affected_items)
+            self._affected_items.setIndexWidget(index, widget)
             top_level_item.setExpanded(True)
 
 
 class _CommitItem(QWidget):
+    """A widget to show commit message, author and data on a QTreeWidget."""
+
     def __init__(self, commit, parent=None):
         super().__init__(parent=parent)
         comment = QLabel(str(commit["comment"]) or "<no comment>")
@@ -97,7 +99,9 @@ class _CommitItem(QWidget):
         layout.addWidget(date, 1, 1)
 
 
-class _CommitContents(QTreeWidget):
+class _AffectedItemsFromOneTable(QTreeWidget):
+    """A widget to show all the items from one table that are affected by a commit."""
+
     def __init__(self, items, parent=None):
         super().__init__(parent=parent)
         self.setIndentation(0)
@@ -128,6 +132,8 @@ class _CommitContents(QTreeWidget):
     def moveEvent(self, ev):
         if ev.pos().x() > 0:
             self.move(self._margin, ev.pos().y())
+            offset = ev.pos().x() - self._margin
+            self.resize(self.size().width() + offset - 2, self.size().height())
             return
         super().moveEvent(ev)
 

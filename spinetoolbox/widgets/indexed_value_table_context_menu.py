@@ -16,7 +16,10 @@ Context menus for parameter value editor widgets.
 :date:   5.7.2019
 """
 from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QInputDialog, QMenu
+from PySide2.QtWidgets import QInputDialog, QMenu, QAction
+from spinetoolbox.plotting import plot_selection, PlottingError, MapTablePlottingHints
+from spinetoolbox.widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
+from spinetoolbox.widgets.report_plotting_failure import report_plotting_failure
 
 _INSERT_SINGLE_COLUMN_AFTER = "Insert column after"
 _INSERT_SINGLE_ROW_AFTER = "Insert row after"
@@ -26,7 +29,9 @@ _INSERT_SINGLE_COLUMN_BEFORE = "Insert column before"
 _INSERT_SINGLE_ROW_BEFORE = "Insert row before"
 _INSERT_MULTIPLE_COLUMNS_BEFORE = "Insert columns before..."
 _INSERT_MULTIPLE_ROWS_BEFORE = "Insert rows before..."
-_OPEN_EDITOR = "Open value editor..."
+_OPEN_EDITOR = "Edit..."
+_PLOT = "Plot..."
+_PLOT_IN_WINDOW = "Plot in window"
 _REMOVE_COLUMNS = "Remove columns"
 _REMOVE_ROWS = "Remove rows"
 _TRIM_COLUMNS = "Trim columns"
@@ -169,6 +174,10 @@ class MapTableContextMenu(ContextMenuBase):
         self._map_editor = editor
         in_expanse_column = table_view.model().is_expanse_column(self._index.column())
         self.addAction(_OPEN_EDITOR, self._show_value_editor)
+        self.addAction(_PLOT, self._plot)
+        self._plot_in_window_menu = self.addMenu(_PLOT_IN_WINDOW)
+        self._plot_in_window_menu.triggered.connect(self._plot_in_window)
+        _prepare_plot_in_window_menu(self._plot_in_window_menu)
         self.addSeparator()
         self._add_default_actions()
         self.addSeparator()
@@ -248,6 +257,35 @@ class MapTableContextMenu(ContextMenuBase):
     def _show_value_editor(self):
         """Opens the value element editor."""
         self._map_editor.open_value_editor(self._index)
+
+    @Slot(bool)
+    def _plot(self, checked=False):
+        """Plots current indexes."""
+        selection = self._table_view.selectedIndexes()
+        try:
+            hints = MapTablePlottingHints()
+            plot_widget = plot_selection(self._table_view.model(), selection, hints)
+        except PlottingError as error:
+            report_plotting_failure(error, self._table_view)
+        else:
+            plot_widget.use_as_window(self._table_view.window(), "value")
+            plot_widget.show()
+
+    @Slot(QAction)
+    def _plot_in_window(self, action):
+        """Plots the selected cells in an existing window."""
+        window_id = action.text()
+        plot_window = PlotWidget.plot_windows.get(window_id)
+        if plot_window is None:
+            self._plot()
+            return
+        selected_indexes = self._table_view.selectedIndexes()
+        hints = MapTablePlottingHints()
+        try:
+            plot_selection(self._table_view.model(), selected_indexes, hints, plot_window)
+            plot_window.raise_()
+        except PlottingError as error:
+            report_plotting_failure(error, self._table_view)
 
     @Slot()
     def _trim_columns(self):
