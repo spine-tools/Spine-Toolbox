@@ -392,9 +392,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
         db_map_class_obj_items = {}
         db_map_class_rel_items = {}
         for item in obj_items:
-            db_map_class_obj_items.setdefault(item.db_map, {}).setdefault(item.entity_class_name, []).append(item)
+            for db_map in item.db_maps:
+                db_map_class_obj_items.setdefault(db_map, {}).setdefault(item.entity_class_name, []).append(item)
         for item in rel_items:
-            db_map_class_rel_items.setdefault(item.db_map, {}).setdefault(item.entity_class_name, []).append(item)
+            for db_map in item.db_maps:
+                db_map_class_rel_items.setdefault(db_map, {}).setdefault(item.entity_class_name, []).append(item)
         db_map_data = {}
         for db_map, class_obj_items in db_map_class_obj_items.items():
             data = db_map_data.setdefault(db_map, {})
