@@ -531,14 +531,14 @@ class ObjectItem(EntityItem):
         relationship_ids_per_class = {}
         for db_map, rels in self.db_mngr.find_cascading_relationships(db_map_object_ids).items():
             for rel in rels:
-                relationship_ids_per_class.setdefault((db_map, rel["class_id"]), set()).add((db_map, rel["id"]))
+                relationship_ids_per_class.setdefault((db_map, rel["class_id"]), set()).add(rel["id"])
         db_map_object_class_ids = {db_map: {self.entity_class_id(db_map)} for db_map in self.db_maps}
         for db_map, rel_clss in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).items():
             for rel_cls in rel_clss:
                 rel_cls = rel_cls.copy()
                 rel_cls["object_class_id_list"] = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
                 rel_cls["relationship_ids"] = relationship_ids_per_class.get((db_map, rel_cls["id"]), set())
-                self._relationship_classes[(db_map, rel_cls["name"])] = rel_cls
+                self._relationship_classes.setdefault(rel_cls["name"], []).append((db_map, rel_cls))
 
     def _populate_expand_collapse_menu(self, menu):
         """
@@ -553,9 +553,12 @@ class ObjectItem(EntityItem):
         menu.setEnabled(True)
         menu.addAction("All")
         menu.addSeparator()
-        for (db_map, name), rel_cls in self._relationship_classes.items():
+        for name, db_map_rel_clss in self._relationship_classes.items():
+            db_map, rel_cls = next(iter(db_map_rel_clss))
             icon = self.db_mngr.entity_class_icon(db_map, "relationship_class", rel_cls["id"])
-            menu.addAction(icon, name + "@" + db_map.codename).setEnabled(bool(rel_cls["relationship_ids"]))
+            menu.addAction(icon, name).setEnabled(
+                any(rel_cls["relationship_ids"] for (db_map, rel_cls) in db_map_rel_clss)
+            )
 
     def _populate_add_relationships_menu(self, menu):
         """
@@ -564,32 +567,43 @@ class ObjectItem(EntityItem):
         Args:
             menu (QMenu)
         """
-        object_class_ids_in_graph = {
-            x.entity_class_id for x in self._spine_db_editor.ui.graphicsView.entity_items if isinstance(x, ObjectItem)
-        }
-        for (db_map, name), rel_cls in self._relationship_classes.items():
+        object_class_ids_in_graph = {}
+        for item in self._spine_db_editor.ui.graphicsView.entity_items:
+            if not isinstance(item, ObjectItem):
+                continue
+            for db_map in item.db_maps:
+                object_class_ids_in_graph.setdefault(db_map, set()).add(item.entity_class_id(db_map))
+        for name, db_map_rel_clss in self._relationship_classes.items():
+            db_map, rel_cls = next(iter(db_map_rel_clss))
             icon = self.db_mngr.entity_class_icon(db_map, "relationship_class", rel_cls["id"])
-            menu.addAction(icon, name + "@" + db_map.codename).setEnabled(
-                set(rel_cls["object_class_id_list"]) <= object_class_ids_in_graph
+            menu.addAction(icon, name).setEnabled(
+                any(
+                    set(rel_cls["object_class_id_list"]) <= object_class_ids_in_graph.get(db_map, set())
+                    for (db_map, rel_cls) in db_map_rel_clss
+                )
             )
         menu.setEnabled(bool(self._relationship_classes))
 
-    def _get_relationship_ids_to_expand_or_collapse(self, action):
-        rel_cls = self._relationship_classes.get(action.text())
-        if rel_cls is not None:
-            return rel_cls["relationship_ids"]
-        return {id_ for rel_cls in self._relationship_classes.values() for id_ in rel_cls["relationship_ids"]}
+    def _get_db_map_relationship_ids_to_expand_or_collapse(self, action):
+        db_map_rel_clss = self._relationship_classes.get(action.text())
+        if db_map_rel_clss is not None:
+            return {(db_map, id_) for db_map, rel_cls in db_map_rel_clss for id_ in rel_cls["relationship_ids"]}
+        return {
+            (db_map, id_)
+            for db_map, rel_cls in self._relationship_classes.values()
+            for id_ in rel_cls["relationship_ids"]
+        }
 
     @Slot(QAction)
     def _expand(self, action):
-        relationship_ids = self._get_relationship_ids_to_expand_or_collapse(action)
-        self._spine_db_editor.added_relationship_ids.update(relationship_ids)
+        db_map_relationship_ids = self._get_db_map_relationship_ids_to_expand_or_collapse(action)
+        self._spine_db_editor.added_db_map_relationship_ids.update(db_map_relationship_ids)
         self._spine_db_editor.build_graph(persistent=True)
 
     @Slot(QAction)
     def _collapse(self, action):
-        relationship_ids = self._get_relationship_ids_to_expand_or_collapse(action)
-        self._spine_db_editor.added_relationship_ids.difference_update(relationship_ids)
+        db_map_relationship_ids = self._get_db_map_relationship_ids_to_expand_or_collapse(action)
+        self._spine_db_editor.added_db_map_relationship_ids.difference_update(db_map_relationship_ids)
         self._spine_db_editor.build_graph(persistent=True)
 
     @Slot(QAction)

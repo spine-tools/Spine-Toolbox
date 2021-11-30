@@ -64,7 +64,7 @@ class GraphViewMixin:
         self.dst_inds = list()
         self._adding_relationships = False
         self._pos_for_added_objects = None
-        self.added_relationship_ids = set()
+        self.added_db_map_relationship_ids = set()
         self._thread_pool = QThreadPool()
         self.layout_gens = dict()
         self._layout_gen_id = None
@@ -129,7 +129,7 @@ class GraphViewMixin:
         if not new_db_map_id_sets:
             return
         if self._adding_relationships:
-            self.added_relationship_ids.update(new_db_map_id_sets)
+            self.added_db_map_relationship_ids.update(new_db_map_id_sets)
             self.build_graph(persistent=True)
             self._end_add_relationships()
         elif self._extending_graph:
@@ -226,7 +226,7 @@ class GraphViewMixin:
         """Hides removed entities while saving them into a set.
         This allows entities to be restored in case the user undoes the operation."""
         removed_db_map_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
-        self.added_relationship_ids -= removed_db_map_ids  # FIXME
+        self.added_db_map_relationship_ids -= removed_db_map_ids
         removed_items = set()
         for item in self.ui.graphicsView.items():
             if not isinstance(item, type_):
@@ -267,7 +267,7 @@ class GraphViewMixin:
         """Stores the given selection of entity tree indexes and builds graph."""
         if selected is not None:
             self.selected_tree_inds = selected
-        self.added_relationship_ids.clear()
+        self.added_db_map_relationship_ids.clear()
         self._extending_graph = True
         self.build_graph()
 
@@ -368,7 +368,7 @@ class GraphViewMixin:
     def _update_graph_data(self):
         """Updates data for graph according to selection in trees."""
         db_map_object_ids, db_map_relationship_ids = self._get_selected_entity_ids()
-        db_map_relationship_ids.update(self.added_relationship_ids)
+        db_map_relationship_ids.update(self.added_db_map_relationship_ids)
         pruned_db_map_entity_ids = {
             id_ for ids in self.ui.graphicsView.pruned_db_map_entity_ids.values() for id_ in ids
         }

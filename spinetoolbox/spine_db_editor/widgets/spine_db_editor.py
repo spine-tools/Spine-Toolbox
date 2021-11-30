@@ -576,7 +576,7 @@ class SpineDBEditorBase(QMainWindow):
         Duplicates the object at the given object tree model index.
 
         Args:
-            index (QModelIndex)
+            object_item (ObjectTreeItem of ObjectItem)
         """
         orig_name = object_item.display_data
         dup_name, ok = QInputDialog.getText(
