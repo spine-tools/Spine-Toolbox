@@ -112,7 +112,10 @@ class TimePatternModel(IndexedValueTableModel):
                 QMessageBox.warning(self.parent(), "Error", str(error))
                 return False
         else:
-            self._value.values[row] = value
+            try:
+                self._value.values[row] = value
+            except ValueError:
+                return False
         self.dataChanged.emit(index, index, [Qt.EditRole])
         return True
 

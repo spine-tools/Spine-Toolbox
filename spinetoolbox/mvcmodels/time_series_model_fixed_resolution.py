@@ -125,7 +125,10 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         row = index.row()
         if row == len(self._value):
             self.insertRow(row)
-        self._value.values[row] = value
+        try:
+            self._value.values[row] = value
+        except ValueError:
+            return False
         self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
         return True
 

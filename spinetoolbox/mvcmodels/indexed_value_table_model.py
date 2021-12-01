@@ -16,6 +16,7 @@ A model for indexed parameter values, used by the parameter_value editors.
 :date:   18.6.2019
 """
 
+import locale
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtGui import QColor
 
@@ -46,7 +47,7 @@ class IndexedValueTableModel(QAbstractTableModel):
                 return None
             if index.column() == 0:
                 return str(self._value.indexes[index.row()])
-            return float(self._value.values[index.row()])
+            return locale.str(self._value.values[index.row()])
         if role == Qt.BackgroundRole:
             if index.row() == len(self._value):
                 return EXPANSE_COLOR
