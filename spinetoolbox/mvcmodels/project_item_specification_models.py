@@ -16,11 +16,13 @@ Contains a class for storing Tool specifications.
 :date:   23.1.2018
 """
 
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot
+from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot, Signal
 
 
 class ProjectItemSpecificationModel(QAbstractListModel):
     """Class to store specs that are available in a project e.g. GAMS or Julia models."""
+
+    specification_replaced = Signal(str, str)
 
     def __init__(self, icons):
         super().__init__()
@@ -62,6 +64,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
                 self._spec_names[i] = new_name
                 index = self.index(i, 0)
                 self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
+                self.specification_replaced.emit(old_name, new_name)
                 break
 
     def connect_to_project(self, project):

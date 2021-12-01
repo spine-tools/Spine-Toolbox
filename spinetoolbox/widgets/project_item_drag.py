@@ -24,8 +24,7 @@ from ..helpers import CharIconEngine, make_icon_background
 
 
 class ProjectItemDragMixin:
-    """Custom class with dragging support.
-    """
+    """Custom class with dragging support."""
 
     drag_about_to_start = Signal()
 
@@ -461,7 +460,10 @@ class ProjectItemSpecArray(QToolBar):
             return
         for row in range(top_left.row(), bottom_right.row() + 1):
             index = self._model.index(row, 0)
-            button = self.widgetForAction(self._actions[row])
+            action = self._actions.get(row)
+            if action is None:
+                continue
+            button = self.widgetForAction(action)
             button.spec_name = index.data()
 
     def _reset_specs(self):
