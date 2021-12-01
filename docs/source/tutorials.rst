@@ -18,5 +18,4 @@ The following tutorials are available:
    simple_system.rst
    SpineTutorialTwoHydro.rst
    case_study_a5.rst
-   SpineTutorialA5CaseStudy.rst
 
