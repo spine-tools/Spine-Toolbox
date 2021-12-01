@@ -133,7 +133,9 @@ class ArrayModel(QAbstractTableModel):
             if row == len(self._data):
                 return None
             element = self._data[row]
-            return locale.str(element)
+            if isinstance(element, (float, str)):
+                return element
+            return str(element)
         if column == 1:
             if role == Qt.EditRole:
                 if row == len(self._data):

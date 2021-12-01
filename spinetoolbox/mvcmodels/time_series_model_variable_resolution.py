@@ -152,10 +152,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
         if index.column() == 0:
             self._value.indexes[row] = value
         else:
-            try:
-                self._value.values[row] = value
-            except ValueError:
-                return False
+            self._value.values[row] = value
         self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
         return True
 

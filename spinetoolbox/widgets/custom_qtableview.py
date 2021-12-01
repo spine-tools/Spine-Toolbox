@@ -317,7 +317,7 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
             with system_lc_numeric():
                 if all(stamp is None for stamp in data_indexes):
                     for value in data_values:
-                        writer.writerow([value])
+                        writer.writerow([locale.str(value) if value is not None else ""])
                 elif all(value is None for value in data_values):
                     for index in data_indexes:
                         writer.writerow([index if index is not None else ""])
