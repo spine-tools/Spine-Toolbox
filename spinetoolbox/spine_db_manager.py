@@ -287,9 +287,31 @@ class SpineDBManager(QObject):
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
-        for db_map, items in db_map_data.items():
-            for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
+        if item_type == "parameter_value_list":
+            # When queried from database, parameter value lists come as individual list values.
+            # Here we collect the separate values into value lists.
+            for db_map, items in db_map_data.items():
+                cache = self._cache.setdefault(db_map, {}).setdefault(item_type, {})
+                for item in items:
+                    id_ = item["id"]
+                    if "value_list" in item:
+                        cache[id_] = CacheItem(**item)
+                    else:
+                        cache_item = cache.get(id_)
+                        if cache_item is None:
+                            cache[id_] = cache_item = CacheItem(id=id_, name=item["name"], commit_id=item["commit_id"])
+                            value_list = []
+                            _insert_value_to_expanding_list(value_list, item["value"], item["value_index"])
+                            cache_item["value_list"] = value_list
+                        else:
+                            _insert_value_to_expanding_list(
+                                cache_item["value_list"], item["value"], item["value_index"]
+                            )
+        else:
+            for db_map, items in db_map_data.items():
+                cache = self._cache.setdefault(db_map, {}).setdefault(item_type, {})
+                for item in items:
+                    cache[item["id"]] = CacheItem(**item)
 
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
@@ -674,7 +696,7 @@ class SpineDBManager(QObject):
             only_visible (bool, optional): If True, only looks in items that have already made it into the cache.
 
         Returns:
-            dict
+            CacheItem: cached item
         """
         item = self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
         if only_visible and item:
@@ -896,12 +918,12 @@ class SpineDBManager(QObject):
         item = self.get_item(db_map, "parameter_value_list", id_)
         if not item:
             return None
-        _split_and_parse_value_list(item)
-        if index < 0 or index >= len(item["split_value_list"]):
+        value_list = _parsed_value_list(item)
+        if not (0 <= index < len(value_list)):
             return None
         if role == Qt.EditRole:
-            return item["split_value_list"][index]
-        return self._format_value(item["split_parsed_value_list"][index], role)
+            return str(value_list[index])
+        return self._format_value(value_list[index], role)
 
     def get_parameter_value_list(self, db_map, id_, role=Qt.DisplayRole):
         """Returns a parameter_value_list formatted for the given role.
@@ -914,10 +936,26 @@ class SpineDBManager(QObject):
         item = self.get_item(db_map, "parameter_value_list", id_)
         if not item:
             return []
-        _split_and_parse_value_list(item)
+        value_list = _parsed_value_list(item)
         if role == Qt.EditRole:
-            return item["split_value_list"]
-        return [self._format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
+            return list(map(str, value_list))
+        return [self._format_value(value, role) for value in value_list]
+
+    def get_parameter_value_list_length(self, db_map, id_, only_visible=True):
+        """Returns number of values in parameter value list.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            id_ (int): The parameter_value_list id
+            only_visible (bool, optional): If True, only looks in items that have already made it into the cache.
+
+        Returns:
+            int: value count
+        """
+        item = self.get_item(db_map, "parameter_value_list", id_, only_visible)
+        if not item:
+            return 0
+        return len(item["value_list"])
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
         alternative_id_list = self.get_item(db_map, "scenario", scen_id).get("alternative_id_list")
@@ -1946,8 +1984,7 @@ class SpineDBManager(QObject):
             item["object_name_list"] = relationship.get("object_name_list")
             item["alternative_name"] = self.get_item(db_map, "alternative", item["alternative_id"])["name"]
         elif item_type == "parameter_value_list":
-            item["value_list"] = ";".join(str(val, "UTF8") for val in item["value_list"])
-            item["value_index_list"] = ";".join(str(k) for k in range(len(item["value_list"])))
+            pass
         elif item_type == "entity_group":
             item["class_id"] = item["entity_class_id"]
             item["group_id"] = item["entity_id"]
@@ -1991,8 +2028,31 @@ class SpineDBManager(QObject):
         return item
 
 
-def _split_and_parse_value_list(item):
-    if "split_value_list" not in item:
-        item["split_value_list"] = item["value_list"].split(";")
-    if "split_parsed_value_list" not in item:
-        item["split_parsed_value_list"] = [json.loads(value) for value in item["split_value_list"]]
+def _parsed_value_list(value_list_item):
+    """Retrieves parsed value list from parameter value list item.
+
+    Args:
+        value_list_item (CacheItem): parameter value list item
+
+    Returns:
+        list: parameter value list values
+    """
+    parsed_value_list = value_list_item.get("parsed_value_list")
+    if parsed_value_list is None:
+        value_list_item["parsed_value_list"] = parsed_value_list = [
+            from_database(value) for value in value_list_item["value_list"]
+        ]
+    return parsed_value_list
+
+
+def _insert_value_to_expanding_list(value_list, value, index):
+    """Inserts a value to list extending the list as needed.
+
+    Args:
+        value_list (list): list
+        value (Any): value to insert
+        index (int): insertion point
+    """
+    if index >= len(value_list):
+        value_list += (index + 1 - len(value_list)) * [None]
+    value_list[index] = value

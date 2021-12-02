@@ -24,7 +24,7 @@ from PySide2.QtCore import Qt, QItemSelectionModel
 from PySide2.QtWidgets import QApplication
 
 from spinedb_api import (
-    DiffDatabaseMapping,
+    DatabaseMapping,
     from_database,
     import_object_classes,
     import_objects,
@@ -68,7 +68,7 @@ class _Base(unittest.TestCase):
             logger = mock.MagicMock()
             self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=create)
             self._db_editor = SpineDBEditor(self._db_mngr, {url: "database"})
-        qApp.processEvents()
+        QApplication.processEvents()
 
     def _common_tear_down(self):
         with mock.patch(
@@ -265,13 +265,17 @@ class TestObjectTreeViewWithExistingData(_EntityTreeViewTestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        db_map = DiffDatabaseMapping(url, create=True)
+        db_map = DatabaseMapping(url, create=True)
         import_object_classes(db_map, ("object_class_1",))
         import_objects(db_map, (("object_class_1", "object_1"), ("object_class_1", "object_2")))
         db_map.commit_session("Add objects.")
         db_map.connection.close()
         self._common_setup(url, create=False)
-        QApplication.processEvents()
+        model = self._db_editor.ui.treeView_object.model()
+        root_index = model.index(0, 0)
+        while model.rowCount(root_index) != 1:
+            # Wait for fetching to finish.
+            QApplication.processEvents()
 
     def tearDown(self):
         self._common_tear_down()
@@ -476,7 +480,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        db_map = DiffDatabaseMapping(url, create=True)
+        db_map = DatabaseMapping(url, create=True)
         import_object_classes(db_map, ("object_class_1", "object_class_2"))
         import_objects(
             db_map,
@@ -495,7 +499,11 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         db_map.commit_session("Add relationships.")
         db_map.connection.close()
         self._common_setup(url, create=False)
-        QApplication.processEvents()
+        model = self._db_editor.ui.treeView_relationship.model()
+        root_index = model.index(0, 0)
+        while model.rowCount(root_index) != 1:
+            # Wait for fetching to finish.
+            QApplication.processEvents()
 
     def tearDown(self):
         self._common_tear_down()
@@ -791,12 +799,16 @@ class TestParameterValueListTreeViewWithExistingData(_ParameterValueListTreeView
         self.cell_editor = None
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        db_map = DiffDatabaseMapping(url, create=True)
+        db_map = DatabaseMapping(url, create=True)
         import_parameter_value_lists(db_map, (("value_list_1", "value_1"), ("value_list_1", "value_2")))
         db_map.commit_session("Add parameter value list.")
         db_map.connection.close()
         self._common_setup(url, create=False)
-        QApplication.processEvents()
+        model = self._db_editor.ui.treeView_parameter_value_list.model()
+        root_index = model.index(0, 0)
+        while model.rowCount(root_index) != 2:
+            # Wait for fetching to finish.
+            QApplication.processEvents()
 
     def tearDown(self):
         self._common_tear_down()
