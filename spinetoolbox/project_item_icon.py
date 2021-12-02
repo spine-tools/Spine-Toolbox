@@ -39,7 +39,6 @@ from PySide2.QtGui import (
     QFont,
     QPainterPath,
     QRadialGradient,
-    QLinearGradient,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spine_engine.spine_engine import ItemExecutionFinishState
@@ -92,7 +91,6 @@ class ProjectItemIcon(QGraphicsPathItem):
         h, s, _, a = icon_color.getHsl()
         background_color = QColor.fromHsl(h, s, 240, a)
         gradient = QRadialGradient(self._rect.center(), 1 * self._rect.width())
-        # gradient = QLinearGradient(self._rect.topLeft(), self._rect.bottomRight())
         gradient.setColorAt(0, background_color.lighter(105))
         gradient.setColorAt(1, background_color.darker(105))
         brush = QBrush(gradient)
@@ -102,14 +100,20 @@ class ProjectItemIcon(QGraphicsPathItem):
         shadow_effect.setOffset(1)
         shadow_effect.setEnabled(False)
         self.setGraphicsEffect(shadow_effect)
-        self.update_path()
+        self._update_path()
 
     def rect(self):
         return self._rect
 
-    def update_path(self):
-        radius = self.component_rect.width() / 2
-        # radius = 0
+    def _update_path(self):
+        rounded = self._toolbox.qsettings().value("appSettings/roundedItems", defaultValue="false") == "true"
+        self._do_update_path(rounded)
+
+    def update_path(self, rounded):
+        self._do_update_path(rounded)
+
+    def _do_update_path(self, rounded):
+        radius = self.component_rect.width() / 2 if rounded else 0
         path = QPainterPath()
         path.addRoundedRect(self._rect, radius, radius)
         self.setPath(path)
@@ -139,6 +143,9 @@ class ProjectItemIcon(QGraphicsPathItem):
             svg_color (QColor): Color of SVG icon
         """
         self.setPen(pen)
+        for conn in self.connectors.values():
+            conn.setPen(pen)
+        self.rank_icon.bg.setPen(pen)
         self.setBrush(brush)
         self.colorizer.setColor(svg_color)
         # Load SVG
@@ -401,7 +408,7 @@ class ConnectorButton(QGraphicsPathItem):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            parent (QGraphicsItem): Project item bg rectangle
+            parent (ProjectItemIcon): parent graphics item
             position (str): Either "top", "left", "bottom", or "right"
         """
         super().__init__(parent)
@@ -409,8 +416,6 @@ class ConnectorButton(QGraphicsPathItem):
         self._toolbox = toolbox
         self.position = position
         self.links = list()
-        pen = QPen(Qt.black, 0.5, Qt.SolidLine)
-        self.setPen(pen)
         self.setBrush(self.brush)
         parent_rect = parent.rect()
         extent = 0.2 * parent_rect.width()

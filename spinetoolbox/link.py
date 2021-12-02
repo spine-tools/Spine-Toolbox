@@ -606,7 +606,7 @@ class LinkDrawerBase(LinkBase):
         """
         super().__init__(toolbox, None, None)
         self.tip = None
-        self.setPen(QPen(Qt.black, 0.5))
+        self.setPen(QPen(self.pen_brush, 0.5))
         self.setZValue(1)  # A drawer should be on top of every other item.
 
     @property
@@ -659,13 +659,15 @@ class LinkDrawerBase(LinkBase):
 class ConnectionLinkDrawer(LinkDrawerBase):
     """An item for drawing connection links between project items."""
 
+    _COLOR = QColor(255, 255, 0, 100)
+
     def __init__(self, toolbox):
         """
         Args:
             toolbox (ToolboxUI): main UI class instance
         """
         super().__init__(toolbox)
-        self.setBrush(QBrush(QColor(255, 255, 0, 100)))
+        self.setBrush(QBrush(self._COLOR))
 
     def add_link(self):
         self._toolbox.ui.graphicsView.add_link(self.src_connector, self.dst_connector)
@@ -683,13 +685,15 @@ class ConnectionLinkDrawer(LinkDrawerBase):
 class JumpLinkDrawer(LinkDrawerBase):
     """An item for drawing jump connections between project items."""
 
+    _COLOR = QColor(128, 0, 255, 100)
+
     def __init__(self, toolbox):
         """
         Args:
             toolbox (ToolboxUI): main UI class instance
         """
         super().__init__(toolbox)
-        self.setBrush(QBrush(QColor(128, 0, 255, 100)))
+        self.setBrush(QBrush(self._COLOR))
 
     def add_link(self):
         self._toolbox.ui.graphicsView.add_jump(self.src_connector, self.dst_connector)

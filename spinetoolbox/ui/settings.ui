@@ -243,29 +243,60 @@
            <property name="spacing">
             <number>6</number>
            </property>
-           <item row="20" column="0">
-            <widget class="QLabel" name="label_4">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Data flow animation speed</string>
-             </property>
-            </widget>
+           <item row="16" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <item>
+              <widget class="QLineEdit" name="lineEdit_work_dir">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="placeholderText">
+                <string>Using default directory</string>
+               </property>
+               <property name="clearButtonEnabled">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QToolButton" name="toolButton_browse_work">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Work directory with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="icon">
+                <iconset resource="resources/resources_icons.qrc">
+                 <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
-           <item row="4" column="0">
-            <widget class="QCheckBox" name="checkBox_delete_data">
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="checkBox_save_project_before_closing">
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select what to do if there are unsaved changes when closing a project or when quitting the app.&lt;/p&gt;&lt;p&gt;Unchecked: Don't save project and don't show question box&lt;/p&gt;&lt;p&gt;Partially checked: Show question box&lt;/p&gt;&lt;p&gt;Checked: Save project and don't show question box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Delete data when project item is removed from project</string>
+              <string>Save project before closing</string>
+             </property>
+             <property name="tristate">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
-           <item row="19" column="0">
+           <item row="21" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_4">
              <item>
               <widget class="QRadioButton" name="radioButton_bg_grid">
@@ -326,47 +357,7 @@
              </item>
             </layout>
            </item>
-           <item row="14" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout_6">
-             <item>
-              <widget class="QLineEdit" name="lineEdit_work_dir">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="placeholderText">
-                <string>Using default directory</string>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QToolButton" name="toolButton_browse_work">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Work directory with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="icon">
-                <iconset resource="resources/resources_icons.qrc">
-                 <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="21" column="0">
+           <item row="23" column="0">
             <layout class="QVBoxLayout" name="verticalLayout_3">
              <property name="spacing">
               <number>0</number>
@@ -438,19 +429,26 @@
              </item>
             </layout>
            </item>
-           <item row="13" column="0">
-            <widget class="QLabel" name="label">
+           <item row="22" column="0">
+            <widget class="QLabel" name="label_4">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
               </font>
              </property>
              <property name="text">
-              <string>Work directory</string>
+              <string>Data flow animation speed</string>
              </property>
             </widget>
            </item>
-           <item row="18" column="0">
+           <item row="9" column="0">
+            <widget class="QCheckBox" name="checkBox_color_toolbar_icons">
+             <property name="text">
+              <string>Color toolbar icons</string>
+             </property>
+            </widget>
+           </item>
+           <item row="20" column="0">
             <widget class="QLabel" name="label_7">
              <property name="font">
               <font>
@@ -462,16 +460,13 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="0">
-            <widget class="QCheckBox" name="checkBox_custom_open_project_dialog">
+           <item row="11" column="0">
+            <widget class="QCheckBox" name="checkBox_use_curved_links">
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the type of dialog used in File-&amp;gt;Open project...&lt;/p&gt;&lt;p&gt;Checking this box shows a custom dialog. Unchecking this box shows the OS provided 'select folder' dialog.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Custom open project dialog</string>
-             </property>
-             <property name="checked">
-              <bool>false</bool>
+              <string>Curved links</string>
              </property>
             </widget>
            </item>
@@ -488,23 +483,28 @@
              </property>
             </widget>
            </item>
-           <item row="10" column="0">
-            <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <item row="15" column="0">
+            <widget class="QLabel" name="label">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
              </property>
              <property name="text">
-              <string>Smooth zoom</string>
+              <string>Work directory</string>
              </property>
             </widget>
            </item>
-           <item row="11" column="0">
-            <widget class="QCheckBox" name="checkBox_use_curved_links">
+           <item row="5" column="0">
+            <widget class="QCheckBox" name="checkBox_custom_open_project_dialog">
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the type of dialog used in File-&amp;gt;Open project...&lt;/p&gt;&lt;p&gt;Checking this box shows a custom dialog. Unchecking this box shows the OS provided 'select folder' dialog.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Curved links</string>
+              <string>Custom open project dialog</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
              </property>
             </widget>
            </item>
@@ -518,16 +518,20 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
-            <widget class="QCheckBox" name="checkBox_save_project_before_closing">
+           <item row="10" column="0">
+            <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select what to do if there are unsaved changes when closing a project or when quitting the app.&lt;/p&gt;&lt;p&gt;Unchecked: Don't save project and don't show question box&lt;/p&gt;&lt;p&gt;Partially checked: Show question box&lt;/p&gt;&lt;p&gt;Checked: Save project and don't show question box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Save project before closing</string>
+              <string>Smooth zoom</string>
              </property>
-             <property name="tristate">
-              <bool>true</bool>
+            </widget>
+           </item>
+           <item row="13" column="0">
+            <widget class="QCheckBox" name="checkBox_prevent_overlapping">
+             <property name="text">
+              <string>Prevent items from overlapping</string>
              </property>
             </widget>
            </item>
@@ -547,17 +551,20 @@
              </property>
             </widget>
            </item>
-           <item row="9" column="0">
-            <widget class="QCheckBox" name="checkBox_color_toolbar_icons">
+           <item row="4" column="0">
+            <widget class="QCheckBox" name="checkBox_delete_data">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
              <property name="text">
-              <string>Color toolbar icons</string>
+              <string>Delete data when project item is removed from project</string>
              </property>
             </widget>
            </item>
            <item row="12" column="0">
-            <widget class="QCheckBox" name="checkBox_prevent_overlapping">
+            <widget class="QCheckBox" name="checkBox_use_rounded_items">
              <property name="text">
-              <string>Prevent items from overlapping</string>
+              <string>Rounded items</string>
              </property>
             </widget>
            </item>

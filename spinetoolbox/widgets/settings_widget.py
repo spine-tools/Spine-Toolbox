@@ -32,6 +32,7 @@ from .install_julia_wizard import InstallJuliaWizard
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..link import Link
+from ..project_item_icon import ProjectItemIcon
 from ..widgets.kernel_editor import (
     KernelEditor,
     MiniPythonKernelEditor,
@@ -287,6 +288,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
         self.ui.checkBox_color_toolbar_icons.clicked.connect(self.set_toolbar_colored_icons)
         self.ui.checkBox_use_curved_links.clicked.connect(self.update_links_geometry)
+        self.ui.checkBox_use_rounded_items.clicked.connect(self.update_items_path)
         self.ui.pushButton_install_julia.clicked.connect(self._show_install_julia_wizard)
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
         self.ui.radioButton_use_python_jupyter_console.toggled.connect(self._update_python_widgets_enabled)
@@ -488,6 +490,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
                 item.update_geometry(curved_links=checked)
 
     @Slot(bool)
+    def update_items_path(self, checked=False):
+        for item in self._toolbox.ui.graphicsView.items():
+            if isinstance(item, ProjectItemIcon):
+                item.update_path(checked)
+
+    @Slot(bool)
     def set_toolbar_colored_icons(self, checked=False):
         self._toolbox.main_toolbar.set_colored_icons(checked)
 
@@ -505,6 +513,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
+        rounded_items = self._qsettings.value("appSettings/roundedItems", defaultValue="false")
         prevent_overlapping = self._qsettings.value("appSettings/preventOverlapping", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
@@ -543,6 +552,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_color_toolbar_icons.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
+        if rounded_items == "true":
+            self.ui.checkBox_use_rounded_items.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if prevent_overlapping == "true":
             self.ui.checkBox_prevent_overlapping.setCheckState(Qt.Checked)
@@ -656,6 +667,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/colorToolbarIcons", color_toolbar_icons)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
+        rounded_items = "true" if int(self.ui.checkBox_use_rounded_items.checkState()) else "false"
+        self._qsettings.setValue("appSettings/roundedItems", rounded_items)
         prevent_overlapping = "true" if int(self.ui.checkBox_prevent_overlapping.checkState()) else "false"
         self._qsettings.setValue("appSettings/preventOverlapping", prevent_overlapping)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
@@ -773,11 +786,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def update_ui(self):
         super().update_ui()
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
+        rounded_items = self._qsettings.value("appSettings/roundedItems", defaultValue="false")
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         self.set_toolbar_colored_icons(color_toolbar_icons == "true")
         self.update_links_geometry(curved_links == "true")
+        self.update_items_path(rounded_items == "true")
         if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
         elif bg_choice == "tree":
