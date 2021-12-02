@@ -18,14 +18,13 @@ Models to represent items in a tree.
 from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
 
 
-class TreeItem(QObject):
+class TreeItem:
     """A tree item that can fetch its children."""
 
     def __init__(self, model=None):
-        """Initializes item.
-
+        """
         Args:
-            model (MinimalTreeModel, NoneType): The model where the item belongs.
+            model (MinimalTreeModel, optional): The model where the item belongs.
         """
         super().__init__()
         self._children = []
