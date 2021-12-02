@@ -269,12 +269,11 @@ class TestSpineDBFetcher(unittest.TestCase):
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value", 1), item)
 
     def test_fetch_parameter_value_lists(self):
-        self._import_data(parameter_value_lists=(("value_list", 2.3),))
+        self._import_data(parameter_value_lists=(("value_list", (2.3,)),))
         self._fetch()
-        item = {'id': 1, 'name': 'value_list', 'value_index': 0, 'value': b'2.3', 'commit_id': 2}
+        item = {'id': 1, 'name': 'value_list', 'value_index_list': '0', 'value_list': '[2.3]', 'commit_id': 2}
         self._listener.receive_parameter_value_lists_added.assert_any_call({self._db_map: [item]})
-        cached_item = {'id': 1, 'name': 'value_list', 'value_list': [b"2.3"], 'commit_id': 2}
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value_list", 1), cached_item)
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value_list", 1), item)
 
     def test_fetch_features(self):
         self._import_data(

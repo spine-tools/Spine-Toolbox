@@ -19,7 +19,7 @@ Tree items for parameter_value lists.
 import json
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
-from spinedb_api import to_database, from_database
+from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from .tree_item_utility import (
     EmptyChildMixin,
@@ -56,7 +56,7 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
 
 
 class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, LeafItem):
-    """A parameter value list item."""
+    """A list item."""
 
     def __init__(self, identifier=None, name=None):
         super().__init__(identifier=identifier)
@@ -69,21 +69,17 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, L
     def _make_item_data(self):
         return {"name": "Type new list name here..." if self._name is None else self._name}
 
-    def collect_values(self):
-        """Collects parameter value list values from child items.
-
-        Returns:
-            list: list of values
-        """
-        return [child.data(0, PARSED_ROLE) for child in self._children[:-1]]
+    @property
+    def value_list(self):
+        if not self.id:
+            return []
+        return self.db_mngr.get_parameter_value_list(self.db_map, self.id, role=Qt.EditRole)
 
     def _do_finalize(self):
         if not self.id and not self._name:
             return
         super()._do_finalize()
-        children = [
-            ValueItem(self.id) for _ in range(self.db_mngr.get_parameter_value_list_length(self.db_map, self.id))
-        ]
+        children = [ValueItem(self.id) for _ in self.value_list]
         self.append_children(children)
 
     # pylint: disable=no-self-use
@@ -115,7 +111,7 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, L
         self.db_mngr.update_parameter_value_lists({self.db_map: [db_item]})
 
     def handle_updated_in_db(self):
-        value_count = self.db_mngr.get_parameter_value_list_length(self.db_map, self.id)
+        value_count = len(self.value_list)
         curr_value_count = self.child_count() - 1
         if value_count > curr_value_count:
             added_count = value_count - curr_value_count
@@ -144,16 +140,16 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
         return super().data(column, role)
 
     def _make_item_to_add(self, value):
-        value_list = self.parent_item.collect_values()
-        try:
-            value_list[self.child_number()] = value
-        except IndexError:
-            value_list.append(value)
-        return [(self.parent_item.name, value) for value in value_list]
+        db_value = to_database(value)[0]
+        return self.make_item_to_add(db_value)
 
     def make_item_to_add(self, db_value):
-        # Needed for parameter value editor.
-        return self._make_item_to_add(from_database(db_value))
+        value_list = self.parent_item.value_list.copy()
+        try:
+            value_list[self.child_number()] = db_value
+        except IndexError:
+            value_list.append(db_value)
+        return [(self.parent_item.name, json.loads(value)) for value in value_list]
 
     def _make_item_to_update(self, _column, value):
         return self._make_item_to_add(value)

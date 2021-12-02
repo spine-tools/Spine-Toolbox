@@ -25,14 +25,7 @@ class ParameterValueListModel(TreeModelBase):
     """A model to display parameter_value_list data in a tree view."""
 
     def add_parameter_value_lists(self, db_map_data):
-        reduced = {}
-        for db_map, data in db_map_data.items():
-            ids_only = {}
-            for item in data:
-                id_ = item["id"]
-                ids_only[id_] = {"id": id_, "name": item["name"]}
-            reduced[db_map] = list(ids_only.values())
-        for db_item, items in self._items_per_db_item(reduced).items():
+        for db_item, items in self._items_per_db_item(db_map_data).items():
             db_item.remove_wip_items({x["name"] for x in items})
             self._insert_items(db_item, items, ListItem)
 

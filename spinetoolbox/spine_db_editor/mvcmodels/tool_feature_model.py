@@ -73,9 +73,10 @@ class ToolFeatureModel(TreeModelBase):
         return self._db_map_feature_data.get(db_map, {}).get(feature_name)
 
     def _begin_set_feature_method(self, db_map, parameter_value_list_id):
-        value_index_list = list(
-            range(self.db_mngr.get_parameter_value_list_length(db_map, parameter_value_list_id, only_visible=False))
+        parameter_value_list = self.db_mngr.get_item(
+            db_map, "parameter_value_list", parameter_value_list_id, only_visible=False
         )
+        value_index_list = [int(ind) for ind in parameter_value_list["value_index_list"].split(";")]
         display_value_list = self.db_mngr.get_parameter_value_list(db_map, parameter_value_list_id, Qt.DisplayRole)
         self._db_map_feature_methods.setdefault(db_map, {})[parameter_value_list_id] = dict(
             zip(display_value_list, value_index_list)
