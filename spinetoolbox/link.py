@@ -39,6 +39,8 @@ class LinkBase(QGraphicsPathItem):
     Mainly provides the ``update_geometry`` method for 'drawing' the link on the scene.
     """
 
+    _COLOR = QColor(0, 0, 0, 0)
+
     def __init__(self, toolbox, src_connector, dst_connector):
         """
         Args:
@@ -52,6 +54,12 @@ class LinkBase(QGraphicsPathItem):
         self.dst_connector = dst_connector
         self.arrow_angle = pi / 4
         self.setCursor(Qt.PointingHandCursor)
+        self.selected_pen = QPen(self.pen_brush, 1, Qt.DashLine)
+        self.normal_pen = QPen(self.pen_brush, 0.5)
+
+    @property
+    def pen_brush(self):
+        return QBrush(self._COLOR.darker(200))
 
     @property
     def magic_number(self):
@@ -368,8 +376,6 @@ class Link(LinkBase):
         """
         super().__init__(toolbox, src_connector, dst_connector)
         self._connection = connection
-        self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
-        self.normal_pen = QPen(Qt.black, 0.5)
         self._link_icon_extent = 4 * self.magic_number
         self._link_icon = _LinkIcon(0, 0, self._link_icon_extent, self._link_icon_extent, self)
         self._link_icon.setPen(self.normal_pen)
@@ -500,6 +506,8 @@ class Link(LinkBase):
 class JumpLink(LinkBase):
     """A graphics icon to represent a jump connection between items."""
 
+    _COLOR = QColor(128, 0, 255, 200)
+
     def __init__(self, toolbox, src_connector, dst_connector, jump):
         """
         Args:
@@ -510,14 +518,11 @@ class JumpLink(LinkBase):
         """
         super().__init__(toolbox, src_connector, dst_connector)
         self._jump = jump
-        self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
-        self.normal_pen = QPen(Qt.black, 0.5)
         self._icon_extent = 2.5 * self.magic_number
         self._icon = _JumpIcon(0, 0, self._icon_extent, self._icon_extent, self)
         self._icon.setPen(self.normal_pen)
         self._icon.update_icon()
-        self._color = QColor(128, 0, 255, 200)
-        brush = QBrush(self._color)
+        brush = QBrush(self._COLOR)
         self.setBrush(brush)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
