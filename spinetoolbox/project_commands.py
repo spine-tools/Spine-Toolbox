@@ -198,6 +198,9 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
         connections = sum((self._project.connections_for_item(name) for name in item_names), [])
         unique_connections = {(c.source, c.destination): c for c in connections}.values()
         self._connection_dicts = [c.to_dict() for c in unique_connections]
+        jumps = sum((self._project.jumps_for_item(name) for name in item_names), [])
+        unique_jumps = {(c.source, c.destination): c for c in jumps}.values()
+        self._jump_dicts = [c.to_dict() for c in unique_jumps]
         if not item_names:
             self.setObsolete(True)
         elif len(item_names) == 1:
@@ -213,6 +216,8 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
         self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
         for connection_dict in self._connection_dicts:
             self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
+        for jump_dict in self._jump_dicts:
+            self._project.add_jump(Jump.from_dict(jump_dict), silent=True)
 
 
 class RenameProjectItemCommand(SpineToolboxCommand):

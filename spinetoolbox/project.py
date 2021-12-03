@@ -19,9 +19,7 @@ from enum import auto, Enum, unique
 from itertools import takewhile, chain
 import os
 import json
-import networkx as nx
 from PySide2.QtCore import Signal
-
 from spine_engine.exception import EngineInitFailed
 from spine_engine.project_item.connection import Connection, Jump
 from spine_engine.spine_engine import ExecutionDirection, validate_jumps
@@ -646,6 +644,17 @@ class SpineToolboxProject(MetaObject):
         self._connections.append(new_connection)
         self.connection_replaced.emit(existing_connection, new_connection)
 
+    def jumps_for_item(self, item_name):
+        """Returns jumps that have given item as source or destination.
+
+        Args:
+            item_name (str): item's name
+
+        Returns:
+            list of Jump: jumps connected to item
+        """
+        return [c for c in self._jumps if item_name in (c.source, c.destination)]
+
     def add_jump(self, jump, silent=False):
         """Adds a jump to project.
 
@@ -754,6 +763,8 @@ class SpineToolboxProject(MetaObject):
         self.item_about_to_be_removed.emit(item_name)
         for c in self.connections_for_item(item_name):
             self.remove_connection(c)
+        for j in self.jumps_for_item(item_name):
+            self.remove_jump(j)
         self.dag_handler.remove_node_from_graph(item_name)
         item = self._project_items.pop(item_name)
         item.tear_down()

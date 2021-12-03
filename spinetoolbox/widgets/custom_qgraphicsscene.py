@@ -80,7 +80,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     def clear_icons_and_links(self):
         for item in self.items():
-            if isinstance(item, (Link, ProjectItemIcon)):
+            if isinstance(item, (Link, JumpLink, ProjectItemIcon)):
                 self.removeItem(item)
 
     def mouseMoveEvent(self, event):
