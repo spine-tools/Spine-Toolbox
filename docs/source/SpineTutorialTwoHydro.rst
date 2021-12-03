@@ -172,6 +172,10 @@ Setting up a project
      resources*, ``{db_url@input}`` and ``{db_url@output}``.
   #. Drag the first resource, ``{db_url@input}``, and drop it in *Command line
      arguments*, just as shown in the image below.
+
+      .. image:: img/case_study_a5_spine_opt_tool_properties.png
+         :align: center
+
   #. Drag the second resource, ``{db_url@output}``, and drop it right below the
      previous one. The panel should be now looking like this:
 
