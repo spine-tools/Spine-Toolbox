@@ -664,6 +664,8 @@ class SpineToolboxProject(MetaObject):
         """
         self._jumps.append(jump)
         self.jump_added.emit(jump)
+        destination = self._project_items[jump.destination]
+        self.notify_resource_changes_to_predecessors(destination)
         return True
 
     def find_jump(self, source_name, destination_name):
@@ -949,8 +951,8 @@ class SpineToolboxProject(MetaObject):
             item (ProjectItem): item whose resources have changed
         """
         item_name = item.name
-        predecessor_names = {c.source for c in self._incoming_connections(item_name)}
-        successor_connections = self._outgoing_connections
+        predecessor_names = {c.source for c in self._incoming_connections_and_jumps(item_name)}
+        successor_connections = self._outgoing_connections_and_jumps
         update_resources = self._update_predecessor
         trigger_resources = item.resources_for_direct_predecessors()
         self._notify_resource_changes(
@@ -1063,6 +1065,28 @@ class SpineToolboxProject(MetaObject):
         """
         return [c for c in self._connections if c.source == name]
 
+    def _outgoing_jumps(self, name):
+        """Collects outgoing jumps.
+
+        Args:
+            name (str): name of the project item whose jumps to collect
+
+        Returns:
+            set of Jump: outgoing jumps
+        """
+        return [c for c in self._jumps if c.source == name]
+
+    def _outgoing_connections_and_jumps(self, name):
+        """Collects outgoing connections and jumps.
+
+        Args:
+            name (str): name of the project item whose connections and jumps to collect
+
+        Returns:
+            set of Connection/Jump: outgoing connections and jumps
+        """
+        return self._outgoing_connections(name) + self._outgoing_jumps(name)
+
     def _incoming_connections(self, name):
         """Collects incoming connections.
 
@@ -1073,6 +1097,28 @@ class SpineToolboxProject(MetaObject):
             set of Connection: incoming connections
         """
         return [c for c in self._connections if c.destination == name]
+
+    def _incoming_jumps(self, name):
+        """Collects incoming jumps.
+
+        Args:
+            name (str): name of the project item whose jumps to collect
+
+        Returns:
+            set of Jump: incoming jumps
+        """
+        return [c for c in self._jumps if c.destination == name]
+
+    def _incoming_connections_and_jumps(self, name):
+        """Collects incoming connections and jumps.
+
+        Args:
+            name (str): name of the project item whose connections and jumps to collect
+
+        Returns:
+            set of Connection/Jump: incoming connections
+        """
+        return self._incoming_connections(name) + self._incoming_jumps(name)
 
     def _update_successor(self, successor, incoming_connections, resource_cache):
         combined_resources = list()
