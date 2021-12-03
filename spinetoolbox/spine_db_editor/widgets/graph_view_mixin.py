@@ -491,23 +491,13 @@ class GraphViewMixin:
             y (list)
         """
         self.object_items = [
-            ObjectItem(
-                self,
-                x[i],
-                y[i],
-                self.VERTEX_EXTENT,
-                tuple(db_map_object_ids),
-            )
+            ObjectItem(self, x[i], y[i], self.VERTEX_EXTENT, tuple(db_map_object_ids))
             for i, db_map_object_ids in enumerate(self.db_map_object_id_sets)
         ]
         offset = len(self.object_items)
         self.relationship_items = [
             RelationshipItem(
-                self,
-                x[offset + i],
-                y[offset + i],
-                0.5 * self.VERTEX_EXTENT,
-                tuple(db_map_relationship_id),
+                self, x[offset + i], y[offset + i], 0.5 * self.VERTEX_EXTENT, tuple(db_map_relationship_id)
             )
             for i, db_map_relationship_id in enumerate(self.db_map_relationship_id_sets)
         ]
