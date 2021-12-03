@@ -99,11 +99,9 @@ Below is a schematic of the model. For clarity, only the Rebnis station is prese
    :align: center
    :scale: 50%
 
-Guide
-=====
 
 Installing requirements
------------------------
+=======================
 
 .. note:: This tutorial is written for latest `Spine Toolbox 
    <https://github.com/Spine-project/Spine-Toolbox/>`_ and `SpineOpt 
@@ -113,7 +111,8 @@ Follow the instructions `here <https://github.com/Spine-project/SpineOpt.jl#inst
 to install Spine Toolbox and SpineOpt in your system.
 
 Creating a new project
-----------------------
+======================
+
 Each Spine Toolbox project resides in its own directory, where the user can
 store data, programming scripts and other necessary material. The Toolbox
 application also creates its own special subdirectory *.spinetoolbox*, for project
@@ -124,7 +123,7 @@ menu. Browse to a location where you want to create the project and create a new
 folder for it, e.g. ‘cs_a5_importer’, and then click **Select Folder**.
 
 Configuring SpineOpt
-____________________
+--------------------
 
 #. To use SpineOpt in your project, you need to create a Tool specification
    for it. Click on the small arrow next to the Tool icon |tool_icon| (in the *Main* section of
@@ -209,16 +208,9 @@ Setting up a project
 
 #. From the main menu, select **File -> Save project**.
 
-   .. note:: If you want to implement this case study using the Importer functionality continue 
-      with the corresponding steps at the end of this tutorial (See :ref:`Using the Importer <importer>`), 
-      otherwise, you can proceed with the next steps.
-
-
-Entering input data
-===================
 
 Importing the SpineOpt database template
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------------
 
 #. Download `the SpineOpt database template 
    <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/data/spineopt_template.json>`_
@@ -253,6 +245,14 @@ Importing the SpineOpt database template
    as opposed to the *specific data* for a particular instance.
    In the remainder of this section, we will add that specific data for the Skellefte river.
 
+Entering data
+=============
+
+There are two options in this tutorial to enter data in the Database. The first one is to enter data manually
+and the second to use the importer functionality. These are described in the next two subsections respectively.
+
+Entering data manually
+----------------------
 
 Creating objects
 ~~~~~~~~~~~~~~~~
@@ -467,8 +467,6 @@ Establishing relationships
 
       .. image:: img/add_pwr_plant_water_from_node.png
         :align: center
-		
-	  |
 
    d. Click **Ok**.
    e. Back in the *Spine DB Editor*, under *Relationship tree*, double click on
@@ -562,47 +560,14 @@ Specifying parameter values of the relationships
 #. When you're ready, commit all changes to the database via the main menu (**Alt + F**).
 
 
-Executing the workflow
-======================
-
-Once the workflow is defined and input data is in place, the project is ready
-to be executed. Hit the **Execute project** button |execute_project| on 
-the tool bar.
-
-You should see ‘Executing All Directed Acyclic Graphs’ printed in the *Event log*
-(on the lower left by default).
-SpineOpt output messages will appear in the *Process Log* panel in the middle.
-After some processing, ‘DAG 1/1 completed successfully’ appears and the 
-execution is complete.
-
-
-Examining the results
-=====================
-
-Select the output data store and open the Spine DB editor.
-
-.. image:: img/case_study_a5_output.png
-   :align: center
-
-To checkout the flow on the electricity load (i.e., the total electricity production in the system),
-go to *Object tree*, expand the ``unit`` object class,
-and select ``electricity_load``, as illustrated in the picture above.
-Next, go to *Relationship parameter value* and double-click the first cell under `value`.
-The *Parameter value editor* will pop up. You should see something like this:
-
-
-.. image:: img/case_study_a5_output_electricity_load_unit_flow.png
-   :align: center
-
-
 
 .. _importer:
 
 Using the Importer
-=====================
+------------------
 
-Continue Setting up a project
------------------------------
+Additional Steps for Project Setup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #. Drag the Data Connection icon |dc_icon| from the tool bar and drop it into the
    Design View. This will open the *Add Data connection dialogue*. Type in ‘Data
@@ -611,7 +576,7 @@ Continue Setting up a project
 #. To import the model of the planning problem into the Spine database, you need
    to create an *Import specification*. Create an *Import specification* by clicking
    on the small arrow next to the Importer item (in the Main section of the toolbar) and
-   press **New**. The *Importer specification editor* will pop-up:
+   press **New**. The *Importer specification editor* will pop-up.
 
 #. Type ‘Import Model’ as the name of the specification. Save the specification by 
    using **Ctrl+S** and close the window.
@@ -619,9 +584,6 @@ Continue Setting up a project
 #. Drag the newly created Import Model Importer item icon |importer_icon| from the tool bar and
    drop it into the *Design View*. This will open the Add Importer dialogue. Type in
    ‘Import Model’ and click on **Ok**.
-
-   .. note:: Each item in the *Design view* is equipped with three *connectors*
-      (the small squares at the item boundaries).
 
 #. Connect ‘Data Connection’ with ‘Import Model’ by first clicking on one of the
    Data Connection’s connectors and then on one of the Importer’s connectors. Connect 
@@ -634,12 +596,10 @@ Continue Setting up a project
 #. From the main menu, select **File -> Save project**.
 
 Importing the model
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 
-#. Download `the SpineOpt database template 
-   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/templates/spineopt_template.json>`_
-   , `the data <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/a5.xlsx>`_ and `the 
+#. Download `the data <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/a5.xlsx>`_ and `the 
    accompanying mapping <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/mapping_case_study_a5.json>`_
    (right click on the links, then select *Save link as...*).
 
@@ -656,56 +616,21 @@ Importing the model
      **Ctrl+S** and exit the *Importer specification editor*.
 
 Executing the workflow
-----------------------
+======================
 
-Importing raw data with the importer
-____________________________________
+Once the workflow is defined and input data is in place, the project is ready
+to be executed. Hit the **Execute project** button |execute_project| on 
+the tool bar.
 
-Once the workflow is defined and source file is in place, the project is ready to 
-import the data to the input database. While holding **Ctrl**, select *Data Connection*, *Import Model*, 
-and *input*. Directly click the *Execute selection* button |execute_selection| on the tool bar.
-
-You should see ‘Executing Selected Directed Acyclic Graphs’ printed in the *Event log* (on the lower left by 
-default). SpineOpt output messages will appear in the *Process Log* panel in the middle.
-After some processing, ‘DAG 1/1 completed successfully’ appears and the execution is complete.
-
-Importing the SpineOpt database template
-________________________________________
-
-#. Select the *input* Data Store item in the Design View. Go to *Data Store Properties* and click on 
-   **Open editor**. This will open the newly created database in the Spine DB editor, looking similar to this:
-
-   .. image:: img/case_study_a5_db_editor_import.png
-      :align: center
-
-   |
-
-   .. note:: The *Spine DB editor* is a dedicated interface within Spine Toolbox
-      for visualizing and managing Spine databases.
-
-#. Press **Alt + F** to display the main menu, select File -> Import…, and then
-   select the template file you previously downloaded. (Tip: Make sure you search for a folder with .json 
-   ending.) The contents of that file will be imported into the current database, and you should 
-   then see classes like ‘commodity’, ‘connection’ and ‘model’ under the root node in the *Object tree* (on
-   the left) with colourful icons.
-#. From the menu in the top right corner, select **Session -> Commit**. Enter ‘Import SpineOpt
-   template’ as message in the popup dialogue and click **Commit**. Exit the Spine DB editor.
-
-   .. note:: The SpineOpt template contains the fundamental object and relationship classes,
-      as well as parameter definitions, that SpineOpt recognizes and expects.
-      You can think of it as the *generic structure* of the model,
-      as opposed to the *specific data* for a particular instance.
-      In the remainder of this section, we will add that specific data for the Skellefte river.
-
-Execute the model
-_________________
-
-Finally, the project is ready to be executed. Hold **Ctrl**, select *SpineOpt* and *output*. Directly 
-click on Execute selection |execute_selection|.
+You should see ‘Executing All Directed Acyclic Graphs’ printed in the *Event log*
+(on the lower left by default).
+SpineOpt output messages will appear in the *Process Log* panel in the middle.
+After some processing, ‘DAG 1/1 completed successfully’ appears and the 
+execution is complete.
 
 
 Examining the results
----------------------
+=====================
 
 Select the output data store and open the Spine DB editor.
 
