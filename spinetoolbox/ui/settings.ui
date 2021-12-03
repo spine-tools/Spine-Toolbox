@@ -21,8 +21,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>677</width>
-    <height>547</height>
+    <width>715</width>
+    <height>663</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -234,7 +234,7 @@
            <bool>false</bool>
           </property>
           <property name="title">
-           <string>General</string>
+           <string>Project</string>
           </property>
           <property name="flat">
            <bool>false</bool>
@@ -243,7 +243,36 @@
            <property name="spacing">
             <number>6</number>
            </property>
-           <item row="16" column="0">
+           <item row="4" column="0">
+            <widget class="QCheckBox" name="checkBox_save_project_before_closing">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select what to do if there are unsaved changes when closing a project or when quitting the app.&lt;/p&gt;&lt;p&gt;Unchecked: Don't save project and don't show question box&lt;/p&gt;&lt;p&gt;Partially checked: Show question box&lt;/p&gt;&lt;p&gt;Checked: Save project and don't show question box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Save project before closing</string>
+             </property>
+             <property name="tristate">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="checkBox_open_previous_project">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, application opens the project at startup that was open the last time the application was quit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Open previous project at startup</string>
+             </property>
+            </widget>
+           </item>
+           <item row="12" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_6">
              <item>
               <widget class="QLineEdit" name="lineEdit_work_dir">
@@ -283,20 +312,51 @@
              </item>
             </layout>
            </item>
-           <item row="3" column="0">
-            <widget class="QCheckBox" name="checkBox_save_project_before_closing">
+           <item row="1" column="0">
+            <widget class="QCheckBox" name="checkBox_exit_prompt">
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select what to do if there are unsaved changes when closing a project or when quitting the app.&lt;/p&gt;&lt;p&gt;Unchecked: Don't save project and don't show question box&lt;/p&gt;&lt;p&gt;Partially checked: Show question box&lt;/p&gt;&lt;p&gt;Checked: Save project and don't show question box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Checking this shows the 'confirm exit' question box when quitting the app&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Save project before closing</string>
+              <string>Confirm exit</string>
              </property>
              <property name="tristate">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
             </widget>
            </item>
-           <item row="21" column="0">
+           <item row="11" column="0">
+            <widget class="QLabel" name="label">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Work directory</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QCheckBox" name="checkBox_delete_data">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Delete data when project item is removed from project</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_ui">
+          <property name="title">
+           <string>UI</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_2">
+           <item row="12" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_4">
              <item>
               <widget class="QRadioButton" name="radioButton_bg_grid">
@@ -357,7 +417,19 @@
              </item>
             </layout>
            </item>
-           <item row="23" column="0">
+           <item row="13" column="0">
+            <widget class="QLabel" name="label_4">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Data flow animation speed</string>
+             </property>
+            </widget>
+           </item>
+           <item row="14" column="0">
             <layout class="QVBoxLayout" name="verticalLayout_3">
              <property name="spacing">
               <number>0</number>
@@ -429,26 +501,7 @@
              </item>
             </layout>
            </item>
-           <item row="22" column="0">
-            <widget class="QLabel" name="label_4">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Data flow animation speed</string>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="0">
-            <widget class="QCheckBox" name="checkBox_color_toolbar_icons">
-             <property name="text">
-              <string>Color toolbar icons</string>
-             </property>
-            </widget>
-           </item>
-           <item row="20" column="0">
+           <item row="11" column="0">
             <widget class="QLabel" name="label_7">
              <property name="font">
               <font>
@@ -460,7 +513,34 @@
              </property>
             </widget>
            </item>
-           <item row="11" column="0">
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="checkBox_prevent_overlapping">
+             <property name="text">
+              <string>Prevent items from overlapping</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Smooth zoom</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QCheckBox" name="checkBox_datetime">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, date and time string is appended into Event Log messages&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Show date and time in Event Log messages</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
             <widget class="QCheckBox" name="checkBox_use_curved_links">
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -470,32 +550,7 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QCheckBox" name="checkBox_exit_prompt">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Checking this shows the 'confirm exit' question box when quitting the app&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Confirm exit</string>
-             </property>
-             <property name="tristate">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="15" column="0">
-            <widget class="QLabel" name="label">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Work directory</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
+           <item row="0" column="0">
             <widget class="QCheckBox" name="checkBox_custom_open_project_dialog">
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the type of dialog used in File-&amp;gt;Open project...&lt;/p&gt;&lt;p&gt;Checking this box shows a custom dialog. Unchecking this box shows the OS provided 'select folder' dialog.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -508,60 +563,14 @@
              </property>
             </widget>
            </item>
-           <item row="6" column="0">
-            <widget class="QCheckBox" name="checkBox_datetime">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, date and time string is appended into Event Log messages&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Show date and time in Event Log messages</string>
-             </property>
-            </widget>
-           </item>
-           <item row="10" column="0">
-            <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Smooth zoom</string>
-             </property>
-            </widget>
-           </item>
-           <item row="13" column="0">
-            <widget class="QCheckBox" name="checkBox_prevent_overlapping">
-             <property name="text">
-              <string>Prevent items from overlapping</string>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="0">
-            <widget class="QCheckBox" name="checkBox_open_previous_project">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, application opens the project at startup that was open the last time the application was quit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
+            <widget class="QCheckBox" name="checkBox_color_toolbar_icons">
              <property name="text">
-              <string>Open previous project at startup</string>
+              <string>Color toolbar icons</string>
              </property>
             </widget>
            </item>
            <item row="4" column="0">
-            <widget class="QCheckBox" name="checkBox_delete_data">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Delete data when project item is removed from project</string>
-             </property>
-            </widget>
-           </item>
-           <item row="12" column="0">
             <widget class="QCheckBox" name="checkBox_use_rounded_items">
              <property name="text">
               <string>Rounded items</string>
@@ -1162,21 +1171,21 @@
              </property>
             </widget>
            </item>
-           <item>
-            <spacer name="verticalSpacer_3">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>40</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
           </layout>
          </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </widget>
@@ -1372,12 +1381,6 @@
  <tabstops>
   <tabstop>listWidget</tabstop>
   <tabstop>checkBox_open_previous_project</tabstop>
-  <tabstop>checkBox_exit_prompt</tabstop>
-  <tabstop>checkBox_save_project_before_closing</tabstop>
-  <tabstop>checkBox_datetime</tabstop>
-  <tabstop>checkBox_color_toolbar_icons</tabstop>
-  <tabstop>checkBox_use_smooth_zoom</tabstop>
-  <tabstop>checkBox_use_curved_links</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>toolButton_browse_work</tabstop>
   <tabstop>radioButton_bg_grid</tabstop>
@@ -1436,7 +1439,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="engine_processes_button_group"/>
   <buttongroup name="persistent_processes_button_group"/>
+  <buttongroup name="engine_processes_button_group"/>
  </buttongroups>
 </ui>
