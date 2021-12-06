@@ -31,7 +31,7 @@ from .notification import Notification
 from .install_julia_wizard import InstallJuliaWizard
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
-from ..link import Link
+from ..link import Link, JumpLink
 from ..project_item_icon import ProjectItemIcon
 from ..widgets.kernel_editor import (
     KernelEditor,
@@ -486,7 +486,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     @Slot(bool)
     def update_links_geometry(self, checked=False):
         for item in self._toolbox.ui.graphicsView.items():
-            if isinstance(item, Link):
+            if isinstance(item, (Link, JumpLink)):
                 item.update_geometry(curved_links=checked)
 
     @Slot(bool)

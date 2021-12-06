@@ -16,7 +16,7 @@ Classes for drawing graphics items on QGraphicsScene.
 :date:    4.4.2018
 """
 
-from math import atan2, sin, cos, pi
+from math import sin, cos, pi, radians
 from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
 from PySide2.QtWidgets import (
     QGraphicsItem,
@@ -130,13 +130,38 @@ class LinkBase(QGraphicsPathItem):
     def _get_src_offset(self):
         return self._get_offset(self.src_connector)
 
-    def _get_dst_offset(self, c1):
-        if not self.dst_connector:
-            guide_path = QPainterPath(self.src_center)
-            guide_path.quadTo(c1, self.dst_center)
-            line = self._get_joint_line(guide_path).unitVector()
-            return QPointF(-line.dx(), -line.dy())
+    def _get_dst_offset(self):
         return self._get_offset(self.dst_connector)
+
+    @staticmethod
+    def _find_new_point(points, target):
+        """Finds a new point that approximates points to target.
+
+        Args:
+            points (list(QPointF))
+            target (QPointF)
+
+        Returns:
+            QPointF
+        """
+        line = QLineF(*points[-2:])
+        line_to_target = QLineF(points[-1], target)
+        angle = line.angleTo(line_to_target)
+        corrected_angle = angle if angle < 180 else angle - 360
+        if abs(corrected_angle) < 90:
+            return None
+        sign = abs(corrected_angle) // corrected_angle
+        foot = sin if angle > 0 else cos
+        new_angle = line.angle() + 90 * sign
+        new_length = abs(foot(radians(angle))) * line_to_target.length()
+        line_to_target.setAngle(new_angle)
+        line_to_target.setLength(new_length)
+        return line_to_target.center()
+
+    def _close_enough(self, p1, p2):
+        if p1 is None:
+            return False
+        return (p1 - p2).manhattanLength() < 2 * self.magic_number
 
     def _make_guide_path(self, curved_links):
         """Returns a 'narrow' path connecting this item's source and destination.
@@ -147,19 +172,50 @@ class LinkBase(QGraphicsPathItem):
         Returns:
             QPainterPath
         """
-        path = QPainterPath(self.src_center)
+        c_factor = 3 * self.magic_number
+        src = self.src_center + c_factor * self._get_src_offset()
+        dst = self.dst_center + c_factor * self._get_dst_offset()
+        src_points = [self.src_center, src]
+        dst_points = [self.dst_center, dst]
+        while True:
+            # Bring source points closer to destination
+            new_src = self._find_new_point(src_points, dst)
+            if self._close_enough(new_src, dst):
+                src_points.append(new_src)
+                break
+            # Bring destination points closer to source
+            new_dst = self._find_new_point(dst_points, src)
+            if self._close_enough(new_dst, src):
+                dst_points.append(new_dst)
+                break
+            if new_src is not None:
+                src_points.append(new_src)
+                src = new_src
+            if new_dst is not None:
+                dst_points.append(new_dst)
+                dst = new_dst
+            if new_src is new_dst is None:
+                break
+        points = src_points + list(reversed(dst_points))
+        points = list(map(lambda xy: QPointF(*xy), dict.fromkeys((p.x(), p.y()) for p in points)))
+        # Correct last point
+        tip = QPainterPath(points[-2])
+        tip.lineTo(points[-1])
+        points[-1] = tip.pointAtPercent(1 - tip.percentAtLength(self.magic_number / 2))
+        # Make path
+        path = QPainterPath(points.pop(0))
         if not curved_links:
-            path.lineTo(self.dst_center)
+            for p1 in points:
+                path.lineTo(p1)
             return path
-        c_min = 2 * self.magic_number
-        c_max = 8 * self.magic_number
-        c_factor = QLineF(self.src_center, self.dst_center).length() / 2
-        c_factor = min(c_factor, c_max)
-        c_factor = max(c_factor, c_min)
-        c1 = self.src_center + c_factor * self._get_src_offset()
-        c2 = self.dst_center + c_factor * self._get_dst_offset(c1)
-        path.cubicTo(c1, c2, self.dst_center)
+        for p1, p2 in zip(points[:-1], points[1:]):
+            path.quadTo(p1, (p1 + p2) / 2)
+        path.lineTo(points[-1])
         return path
+
+    def _get_joint_angle(self, guide_path):
+        line = QLineF(self._get_dst_offset(), QPointF(0, 0))
+        return radians(line.angle())
 
     def _points_and_angles_from_path(self, path):
         """Returns a list of representative points and angles from given path.
@@ -171,8 +227,7 @@ class LinkBase(QGraphicsPathItem):
             list(QPointF): points
             list(float): angles
         """
-        count = min(int(100 * (1.0 - path.percentAtLength(self.src_rect.width() / 2))) + 2, 100)
-        percents = [k / 100 for k in range(count)]
+        percents = [k / 100 for k in range(101)]
         points = list(map(path.pointAtPercent, percents))
         angles = list(map(path.angleAtPercent, percents))
         return points, angles
@@ -207,12 +262,9 @@ class LinkBase(QGraphicsPathItem):
 
     @staticmethod
     def _follow_points(curve_path, points):
-        points = iter(points)
-        for p0 in points:
-            p1 = next(points, None)
-            if p1 is None:
-                break
+        for p0, p1 in zip(points[:-1], points[1:]):
             curve_path.quadTo(p0, p1)
+        curve_path.lineTo(points[-1])
 
     def _radius_from_point_and_angle(self, point, angle):
         line = QLineF()
@@ -244,17 +296,6 @@ class LinkBase(QGraphicsPathItem):
         arrow_path.lineTo(arrow_p2)
         arrow_path.closeSubpath()
         return arrow_path
-
-    def _get_joint_line(self, guide_path):
-        t = 1.0 - guide_path.percentAtLength(self.src_rect.width() / 2)
-        t = max(t, 0.01)
-        src = guide_path.pointAtPercent(t - 0.01)
-        dst = guide_path.pointAtPercent(t)
-        return QLineF(src, dst)
-
-    def _get_joint_angle(self, guide_path):
-        line = self._get_joint_line(guide_path)
-        return atan2(-line.dy(), line.dx())
 
     def itemChange(self, change, value):
         """Wipes out the link when removed from scene."""
@@ -591,10 +632,6 @@ class JumpLink(LinkBase):
         animation.finished.connect(animation.deleteLater())
         return animation
 
-    def update_geometry(self, curved_links=None):
-        """Forces curved links."""
-        super().update_geometry(curved_links=True)
-
 
 class LinkDrawerBase(LinkBase):
     """A base class for items intended for drawing links between project items."""
@@ -628,6 +665,14 @@ class LinkDrawerBase(LinkBase):
         # If link drawer tip is on a connector button, this makes
         # the tip 'snap' to the center of the connector button
         return self.dst_rect.center()
+
+    def _get_dst_offset(self):
+        if self.dst_connector is None:
+            return QPointF(0, 0)
+        return super()._get_dst_offset()
+
+    def _get_joint_angle(self, guide_path):
+        return radians(guide_path.angleAtPercent(0.99))
 
     def add_link(self):
         """Makes link between source and destination connectors."""
