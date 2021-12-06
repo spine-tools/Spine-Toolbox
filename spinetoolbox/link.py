@@ -96,6 +96,7 @@ class LinkBase(QGraphicsPathItem):
             curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
         guide_path = self._make_guide_path(curved_links)
         self.do_update_geometry(guide_path)
+        return guide_path
 
     def do_update_geometry(self, guide_path):
         """Sets the path for this item.
@@ -135,14 +136,15 @@ class LinkBase(QGraphicsPathItem):
 
     @staticmethod
     def _find_new_point(points, target):
-        """Finds a new point that approximates points to target.
+        """Finds a new point that approximates points to target in a smooth trajectory.
+        Returns the new point, or None if no need for approximation.
 
         Args:
             points (list(QPointF))
             target (QPointF)
 
         Returns:
-            QPointF
+            QPointF or None
         """
         line = QLineF(*points[-2:])
         line_to_target = QLineF(points[-1], target)
@@ -151,8 +153,8 @@ class LinkBase(QGraphicsPathItem):
         if abs(corrected_angle) < 90:
             return None
         sign = abs(corrected_angle) // corrected_angle
-        foot = sin if angle > 0 else cos
         new_angle = line.angle() + 90 * sign
+        foot = sin if angle > 0 else cos
         new_length = abs(foot(radians(angle))) * line_to_target.length()
         line_to_target.setAngle(new_angle)
         line_to_target.setLength(new_length)
@@ -163,7 +165,7 @@ class LinkBase(QGraphicsPathItem):
             return False
         return (p1 - p2).manhattanLength() < 2 * self.magic_number
 
-    def _make_guide_path(self, curved_links):
+    def _make_guide_path(self, curved_links=False):
         """Returns a 'narrow' path connecting this item's source and destination.
 
         Args:
@@ -198,10 +200,10 @@ class LinkBase(QGraphicsPathItem):
                 break
         points = src_points + list(reversed(dst_points))
         points = list(map(lambda xy: QPointF(*xy), dict.fromkeys((p.x(), p.y()) for p in points)))
-        # Correct last point
-        tip = QPainterPath(points[-2])
-        tip.lineTo(points[-1])
-        points[-1] = tip.pointAtPercent(1 - tip.percentAtLength(self.magic_number / 2))
+        # Correct last point so it doesn't go beyond the arrow
+        head = QPainterPath(points[-2])
+        head.lineTo(points[-1])
+        points[-1] = head.pointAtPercent(1 - head.percentAtLength(self.magic_number / 2))
         # Make path
         path = QPainterPath(points.pop(0))
         if not curved_links:
