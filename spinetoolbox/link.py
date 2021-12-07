@@ -29,8 +29,11 @@ from PySide2.QtWidgets import (
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
-from spinetoolbox.helpers import busy_effect
+from spinetoolbox.helpers import busy_effect, color_from_index
 from .project_item_icon import ConnectorButton
+
+_LINK_COLOR = color_from_index(0, 2, base_hue=60)
+_JUMP_COLOR = color_from_index(1, 2, base_hue=60)
 
 
 class LinkBase(QGraphicsPathItem):
@@ -134,8 +137,7 @@ class LinkBase(QGraphicsPathItem):
     def _get_dst_offset(self):
         return self._get_offset(self.dst_connector)
 
-    @staticmethod
-    def _find_new_point(points, target):
+    def _find_new_point(self, points, target):
         """Finds a new point that approximates points to target in a smooth trajectory.
         Returns the new point, or None if no need for approximation.
 
@@ -150,12 +152,12 @@ class LinkBase(QGraphicsPathItem):
         line_to_target = QLineF(points[-1], target)
         angle = line.angleTo(line_to_target)
         corrected_angle = angle if angle < 180 else angle - 360
-        if abs(corrected_angle) < 90:
+        if abs(corrected_angle) <= 90:
             return None
         sign = abs(corrected_angle) // corrected_angle
         new_angle = line.angle() + 90 * sign
         foot = sin if angle > 0 else cos
-        new_length = abs(foot(radians(angle))) * line_to_target.length()
+        new_length = max(abs(foot(radians(angle))) * line_to_target.length(), 3 * self.magic_number)
         line_to_target.setAngle(new_angle)
         line_to_target.setLength(new_length)
         return line_to_target.center()
@@ -206,13 +208,16 @@ class LinkBase(QGraphicsPathItem):
         points[-1] = head.pointAtPercent(1 - head.percentAtLength(self.magic_number / 2))
         # Make path
         path = QPainterPath(points.pop(0))
+        if len(points) == 1:
+            path.lineTo(points[0])
+            return path
         if not curved_links:
             for p1 in points:
                 path.lineTo(p1)
             return path
-        for p1, p2 in zip(points[:-1], points[1:]):
+        for p1, p2 in zip(points[:-2], points[1:-1]):
             path.quadTo(p1, (p1 + p2) / 2)
-        path.lineTo(points[-1])
+        path.quadTo(points[-2], points[-1])
         return path
 
     def _get_joint_angle(self, guide_path):
@@ -407,7 +412,7 @@ class _JumpIcon(QGraphicsEllipseItem):
 class Link(LinkBase):
     """A graphics item to represent the connection between two project items."""
 
-    _COLOR = QColor(255, 255, 0, 200)
+    _COLOR = _LINK_COLOR
 
     def __init__(self, toolbox, src_connector, dst_connector, connection):
         """
@@ -549,7 +554,7 @@ class Link(LinkBase):
 class JumpLink(LinkBase):
     """A graphics icon to represent a jump connection between items."""
 
-    _COLOR = QColor(128, 0, 255, 200)
+    _COLOR = _JUMP_COLOR
 
     def __init__(self, toolbox, src_connector, dst_connector, jump):
         """
@@ -706,7 +711,7 @@ class LinkDrawerBase(LinkBase):
 class ConnectionLinkDrawer(LinkDrawerBase):
     """An item for drawing connection links between project items."""
 
-    _COLOR = QColor(255, 255, 0, 100)
+    _COLOR = _LINK_COLOR.lighter()
 
     def __init__(self, toolbox):
         """
@@ -732,7 +737,7 @@ class ConnectionLinkDrawer(LinkDrawerBase):
 class JumpLinkDrawer(LinkDrawerBase):
     """An item for drawing jump connections between project items."""
 
-    _COLOR = QColor(128, 0, 255, 100)
+    _COLOR = _JUMP_COLOR.lighter()
 
     def __init__(self, toolbox):
         """
