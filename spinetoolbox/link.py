@@ -26,7 +26,7 @@ from PySide2.QtWidgets import (
     QStyle,
     QToolTip,
 )
-from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont
+from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
 from spinetoolbox.helpers import busy_effect, color_from_index
@@ -176,7 +176,7 @@ class LinkBase(QGraphicsPathItem):
         Returns:
             QPainterPath
         """
-        c_factor = 3 * self.magic_number
+        c_factor = min(3 * self.magic_number, (self.src_center - self.dst_center).manhattanLength() / 4)
         src = self.src_center + c_factor * self._get_src_offset()
         dst = self.dst_center + c_factor * self._get_dst_offset()
         src_points = [self.src_center, src]
@@ -202,15 +202,16 @@ class LinkBase(QGraphicsPathItem):
                 break
         points = src_points + list(reversed(dst_points))
         points = list(map(lambda xy: QPointF(*xy), dict.fromkeys((p.x(), p.y()) for p in points)))
+        if len(points) == 1:
+            path = QPainterPath(points[0])
+            path.lineTo(points[0] + QPointF(1, 1))
+            return path
         # Correct last point so it doesn't go beyond the arrow
         head = QPainterPath(points[-2])
         head.lineTo(points[-1])
         points[-1] = head.pointAtPercent(1 - head.percentAtLength(self.magic_number / 2))
         # Make path
         path = QPainterPath(points.pop(0))
-        if len(points) == 1:
-            path.lineTo(points[0])
-            return path
         if not curved_links:
             for p1 in points:
                 path.lineTo(p1)
@@ -234,7 +235,8 @@ class LinkBase(QGraphicsPathItem):
             list(QPointF): points
             list(float): angles
         """
-        percents = [k / 100 for k in range(101)]
+        count = 100
+        percents = [k / count for k in range(count + 1)]
         points = list(map(path.pointAtPercent, percents))
         angles = list(map(path.angleAtPercent, percents))
         return points, angles
@@ -692,9 +694,10 @@ class LinkDrawerBase(LinkBase):
         Args:
             src_connector (ConnectorButton): source connector
         """
-        src_connector.scene().addItem(self)
+        view = self._toolbox.ui.graphicsView
+        self.tip = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         self.src_connector = src_connector
-        self.tip = src_connector.sceneBoundingRect().center()
+        self.src_connector.scene().addItem(self)
         self.update_geometry()
         self.show()
 
