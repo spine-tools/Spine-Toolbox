@@ -61,7 +61,7 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         self._set_link(properties_widget)
         self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(23)")
         properties_widget.unset_link()
-        self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "")
+        self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(23)")
 
     def test_edit_condition(self):
         properties_widget = self._find_widget()

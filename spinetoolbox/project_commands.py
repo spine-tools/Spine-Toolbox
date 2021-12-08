@@ -423,6 +423,28 @@ class SetJumpConditionCommand(SpineToolboxCommand):
         self._jump_properties.set_condition(self._jump, self._previous_condition)
 
 
+class UpdateJumpCmdLineArgsCommand(SpineToolboxCommand):
+    def __init__(self, jump_properties, jump, cmd_line_args):
+        """Command to update Jump command line args.
+
+        Args:
+            jump_properties (JumpPropertiesWidget): the item
+            cmd_line_args (list): list of command line args
+        """
+        super().__init__()
+        self._jump_properties = jump_properties
+        self._jump = jump
+        self._redo_cmd_line_args = cmd_line_args
+        self._undo_cmd_line_args = self._jump.cmd_line_args
+        self.setText(f"change command line arguments of {jump.name}")
+
+    def redo(self):
+        self._jump_properties.update_cmd_line_args(self._jump, self._redo_cmd_line_args)
+
+    def undo(self):
+        self._jump_properties.update_cmd_line_args(self._jump, self._undo_cmd_line_args)
+
+
 class SetFiltersOnlineCommand(SpineToolboxCommand):
     def __init__(self, resource_filter_model, resource, filter_type, online):
         """Command to toggle filter value.

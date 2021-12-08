@@ -665,7 +665,11 @@ class SpineToolboxProject(MetaObject):
         self._jumps.append(jump)
         self.jump_added.emit(jump)
         destination = self._project_items[jump.destination]
-        self.notify_resource_changes_to_predecessors(destination)
+        source = self._project_items[jump.source]
+        self._update_incoming_connection_and_jump_resources(
+            destination.name, destination.resources_for_direct_predecessors()
+        )
+        self._update_outgoing_connection_and_jump_resources(source.name, source.resources_for_direct_successors())
         return True
 
     def find_jump(self, source_name, destination_name):
@@ -951,13 +955,18 @@ class SpineToolboxProject(MetaObject):
             item (ProjectItem): item whose resources have changed
         """
         item_name = item.name
-        predecessor_names = {c.source for c in self._incoming_connections_and_jumps(item_name)}
-        successor_connections = self._outgoing_connections_and_jumps
+        predecessor_names = {c.source for c in self._incoming_connections(item_name)}
+        successor_connections = self._outgoing_connections
         update_resources = self._update_predecessor
         trigger_resources = item.resources_for_direct_predecessors()
         self._notify_resource_changes(
             item_name, predecessor_names, successor_connections, update_resources, trigger_resources
         )
+        self._update_incoming_connection_and_jump_resources(item_name, trigger_resources)
+
+    def _update_incoming_connection_and_jump_resources(self, item_name, trigger_resources):
+        for connection in self._incoming_connections_and_jumps(item_name):
+            connection.receive_resources_from_destination(trigger_resources)
 
     def notify_resource_changes_to_successors(self, item):
         """Updates resources for direct successors and outgoing connections of given item.
@@ -973,7 +982,10 @@ class SpineToolboxProject(MetaObject):
         self._notify_resource_changes(
             item_name, successor_names, predecessor_connections, update_resources, trigger_resources
         )
-        for connection in self._outgoing_connections(item_name):
+        self._update_outgoing_connection_and_jump_resources(item_name, trigger_resources)
+
+    def _update_outgoing_connection_and_jump_resources(self, item_name, trigger_resources):
+        for connection in self._outgoing_connections_and_jumps(item_name):
             connection.receive_resources_from_source(trigger_resources)
 
     def _notify_resource_changes(
