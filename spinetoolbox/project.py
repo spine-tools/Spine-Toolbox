@@ -860,9 +860,11 @@ class SpineToolboxProject(MetaObject):
                 spec_dict["definition_file_path"] = spec.definition_file_path
                 specification_dicts.setdefault(project_item.item_type(), list()).append(spec_dict)
         is_in_dag = lambda c: {c.source, c.destination}.intersection(items.keys())
-        connection_dicts = [c.to_dict() for c in self._connections if is_in_dag(c)]
+        connections = {c.name: c for c in self._connections if is_in_dag(c)}
+        connection_dicts = [c.to_dict() for c in connections.values()]
         jumps = {c.name: c for c in self._jumps if is_in_dag(c)}
         jump_dicts = [c.to_dict() for c in jumps.values()]
+        connections.update(jumps)
         data = {
             "items": item_dicts,
             "specifications": specification_dicts,
@@ -875,7 +877,7 @@ class SpineToolboxProject(MetaObject):
             "project_dir": self.project_dir,
         }
         server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
-        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items, jumps, self._logger)
+        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items, connections, self._logger)
         return worker
 
     def _handle_engine_worker_finished(self, worker):
