@@ -1063,6 +1063,17 @@ class SpineToolboxProject(MetaObject):
             connections = self._outgoing_connections(target_name)
             self._update_predecessor(target_item, connections, resource_cache={})
 
+    def predecessor_names(self, name):
+        """Collects direct predecessor item names.
+
+        Args:
+            name (str): name of the project item whose predecessors to collect
+
+        Returns:
+            set of str: direct predecessor names
+        """
+        return {c.source for c in self._incoming_connections(name)}
+
     def successor_names(self, name):
         """Collects direct successor item names.
 
