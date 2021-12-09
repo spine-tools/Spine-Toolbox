@@ -15,7 +15,7 @@ Contains jump properties widget's business logic.
 :author: A. Soininen (VTT)
 :date:   23.6.2021
 """
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, QItemSelection
 from PySide2.QtWidgets import QWidget
 from ..config import TREEVIEW_HEADER_SS
 from ..project_commands import SetJumpConditionCommand, UpdateJumpCmdLineArgsCommand
@@ -41,15 +41,35 @@ class JumpPropertiesWidget(QWidget):
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self._ui.treeView_cmd_line_args.setModel(self._cmd_line_args_model)
+        self._ui.treeView_cmd_line_args.setStyleSheet(TREEVIEW_HEADER_SS)
         self._ui.treeView_input_files.setModel(self._input_file_model)
         self._ui.treeView_input_files.setStyleSheet(TREEVIEW_HEADER_SS)
-        self._ui.treeView_cmd_line_args.setStyleSheet(TREEVIEW_HEADER_SS)
         toolbox.ui.tabWidget_item_properties.addTab(self, "Loop properties")
         self._ui.condition_edit.set_lexer_name("python")
         self._ui.condition_edit.textChanged.connect(self._change_condition)
         self._ui.toolButton_remove_arg.clicked.connect(self._remove_arg)
         self._ui.toolButton_add_arg.clicked.connect(self._add_args)
         self._cmd_line_args_model.args_updated.connect(self._push_update_cmd_line_args_command)
+        self._ui.treeView_cmd_line_args.selectionModel().selectionChanged.connect(
+            self._update_remove_args_button_enabled
+        )
+        self._ui.treeView_input_files.selectionModel().selectionChanged.connect(self._update_add_args_button_enabled)
+
+    @Slot(QItemSelection, QItemSelection)
+    def _update_add_args_button_enabled(self, _selected, _deselected):
+        self._do_update_add_args_button_enabled()
+
+    def _do_update_add_args_button_enabled(self):
+        enabled = self._ui.treeView_input_files.selectionModel().hasSelection()
+        self._ui.toolButton_add_arg.setEnabled(enabled)
+
+    @Slot(QItemSelection, QItemSelection)
+    def _update_remove_args_button_enabled(self, _selected, _deselected):
+        self._do_update_remove_args_button_enabled()
+
+    def _do_update_remove_args_button_enabled(self):
+        enabled = self._ui.treeView_cmd_line_args.selectionModel().hasSelection()
+        self._ui.toolButton_remove_arg.setEnabled(enabled)
 
     def set_link(self, jump):
         """Hooks the widget to given jump link, so that user actions are reflected in the jump link's configuration.
@@ -63,6 +83,8 @@ class JumpPropertiesWidget(QWidget):
         self._ui.link_name_label.setText(f"Loop from {self._jump.source} to {self._jump.destination}")
         self._input_file_model.update(self._jump.resources)
         self._populate_cmd_line_args_model()
+        self._do_update_add_args_button_enabled()
+        self._do_update_remove_args_button_enabled()
 
     def unset_link(self):
         """Releases the widget from any links."""

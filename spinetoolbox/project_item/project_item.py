@@ -51,7 +51,7 @@ class ProjectItem(LogMixin, MetaObject):
         self._logger = project.toolbox()
         self._properties_ui = None
         self._icon = None
-        self._sigs = None
+        self._sigs = dict()
         self._active = False
         self._actions = list()
         # Make project directory for this Item
@@ -123,6 +123,7 @@ class ProjectItem(LogMixin, MetaObject):
 
     def _connect_signals(self):
         """Connect signals to handlers."""
+        self._sigs = self.make_signal_handler_dict()
         for signal, handler in self._sigs.items():
             signal.connect(handler)
 
@@ -152,8 +153,6 @@ class ProjectItem(LogMixin, MetaObject):
             properties_ui (QWidget): item's properties UI
         """
         self._properties_ui = properties_ui
-        if self._sigs is None:
-            self._sigs = self.make_signal_handler_dict()
 
     def specification(self):
         """Returns the specification for this item."""
