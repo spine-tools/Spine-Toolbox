@@ -21,7 +21,7 @@ import os
 import json
 from PySide2.QtCore import Signal
 from spine_engine.exception import EngineInitFailed
-from spine_engine.project_item.connection import Connection, Jump
+from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import ExecutionDirection, validate_jumps
 from spine_engine.utils.helpers import shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
@@ -247,13 +247,19 @@ class SpineToolboxProject(MetaObject):
         self.restore_project_items(items_dict, item_factories, silent=True)
         self._logger.msg.emit("Restoring connections...")
         connection_dicts = project_info["project"]["connections"]
-        for connection in map(Connection.from_dict, connection_dicts):
+        for connection in map(self.connection_from_dict, connection_dicts):
             self.add_connection(connection, silent=True)
         self._logger.msg.emit("Restoring jumps...")
         jump_dicts = project_info["project"].get("jumps", [])
-        for jump in map(Jump.from_dict, jump_dicts):
+        for jump in map(self.jump_from_dict, jump_dicts):
             self.add_jump(jump, silent=True)
         return True
+
+    def connection_from_dict(self, connection_dict):
+        return LoggingConnection.from_dict(connection_dict, toolbox=self._toolbox)
+
+    def jump_from_dict(self, jump_dict):
+        return LoggingJump.from_dict(jump_dict, toolbox=self._toolbox)
 
     def _load_project_dict(self):
         """Loads project dictionary from project directory.
@@ -843,24 +849,25 @@ class SpineToolboxProject(MetaObject):
         node_successors = self.get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return None
-        items = {}
-        specifications = {}
-        items_in_dag = {name: item for name, item in self._project_items.items() if name in node_successors}
-        for name, project_item in items_in_dag.items():
-            items[name] = project_item.item_dict()
+        item_dicts = {}
+        specification_dicts = {}
+        items = {name: item for name, item in self._project_items.items() if name in node_successors}
+        for name, project_item in items.items():
+            item_dicts[name] = project_item.item_dict()
             spec = project_item.specification()
             if spec is not None:
                 spec_dict = spec.to_dict().copy()
                 spec_dict["definition_file_path"] = spec.definition_file_path
-                specifications.setdefault(project_item.item_type(), list()).append(spec_dict)
-        is_in_dag = lambda c: {c.source, c.destination}.intersection(items_in_dag.keys())
-        connections = [c.to_dict() for c in self._connections if is_in_dag(c)]
-        jumps = [c.to_dict() for c in self._jumps if is_in_dag(c)]
+                specification_dicts.setdefault(project_item.item_type(), list()).append(spec_dict)
+        is_in_dag = lambda c: {c.source, c.destination}.intersection(items.keys())
+        connection_dicts = [c.to_dict() for c in self._connections if is_in_dag(c)]
+        jumps = {c.name: c for c in self._jumps if is_in_dag(c)}
+        jump_dicts = [c.to_dict() for c in jumps.values()]
         data = {
-            "items": items,
-            "specifications": specifications,
-            "connections": connections,
-            "jumps": jumps,
+            "items": item_dicts,
+            "specifications": specification_dicts,
+            "connections": connection_dicts,
+            "jumps": jump_dicts,
             "node_successors": node_successors,
             "execution_permits": execution_permits,
             "items_module_name": "spine_items",
@@ -868,7 +875,7 @@ class SpineToolboxProject(MetaObject):
             "project_dir": self.project_dir,
         }
         server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
-        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items_in_dag, self._logger)
+        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items, jumps, self._logger)
         return worker
 
     def _handle_engine_worker_finished(self, worker):

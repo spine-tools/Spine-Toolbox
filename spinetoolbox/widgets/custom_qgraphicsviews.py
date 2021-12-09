@@ -272,8 +272,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     @Slot()
     def _set_preferred_scene_rect(self):
-        """Sets the scene rect to the result of uniting the scene viewport rect and the items bounding rect.
-        """
+        """Sets the scene rect to the result of uniting the scene viewport rect and the items bounding rect."""
         viewport_scene_rect = self._get_viewport_scene_rect()
         items_scene_rect = self.scene().itemsBoundingRect()
         self.scene().setSceneRect(viewport_scene_rect.united(items_scene_rect))
@@ -370,7 +369,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         destination_connector = (
             project.get_item(connection.destination).get_icon().conn_button(connection.destination_position)
         )
-        link = Link(self._toolbox, source_connector, destination_connector, connection)
+        connection.link = link = Link(self._toolbox, source_connector, destination_connector, connection)
         source_connector.links.append(link)
         destination_connector.links.append(link)
         self.scene().addItem(link)
@@ -457,7 +456,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         project = self._toolbox.project()
         source_connector = project.get_item(jump.source).get_icon().conn_button(jump.source_position)
         destination_connector = project.get_item(jump.destination).get_icon().conn_button(jump.destination_position)
-        jump_link = JumpLink(self._toolbox, source_connector, destination_connector, jump)
+        jump.jump_link = jump_link = JumpLink(self._toolbox, source_connector, destination_connector, jump)
         source_connector.links.append(jump_link)
         destination_connector.links.append(jump_link)
         self.scene().addItem(jump_link)

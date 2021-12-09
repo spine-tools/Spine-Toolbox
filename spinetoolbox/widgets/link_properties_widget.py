@@ -33,23 +33,23 @@ class LinkPropertiesWidget(QWidget):
 
         super().__init__(toolbox)
         self._toolbox = toolbox
-        self._link = None
+        self._connection = None
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         toolbox.ui.tabWidget_item_properties.addTab(self, "Link properties")
         self.ui.checkBox_use_datapackage.stateChanged.connect(self._handle_use_datapackage_state_changed)
 
-    def set_link(self, link):
+    def set_link(self, connection):
         """Hooks the widget to given link, so that user actions are reflected in the link's filter configuration.
 
         Args:
-            link (Link)
+            connection (LoggingConnection)
         """
-        self._link = link
-        link.refresh_resource_filter_model()
-        self.ui.treeView_filters.setModel(link.resource_filter_model)
+        self._connection = connection
+        self._connection.refresh_resource_filter_model()
+        self.ui.treeView_filters.setModel(self._connection.resource_filter_model)
         self.ui.treeView_filters.expandAll()
-        self.ui.label_link_name.setText(f"Link {link.name}")
+        self.ui.label_link_name.setText(f"Link {self._connection.name}")
         self.load_connection_options()
 
     def unset_link(self):
@@ -59,10 +59,10 @@ class LinkPropertiesWidget(QWidget):
     @Slot(int)
     def _handle_use_datapackage_state_changed(self, _state):
         checked = self.ui.checkBox_use_datapackage.isChecked()
-        if self._link.connection.use_datapackage == checked:
+        if self._connection.use_datapackage == checked:
             return
         options = {"use_datapackage": checked}
-        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._link, options))
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._connection, options))
 
     def load_connection_options(self):
-        self.ui.checkBox_use_datapackage.setChecked(self._link.connection.use_datapackage)
+        self.ui.checkBox_use_datapackage.setChecked(self._connection.use_datapackage)

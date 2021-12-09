@@ -28,7 +28,6 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
 from spinetoolbox.helpers import busy_effect, color_from_index
 from .project_item_icon import ConnectorButton
 
@@ -59,6 +58,10 @@ class LinkBase(QGraphicsPathItem):
         self.setCursor(Qt.PointingHandCursor)
         self.selected_pen = QPen(self.pen_brush, 1, Qt.DashLine)
         self.normal_pen = QPen(self.pen_brush, 0.5)
+
+    @property
+    def item(self):
+        raise NotImplementedError()
 
     @property
     def pen_brush(self):
@@ -437,25 +440,9 @@ class Link(LinkBase):
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
         self.update_geometry()
         self._exec_color = None
-        self.resource_filter_model = ResourceFilterModel(self, toolbox.undo_stack, toolbox)
-
-    def refresh_resource_filter_model(self):
-        """Makes resource filter mode fetch filter data from database."""
-        self.resource_filter_model.build_tree()
 
     def update_icon(self):
         self._link_icon.update_icon()
-
-    @busy_effect
-    def set_connection_options(self, options):
-        if options == self.connection.options:
-            return
-        self.connection.options = options
-        self.update_icon()
-        item = self._toolbox.project_item_model.get_item(self.connection.source).project_item
-        self._toolbox.project().notify_resource_changes_to_successors(item)
-        if self is self._toolbox.active_link:
-            self._toolbox.link_properties_widgets[Link].load_connection_options()
 
     @property
     def name(self):
@@ -464,6 +451,10 @@ class Link(LinkBase):
     @property
     def connection(self):
         return self._connection
+
+    @property
+    def item(self):
+        return self.connection
 
     def do_update_geometry(self, guide_path):
         """See base class."""
@@ -583,6 +574,10 @@ class JumpLink(LinkBase):
     @property
     def jump(self):
         return self._jump
+
+    @property
+    def item(self):
+        return self.jump
 
     def issues(self):
         """Checks if jump is well-defined.

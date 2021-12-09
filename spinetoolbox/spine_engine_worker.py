@@ -110,7 +110,7 @@ class SpineEngineWorker(QObject):
     _prompt_arrived = Signal(dict, object)
     _all_items_failed = Signal(list)
 
-    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, logger):
+    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, jumps, logger):
         """
         Args:
             engine_server_address (str): Address of engine server if any
@@ -118,6 +118,7 @@ class SpineEngineWorker(QObject):
             dag (DirectedGraphHandler)
             dag_identifier (str)
             project_items (dict): mapping from project item name to :class:`ProjectItem`
+            jumps (dict): mapping from jump name to :class:`LoggingJump`
             logger (LoggerInterface): a logger
         """
         super().__init__()
@@ -128,6 +129,7 @@ class SpineEngineWorker(QObject):
         self._engine_final_state = "UNKNOWN"
         self._executing_items = []
         self._project_items = project_items
+        self._jumps = jumps
         self._logger = logger
         self.event_messages = {}
         self.process_messages = {}
@@ -159,11 +161,11 @@ class SpineEngineWorker(QObject):
         self._engine_data = engine_data
 
     @Slot(object, str, str)
-    def _handle_event_message_arrived(self, item, filter_id, msg_type, msg_text):
+    def _handle_event_message_arrived_silent(self, item, filter_id, msg_type, msg_text):
         self.event_messages.setdefault(msg_type, []).append(msg_text)
 
     @Slot(object, str, str)
-    def _handle_process_message_arrived(self, item, filter_id, msg_type, msg_text):
+    def _handle_process_message_arrived_silent(self, item, filter_id, msg_type, msg_text):
         self.process_messages.setdefault(msg_type, []).append(msg_text)
 
     def stop_engine(self):
@@ -177,8 +179,8 @@ class SpineEngineWorker(QObject):
 
     def _connect_log_signals(self, silent):
         if silent:
-            self._event_message_arrived.connect(self._handle_event_message_arrived)
-            self._process_message_arrived.connect(self._handle_process_message_arrived)
+            self._event_message_arrived.connect(self._handle_event_message_arrived_silent)
+            self._process_message_arrived.connect(self._handle_process_message_arrived_silent)
             return
         self._dag_execution_started.connect(_handle_dag_execution_started)
         self._node_execution_started.connect(_handle_node_execution_started)
@@ -308,14 +310,14 @@ class SpineEngineWorker(QObject):
         self._do_handle_process_msg(**data)
 
     def _do_handle_process_msg(self, item_name, filter_id, msg_type, msg_text):
-        item = self._project_items[item_name]
+        item = self._project_items.get(item_name) or self._jumps.get(item_name)
         self._process_message_arrived.emit(item, filter_id, msg_type, msg_text)
 
     def _handle_event_msg(self, data):
         self._do_handle_event_msg(**data)
 
     def _do_handle_event_msg(self, item_name, filter_id, msg_type, msg_text):
-        item = self._project_items[item_name]
+        item = self._project_items.get(item_name) or self._jumps.get(item_name)
         self._event_message_arrived.emit(item, filter_id, msg_type, msg_text)
 
     def _handle_node_execution_started(self, data):

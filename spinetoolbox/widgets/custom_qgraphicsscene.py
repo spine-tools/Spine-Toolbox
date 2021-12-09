@@ -149,8 +149,9 @@ class DesignGraphicsScene(CustomGraphicsScene):
             if len(project_item_icons) == 1
             else None
         )
-        active_link = links[0] if len(links) == 1 else None
-        self._toolbox.refresh_active_elements(active_project_item, active_link)
+        active_link_item = links[0].item if len(links) == 1 else None
+        self._toolbox.refresh_active_elements(active_project_item, active_link_item)
+        self._toolbox.override_logs_and_consoles()
         # Sync selection with project tree view
         selected_item_names = {icon.name() for icon in project_item_icons}
         self._toolbox.sync_item_selection_with_scene = False

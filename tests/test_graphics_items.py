@@ -26,6 +26,7 @@ from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
 from spine_engine.project_item.connection import Connection
 from spine_engine.project_item.project_item_resource import database_resource
 from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
+from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
 from .mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project
@@ -161,8 +162,8 @@ class TestLink(unittest.TestCase):
         source_item_icon.update_name_item("source icon")
         destination_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
         destination_item_icon.update_name_item("destination icon")
-        connection = Connection("source icon", "right", "destination icon", "left")
-        self._link = Link(
+        connection = LoggingConnection("source icon", "right", "destination icon", "left", toolbox=self._toolbox)
+        connection.link = self._link = Link(
             self._toolbox, source_item_icon.conn_button(), destination_item_icon.conn_button(), connection
         )
 
@@ -177,8 +178,8 @@ class TestLink(unittest.TestCase):
         db_map.commit_session("Add test data.")
         db_map.connection.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url)])
-        self._link.refresh_resource_filter_model()
-        filter_model = self._link.resource_filter_model
+        self._link.connection.refresh_resource_filter_model()
+        filter_model = self._link.connection.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
         self.assertEqual(filter_model.columnCount(), 1)
         index = filter_model.index(0, 0)
@@ -205,8 +206,8 @@ class TestLink(unittest.TestCase):
         db_map.commit_session("Add test data.")
         db_map.connection.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url)])
-        self._link.refresh_resource_filter_model()
-        filter_model = self._link.resource_filter_model
+        self._link.connection.refresh_resource_filter_model()
+        filter_model = self._link.connection.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
         self.assertEqual(filter_model.columnCount(), 1)
         index = filter_model.index(0, 0)
@@ -233,8 +234,8 @@ class TestLink(unittest.TestCase):
         db_map.commit_session("Add test data.")
         db_map.connection.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url)])
-        self._link.refresh_resource_filter_model()
-        filter_model = self._link.resource_filter_model
+        self._link.connection.refresh_resource_filter_model()
+        filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {1: True})
         self.assertEqual(self._link.connection.resource_filters, {url: {"scenario_filter": {1: True}}})
 
@@ -245,8 +246,8 @@ class TestLink(unittest.TestCase):
         db_map.commit_session("Add test data.")
         db_map.connection.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url)])
-        self._link.refresh_resource_filter_model()
-        filter_model = self._link.resource_filter_model
+        self._link.connection.refresh_resource_filter_model()
+        filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "tool_filter", {1: True})
         self.assertEqual(self._link.connection.resource_filters, {url: {"tool_filter": {1: True}}})
 

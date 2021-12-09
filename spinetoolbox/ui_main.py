@@ -104,6 +104,7 @@ from .project_commands import (
 )
 from .plugin_manager import PluginManager
 from .link import JumpLink, Link
+from .project_item.logging_connection import LoggingConnection, LoggingJump
 
 
 class ToolboxUI(QMainWindow):
@@ -155,10 +156,13 @@ class ToolboxUI(QMainWindow):
         self.filtered_spec_factory_models = {}
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
-        self.active_link = None
+        self.active_link_item = None
         self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
-        self.link_properties_widgets = {Link: LinkPropertiesWidget(self), JumpLink: JumpPropertiesWidget(self)}
+        self.link_properties_widgets = {
+            LoggingConnection: LinkPropertiesWidget(self),
+            LoggingJump: JumpPropertiesWidget(self),
+        }
         self._anchor_callbacks = {}
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
@@ -856,15 +860,14 @@ class ToolboxUI(QMainWindow):
         for icon in scene.project_item_icons():
             icon.setSelected(icon.name() in project_item_names)
 
-    def refresh_active_elements(self, active_project_item, active_link):
+    def refresh_active_elements(self, active_project_item, active_link_item):
         self._set_active_project_item(active_project_item)
-        self._set_active_link(active_link)
+        self._set_active_link_item(active_link_item)
         if self.active_project_item:
             self.activate_item_tab()
-            self.override_logs_and_consoles()
             return
         self.restore_original_logs_and_consoles()
-        if self.active_link:
+        if self.active_link_item:
             self.activate_link_tab()
             return
         self.activate_no_selection_tab()
@@ -886,20 +889,20 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item:
             self.active_project_item.activate()
 
-    def _set_active_link(self, active_link):
+    def _set_active_link_item(self, active_link_item):
         """
         Sets active link and connects to corresponding properties widget.
 
         Args:
-            active_link (JumpLink or Link, optional)
+            active_link_item (LoggingConnection or LoggingJump, optional)
         """
-        if self.active_link is active_link:
+        if self.active_link_item is active_link_item:
             return
-        if self.active_link:
-            self.link_properties_widgets[type(self.active_link)].unset_link()
-        self.active_link = active_link
-        if self.active_link:
-            self.link_properties_widgets[type(self.active_link)].set_link(self.active_link)
+        if self.active_link_item:
+            self.link_properties_widgets[type(self.active_link_item)].unset_link()
+        self.active_link_item = active_link_item
+        if self.active_link_item:
+            self.link_properties_widgets[type(self.active_link_item)].set_link(self.active_link_item)
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
@@ -921,7 +924,7 @@ class ToolboxUI(QMainWindow):
 
     def activate_link_tab(self):
         """Shows link properties tab."""
-        tab_text = {Link: "Link properties", JumpLink: "Loop properties"}[type(self.active_link)]
+        tab_text = {LoggingConnection: "Link properties", LoggingJump: "Loop properties"}[type(self.active_link_item)]
         for i in range(self.ui.tabWidget_item_properties.count()):
             if self.ui.tabWidget_item_properties.tabText(i) == tab_text:
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
@@ -1347,9 +1350,10 @@ class ToolboxUI(QMainWindow):
 
     def override_item_log(self):
         """Sets the log document of the active project item in Item Execution Log and updates title."""
-        if self.active_project_item is None:
+        active_thing = self.active_project_item or self.active_link_item
+        if active_thing is None:
             return
-        document = self.active_project_item.log_document
+        document = active_thing.log_document
         self._do_override_item_log(document)
 
     def _do_override_item_log(self, document):
@@ -1457,16 +1461,6 @@ class ToolboxUI(QMainWindow):
         """Sets the console of the selected execution in Console."""
         if not current.data():
             return
-        console = current.model().get_console(current.data())
-        self._do_override_console(console)
-
-    def _select_execution(self, view, current):
-        """Sets the log documents of the selected execution in Event and Process Log,
-        and any consoles in Python and Julia Console."""
-        if not current.data():
-            return
-        item_log_doc = current.model().get_log_document(current.data())
-        self._do_override_item_log(item_log_doc)
         console = current.model().get_console(current.data())
         self._do_override_console(console)
 

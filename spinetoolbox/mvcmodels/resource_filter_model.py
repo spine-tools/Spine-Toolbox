@@ -30,21 +30,21 @@ class ResourceFilterModel(QStandardItemModel):
     _FILTER_TYPE_TO_TEXT = dict(zip(_FILTER_TYPES.values(), _FILTER_TYPES.keys()))
     _ID_ROLE = Qt.UserRole + 1
 
-    def __init__(self, link, undo_stack, logger):
+    def __init__(self, connection, undo_stack, logger):
         """
         Args:
-            link (Link): link whose resources to model
+            connection (LoggingConnection): connection whose resources to model
             undo_stack (QUndoStack): an undo stack
             logger (LoggerInterface): a logger
         """
         super().__init__()
-        self._link = link
+        self._connection = connection
         self._undo_stack = undo_stack
         self._logger = logger
 
     @property
     def connection(self):
-        return self._link.connection
+        return self._connection
 
     def build_tree(self):
         """Rebuilds model's contents."""
@@ -118,7 +118,7 @@ class ResourceFilterModel(QStandardItemModel):
             online (dict): mapping from scenario/tool id to online flag
         """
         self.connection.set_online(resource, filter_type, online)
-        self._link.update_icon()
+        self.connection.link.update_icon()
         filter_type_item = self._find_filter_type_item(resource, filter_type)
         for row in range(filter_type_item.rowCount()):
             filter_item = filter_type_item.child(row)
@@ -152,11 +152,11 @@ class ResourceFilterModel(QStandardItemModel):
     def _set_all_selected_item(self, resource, filter_type_item, emit_data_changed=False):
         """Updates 'Select All' item's checked state.
 
-         Args:
-             resource (str): resource label
-             filter_type_item (QStandardItem): filter type item
-             emit_data_changed (bool): if True, emit dataChanged signal if the state was updated
-         """
+        Args:
+            resource (str): resource label
+            filter_type_item (QStandardItem): filter type item
+            emit_data_changed (bool): if True, emit dataChanged signal if the state was updated
+        """
         all_online = all(
             self.connection.resource_filters[resource][self._FILTER_TYPES[filter_type_item.text()]].values()
         )

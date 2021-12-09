@@ -53,6 +53,8 @@ class MainStatusBar(QStatusBar):
         doc = self._toolbox.ui.textBrowser_itemlog.document()
         if doc.owner is not None and doc not in self._item_buttons:
             factory = self._toolbox.item_factories.get(doc.owner.item_type())
+            if factory is None:
+                return
             color = factory.icon_color()
             self._item_buttons[doc] = button = _ItemLogButton(
                 self._toolbox.ui.dockWidget_itemlog,

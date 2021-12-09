@@ -37,7 +37,7 @@ class JumpPropertiesWidget(QWidget):
         self._toolbox = toolbox
         self._cmd_line_args_model = JumpCommandLineArgsModel(self)
         self._input_file_model = FileListModel(header_label="Available resources", draggable=True)
-        self._jump_link = None
+        self._jump = None
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self._ui.treeView_cmd_line_args.setModel(self._cmd_line_args_model)
@@ -51,64 +51,58 @@ class JumpPropertiesWidget(QWidget):
         self._ui.toolButton_add_arg.clicked.connect(self._add_args)
         self._cmd_line_args_model.args_updated.connect(self._push_update_cmd_line_args_command)
 
-    def set_link(self, link):
-        """Hooks the widget to given link, so that user actions are reflected in the link's configuration.
+    def set_link(self, jump):
+        """Hooks the widget to given jump link, so that user actions are reflected in the jump link's configuration.
 
         Args:
-            link (JumpLink): link to hook into
+            jump (LoggingJump): link to hook into
         """
-        self._jump_link = link
-        self._ui.condition_edit.setPlainText(link.jump.condition)
-        self._ui.link_name_label.setText(f"Loop from {link.jump.source} to {link.jump.destination}")
-        self._input_file_model.update(self._jump_link.jump.resources)
+        self._jump = jump
+        self._jump.activate()
+        self._ui.condition_edit.setPlainText(self._jump.condition)
+        self._ui.link_name_label.setText(f"Loop from {self._jump.source} to {self._jump.destination}")
+        self._input_file_model.update(self._jump.resources)
         self._populate_cmd_line_args_model()
 
     def unset_link(self):
         """Releases the widget from any links."""
-        self._jump_link = None
+        self._jump.deactivate()
+        self._jump = None
 
     def set_condition(self, jump, condition):
         jump.condition = condition
-        if (
-            self._jump_link is not None
-            and jump is self._jump_link.jump
-            and self._ui.condition_edit.toPlainText() != condition
-        ):
+        if jump is self._jump and self._ui.condition_edit.toPlainText() != condition:
             self._ui.condition_edit.setPlainText(condition)
 
     def update_cmd_line_args(self, jump, cmd_line_args):
         jump.cmd_line_args = cmd_line_args
-        if (
-            self._jump_link is not None
-            and jump is self._jump_link.jump
-            and self._cmd_line_args_model.args != cmd_line_args
-        ):
+        if jump is self._jump and self._cmd_line_args_model.args != cmd_line_args:
             self._populate_cmd_line_args_model()
 
     def _populate_cmd_line_args_model(self):
-        self._cmd_line_args_model.reset_model(self._jump_link.jump.cmd_line_args)
+        self._cmd_line_args_model.reset_model(self._jump.cmd_line_args)
 
     @Slot()
     def _change_condition(self):
         """Stores jump condition to link."""
         condition = self._ui.condition_edit.toPlainText()
-        if self._jump_link.jump.condition == condition:
+        if self._jump.condition == condition:
             return
-        self._toolbox.undo_stack.push(SetJumpConditionCommand(self, self._jump_link.jump, condition))
+        self._toolbox.undo_stack.push(SetJumpConditionCommand(self, self._jump, condition))
 
     @Slot(list)
     def _push_update_cmd_line_args_command(self, cmd_line_args):
-        if self._jump_link.jump.cmd_line_args == cmd_line_args:
+        if self._jump.cmd_line_args == cmd_line_args:
             return
-        self._toolbox.undo_stack.push(UpdateJumpCmdLineArgsCommand(self, self._jump_link.jump, cmd_line_args))
+        self._toolbox.undo_stack.push(UpdateJumpCmdLineArgsCommand(self, self._jump, cmd_line_args))
 
     @Slot(bool)
     def _remove_arg(self, _=False):
         removed_rows = [index.row() for index in self._ui.treeView_cmd_line_args.selectedIndexes()]
-        cmd_line_args = [arg for row, arg in enumerate(self._jump_link.jump.cmd_line_args) if row not in removed_rows]
+        cmd_line_args = [arg for row, arg in enumerate(self._jump.cmd_line_args) if row not in removed_rows]
         self._push_update_cmd_line_args_command(cmd_line_args)
 
     @Slot(bool)
     def _add_args(self, _=False):
         new_args = [LabelArg(index.data()) for index in self._ui.treeView_input_files.selectedIndexes()]
-        self._push_update_cmd_line_args_command(self._jump_link.jump.cmd_line_args + new_args)
+        self._push_update_cmd_line_args_command(self._jump.cmd_line_args + new_args)
