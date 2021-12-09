@@ -150,8 +150,6 @@ class DesignGraphicsScene(CustomGraphicsScene):
             else None
         )
         active_link_item = links[0].item if len(links) == 1 else None
-        self._toolbox.refresh_active_elements(active_project_item, active_link_item)
-        self._toolbox.override_logs_and_consoles()
         # Sync selection with project tree view
         selected_item_names = {icon.name() for icon in project_item_icons}
         self._toolbox.sync_item_selection_with_scene = False
@@ -164,6 +162,10 @@ class DesignGraphicsScene(CustomGraphicsScene):
         if project_item_icons:
             last_ind = self._toolbox.project_item_model.find_item(project_item_icons[-1].name())
             self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(last_ind, QItemSelectionModel.NoUpdate)
+        selected_link_icons = [conn.parent for link in links for conn in (link.src_connector, link.dst_connector)]
+        selected_item_names |= set(icon.name() for icon in selected_link_icons)
+        self._toolbox.refresh_active_elements(active_project_item, active_link_item, selected_item_names)
+        self._toolbox.override_logs_and_consoles()
 
     def set_bg_color(self, color):
         """Change background color when this is changed in Settings.

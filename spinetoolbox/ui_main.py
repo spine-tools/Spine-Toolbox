@@ -157,6 +157,7 @@ class ToolboxUI(QMainWindow):
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.active_link_item = None
+        self._selected_item_names = set()
         self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
         self.link_properties_widgets = {
@@ -331,7 +332,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionExecute_project.setEnabled(first_index is not None and not self.execution_in_progress)
 
     def _update_execute_selected_enabled(self):
-        has_selection = bool(self.ui.treeView_project.selectedIndexes())
+        has_selection = bool(self._selected_item_names)
         self.ui.actionExecute_selection.setEnabled(has_selection and not self.execution_in_progress)
 
     @Slot(bool)
@@ -839,18 +840,13 @@ class ToolboxUI(QMainWindow):
                     return False
         return True
 
-    def selected_item_names(self):
-        """Returns names of selected project items.
-
-        Returns:
-            list of str: names of selected project items
-        """
-        return [self.project_item_model.item(i).name for i in self.ui.treeView_project.selectedIndexes()]
-
     @Slot(QItemSelection, QItemSelection)
     def item_selection_changed(self, selected, deselected):
         """Synchronizes selection with scene. The scene handles item/link de/activation."""
         inds = self.ui.treeView_project.selectedIndexes()
+        self._selected_item_names = {
+            self.project_item_model.item(i).name for i in self.ui.treeView_project.selectedIndexes()
+        }
         self._update_execute_selected_enabled()
         if not self.sync_item_selection_with_scene:
             return
@@ -860,7 +856,9 @@ class ToolboxUI(QMainWindow):
         for icon in scene.project_item_icons():
             icon.setSelected(icon.name() in project_item_names)
 
-    def refresh_active_elements(self, active_project_item, active_link_item):
+    def refresh_active_elements(self, active_project_item, active_link_item, selected_item_names):
+        self._selected_item_names = selected_item_names
+        self._update_execute_selected_enabled()
         self._set_active_project_item(active_project_item)
         self._set_active_link_item(active_link_item)
         if self.active_project_item:
@@ -2053,8 +2051,7 @@ class ToolboxUI(QMainWindow):
         if self._project is None:
             self.msg.emit("Please create a new project or open an existing one first")
             return
-        selected_names = self.selected_item_names()
-        self._project.execute_selected(selected_names)
+        self._project.execute_selected(self._selected_item_names)
 
     @Slot(bool)
     def _stop_execution(self, checked=False):
