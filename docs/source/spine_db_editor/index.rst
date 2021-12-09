@@ -12,6 +12,7 @@ that you can use to visualize and edit data in one or more Spine databases.
    :maxdepth: 1
    :caption: Contents:
 
+   spine_data_structure
    getting_started
    viewing_data
    adding_data
