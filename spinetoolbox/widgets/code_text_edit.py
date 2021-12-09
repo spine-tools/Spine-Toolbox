@@ -21,7 +21,7 @@ from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
 from PySide2.QtWidgets import QWidget, QPlainTextEdit, QPlainTextDocumentLayout
-from PySide2.QtGui import QColor, QFontMetrics, QFontDatabase, QPainter
+from PySide2.QtGui import QColor, QFontMetrics, QFontDatabase, QPainter, QTextDocument
 from PySide2.QtCore import QSize, Slot, QRect, Qt
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 
@@ -57,6 +57,11 @@ class CodeTextEdit(QPlainTextEdit):
         except ClassNotFound:
             # No lexer for aliases 'gams' nor 'executable'
             pass
+
+    def setPlainText(self, text):
+        doc = QTextDocument(self)
+        doc.setPlainText(text)
+        self.setDocument(doc)
 
     def setDocument(self, doc):
         doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
