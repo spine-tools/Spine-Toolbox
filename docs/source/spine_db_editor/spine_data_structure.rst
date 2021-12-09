@@ -9,7 +9,7 @@ Main features
 --------------------
 
 Spine data structure follows entity-attribute-value (EAV) with classes and relationships data model 
-(`Wikipedia<https://en.wikipedia.org/wiki/Entity%E2%80%93attribute%E2%80%93value_model#EAV/CR:_representing_substructure_with_classes_and_relationships>`_).
+(`Wikipedia <https://en.wikipedia.org/wiki/Entity%E2%80%93attribute%E2%80%93value_model#EAV/CR:_representing_substructure_with_classes_and_relationships>`_).
 It is an open schema where the data structure is defined through data (and not through database structure). 
 Spine Toolbox also adds an ability to hold alternative parameter values for the same parameter of a particular entity. 
 This allows the creation of scenarios.
