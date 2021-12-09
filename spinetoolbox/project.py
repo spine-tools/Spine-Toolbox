@@ -859,10 +859,9 @@ class SpineToolboxProject(MetaObject):
                 spec_dict = spec.to_dict().copy()
                 spec_dict["definition_file_path"] = spec.definition_file_path
                 specification_dicts.setdefault(project_item.item_type(), list()).append(spec_dict)
-        is_in_dag = lambda c: {c.source, c.destination}.intersection(items.keys())
-        connections = {c.name: c for c in self._connections if is_in_dag(c)}
+        connections = {c.name: c for c in self._connections if {c.source, c.destination}.intersection(items)}
         connection_dicts = [c.to_dict() for c in connections.values()]
-        jumps = {c.name: c for c in self._jumps if is_in_dag(c)}
+        jumps = {c.name: c for c in self._jumps if execution_permits[c.source]}
         jump_dicts = [c.to_dict() for c in jumps.values()]
         connections.update(jumps)
         data = {
