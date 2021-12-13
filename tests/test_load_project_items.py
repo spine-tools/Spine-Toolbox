@@ -32,6 +32,7 @@ class TestLoadProjectItems(unittest.TestCase):
         expected_categories = {
             "Data Connection": "Data Connections",
             "Data Transformer": "Manipulators",
+            "Merger": "Manipulators",
             "Data Store": "Data Stores",
             "Importer": "Importers",
             "Exporter": "Exporters",
