@@ -28,7 +28,7 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from spinetoolbox.helpers import busy_effect, color_from_index
+from spinetoolbox.helpers import color_from_index
 from .project_item_icon import ConnectorButton
 
 _LINK_COLOR = color_from_index(0, 2, base_hue=60)
@@ -65,7 +65,7 @@ class LinkBase(QGraphicsPathItem):
 
     @property
     def pen_brush(self):
-        return QBrush(self._COLOR.darker(200))
+        return QBrush(self._COLOR.darker())
 
     @property
     def magic_number(self):

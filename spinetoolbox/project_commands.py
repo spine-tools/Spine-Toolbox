@@ -28,11 +28,13 @@ class Id(IntEnum):
 
 
 class SpineToolboxCommand(QUndoCommand):
-    successfully_undone = False
-    """Flag to register the outcome of undoing a critical command, so toolbox can react afterwards."""
+    def __init__(self):
+        super().__init__()
+        self.successfully_undone = False
+        """Flag to register the outcome of undoing a critical command, so toolbox can react afterwards."""
 
-    @staticmethod
-    def is_critical():
+    @property
+    def is_critical(self):
         """Returns True if this command needs to be undone before
         closing the project without saving changes.
         """
@@ -244,8 +246,9 @@ class RenameProjectItemCommand(SpineToolboxCommand):
         box_title = f"Undoing '{self.text()}'"
         self.successfully_undone = self._project.rename_item(self._new_name, self._previous_name, box_title)
 
-    @staticmethod
-    def is_critical():
+
+    @property
+    def is_critical(self):
         return True
 
 
@@ -550,8 +553,9 @@ class ReplaceSpecificationCommand(SpineToolboxCommand):
     def undo(self):
         self.successfully_undone = self._project.replace_specification(self._undo_name, self._undo_specification)
 
-    @staticmethod
-    def is_critical():
+
+    @property
+    def is_critical(self):
         return True
 
 

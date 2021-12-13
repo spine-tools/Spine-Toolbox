@@ -400,7 +400,7 @@ class ProjectItem(LogMixin, MetaObject):
         self.data_dir = new_data_dir
         if self._active:
             self.update_name_label()
-            self._project._toolbox.override_logs_and_consoles()
+            self._project.toolbox().override_logs_and_consoles()
         self.get_icon().update_name_item(new_name)
         return True
 

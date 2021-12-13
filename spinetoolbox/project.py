@@ -518,7 +518,11 @@ class SpineToolboxProject(MetaObject):
             msg = f"Project item using directory <b>{shorten(new_name)}</b> already exists"
             self._logger.error_box.emit("Invalid name", msg)
             return False
-        item = self._project_items.pop(previous_name)
+        item = self._project_items.pop(previous_name, None)
+        if item is None:
+            # Happens when renaming an item, removing, and then closing the project.
+            # We try to undo the renaming because it's critical, but the item doesn't exist anymore so it's fine.
+            return True
         resources_to_predecessors = item.resources_for_direct_predecessors()
         resources_to_successors = item.resources_for_direct_successors()
         if not item.rename(new_name, rename_data_dir_message):

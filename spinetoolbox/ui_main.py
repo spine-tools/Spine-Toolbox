@@ -785,15 +785,20 @@ class ToolboxUI(QMainWindow):
 
         def is_critical(cmd):
             if isinstance(cmd, SpineToolboxCommand):
-                return cmd.is_critical()
+                return cmd.is_critical
             return any(is_critical(cmd.child(i)) for i in range(cmd.childCount()))
+
+        def successfully_undone(cmd):
+            if isinstance(cmd, SpineToolboxCommand):
+                return cmd.successfully_undone
+            return all(successfully_undone(cmd.child(i)) for i in range(cmd.childCount()))
 
         critical_commands = [cmd for cmd in commands if is_critical(cmd)]
         if not critical_commands:
             return True
         for cmd in reversed(critical_commands):
             cmd.undo()
-            if not cmd.successfully_undone:
+            if not successfully_undone(cmd):
                 return False
         return True
 

@@ -94,7 +94,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         gradient.setColorAt(0, background_color.lighter(105))
         gradient.setColorAt(1, background_color.darker(105))
         brush = QBrush(gradient)
-        pen = QPen(QBrush(background_color.darker(200)), 1, Qt.SolidLine)
+        pen = QPen(QBrush(background_color.darker()), 1, Qt.SolidLine)
         self._setup(brush, pen, icon_file, icon_color)
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setOffset(1)
@@ -191,7 +191,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         """
         self._name = new_name
         self.name_item.setText(new_name)
-        self.set_name_attributes()
+        self._reposition_name_item()
 
     def set_name_attributes(self):
         """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
