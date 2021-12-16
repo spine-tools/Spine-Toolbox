@@ -15,6 +15,8 @@ QUndoCommand subclasses for modifying the project.
 :authors: M. Marin (KTH)
 :date:   12.2.2020
 """
+
+from copy import copy
 from enum import IntEnum, unique
 from PySide2.QtWidgets import QUndoCommand
 from spine_engine.project_item.connection import Connection, Jump
@@ -246,7 +248,6 @@ class RenameProjectItemCommand(SpineToolboxCommand):
         box_title = f"Undoing '{self.text()}'"
         self.successfully_undone = self._project.rename_item(self._new_name, self._previous_name, box_title)
 
-
     @property
     def is_critical(self):
         return True
@@ -267,11 +268,16 @@ class AddConnectionCommand(SpineToolboxCommand):
         self._project = project
         self._source_name = source_name
         self._destination_name = destination_name
-        self._connection_dict = Connection(
-            source_name, source_position, destination_name, destination_position
-        ).to_dict()
         replaced_connection = self._project.find_connection(source_name, destination_name)
-        self._replaced_connection_dict = replaced_connection.to_dict() if replaced_connection is not None else None
+        if replaced_connection is not None:
+            self._replaced_connection_dict = replaced_connection.to_dict()
+            connection = copy(replaced_connection)
+            connection.source_position = source_position
+            connection.destination_position = destination_position
+        else:
+            self._replaced_connection_dict = None
+            connection = Connection(source_name, source_position, destination_name, destination_position)
+        self._connection_dict = connection.to_dict()
         self._connection_name = f"link from {source_name} to {destination_name}"
 
     def redo(self):
@@ -288,11 +294,10 @@ class AddConnectionCommand(SpineToolboxCommand):
         self.setText(f"{action} {self._connection_name}")
 
     def undo(self):
+        connection = self._project.find_connection(self._source_name, self._destination_name)
         if self._replaced_connection_dict is None:
-            connection = self._project.find_connection(self._source_name, self._destination_name)
             self._project.remove_connection(connection)
         else:
-            connection = self._project.find_connection(self._source_name, self._destination_name)
             self._project.replace_connection(
                 connection, self._project.connection_from_dict(self._replaced_connection_dict)
             )
@@ -342,9 +347,16 @@ class AddJumpCommand(SpineToolboxCommand):
         self._project = project
         self._source_name = source_name
         self._destination_name = destination_name
-        self._jump_dict = Jump(source_name, source_position, destination_name, destination_position).to_dict()
         replaced_jump = self._project.find_jump(source_name, destination_name)
-        self._replaced_jump_dict = replaced_jump.to_dict() if replaced_jump is not None else None
+        if replaced_jump is not None:
+            self._replaced_jump_dict = replaced_jump.to_dict()
+            jump = copy(replaced_jump)
+            jump.source_position = source_position
+            jump.destination_position = destination_position
+        else:
+            self._replaced_jump_dict = None
+            jump = Jump(source_name, source_position, destination_name, destination_position)
+        self._jump_dict = jump.to_dict()
         self._jump_name = f"jump from {source_name} to {destination_name}"
 
     def redo(self):
@@ -360,11 +372,10 @@ class AddJumpCommand(SpineToolboxCommand):
         self.setText(f"{action} {self._jump_name}")
 
     def undo(self):
+        jump = self._project.find_jump(self._source_name, self._destination_name)
         if self._replaced_jump_dict is None:
-            jump = self._project.find_jump(self._source_name, self._destination_name)
             self._project.remove_jump(jump)
         else:
-            jump = self._project.find_jump(self._source_name, self._destination_name)
             self._project.replace_jump(jump, self._project.jump_from_dict(self._replaced_jump_dict))
 
 
@@ -552,7 +563,6 @@ class ReplaceSpecificationCommand(SpineToolboxCommand):
 
     def undo(self):
         self.successfully_undone = self._project.replace_specification(self._undo_name, self._undo_specification)
-
 
     @property
     def is_critical(self):
