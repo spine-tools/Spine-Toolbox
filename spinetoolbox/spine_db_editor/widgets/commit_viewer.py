@@ -28,7 +28,7 @@ from PySide2.QtWidgets import (
     QLabel,
 )
 from PySide2.QtCore import Qt, Slot
-from spinetoolbox.helpers import restore_ui, save_ui
+from spinetoolbox.helpers import restore_ui, save_ui, busy_effect
 
 
 class _DBCommitViewer(QWidget):
@@ -54,9 +54,6 @@ class _DBCommitViewer(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         for commit in reversed(self._db_mngr.get_items(db_map, "commit", only_visible=False)):
-            items = self._db_mngr.get_items_for_commit(self._db_map, commit["id"])
-            if not items:
-                continue
             tree_item = QTreeWidgetItem(self._commit_list)
             tree_item.setData(0, Qt.UserRole + 1, commit["id"])
             self._commit_list.addTopLevelItem(tree_item)
@@ -67,8 +64,15 @@ class _DBCommitViewer(QWidget):
 
     @Slot(QTreeWidgetItem, QTreeWidgetItem)
     def _select_commit(self, current, previous):
+        self._commit_list.setDisabled(True)
+        self._do_select_commit(current)
+        self._commit_list.setEnabled(True)
+
+    @busy_effect
+    def _do_select_commit(self, current):
         commit_id = current.data(0, Qt.UserRole + 1)
         self._affected_items.clear()
+        # TODO: If no items, show message that data was overwritten by a further commit
         for item_type, ids in self._db_mngr.get_items_for_commit(self._db_map, commit_id).items():
             top_level_item = QTreeWidgetItem([item_type])
             self._affected_items.addTopLevelItem(top_level_item)
