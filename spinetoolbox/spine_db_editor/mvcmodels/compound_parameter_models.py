@@ -571,8 +571,15 @@ class CompoundParameterDefinitionMixin:
 class CompoundParameterValueMixin:
     """Handles signals from db mngr for parameter_value models."""
 
-    _filter_entity_ids = dict()
-    _filter_alternative_ids = dict()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._filter_entity_ids = dict()
+        self._filter_alternative_ids = dict()
+
+    def init_model(self):
+        super().init_model()
+        self._filter_entity_ids = dict()
+        self._filter_alternative_ids = dict()
 
     @property
     def item_type(self):
