@@ -28,6 +28,7 @@ from PySide2.QtWidgets import (
     QGraphicsDropShadowEffect,
     QApplication,
     QToolTip,
+    QStyle,
 )
 from PySide2.QtGui import (
     QColor,
@@ -64,6 +65,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self._bumping = True
         self.bumped_rects = {}  # Item rect before it was bumped
         self.icon_file = icon_file
+        self._icon_color = icon_color
         self._moved_on_scene = False
         self.previous_pos = QPointF()
         self.icon_group = {self}
@@ -88,14 +90,8 @@ class ProjectItemIcon(QGraphicsPathItem):
             left=ConnectorButton(toolbox, self, position="left"),
             right=ConnectorButton(toolbox, self, position="right"),
         )
-        h, s, _, a = icon_color.getHsl()
-        background_color = QColor.fromHsl(h, s, 240, a)
-        gradient = QRadialGradient(self._rect.center(), 1 * self._rect.width())
-        gradient.setColorAt(0, background_color.lighter(105))
-        gradient.setColorAt(1, background_color.darker(105))
-        brush = QBrush(gradient)
-        pen = QPen(QBrush(background_color.darker()), 1, Qt.SolidLine)
-        self._setup(brush, pen, icon_file, icon_color)
+        self._selection_halo = QGraphicsPathItem(self)
+        self._setup()
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setOffset(1)
         shadow_effect.setEnabled(False)
@@ -120,6 +116,15 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.rank_icon.update_path(radius)
         for conn in self.connectors.values():
             conn.update_path(radius)
+        # Selection halo
+        pen_width = 1
+        margin = 1
+        path = QPainterPath()
+        path.addRoundedRect(self._rect.adjusted(-margin, -margin, margin, margin), radius + margin, radius + margin)
+        self._selection_halo.setPath(path)
+        selection_pen = QPen(Qt.DashLine)
+        selection_pen.setWidthF(pen_width)
+        self._selection_halo.setPen(selection_pen)
 
     def finalize(self, name, x, y):
         """
@@ -133,25 +138,25 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.moveBy(x, y)
         self.update_name_item(name)
 
-    def _setup(self, brush, pen, svg, svg_color):
-        """Setup item's attributes.
-
-        Args:
-            brush (QBrush): Used in filling the background rectangle
-            pen (QPen)
-            svg (str): Path to SVG icon file
-            svg_color (QColor): Color of SVG icon
-        """
+    def _setup(self):
+        """Setup item's attributes."""
+        self.colorizer.setColor(self._icon_color)
+        h, s, _, a = self._icon_color.getHsl()
+        background_color = QColor.fromHsl(h, s, 240, a)
+        gradient = QRadialGradient(self._rect.center(), 1 * self._rect.width())
+        gradient.setColorAt(0, background_color.lighter(105))
+        gradient.setColorAt(1, background_color.darker(105))
+        brush = QBrush(gradient)
+        pen = QPen(QBrush(background_color.darker()), 1, Qt.SolidLine)
         self.setPen(pen)
         for conn in self.connectors.values():
             conn.setPen(pen)
         self.rank_icon.bg.setPen(pen)
         self.setBrush(brush)
-        self.colorizer.setColor(svg_color)
         # Load SVG
-        loading_ok = self.renderer.load(svg)
+        loading_ok = self.renderer.load(self.icon_file)
         if not loading_ok:
-            self._toolbox.msg_error.emit("Loading SVG icon from resource:{0} failed".format(svg))
+            self._toolbox.msg_error.emit("Loading SVG icon from resource:{0} failed".format(self.icon_file))
             return
         size = self.renderer.defaultSize()
         self.svg_item.setSharedRenderer(self.renderer)
@@ -395,6 +400,13 @@ class ProjectItemIcon(QGraphicsPathItem):
         """Update GUI to show the details of the selected item."""
         ind = self._toolbox.project_item_model.find_item(self.name())
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
+
+    def paint(self, painter, option, widget=None):
+        """Sets a dashed pen if selected."""
+        selected = option.state & QStyle.State_Selected
+        self._selection_halo.setVisible(selected)
+        option.state &= ~QStyle.State_Selected
+        super().paint(painter, option, widget)
 
 
 class ConnectorButton(QGraphicsPathItem):
