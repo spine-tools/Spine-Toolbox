@@ -55,7 +55,13 @@ from PySide2.QtGui import (
 )
 from spine_engine.utils.serialization import deserialize_path
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
-from .config import DEFAULT_WORK_DIR, PLUGINS_PATH
+from .config import (
+    DEFAULT_WORK_DIR,
+    PLUGINS_PATH,
+    PROJECT_FILENAME,
+    PROJECT_LOCAL_DATA_DIR_NAME,
+    PROJECT_LOCAL_DATA_FILENAME,
+)
 
 if os.name == "nt":
     import ctypes
@@ -1432,3 +1438,59 @@ class ItemTypeFetchParent(FetchParent):
     @property
     def fetch_item_type(self):
         return self._fetch_item_type
+
+
+def load_project_dict(project_config_dir, logger):
+    """Loads project dictionary from project directory.
+
+    Args:
+        project_config_dir (str): project's .spinetoolbox directory
+        logger (LoggerInterface): a logger
+
+    Returns:
+        dict: project dictionary
+    """
+    load_path = os.path.abspath(os.path.join(project_config_dir, PROJECT_FILENAME))
+    try:
+        with open(load_path, "r") as fh:
+            try:
+                project_dict = json.load(fh)
+            except json.decoder.JSONDecodeError:
+                logger.msg_error.emit(f"Error in project file <b>{load_path}</b>. Invalid JSON.")
+                return None
+    except OSError:
+        logger.msg_error.emit(f"Project file <b>{load_path}</b> missing")
+        return None
+    return project_dict
+
+
+def load_local_project_data(project_config_dir, logger):
+    """Loads local project data.
+
+    Args:
+        project_config_dir (Path or str): project's .spinetoolbox directory
+        logger (LoggerInterface): a logger
+
+    Returns:
+        dict: project's local data
+    """
+    load_path = pathlib.Path(project_config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME)
+    if not load_path.exists():
+        return {}
+    with load_path.open() as fh:
+        try:
+            local_data_dict = json.load(fh)
+        except json.decoder.JSONDecodeError:
+            logger.msg_error.emit(f"Error in project's local data file <b>{load_path}</b>. Invalid JSON.")
+            return {}
+    return local_data_dict
+
+
+def merge_dicts(source, target):
+    """Merges two dictionaries that may contain nested dictionaries recursively."""
+    for key, value in source.items():
+        target_entry = target.get(key)
+        if isinstance(value, dict) and target_entry is not None:
+            merge_dicts(value, target_entry)
+        else:
+            target[key] = value

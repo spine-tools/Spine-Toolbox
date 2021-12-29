@@ -18,6 +18,7 @@ Spine Toolbox project class.
 from enum import auto, Enum, unique
 from itertools import takewhile, chain
 import os
+from pathlib import Path
 import json
 from PySide2.QtCore import Signal
 from spine_engine.exception import EngineInitFailed
@@ -26,9 +27,23 @@ from spine_engine.spine_engine import ExecutionDirection, validate_jumps
 from spine_engine.utils.helpers import shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from .metaobject import MetaObject
-from .helpers import create_dir, erase_dir, load_specification_from_file, make_settings_dict_for_engine
+from .helpers import (
+    create_dir,
+    erase_dir,
+    load_specification_from_file,
+    make_settings_dict_for_engine,
+    load_project_dict,
+    load_local_project_data,
+    merge_dicts,
+)
 from .project_upgrader import ProjectUpgrader
-from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME, INVALID_CHARS
+from .config import (
+    LATEST_PROJECT_VERSION,
+    PROJECT_FILENAME,
+    INVALID_CHARS,
+    PROJECT_LOCAL_DATA_DIR_NAME,
+    PROJECT_LOCAL_DATA_FILENAME,
+)
 from .dag_handler import DirectedGraphHandler
 from .project_commands import SetProjectNameAndDescriptionCommand
 from .spine_engine_worker import SpineEngineWorker
@@ -192,10 +207,41 @@ class SpineToolboxProject(MetaObject):
             "jumps": [jump.to_dict() for jump in self._jumps],
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
+        local_items_data = self._pop_local_data_from_items_dict(items_dict)
         saved_dict = dict(project=project_dict, items=items_dict)
         with open(self.config_file, "w") as fp:
             self._dump(saved_dict, fp)
+        local_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
+        local_path.mkdir(parents=True, exist_ok=True)
+        with (local_path / PROJECT_LOCAL_DATA_FILENAME).open("w") as fp:
+            self._dump(dict(items=local_items_data), fp)
         return True
+
+    def _pop_local_data_from_items_dict(self, items_dict):
+        """Pops local data from project items dict.
+
+        Args:
+            items_dict (dict): items dict
+
+        Returns:
+            dict: local project item data
+        """
+        local_data_dict = dict()
+        for name, item_dict in items_dict.items():
+            local_entries = self._project_items[name].item_dict_local_entries()
+            if not local_entries:
+                continue
+            local_data = {}
+            local_data_dict[name] = local_data
+            for entry in local_entries:
+                data = None
+                for component in entry[:-1]:
+                    data = item_dict[component]
+                    local_data = local_data.setdefault(component, {})
+                last_component = entry[-1]
+                local_data[last_component] = data.pop(last_component)
+                local_data = local_data_dict[name]
+        return local_data_dict
 
     @staticmethod
     def _dump(project_dict, out_stream):
@@ -217,17 +263,18 @@ class SpineToolboxProject(MetaObject):
         Returns:
             bool: True if the operation was successful, False otherwise
         """
-        project_dict = self._load_project_dict()
+        project_dict = load_project_dict(self.config_dir, self._logger)
         if project_dict is None:
             return False
         project_info = ProjectUpgrader(self._toolbox).upgrade(project_dict, self.project_dir)
         if not project_info:
             return False
-        if not ProjectUpgrader(self._toolbox).is_valid(
-            LATEST_PROJECT_VERSION, project_info
-        ):  # Check project info validity
+        # Check project info validity
+        if not ProjectUpgrader(self._toolbox).is_valid(LATEST_PROJECT_VERSION, project_info):
             self._logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
             return False
+        local_data_dict = load_local_project_data(self.config_dir, self._logger)
+        merge_dicts(local_data_dict, project_info)
         # Parse project info
         self.set_name(project_info["project"]["name"])
         self.set_description(project_info["project"]["description"])
@@ -260,25 +307,6 @@ class SpineToolboxProject(MetaObject):
 
     def jump_from_dict(self, jump_dict):
         return LoggingJump.from_dict(jump_dict, toolbox=self._toolbox)
-
-    def _load_project_dict(self):
-        """Loads project dictionary from project directory.
-
-        Returns:
-            dict: project dictionary
-        """
-        load_path = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox", PROJECT_FILENAME))
-        try:
-            with open(load_path, "r") as fh:
-                try:
-                    project_dict = json.load(fh)
-                except json.decoder.JSONDecodeError:
-                    self._logger.msg_error.emit(f"Error in project file <b>{load_path}</b>. Invalid JSON.")
-                    return None
-        except OSError:
-            self._logger.msg_error.emit(f"Project file <b>{load_path}</b> missing")
-            return None
-        return project_dict
 
     def add_specification(self, specification, save_to_disk=True):
         """Adds a specification to the project.
@@ -753,7 +781,7 @@ class SpineToolboxProject(MetaObject):
                 return
             try:
                 project_item = factory.make_item(item_name, item_dict, self._toolbox, self)
-            except TypeError as error:
+            except TypeError:
                 self._logger.msg_error.emit(
                     f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
                     "This is most likely caused by an outdated project file."

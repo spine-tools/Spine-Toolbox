@@ -21,12 +21,21 @@ import logging
 import pathlib
 import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
+
 from spine_engine import SpineEngineState
 from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import deserialize_path
 from .dag_handler import DirectedGraphHandler
-from .helpers import make_settings_dict_for_engine, plugins_dirs, load_plugin_dict, load_plugin_specifications
+from .helpers import (
+    make_settings_dict_for_engine,
+    plugins_dirs,
+    load_plugin_dict,
+    load_plugin_specifications,
+    load_project_dict,
+    load_local_project_data,
+    merge_dicts,
+)
 from .spine_engine_manager import make_engine_manager
 
 
@@ -151,7 +160,7 @@ class ActionsWithProject(QObject):
         QCoreApplication.instance().exit(Status.OK)
 
     def _open_project(self):
-        """Opens a project and executes all DAGs in that project.
+        """Opens a project.
 
         Returns:
             Status: status code
@@ -170,17 +179,9 @@ class ActionsWithProject(QObject):
                 for spec in spec_list:
                     self._plugin_specifications.setdefault(spec.item_type, []).append(spec)
         self._project_dir = pathlib.Path(self._args.project).resolve()
-        project_file_path = self._project_dir / ".spinetoolbox" / "project.json"
-        try:
-            with project_file_path.open() as project_file:
-                try:
-                    project_dict = json.load(project_file)
-                except json.decoder.JSONDecodeError:
-                    self._logger.msg_error.emit(f"Error in project file {project_file_path}. Invalid JSON.")
-                    return Status.ERROR
-        except OSError:
-            self._logger.msg_error.emit(f"Project file {project_file_path} missing")
-            return Status.ERROR
+        project_dict = load_project_dict(str(self._project_dir / ".spinetoolbox"), self._logger)
+        local_data_dict = load_local_project_data(self._project_dir / ".spinetoolbox", self._logger)
+        merge_dicts(local_data_dict, project_dict)
         self._item_dicts, self._specification_dicts, self._connection_dicts, self._jump_dicts, self._dag_handler = open_project(
             project_dict, self._project_dir, self._logger
         )

@@ -411,9 +411,7 @@ class ProjectUpgrader:
                 "cancel_on_error": new["items"][to_name].pop("cancel_on_error", False),
             }
             for from_name in from_names:
-                new["project"]["connections"].append(
-                    {"from": [from_name, from_pos], "to": [merger_name, to_pos]},
-                )
+                new["project"]["connections"].append({"from": [from_name, from_pos], "to": [merger_name, to_pos]})
             new["project"]["connections"].append({"from": [merger_name, "right"], "to": list(to_conn)})
         for conn in to_remove:
             new["project"]["connections"].remove(conn)

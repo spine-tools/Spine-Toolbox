@@ -324,13 +324,26 @@ class ProjectItem(LogMixin, MetaObject):
         self.remove_notification("The workflow defined for this item has loops and thus cannot be executed.")
 
     def item_dict(self):
-        """Returns a dictionary corresponding to this item."""
+        """Returns a dictionary corresponding to this item.
+
+        Returns:
+            dict: serialized project item
+        """
         return {
             "type": self.item_type(),
             "description": self.description,
             "x": self.get_icon().x(),
             "y": self.get_icon().y(),
         }
+
+    @staticmethod
+    def item_dict_local_entries():
+        """Returns entries or 'paths' in item dict that should be stored in project's local data directory.
+
+        Returns:
+            list of tuple of str: local data item dict entries
+        """
+        return []
 
     @staticmethod
     def parse_item_dict(item_dict):
@@ -365,6 +378,7 @@ class ProjectItem(LogMixin, MetaObject):
             item_dict (dict): serialized item
             toolbox (ToolboxUI): the main window
             project (SpineToolboxProject): a project
+
         Returns:
             ProjectItem: deserialized item
         """

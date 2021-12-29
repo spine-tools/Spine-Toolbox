@@ -15,19 +15,24 @@ Unit tests for SpineToolboxProject class.
 :author: P. Savolainen (VTT)
 :date:   14.11.2018
 """
+import json
 import os.path
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import QVariantAnimation, QEventLoop
+from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
+
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.connection import Connection
 from spine_engine.utils.helpers import shorten
 from spinetoolbox.helpers import SignalWaiter
-from .mock_helpers import (
+from spinetoolbox.project_item.project_item import ProjectItem
+from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
+from spinetoolbox.config import PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
+from tests.mock_helpers import (
     clean_up_toolbox,
     create_toolboxui_with_project,
     add_ds,
@@ -445,6 +450,51 @@ class TestSpineToolboxProject(unittest.TestCase):
         dag = project.dag_handler.dag_with_node(dc1_name)
         self.assertEqual(project.dag_handler.node_successors(dag), {dc1_name: [dc2_name], dc2_name: []})
 
+    def test_save_when_storing_item_local_data(self):
+        project = self.toolbox.project()
+        item = _MockItemWithLocalData(project)
+        with mock.patch.object(self.toolbox, "project_item_properties_ui"), mock.patch.object(
+            self.toolbox, "project_item_icon"
+        ):
+            project.add_item(item)
+        project.save()
+        with open(project.config_file) as fp:
+            project_dict = json.load(fp)
+        self.assertEqual(
+            project_dict,
+            {
+                "items": {"test item": {"type": "Tester", "a": {"c": 2}}},
+                "project": {
+                    "connections": [],
+                    "description": "Project for unit tests.",
+                    "jumps": [],
+                    "name": "UnitTest Project",
+                    "specifications": {},
+                    "version": 7,
+                },
+            },
+        )
+        with Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME).open() as fp:
+            local_data_dict = json.load(fp)
+        self.assertEqual(local_data_dict, {'items': {'test item': {'a': {'b': 1, 'd': 3}}}})
+
+    def test_load_when_storing_item_local_data(self):
+        project = self.toolbox.project()
+        item = _MockItemWithLocalData(project)
+        with mock.patch.object(self.toolbox, "project_item_properties_ui"), mock.patch.object(
+            self.toolbox, "project_item_icon"
+        ):
+            project.add_item(item)
+        project.save()
+        self.assertTrue(self.toolbox.close_project(ask_confirmation=False))
+        self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests()}
+        with mock.patch.object(self.toolbox, "update_recent_projects"), mock.patch.object(
+            self.toolbox, "project_item_properties_ui"
+        ), mock.patch.object(self.toolbox, "project_item_icon"):
+            self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
+        item = self.toolbox.project().get_item("test item")
+        self.assertEqual(item.kwargs, {"type": "Tester", "a": {"b": 1, "c": 2, "d": 3}})
+
     def _make_mock_executable(self, item):
         item_name = item.name
         item = self.toolbox.project_item_model.get_item(item_name).project_item
@@ -475,6 +525,39 @@ class _MockExecutableItem(ExecutableItemBase):
     @classmethod
     def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
         raise NotImplementedError()
+
+
+class _MockItemWithLocalData(ProjectItem):
+    def __init__(self, project, **kwargs):
+        super().__init__("test item", "a mock item for testing project items' local data", 0.0, 0.0, project)
+        self.kwargs = kwargs
+
+    def item_dict(self):
+        return {"type": self.item_type(), "a": {"b": 1, "c": 2, "d": 3}}
+
+    @staticmethod
+    def item_dict_local_entries():
+        return [("a", "b"), ("a", "d")]
+
+    @staticmethod
+    def item_type():
+        return "Tester"
+
+    @staticmethod
+    def item_category():
+        return "Tools"
+
+    def set_rank(self, rank):
+        pass
+
+    def set_icon(self, icon):
+        return
+
+
+class _MockItemFactoryForLocalDataTests(ProjectItemFactory):
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project):
+        return _MockItemWithLocalData(project, **item_dict)
 
 
 if __name__ == '__main__':
