@@ -185,7 +185,7 @@ class FileListModel(QAbstractItemModel):
         duplicates = set()
         for p1, p2 in combinations(paths, 2):
             try:
-                if p1.samefile(p2):
+                if p1 == p2:
                     duplicates.add(str(p2))
             except OSError:
                 # Sometimes file access fails e.g. in the middle of replacing
