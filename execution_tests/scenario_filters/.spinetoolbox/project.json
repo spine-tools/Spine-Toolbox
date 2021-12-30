@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 6,
+        "version": 7,
         "name": "scenario_filters",
         "description": "Test project to test scenario filtering in a Tool project item.",
         "specifications": {
@@ -66,11 +66,9 @@
             "type": "Data Store",
             "description": "",
             "x": 53.7378191555396,
-            "y": 2.749629194101132,
+            "y": 3.2621529453775295,
             "url": {
                 "dialect": "sqlite",
-                "username": "",
-                "password": "",
                 "host": "",
                 "port": "",
                 "database": {
@@ -78,14 +76,13 @@
                     "relative": true,
                     "path": ".spinetoolbox/items/data_store/database.sqlite"
                 }
-            },
-            "cancel_on_error": true
+            }
         },
         "Input data": {
             "type": "Data Connection",
             "description": "",
             "x": -196.59913736619956,
-            "y": 2.7447982762267387,
+            "y": 3.257322027503136,
             "references": [
                 {
                     "type": "path",
@@ -98,7 +95,7 @@
             "type": "Tool",
             "description": "",
             "x": 183.09913736619953,
-            "y": 1.7503708058988678,
+            "y": 2.262894557175265,
             "specification": "Write values",
             "execute_in_work": true,
             "cmd_line_args": [
@@ -112,9 +109,11 @@
             "type": "Importer",
             "description": "",
             "x": -73.61763156168624,
-            "y": 0.7253233033460731,
+            "y": 1.2378470546224705,
             "specification": "Input data mapping",
-            "cancel_on_error": false,
+            "cancel_on_error": true,
+            "purge_before_writing": false,
+            "on_conflict": "merge",
             "file_selection": [
                 [
                     "<project>/input_data.csv",
