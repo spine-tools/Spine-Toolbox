@@ -24,6 +24,12 @@ All accompanying documentation, original graphics and other material are release
 Licenses of all packages used by Spine Toolbox are listed in the Spine Toolbox User 
 Guide.
 
+## Attribution
+
+If you use Spine Toolbox in a published work, please cite the following publication (Chicago/Turabian Style).
+
+Kiviluoma Juha, Pallonetto Fabiano, Marin Manuel, Savolainen Pekka T., Soininen Antti, Vennström Per, Rinne Erkka, Huang Jiangyi, Kouveliotis-Lysikatos Iasonas, Ihlemann Maren, Delarue Erik, O’Dwyer Ciara, O’Donnel Terence, Amelin Mikael, Söder Lennart, and Dillon Joseph. 2022. "Spine Toolbox: A flexible open-source workflow management system with scenario and data management" SoftwareX, Vol. 17, 100967, https://doi.org/10.1016/j.softx.2021.100967.
+
 ## Installation
 
 We provide three options for installing Spine Toolbox: 
