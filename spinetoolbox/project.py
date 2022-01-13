@@ -274,7 +274,7 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
             return False
         local_data_dict = load_local_project_data(self.config_dir, self._logger)
-        merge_dicts(local_data_dict, project_info)
+        self._merge_local_data_to_project_info(local_data_dict, project_info)
         # Parse project info
         self.set_name(project_info["project"]["name"])
         self.set_description(project_info["project"]["description"])
@@ -301,6 +301,22 @@ class SpineToolboxProject(MetaObject):
         for jump in map(self.jump_from_dict, jump_dicts):
             self.add_jump(jump, silent=True)
         return True
+
+    @staticmethod
+    def _merge_local_data_to_project_info(local_data_dict, project_info):
+        """Merges local data into project info.
+
+        Args:
+            local_data_dict (dict): local data
+            project_info (dict): project dict
+        """
+        local_items = local_data_dict.get("items")
+        project_items = project_info.get("items")
+        if local_items is not None and project_items is not None:
+            for item_name, item_dict in project_items.items():
+                local_item_dict = local_items.get(item_name)
+                if local_item_dict is not None:
+                    merge_dicts(local_item_dict, item_dict)
 
     def connection_from_dict(self, connection_dict):
         return LoggingConnection.from_dict(connection_dict, toolbox=self._toolbox)
@@ -773,7 +789,10 @@ class SpineToolboxProject(MetaObject):
             silent (bool): if True, suppress a log messages
         """
         for item_name, item_dict in items_dict.items():
-            item_type = item_dict["type"]
+            try:
+                item_type = item_dict["type"]
+            except KeyError as missing:
+                raise missing
             factory = item_factories.get(item_type)
             if factory is None:
                 self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")

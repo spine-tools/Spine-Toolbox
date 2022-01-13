@@ -207,9 +207,7 @@ class ActionsWithProject(QObject):
             )
             return Status.ERROR
         if version < LATEST_PROJECT_VERSION:
-            self._logger.msg_error.emit(
-                "Unsupported project version. Open project in Toolbox GUI to upgrade it."
-            )
+            self._logger.msg_error.emit("Unsupported project version. Open project in Toolbox GUI to upgrade it.")
             return Status.ERROR
         return Status.OK
 
