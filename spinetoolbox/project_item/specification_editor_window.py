@@ -84,6 +84,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._ui = self._make_ui()
         self._ui.setupUi(self)
         self._ui_error = QErrorMessage(self)
+        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self._ui_error.setWindowTitle("Error")
         self.setWindowTitle(specification.name if specification else "")
         # Restore ui
@@ -136,7 +137,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         raise NotImplementedError()
 
     @Slot(str)
-    def _show_error(self, message):
+    def show_error(self, message):
         self._ui_error.showMessage(message)
 
     def _show_status_bar_msg(self, msg):
@@ -167,18 +168,18 @@ class SpecificationEditorWindowBase(QMainWindow):
             bool: True if operation was successful, False otherwise
         """
         if not self._toolbox.project():
-            self._show_error("Please open or create a project first")
+            self.show_error("Please open or create a project first")
             return False
         name = self._spec_toolbar.name()
         if not name:
-            self._show_error("Please enter a name for the specification.")
+            self.show_error("Please enter a name for the specification.")
             return False
         spec = self._make_new_specification(name)
         if spec is None:
             return False
         if not self._original_spec_name:
             if self._toolbox.project().is_specification_name_reserved(name):
-                self._show_error("Specification name already in use. Please enter a new name.")
+                self.show_error("Specification name already in use. Please enter a new name.")
                 return False
             self._toolbox.add_specification(spec)
             if not self._toolbox.project().is_specification_name_reserved(name):
@@ -187,7 +188,7 @@ class SpecificationEditorWindowBase(QMainWindow):
                 self.item.set_specification(spec)
         else:
             if name != self._original_spec_name and self._toolbox.project().is_specification_name_reserved(name):
-                self._show_error("Specification name already in use. Please enter a new name.")
+                self.show_error("Specification name already in use. Please enter a new name.")
                 return False
             spec.definition_file_path = self.specification.definition_file_path
             self._toolbox.replace_specification(self._original_spec_name, spec)
@@ -206,7 +207,7 @@ class SpecificationEditorWindowBase(QMainWindow):
 
     def _duplicate(self):
         if not self._toolbox.project():
-            self._show_error("Please open or create a project first")
+            self.show_error("Please open or create a project first")
             return
         new_spec = self._make_new_specification("")
         self._toolbox.show_specification_form(new_spec.item_type, new_spec, **self._duplicate_kwargs)
