@@ -75,6 +75,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.text_font_size = 10  # point size
         self._rect = QRectF(-self.ITEM_EXTENT / 2, -self.ITEM_EXTENT / 2, self.ITEM_EXTENT, self.ITEM_EXTENT)
         self.component_rect = QRectF(0, 0, self.ITEM_EXTENT / 4, self.ITEM_EXTENT / 4)
+        self._selection_halo = QGraphicsPathItem(self)
         # Make exclamation, rank, and execution icons
         self.exclamation_icon = ExclamationIcon(self)
         self.execution_icon = ExecutionIcon(self)
@@ -90,7 +91,6 @@ class ProjectItemIcon(QGraphicsPathItem):
             left=ConnectorButton(toolbox, self, position="left"),
             right=ConnectorButton(toolbox, self, position="right"),
         )
-        self._selection_halo = QGraphicsPathItem(self)
         self._setup()
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setOffset(1)
