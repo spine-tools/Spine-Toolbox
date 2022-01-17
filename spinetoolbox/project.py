@@ -912,7 +912,7 @@ class SpineToolboxProject(MetaObject):
                 specification_dicts.setdefault(project_item.item_type(), list()).append(spec_dict)
         connections = {c.name: c for c in self._connections if {c.source, c.destination}.intersection(items)}
         connection_dicts = [c.to_dict() for c in connections.values()]
-        jumps = {c.name: c for c in self._jumps if execution_permits[c.source]}
+        jumps = {c.name: c for c in self._jumps if execution_permits.get(c.source, False)}
         jump_dicts = [c.to_dict() for c in jumps.values()]
         connections.update(jumps)
         data = {
