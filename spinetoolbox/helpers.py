@@ -1053,10 +1053,10 @@ def get_upgrade_db_promt_text(url, current, expected):
         "version of Spine Toolbox."
     )
     info_text = (
-        "Do you want to upgrade the database now?"
-        "<p><b>WARNING</b>: After the upgrade, "
+        "<b>WARNING</b>: After the upgrade, "
         "the database may no longer be used "
         "with previous versions of Spine."
+        "<p>Do you want to upgrade the database now?"
     )
     return text, info_text
 
