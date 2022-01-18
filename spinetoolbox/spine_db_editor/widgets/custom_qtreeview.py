@@ -57,6 +57,10 @@ class EntityTreeView(CopyTreeView):
         self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
 
+    def reset(self):
+        super().reset()
+        self._selected_indexes = {}
+
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
 
@@ -501,6 +505,10 @@ class AlternativeScenarioTreeView(ItemTreeView):
         self._selected_alternative_ids = dict()
         self._generate_scenarios_action = None
         self.setMouseTracking(True)
+
+    def reset(self):
+        super().reset()
+        self._selected_alternative_ids = dict()
 
     def connect_signals(self):
         """Connects signals."""
