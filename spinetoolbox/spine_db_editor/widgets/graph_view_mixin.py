@@ -431,13 +431,13 @@ class GraphViewMixin:
             for k, db_map_rel_ids in enumerate(self.db_map_relationship_id_sets)
             for db_map_rel_id in db_map_rel_ids
         }
-        edges = set()
+        edges = dict()
         for db_map_rel_id, db_map_object_id_list in db_map_object_id_lists.items():
             object_inds = [obj_ind_lookup[db_map_obj_id] for db_map_obj_id in db_map_object_id_list]
             relationship_ind = rel_ind_lookup[db_map_rel_id]
             for object_ind in object_inds:
-                edges.add((relationship_ind, object_ind))
-        for src, dst in edges:
+                edges[relationship_ind, object_ind] = None
+        for src, dst in edges:  # pylint: disable=dict-iter-missing-items
             self.src_inds.append(src)
             self.dst_inds.append(dst)
 
