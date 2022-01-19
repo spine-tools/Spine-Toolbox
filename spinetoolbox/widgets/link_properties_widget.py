@@ -36,7 +36,6 @@ class LinkPropertiesWidget(QWidget):
         self._connection = None
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        toolbox.ui.tabWidget_item_properties.addTab(self, "Link properties")
         self.ui.checkBox_use_datapackage.stateChanged.connect(self._handle_use_datapackage_state_changed)
 
     def set_link(self, connection):
@@ -49,7 +48,14 @@ class LinkPropertiesWidget(QWidget):
         self._connection.refresh_resource_filter_model()
         self.ui.treeView_filters.setModel(self._connection.resource_filter_model)
         self.ui.treeView_filters.expandAll()
-        self.ui.label_link_name.setText(f"Link {self._connection.name}")
+        label = self._toolbox.label_item_name
+        height = label.minimumHeight() / 1.5
+        pixmap = self._connection.link.get_pixmap(height)
+        self._toolbox.label_item_name.setPixmap(pixmap)
+        color0, color1 = self._connection.link.get_gradient_colors()
+        gradient = f"qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 {color0.name()}, stop: 1 {color1.name()})"
+        ss = f"QLabel{{background: {gradient};}}"
+        label.setStyleSheet(ss)
         self.load_connection_options()
 
     def unset_link(self):

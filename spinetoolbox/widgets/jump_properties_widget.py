@@ -44,7 +44,6 @@ class JumpPropertiesWidget(QWidget):
         self._ui.treeView_cmd_line_args.setStyleSheet(TREEVIEW_HEADER_SS)
         self._ui.treeView_input_files.setModel(self._input_file_model)
         self._ui.treeView_input_files.setStyleSheet(TREEVIEW_HEADER_SS)
-        toolbox.ui.tabWidget_item_properties.addTab(self, "Loop properties")
         self._ui.condition_edit.set_lexer_name("python")
         self._ui.condition_edit.textChanged.connect(self._change_condition)
         self._ui.toolButton_remove_arg.clicked.connect(self._remove_arg)
@@ -80,7 +79,14 @@ class JumpPropertiesWidget(QWidget):
         self._jump = jump
         self._jump.activate()
         self._ui.condition_edit.setPlainText(self._jump.condition)
-        self._ui.link_name_label.setText(f"Loop from {self._jump.source} to {self._jump.destination}")
+        label = self._toolbox.label_item_name
+        height = label.minimumHeight() / 1.5
+        pixmap = self._jump.jump_link.get_pixmap(height)
+        self._toolbox.label_item_name.setPixmap(pixmap)
+        color0, color1 = self._jump.jump_link.get_gradient_colors()
+        gradient = f"qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 {color0.name()}, stop: 1 {color1.name()})"
+        ss = f"QLabel{{background: {gradient};}}"
+        label.setStyleSheet(ss)
         self._input_file_model.update(self._jump.resources)
         self._populate_cmd_line_args_model()
         self._do_update_add_args_button_enabled()

@@ -50,6 +50,8 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
     QWidget,
+    QLabel,
+    QVBoxLayout,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
@@ -133,6 +135,8 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.label_item_name = QLabel()
+        self.label_item_name.setMinimumHeight(28)
         self.takeCentralWidget().deleteLater()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers.py
@@ -164,6 +168,10 @@ class ToolboxUI(QMainWindow):
             LoggingConnection: LinkPropertiesWidget(self),
             LoggingJump: JumpPropertiesWidget(self),
         }
+        link_tab = self._make_properties_tab(self.link_properties_widgets[LoggingConnection])
+        jump_tab = self._make_properties_tab(self.link_properties_widgets[LoggingJump])
+        self.ui.tabWidget_item_properties.addTab(link_tab, "Link properties")
+        self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._anchor_callbacks = {}
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
@@ -720,7 +728,17 @@ class ToolboxUI(QMainWindow):
 
     def make_item_properties_uis(self):
         for item_type, factory in self.item_factories.items():
-            self._item_properties_uis[item_type] = factory.make_properties_widget(self)
+            properties_ui = self._item_properties_uis[item_type] = factory.make_properties_widget(self)
+            tab = self._make_properties_tab(properties_ui)
+            self.ui.tabWidget_item_properties.addTab(tab, item_type)
+
+    def _make_properties_tab(self, properties_ui):
+        tab = QWidget(self)
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(properties_ui)
+        return tab
 
     def add_project_items(self, items_dict, silent=False):
         """Pushes an AddProjectItemsCommand to the undo stack.
@@ -922,6 +940,7 @@ class ToolboxUI(QMainWindow):
             if self.ui.tabWidget_item_properties.tabText(i) == self.active_project_item.item_type():
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
+        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self.label_item_name)
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
 
@@ -932,6 +951,7 @@ class ToolboxUI(QMainWindow):
             if self.ui.tabWidget_item_properties.tabText(i) == tab_text:
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
+        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self.label_item_name)
         self.ui.dockWidget_item.setWindowTitle(tab_text)
 
     def add_specification(self, specification):

@@ -26,7 +26,18 @@ from PySide2.QtWidgets import (
     QStyle,
     QToolTip,
 )
-from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor
+from PySide2.QtGui import (
+    QColor,
+    QPen,
+    QBrush,
+    QPainterPath,
+    QLinearGradient,
+    QFont,
+    QCursor,
+    QFontMetrics,
+    QPixmap,
+    QPainter,
+)
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.helpers import color_from_index
 from .project_item_icon import ConnectorButton
@@ -318,6 +329,27 @@ class LinkBase(QGraphicsPathItem):
     def wipe_out(self):
         """Removes any trace of this item from the system."""
 
+    def get_gradient_colors(self):
+        h, s, _, a = self._COLOR.getHsl()
+        bg_color = QColor.fromHsl(h, s, 240, a)
+        return bg_color.lighter(105), bg_color.darker(105)
+
+    def _full_name(self):
+        raise NotImplementedError()
+
+    def get_pixmap(self, height):
+        font = QFont()
+        font.setBold(True)
+        name = self._full_name()
+        text_width = QFontMetrics(font).size(Qt.TextSingleLine, name).width()
+        margin = 4
+        final_pixmap = QPixmap(margin + text_width, height)
+        final_pixmap.fill(Qt.transparent)
+        painter = QPainter(final_pixmap)
+        painter.setFont(font)
+        painter.drawText(QRectF(margin, 0, text_width, height), Qt.AlignBottom, name)
+        return final_pixmap
+
 
 class _LinkIcon(QGraphicsEllipseItem):
     """An icon to show over a Link."""
@@ -447,6 +479,9 @@ class Link(LinkBase):
     @property
     def name(self):
         return self._connection.name
+
+    def _full_name(self):
+        return f"Link {self.name}"
 
     @property
     def connection(self):
@@ -578,6 +613,13 @@ class JumpLink(LinkBase):
     @property
     def item(self):
         return self.jump
+
+    @property
+    def name(self):
+        return self._jump.name
+
+    def _full_name(self):
+        return f"Loop {self.name}"
 
     def issues(self):
         """Checks if jump is well-defined.

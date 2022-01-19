@@ -17,7 +17,7 @@ Contains base classes for project items and item factories.
 
 import os
 import logging
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, Qt
 from spine_engine.utils.helpers import shorten
 from ..helpers import create_dir, open_url
 from ..metaobject import MetaObject
@@ -103,8 +103,8 @@ class ProjectItem(LogMixin, MetaObject):
     def activate(self):
         """Restore selections and connect signals."""
         self._active = True
-        self.restore_selections()  # Do this before connecting signals or funny things happen
         self.update_name_label()
+        self.restore_selections()  # Do this before connecting signals or funny things happen
         self._connect_signals()
 
     def deactivate(self):
@@ -413,10 +413,10 @@ class ProjectItem(LogMixin, MetaObject):
             return False
         self.set_name(new_name)
         self.data_dir = new_data_dir
+        self.get_icon().update_name_item(new_name)
         if self._active:
             self.update_name_label()
             self._project.toolbox().override_logs_and_consoles()
-        self.get_icon().update_name_item(new_name)
         return True
 
     @Slot(bool)
@@ -449,7 +449,14 @@ class ProjectItem(LogMixin, MetaObject):
         """
         Updates the name label on the properties widget, used when selecting an item and renaming the selected one.
         """
-        self._properties_ui.label_item_name.setText(self.name)
+        label = self._project.toolbox().label_item_name
+        height = label.minimumHeight() / 1.5
+        pixmap = self.get_icon().get_pixmap(height)
+        label.setPixmap(pixmap)
+        color0, color1 = self.get_icon().get_gradient_colors()
+        gradient = f"qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 {color0.name()}, stop: 1 {color1.name()})"
+        ss = f"QLabel{{background: {gradient};}}"
+        label.setStyleSheet(ss)
 
     def notify_destination(self, source_item):
         """
