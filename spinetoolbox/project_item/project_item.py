@@ -104,6 +104,7 @@ class ProjectItem(LogMixin, MetaObject):
         """Restore selections and connect signals."""
         self._active = True
         self.restore_selections()  # Do this before connecting signals or funny things happen
+        self.update_name_label()
         self._connect_signals()
 
     def deactivate(self):
@@ -446,11 +447,9 @@ class ProjectItem(LogMixin, MetaObject):
 
     def update_name_label(self):
         """
-        Updates the name label on the properties widget when renaming an item.
-
-        Must be reimplemented by subclasses.
+        Updates the name label on the properties widget, used when selecting an item and renaming the selected one.
         """
-        raise NotImplementedError()
+        self._properties_ui.label_item_name.setText(self.name)
 
     def notify_destination(self, source_item):
         """
