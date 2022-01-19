@@ -42,13 +42,10 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_properties_widget_in_toolbox(self):
-        tab_widget = self._toolbox.ui.tabWidget_item_properties
         widget_count = 0
-        for i in range(tab_widget.count()):
-            widget = tab_widget.widget(i)
+        for widget in self._toolbox.link_properties_widgets.values():
             if isinstance(widget, JumpPropertiesWidget):
                 widget_count += 1
-                self.assertEqual(tab_widget.tabText(i), "Loop properties")
         self.assertEqual(widget_count, 1)
 
     def test_set_link(self):
@@ -84,9 +81,7 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         properties_widget.set_link(link.item)
 
     def _find_widget(self):
-        tab_widget = self._toolbox.ui.tabWidget_item_properties
-        for i in range(tab_widget.count()):
-            widget = tab_widget.widget(i)
+        for widget in self._toolbox.link_properties_widgets.values():
             if isinstance(widget, JumpPropertiesWidget):
                 return widget
         return None
