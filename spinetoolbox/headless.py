@@ -234,11 +234,13 @@ class ActionsWithProject(QObject):
             item_dicts_in_dag = {
                 name: item_dict for name, item_dict in self._item_dicts.items() if name in item_names_in_dag
             }
-            if selected:
+            if selected is not None:
                 execution_permits = {item_name: item_name in selected for item_name in dag.nodes}
                 selected = selected - item_names_in_dag
             else:
                 execution_permits = {item_name: True for item_name in item_names_in_dag}
+            if all(not permitted for permitted in execution_permits.values()):
+                continue
             engine_data = {
                 "items": item_dicts_in_dag,
                 "specifications": self._specification_dicts,
