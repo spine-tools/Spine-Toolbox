@@ -72,11 +72,7 @@ class PropertiesWidgetBase(QWidget):
         if settings.value("appSettings/colorPropertiesWidgets", defaultValue="false") == "false":
             super().paintEvent(ev)
             return
-        self.paint_bg(ev.rect())
-
-    def paint_bg(self, rect=None):
-        if rect is None:
-            rect = self.rect()
+        rect = self.rect()
         painter = QPainter(self)
         painter.fillRect(rect, self._bg_color)
         if self._pixmap is not None:
