@@ -51,8 +51,10 @@ from PySide2.QtWidgets import (
     QUndoStack,
     QWidget,
     QLabel,
-    QVBoxLayout,
     QScrollArea,
+    QToolButton,
+    QVBoxLayout,
+    QHBoxLayout,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
@@ -137,8 +139,9 @@ class ToolboxUI(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.label_item_name = QLabel()
-        self.label_item_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        self.label_item_name.setMinimumHeight(28)
+        self._button_item_dir = QToolButton()
+        self._properties_title = QWidget()
+        self._setup_properties_title()
         self.takeCentralWidget().deleteLater()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers.py
@@ -242,6 +245,16 @@ class ToolboxUI(QMainWindow):
                     self.ui.splitter_console.restoreState(splitter_state)
         return super().eventFilter(obj, ev)
 
+    def _setup_properties_title(self):
+        self.label_item_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.label_item_name.setMinimumHeight(28)
+        self._button_item_dir.setIcon(QIcon(":icons/folder-open-regular.svg"))
+        layout = QHBoxLayout(self._properties_title)
+        layout.addWidget(self.label_item_name)
+        layout.addWidget(self._button_item_dir)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+
     def connect_signals(self):
         """Connect signals."""
         # Event and process log signals
@@ -314,6 +327,12 @@ class ToolboxUI(QMainWindow):
         self.ui.actionExecute_project.triggered.connect(self._execute_project)
         self.ui.actionExecute_selection.triggered.connect(self._execute_selection)
         self.ui.actionStop_execution.triggered.connect(self._stop_execution)
+        # Open dir
+        self._button_item_dir.clicked.connect(self._open_active_item_dir)
+
+    @Slot(bool)
+    def _open_active_item_dir(self, _checked=False):
+        self.active_project_item.open_directory()
 
     @staticmethod
     def set_error_mode():
@@ -948,12 +967,14 @@ class ToolboxUI(QMainWindow):
             if self.ui.tabWidget_item_properties.tabText(i) == self.active_project_item.item_type():
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
-        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self.label_item_name)
+        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self._properties_title)
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
         color = self._item_properties_uis[self.active_project_item.item_type()].fg_color
-        ss = f"QLabel{{background: {color.name()};}}"
-        self.label_item_name.setStyleSheet(ss)
+        ss = f"QWidget{{background: {color.name()};}}"
+        self._properties_title.setStyleSheet(ss)
+        self._button_item_dir.show()
+        self._button_item_dir.setToolTip(f"<html>Open <b>{self.active_project_item.name}</b> directory.</html>")
 
     def activate_link_tab(self):
         """Shows link properties tab."""
@@ -962,11 +983,12 @@ class ToolboxUI(QMainWindow):
             if self.ui.tabWidget_item_properties.tabText(i) == tab_text:
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
-        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self.label_item_name)
+        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self._properties_title)
         self.ui.dockWidget_item.setWindowTitle(tab_text)
         color = self.link_properties_widgets[type(self.active_link_item)].fg_color
-        ss = f"QLabel{{background: {color.name()};}}"
-        self.label_item_name.setStyleSheet(ss)
+        ss = f"QWidget{{background: {color.name()};}}"
+        self._properties_title.setStyleSheet(ss)
+        self._button_item_dir.hide()
 
     def update_properties_ui(self):
         widget = self._get_active_properties_widget()
