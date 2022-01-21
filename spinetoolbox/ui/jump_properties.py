@@ -33,19 +33,10 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(386, 462)
-        self.verticalLayout_2 = QVBoxLayout(Form)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.scrollArea = QScrollArea(Form)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 384, 460))
-        self.verticalLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        Form.resize(276, 627)
+        self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.splitter = QSplitter(self.scrollAreaWidgetContents)
+        self.splitter = QSplitter(Form)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Vertical)
         self.condition_edit = CodeTextEdit(self.splitter)
@@ -99,10 +90,6 @@ class Ui_Form(object):
         self.splitter.addWidget(self.verticalLayoutWidget)
 
         self.verticalLayout.addWidget(self.splitter)
-
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-
-        self.verticalLayout_2.addWidget(self.scrollArea)
 
 
         self.retranslateUi(Form)

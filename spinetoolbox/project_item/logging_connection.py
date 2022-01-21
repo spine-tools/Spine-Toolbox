@@ -12,7 +12,7 @@
 from spine_engine.project_item.connection import Connection, Jump
 from ..log_mixin import LogMixin
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
-from ..helpers import busy_effect
+from ..helpers import busy_effect, fix_lightness_color
 
 
 class LoggingConnection(LogMixin, Connection):

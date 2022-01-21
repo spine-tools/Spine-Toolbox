@@ -54,7 +54,7 @@ def create_toolboxui_with_project(project_dir):
     ), mock.patch(
         "spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"
     ), mock.patch(
-        "spinetoolbox.ui_main.QVBoxLayout.addWidget"
+        "spinetoolbox.ui_main.QScrollArea.setWidget"
     ):
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()

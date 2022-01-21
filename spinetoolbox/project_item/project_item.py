@@ -449,14 +449,7 @@ class ProjectItem(LogMixin, MetaObject):
         """
         Updates the name label on the properties widget, used when selecting an item and renaming the selected one.
         """
-        label = self._project.toolbox().label_item_name
-        height = label.minimumHeight() / 1.5
-        pixmap = self.get_icon().get_pixmap(height)
-        label.setPixmap(pixmap)
-        color0, color1 = self.get_icon().get_gradient_colors()
-        gradient = f"qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 {color0.name()}, stop: 1 {color1.name()})"
-        ss = f"QLabel{{background: {gradient};}}"
-        label.setStyleSheet(ss)
+        self._project.toolbox().label_item_name.setText(f"<b>{self.name}</b>")
 
     def notify_destination(self, source_item):
         """

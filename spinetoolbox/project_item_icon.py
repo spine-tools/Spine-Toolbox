@@ -38,16 +38,13 @@ from PySide2.QtGui import (
     QPalette,
     QTextBlockFormat,
     QFont,
-    QFontMetrics,
     QPainterPath,
     QRadialGradient,
-    QPixmap,
-    QPainter,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spine_engine.spine_engine import ItemExecutionFinishState
 from .project_commands import MoveIconCommand
-from .helpers import LinkType
+from .helpers import LinkType, fix_lightness_color
 
 
 class ProjectItemIcon(QGraphicsPathItem):
@@ -141,18 +138,10 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.moveBy(x, y)
         self.update_name_item(name)
 
-    def get_gradient_colors(self):
-        background_color = self._get_background_color()
-        return background_color.lighter(105), background_color.darker(105)
-
-    def _get_background_color(self):
-        h, s, _, a = self._icon_color.getHsl()
-        return QColor.fromHsl(h, s, 240, a)
-
     def _setup(self):
         """Setup item's attributes."""
         self.colorizer.setColor(self._icon_color)
-        background_color = self._get_background_color()
+        background_color = fix_lightness_color(self._icon_color)
         gradient = QRadialGradient(self._rect.center(), 1 * self._rect.width())
         gradient.setColorAt(0, background_color.lighter(105))
         gradient.setColorAt(1, background_color.darker(105))
@@ -197,27 +186,6 @@ class ProjectItemIcon(QGraphicsPathItem):
             str: icon's name
         """
         return self._name
-
-    def get_pixmap(self, height):
-        bnw_pixmap = QPixmap(self.icon_file)
-        pixmap = QPixmap(bnw_pixmap.size())
-        pixmap.fill(self._icon_color)
-        pixmap.setMask(bnw_pixmap.createMaskFromColor(Qt.transparent))
-        pixmap = pixmap.scaledToHeight(height, Qt.SmoothTransformation)
-        pixmap_width = pixmap.size().width()
-        font = QFont()
-        font.setBold(True)
-        text_width = QFontMetrics(font).size(Qt.TextSingleLine, self._name).width()
-        spacing = 4
-        margin = 4
-        final_pixmap = QPixmap(margin + pixmap_width + spacing + text_width, height)
-        final_pixmap.fill(Qt.transparent)
-        painter = QPainter(final_pixmap)
-        painter.setFont(font)
-        painter.setRenderHint(QPainter.SmoothPixmapTransform)
-        painter.drawPixmap(margin, 0, pixmap)
-        painter.drawText(QRectF(margin + pixmap_width + spacing, 0, text_width, height), Qt.AlignBottom, self._name)
-        return final_pixmap
 
     def update_name_item(self, new_name):
         """Set a new text to name item.

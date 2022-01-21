@@ -31,34 +31,21 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(386, 462)
+        Form.resize(274, 239)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.scrollArea = QScrollArea(Form)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 384, 460))
-        self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.treeView_filters = QTreeView(self.scrollAreaWidgetContents)
+        self.treeView_filters = QTreeView(Form)
         self.treeView_filters.setObjectName(u"treeView_filters")
         self.treeView_filters.setAcceptDrops(True)
         self.treeView_filters.setDragDropMode(QAbstractItemView.DragDrop)
         self.treeView_filters.header().setVisible(True)
 
-        self.verticalLayout_2.addWidget(self.treeView_filters)
+        self.verticalLayout.addWidget(self.treeView_filters)
 
-        self.checkBox_use_datapackage = QCheckBox(self.scrollAreaWidgetContents)
+        self.checkBox_use_datapackage = QCheckBox(Form)
         self.checkBox_use_datapackage.setObjectName(u"checkBox_use_datapackage")
 
-        self.verticalLayout_2.addWidget(self.checkBox_use_datapackage)
-
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-
-        self.verticalLayout.addWidget(self.scrollArea)
+        self.verticalLayout.addWidget(self.checkBox_use_datapackage)
 
 
         self.retranslateUi(Form)

@@ -16,25 +16,24 @@ Contains jump properties widget's business logic.
 :date:   23.6.2021
 """
 from PySide2.QtCore import Slot, QItemSelection
-from PySide2.QtWidgets import QWidget
+from .properties_widget import PropertiesWidgetBase
 from ..config import TREEVIEW_HEADER_SS
 from ..project_commands import SetJumpConditionCommand, UpdateJumpCmdLineArgsCommand
 from ..mvcmodels.file_list_models import FileListModel, JumpCommandLineArgsModel
 from spine_engine.project_item.project_item_resource import LabelArg
 
 
-class JumpPropertiesWidget(QWidget):
+class JumpPropertiesWidget(PropertiesWidgetBase):
     """Widget for jump link properties."""
 
-    def __init__(self, toolbox):
+    def __init__(self, toolbox, base_color=None):
         """
         Args:
             toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
         """
         from ..ui.jump_properties import Ui_Form
 
-        super().__init__(toolbox)
-        self._toolbox = toolbox
+        super().__init__(toolbox, base_color=base_color)
         self._cmd_line_args_model = JumpCommandLineArgsModel(self)
         self._input_file_model = FileListModel(header_label="Available resources", draggable=True)
         self._jump = None
@@ -79,14 +78,7 @@ class JumpPropertiesWidget(QWidget):
         self._jump = jump
         self._jump.activate()
         self._ui.condition_edit.setPlainText(self._jump.condition)
-        label = self._toolbox.label_item_name
-        height = label.minimumHeight() / 1.5
-        pixmap = self._jump.jump_link.get_pixmap(height)
-        self._toolbox.label_item_name.setPixmap(pixmap)
-        color0, color1 = self._jump.jump_link.get_gradient_colors()
-        gradient = f"qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 {color0.name()}, stop: 1 {color1.name()})"
-        ss = f"QLabel{{background: {gradient};}}"
-        label.setStyleSheet(ss)
+        self._toolbox.label_item_name.setText(f"<b>Loop {self._jump.jump_link.name}</b>")
         self._input_file_model.update(self._jump.resources)
         self._populate_cmd_line_args_model()
         self._do_update_add_args_button_enabled()

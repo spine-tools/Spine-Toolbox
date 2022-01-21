@@ -364,10 +364,13 @@
            <string>UI</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_2">
-           <item row="5" column="0">
-            <widget class="QCheckBox" name="checkBox_use_rounded_items">
+           <item row="7" column="0">
+            <widget class="QCheckBox" name="checkBox_datetime">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, date and time string is appended into Event Log messages&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
              <property name="text">
-              <string>Rounded items</string>
+              <string>Show date and time in Event Log messages</string>
              </property>
             </widget>
            </item>
@@ -379,43 +382,13 @@
             </widget>
            </item>
            <item row="6" column="0">
-            <widget class="QCheckBox" name="checkBox_datetime">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, date and time string is appended into Event Log messages&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
+            <widget class="QCheckBox" name="checkBox_use_rounded_items">
              <property name="text">
-              <string>Show date and time in Event Log messages</string>
+              <string>Rounded items</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
-            <widget class="QCheckBox" name="checkBox_prevent_overlapping">
-             <property name="text">
-              <string>Prevent items from overlapping</string>
-             </property>
-            </widget>
-           </item>
-           <item row="8" column="0">
-            <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Smooth zoom</string>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QCheckBox" name="checkBox_use_curved_links">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Curved links</string>
-             </property>
-            </widget>
-           </item>
-           <item row="9" column="0">
+           <item row="10" column="0">
             <layout class="QFormLayout" name="formLayout">
              <item row="0" column="0">
               <widget class="QLabel" name="label_7">
@@ -425,7 +398,7 @@
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="QFrame" name="">
+              <widget class="QFrame" name="frame">
                <property name="frameShape">
                 <enum>QFrame::StyledPanel</enum>
                </property>
@@ -513,7 +486,7 @@
               </widget>
              </item>
              <item row="1" column="1">
-              <widget class="QFrame" name="">
+              <widget class="QFrame" name="frame">
                <property name="frameShape">
                 <enum>QFrame::StyledPanel</enum>
                </property>
@@ -588,6 +561,40 @@
               </widget>
              </item>
             </layout>
+           </item>
+           <item row="5" column="0">
+            <widget class="QCheckBox" name="checkBox_prevent_overlapping">
+             <property name="text">
+              <string>Prevent items from overlapping</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QCheckBox" name="checkBox_use_curved_links">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Curved links</string>
+             </property>
+            </widget>
+           </item>
+           <item row="9" column="0">
+            <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Smooth zoom</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="checkBox_color_properties_widgets">
+             <property name="text">
+              <string>Color properties widgets</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -1450,7 +1457,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="persistent_processes_button_group"/>
   <buttongroup name="engine_processes_button_group"/>
+  <buttongroup name="persistent_processes_button_group"/>
  </buttongroups>
 </ui>

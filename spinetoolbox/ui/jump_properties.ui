@@ -18,115 +18,84 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>386</width>
-    <height>462</height>
+    <width>276</width>
+    <height>627</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QScrollArea" name="scrollArea">
-     <property name="widgetResizable">
-      <bool>true</bool>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>384</width>
-        <height>460</height>
-       </rect>
+     <widget class="CodeTextEdit" name="condition_edit"/>
+     <widget class="QTreeView" name="treeView_cmd_line_args">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="QSplitter" name="splitter">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
+      <property name="dragDropMode">
+       <enum>QAbstractItemView::DragDrop</enum>
+      </property>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget">
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QToolButton" name="toolButton_add_arg">
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="icon">
+            <iconset resource="../../../spine-items/spine_items/ui/resources/resources_icons.qrc">
+             <normaloff>:/icons/file-upload.svg</normaloff>:/icons/file-upload.svg</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QToolButton" name="toolButton_remove_arg">
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="icon">
+            <iconset resource="../../../spine-items/spine_items/ui/resources/resources_icons.qrc">
+             <normaloff>:/icons/minus.svg</normaloff>:/icons/minus.svg</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <widget class="QTreeView" name="treeView_input_files">
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
          </property>
-         <widget class="CodeTextEdit" name="condition_edit"/>
-         <widget class="QTreeView" name="treeView_cmd_line_args">
-          <property name="font">
-           <font>
-            <pointsize>10</pointsize>
-           </font>
-          </property>
-          <property name="dragDropMode">
-           <enum>QAbstractItemView::DragDrop</enum>
-          </property>
-         </widget>
-         <widget class="QWidget" name="verticalLayoutWidget">
-          <layout class="QGridLayout" name="gridLayout">
-           <item row="0" column="0">
-            <layout class="QHBoxLayout" name="horizontalLayout">
-             <item>
-              <widget class="QToolButton" name="toolButton_add_arg">
-               <property name="text">
-                <string>...</string>
-               </property>
-               <property name="icon">
-                <iconset resource="../../../spine-items/spine_items/ui/resources/resources_icons.qrc">
-                 <normaloff>:/icons/file-upload.svg</normaloff>:/icons/file-upload.svg</iconset>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_2">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
-              <widget class="QToolButton" name="toolButton_remove_arg">
-               <property name="text">
-                <string>...</string>
-               </property>
-               <property name="icon">
-                <iconset resource="../../../spine-items/spine_items/ui/resources/resources_icons.qrc">
-                 <normaloff>:/icons/minus.svg</normaloff>:/icons/minus.svg</iconset>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="1" column="0">
-            <widget class="QTreeView" name="treeView_input_files">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="dragDropMode">
-              <enum>QAbstractItemView::DragDrop</enum>
-             </property>
-             <property name="selectionMode">
-              <enum>QAbstractItemView::ExtendedSelection</enum>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
+         <property name="dragDropMode">
+          <enum>QAbstractItemView::DragDrop</enum>
+         </property>
+         <property name="selectionMode">
+          <enum>QAbstractItemView::ExtendedSelection</enum>
+         </property>
         </widget>
        </item>
       </layout>

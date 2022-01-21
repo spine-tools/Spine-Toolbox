@@ -17,22 +17,21 @@ Link properties widget.
 """
 
 from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QWidget
+from .properties_widget import PropertiesWidgetBase
 from ..project_commands import SetConnectionOptionsCommand
 
 
-class LinkPropertiesWidget(QWidget):
+class LinkPropertiesWidget(PropertiesWidgetBase):
     """Widget for connection link properties."""
 
-    def __init__(self, toolbox):
+    def __init__(self, toolbox, base_color=None):
         """
         Args:
             toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
         """
         from ..ui.link_properties import Ui_Form  # pylint: disable=import-outside-toplevel
 
-        super().__init__(toolbox)
-        self._toolbox = toolbox
+        super().__init__(toolbox, base_color=base_color)
         self._connection = None
         self.ui = Ui_Form()
         self.ui.setupUi(self)
@@ -48,14 +47,7 @@ class LinkPropertiesWidget(QWidget):
         self._connection.refresh_resource_filter_model()
         self.ui.treeView_filters.setModel(self._connection.resource_filter_model)
         self.ui.treeView_filters.expandAll()
-        label = self._toolbox.label_item_name
-        height = label.minimumHeight() / 1.5
-        pixmap = self._connection.link.get_pixmap(height)
-        self._toolbox.label_item_name.setPixmap(pixmap)
-        color0, color1 = self._connection.link.get_gradient_colors()
-        gradient = f"qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 {color0.name()}, stop: 1 {color1.name()})"
-        ss = f"QLabel{{background: {gradient};}}"
-        label.setStyleSheet(ss)
+        self._toolbox.label_item_name.setText(f"<b>Link {self._connection.link.name}</b>")
         self.load_connection_options()
 
     def unset_link(self):

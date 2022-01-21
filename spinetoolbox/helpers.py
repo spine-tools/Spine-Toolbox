@@ -1494,3 +1494,8 @@ def merge_dicts(source, target):
             merge_dicts(value, target_entry)
         else:
             target[key] = value
+
+
+def fix_lightness_color(color, lightness=240):
+    h, s, _, a = color.getHsl()
+    return QColor.fromHsl(h, s, lightness, a)

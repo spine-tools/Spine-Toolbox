@@ -499,6 +499,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def set_toolbar_colored_icons(self, checked=False):
         self._toolbox.main_toolbar.set_colored_icons(checked)
 
+    @Slot(bool)
+    def _update_properties_widget(self, _checked=False):
+        self._toolbox.ui.tabWidget_item_properties.update()
+
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
@@ -512,6 +516,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         custom_open_project_dialog = self._qsettings.value("appSettings/customOpenProjectDialog", defaultValue="true")
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
+        color_properties_widgets = self._qsettings.value("appSettings/colorPropertiesWidgets", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         rounded_items = self._qsettings.value("appSettings/roundedItems", defaultValue="false")
         prevent_overlapping = self._qsettings.value("appSettings/preventOverlapping", defaultValue="false")
@@ -550,6 +555,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
         if color_toolbar_icons == "true":
             self.ui.checkBox_color_toolbar_icons.setCheckState(Qt.Checked)
+        if color_properties_widgets == "true":
+            self.ui.checkBox_color_properties_widgets.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
         if rounded_items == "true":
@@ -665,6 +672,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
         color_toolbar_icons = "true" if int(self.ui.checkBox_color_toolbar_icons.checkState()) else "false"
         self._qsettings.setValue("appSettings/colorToolbarIcons", color_toolbar_icons)
+        color_properties_widgets = "true" if int(self.ui.checkBox_color_properties_widgets.checkState()) else "false"
+        self._qsettings.setValue("appSettings/colorPropertiesWidgets", color_properties_widgets)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
         rounded_items = "true" if int(self.ui.checkBox_use_rounded_items.checkState()) else "false"
@@ -805,6 +814,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.bg_color = bg_color
         self.update_bg_color()
+
+    def closeEvent(self, ev):
+        super().closeEvent(ev)
+        self._toolbox.update_properties_ui()
 
 
 def _get_python_kernel_name_by_exe(python_exe):

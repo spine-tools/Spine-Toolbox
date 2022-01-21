@@ -18,63 +18,32 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>386</width>
-    <height>462</height>
+    <width>274</width>
+    <height>239</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <property name="leftMargin">
-    <number>0</number>
-   </property>
-   <property name="topMargin">
-    <number>0</number>
-   </property>
-   <property name="rightMargin">
-    <number>0</number>
-   </property>
-   <property name="bottomMargin">
-    <number>0</number>
-   </property>
    <item>
-    <widget class="QScrollArea" name="scrollArea">
-     <property name="widgetResizable">
+    <widget class="QTreeView" name="treeView_filters">
+     <property name="acceptDrops">
       <bool>true</bool>
      </property>
-     <widget class="QWidget" name="scrollAreaWidgetContents">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>384</width>
-        <height>460</height>
-       </rect>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <widget class="QTreeView" name="treeView_filters">
-         <property name="acceptDrops">
-          <bool>true</bool>
-         </property>
-         <property name="dragDropMode">
-          <enum>QAbstractItemView::DragDrop</enum>
-         </property>
-         <attribute name="headerVisible">
-          <bool>true</bool>
-         </attribute>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="checkBox_use_datapackage">
-         <property name="text">
-          <string>Pack CSV files (datapackage.json)</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
+     <property name="dragDropMode">
+      <enum>QAbstractItemView::DragDrop</enum>
+     </property>
+     <attribute name="headerVisible">
+      <bool>true</bool>
+     </attribute>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="checkBox_use_datapackage">
+     <property name="text">
+      <string>Pack CSV files (datapackage.json)</string>
+     </property>
     </widget>
    </item>
   </layout>

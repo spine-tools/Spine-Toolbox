@@ -52,6 +52,7 @@ from PySide2.QtWidgets import (
     QWidget,
     QLabel,
     QVBoxLayout,
+    QScrollArea,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
@@ -105,7 +106,7 @@ from .project_commands import (
     RemoveProjectItemsCommand,
 )
 from .plugin_manager import PluginManager
-from .link import JumpLink, Link
+from .link import JumpLink, Link, LINK_COLOR, JUMP_COLOR
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 
 
@@ -136,6 +137,7 @@ class ToolboxUI(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.label_item_name = QLabel()
+        self.label_item_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.label_item_name.setMinimumHeight(28)
         self.takeCentralWidget().deleteLater()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
@@ -165,8 +167,8 @@ class ToolboxUI(QMainWindow):
         self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
         self.link_properties_widgets = {
-            LoggingConnection: LinkPropertiesWidget(self),
-            LoggingJump: JumpPropertiesWidget(self),
+            LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
+            LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
         }
         link_tab = self._make_properties_tab(self.link_properties_widgets[LoggingConnection])
         jump_tab = self._make_properties_tab(self.link_properties_widgets[LoggingJump])
@@ -729,7 +731,13 @@ class ToolboxUI(QMainWindow):
     def make_item_properties_uis(self):
         for item_type, factory in self.item_factories.items():
             properties_ui = self._item_properties_uis[item_type] = factory.make_properties_widget(self)
-            tab = self._make_properties_tab(properties_ui)
+            color = factory.icon_color()
+            icon = factory.icon()
+            properties_ui.set_color_and_icon(color, icon)
+            scroll_area = QScrollArea(self)
+            scroll_area.setWidget(properties_ui)
+            scroll_area.setWidgetResizable(True)
+            tab = self._make_properties_tab(scroll_area)
             self.ui.tabWidget_item_properties.addTab(tab, item_type)
 
     def _make_properties_tab(self, properties_ui):
@@ -943,6 +951,9 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self.label_item_name)
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
+        color = self._item_properties_uis[self.active_project_item.item_type()].fg_color
+        ss = f"QLabel{{background: {color.name()};}}"
+        self.label_item_name.setStyleSheet(ss)
 
     def activate_link_tab(self):
         """Shows link properties tab."""
@@ -953,6 +964,21 @@ class ToolboxUI(QMainWindow):
                 break
         self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self.label_item_name)
         self.ui.dockWidget_item.setWindowTitle(tab_text)
+        color = self.link_properties_widgets[type(self.active_link_item)].fg_color
+        ss = f"QLabel{{background: {color.name()};}}"
+        self.label_item_name.setStyleSheet(ss)
+
+    def update_properties_ui(self):
+        widget = self._get_active_properties_widget()
+        if widget is not None:
+            widget.repaint()
+
+    def _get_active_properties_widget(self):
+        if self.active_project_item is not None:
+            return self._item_properties_uis[self.active_project_item.item_type()]
+        if self.active_link_item is not None:
+            return self.link_properties_widgets[type(self.active_link_item)]
+        return None
 
     def add_specification(self, specification):
         """Pushes an AddSpecificationCommand to undo stack."""
