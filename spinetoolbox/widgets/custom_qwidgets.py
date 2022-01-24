@@ -574,3 +574,35 @@ class LabelWithCopyButton(QWidget):
         layout.addWidget(button)
         # pylint: disable=undefined-variable
         button.clicked.connect(lambda _=False, le=line_edit: qApp.clipboard().setText(le.text()))
+
+
+class ElidedTextMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._full_text = ""
+        self.elided_mode = Qt.ElideLeft
+
+    def setText(self, text):
+        self._full_text = text
+        self._set_text_elided()
+
+    def _set_text_elided(self, width=None):
+        if width is None:
+            width = self.rect().width()
+        text_width = width - self._elided_offset() - self.fontMetrics().averageCharWidth()
+        elided_text = self.fontMetrics().elidedText(self._full_text, self.elided_mode, text_width)
+        super().setText(elided_text)
+
+    def _elided_offset(self):
+        return 0
+
+    def text(self):
+        return self._full_text
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._set_text_elided(event.size().width())
+
+
+class ElidedLabel(ElidedTextMixin, QLabel):
+    """A QLabel with elided text."""
