@@ -22,7 +22,7 @@ from unittest.mock import NonCallableMagicMock
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.project_item_model import ProjectItemModel
-from spinetoolbox.project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
+from spinetoolbox.mvcmodels.project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
 from spinetoolbox.project_item.project_item import ProjectItem
 from ..mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
