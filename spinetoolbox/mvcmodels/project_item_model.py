@@ -20,7 +20,7 @@ from copy import copy
 from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel, Slot
 from PySide2.QtGui import QIcon, QFont
 
-from ..project_tree_item import LeafProjectTreeItem
+from .project_tree_item import LeafProjectTreeItem
 
 
 class ProjectItemModel(QAbstractItemModel):
