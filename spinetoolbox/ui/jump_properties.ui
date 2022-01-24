@@ -21,11 +21,6 @@
      </property>
      <widget class="CodeTextEdit" name="condition_edit"/>
      <widget class="QTreeView" name="treeView_cmd_line_args">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
       <property name="dragDropMode">
        <enum>QAbstractItemView::DragDrop</enum>
       </property>
@@ -73,11 +68,6 @@
        </item>
        <item row="1" column="0">
         <widget class="QTreeView" name="treeView_input_files">
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-          </font>
-         </property>
          <property name="dragDropMode">
           <enum>QAbstractItemView::DragDrop</enum>
          </property>

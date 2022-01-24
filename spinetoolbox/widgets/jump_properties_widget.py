@@ -17,7 +17,6 @@ Contains jump properties widget's business logic.
 """
 from PySide2.QtCore import Slot, QItemSelection
 from .properties_widget import PropertiesWidgetBase
-from ..config import TREEVIEW_HEADER_SS
 from ..project_commands import SetJumpConditionCommand, UpdateJumpCmdLineArgsCommand
 from ..mvcmodels.file_list_models import FileListModel, JumpCommandLineArgsModel
 from spine_engine.project_item.project_item_resource import LabelArg
@@ -40,9 +39,7 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self._ui.treeView_cmd_line_args.setModel(self._cmd_line_args_model)
-        self._ui.treeView_cmd_line_args.setStyleSheet(TREEVIEW_HEADER_SS)
         self._ui.treeView_input_files.setModel(self._input_file_model)
-        self._ui.treeView_input_files.setStyleSheet(TREEVIEW_HEADER_SS)
         self._ui.condition_edit.set_lexer_name("python")
         self._ui.condition_edit.textChanged.connect(self._change_condition)
         self._ui.toolButton_remove_arg.clicked.connect(self._remove_arg)

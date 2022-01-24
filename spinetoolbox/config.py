@@ -62,7 +62,6 @@ STATUSBAR_SS = "QStatusBar{background-color: #EBEBE0; border-width: 1px; border-
 SETTINGS_SS = (
     "#SettingsForm{background-color: ghostwhite;}"
     "QLabel{color: black;}"
-    "QLineEdit{font-size: 12px;}"
     "QGroupBox{border: 2px solid gray; "
     "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #80B0FF, stop: 1 #e6efff);"
     "border-radius: 5px;"
@@ -125,7 +124,5 @@ MAINWINDOW_SS = (
     "QTextEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}"
     "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
 )
-
-TREEVIEW_HEADER_SS = "QHeaderView::section{font-size: 12px;}"
 
 PIVOT_TABLE_HEADER_COLOR = "#efefef"
