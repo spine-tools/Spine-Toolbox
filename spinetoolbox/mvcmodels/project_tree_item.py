@@ -17,6 +17,7 @@ Project Tree items.
 """
 
 import logging
+import bisect
 from PySide2.QtCore import Qt
 from spinetoolbox.metaobject import MetaObject
 
@@ -151,7 +152,9 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
         if not isinstance(child_item, LeafProjectTreeItem):
             logging.error("You can only add a leaf item as a child of a category item")
             return False
-        self._children.append(child_item)
+        key = lambda x: x.name.lower()
+        pos = bisect.bisect_left([key(x) for x in self._children], key(child_item))
+        self._children.insert(pos, child_item)
         child_item._parent = self
         return True
 
