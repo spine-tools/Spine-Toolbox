@@ -71,8 +71,8 @@ class ProjectItemModel(QAbstractItemModel):
         Args:
             name (str): project item's name
         """
-        project_item = self._project.get_item(name)
-        leaf_item = self.get_item(name)
+        leaf_item = self.find_item(name).internalPointer()
+        project_item = leaf_item.project_item
         category_index = self.find_category(project_item.item_category())
         self.remove_item(leaf_item, category_index)
 
@@ -84,8 +84,8 @@ class ProjectItemModel(QAbstractItemModel):
             old_name (str): item's old name
             new_name (str): item's new name
         """
-        leaf_index = self.find_item(old_name)
-        self.set_leaf_item_name(leaf_index, new_name)
+        self._remove_leaf_item(old_name)
+        self._add_leaf_item(new_name)
 
     def rowCount(self, parent=QModelIndex()):
         """Reimplemented rowCount method.
@@ -293,17 +293,6 @@ class ProjectItemModel(QAbstractItemModel):
         self.beginRemoveRows(parent, row, row)
         parent_item.remove_child(row)
         self.endRemoveRows()
-
-    def set_leaf_item_name(self, index, name):
-        """Changes the name of the leaf item at given index.
-
-        Args:
-            index (QModelIndex): Tree item index
-            name (str): New project item name
-        """
-        item = index.internalPointer()
-        item.set_name(name)
-        self.dataChanged.emit(index, index, [Qt.DisplayRole])
 
     def items(self, category_name=None):
         """Returns a list of leaf items in model according to category name. If no category name given,

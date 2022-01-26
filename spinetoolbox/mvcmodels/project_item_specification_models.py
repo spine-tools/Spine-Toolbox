@@ -16,6 +16,7 @@ Contains a class for storing Tool specifications.
 :date:   23.1.2018
 """
 
+import bisect
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot, Signal
 
 
@@ -37,7 +38,8 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         Args:
             name (str): specification's name
         """
-        self.insertRow(name)
+        pos = bisect.bisect_left([x.lower() for x in self._spec_names], name.lower())
+        self.insertRow(name, pos)
 
     @Slot(str)
     def remove_specification(self, name):
@@ -59,13 +61,9 @@ class ProjectItemSpecificationModel(QAbstractListModel):
             old_name (str): previous name
             new_name (str): new name
         """
-        for i, spec_name in enumerate(self._spec_names):
-            if spec_name == old_name:
-                self._spec_names[i] = new_name
-                index = self.index(i, 0)
-                self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
-                self.specification_replaced.emit(old_name, new_name)
-                break
+        self.remove_specification(old_name)
+        self.add_specification(new_name)
+        self.specification_replaced.emit(old_name, new_name)
 
     def connect_to_project(self, project):
         """Connects the model to a project.
@@ -167,7 +165,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         return True
 
     def specification(self, row):
-        """Returns spec specification on given row.
+        """Returns spec on given row.
 
         Args:
             row (int): Row of spec specification
@@ -176,6 +174,17 @@ class ProjectItemSpecificationModel(QAbstractListModel):
             ProjectItemSpecification from specification list or None if given row is zero
         """
         return self._project.get_specification(self._spec_names[row])
+
+    def specification_name(self, row):
+        """Returns name of specification on given row.
+
+        Args:
+            row (int): Row of spec specification
+
+        Returns:
+            str: name from specification list or None if given row is zero
+        """
+        return self._spec_names[row]
 
     def specification_row(self, name):
         """Returns the row on which the given specification is located or -1 if it is not found."""

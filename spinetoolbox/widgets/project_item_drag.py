@@ -238,7 +238,6 @@ class ProjectItemSpecArray(QToolBar):
         self._button_filling.setVisible(False)
         self._model.rowsInserted.connect(self._insert_specs)
         self._model.rowsAboutToBeRemoved.connect(self._remove_specs)
-        self._model.dataChanged.connect(self._change_spec_data)
         self._model.modelReset.connect(self._reset_specs)
         self._button_visible.clicked.connect(self.toggle_visibility)
         self._button_new.clicked.connect(self._show_spec_form)
@@ -440,6 +439,22 @@ class ProjectItemSpecArray(QToolBar):
             action.setVisible(self._visible)
         self._action_new.setVisible(self._visible)
 
+    def _get_source_row_from_row(self, row):
+        index = self._model.index(row, 0)
+        source_index = self._model.mapToSource(index)
+        return source_index.row()
+
+    def _get_spec_from_row(self, row):
+        if row >= self._model.rowCount():
+            return None
+        source_row = self._get_source_row_from_row(row)
+        return self._model.sourceModel().specification(source_row)
+
+    def _get_spec_name_from_row(self, row):
+        source_row = self._get_source_row_from_row(row)
+        return self._model.sourceModel().specification_name(source_row)
+
+    @Slot(QModelIndex, int, int)
     def _insert_specs(self, parent, first, last):
         for row in range(first, last + 1):
             self._add_spec(row)
@@ -448,24 +463,18 @@ class ProjectItemSpecArray(QToolBar):
     @Slot(QModelIndex, int, int)
     def _remove_specs(self, parent, first, last):
         for row in range(first, last + 1):
-            try:
-                action = self._actions.pop(row)
-                self.removeAction(action)
-            except KeyError:
-                pass  # Happens when Plugins are removed
+            self._remove_spec(row)
         self._update_button_geom()
 
-    def _change_spec_data(self, top_left, bottom_right, roles):
-        if Qt.DisplayRole not in roles:
-            return
-        for row in range(top_left.row(), bottom_right.row() + 1):
-            index = self._model.index(row, 0)
-            action = self._actions.get(row)
-            if action is None:
-                continue
-            button = self.widgetForAction(action)
-            button.spec_name = index.data()
+    def _remove_spec(self, row):
+        spec_name = self._get_spec_name_from_row(row)
+        try:
+            action = self._actions.pop(spec_name)
+            self.removeAction(action)
+        except KeyError:
+            pass  # Happens when Plugins are removed
 
+    @Slot()
     def _reset_specs(self):
         for action in self._actions.values():
             self.removeAction(action)
@@ -475,14 +484,13 @@ class ProjectItemSpecArray(QToolBar):
         self._update_button_geom()
 
     def _add_spec(self, row):
-        index = self._model.index(row, 0)
-        source_index = self._model.mapToSource(index)
-        spec = self._model.sourceModel().specification(source_index.row())
+        spec = self._get_spec_from_row(row)
         if spec.plugin:
             return
+        next_spec = self._get_spec_from_row(row + 1)
         button = ShadeProjectItemSpecButton(self._toolbox, spec.item_type, self._icon, spec.name)
         button.setIconSize(self.iconSize())
         button.set_orientation(self.orientation())
-        action = self.addWidget(button)
+        action = self.insertWidget(self._actions[next_spec.name], button) if next_spec else self.addWidget(button)
         action.setVisible(self._visible)
-        self._actions[row] = action
+        self._actions[spec.name] = action
