@@ -33,7 +33,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(276, 627)
+        Form.resize(276, 628)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.splitter = QSplitter(Form)
@@ -44,9 +44,6 @@ class Ui_Form(object):
         self.splitter.addWidget(self.condition_edit)
         self.treeView_cmd_line_args = QTreeView(self.splitter)
         self.treeView_cmd_line_args.setObjectName(u"treeView_cmd_line_args")
-        font = QFont()
-        font.setPointSize(10)
-        self.treeView_cmd_line_args.setFont(font)
         self.treeView_cmd_line_args.setDragDropMode(QAbstractItemView.DragDrop)
         self.splitter.addWidget(self.treeView_cmd_line_args)
         self.verticalLayoutWidget = QWidget(self.splitter)
@@ -81,7 +78,6 @@ class Ui_Form(object):
 
         self.treeView_input_files = QTreeView(self.verticalLayoutWidget)
         self.treeView_input_files.setObjectName(u"treeView_input_files")
-        self.treeView_input_files.setFont(font)
         self.treeView_input_files.setDragDropMode(QAbstractItemView.DragDrop)
         self.treeView_input_files.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
