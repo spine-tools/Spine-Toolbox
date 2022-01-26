@@ -80,20 +80,6 @@ class TestProjectItemModel(unittest.TestCase):
         self.assertEqual(model.n_items(), 1)
         self.assertEqual(model.items("category"), [leaf])
 
-    def test_set_leaf_item_name(self):
-        root = RootProjectTreeItem()
-        model = ProjectItemModel(root)
-        category = CategoryProjectTreeItem("category", "category description")
-        model.insert_item(category)
-        category_index = model.find_category("category")
-        project_item = ProjectItem("item", "item description", 0.0, 0.0, self.toolbox.project())
-        leaf = LeafProjectTreeItem(project_item)
-        model.insert_item(leaf, category_index)
-        leaf_index = model.find_item("item")
-        model.set_leaf_item_name(leaf_index, "new view item name")
-        leaf_item = model.get_item("new view item name")
-        self.assertIsNotNone(leaf_item)
-
     def test_category_of_item(self):
         root = RootProjectTreeItem()
         category = CategoryProjectTreeItem("category", "category description")
