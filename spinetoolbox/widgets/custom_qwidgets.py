@@ -583,6 +583,9 @@ class ElidedTextMixin:
         self.elided_mode = Qt.ElideLeft
 
     def setText(self, text):
+        self._update_text(text)
+
+    def _update_text(self, text):
         self._full_text = text
         self._set_text_elided()
 
