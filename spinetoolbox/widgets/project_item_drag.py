@@ -439,21 +439,6 @@ class ProjectItemSpecArray(QToolBar):
             action.setVisible(self._visible)
         self._action_new.setVisible(self._visible)
 
-    def _get_source_row_from_row(self, row):
-        index = self._model.index(row, 0)
-        source_index = self._model.mapToSource(index)
-        return source_index.row()
-
-    def _get_spec_from_row(self, row):
-        if row >= self._model.rowCount():
-            return None
-        source_row = self._get_source_row_from_row(row)
-        return self._model.sourceModel().specification(source_row)
-
-    def _get_spec_name_from_row(self, row):
-        source_row = self._get_source_row_from_row(row)
-        return self._model.sourceModel().specification_name(source_row)
-
     @Slot(QModelIndex, int, int)
     def _insert_specs(self, parent, first, last):
         for row in range(first, last + 1):
@@ -467,7 +452,7 @@ class ProjectItemSpecArray(QToolBar):
         self._update_button_geom()
 
     def _remove_spec(self, row):
-        spec_name = self._get_spec_name_from_row(row)
+        spec_name = self._model.index(row, 0).data(Qt.DisplayRole)
         try:
             action = self._actions.pop(spec_name)
             self.removeAction(action)
@@ -484,10 +469,10 @@ class ProjectItemSpecArray(QToolBar):
         self._update_button_geom()
 
     def _add_spec(self, row):
-        spec = self._get_spec_from_row(row)
+        spec = self._model.specification(row)
         if spec.plugin:
             return
-        next_spec = self._get_spec_from_row(row + 1)
+        next_spec = self._model.specification(row + 1)
         button = ShadeProjectItemSpecButton(self._toolbox, spec.item_type, self._icon, spec.name)
         button.setIconSize(self.iconSize())
         button.set_orientation(self.orientation())

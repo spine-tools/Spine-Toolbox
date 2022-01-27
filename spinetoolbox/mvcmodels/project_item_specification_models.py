@@ -173,18 +173,9 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         Returns:
             ProjectItemSpecification from specification list or None if given row is zero
         """
+        if row < 0 or row >= self.rowCount():
+            return None
         return self._project.get_specification(self._spec_names[row])
-
-    def specification_name(self, row):
-        """Returns name of specification on given row.
-
-        Args:
-            row (int): Row of spec specification
-
-        Returns:
-            str: name from specification list or None if given row is zero
-        """
-        return self._spec_names[row]
 
     def specification_row(self, name):
         """Returns the row on which the given specification is located or -1 if it is not found."""
@@ -220,3 +211,11 @@ class FilteredSpecificationModel(QSortFilterProxyModel):
         for row in range(self.rowCount()):
             source_row = self.mapToSource(self.index(row, 0)).row()
             yield self.sourceModel().specification(source_row)
+
+    def specification(self, row):
+        if row < 0 or row >= self.rowCount():
+            return None
+        index = self.index(row, 0)
+        source_index = self.mapToSource(index)
+        source_row = source_index.row()
+        return self.sourceModel().specification(source_row)
