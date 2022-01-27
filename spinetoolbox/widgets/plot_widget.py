@@ -44,6 +44,7 @@ class PlotWidget(QWidget):
         self._toolbar = NavigationToolBar(self.canvas, self)
         self._layout.addWidget(self._toolbar)
         self._layout.addWidget(self.canvas)
+        self.all_labels = list()
         QMetaObject.connectSlotsByName(self)
 
     def closeEvent(self, event):

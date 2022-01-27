@@ -486,7 +486,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         item = self.db_item(index)
         if item is None:
             return ""
-        database = self.index(index.row(), self.columnCount() - 1).data() if len(self.db_maps) > 1 else None
+        database = self.index(index.row(), self.columnCount() - 1).data()
         name_key = {
             "parameter_definition": {
                 "object_class": "object_class_name",

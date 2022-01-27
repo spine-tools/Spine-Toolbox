@@ -117,10 +117,9 @@ def plot_selection(model, indexes, hints, plot_widget=None):
     else:
         needs_redraw = True
     selections = hints.filter_columns(_organize_selection_to_columns(indexes), model)
-    all_labels = list()
     for column, rows in selections.items():
         values, labels = _collect_column_values(model, column, rows, hints)
-        all_labels += labels
+        plot_widget.all_labels += labels
         if values:
             if plot_widget.plot_type is None:
                 plot_widget.infer_plot_type(values)
@@ -128,10 +127,11 @@ def plot_selection(model, indexes, hints, plot_widget=None):
                 _raise_if_value_types_clash(values, plot_widget)
         _add_plot_to_widget(values, labels, plot_widget)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
-    if len(all_labels) > 1:
+    if len(plot_widget.all_labels) > 1:
+        plot_widget.canvas.axes.set_title("")
         plot_widget.canvas.axes.legend(**_LEGEND_SETTINGS)
-    elif len(all_labels) == 1:
-        plot_widget.canvas.axes.set_title(all_labels[0])
+    elif len(plot_widget.all_labels) == 1:
+        plot_widget.canvas.axes.set_title(plot_widget.all_labels[0])
     if needs_redraw:
         plot_widget.canvas.draw()
     return plot_widget
