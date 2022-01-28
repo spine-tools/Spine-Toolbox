@@ -440,9 +440,9 @@ class Link(LinkBase):
         """
         super().__init__(toolbox, src_connector, dst_connector)
         self._connection = connection
-        self._link_icon_extent = 4 * self.magic_number
-        self._link_icon = _LinkIcon(0, 0, self._link_icon_extent, self._link_icon_extent, self)
-        self._link_icon.setPen(self.normal_pen)
+        self._icon_extent = 4 * self.magic_number
+        self._icon = _LinkIcon(0, 0, self._icon_extent, self._icon_extent, self)
+        self._icon.setPen(self.normal_pen)
         self.update_icon()
         self.setBrush(QBrush(self._COLOR))
         self.parallel_link = None
@@ -453,7 +453,7 @@ class Link(LinkBase):
         self._exec_color = None
 
     def update_icon(self):
-        self._link_icon.update_icon()
+        self._icon.update_icon()
 
     @property
     def name(self):
@@ -471,7 +471,7 @@ class Link(LinkBase):
         """See base class."""
         super().do_update_geometry(guide_path)
         center = guide_path.pointAtPercent(0.5)
-        self._link_icon.setPos(center - 0.5 * QPointF(self._link_icon_extent, self._link_icon_extent))
+        self._icon.setPos(center - 0.5 * QPointF(self._icon_extent, self._icon_extent))
 
     def make_execution_animation(self, excluded):
         """Returns an animation to play when execution 'passes' through this link.
@@ -527,16 +527,16 @@ class Link(LinkBase):
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             self.setPen(self.selected_pen)
-            self._link_icon.setPen(self.selected_pen)
+            self._icon.setPen(self.selected_pen)
         else:
             self.setPen(self.normal_pen)
-            self._link_icon.setPen(self.normal_pen)
+            self._icon.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
     def shape(self):
         shape = super().shape()
-        if self._link_icon.isVisible():
-            shape.addEllipse(self._link_icon.sceneBoundingRect())
+        if self._icon.isVisible():
+            shape.addEllipse(self._icon.sceneBoundingRect())
         return shape
 
     def itemChange(self, change, value):
@@ -550,7 +550,7 @@ class Link(LinkBase):
 
     def wipe_out(self):
         """Removes any trace of this item from the system."""
-        self._link_icon.wipe_out()
+        self._icon.wipe_out()
         self.src_connector.links.remove(self)
         self.dst_connector.links.remove(self)
 
