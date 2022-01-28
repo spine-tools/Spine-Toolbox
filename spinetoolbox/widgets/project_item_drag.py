@@ -472,7 +472,12 @@ class ProjectItemSpecArray(QToolBar):
         spec = self._model.specification(row)
         if spec.plugin:
             return
-        next_spec = self._model.specification(row + 1)
+        next_row = row + 1
+        while True:
+            next_spec = self._model.specification(next_row)
+            if next_spec is None or not next_spec.plugin:
+                break
+            next_row += 1
         button = ShadeProjectItemSpecButton(self._toolbox, spec.item_type, self._icon, spec.name)
         button.setIconSize(self.iconSize())
         button.set_orientation(self.orientation())
