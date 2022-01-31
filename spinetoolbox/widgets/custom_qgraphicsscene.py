@@ -39,13 +39,7 @@ class CustomGraphicsScene(QGraphicsScene):
 
     def center_items(self):
         """Centers toplevel items in the scene."""
-        rect = self.itemsBoundingRect()
-        delta = -rect.center()
-        for item in self.items():
-            if item.topLevelItem() != item:
-                continue
-            item.moveBy(delta.x(), delta.y())
-        self.setSceneRect(rect.translated(delta))
+        self.setSceneRect(self.itemsBoundingRect())
 
 
 class DesignGraphicsScene(CustomGraphicsScene):
