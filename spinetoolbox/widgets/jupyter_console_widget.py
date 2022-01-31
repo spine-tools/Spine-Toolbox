@@ -74,7 +74,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
 
     @property
     def owner_names(self):
-        return "&".join(x.name for x in self.owners if x is not None)
+        return " & ".join(x.name for x in self.owners if x is not None)
 
     @Slot(bool)
     def start_console(self, checked=False):

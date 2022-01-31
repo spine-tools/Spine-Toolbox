@@ -133,7 +133,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     @property
     def owner_names(self):
-        return "&".join(x.name for x in self.owners if x is not None)
+        return " & ".join(x.name for x in self.owners if x is not None)
 
     def _make_prompt(self):
         text_format = QTextCharFormat()

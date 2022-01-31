@@ -1494,7 +1494,7 @@ class ToolboxUI(QMainWindow):
             new_title = console.name()
         except AttributeError:
             new_title = "Console"
-        splitter.parent().setWindowTitle(new_title)
+        self.ui.dockWidget_console.setWindowTitle(new_title)
 
     @Slot()
     def _refresh_log_execution_list(self):
