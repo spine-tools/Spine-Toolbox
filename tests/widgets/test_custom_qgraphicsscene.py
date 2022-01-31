@@ -33,14 +33,8 @@ class TestCustomGraphicsScene(unittest.TestCase):
         scene = CustomGraphicsScene()
         rect = scene.addRect(-120.0, 66.0, 1.0, 1.0)
         child_rect = QGraphicsRectItem(23.3, -5.5, 0.3, 0.3, rect)
-        original_pos = rect.pos()
-        child_original_pos = child_rect.pos()
-        original_bounding = scene.itemsBoundingRect()
-        delta = original_bounding.center()
         scene.center_items()
-        self.assertEqual(rect.pos(), original_pos - delta)
-        self.assertEqual(child_rect.pos(), child_original_pos)
-        self.assertEqual(scene.itemsBoundingRect(), original_bounding.translated(-delta))
+        self.assertEqual(scene.itemsBoundingRect(), scene.sceneRect())
         scene.deleteLater()
 
 
