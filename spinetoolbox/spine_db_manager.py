@@ -903,7 +903,7 @@ class SpineDBManager(QObject):
             return item["split_value_list"][index]
         return self._format_value(item["split_parsed_value_list"][index], role)
 
-    def get_parameter_value_list(self, db_map, id_, role=Qt.DisplayRole):
+    def get_parameter_value_list(self, db_map, id_, role=Qt.DisplayRole, only_visible=True):
         """Returns a parameter_value_list formatted for the given role.
 
         Args:
@@ -911,7 +911,7 @@ class SpineDBManager(QObject):
             id_ (int): The parameter_value_list id
             role (int, optional)
         """
-        item = self.get_item(db_map, "parameter_value_list", id_)
+        item = self.get_item(db_map, "parameter_value_list", id_, only_visible=only_visible)
         if not item:
             return []
         _split_and_parse_value_list(item)
@@ -919,8 +919,10 @@ class SpineDBManager(QObject):
             return item["split_value_list"]
         return [self._format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
 
-    def get_scenario_alternative_id_list(self, db_map, scen_id):
-        alternative_id_list = self.get_item(db_map, "scenario", scen_id).get("alternative_id_list")
+    def get_scenario_alternative_id_list(self, db_map, scen_id, only_visible=True):
+        alternative_id_list = self.get_item(db_map, "scenario", scen_id, only_visible=only_visible).get(
+            "alternative_id_list"
+        )
         if not alternative_id_list:
             return []
         return [int(id_) for id_ in alternative_id_list.split(",")]
