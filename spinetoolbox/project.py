@@ -894,6 +894,7 @@ class SpineToolboxProject(MetaObject):
         for worker in self._engine_workers:
             self._logger.msg.emit("<b>Starting DAG {0}</b>".format(worker.dag_identifier))
             self._logger.msg.emit("Order: {0}".format(" -> ".join(worker.engine_data["node_successors"])))
+            self._toolbox.create_item_log_entry_points(worker.engine_data["node_successors"])
             worker.start()
 
     def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):

@@ -23,13 +23,11 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from PySide2.QtCore import QSettings
-from PySide2.QtGui import QTextDocument
 from PySide2.QtWidgets import QApplication, QLineEdit
 
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
-    add_message_to_document,
     copy_files,
     create_dir,
     dir_is_valid,
@@ -81,14 +79,6 @@ class TestHelpers(unittest.TestCase):
         test_correctness("msg_success", "#00ff00")
         test_correctness("msg_error", "#ff3333")
         test_correctness("msg_warning", "yellow")
-
-    def test_add_message_to_document(self):
-        document = QTextDocument()
-        cursor = add_message_to_document(document, "test message")
-        self.assertTrue(cursor.atEnd())
-        self.assertEqual(document.blockCount(), 2)
-        self.assertEqual(document.toPlainText(), "\ntest message")
-        document.deleteLater()
 
     def test_make_icon_id(self):
         icon_id = make_icon_id(3, 7)

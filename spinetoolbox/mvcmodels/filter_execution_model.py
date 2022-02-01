@@ -33,7 +33,7 @@ class FilterExecutionModel(QAbstractListModel):
     def rowCount(self, parent=QModelIndex()):
         if self._item is None:
             return 0
-        return len(self._item.filter_log_documents)
+        return len(self._item.filter_consoles)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if section == 0 and orientation == Qt.Horizontal and role == Qt.DisplayRole:
@@ -44,11 +44,8 @@ class FilterExecutionModel(QAbstractListModel):
         if self._item is None or not index.isValid():
             return None
         if role == Qt.DisplayRole:
-            return list(self._item.filter_log_documents.keys())[index.row()]
+            return list(self._item.filter_consoles.keys())[index.row()]
         return None
-
-    def get_log_document(self, filter_id):
-        return self._item.filter_log_documents[filter_id]
 
     def get_console(self, filter_id):
         return self._item.filter_consoles.get(filter_id)

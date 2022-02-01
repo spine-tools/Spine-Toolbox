@@ -15,54 +15,10 @@ Contains LogMixin.
 :date:    9.12.2021
 """
 
-from .widgets.custom_qtextbrowser import SignedTextDocument
-from .helpers import format_log_message, add_message_to_document
+from .helpers import format_log_message
 
 
 class LogMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._log_document = None
-        self._filter_log_documents = {}
-
-    @property
-    def log_document(self):
-        return self._log_document
-
-    @property
-    def filter_log_documents(self):
-        return self._filter_log_documents
-
-    def _create_filter_log_document(self, filter_id):
-        """Creates log document for a filter execution if none yet, and returns it
-
-        Args:
-            filter_id (str): filter identifier
-
-        Returns:
-            SignedTextDocument
-        """
-        if filter_id not in self._filter_log_documents:
-            self._filter_log_documents[filter_id] = SignedTextDocument(self)
-            if self._active:
-                self._toolbox.ui.listView_log_executions.model().layoutChanged.emit()
-        return self._filter_log_documents[filter_id]
-
-    def _create_log_document(self):
-        """Creates log document if none yet, and returns it
-
-        Args:
-            filter_id (str): filter identifier
-
-        Returns:
-            SignedTextDocument
-        """
-        if self._log_document is None:
-            self._log_document = SignedTextDocument(self)
-            if self._active:
-                self._toolbox.override_item_log()
-        return self._log_document
-
     def add_log_message(self, filter_id, message):
         """Adds a message to the log document.
 
@@ -70,15 +26,7 @@ class LogMixin:
             filter_id (str): filter identifier
             message (str): formatted message
         """
-        if filter_id:
-            document = self._create_filter_log_document(filter_id)
-        else:
-            document = self._create_log_document()
-        scrollbar = self._toolbox.ui.textBrowser_itemlog.verticalScrollBar()
-        scrollbar_at_max = scrollbar.value() == scrollbar.maximum()
-        add_message_to_document(document, message)
-        if scrollbar_at_max:  # if scrollbar was at maximum before message was appended -> scroll to bottom
-            self._toolbox.ui.textBrowser_itemlog.scroll_to_bottom()
+        self._toolbox.add_log_message(self.name, filter_id, message)
 
     def add_event_message(self, filter_id, msg_type, msg_text):
         """Adds a message to the log document.

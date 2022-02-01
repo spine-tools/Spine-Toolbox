@@ -159,7 +159,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         selected_link_icons = [conn.parent for link in links for conn in (link.src_connector, link.dst_connector)]
         selected_item_names |= set(icon.name() for icon in selected_link_icons)
         self._toolbox.refresh_active_elements(active_project_item, active_link_item, selected_item_names)
-        self._toolbox.override_logs_and_consoles()
+        self._toolbox.override_console_and_execution_list()
 
     def set_bg_color(self, color):
         """Change background color when this is changed in Settings.

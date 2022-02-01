@@ -22,6 +22,7 @@ import locale
 import logging
 import json
 import pathlib
+import uuid
 import numpy as np
 from PySide2.QtCore import (
     QByteArray,
@@ -36,7 +37,16 @@ from PySide2.QtCore import (
     QUrl,
     QEvent,
 )
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow
+from PySide2.QtGui import (
+    QDesktopServices,
+    QGuiApplication,
+    QKeySequence,
+    QIcon,
+    QCursor,
+    QWindow,
+    QTextFrameFormat,
+    QTextCursor,
+)
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -149,7 +159,6 @@ class ToolboxUI(QMainWindow):
         self.key_press_filter = ChildCyclingKeyPressFilter(self)
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._share_item_edit_actions()
-        self.ui.listView_log_executions.setModel(FilterExecutionModel(self))
         self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
         # Set style sheets
         self.setStyleSheet(MAINWINDOW_SS)
@@ -178,6 +187,13 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.addTab(link_tab, "Link properties")
         self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._anchor_callbacks = {}
+        self._item_cursors = {}
+        self._item_filter_cursors = {}
+        self._item_anchors = {}
+        self._frame_format = QTextFrameFormat()
+        self._frame_format.setMargin(8)
+        self._frame_format.setPadding(8)
+        self._frame_format.setBorder(4)
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
@@ -211,10 +227,7 @@ class ToolboxUI(QMainWindow):
         self._proposed_item_name_counts = dict()
         self.restore_dock_widgets()
         self.restore_ui()
-        self.ui.textBrowser_itemlog.hide()
-        self.ui.listView_log_executions.hide()
         self.ui.listView_console_executions.hide()
-        self.ui.listView_log_executions.installEventFilter(self)
         self.ui.listView_console_executions.installEventFilter(self)
         self.parse_project_item_modules()
         self.init_project_item_model()
@@ -229,13 +242,6 @@ class ToolboxUI(QMainWindow):
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
-        if obj == self.ui.listView_log_executions:
-            if ev.type() == QEvent.Hide:
-                self._qsettings.setValue("mainWindow/itemLogSplitterState", self.ui.splitter_item_log.saveState())
-            elif ev.type() == QEvent.Show:
-                splitter_state = self._qsettings.value("mainWindow/itemLogSplitterState", defaultValue="false")
-                if splitter_state != "false":
-                    self.ui.splitter_item_log.restoreState(splitter_state)
         if obj == self.ui.listView_console_executions:
             if ev.type() == QEvent.Hide:
                 self._qsettings.setValue("mainWindow/consoleSplitterState", self.ui.splitter_console.saveState())
@@ -265,7 +271,6 @@ class ToolboxUI(QMainWindow):
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
-        self.ui.textBrowser_itemlog.anchorClicked.connect(self.open_anchor)
         # Message box signals
         self.information_box.connect(self._show_message_box)
         self.error_box.connect(self._show_error_box)
@@ -315,9 +320,7 @@ class ToolboxUI(QMainWindow):
         # Undo stack
         self.undo_stack.cleanChanged.connect(self.update_window_modified)
         # Views
-        self.ui.listView_log_executions.selectionModel().currentChanged.connect(self._select_log_execution)
         self.ui.listView_console_executions.selectionModel().currentChanged.connect(self._select_console_execution)
-        self.ui.listView_log_executions.model().layoutChanged.connect(self._refresh_log_execution_list)
         self.ui.listView_console_executions.model().layoutChanged.connect(self._refresh_console_execution_list)
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Models
@@ -708,7 +711,6 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.setClean()
         self.update_window_title()
         self.ui.textBrowser_eventlog.clear()
-        self.ui.textBrowser_itemlog.clear()
         return True
 
     @Slot(bool)
@@ -814,7 +816,7 @@ class ToolboxUI(QMainWindow):
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
         self.activate_no_selection_tab()  # Clear properties widget
-        self.restore_original_logs_and_consoles()
+        self.restore_original_console()
         self.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self._shutdown_engine_kernels()
 
@@ -914,7 +916,7 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item:
             self.activate_item_tab()
             return
-        self.restore_original_logs_and_consoles()
+        self.restore_original_console()
         if self.active_link_item:
             self.activate_link_tab()
             return
@@ -936,6 +938,7 @@ class ToolboxUI(QMainWindow):
         self.active_project_item = active_project_item
         if self.active_project_item:
             self.active_project_item.activate()
+            self._scroll_to_active_item_log()
 
     def _set_active_link_item(self, active_link_item):
         """
@@ -1293,7 +1296,6 @@ class ToolboxUI(QMainWindow):
             dock.setFloating(False)
         self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_eventlog, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Horizontal)
-        self.tabifyDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_itemlog)
         self.ui.dockWidget_eventlog.raise_()
         self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Horizontal)
@@ -1323,7 +1325,6 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_itemlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_console.toggleViewAction())
         undo_action = self.undo_stack.createUndoAction(self)
@@ -1410,31 +1411,9 @@ class ToolboxUI(QMainWindow):
         message = format_log_message("msg_error", msg)
         self.ui.textBrowser_eventlog.append(message)
 
-    def restore_original_logs_and_consoles(self):
-        self.restore_original_item_log_document()
-        self.restore_original_console()
-
-    def override_logs_and_consoles(self):
-        self.override_item_log()
+    def override_console_and_execution_list(self):
         self.override_console()
         self.override_execution_list()
-
-    def override_item_log(self):
-        """Sets the log document of the active project item in Item Execution Log and updates title."""
-        active_thing = self.active_project_item or self.active_link_item
-        if active_thing is None:
-            return
-        document = active_thing.log_document
-        self._do_override_item_log(document)
-
-    def _do_override_item_log(self, document):
-        if document is None:
-            self.restore_original_item_log_document()
-            return
-        self.ui.textBrowser_itemlog.set_override_document(document)
-        self.ui.textBrowser_itemlog.show()
-        self.ui.label_no_itemlog.hide()
-        self._update_item_log_title()
 
     def override_console(self):
         """Sets the jupyter console of the active project item in Jupyter Console and updates title."""
@@ -1453,36 +1432,15 @@ class ToolboxUI(QMainWindow):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
-        # log
-        self.ui.listView_log_executions.setVisible(bool(self.active_project_item.filter_log_documents))
-        self.ui.listView_log_executions.model().reset_model(self.active_project_item)
-        current = self.ui.listView_log_executions.currentIndex()
-        self._select_log_execution(current, None)
-        # console
         self.ui.listView_console_executions.setVisible(bool(self.active_project_item.filter_consoles))
         self.ui.listView_console_executions.model().reset_model(self.active_project_item)
         current = self.ui.listView_console_executions.currentIndex()
         self._select_console_execution(current, None)
 
-    def restore_original_item_log_document(self):
-        """Sets the Item Execution Log document back to the original."""
-        self.ui.listView_log_executions.hide()
-        self.ui.textBrowser_itemlog.restore_original_document()
-        self.ui.textBrowser_itemlog.hide()
-        self.ui.label_no_itemlog.show()
-        self._update_item_log_title()
-
     def restore_original_console(self):
         """Sets the Console back to the original."""
         self.ui.listView_console_executions.hide()
         self._set_override_console(self.ui.label_no_console)
-
-    def _update_item_log_title(self):
-        """Updates Event Log title."""
-        owner = self.ui.textBrowser_itemlog.document().owner
-        owner_name = owner.name if owner else "Item"
-        new_title = f"{owner_name} Execution Log"
-        self.ui.dockWidget_itemlog.setWindowTitle(new_title)
 
     def _set_override_console(self, console):
         splitter = self.ui.splitter_console
@@ -1495,11 +1453,6 @@ class ToolboxUI(QMainWindow):
         except AttributeError:
             new_title = "Console"
         self.ui.dockWidget_console.setWindowTitle(new_title)
-
-    @Slot()
-    def _refresh_log_execution_list(self):
-        """Refreshes log executions as the active project item starts new executions."""
-        self._refresh_execution_list(self.ui.listView_log_executions, self._select_log_execution)
 
     @Slot()
     def _refresh_console_execution_list(self):
@@ -1518,14 +1471,6 @@ class ToolboxUI(QMainWindow):
         else:
             current = view.currentIndex()
             select(current, None)
-
-    @Slot(QModelIndex, QModelIndex)
-    def _select_log_execution(self, current, _previous):
-        """Sets the log documents of the selected execution in Event and Process Log."""
-        if not current.data():
-            return
-        item_log_doc = current.model().get_log_document(current.data())
-        self._do_override_item_log(item_log_doc)
 
     @Slot(QModelIndex, QModelIndex)
     def _select_console_execution(self, current, _previous):
@@ -2381,3 +2326,56 @@ class ToolboxUI(QMainWindow):
         if self.isMinimized():
             self.showNormal()
         self.activateWindow()
+
+    @staticmethod
+    def _make_log_entry_title(title):
+        return f'<b>[{title}]</b>'
+
+    def create_item_log_entry_points(self, item_names):
+        """Creates cursors (log entry points) for given items in event log.
+
+        Args:
+            item_names (list of str): list of item names in the order of execution
+        """
+        anchor_suffix = str(uuid.uuid4())
+        with self.ui.textBrowser_eventlog.keeping_at_bottom():
+            cursor = self.ui.textBrowser_eventlog.textCursor()
+            cursor.movePosition(cursor.End)
+            for name in item_names:
+                cursor.insertFrame(self._frame_format)
+                self._item_anchors[name] = anchor = name + anchor_suffix
+                title = self._make_log_entry_title(name)
+                cursor.insertHtml(f'<a name="{anchor}">{title}</a>')
+                self._item_cursors[name] = cursor
+                cursor = self.ui.textBrowser_eventlog.textCursor()
+                cursor.movePosition(cursor.End)
+                self._item_filter_cursors[name] = {}
+
+    def add_log_message(self, item_name, filter_id, message):
+        """Adds a message to an item's execution log.
+
+        Args:
+            item_name (str): item name
+            filter_id (str): filter identifier
+            message (str): formatted message
+        """
+        with self.ui.textBrowser_eventlog.keeping_at_bottom():
+            cursor = self._item_cursors[item_name]
+            if filter_id:
+                filter_cursors = self._item_filter_cursors[item_name]
+                if filter_id not in filter_cursors:
+                    filter_cursor = QTextCursor(cursor)
+                    filter_cursor.insertFrame(self._frame_format)
+                    title = self._make_log_entry_title(filter_id)
+                    filter_cursor.insertHtml(title)
+                    filter_cursors[filter_id] = filter_cursor
+                    cursor.movePosition(cursor.NextBlock)
+                cursor = filter_cursors[filter_id]
+            cursor.insertBlock()
+            cursor.insertHtml(message)
+
+    def _scroll_to_active_item_log(self):
+        item_name = self.active_project_item.name
+        anchor = self._item_anchors.get(item_name)
+        if anchor is not None:
+            self.ui.textBrowser_eventlog.scrollToAnchor(anchor)

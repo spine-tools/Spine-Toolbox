@@ -103,7 +103,6 @@ def _make_text_browser_ss(color):
 
 
 TEXTBROWSER_SS = _make_text_browser_ss("#19232D")
-TEXTBROWSER_OVERRIDE_SS = _make_text_browser_ss("#2d2119")
 
 # ToolboxUI stylesheet. A lot of widgets inherit this sheet.
 MAINWINDOW_SS = (

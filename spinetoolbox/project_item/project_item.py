@@ -416,7 +416,7 @@ class ProjectItem(LogMixin, MetaObject):
         self.get_icon().update_name_item(new_name)
         if self._active:
             self.update_name_label()
-            self._project.toolbox().override_logs_and_consoles()
+            self._project.toolbox().override_console_and_execution_list()
         return True
 
     @Slot(bool)

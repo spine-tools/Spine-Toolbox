@@ -16,21 +16,11 @@ Class for a custom QTextBrowser for showing the logs and tool output.
 :date:   6.2.2018
 """
 
+from contextlib import contextmanager
 from PySide2.QtCore import Slot
-from PySide2.QtGui import QTextCursor, QTextDocument, QFontDatabase
+from PySide2.QtGui import QTextCursor, QFontDatabase
 from PySide2.QtWidgets import QTextBrowser, QAction
-from spinetoolbox.helpers import add_message_to_document
-from ..config import TEXTBROWSER_OVERRIDE_SS, TEXTBROWSER_SS
-
-
-class SignedTextDocument(QTextDocument):
-    def __init__(self, owner=None):
-        """
-        Args:
-            owner (ProjectItem, optional): The item that owns the document.
-        """
-        super().__init__()
-        self.owner = owner
+from ..config import TEXTBROWSER_SS
 
 
 class CustomQTextBrowser(QTextBrowser):
@@ -42,36 +32,35 @@ class CustomQTextBrowser(QTextBrowser):
             parent (QWidget): Parent widget
         """
         super().__init__(parent=parent)
-        self._original_document = SignedTextDocument()
-        self.setDocument(self._original_document)
         self.setStyleSheet(TEXTBROWSER_SS)
         self._max_blocks = 2000
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
 
-    def set_override_document(self, document):
-        """
-        Sets the given document as the current document.
-
-        Args:
-            document (QTextDocument)
-        """
-        self.setDocument(document)
-        self.scroll_to_bottom()
-        self.setStyleSheet(TEXTBROWSER_OVERRIDE_SS)
-
-    def restore_original_document(self):
-        """
-        Restores the original document
-        """
-        self.setDocument(self._original_document)
-        self.scroll_to_bottom()
-        self.setStyleSheet(TEXTBROWSER_SS)
-
     @Slot()
     def scroll_to_bottom(self):
         vertical_scroll_bar = self.verticalScrollBar()
         vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
+
+    @contextmanager
+    def keeping_at_bottom(self):
+        """A context manager to keep the text browser at bottom and manage the maximum number of blocks."""
+        scrollbar = self.verticalScrollBar()
+        scroll_to_bottom = scrollbar.value() in (scrollbar.maximum(), 0)
+        try:
+            yield None
+        finally:
+            block_count = self.document().blockCount()
+            if block_count > self._max_blocks:
+                blocks_to_remove = block_count - self._max_blocks
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.Start)
+                for _ in range(blocks_to_remove):
+                    cursor.select(QTextCursor.BlockUnderCursor)
+                    cursor.removeSelectedText()
+                    cursor.deleteChar()  # Remove the trailing newline
+            if scroll_to_bottom:
+                self.scroll_to_bottom()
 
     @Slot(str)
     def append(self, text):
@@ -84,19 +73,8 @@ class CustomQTextBrowser(QTextBrowser):
         Args:
             text (str): text to add
         """
-        scrollbar_at_max = self.verticalScrollBar().value() == self.verticalScrollBar().maximum()
-        cursor = add_message_to_document(self._original_document, text)
-        block_count = self._original_document.blockCount()
-        if block_count > self._max_blocks:
-            blocks_to_remove = block_count - self._max_blocks
-            cursor.movePosition(QTextCursor.Start)
-            for _ in range(blocks_to_remove):
-                cursor.select(QTextCursor.BlockUnderCursor)
-                cursor.removeSelectedText()
-                cursor.deleteChar()  # Remove the trailing newline
-        if self.document() == self._original_document:
-            if scrollbar_at_max:
-                self.scroll_to_bottom()
+        with self.keeping_at_bottom():
+            super().append(text)
 
     def contextMenuEvent(self, event):
         """Reimplemented method to add a clear action into the default context menu.

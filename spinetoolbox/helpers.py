@@ -29,7 +29,7 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import matplotlib
-from PySide2.QtCore import Qt, Signal, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
@@ -44,7 +44,6 @@ from PySide2.QtGui import (
     QStandardItem,
     QDesktopServices,
     QKeySequence,
-    QTextCursor,
     QPalette,
     QSyntaxHighlighter,
     QTextCharFormat,
@@ -104,23 +103,6 @@ def format_log_message(msg_type, message, show_datetime=True):
     open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"
-
-
-def add_message_to_document(document, message):
-    """Adds a message to a document and return the cursor.
-
-    Args:
-        document (QTextDocument)
-        message (str)
-
-    Returns:
-        QTextCursor
-    """
-    cursor = QTextCursor(document)
-    cursor.movePosition(QTextCursor.End)
-    cursor.insertBlock()
-    cursor.insertHtml(message)
-    return cursor
 
 
 def busy_effect(func):
