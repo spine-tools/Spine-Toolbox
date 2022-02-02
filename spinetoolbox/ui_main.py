@@ -192,9 +192,9 @@ class ToolboxUI(QMainWindow):
         self._item_filter_cursors = {}
         self._item_anchors = {}
         self._frame_format = QTextFrameFormat()
-        self._frame_format.setMargin(8)
-        self._frame_format.setPadding(8)
-        self._frame_format.setBorder(4)
+        self._frame_format.setMargin(2)
+        self._frame_format.setPadding(2)
+        self._frame_format.setBorder(1)
         self._selected_frame_format = QTextFrameFormat(self._frame_format)
         palette = self.palette()
         self._selected_frame_format.setBackground(QBrush(palette.color(palette.Highlight).darker()))
