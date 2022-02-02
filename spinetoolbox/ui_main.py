@@ -46,6 +46,7 @@ from PySide2.QtGui import (
     QWindow,
     QTextFrameFormat,
     QTextCursor,
+    QBrush,
 )
 from PySide2.QtWidgets import (
     QMainWindow,
@@ -194,6 +195,9 @@ class ToolboxUI(QMainWindow):
         self._frame_format.setMargin(8)
         self._frame_format.setPadding(8)
         self._frame_format.setBorder(4)
+        self._selected_frame_format = QTextFrameFormat(self._frame_format)
+        palette = self.palette()
+        self._selected_frame_format.setBackground(QBrush(palette.color(palette.Highlight).darker()))
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
@@ -935,10 +939,11 @@ class ToolboxUI(QMainWindow):
                 self.msg_error.emit(
                     "Something went wrong in disconnecting {0} signals".format(self.active_project_item.name)
                 )
+            self._set_item_log_selected(False)
         self.active_project_item = active_project_item
         if self.active_project_item:
             self.active_project_item.activate()
-            self._scroll_to_active_item_log()
+            self.activate_item_log()
 
     def _set_active_link_item(self, active_link_item):
         """
@@ -2329,7 +2334,7 @@ class ToolboxUI(QMainWindow):
 
     @staticmethod
     def _make_log_entry_title(title):
-        return f'<b>[{title}]</b>'
+        return f'<b>{title}</b>'
 
     def create_item_log_entry_points(self, item_names):
         """Creates cursors (log entry points) for given items in event log.
@@ -2338,7 +2343,7 @@ class ToolboxUI(QMainWindow):
             item_names (list of str): list of item names in the order of execution
         """
         anchor_suffix = str(uuid.uuid4())
-        with self.ui.textBrowser_eventlog.keeping_at_bottom():
+        with self.ui.textBrowser_eventlog.housekeeping():
             cursor = self.ui.textBrowser_eventlog.textCursor()
             cursor.movePosition(cursor.End)
             for name in item_names:
@@ -2359,7 +2364,7 @@ class ToolboxUI(QMainWindow):
             filter_id (str): filter identifier
             message (str): formatted message
         """
-        with self.ui.textBrowser_eventlog.keeping_at_bottom():
+        with self.ui.textBrowser_eventlog.housekeeping():
             cursor = self._item_cursors[item_name]
             if filter_id:
                 filter_cursors = self._item_filter_cursors[item_name]
@@ -2373,9 +2378,24 @@ class ToolboxUI(QMainWindow):
                 cursor = filter_cursors[filter_id]
             cursor.insertBlock()
             cursor.insertHtml(message)
+        self.activate_item_log()
 
-    def _scroll_to_active_item_log(self):
+    def activate_item_log(self):
+        if not self.active_project_item:
+            return
         item_name = self.active_project_item.name
         anchor = self._item_anchors.get(item_name)
         if anchor is not None:
             self.ui.textBrowser_eventlog.scrollToAnchor(anchor)
+        self._set_item_log_selected(True)
+
+    def _set_item_log_selected(self, selected):
+        if not self.active_project_item:
+            return
+        item_name = self.active_project_item.name
+        cursor = self._item_cursors.get(item_name)
+        if cursor is None:
+            return
+        frame = cursor.currentFrame()
+        frame_format = self._selected_frame_format if selected else self._frame_format
+        frame.setFrameFormat(frame_format)

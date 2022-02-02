@@ -43,10 +43,10 @@ class CustomQTextBrowser(QTextBrowser):
         vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
 
     @contextmanager
-    def keeping_at_bottom(self):
+    def housekeeping(self):
         """A context manager to keep the text browser at bottom and manage the maximum number of blocks."""
         scrollbar = self.verticalScrollBar()
-        scroll_to_bottom = scrollbar.value() in (scrollbar.maximum(), 0)
+        keep_at_bottom = scrollbar.value() in (scrollbar.maximum(), 0)
         try:
             yield None
         finally:
@@ -59,7 +59,7 @@ class CustomQTextBrowser(QTextBrowser):
                     cursor.select(QTextCursor.BlockUnderCursor)
                     cursor.removeSelectedText()
                     cursor.deleteChar()  # Remove the trailing newline
-            if scroll_to_bottom:
+            if keep_at_bottom:
                 self.scroll_to_bottom()
 
     @Slot(str)
@@ -73,7 +73,7 @@ class CustomQTextBrowser(QTextBrowser):
         Args:
             text (str): text to add
         """
-        with self.keeping_at_bottom():
+        with self.housekeeping():
             super().append(text)
 
     def contextMenuEvent(self, event):
