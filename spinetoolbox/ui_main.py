@@ -915,8 +915,13 @@ class ToolboxUI(QMainWindow):
     def refresh_active_elements(self, active_project_item, active_link_item, selected_item_names):
         self._selected_item_names = selected_item_names
         self._update_execute_selected_enabled()
+        self._set_item_log_selected(False)
         self._set_active_project_item(active_project_item)
         self._set_active_link_item(active_link_item)
+        self._activate_properties_tab()
+        self._activate_item_log()
+
+    def _activate_properties_tab(self):
         if self.active_project_item:
             self.activate_item_tab()
             return
@@ -939,11 +944,9 @@ class ToolboxUI(QMainWindow):
                 self.msg_error.emit(
                     "Something went wrong in disconnecting {0} signals".format(self.active_project_item.name)
                 )
-            self._set_item_log_selected(False)
         self.active_project_item = active_project_item
         if self.active_project_item:
             self.active_project_item.activate()
-            self._activate_item_log()
 
     def _set_active_link_item(self, active_link_item):
         """
@@ -959,7 +962,6 @@ class ToolboxUI(QMainWindow):
         self.active_link_item = active_link_item
         if self.active_link_item:
             self.link_properties_widgets[type(self.active_link_item)].set_link(self.active_link_item)
-            self._activate_item_log()
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
