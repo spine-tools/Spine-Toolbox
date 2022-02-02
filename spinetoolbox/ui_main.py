@@ -943,7 +943,7 @@ class ToolboxUI(QMainWindow):
         self.active_project_item = active_project_item
         if self.active_project_item:
             self.active_project_item.activate()
-            self.activate_item_log()
+            self._activate_item_log()
 
     def _set_active_link_item(self, active_link_item):
         """
@@ -959,6 +959,7 @@ class ToolboxUI(QMainWindow):
         self.active_link_item = active_link_item
         if self.active_link_item:
             self.link_properties_widgets[type(self.active_link_item)].set_link(self.active_link_item)
+            self._activate_item_log()
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
@@ -2378,21 +2379,23 @@ class ToolboxUI(QMainWindow):
                 cursor = filter_cursors[filter_id]
             cursor.insertBlock()
             cursor.insertHtml(message)
-        self.activate_item_log()
+        self._activate_item_log()
 
-    def activate_item_log(self):
-        if not self.active_project_item:
+    def _activate_item_log(self):
+        active_item = self.active_project_item or self.active_link_item
+        if not active_item:
             return
-        item_name = self.active_project_item.name
+        item_name = active_item.name
         anchor = self._item_anchors.get(item_name)
         if anchor is not None:
             self.ui.textBrowser_eventlog.scrollToAnchor(anchor)
         self._set_item_log_selected(True)
 
     def _set_item_log_selected(self, selected):
-        if not self.active_project_item:
+        active_item = self.active_project_item or self.active_link_item
+        if not active_item:
             return
-        item_name = self.active_project_item.name
+        item_name = active_item.name
         cursor = self._item_cursors.get(item_name)
         if cursor is None:
             return
