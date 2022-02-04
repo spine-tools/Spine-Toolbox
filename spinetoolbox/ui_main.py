@@ -2427,7 +2427,8 @@ class ToolboxUI(QMainWindow):
                 cursor.setPosition(block.position())
                 cursor.setBlockFormat(block_format)
                 frame = cursor.currentFrame()
-                frame.setFrameFormat(frame_format)
+                if frame != self.ui.textBrowser_eventlog.document().rootFrame():
+                    frame.setFrameFormat(frame_format)
         self._set_item_log_selected(True)
 
     def _set_item_log_selected(self, selected):

@@ -20,7 +20,7 @@ from ..config import STATUSBAR_SS
 class MainStatusBar(QStatusBar):
     """A status bar for the main toolbox window."""
 
-    _ALL_RUNS = "All runs"
+    _ALL_RUNS = "All executions"
 
     def __init__(self, toolbox):
         """
