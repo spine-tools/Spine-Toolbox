@@ -17,7 +17,7 @@ Class for a custom QTextBrowser for showing the logs and tool output.
 """
 
 from contextlib import contextmanager
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, Signal
 from PySide2.QtGui import QTextCursor, QFontDatabase
 from PySide2.QtWidgets import QTextBrowser, QAction
 from ..config import TEXTBROWSER_SS
@@ -27,6 +27,7 @@ class CustomQTextBrowser(QTextBrowser):
     """Custom QTextBrowser class."""
 
     #FIXME: When clear(), we need to reset execution stuff in toolbox
+    cleared = Signal()
 
     def __init__(self, parent):
         """
@@ -104,6 +105,9 @@ class CustomQTextBrowser(QTextBrowser):
     def max_blocks(self, new_max):
         self._max_blocks = new_max if new_max > 0 else 2000
 
+    def clear(self):
+        super().clear()
+        self.cleared.emit()
 
 class MonoSpaceFontTextBrowser(CustomQTextBrowser):
     def __init__(self, parent):

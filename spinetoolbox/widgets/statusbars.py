@@ -47,6 +47,9 @@ class MainStatusBar(QStatusBar):
         for text in texts:
             self._executions_menu.addAction(text)
 
+    def reset_executions_button_text(self):
+        self.executions_button.setText(self._ALL_RUNS)
+
     @Slot(QAction)
     def _select_execution(self, action):
         text = action.text()

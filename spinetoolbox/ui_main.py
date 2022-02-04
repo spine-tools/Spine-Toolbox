@@ -277,6 +277,7 @@ class ToolboxUI(QMainWindow):
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
+        self.ui.textBrowser_eventlog.cleared.connect(self._clear_execution_logs)
         # Message box signals
         self.information_box.connect(self._show_message_box)
         self.error_box.connect(self._show_error_box)
@@ -2348,19 +2349,19 @@ class ToolboxUI(QMainWindow):
             item_names (list of str): list of item names in the order of execution
         """
         item_blocks = self._execution_blocks.setdefault(timestamp, {})
+        cursor = self.ui.textBrowser_eventlog.textCursor()
+        cursor.movePosition(cursor.End)
         with self.ui.textBrowser_eventlog.housekeeping():
-            cursor = self.ui.textBrowser_eventlog.textCursor()
-            cursor.movePosition(cursor.End)
             for name in item_names:
                 cursor.insertFrame(self._frame_format)
-                item_blocks[name] = [cursor.block(), cursor.block()]
+                item_blocks[name] = [cursor.block()]
                 self._item_anchors[timestamp, name] = anchor = timestamp + name
                 title = self._make_log_entry_title(name)
                 cursor.insertHtml(f'<a name="{anchor}">{title}</a>')
                 self._item_cursors[timestamp, name] = cursor
                 cursor = self.ui.textBrowser_eventlog.textCursor()
                 cursor.movePosition(cursor.End)
-                self._item_filter_cursors[name] = {}
+                self._item_filter_cursors[timestamp, name] = {}
         self.select_execution(timestamp)
 
     def add_log_message(self, item_name, filter_id, message):
@@ -2371,21 +2372,23 @@ class ToolboxUI(QMainWindow):
             filter_id (str): filter identifier
             message (str): formatted message
         """
+        blocks = self._execution_blocks[self._visible_timestamp][item_name]
         with self.ui.textBrowser_eventlog.housekeeping():
             cursor = self._item_cursors[self._visible_timestamp, item_name]
             if filter_id:
-                filter_cursors = self._item_filter_cursors[item_name]
+                filter_cursors = self._item_filter_cursors[self._visible_timestamp, item_name]
                 if filter_id not in filter_cursors:
                     filter_cursor = QTextCursor(cursor)
                     filter_cursor.insertFrame(self._frame_format)
                     title = self._make_log_entry_title(filter_id)
                     filter_cursor.insertHtml(title)
+                    blocks.append(filter_cursor.block())
                     filter_cursors[filter_id] = filter_cursor
                     cursor.movePosition(cursor.NextBlock)
                 cursor = filter_cursors[filter_id]
             cursor.insertBlock()
-            self._execution_blocks[self._visible_timestamp][item_name][-1] = cursor.block()
             cursor.insertHtml(message)
+            blocks.append(cursor.block())
         self._set_item_log_selected(True)
 
     def execution_timestamps(self):
@@ -2408,20 +2411,17 @@ class ToolboxUI(QMainWindow):
             self._set_item_log_selected(False)
             self._visible_timestamp = timestamp
             self._set_item_log_selected(True)
-        item_blocks = self._execution_blocks.get(timestamp, {})
         block_format = QTextBlockFormat()
         if not visible:
             block_format.setLineHeight(0, QTextBlockFormat.FixedHeight)
+        item_blocks = self._execution_blocks.get(timestamp, {})
+        all_blocks = [block for blocks in item_blocks.values() for block in blocks]
         cursor = self.ui.textBrowser_eventlog.textCursor()
-        blocks = list(item_blocks.values())
-        first_block_no = blocks[0][0].blockNumber()
-        last_block_no = blocks[-1][-1].blockNumber()
         with self.ui.textBrowser_eventlog.housekeeping():
-            for block_no in reversed(range(first_block_no, last_block_no + 1)):
-                block = self.ui.textBrowser_eventlog.document().findBlockByNumber(block_no)
+            for block in all_blocks:
+                block.setVisible(visible)
                 cursor.setPosition(block.position())
                 cursor.setBlockFormat(block_format)
-                block.setVisible(visible)
 
     def _set_item_log_selected(self, selected):
         active_item = self.active_project_item or self.active_link_item
@@ -2436,3 +2436,11 @@ class ToolboxUI(QMainWindow):
             frame = cursor.currentFrame()
             frame_format = self._selected_frame_format if selected else self._frame_format
             frame.setFrameFormat(frame_format)
+
+    def _clear_execution_logs(self):
+        self.statusBar().reset_executions_button_text()
+        self._item_cursors = {}
+        self._item_filter_cursors = {}
+        self._item_anchors = {}
+        self._visible_timestamp = None
+        self._execution_blocks = {}
