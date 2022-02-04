@@ -195,6 +195,7 @@ class ToolboxUI(QMainWindow):
         self._execution_blocks = {}
         self._frame_format = QTextFrameFormat()
         self._frame_format.setMargin(2)
+        self._frame_format.setLeftMargin(8)
         self._frame_format.setPadding(2)
         self._frame_format.setBorder(1)
         self._selected_frame_format = QTextFrameFormat(self._frame_format)
@@ -2361,6 +2362,7 @@ class ToolboxUI(QMainWindow):
                 self._item_cursors[timestamp, name] = cursor
                 cursor = self.ui.textBrowser_eventlog.textCursor()
                 cursor.movePosition(cursor.End)
+                item_blocks[name].append(cursor.block())
                 self._item_filter_cursors[timestamp, name] = {}
         self.select_execution(timestamp)
 
@@ -2385,6 +2387,7 @@ class ToolboxUI(QMainWindow):
                     blocks.append(filter_cursor.block())
                     filter_cursors[filter_id] = filter_cursor
                     cursor.movePosition(cursor.NextBlock)
+                    blocks.append(cursor.block())
                 cursor = filter_cursors[filter_id]
             cursor.insertBlock()
             cursor.insertHtml(message)
@@ -2410,10 +2413,10 @@ class ToolboxUI(QMainWindow):
                 return
             self._set_item_log_selected(False)
             self._visible_timestamp = timestamp
-            self._set_item_log_selected(True)
         block_format = QTextBlockFormat()
         if not visible:
             block_format.setLineHeight(0, QTextBlockFormat.FixedHeight)
+        frame_format = self._frame_format if visible else QTextFrameFormat()
         item_blocks = self._execution_blocks.get(timestamp, {})
         all_blocks = [block for blocks in item_blocks.values() for block in blocks]
         cursor = self.ui.textBrowser_eventlog.textCursor()
@@ -2422,6 +2425,9 @@ class ToolboxUI(QMainWindow):
                 block.setVisible(visible)
                 cursor.setPosition(block.position())
                 cursor.setBlockFormat(block_format)
+                frame = cursor.currentFrame()
+                frame.setFrameFormat(frame_format)
+        self._set_item_log_selected(True)
 
     def _set_item_log_selected(self, selected):
         active_item = self.active_project_item or self.active_link_item
