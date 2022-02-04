@@ -22,7 +22,6 @@ import locale
 import logging
 import json
 import pathlib
-import uuid
 import numpy as np
 from PySide2.QtCore import (
     QByteArray,
@@ -45,6 +44,7 @@ from PySide2.QtGui import (
     QCursor,
     QWindow,
     QTextFrameFormat,
+    QTextBlockFormat,
     QTextCursor,
     QBrush,
 )
@@ -191,6 +191,8 @@ class ToolboxUI(QMainWindow):
         self._item_cursors = {}
         self._item_filter_cursors = {}
         self._item_anchors = {}
+        self._visible_timestamp = None
+        self._execution_blocks = {}
         self._frame_format = QTextFrameFormat()
         self._frame_format.setMargin(2)
         self._frame_format.setPadding(2)
@@ -919,7 +921,7 @@ class ToolboxUI(QMainWindow):
         self._set_active_project_item(active_project_item)
         self._set_active_link_item(active_link_item)
         self._activate_properties_tab()
-        self._activate_item_log()
+        self._set_item_log_selected(True)
 
     def _activate_properties_tab(self):
         if self.active_project_item:
@@ -2339,25 +2341,27 @@ class ToolboxUI(QMainWindow):
     def _make_log_entry_title(title):
         return f'<b>{title}</b>'
 
-    def create_item_log_entry_points(self, item_names):
+    def create_item_log_entry_points(self, item_names, timestamp):
         """Creates cursors (log entry points) for given items in event log.
 
         Args:
             item_names (list of str): list of item names in the order of execution
         """
-        anchor_suffix = str(uuid.uuid4())
+        item_blocks = self._execution_blocks.setdefault(timestamp, {})
         with self.ui.textBrowser_eventlog.housekeeping():
             cursor = self.ui.textBrowser_eventlog.textCursor()
             cursor.movePosition(cursor.End)
             for name in item_names:
                 cursor.insertFrame(self._frame_format)
-                self._item_anchors[name] = anchor = name + anchor_suffix
+                item_blocks[name] = [cursor.block(), cursor.block()]
+                self._item_anchors[timestamp, name] = anchor = timestamp + name
                 title = self._make_log_entry_title(name)
                 cursor.insertHtml(f'<a name="{anchor}">{title}</a>')
-                self._item_cursors[name] = cursor
+                self._item_cursors[timestamp, name] = cursor
                 cursor = self.ui.textBrowser_eventlog.textCursor()
                 cursor.movePosition(cursor.End)
                 self._item_filter_cursors[name] = {}
+        self.select_execution(timestamp)
 
     def add_log_message(self, item_name, filter_id, message):
         """Adds a message to an item's execution log.
@@ -2368,7 +2372,7 @@ class ToolboxUI(QMainWindow):
             message (str): formatted message
         """
         with self.ui.textBrowser_eventlog.housekeeping():
-            cursor = self._item_cursors[item_name]
+            cursor = self._item_cursors[self._visible_timestamp, item_name]
             if filter_id:
                 filter_cursors = self._item_filter_cursors[item_name]
                 if filter_id not in filter_cursors:
@@ -2380,27 +2384,55 @@ class ToolboxUI(QMainWindow):
                     cursor.movePosition(cursor.NextBlock)
                 cursor = filter_cursors[filter_id]
             cursor.insertBlock()
+            self._execution_blocks[self._visible_timestamp][item_name][-1] = cursor.block()
             cursor.insertHtml(message)
-        self._activate_item_log()
-
-    def _activate_item_log(self):
-        active_item = self.active_project_item or self.active_link_item
-        if not active_item:
-            return
-        item_name = active_item.name
-        anchor = self._item_anchors.get(item_name)
-        if anchor is not None:
-            self.ui.textBrowser_eventlog.scrollToAnchor(anchor)
         self._set_item_log_selected(True)
+
+    def execution_timestamps(self):
+        return list(self._execution_blocks)
+
+    def select_all_executions(self):
+        for timestamp in self._execution_blocks:
+            self._set_execution_visible(timestamp, True)
+
+    def select_execution(self, timestamp):
+        self.statusBar().executions_button.setText(timestamp)
+        self._set_execution_visible(timestamp, True)
+        for other_timestamp in set(self._execution_blocks) - {timestamp}:
+            self._set_execution_visible(other_timestamp, False)
+
+    def _set_execution_visible(self, timestamp, visible):
+        if visible:
+            if timestamp == self._visible_timestamp:
+                return
+            self._set_item_log_selected(False)
+            self._visible_timestamp = timestamp
+            self._set_item_log_selected(True)
+        item_blocks = self._execution_blocks.get(timestamp, {})
+        block_format = QTextBlockFormat()
+        if not visible:
+            block_format.setLineHeight(0, QTextBlockFormat.FixedHeight)
+        cursor = self.ui.textBrowser_eventlog.textCursor()
+        blocks = list(item_blocks.values())
+        first_block_no = blocks[0][0].blockNumber()
+        last_block_no = blocks[-1][-1].blockNumber()
+        with self.ui.textBrowser_eventlog.housekeeping():
+            for block_no in reversed(range(first_block_no, last_block_no + 1)):
+                block = self.ui.textBrowser_eventlog.document().findBlockByNumber(block_no)
+                cursor.setPosition(block.position())
+                cursor.setBlockFormat(block_format)
+                block.setVisible(visible)
 
     def _set_item_log_selected(self, selected):
         active_item = self.active_project_item or self.active_link_item
         if not active_item:
             return
         item_name = active_item.name
-        cursor = self._item_cursors.get(item_name)
-        if cursor is None:
-            return
-        frame = cursor.currentFrame()
-        frame_format = self._selected_frame_format if selected else self._frame_format
-        frame.setFrameFormat(frame_format)
+        anchor = self._item_anchors.get((self._visible_timestamp, item_name))
+        if anchor is not None and selected:
+            self.ui.textBrowser_eventlog.scrollToAnchor(anchor)
+        cursor = self._item_cursors.get((self._visible_timestamp, item_name))
+        if cursor is not None:
+            frame = cursor.currentFrame()
+            frame_format = self._selected_frame_format if selected else self._frame_format
+            frame.setFrameFormat(frame_format)

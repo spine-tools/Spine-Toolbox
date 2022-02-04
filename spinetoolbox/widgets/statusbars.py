@@ -12,12 +12,15 @@
 """
 Functions to make and handle QStatusBars.
 """
-from PySide2.QtWidgets import QStatusBar
+from PySide2.QtCore import Slot
+from PySide2.QtWidgets import QStatusBar, QToolButton, QMenu, QAction
 from ..config import STATUSBAR_SS
 
 
 class MainStatusBar(QStatusBar):
     """A status bar for the main toolbox window."""
+
+    _ALL_RUNS = "All runs"
 
     def __init__(self, toolbox):
         """
@@ -25,4 +28,30 @@ class MainStatusBar(QStatusBar):
             toolbox (ToolboxUI)
         """
         super().__init__(toolbox)
-        self.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
+        self._toolbox = toolbox
+        self.setStyleSheet(STATUSBAR_SS)
+        self._executions_menu = QMenu(self)
+        self.executions_button = QToolButton(self)
+        self.executions_button.setText(self._ALL_RUNS)
+        self.executions_button.setMenu(self._executions_menu)
+        self.executions_button.setPopupMode(QToolButton.InstantPopup)
+        self.insertWidget(0, self.executions_button)
+        self._executions_menu.aboutToShow.connect(self._populate_executions_menu)
+        self._executions_menu.triggered.connect(self._select_execution)
+
+    @Slot()
+    def _populate_executions_menu(self):
+        texts = sorted(self._toolbox.execution_timestamps(), reverse=True) + [self._ALL_RUNS]
+        texts.remove(self.executions_button.text())
+        self._executions_menu.clear()
+        for text in texts:
+            self._executions_menu.addAction(text)
+
+    @Slot(QAction)
+    def _select_execution(self, action):
+        text = action.text()
+        self.executions_button.setText(text)
+        if text == self._ALL_RUNS:
+            self._toolbox.select_all_executions()
+            return
+        self._toolbox.select_execution(text)

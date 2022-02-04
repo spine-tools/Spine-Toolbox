@@ -26,6 +26,8 @@ from ..config import TEXTBROWSER_SS
 class CustomQTextBrowser(QTextBrowser):
     """Custom QTextBrowser class."""
 
+    #FIXME: When clear(), we need to reset execution stuff in toolbox
+
     def __init__(self, parent):
         """
         Args:
@@ -74,7 +76,10 @@ class CustomQTextBrowser(QTextBrowser):
             text (str): text to add
         """
         with self.housekeeping():
-            super().append(text)
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.End)
+            cursor.insertBlock()
+            cursor.insertHtml(text)
 
     def contextMenuEvent(self, event):
         """Reimplemented method to add a clear action into the default context menu.

@@ -22,6 +22,7 @@ from pathlib import Path
 import json
 from PySide2.QtCore import Signal
 from spine_engine.exception import EngineInitFailed
+from spine_engine.utils.helpers import create_timestamp
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import ExecutionDirection, validate_jumps
 from spine_engine.utils.helpers import shorten
@@ -847,7 +848,7 @@ class SpineToolboxProject(MetaObject):
         if not self._project_items:
             self._logger.msg.emit("All items removed from project.")
 
-    def execute_dags(self, dags, execution_permits, msg):
+    def execute_dags(self, dags, execution_permits_list, msg):
         """Executes given dags.
 
         Args:
@@ -860,7 +861,7 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit(f"<b>{msg}</b>")
         self._logger.msg.emit("-------------------------------------------------")
         self._execution_stopped = False
-        self._execute_dags(dags, execution_permits)
+        self._execute_dags(dags, execution_permits_list)
 
     def get_node_successors(self, dag, dag_identifier):
         node_successors = self.dag_handler.node_successors(dag)
@@ -891,15 +892,19 @@ class SpineToolboxProject(MetaObject):
         # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others
         # are added to ``_engine_workers``, and thus ``_handle_engine_worker_finished()`` will believe
         # that the project is done executing before it's fully loaded.
+        timestamp = create_timestamp()
         for worker in self._engine_workers:
             self._logger.msg.emit("<b>Starting DAG {0}</b>".format(worker.dag_identifier))
-            self._logger.msg.emit("Order: {0}".format(" -> ".join(worker.engine_data["node_successors"])))
-            items_and_jumps = list(worker.engine_data["items"])
-            for jump in worker.engine_data["jumps"]:
+            node_successors = worker.engine_data["node_successors"]
+            execution_permits = worker.engine_data["execution_permits"]
+            jumps = worker.engine_data["jumps"]
+            items_and_jumps = [x for x in node_successors if execution_permits[x]]
+            self._logger.msg.emit("Order: {0}".format(" -> ".join(items_and_jumps)))
+            for jump in jumps:
                 from_item, _ = jump["from"]
                 pos = items_and_jumps.index(from_item) + 1
                 items_and_jumps.insert(pos, jump["name"])
-            self._toolbox.create_item_log_entry_points(items_and_jumps)
+            self._toolbox.create_item_log_entry_points(items_and_jumps, timestamp)
             worker.start()
 
     def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
