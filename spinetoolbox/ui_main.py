@@ -194,7 +194,7 @@ class ToolboxUI(QMainWindow):
         self._visible_timestamp = None
         self._execution_blocks = {}
         self._frame_format = QTextFrameFormat()
-        self._frame_format.setMargin(2)
+        self._frame_format.setMargin(4)
         self._frame_format.setLeftMargin(8)
         self._frame_format.setPadding(2)
         self._frame_format.setBorder(1)
@@ -2349,6 +2349,7 @@ class ToolboxUI(QMainWindow):
         Args:
             item_names (list of str): list of item names in the order of execution
         """
+        self.statusBar().executions_button.setEnabled(True)
         item_blocks = self._execution_blocks.setdefault(timestamp, {})
         cursor = self.ui.textBrowser_eventlog.textCursor()
         cursor.movePosition(cursor.End)

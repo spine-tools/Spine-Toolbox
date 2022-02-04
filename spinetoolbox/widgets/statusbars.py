@@ -32,7 +32,7 @@ class MainStatusBar(QStatusBar):
         self.setStyleSheet(STATUSBAR_SS)
         self._executions_menu = QMenu(self)
         self.executions_button = QToolButton(self)
-        self.executions_button.setText(self._ALL_RUNS)
+        self.reset_executions_button_text()
         self.executions_button.setMenu(self._executions_menu)
         self.executions_button.setPopupMode(QToolButton.InstantPopup)
         self.insertWidget(0, self.executions_button)
@@ -41,14 +41,16 @@ class MainStatusBar(QStatusBar):
 
     @Slot()
     def _populate_executions_menu(self):
-        texts = sorted(self._toolbox.execution_timestamps(), reverse=True) + [self._ALL_RUNS]
-        texts.remove(self.executions_button.text())
+        texts = [self._ALL_RUNS] + self._toolbox.execution_timestamps()
         self._executions_menu.clear()
         for text in texts:
-            self._executions_menu.addAction(text)
+            action = self._executions_menu.addAction(text)
+            action.setCheckable(True)
+            action.setChecked(text == self.executions_button.text())
 
     def reset_executions_button_text(self):
         self.executions_button.setText(self._ALL_RUNS)
+        self.executions_button.setEnabled(False)
 
     @Slot(QAction)
     def _select_execution(self, action):
