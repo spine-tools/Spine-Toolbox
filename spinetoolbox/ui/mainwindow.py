@@ -34,7 +34,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(640, 856)
+        MainWindow.resize(640, 1048)
         MainWindow.setDockNestingEnabled(True)
         self.actionQuit = QAction(MainWindow)
         self.actionQuit.setObjectName(u"actionQuit")
@@ -233,6 +233,8 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.setSpacing(0)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_7 = QVBoxLayout()
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.textBrowser_eventlog = CustomQTextBrowser(self.dockWidgetContents)
         self.textBrowser_eventlog.setObjectName(u"textBrowser_eventlog")
         sizePolicy.setHeightForWidth(self.textBrowser_eventlog.sizePolicy().hasHeightForWidth())
@@ -240,7 +242,16 @@ class Ui_MainWindow(object):
         self.textBrowser_eventlog.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.textBrowser_eventlog.setOpenLinks(False)
 
-        self.verticalLayout_5.addWidget(self.textBrowser_eventlog)
+        self.verticalLayout_7.addWidget(self.textBrowser_eventlog)
+
+        self.toolButton_executions = QToolButton(self.dockWidgetContents)
+        self.toolButton_executions.setObjectName(u"toolButton_executions")
+        self.toolButton_executions.setPopupMode(QToolButton.InstantPopup)
+
+        self.verticalLayout_7.addWidget(self.toolButton_executions)
+
+
+        self.verticalLayout_5.addLayout(self.verticalLayout_7)
 
         self.dockWidget_eventlog.setWidget(self.dockWidgetContents)
         MainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.dockWidget_eventlog)
@@ -359,7 +370,6 @@ class Ui_MainWindow(object):
 
         self.dockWidget_design_view.setWidget(self.dockWidgetContents_5)
         MainWindow.addDockWidget(Qt.TopDockWidgetArea, self.dockWidget_design_view)
-        QWidget.setTabOrder(self.textBrowser_eventlog, self.tabWidget_item_properties)
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -622,6 +632,7 @@ class Ui_MainWindow(object):
         self.menuPlugins.setTitle(QCoreApplication.translate("MainWindow", u"Plugins", None))
         self.menuConsoles.setTitle(QCoreApplication.translate("MainWindow", u"Consoles", None))
         self.dockWidget_eventlog.setWindowTitle(QCoreApplication.translate("MainWindow", u"Event Log", None))
+        self.toolButton_executions.setText(QCoreApplication.translate("MainWindow", u"...", None))
         self.dockWidget_item.setWindowTitle(QCoreApplication.translate("MainWindow", u"Properties", None))
         self.label_no_selection.setText(QCoreApplication.translate("MainWindow", u"Select a project item to view its properties", None))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_no_selection), QCoreApplication.translate("MainWindow", u"No Selection", None))

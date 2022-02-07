@@ -17,17 +17,16 @@ Class for a custom QTextBrowser for showing the logs and tool output.
 """
 
 from contextlib import contextmanager
-from PySide2.QtCore import Slot, Signal
-from PySide2.QtGui import QTextCursor, QFontDatabase
-from PySide2.QtWidgets import QTextBrowser, QAction
+from PySide2.QtCore import Slot
+from PySide2.QtGui import QTextCursor, QFontDatabase, QTextBlockFormat, QTextFrameFormat, QBrush
+from PySide2.QtWidgets import QTextBrowser, QAction, QMenu
 from ..config import TEXTBROWSER_SS
 
 
 class CustomQTextBrowser(QTextBrowser):
     """Custom QTextBrowser class."""
 
-    #FIXME: When clear(), we need to reset execution stuff in toolbox
-    cleared = Signal()
+    _ALL_RUNS = "All executions"
 
     def __init__(self, parent):
         """
@@ -35,10 +34,32 @@ class CustomQTextBrowser(QTextBrowser):
             parent (QWidget): Parent widget
         """
         super().__init__(parent=parent)
+        self._toolbox = None
         self.setStyleSheet(TEXTBROWSER_SS)
         self._max_blocks = 2000
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
+        self._executions_menu = QMenu(self)
+        self._item_cursors = {}
+        self._item_filter_cursors = {}
+        self._item_anchors = {}
+        self._visible_timestamp = None
+        self._execution_blocks = {}
+        self._frame_format = QTextFrameFormat()
+        self._frame_format.setMargin(4)
+        self._frame_format.setLeftMargin(8)
+        self._frame_format.setPadding(2)
+        self._frame_format.setBorder(1)
+        self._selected_frame_format = QTextFrameFormat(self._frame_format)
+        palette = self.palette()
+        self._selected_frame_format.setBackground(QBrush(palette.color(palette.Highlight).darker()))
+        self._executions_menu.aboutToShow.connect(self._populate_executions_menu)
+        self._executions_menu.triggered.connect(self._select_execution)
+
+    def set_toolbox(self, toolbox):
+        self._toolbox = toolbox
+        self._toolbox.ui.toolButton_executions.setMenu(self._executions_menu)
+        self._toolbox.ui.toolButton_executions.hide()
 
     @Slot()
     def scroll_to_bottom(self):
@@ -107,7 +128,141 @@ class CustomQTextBrowser(QTextBrowser):
 
     def clear(self):
         super().clear()
-        self.cleared.emit()
+        self.reset_executions_button_text()
+        self._item_cursors = {}
+        self._item_filter_cursors = {}
+        self._item_anchors = {}
+        self._visible_timestamp = None
+        self._execution_blocks = {}
+
+    @Slot()
+    def _populate_executions_menu(self):
+        texts = [self._ALL_RUNS] + self.execution_timestamps()
+        self._executions_menu.clear()
+        for text in texts:
+            action = self._executions_menu.addAction(text)
+            action.setCheckable(True)
+            action.setChecked(text == self._toolbox.ui.toolButton_executions.text())
+
+    def reset_executions_button_text(self):
+        self._toolbox.ui.toolButton_executions.setText(self._ALL_RUNS)
+        self._toolbox.ui.toolButton_executions.setVisible(False)
+
+    @Slot(QAction)
+    def _select_execution(self, action):
+        text = action.text()
+        self._toolbox.ui.toolButton_executions.setText(text)
+        if text == self._ALL_RUNS:
+            self.select_all_executions()
+            return
+        self.select_execution(text)
+
+    @staticmethod
+    def _make_log_entry_title(title):
+        return f'<b>{title}</b>'
+
+    def create_item_log_entry_points(self, item_names, timestamp):
+        """Creates cursors (log entry points) for given items in event log.
+
+        Args:
+            item_names (list of str): list of item names in the order of execution
+        """
+        self._toolbox.ui.toolButton_executions.setVisible(True)
+        item_blocks = self._execution_blocks.setdefault(timestamp, {})
+        cursor = self.textCursor()
+        cursor.movePosition(cursor.End)
+        with self.housekeeping():
+            for name in item_names:
+                cursor.insertFrame(self._frame_format)
+                item_blocks[name] = [cursor.block()]
+                self._item_anchors[timestamp, name] = anchor = timestamp + name
+                title = self._make_log_entry_title(name)
+                cursor.insertHtml(f'<a name="{anchor}">{title}</a>')
+                self._item_cursors[timestamp, name] = cursor
+                cursor = self.textCursor()
+                cursor.movePosition(cursor.End)
+                item_blocks[name].append(cursor.block())
+                self._item_filter_cursors[timestamp, name] = {}
+        self.select_execution(timestamp)
+
+    def add_log_message(self, item_name, filter_id, message):
+        """Adds a message to an item's execution log.
+
+        Args:
+            item_name (str): item name
+            filter_id (str): filter identifier
+            message (str): formatted message
+        """
+        blocks = self._execution_blocks[self._visible_timestamp][item_name]
+        with self.housekeeping():
+            cursor = self._item_cursors[self._visible_timestamp, item_name]
+            if filter_id:
+                filter_cursors = self._item_filter_cursors[self._visible_timestamp, item_name]
+                if filter_id not in filter_cursors:
+                    filter_cursor = QTextCursor(cursor)
+                    filter_cursor.insertFrame(self._frame_format)
+                    title = self._make_log_entry_title(filter_id)
+                    filter_cursor.insertHtml(title)
+                    blocks.append(filter_cursor.block())
+                    filter_cursors[filter_id] = filter_cursor
+                    cursor.movePosition(cursor.NextBlock)
+                    blocks.append(cursor.block())
+                cursor = filter_cursors[filter_id]
+            cursor.insertBlock()
+            cursor.insertHtml(message)
+            blocks.append(cursor.block())
+        self.set_item_log_selected(True)
+
+    def execution_timestamps(self):
+        return list(self._execution_blocks)
+
+    def select_all_executions(self):
+        for timestamp in self._execution_blocks:
+            self._set_execution_visible(timestamp, True)
+
+    def select_execution(self, timestamp):
+        self._toolbox.ui.toolButton_executions.setText(timestamp)
+        self._set_execution_visible(timestamp, True)
+        for other_timestamp in set(self._execution_blocks) - {timestamp}:
+            self._set_execution_visible(other_timestamp, False)
+
+    def _set_execution_visible(self, timestamp, visible):
+        if visible:
+            if timestamp == self._visible_timestamp:
+                return
+            self.set_item_log_selected(False)
+            self._visible_timestamp = timestamp
+        block_format = QTextBlockFormat()
+        if not visible:
+            block_format.setLineHeight(0, QTextBlockFormat.FixedHeight)
+        frame_format = self._frame_format if visible else QTextFrameFormat()
+        item_blocks = self._execution_blocks.get(timestamp, {})
+        all_blocks = [block for blocks in item_blocks.values() for block in blocks]
+        cursor = self.textCursor()
+        with self.housekeeping():
+            for block in all_blocks:
+                block.setVisible(visible)
+                cursor.setPosition(block.position())
+                cursor.setBlockFormat(block_format)
+                frame = cursor.currentFrame()
+                if frame != self.document().rootFrame():
+                    frame.setFrameFormat(frame_format)
+        self.set_item_log_selected(True)
+
+    def set_item_log_selected(self, selected):
+        active_item = self._toolbox.active_project_item or self._toolbox.active_link_item
+        if not active_item:
+            return
+        item_name = active_item.name
+        anchor = self._item_anchors.get((self._visible_timestamp, item_name))
+        if anchor is not None and selected:
+            self.scrollToAnchor(anchor)
+        cursor = self._item_cursors.get((self._visible_timestamp, item_name))
+        if cursor is not None:
+            frame = cursor.currentFrame()
+            frame_format = self._selected_frame_format if selected else self._frame_format
+            frame.setFrameFormat(frame_format)
+
 
 class MonoSpaceFontTextBrowser(CustomQTextBrowser):
     def __init__(self, parent):

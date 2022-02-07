@@ -36,18 +36,7 @@ from PySide2.QtCore import (
     QUrl,
     QEvent,
 )
-from PySide2.QtGui import (
-    QDesktopServices,
-    QGuiApplication,
-    QKeySequence,
-    QIcon,
-    QCursor,
-    QWindow,
-    QTextFrameFormat,
-    QTextBlockFormat,
-    QTextCursor,
-    QBrush,
-)
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -88,7 +77,6 @@ from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.jump_properties_widget import JumpPropertiesWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
 from .widgets.console_window import ConsoleWindow
-from .widgets.statusbars import MainStatusBar
 from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
@@ -188,19 +176,7 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.addTab(link_tab, "Link properties")
         self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._anchor_callbacks = {}
-        self._item_cursors = {}
-        self._item_filter_cursors = {}
-        self._item_anchors = {}
-        self._visible_timestamp = None
-        self._execution_blocks = {}
-        self._frame_format = QTextFrameFormat()
-        self._frame_format.setMargin(4)
-        self._frame_format.setLeftMargin(8)
-        self._frame_format.setPadding(2)
-        self._frame_format.setBorder(1)
-        self._selected_frame_format = QTextFrameFormat(self._frame_format)
-        palette = self.palette()
-        self._selected_frame_format.setBackground(QBrush(palette.color(palette.Highlight).darker()))
+        self.ui.textBrowser_eventlog.set_toolbox(self)
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
@@ -212,7 +188,7 @@ class ToolboxUI(QMainWindow):
             self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
         )
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
-        self.setStatusBar(MainStatusBar(self))
+        self.setStatusBar(None)
         self._base_python_console = None  # 'base' Python console, independent of project items
         self._base_julia_console = None  # 'base' Julia console, independent of project items
         # Additional consoles for item execution
@@ -278,7 +254,6 @@ class ToolboxUI(QMainWindow):
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
-        self.ui.textBrowser_eventlog.cleared.connect(self._clear_execution_logs)
         # Message box signals
         self.information_box.connect(self._show_message_box)
         self.error_box.connect(self._show_error_box)
@@ -919,11 +894,11 @@ class ToolboxUI(QMainWindow):
     def refresh_active_elements(self, active_project_item, active_link_item, selected_item_names):
         self._selected_item_names = selected_item_names
         self._update_execute_selected_enabled()
-        self._set_item_log_selected(False)
+        self.ui.textBrowser_eventlog.set_item_log_selected(False)
         self._set_active_project_item(active_project_item)
         self._set_active_link_item(active_link_item)
         self._activate_properties_tab()
-        self._set_item_log_selected(True)
+        self.ui.textBrowser_eventlog.set_item_log_selected(True)
 
     def _activate_properties_tab(self):
         if self.active_project_item:
@@ -2349,23 +2324,7 @@ class ToolboxUI(QMainWindow):
         Args:
             item_names (list of str): list of item names in the order of execution
         """
-        self.statusBar().executions_button.setEnabled(True)
-        item_blocks = self._execution_blocks.setdefault(timestamp, {})
-        cursor = self.ui.textBrowser_eventlog.textCursor()
-        cursor.movePosition(cursor.End)
-        with self.ui.textBrowser_eventlog.housekeeping():
-            for name in item_names:
-                cursor.insertFrame(self._frame_format)
-                item_blocks[name] = [cursor.block()]
-                self._item_anchors[timestamp, name] = anchor = timestamp + name
-                title = self._make_log_entry_title(name)
-                cursor.insertHtml(f'<a name="{anchor}">{title}</a>')
-                self._item_cursors[timestamp, name] = cursor
-                cursor = self.ui.textBrowser_eventlog.textCursor()
-                cursor.movePosition(cursor.End)
-                item_blocks[name].append(cursor.block())
-                self._item_filter_cursors[timestamp, name] = {}
-        self.select_execution(timestamp)
+        self.ui.textBrowser_eventlog.create_item_log_entry_points(item_names, timestamp)
 
     def add_log_message(self, item_name, filter_id, message):
         """Adds a message to an item's execution log.
@@ -2375,80 +2334,4 @@ class ToolboxUI(QMainWindow):
             filter_id (str): filter identifier
             message (str): formatted message
         """
-        blocks = self._execution_blocks[self._visible_timestamp][item_name]
-        with self.ui.textBrowser_eventlog.housekeeping():
-            cursor = self._item_cursors[self._visible_timestamp, item_name]
-            if filter_id:
-                filter_cursors = self._item_filter_cursors[self._visible_timestamp, item_name]
-                if filter_id not in filter_cursors:
-                    filter_cursor = QTextCursor(cursor)
-                    filter_cursor.insertFrame(self._frame_format)
-                    title = self._make_log_entry_title(filter_id)
-                    filter_cursor.insertHtml(title)
-                    blocks.append(filter_cursor.block())
-                    filter_cursors[filter_id] = filter_cursor
-                    cursor.movePosition(cursor.NextBlock)
-                    blocks.append(cursor.block())
-                cursor = filter_cursors[filter_id]
-            cursor.insertBlock()
-            cursor.insertHtml(message)
-            blocks.append(cursor.block())
-        self._set_item_log_selected(True)
-
-    def execution_timestamps(self):
-        return list(self._execution_blocks)
-
-    def select_all_executions(self):
-        for timestamp in self._execution_blocks:
-            self._set_execution_visible(timestamp, True)
-
-    def select_execution(self, timestamp):
-        self.statusBar().executions_button.setText(timestamp)
-        self._set_execution_visible(timestamp, True)
-        for other_timestamp in set(self._execution_blocks) - {timestamp}:
-            self._set_execution_visible(other_timestamp, False)
-
-    def _set_execution_visible(self, timestamp, visible):
-        if visible:
-            if timestamp == self._visible_timestamp:
-                return
-            self._set_item_log_selected(False)
-            self._visible_timestamp = timestamp
-        block_format = QTextBlockFormat()
-        if not visible:
-            block_format.setLineHeight(0, QTextBlockFormat.FixedHeight)
-        frame_format = self._frame_format if visible else QTextFrameFormat()
-        item_blocks = self._execution_blocks.get(timestamp, {})
-        all_blocks = [block for blocks in item_blocks.values() for block in blocks]
-        cursor = self.ui.textBrowser_eventlog.textCursor()
-        with self.ui.textBrowser_eventlog.housekeeping():
-            for block in all_blocks:
-                block.setVisible(visible)
-                cursor.setPosition(block.position())
-                cursor.setBlockFormat(block_format)
-                frame = cursor.currentFrame()
-                if frame != self.ui.textBrowser_eventlog.document().rootFrame():
-                    frame.setFrameFormat(frame_format)
-        self._set_item_log_selected(True)
-
-    def _set_item_log_selected(self, selected):
-        active_item = self.active_project_item or self.active_link_item
-        if not active_item:
-            return
-        item_name = active_item.name
-        anchor = self._item_anchors.get((self._visible_timestamp, item_name))
-        if anchor is not None and selected:
-            self.ui.textBrowser_eventlog.scrollToAnchor(anchor)
-        cursor = self._item_cursors.get((self._visible_timestamp, item_name))
-        if cursor is not None:
-            frame = cursor.currentFrame()
-            frame_format = self._selected_frame_format if selected else self._frame_format
-            frame.setFrameFormat(frame_format)
-
-    def _clear_execution_logs(self):
-        self.statusBar().reset_executions_button_text()
-        self._item_cursors = {}
-        self._item_filter_cursors = {}
-        self._item_anchors = {}
-        self._visible_timestamp = None
-        self._execution_blocks = {}
+        self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)
