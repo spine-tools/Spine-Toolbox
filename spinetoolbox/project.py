@@ -20,7 +20,9 @@ from itertools import takewhile, chain
 import os
 from pathlib import Path
 import json
+import random
 from PySide2.QtCore import Signal
+import networkx as nx
 from spine_engine.exception import EngineInitFailed
 from spine_engine.utils.helpers import create_timestamp
 from .project_item.logging_connection import LoggingConnection, LoggingJump
@@ -45,7 +47,6 @@ from .config import (
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
 )
-from .dag_handler import DirectedGraphHandler
 from .project_commands import SetProjectNameAndDescriptionCommand
 from .spine_engine_worker import SpineEngineWorker
 
@@ -115,7 +116,6 @@ class SpineToolboxProject(MetaObject):
         self._jumps = list()
         self._logger = logger
         self._settings = settings
-        self.dag_handler = DirectedGraphHandler()
         self._engine_workers = []
         self._execution_stopped = True
         self.project_dir = None  # Full path to project directory
@@ -504,7 +504,6 @@ class SpineToolboxProject(MetaObject):
             raise RuntimeError("Item already in project.")
         self._project_items[item.name] = item
         name = item.name
-        self.dag_handler.add_dag_node(name)
         self.item_added.emit(name)
         item.set_up()
         if not silent:
@@ -574,7 +573,6 @@ class SpineToolboxProject(MetaObject):
             self._project_items[previous_name] = item
             return False
         self._project_items[new_name] = item
-        self.dag_handler.rename_node(previous_name, new_name)
         for connection in self._connections:
             if connection.source == previous_name:
                 connection.source = new_name
@@ -650,10 +648,10 @@ class SpineToolboxProject(MetaObject):
         """
         if connection in self._connections:
             return False
-        if not self.dag_handler.add_graph_edge(connection.source, connection.destination):
+        if None in (self.dag_with_node(connection.source), self.dag_with_node(connection.destination)):
             return False
         self._connections.append(connection)
-        dag = self.dag_handler.dag_with_node(connection.source)
+        dag = self.dag_with_node(connection.source)
         self.connection_established.emit(connection)
         if not self._is_dag_valid(dag):
             return True  # Connection was added successfully even though DAG is not valid.
@@ -666,6 +664,41 @@ class SpineToolboxProject(MetaObject):
         self._update_ranks(dag)
         return True
 
+    def _dag_iterator(self):
+        """Iterates directed graphs in the project.
+
+        Yields:
+            nx.DiGraph
+        """
+        graph = nx.DiGraph()
+        graph.add_nodes_from(self._project_items)
+        graph.add_edges_from(((x.source, x.destination) for x in self._connections))
+        for nodes in nx.weakly_connected_components(graph):
+            yield graph.subgraph(nodes)
+
+    def dags(self):
+        """Used in tests. Returns a list of dags in the project.
+
+        Returns:
+            list
+        """
+        return list(self._dag_iterator())
+
+    def node_is_isolated(self, node):
+        """Used in tests. Checks if the project item with the given name has any connections.
+
+        Args:
+            node (str): Project item name
+
+        Returns:
+            bool
+        """
+        g = self.dag_with_node(node)
+        return nx.is_isolate(g, node)
+
+    def dag_with_node(self, node):
+        return next((x for x in self._dag_iterator() if x.has_node(node)), None)
+
     def remove_connection(self, connection):
         """Removes a connection from the project.
 
@@ -674,9 +707,9 @@ class SpineToolboxProject(MetaObject):
         """
         self.connection_about_to_be_removed.emit(connection)
         self._connections.remove(connection)
-        dags = self.dag_handler.remove_graph_edge(connection.source, connection.destination)
+        dags = [self.dag_with_node(connection.source), self.dag_with_node(connection.destination)]
         valid_dags = [dag for dag in dags if self._is_dag_valid(dag)]
-        updateable_nodes = set(chain(*(dag.nodes() for dag in valid_dags)))
+        updateable_nodes = set(chain(*(dag.nodes for dag in valid_dags)))
         destination = self._project_items[connection.destination]
         if destination.name in updateable_nodes:
             self._update_item_resources(destination, ExecutionDirection.FORWARD)
@@ -772,7 +805,7 @@ class SpineToolboxProject(MetaObject):
             list of str: list of issues, if any
         """
         issues = list()
-        dag = self.dag_handler.dag_with_node(jump.source)
+        dag = self.dag_with_node(jump.source)
         if not dag.has_node(jump.destination):
             issues.append("Loop cannot span over separate DAGs.")
         try:
@@ -829,7 +862,6 @@ class SpineToolboxProject(MetaObject):
             self.remove_connection(c)
         for j in self.jumps_for_item(item_name):
             self.remove_jump(j)
-        self.dag_handler.remove_node_from_graph(item_name)
         item = self._project_items.pop(item_name)
         item.tear_down()
         if delete_data:
@@ -863,20 +895,6 @@ class SpineToolboxProject(MetaObject):
         self._execution_stopped = False
         self._execute_dags(dags, execution_permits_list)
 
-    def get_node_successors(self, dag, dag_identifier):
-        node_successors = self.dag_handler.node_successors(dag)
-        if not node_successors:
-            self._logger.msg_warning.emit("<b>Graph {0} is not a Directed Acyclic Graph</b>".format(dag_identifier))
-            self._logger.msg.emit("Items in graph: {0}".format(", ".join(dag.nodes())))
-            edges = ["{0} -> {1}".format(*edge) for edge in self.dag_handler.edges_causing_loops(dag)]
-            self._logger.msg.emit(
-                "Please edit connections in Design View to execute it. Possible fix: remove connection(s) {0}.".format(
-                    ", ".join(edges)
-                )
-            )
-            return None
-        return node_successors
-
     def _execute_dags(self, dags, execution_permits_list):
         if self._engine_workers:
             self._logger.msg_error.emit("Execution already in progress.")
@@ -887,6 +905,8 @@ class SpineToolboxProject(MetaObject):
             worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
             if worker is None:
                 continue
+            self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
+            self._logger.msg.emit("Order: {0}".format(" -> ".join(nx.topological_sort(dag))))
             worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
             self._engine_workers.append(worker)
         # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others
@@ -894,12 +914,10 @@ class SpineToolboxProject(MetaObject):
         # that the project is done executing before it's fully loaded.
         timestamp = create_timestamp()
         for worker in self._engine_workers:
-            self._logger.msg.emit("<b>Starting DAG {0}</b>".format(worker.dag_identifier))
-            node_successors = worker.engine_data["node_successors"]
+            items = worker.engine_data["items"]
             execution_permits = worker.engine_data["execution_permits"]
             jumps = worker.engine_data["jumps"]
-            items_and_jumps = [x for x in node_successors if execution_permits[x]]
-            self._logger.msg.emit("Order: {0}".format(" -> ".join(items_and_jumps)))
+            items_and_jumps = [x for x in items if execution_permits[x]]
             for jump in jumps:
                 from_item, _ = jump["from"]
                 pos = items_and_jumps.index(from_item) + 1
@@ -908,12 +926,20 @@ class SpineToolboxProject(MetaObject):
             worker.start()
 
     def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
-        node_successors = self.get_node_successors(dag, dag_identifier)
-        if node_successors is None:
-            return None
+        """Creates and returns a SpineEngineWorker to execute given *validated* dag.
+
+        Args:
+            dag (nx.DiGraph): The dag
+            execution_permits (dict): mapping item names to a boolean indicating whether to execute it or skip it
+            dag_identifier (str): A string identifying the dag, for logging
+            settings (dict): project and app settings to send to the spine engine.
+
+        Returns:
+            SpineEngineWorker
+        """
         item_dicts = {}
         specification_dicts = {}
-        items = {name: item for name, item in self._project_items.items() if name in node_successors}
+        items = {name: item for name, item in self._project_items.items() if name in dag.nodes}
         for name, project_item in items.items():
             item_dicts[name] = project_item.item_dict()
             spec = project_item.specification()
@@ -931,7 +957,6 @@ class SpineToolboxProject(MetaObject):
             "specifications": specification_dicts,
             "connections": connection_dicts,
             "jumps": jump_dicts,
-            "node_successors": node_successors,
             "execution_permits": execution_permits,
             "items_module_name": "spine_items",
             "settings": settings,
@@ -964,21 +989,13 @@ class SpineToolboxProject(MetaObject):
         self._engine_workers.clear()
         self.project_execution_finished.emit()
 
-    def dag_with_node(self, item_name):
-        dag = self.dag_handler.dag_with_node(item_name)
-        if not dag:
-            self._logger.msg_error.emit(
-                "[BUG] Could not find a graph containing {0}. <b>Please reopen the project.</b>".format(item_name)
-            )
-        return dag
-
     def execute_selected(self, names):
         """Executes DAGs corresponding to given project items.
 
         Args:
             names (Iterable of str): item names to execute
         """
-        if not self.dag_handler.dags():
+        if not self._project_items:
             self._logger.msg_warning.emit("Project has no items to execute")
             return
         if not names:
@@ -990,6 +1007,7 @@ class SpineToolboxProject(MetaObject):
             if not dag:
                 continue
             dags.add(dag)
+        dags = self._validate_dags(dags)
         execution_permit_list = list()
         for dag in dags:
             execution_permits = {name: name in names for name in dag.nodes}
@@ -998,14 +1016,35 @@ class SpineToolboxProject(MetaObject):
 
     def execute_project(self):
         """Executes all dags in the project."""
-        dags = self.dag_handler.dags()
-        if not dags:
+        if not self._project_items:
             self._logger.msg_warning.emit("Project has no items to execute")
             return
+        dags = self._validate_dags(self._dag_iterator())
         execution_permit_list = list()
         for dag in dags:
             execution_permit_list.append({item_name: True for item_name in dag.nodes})
         self.execute_dags(dags, execution_permit_list, "Executing All Directed Acyclic Graphs")
+
+    def _validate_dags(self, dags):
+        """Validates dags and logs error messages.
+
+        Args:
+            dags (list): dags to validate
+
+        Returns:
+            list: validated dag
+        """
+        valid = []
+        for dag in dags:
+            if not dag.nodes:
+                # Should never happen
+                continue
+            if not nx.is_directed_acyclic_graph(dag):
+                items = ", ".join(dag.nodes)
+                self._logger.msg_error.emit(f"<b>Skipping execution of items as they are in a cycle: {items}</b>")
+                continue
+            valid.append(dag)
+        return valid
 
     def stop(self):
         """Stops execution."""
@@ -1239,20 +1278,19 @@ class SpineToolboxProject(MetaObject):
         predecessor.downstream_resources_updated(combined_resources)
 
     def _is_dag_valid(self, dag):
-        node_successors = self.dag_handler.node_successors(dag)
-        if not node_successors:
-            edges = self.dag_handler.edges_causing_loops(dag)
-            for node in dag.nodes():
+        if not nx.is_directed_acyclic_graph(dag):
+            edges = _edges_causing_loops(dag)
+            for node in dag.nodes:
                 self._project_items[node].invalidate_workflow(edges)
             return False
-        for node in dag.nodes():
+        for node in dag.nodes:
             self._project_items[node].revalidate_workflow()
         return True
 
     def _update_ranks(self, dag):
-        node_successors = self.dag_handler.node_successors(dag)
-        ranks = _ranks(node_successors)
-        for item_name in node_successors:
+        node_successors_ = node_successors(dag)
+        ranks = _ranks(node_successors_)
+        for item_name in node_successors_:
             item = self._project_items[item_name]
             item.set_rank(ranks[item_name])
 
@@ -1266,6 +1304,40 @@ class SpineToolboxProject(MetaObject):
         for item in self._project_items.values():
             item.tear_down()
         self.deleteLater()
+
+
+def node_successors(g):
+    """Returns a dict mapping nodes in topological order to a list of successors.
+
+    Args:
+        g (nx.DiGraph)
+
+    Returns:
+        dict
+    """
+    return {n: list(g.successors(n)) for n in nx.topological_sort(g)}
+
+
+def _edges_causing_loops(g):
+    """Returns a list of edges whose removal from g results in it becoming acyclic.
+
+    Args:
+        g (nx.DiGraph)
+
+    Returns:
+        list
+    """
+    result = list()
+    h = g.copy()  # Let's work on a copy of the graph
+    while True:
+        try:
+            cycle = list(nx.find_cycle(h))
+        except nx.NetworkXNoCycle:
+            break
+        edge = random.choice(cycle)
+        h.remove_edge(*edge)
+        result.append(edge)
+    return result
 
 
 def _ranks(node_successors):

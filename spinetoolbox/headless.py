@@ -21,12 +21,13 @@ import logging
 import pathlib
 import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
+import networkx as nx
 
 from spine_engine import SpineEngineState
+from spine_engine.project_item.connection import Connection
 from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import deserialize_path
-from .dag_handler import DirectedGraphHandler
 from .config import LATEST_PROJECT_VERSION
 from .helpers import (
     make_settings_dict_for_engine,
@@ -132,7 +133,13 @@ class ActionsWithProject(QObject):
         self._plugin_specifications = None
         self._connection_dicts = None
         self._jump_dicts = None
-        self._dag_handler = None
+
+    def _dags(self):
+        graph = nx.DiGraph()
+        graph.add_nodes_from(self._item_dicts)
+        connections = map(Connection.from_dict, self._connection_dicts)
+        graph.add_edges_from(((x.source, x.destination) for x in connections))
+        return [graph.subgraph(nodes) for nodes in nx.weakly_connected_components(graph)]
 
     @Slot()
     def _execute(self):
@@ -147,8 +154,9 @@ class ActionsWithProject(QObject):
                 QCoreApplication.instance().exit(status)
                 return
             if self._args.list_items:
-                for dag_number, dag in enumerate(self._dag_handler.dags()):
-                    print(f"DAG {dag_number + 1}/{len(self._dag_handler.dags())}:")
+                dags = self._dags()
+                for dag_number, dag in enumerate(dags):
+                    print(f"DAG {dag_number + 1}/{len(dags)}:")
                     print(" ".join(sorted(dag.nodes)))
             if self._args.execute_only:
                 status = self._execute_project()
@@ -186,7 +194,7 @@ class ActionsWithProject(QObject):
             return version_status
         local_data_dict = load_local_project_data(self._project_dir / ".spinetoolbox", self._logger)
         merge_dicts(local_data_dict, project_dict)
-        self._item_dicts, self._specification_dicts, self._connection_dicts, self._jump_dicts, self._dag_handler = open_project(
+        self._item_dicts, self._specification_dicts, self._connection_dicts, self._jump_dicts = open_project(
             project_dict, self._project_dir, self._logger
         )
         return Status.OK
@@ -222,13 +230,12 @@ class ActionsWithProject(QObject):
                 spec_dict = spec.to_dict()
                 spec_dict["definition_file_path"] = spec.definition_file_path
                 self._specification_dicts.setdefault(item_type, []).append(spec_dict)
-        dags = self._dag_handler.dags()
+        dags = self._dags()
         settings = make_settings_dict_for_engine(self._app_settings)
         selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
         for dag in dags:
             item_names_in_dag = set(dag.nodes)
-            node_successors = self._dag_handler.node_successors(dag)
-            if not node_successors:
+            if not nx.is_directed_acyclic_graph(dag):
                 self._logger.msg_error.emit("The project contains a graph that is not a Directed Acyclic Graph.")
                 return Status.ERROR
             item_dicts_in_dag = {
@@ -246,7 +253,6 @@ class ActionsWithProject(QObject):
                 "specifications": self._specification_dicts,
                 "connections": self._connection_dicts,
                 "jumps": self._jump_dicts,
-                "node_successors": node_successors,
                 "execution_permits": execution_permits,
                 "items_module_name": "spine_items",
                 "settings": settings,
@@ -386,21 +392,11 @@ def open_project(project_dict, project_dir, logger):
         tuple: item dicts, specification dicts, connection dicts, jump dicts and a DagHandler object
     """
     specification_dicts = _specification_dicts(project_dict, project_dir, logger)
-    item_dicts = dict()
-    dag_handler = DirectedGraphHandler()
-    for item_name, item_dict in project_dict["items"].items():
-        dag_handler.add_dag_node(item_name)
-        item_dicts[item_name] = item_dict
-    for connection in project_dict["project"]["connections"]:
-        from_name = connection["from"][0]
-        to_name = connection["to"][0]
-        dag_handler.add_graph_edge(from_name, to_name)
     return (
         project_dict["items"],
         specification_dicts,
         project_dict["project"]["connections"],
         project_dict["project"]["jumps"],
-        dag_handler,
     )
 
 

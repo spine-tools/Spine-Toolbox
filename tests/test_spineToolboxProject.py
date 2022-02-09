@@ -32,6 +32,7 @@ from spinetoolbox.helpers import SignalWaiter
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.config import PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
+from spinetoolbox.project import node_successors
 from tests.mock_helpers import (
     clean_up_toolbox,
     create_toolboxui_with_project,
@@ -82,9 +83,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         """Check that project dag handler contains only one
         graph, which has one node and its name matches the
         given argument."""
-        dag = self.toolbox.project().dag_handler
-        self.assertTrue(len(dag.dags()) == 1)
-        g = dag.dag_with_node(name)
+        self.assertTrue(len(self.toolbox.project().dags()) == 1)
+        g = self.toolbox.project().dag_with_node(name)
         self.assertTrue(len(g.nodes()) == 1)
         for node_name in g.nodes():
             self.assertTrue(node_name == name)
@@ -171,27 +171,26 @@ class TestSpineToolboxProject(unittest.TestCase):
         gdx_exporter = p.get_item(gdx_exporter_name)
         self.assertEqual(gdx_exporter_name, gdx_exporter.name)
         # DAG handler should now have six graphs, each with one item
-        dag_hndlr = self.toolbox.project().dag_handler
-        n_dags = len(dag_hndlr.dags())
+        n_dags = len(self.toolbox.project().dags())
         self.assertEqual(9, n_dags)
         # Check that all created items are in graphs
-        ds_graph = dag_hndlr.dag_with_node(ds_name)
+        ds_graph = self.toolbox.project().dag_with_node(ds_name)
         self.assertIsNotNone(ds_graph)
-        dc_graph = dag_hndlr.dag_with_node(dc_name)
+        dc_graph = self.toolbox.project().dag_with_node(dc_name)
         self.assertIsNotNone(dc_graph)
-        dt_graph = dag_hndlr.dag_with_node(dt_name)
+        dt_graph = self.toolbox.project().dag_with_node(dt_name)
         self.assertIsNotNone(dt_graph)
-        tool_graph = dag_hndlr.dag_with_node(tool_name)
+        tool_graph = self.toolbox.project().dag_with_node(tool_name)
         self.assertIsNotNone(tool_graph)
-        gimlet_graph = dag_hndlr.dag_with_node(gimlet_name)
+        gimlet_graph = self.toolbox.project().dag_with_node(gimlet_name)
         self.assertIsNotNone(gimlet_graph)
-        view_graph = dag_hndlr.dag_with_node(view_name)
+        view_graph = self.toolbox.project().dag_with_node(view_name)
         self.assertIsNotNone(view_graph)
-        importer_graph = dag_hndlr.dag_with_node(imp_name)
+        importer_graph = self.toolbox.project().dag_with_node(imp_name)
         self.assertIsNotNone(importer_graph)
-        exporter_graph = dag_hndlr.dag_with_node(exporter_name)
+        exporter_graph = self.toolbox.project().dag_with_node(exporter_name)
         self.assertIsNotNone(exporter_graph)
-        gdx_exporter_graph = dag_hndlr.dag_with_node(gdx_exporter_name)
+        gdx_exporter_graph = self.toolbox.project().dag_with_node(gdx_exporter_name)
         self.assertIsNotNone(gdx_exporter_graph)
 
     def test_remove_item_by_name(self):
@@ -219,7 +218,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(len(project.connections), 0)
         view = self.toolbox.project_item_model.get_item(view2_name)
         self.assertEqual(view2_name, view.name)
-        self.assertTrue(project.dag_handler.node_is_isolated(view2_name))
+        self.assertTrue(project.node_is_isolated(view2_name))
 
     def test_remove_item_by_name_removes_incoming_connections(self):
         project = self.toolbox.project()
@@ -238,7 +237,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(len(project.connections), 0)
         view = self.toolbox.project_item_model.get_item(view1_name)
         self.assertEqual(view1_name, view.name)
-        self.assertTrue(project.dag_handler.node_is_isolated(view1_name))
+        self.assertTrue(project.node_is_isolated(view1_name))
 
     def _execute_project(self):
         waiter = SignalWaiter()
@@ -337,11 +336,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertTrue(bool(project.get_item("renamed source")))
         self.assertEqual(source_item.name, "renamed source")
         self.assertEqual(project.connections, [Connection("renamed source", "left", destination_name, "right")])
-        dags = project.dag_handler.dags()
+        dags = project.dags()
         self.assertEqual(len(dags), 1)
-        self.assertEqual(
-            project.dag_handler.node_successors(dags[0]), {"destination": [], "renamed source": ["destination"]}
-        )
+        self.assertEqual(node_successors(dags[0]), {"destination": [], "renamed source": ["destination"]})
         self.assertEqual(source_item.get_icon().name(), "renamed source")
         self.assertEqual(os.path.split(source_item.data_dir)[1], shorten("renamed source"))
 
@@ -376,8 +373,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_importer(project, self.toolbox.item_factories, importer_name)
         project.add_connection(Connection(dc_name, "right", importer_name, "left"))
         self.assertEqual(len(project.connections), 1)
-        dag = project.dag_handler.dag_with_node(dc_name)
-        self.assertEqual(project.dag_handler.node_successors(dag), {dc_name: [importer_name], importer_name: []})
+        dag = project.dag_with_node(dc_name)
+        self.assertEqual(node_successors(dag), {dc_name: [importer_name], importer_name: []})
 
     def test_add_connection_updates_resources(self):
         project = self.toolbox.project()
@@ -447,8 +444,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         )
         self.assertEqual(project.connections_for_item(dc1_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
         self.assertEqual(project.connections_for_item(dc2_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
-        dag = project.dag_handler.dag_with_node(dc1_name)
-        self.assertEqual(project.dag_handler.node_successors(dag), {dc1_name: [dc2_name], dc2_name: []})
+        dag = project.dag_with_node(dc1_name)
+        self.assertEqual(node_successors(dag), {dc1_name: [dc2_name], dc2_name: []})
 
     def test_save_when_storing_item_local_data(self):
         project = self.toolbox.project()
