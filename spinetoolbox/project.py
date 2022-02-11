@@ -22,6 +22,7 @@ from pathlib import Path
 import json
 import random
 from PySide2.QtCore import Signal
+from PySide2.QtGui import QColor
 import networkx as nx
 from spine_engine.exception import EngineInitFailed
 from spine_engine.utils.helpers import create_timestamp
@@ -46,6 +47,7 @@ from .config import (
     INVALID_CHARS,
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
+    FG_COLOR,
 )
 from .project_commands import SetProjectNameAndDescriptionCommand
 from .spine_engine_worker import SpineEngineWorker
@@ -900,13 +902,16 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg_error.emit("Execution already in progress.")
             return
         settings = make_settings_dict_for_engine(self._settings)
+        darker_fg_color = QColor(FG_COLOR).darker().name()
+        darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
             worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
             if worker is None:
                 continue
             self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
-            self._logger.msg.emit("Order: {0}".format(" -> ".join(nx.topological_sort(dag))))
+            item_names = (darker(name) if not execution_permits[name] else name for name in nx.topological_sort(dag))
+            self._logger.msg.emit("Order: {0}".format(darker(" -> ").join(item_names)))
             worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
             self._engine_workers.append(worker)
         # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others

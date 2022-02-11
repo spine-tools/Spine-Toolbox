@@ -59,6 +59,9 @@ PROJECT_LOCAL_DATA_FILENAME = "project_local_data.json"
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{background-color: #EBEBE0; border-width: 1px; border-color: gray; border-style: groove;}"
 
+BG_COLOR = "#19232D"
+FG_COLOR = "#F0F0F0"
+
 SETTINGS_SS = (
     "#SettingsForm{background-color: ghostwhite;}"
     "QLabel{color: black;}"
@@ -75,12 +78,12 @@ SETTINGS_SS = (
     "padding-right: 3px;"
     "padding-left: 3px;}"
     "QCheckBox{outline-style: dashed; outline-width: 1px; outline-color: white;}"
-    "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; border-radius: 4px; padding: 3px; outline: none; min-width:80px}"
+    f"QPushButton{{background-color: #505F69; border: 1px solid #29353d; color: {FG_COLOR}; border-radius: 4px; padding: 3px; outline: none; min-width:80px}}"
     "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}"
     "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}"
     "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
-    "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}"
-    "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}"
+    f"QPushButton:hover{{border: 1px solid #148CD2; color: {FG_COLOR};}}"
+    f"QPushButton:pressed{{background-color: {BG_COLOR}; border: 1px solid {BG_COLOR};}}"
     "QSlider::groove:horizontal{background: #e1e1e1; border: 1px solid #a4a4a4; height: 5px; margin: 2px 0; border-radius: 2px;}"
     "QSlider::handle:horizontal{background: #fafafa; border: 1px solid #a4a4a4; width: 12px; margin: -5px 0; border-radius: 2px;}"
     "QSlider::add-page:horizontal{background: transparent;}"
@@ -92,28 +95,22 @@ ICON_BACKGROUND = "qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, 
 
 ICON_TOOLBAR_SS = f"QToolBar{{spacing: 6px; background: {ICON_BACKGROUND}; padding: 3px; border-style: solid;}}"
 
-
-def _make_text_browser_ss(color):
-    return (
-        f"QTextBrowser {{background-color: {color}; border: 1px solid #32414B; color: #F0F0F0; border-radius: 2px;}}"
-        "QTextBrowser:hover,"
-        "QTextBrowser:selected,"
-        "QTextBrowser:pressed {border: 1px solid #668599;}"
-    )
-
-
-TEXTBROWSER_SS = _make_text_browser_ss("#19232D")
+TEXTBROWSER_SS = (
+    f"QTextBrowser {{background-color: {BG_COLOR}; border: 1px solid #32414B; color: {FG_COLOR}; border-radius: 2px;}}"
+    "QTextBrowser:hover,"
+    "QTextBrowser:selected,"
+    "QTextBrowser:pressed {border: 1px solid #668599;}"
+)
 
 # ToolboxUI stylesheet. A lot of widgets inherit this sheet.
 MAINWINDOW_SS = (
     "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"
-    "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; "
-    "border-radius: 4px; padding: 3px; outline: none; min-width: 75px;}"
+    f"QPushButton{{background-color: #505F69; border: 1px solid #29353d; color: {FG_COLOR}; border-radius: 4px; padding: 3px; outline: none; min-width: 75px;}}"
     "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}"
     "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}"
     "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
-    "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}"
-    "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}"
+    f"QPushButton:hover{{border: 1px solid #148CD2; color: {FG_COLOR};}}"
+    f"QPushButton:pressed{{background-color: {BG_COLOR}; border: 1px solid {BG_COLOR};}}"
     "QToolButton:focus{border-color: black; border-width: 1px; border-style: ridge;}"
     "QToolButton:pressed{background-color: #f2f2f2;}"
     "QToolButton::menu-indicator{width: 0px;}"
