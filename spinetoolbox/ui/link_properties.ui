@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>274</width>
-    <height>239</height>
+    <width>298</width>
+    <height>288</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -40,10 +40,29 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="checkBox_use_datapackage">
-     <property name="text">
-      <string>Pack CSV files (datapackage.json)</string>
+    <widget class="QFrame" name="frame">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
      </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QCheckBox" name="checkBox_use_memory_db">
+        <property name="text">
+         <string>Use memory DB for tool execution</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBox_use_datapackage">
+        <property name="text">
+         <string>Pack CSV files (datapackage.json)</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

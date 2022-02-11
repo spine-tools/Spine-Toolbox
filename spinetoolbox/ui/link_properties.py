@@ -31,7 +31,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(274, 239)
+        Form.resize(298, 288)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.treeView_filters = QTreeView(Form)
@@ -42,10 +42,24 @@ class Ui_Form(object):
 
         self.verticalLayout.addWidget(self.treeView_filters)
 
-        self.checkBox_use_datapackage = QCheckBox(Form)
+        self.frame = QFrame(Form)
+        self.frame.setObjectName(u"frame")
+        self.frame.setFrameShape(QFrame.StyledPanel)
+        self.frame.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_2 = QVBoxLayout(self.frame)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.checkBox_use_memory_db = QCheckBox(self.frame)
+        self.checkBox_use_memory_db.setObjectName(u"checkBox_use_memory_db")
+
+        self.verticalLayout_2.addWidget(self.checkBox_use_memory_db)
+
+        self.checkBox_use_datapackage = QCheckBox(self.frame)
         self.checkBox_use_datapackage.setObjectName(u"checkBox_use_datapackage")
 
-        self.verticalLayout.addWidget(self.checkBox_use_datapackage)
+        self.verticalLayout_2.addWidget(self.checkBox_use_datapackage)
+
+
+        self.verticalLayout.addWidget(self.frame)
 
 
         self.retranslateUi(Form)
@@ -55,6 +69,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.checkBox_use_memory_db.setText(QCoreApplication.translate("Form", u"Use memory DB for tool execution", None))
         self.checkBox_use_datapackage.setText(QCoreApplication.translate("Form", u"Pack CSV files (datapackage.json)", None))
     # retranslateUi
 

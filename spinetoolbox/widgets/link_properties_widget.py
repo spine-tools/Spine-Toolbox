@@ -36,6 +36,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.ui.checkBox_use_datapackage.stateChanged.connect(self._handle_use_datapackage_state_changed)
+        self.ui.checkBox_use_memory_db.stateChanged.connect(self._handle_use_memory_db_state_changed)
 
     def set_link(self, connection):
         """Hooks the widget to given link, so that user actions are reflected in the link's filter configuration.
@@ -49,6 +50,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self.ui.treeView_filters.expandAll()
         self._toolbox.label_item_name.setText(f"<b>Link {self._connection.link.name}</b>")
         self.load_connection_options()
+        # TODO: update UI depending on source and destination items, because not all options apply to all links
 
     def unset_link(self):
         """Releases the widget from any links."""
@@ -62,5 +64,14 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         options = {"use_datapackage": checked}
         self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._connection, options))
 
+    @Slot(int)
+    def _handle_use_memory_db_state_changed(self, _state):
+        checked = self.ui.checkBox_use_memory_db.isChecked()
+        if self._connection.use_memory_db == checked:
+            return
+        options = {"use_memory_db": checked}
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._connection, options))
+
     def load_connection_options(self):
         self.ui.checkBox_use_datapackage.setChecked(self._connection.use_datapackage)
+        self.ui.checkBox_use_memory_db.setChecked(self._connection.use_memory_db)

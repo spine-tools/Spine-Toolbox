@@ -911,7 +911,7 @@ class SpineToolboxProject(MetaObject):
                 continue
             self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
             item_names = (darker(name) if not execution_permits[name] else name for name in nx.topological_sort(dag))
-            self._logger.msg.emit("Order: {0}".format(darker(" -> ").join(item_names)))
+            self._logger.msg.emit(darker(" -> ").join(item_names))
             worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
             self._engine_workers.append(worker)
         # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others
@@ -1131,8 +1131,8 @@ class SpineToolboxProject(MetaObject):
             if connection.source != item.name:
                 continue
             connection.replace_resources_from_source(old, new)
-            old_converted = connection.convert_resources(old, old[0].provider_name)
-            new_converted = connection.convert_resources(new)
+            old_converted = connection.convert_forward_resources(old)
+            new_converted = connection.convert_forward_resources(new)
             self.get_item(connection.destination).replace_resources_from_upstream(old_converted, new_converted)
 
     def notify_resource_replacement_to_predecessors(self, item, old, new):
@@ -1261,7 +1261,7 @@ class SpineToolboxProject(MetaObject):
             if resources is None:
                 resources = predecessor.resources_for_direct_successors()
                 resource_cache[item_name] = resources
-            resources = conn.convert_resources(resources)
+            resources = conn.convert_forward_resources(resources)
             combined_resources += resources
         successor.upstream_resources_updated(combined_resources)
 
