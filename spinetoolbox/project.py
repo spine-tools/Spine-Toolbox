@@ -1001,12 +1001,7 @@ class SpineToolboxProject(MetaObject):
         if not names:
             self._logger.msg_warning.emit("Please select a project item and try again.")
             return
-        dags = set()
-        for name in names:
-            dag = self.dag_with_node(name)
-            if not dag:
-                continue
-            dags.add(dag)
+        dags = [dag for dag in self._dag_iterator() if set(names) & dag.nodes]
         dags = self._validate_dags(dags)
         execution_permit_list = list()
         for dag in dags:
