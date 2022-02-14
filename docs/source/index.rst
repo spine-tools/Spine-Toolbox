@@ -3,7 +3,7 @@
 
 Welcome to Spine Toolbox's User Guide!
 ======================================
-Spine Toolbox is an application, which provides means to define, manage, and execute complex data processing and
+`Spine Toolbox <https://github.com/Spine-project/Spine-Toolbox>`_ is an application, which provides means to define, manage, and execute complex data processing and
 computation tasks, such as energy system models.
 
 If you are new to Spine Toolbox, :ref:`Getting Started` section is a good place to start. If you want to run
