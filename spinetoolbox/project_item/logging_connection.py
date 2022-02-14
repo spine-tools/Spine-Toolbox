@@ -23,6 +23,10 @@ class LoggingConnection(LogMixin, Connection):
         self.resource_filter_model = ResourceFilterModel(self, toolbox.undo_stack, toolbox)
         self.link = None
 
+    @property
+    def graphics_item(self):
+        return self.link
+
     def item_type(self):
         return "connection"
 
@@ -54,6 +58,10 @@ class LoggingJump(LogMixin, Jump):
         self._toolbox = toolbox
         self._active = False
         self.jump_link = None
+
+    @property
+    def graphics_item(self):
+        return self.jump_link
 
     def item_type(self):
         return "jump"

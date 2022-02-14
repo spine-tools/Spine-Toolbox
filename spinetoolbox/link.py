@@ -384,9 +384,9 @@ class JumpOrLink(LinkBase):
         super().__init__(toolbox, src_connector, dst_connector)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self._exec_color = None
         self._icon_extent = 4 * self.magic_number
         self._icons = []
+        self._anim = self._make_execution_animation()
         self.update_geometry()
 
     @property
@@ -449,6 +449,38 @@ class JumpOrLink(LinkBase):
         self.src_connector.links.remove(self)
         self.dst_connector.links.remove(self)
 
+    def _make_execution_animation(self):
+        """Returns an animation to play when execution 'passes' through this link.
+
+        Returns:
+            QVariantAnimation
+        """
+        animation = QVariantAnimation()
+        animation.setStartValue(0.0)
+        animation.setEndValue(1.0)
+        animation.valueChanged.connect(self._handle_execution_animation_value_changed)
+        animation.finished.connect(lambda: self.setBrush(self._COLOR))
+        return animation
+
+    def run_execution_animation(self):
+        """Runs execution animation."""
+        qsettings = self._toolbox.qsettings()
+        duration = int(qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
+        self._anim.setDuration(duration)
+        self._anim.start()
+
+    @Slot(object)
+    def _handle_execution_animation_value_changed(self, step):
+        exec_color = QColor("red")
+        gradient = QLinearGradient(self.src_center, self.dst_center)
+        delta = 8 * self.magic_number / QLineF(self.src_center, self.dst_center).length()
+        gradient.setColorAt(0, self._COLOR)
+        gradient.setColorAt(max(0.0, step - delta), self._COLOR)
+        gradient.setColorAt(step, exec_color)
+        gradient.setColorAt(min(1.0, step + delta), self._COLOR)
+        gradient.setColorAt(1.0, self._COLOR)
+        self.setBrush(gradient)
+
 
 class Link(JumpOrLink):
     """A graphics item to represent the connection between two project items."""
@@ -494,36 +526,6 @@ class Link(JumpOrLink):
     @property
     def item(self):
         return self.connection
-
-    def make_execution_animation(self, excluded):
-        """Returns an animation to play when execution 'passes' through this link.
-
-        Returns:
-            QVariantAnimation
-        """
-        colorname = "lightGray" if excluded else "red"
-        self._exec_color = QColor(colorname)
-        qsettings = self._toolbox.qsettings()
-        duration = int(qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
-        animation = QVariantAnimation()
-        animation.setStartValue(0.0)
-        animation.setEndValue(1.0)
-        animation.setDuration(duration)
-        animation.valueChanged.connect(self._handle_execution_animation_value_changed)
-        animation.finished.connect(lambda: self.setBrush(self._COLOR))
-        animation.finished.connect(animation.deleteLater)
-        return animation
-
-    @Slot(object)
-    def _handle_execution_animation_value_changed(self, step):
-        gradient = QLinearGradient(self.src_center, self.dst_center)
-        delta = 8 * self.magic_number / QLineF(self.src_center, self.dst_center).length()
-        gradient.setColorAt(0, self._COLOR)
-        gradient.setColorAt(max(0.0, step - delta), self._COLOR)
-        gradient.setColorAt(step, self._exec_color)
-        gradient.setColorAt(min(1.0, step + delta), self._COLOR)
-        gradient.setColorAt(1.0, self._COLOR)
-        self.setBrush(gradient)
 
     def itemChange(self, change, value):
         """Brings selected link to top."""
@@ -591,16 +593,6 @@ class JumpLink(JumpOrLink):
         icon = _TextIcon(0, 0, self._icon_extent, self._icon_extent, self, text, color=color, tooltip=tooltip)
         self._icons.append(icon)
         self._place_icons()
-
-    def make_execution_animation(self, excluded):
-        """Returns an animation to play when execution 'passes' through this link.
-
-        Returns:
-            QVariantAnimation
-        """
-        animation = QVariantAnimation()
-        animation.finished.connect(animation.deleteLater())
-        return animation
 
 
 class LinkDrawerBase(LinkBase):

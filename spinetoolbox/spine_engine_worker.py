@@ -41,15 +41,12 @@ def _handle_node_execution_started(item, direction):
 
 
 @Slot(object, object, object, object)
-def _handle_node_execution_finished(item, direction, state, item_state):
+def _handle_node_execution_finished(item, direction, item_state):
     icon = item.get_icon()
     if direction == "FORWARD":
         icon.execution_icon.mark_execution_finished(item_state)
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_stopped.emit()
-        if state == "RUNNING":
-            excluded = item_state == ItemExecutionFinishState.EXCLUDED
-            icon.run_execution_leave_animation(excluded)
 
 
 @Slot(object, str, str)
@@ -85,6 +82,11 @@ def _handle_prompt_arrived(prompt, engine_mngr):
     engine_mngr.answer_prompt(item_name, accepted)
 
 
+@Slot(object)
+def _handle_flash_arrived(connection):
+    connection.graphics_item.run_execution_animation()
+
+
 @Slot(list)
 def _mark_all_items_failed(items):
     """Fails all project items.
@@ -104,10 +106,11 @@ class SpineEngineWorker(QObject):
     finished = Signal()
     _dag_execution_started = Signal(list)
     _node_execution_started = Signal(object, object)
-    _node_execution_finished = Signal(object, object, object, object)
+    _node_execution_finished = Signal(object, object, object)
     _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
     _prompt_arrived = Signal(dict, object)
+    _flash_arrived = Signal(object)
     _all_items_failed = Signal(list)
 
     def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, connections, logger):
@@ -127,7 +130,7 @@ class SpineEngineWorker(QObject):
         self.dag = dag
         self.dag_identifier = dag_identifier
         self._engine_final_state = "UNKNOWN"
-        self._executing_items = []
+        self._executing_items = set()
         self._project_items = project_items
         self._connections = connections
         self._logger = logger
@@ -188,6 +191,7 @@ class SpineEngineWorker(QObject):
         self._event_message_arrived.connect(_handle_event_message_arrived)
         self._process_message_arrived.connect(_handle_process_message_arrived)
         self._prompt_arrived.connect(_handle_prompt_arrived)
+        self._flash_arrived.connect(_handle_flash_arrived)
 
     def start(self, silent=False):
         """Connects log signals.
@@ -230,6 +234,7 @@ class SpineEngineWorker(QObject):
             "persistent_execution_msg": self._handle_persistent_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
             "prompt": self._handle_prompt,
+            "flash": self._handle_flash,
         }.get(event_type)
         if handler is None:
             return
@@ -237,6 +242,10 @@ class SpineEngineWorker(QObject):
 
     def _handle_prompt(self, prompt):
         self._prompt_arrived.emit(prompt, self._engine_mngr)
+
+    def _handle_flash(self, flash):
+        connection = self._connections[flash["item_name"]]
+        self._flash_arrived.emit(connection)
 
     def _handle_standard_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
@@ -326,7 +335,7 @@ class SpineEngineWorker(QObject):
     def _do_handle_node_execution_started(self, item_name, direction):
         """Starts item icon animation when executing forward."""
         item = self._project_items[item_name]
-        self._executing_items.append(item)
+        self._executing_items.add(item)
         self._node_execution_started.emit(item, direction)
 
     def _handle_node_execution_finished(self, data):
@@ -336,17 +345,14 @@ class SpineEngineWorker(QObject):
         item = self._project_items[item_name]
         if item_state == ItemExecutionFinishState.SUCCESS:
             self.successful_executions.append((item, direction, state))
-        try:
-            self._executing_items.remove(item)
-        except ValueError:
-            # A single item may seemingly finish multiple times
-            # when the execution is stopped by user during filtered execution.
-            pass
-        self._node_execution_finished.emit(item, direction, state, item_state)
+        self._executing_items.discard(item)
+        # NOTE: A single item may seemingly finish multiple times
+        # when the execution is stopped by user during filtered execution.
+        self._node_execution_finished.emit(item, direction, item_state)
 
     def clean_up(self):
         for item in self._executing_items:
-            self._node_execution_finished.emit(item, None, None, None)
+            self._node_execution_finished.emit(item, None, None)
         self._thread.quit()
         self._thread.wait()
         self._thread.deleteLater()

@@ -76,7 +76,6 @@ class ProjectItemIcon(QGraphicsPathItem):
         self._rect = QRectF(-self.ITEM_EXTENT / 2, -self.ITEM_EXTENT / 2, self.ITEM_EXTENT, self.ITEM_EXTENT)
         self.component_rect = QRectF(0, 0, self.ITEM_EXTENT / 4, self.ITEM_EXTENT / 4)
         self._selection_halo = QGraphicsPathItem(self)
-        self._link_animation_group = None
         # Make exclamation, rank, and execution icons
         self.exclamation_icon = ExclamationIcon(self)
         self.execution_icon = ExecutionIcon(self)
@@ -238,19 +237,6 @@ class ProjectItemIcon(QGraphicsPathItem):
             list of LinkBase: outgoing links
         """
         return [l for conn in self.connectors.values() for l in conn.incoming_links()]
-
-    def run_execution_leave_animation(self, excluded):
-        """
-        Starts the animation associated with execution leaving the icon.
-
-        Args:
-            excluded (bool): True if project item was not actually executed.
-        """
-        self._link_animation_group = QParallelAnimationGroup()
-        for link in self.outgoing_connection_links():
-            self._link_animation_group.addAnimation(link.make_execution_animation(excluded))
-        self._link_animation_group.finished.connect(self._link_animation_group.deleteLater)
-        self._link_animation_group.start()
 
     def hoverEnterEvent(self, event):
         """Sets a drop shadow effect to icon when mouse enters its boundaries.
