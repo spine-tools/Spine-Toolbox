@@ -112,6 +112,10 @@ class LinkBase(QGraphicsPathItem):
         self._guide_path = self._make_guide_path(curved_links)
         self._do_update_geometry()
 
+    def guide_path(self):
+        """For tests."""
+        return self._guide_path
+
     def _do_update_geometry(self):
         """Sets the path for this item."""
         ellipse_path = self._make_ellipse_path()

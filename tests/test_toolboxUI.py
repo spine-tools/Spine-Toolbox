@@ -876,7 +876,8 @@ class TestToolboxUI(unittest.TestCase):
         # Make sure the boundingRect's center point is *on* the link
         with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
             mock_qsettings_value.side_effect = "false"
-            path = link.update_geometry()
+            link.update_geometry()
+        path = link.guide_path()
         # We need to map item coordinates to scene coordinates to graphics view viewport coordinates
         # Get link center
         center = path.pointAtPercent(0.5)
