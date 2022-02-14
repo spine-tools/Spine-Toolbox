@@ -118,7 +118,7 @@ class ResourceFilterModel(QStandardItemModel):
             online (dict): mapping from scenario/tool id to online flag
         """
         self.connection.set_online(resource, filter_type, online)
-        self.connection.link.update_icon()
+        self.connection.link.update_icons()
         filter_type_item = self._find_filter_type_item(resource, filter_type)
         for row in range(filter_type_item.rowCount()):
             filter_item = filter_type_item.child(row)

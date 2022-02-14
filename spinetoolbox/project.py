@@ -760,6 +760,7 @@ class SpineToolboxProject(MetaObject):
             destination.name, destination.resources_for_direct_predecessors()
         )
         self._update_outgoing_connection_and_jump_resources(source.name, source.resources_for_direct_successors())
+        self._update_jump_icons()
         return True
 
     def find_jump(self, source_name, destination_name):
@@ -785,6 +786,7 @@ class SpineToolboxProject(MetaObject):
         """
         self.jump_about_to_be_removed.emit(jump)
         self._jumps.remove(jump)
+        self._update_jump_icons()
 
     def replace_jump(self, existing_jump, new_jump):
         """Replaces an existing jump between items.
@@ -796,6 +798,11 @@ class SpineToolboxProject(MetaObject):
         self._jumps.remove(existing_jump)
         self._jumps.append(new_jump)
         self.jump_replaced.emit(existing_jump, new_jump)
+
+    def _update_jump_icons(self):
+        """Updates icons for all jumps in the project."""
+        for jump in self._jumps:
+            jump.jump_link.update_icons()
 
     def jump_issues(self, jump):
         """Checks if jump is OK.

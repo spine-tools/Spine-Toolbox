@@ -12,7 +12,7 @@
 from spine_engine.project_item.connection import Connection, Jump
 from ..log_mixin import LogMixin
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
-from ..helpers import busy_effect, fix_lightness_color
+from ..helpers import busy_effect
 
 
 class LoggingConnection(LogMixin, Connection):
@@ -41,7 +41,7 @@ class LoggingConnection(LogMixin, Connection):
         if options == self.options:
             return
         self.options = options
-        self.link.update_icon()
+        self.link.update_icons()
         item = self._toolbox.project_item_model.get_item(self.source).project_item
         self._toolbox.project().notify_resource_changes_to_successors(item)
         if self is self._toolbox.active_link_item:

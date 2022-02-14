@@ -69,10 +69,8 @@ class LinkBase(QGraphicsPathItem):
         self.setCursor(Qt.PointingHandCursor)
         self.selected_pen = QPen(self.pen_brush, 1, Qt.DashLine)
         self.normal_pen = QPen(self.pen_brush, 0.5)
-
-    @property
-    def item(self):
-        raise NotImplementedError()
+        self._guide_path = None
+        self.setBrush(QBrush(self._COLOR))
 
     @property
     def pen_brush(self):
@@ -111,19 +109,14 @@ class LinkBase(QGraphicsPathItem):
         if curved_links is None:
             qsettings = self._toolbox.qsettings()
             curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
-        guide_path = self._make_guide_path(curved_links)
-        self.do_update_geometry(guide_path)
-        return guide_path
+        self._guide_path = self._make_guide_path(curved_links)
+        self._do_update_geometry()
 
-    def do_update_geometry(self, guide_path):
-        """Sets the path for this item.
-
-        Args:
-            guide_path (QPainterPath)
-        """
+    def _do_update_geometry(self):
+        """Sets the path for this item."""
         ellipse_path = self._make_ellipse_path()
-        connecting_path = self._make_connecting_path(guide_path)
-        arrow_path = self._make_arrow_path(guide_path)
+        connecting_path = self._make_connecting_path()
+        arrow_path = self._make_arrow_path()
         path = ellipse_path + connecting_path + arrow_path
         self.setPath(path.simplified())
 
@@ -235,7 +228,7 @@ class LinkBase(QGraphicsPathItem):
         path.quadTo(points[-2], points[-1])
         return path
 
-    def _get_joint_angle(self, guide_path):
+    def _get_joint_angle(self):
         line = QLineF(self._get_dst_offset(), QPointF(0, 0))
         return radians(line.angle())
 
@@ -255,24 +248,21 @@ class LinkBase(QGraphicsPathItem):
         angles = list(map(path.angleAtPercent, percents))
         return points, angles
 
-    def _make_connecting_path(self, guide_path):
+    def _make_connecting_path(self):
         """Returns a 'thick' path connecting source and destination, by following the given 'guide' path.
-
-        Args:
-            guide_path (QPainterPath)
 
         Returns:
             QPainterPath
         """
-        points, angles = self._points_and_angles_from_path(guide_path)
+        points, angles = self._points_and_angles_from_path(self._guide_path)
         outgoing_points = []
         incoming_points = []
         for point, angle in zip(points, angles):
             off = self._radius_from_point_and_angle(point, angle)
             outgoing_points.append(point + off)
             incoming_points.insert(0, point - off)
-        p0 = guide_path.pointAtPercent(0)
-        a0 = guide_path.angleAtPercent(0)
+        p0 = self._guide_path.pointAtPercent(0)
+        a0 = self._guide_path.angleAtPercent(0)
         off0 = self._radius_from_point_and_angle(p0, a0)
         curve_path = QPainterPath(p0 + off0)
         self._follow_points(curve_path, outgoing_points)
@@ -297,17 +287,13 @@ class LinkBase(QGraphicsPathItem):
         normal.setLength(self.magic_number / 2)
         return QPointF(normal.dx(), normal.dy())
 
-    def _make_arrow_path(self, guide_path):
+    def _make_arrow_path(self):
         """Returns an arrow path for the link's tip.
-
-        Args:
-            guide_path (QPainterPath): A narrow path connecting source and destination,
-                used to determine the arrow orientation.
 
         Returns:
             QPainterPath
         """
-        angle = self._get_joint_angle(guide_path)
+        angle = self._get_joint_angle()
         arrow_p0 = self.dst_center
         d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
         d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
@@ -330,93 +316,17 @@ class LinkBase(QGraphicsPathItem):
         """Removes any trace of this item from the system."""
 
 
-class _LinkIcon(QGraphicsEllipseItem):
-    """An icon to show over a Link."""
+class _IconBase(QGraphicsEllipseItem):
+    """Base class for icons to show over a Link."""
 
-    def __init__(self, x, y, w, h, parent):
+    def __init__(self, x, y, w, h, parent, tooltip=None):
         super().__init__(x, y, w, h, parent)
-        self._parent = parent
-        color = QColor("slateblue")
-        self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
-        self._text_item = QGraphicsTextItem(self)
-        font = QFont('Font Awesome 5 Free Solid')
-        self._text_item.setFont(font)
-        self._text_item.setDefaultTextColor(color)
-        self._svg_item = QGraphicsSvgItem(self)
-        self._datapkg_renderer = QSvgRenderer()
-        self._datapkg_renderer.load(":/icons/datapkg.svg")
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-
-    def update_icon(self):
-        """Sets the icon (filter, datapkg, or none), depending on Connection state."""
-        connection = self._parent.connection
-        if connection.use_datapackage:
-            self.setVisible(True)
-            self._svg_item.setVisible(True)
-            self._svg_item.setSharedRenderer(self._datapkg_renderer)
-            scale = 0.8 * self.rect().width() / self._datapkg_renderer.defaultSize().width()
-            self._svg_item.setScale(scale)
-            self._svg_item.setPos(0, 0)
-            self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
-            self._text_item.setVisible(False)
-            return
-        if connection.has_filters():
-            self.setVisible(True)
-            self._text_item.setVisible(True)
-            self._text_item.setPlainText("\uf0b0")
-            self._text_item.setPos(0, 0)
-            self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
-            self._svg_item.setVisible(False)
-            return
-        self.setVisible(False)
-        self._text_item.setVisible(False)
-        self._svg_item.setVisible(False)
-
-    def wipe_out(self):
-        """Cleans up icon's resources."""
-        self._text_item.deleteLater()
-        self._svg_item.deleteLater()
-        self._datapkg_renderer.deleteLater()
-
-
-class _JumpIcon(QGraphicsEllipseItem):
-    """An icon to show over a JumpLink."""
-
-    _NORMAL_COLOR = QColor("black")
-    _ISSUE_COLOR = QColor("red")
-
-    def __init__(self, x, y, w, h, jump_link):
-        super().__init__(x, y, w, h, jump_link)
-        self._jump_link = jump_link
-        self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
-        self._text_item = QGraphicsTextItem(self)
-        font = QFont('Font Awesome 5 Free Solid')
-        self._text_item.setFont(font)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        if tooltip:
+            self.setToolTip(tooltip)
         self.setAcceptHoverEvents(True)
-
-    def update_icon(self):
-        """Sets the icon depending on Jump state."""
-        issues = self._jump_link.issues()
-        if issues:
-            self._text_item.setDefaultTextColor(self._ISSUE_COLOR)
-            self._text_item.setPlainText("\uf06a")
-            self._text_item.setPos(
-                self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center() + QPointF(0.0, 0.5)
-            )
-            self.setToolTip(issues[0])
-        else:
-            self._text_item.setDefaultTextColor(self._NORMAL_COLOR)
-            self._text_item.setPlainText("\uf1ce")
-            self._text_item.setPos(
-                self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center() + QPointF(0.0, 0.5)
-            )
-            self.setToolTip("")
-
-    def wipe_out(self):
-        """Cleans up icon's resources."""
-        self._text_item.deleteLater()
-        self._renderer.deleteLater()
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
 
     def hoverEnterEvent(self, event):
         QToolTip.showText(event.screenPos(), self.toolTip())
@@ -425,10 +335,128 @@ class _JumpIcon(QGraphicsEllipseItem):
         QToolTip.hideText()
 
 
-class Link(LinkBase):
+class _SvgIcon(_IconBase):
+    """A svg icon to show over a Link."""
+
+    def __init__(self, x, y, w, h, parent, path, tooltip=None):
+        super().__init__(x, y, w, h, parent, tooltip=tooltip)
+        self._svg_item = QGraphicsSvgItem(self)
+        self._renderer = QSvgRenderer()
+        self._renderer.load(path)
+        self._svg_item.setSharedRenderer(self._renderer)
+        scale = 0.8 * self.rect().width() / self._renderer.defaultSize().width()
+        self._svg_item.setScale(scale)
+        self._svg_item.setPos(0, 0)
+        self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
+
+    def wipe_out(self):
+        """Cleans up icon's resources."""
+        self._svg_item.deleteLater()
+        self._renderer.deleteLater()
+        self.scene().removeItem(self)
+
+
+class _TextIcon(_IconBase):
+    """A font awesome icon to show over a Link."""
+
+    def __init__(self, x, y, w, h, parent, char, tooltip=None, color=None):
+        super().__init__(x, y, w, h, parent, tooltip=tooltip)
+        if color is None:
+            color = QColor("slateblue")
+        self._text_item = QGraphicsTextItem(self)
+        font = QFont('Font Awesome 5 Free Solid')
+        self._text_item.setFont(font)
+        self._text_item.setDefaultTextColor(color)
+        self._text_item.setPlainText(char)
+        self._text_item.setPos(0, 0)
+        self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
+
+    def wipe_out(self):
+        """Cleans up icon's resources."""
+        self._text_item.deleteLater()
+        self.scene().removeItem(self)
+
+
+class JumpOrLink(LinkBase):
+    """Base class for Jump and Link."""
+
+    def __init__(self, toolbox, src_connector, dst_connector):
+        super().__init__(toolbox, src_connector, dst_connector)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self._exec_color = None
+        self._icon_extent = 4 * self.magic_number
+        self._icons = []
+        self.update_geometry()
+
+    @property
+    def item(self):
+        raise NotImplementedError()
+
+    def _do_update_geometry(self):
+        """See base class."""
+        super()._do_update_geometry()
+        self._place_icons()
+
+    def _place_icons(self):
+        delta = 0.6 / (len(self._icons) + 1)
+        percent = 0.2 + delta
+        for icon in self._icons:
+            center = self._guide_path.pointAtPercent(percent)
+            icon.setPos(center - 0.5 * QPointF(self._icon_extent, self._icon_extent))
+            percent += delta
+
+    def mousePressEvent(self, e):
+        """Ignores event if there's a connector button underneath,
+        to allow creation of new links.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        if any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
+            e.ignore()
+
+    def contextMenuEvent(self, e):
+        """Selects the link and shows context menu.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        self.setSelected(True)
+        self._toolbox.show_link_context_menu(e.screenPos(), self)
+
+    def paint(self, painter, option, widget=None):
+        """Sets a dashed pen if selected."""
+        if option.state & QStyle.State_Selected:
+            option.state &= ~QStyle.State_Selected
+            self.setPen(self.selected_pen)
+            for icon in self._icons:
+                icon.setPen(self.selected_pen)
+        else:
+            self.setPen(self.normal_pen)
+            for icon in self._icons:
+                icon.setPen(self.normal_pen)
+        super().paint(painter, option, widget)
+
+    def shape(self):
+        shape = super().shape()
+        for icon in self._icons:
+            shape.addEllipse(icon.sceneBoundingRect())
+        return shape
+
+    def wipe_out(self):
+        """Removes any trace of this item from the system."""
+        self.src_connector.links.remove(self)
+        self.dst_connector.links.remove(self)
+
+
+class Link(JumpOrLink):
     """A graphics item to represent the connection between two project items."""
 
     _COLOR = LINK_COLOR
+    _MEMORY = "\uf538"
+    _FILTERS = "\uf0b0"
+    _DATAPACKAGE = ":/icons/datapkg.svg"
 
     def __init__(self, toolbox, src_connector, dst_connector, connection):
         """
@@ -440,20 +468,20 @@ class Link(LinkBase):
         """
         super().__init__(toolbox, src_connector, dst_connector)
         self._connection = connection
-        self._icon_extent = 4 * self.magic_number
-        self._icon = _LinkIcon(0, 0, self._icon_extent, self._icon_extent, self)
-        self._icon.setPen(self.normal_pen)
-        self.update_icon()
-        self.setBrush(QBrush(self._COLOR))
         self.parallel_link = None
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
-        self.update_geometry()
-        self._exec_color = None
+        self.update_icons()
 
-    def update_icon(self):
-        self._icon.update_icon()
+    def update_icons(self):
+        while self._icons:
+            self._icons.pop(0).wipe_out()
+        if self._connection.use_datapackage:
+            self._icons.append(_SvgIcon(0, 0, self._icon_extent, self._icon_extent, self, self._DATAPACKAGE))
+        if self._connection.has_filters():
+            self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._FILTERS))
+        if self._connection.use_memory_db:
+            self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._MEMORY))
+        self._place_icons()
 
     @property
     def name(self):
@@ -466,12 +494,6 @@ class Link(LinkBase):
     @property
     def item(self):
         return self.connection
-
-    def do_update_geometry(self, guide_path):
-        """See base class."""
-        super().do_update_geometry(guide_path)
-        center = guide_path.pointAtPercent(0.5)
-        self._icon.setPos(center - 0.5 * QPointF(self._icon_extent, self._icon_extent))
 
     def make_execution_animation(self, excluded):
         """Returns an animation to play when execution 'passes' through this link.
@@ -503,42 +525,6 @@ class Link(LinkBase):
         gradient.setColorAt(1.0, self._COLOR)
         self.setBrush(gradient)
 
-    def mousePressEvent(self, e):
-        """Ignores event if there's a connector button underneath,
-        to allow creation of new links.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        if any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
-            e.ignore()
-
-    def contextMenuEvent(self, e):
-        """Selects the link and shows context menu.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        self.setSelected(True)
-        self._toolbox.show_link_context_menu(e.screenPos(), self)
-
-    def paint(self, painter, option, widget=None):
-        """Sets a dashed pen if selected."""
-        if option.state & QStyle.State_Selected:
-            option.state &= ~QStyle.State_Selected
-            self.setPen(self.selected_pen)
-            self._icon.setPen(self.selected_pen)
-        else:
-            self.setPen(self.normal_pen)
-            self._icon.setPen(self.normal_pen)
-        super().paint(painter, option, widget)
-
-    def shape(self):
-        shape = super().shape()
-        if self._icon.isVisible():
-            shape.addEllipse(self._icon.sceneBoundingRect())
-        return shape
-
     def itemChange(self, change, value):
         """Brings selected link to top."""
         if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
@@ -548,17 +534,14 @@ class Link(LinkBase):
                 item.stackBefore(self)
         return super().itemChange(change, value)
 
-    def wipe_out(self):
-        """Removes any trace of this item from the system."""
-        self._icon.wipe_out()
-        self.src_connector.links.remove(self)
-        self.dst_connector.links.remove(self)
 
-
-class JumpLink(LinkBase):
+class JumpLink(JumpOrLink):
     """A graphics icon to represent a jump connection between items."""
 
     _COLOR = JUMP_COLOR
+    _ISSUE_TEXT = "\uf071"
+    _NORMAL_TEXT = "\uf2f9"
+    _ISSUE_COLOR = QColor("red")
 
     def __init__(self, toolbox, src_connector, dst_connector, jump):
         """
@@ -570,17 +553,8 @@ class JumpLink(LinkBase):
         """
         super().__init__(toolbox, src_connector, dst_connector)
         self._jump = jump
-        self._icon_extent = 2.5 * self.magic_number
-        self._icon = _JumpIcon(0, 0, self._icon_extent, self._icon_extent, self)
-        self._icon.setPen(self.normal_pen)
-        self._icon.update_icon()
-        brush = QBrush(self._COLOR)
-        self.setBrush(brush)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setZValue(0.6)
-        self.update_geometry()
-        self._exec_color = None
+        self.update_icons()
 
     @property
     def jump(self):
@@ -602,44 +576,21 @@ class JumpLink(LinkBase):
         """
         return self._toolbox.project().jump_issues(self.jump)
 
-    def wipe_out(self):
-        """Removes any trace of this item from the system."""
-        self.src_connector.links.remove(self)
-        self.dst_connector.links.remove(self)
-
-    def do_update_geometry(self, guide_path):
-        """See base class."""
-        super().do_update_geometry(guide_path)
-        center = guide_path.pointAtPercent(0.5)
-        self._icon.setPos(center - 0.5 * QPointF(self._icon_extent, self._icon_extent))
-
-    def contextMenuEvent(self, e):
-        """Selects the link and shows context menu.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        self.setSelected(True)
-        self._toolbox.show_link_context_menu(e.screenPos(), self)
-
-    def mousePressEvent(self, e):
-        """Ignores event if there's a connector button underneath,
-        to allow creation of new links.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        if any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
-            e.ignore()
-
-    def paint(self, painter, option, widget=None):
-        """Sets a dashed pen if selected."""
-        if option.state & QStyle.State_Selected:
-            option.state &= ~QStyle.State_Selected
-            self.setPen(self.selected_pen)
+    def update_icons(self):
+        while self._icons:
+            self._icons.pop(0).wipe_out()
+        issues = self.issues()
+        if issues:
+            text = self._ISSUE_TEXT
+            color = self._ISSUE_COLOR
+            tooltip = issues[0]
         else:
-            self.setPen(self.normal_pen)
-        super().paint(painter, option, widget)
+            text = self._NORMAL_TEXT
+            color = None
+            tooltip = ""
+        icon = _TextIcon(0, 0, self._icon_extent, self._icon_extent, self, text, color=color, tooltip=tooltip)
+        self._icons.append(icon)
+        self._place_icons()
 
     def make_execution_animation(self, excluded):
         """Returns an animation to play when execution 'passes' through this link.
@@ -690,8 +641,8 @@ class LinkDrawerBase(LinkBase):
             return QPointF(0, 0)
         return super()._get_dst_offset()
 
-    def _get_joint_angle(self, guide_path):
-        return radians(guide_path.angleAtPercent(0.99))
+    def _get_joint_angle(self):
+        return radians(self._guide_path.angleAtPercent(0.99))
 
     def add_link(self):
         """Makes link between source and destination connectors."""

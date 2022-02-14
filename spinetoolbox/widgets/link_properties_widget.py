@@ -50,7 +50,11 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self.ui.treeView_filters.expandAll()
         self._toolbox.label_item_name.setText(f"<b>Link {self._connection.link.name}</b>")
         self.load_connection_options()
-        # TODO: update UI depending on source and destination items, because not all options apply to all links
+        source_item_type = self._toolbox.project().get_item(self._connection.source).item_type()
+        destination_item_type = self._toolbox.project().get_item(self._connection.destination).item_type()
+        self.ui.treeView_filters.setEnabled(bool(self._connection.database_resources))
+        self.ui.checkBox_use_memory_db.setEnabled({"Tool", "Data Store"} == {source_item_type, destination_item_type})
+        self.ui.checkBox_use_datapackage.setEnabled(source_item_type in {"Exporter", "Data Connection"})
 
     def unset_link(self):
         """Releases the widget from any links."""
