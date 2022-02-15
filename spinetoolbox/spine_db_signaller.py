@@ -85,6 +85,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.tools_added.connect(self.receive_tools_added)
         self.db_mngr.tool_features_added.connect(self.receive_tool_features_added)
         self.db_mngr.tool_feature_methods_added.connect(self.receive_tool_feature_methods_added)
+        self.db_mngr.metadata_added.connect(self.receive_metadata_added)
         # Updated
         self.db_mngr.scenarios_updated.connect(self.receive_scenarios_updated)
         self.db_mngr.alternatives_updated.connect(self.receive_alternatives_updated)
@@ -100,6 +101,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.tools_updated.connect(self.receive_tools_updated)
         self.db_mngr.tool_features_updated.connect(self.receive_tool_features_updated)
         self.db_mngr.tool_feature_methods_updated.connect(self.receive_tool_feature_methods_updated)
+        self.db_mngr.metadata_updated.connect(self.receive_metadata_updated)
         # Removed
         self.db_mngr.scenarios_removed.connect(self.receive_scenarios_removed)
         self.db_mngr.alternatives_removed.connect(self.receive_alternatives_removed)
@@ -116,6 +118,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.tools_removed.connect(self.receive_tools_removed)
         self.db_mngr.tool_features_removed.connect(self.receive_tool_features_removed)
         self.db_mngr.tool_feature_methods_removed.connect(self.receive_tool_feature_methods_removed)
+        self.db_mngr.metadata_removed.connect(self.receive_metadata_removed)
         # Commit, rollback, refresh
         self.db_mngr.session_refreshed.connect(self.receive_session_refreshed)
         self.db_mngr.session_committed.connect(self.receive_session_committed)
@@ -183,6 +186,10 @@ class SpineDBSignaller(QObject):
         self._call_in_listeners("receive_tool_feature_methods_added", db_map_data)
 
     @Slot(object)
+    def receive_metadata_added(self, db_map_data):
+        self._call_in_listeners("receive_metadata_added", db_map_data)
+
+    @Slot(object)
     def receive_scenarios_updated(self, db_map_data):
         self._call_in_listeners("receive_scenarios_updated", db_map_data)
 
@@ -237,6 +244,10 @@ class SpineDBSignaller(QObject):
     @Slot(object)
     def receive_tool_feature_methods_updated(self, db_map_data):
         self._call_in_listeners("receive_tool_feature_methods_updated", db_map_data)
+
+    @Slot(object)
+    def receive_metadata_updated(self, db_map_data):
+        self._call_in_listeners("receive_metadata_updated", db_map_data)
 
     @Slot(object)
     def receive_scenarios_removed(self, db_map_data):
@@ -297,6 +308,10 @@ class SpineDBSignaller(QObject):
     @Slot(object)
     def receive_tool_feature_methods_removed(self, db_map_data):
         self._call_in_listeners("receive_tool_feature_methods_removed", db_map_data)
+
+    @Slot(object)
+    def receive_metadata_removed(self, db_map_data):
+        self._call_in_listeners("receive_metadata_removed", db_map_data)
 
     @Slot(object)
     def receive_error_msg(self, db_map_error_log):

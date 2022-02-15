@@ -30,7 +30,8 @@ class CompoundTableModel(MinimalTableModel):
         """Initializes model.
 
         Args:
-            parent (QObject): the parent object
+            parent (QObject, optional): the parent object
+            header (list of str, optional): header labels
         """
         super().__init__(parent=parent, header=header)
         self.sub_models = []
@@ -259,12 +260,17 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         return self.sub_models[-1]
 
     def _create_empty_model(self):
-        """Returns an empty model."""
+        """Creates and returns an empty model.
+
+        Returns:
+            EmptyRowModel: model
+        """
         raise NotImplementedError()
 
     def init_model(self):
-        """Initializes the compound model. Basically populates the sub_models list attribute
-        with the result of _create_single_models and _create_empty_model.
+        """Initializes the compound model.
+
+        Basically populates the sub_models list attribute with the result of _create_empty_model.
         """
         self.clear_model()
         self.sub_models.append(self._create_empty_model())
@@ -272,7 +278,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
     def _connect_single_model(self, model):
-        """Connects signals so changes in the submodels are acknowledge by the compound."""
+        """Connects signals so changes in the submodels are acknowledged by the compound."""
         model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
         model.modelAboutToBeReset.connect(lambda model=model: self._handle_single_model_about_to_be_reset(model))
         model.dataChanged.connect(

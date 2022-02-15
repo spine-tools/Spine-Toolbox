@@ -24,7 +24,9 @@ class MinimalTableModel(QAbstractTableModel):
         """Table model for outlining simple tabular data.
 
         Args:
-            parent (QObject): the parent object
+            parent (QObject, optional): the parent object
+            header (list of str): header labels
+            lazy (boolean): if True, fetches data lazily
         """
         super().__init__(parent)
         if header is None:
@@ -151,7 +153,15 @@ class MinimalTableModel(QAbstractTableModel):
         return self.batch_set_data([index], [value])
 
     def batch_set_data(self, indexes, data):
-        """Batch set data for indexes."""
+        """Batch set data for indexes.
+
+        Args:
+            indexes (Iterable of QModelIndex): model indexes
+            data (Iterable): data at each index
+
+        Returns:
+            boolean: True if data was set successfully, False otherwise
+        """
         if not indexes or not data:
             return False
         rows = []

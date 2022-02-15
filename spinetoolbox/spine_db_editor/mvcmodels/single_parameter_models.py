@@ -30,6 +30,7 @@ from ..mvcmodels.parameter_mixins import (
     ImposeEntityClassIdMixin,
 )
 from ...mvcmodels.shared import PARSED_ROLE
+from .colors import FIXED_FIELD_COLOR
 
 
 class HalfSortedTableModel(MinimalTableModel):
@@ -205,7 +206,7 @@ class SingleParameterModel(HalfSortedTableModel):
         field = self.header[index.column()]
         # Background role
         if role == Qt.BackgroundRole and field in self.fixed_fields:
-            return QGuiApplication.palette().button()
+            return FIXED_FIELD_COLOR
         # Display, edit, tool tip, alignment role of 'json fields'
         if field == self.value_field and role in (
             Qt.DisplayRole,
@@ -424,7 +425,7 @@ class SingleParameterValueMixin(
         """Update items in db.
 
         Args:
-            item (list): dictionary-items
+            items (list): dictionary-items
         """
         param_vals = list()
         error_log = list()

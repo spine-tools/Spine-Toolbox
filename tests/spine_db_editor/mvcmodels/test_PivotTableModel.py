@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for the plotting module.
+Unit tests for :class:`ParameterValuePivotTableModel` module.
 
 :author: A. Soininen(VTT)
 :date:   10.7.2019

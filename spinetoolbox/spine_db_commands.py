@@ -77,6 +77,7 @@ class SpineDBCommand(AgedUndoCommand):
         "tool": "add tool",
         "tool_feature": "add tool features",
         "tool_feature_method": "add tool feature methods",
+        "metadata": "add metadata",
     }
     _update_command_name = {
         "object_class": "update object classes",
@@ -93,6 +94,7 @@ class SpineDBCommand(AgedUndoCommand):
         "tool": "update tools",
         "tool_feature": "update tool features",
         "tool_feature_method": "update tool feature methods",
+        "metadata": "update metadata",
     }
     _add_method_name = {
         "object_class": "add_object_classes",
@@ -111,6 +113,7 @@ class SpineDBCommand(AgedUndoCommand):
         "tool": "add_tools",
         "tool_feature": "add_tool_features",
         "tool_feature_method": "add_tool_feature_methods",
+        "metadata": "add_metadata",
     }
     _update_method_name = {
         "object_class": "update_object_classes",
@@ -128,6 +131,7 @@ class SpineDBCommand(AgedUndoCommand):
         "tool": "update_tools",
         "tool_feature": "update_tool_features",
         "tool_feature_method": "update_tool_feature_methods",
+        "metadata": "update_metadata",
     }
     _added_signal_name = {
         "object_class": "object_classes_added",
@@ -146,6 +150,7 @@ class SpineDBCommand(AgedUndoCommand):
         "tool": "tools_added",
         "tool_feature": "tool_features_added",
         "tool_feature_method": "tool_feature_methods_added",
+        "metadata": "metadata_added",
     }
     _updated_signal_name = {
         "object_class": "object_classes_updated",
@@ -163,6 +168,7 @@ class SpineDBCommand(AgedUndoCommand):
         "tool": "tools_updated",
         "tool_feature": "tool_features_updated",
         "tool_feature_method": "tool_feature_methods_updated",
+        "metadata": "metadata_updated",
     }
 
     def __init__(self, db_mngr, db_map, parent=None):

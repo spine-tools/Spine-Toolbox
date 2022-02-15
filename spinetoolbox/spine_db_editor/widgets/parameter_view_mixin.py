@@ -188,7 +188,7 @@ class ParameterViewMixin:
         active_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in active_obj_inds}
         self._filter_class_ids = self._db_map_ids(active_obj_cls_inds | active_rel_cls_inds)
         self._filter_entity_ids = self._db_map_class_ids(active_obj_inds | active_rel_inds)
-        # Cascade (note that we carefuly select where to cascade from, to avoid 'circularity')
+        # Cascade (note that we carefully select where to cascade from, to avoid 'circularity')
         obj_cls_ids = self._db_map_ids(obj_cls_inds | {ind.parent() for ind in obj_inds})
         obj_ids = self._db_map_ids(obj_inds | {ind.parent() for ind in rel_cls_inds})
         cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(obj_cls_ids, only_visible=False)

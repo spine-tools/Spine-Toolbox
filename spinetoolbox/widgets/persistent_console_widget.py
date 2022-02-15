@@ -261,7 +261,7 @@ class PersistentConsoleWidget(QTextEdit):
             self.autocomplete(text, partial_text)
         elif ev.key() not in (Qt.Key_Backspace, Qt.Key_Left) or self.textCursor().position() > self._input_start_pos:
             super().keyPressEvent(ev)
-        self._highlight_current_text()
+        self._highlight()
 
     def issue_command(self, text):
         """Issues command.

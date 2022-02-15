@@ -39,12 +39,14 @@ from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xls
 from spinedb_api.helpers import vacuum
 from .custom_menus import MainMenu
 from .commit_viewer import CommitViewer
+from .item_metadata_editor import ItemMetadataEditor
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .url_toolbar import UrlToolBar
+from .metadata_editor import MetadataEditor
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
@@ -774,6 +776,9 @@ class SpineDBEditorBase(QMainWindow):
     def receive_tool_feature_methods_added(self, db_map_data):
         self._receive_items_changed("added", "tool_feature_method", db_map_data)
 
+    def receive_metadata_added(self, db_map_data):
+        self._receive_items_changed("added", "metadata", db_map_data)
+
     def receive_scenarios_updated(self, db_map_data):
         self._receive_items_changed("updated", "scenario", db_map_data)
 
@@ -815,6 +820,9 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_tool_feature_methods_updated(self, db_map_data):
         self._receive_items_changed("updated", "tool_feature_method", db_map_data)
+
+    def receive_metadata_updated(self, db_map_data):
+        self._receive_items_changed("updated", "metadata", db_map_data)
 
     def receive_scenarios_removed(self, db_map_data):
         self._receive_items_changed("removed", "scenarios", db_map_data)
@@ -860,6 +868,9 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_tool_feature_methods_removed(self, db_map_data):
         self._receive_items_changed("removed", "tool_feature_method", db_map_data)
+
+    def receive_metadata_removed(self, db_map_data):
+        self._receive_items_changed("removed", "metadata", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -1022,6 +1033,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         """
         super().__init__(db_mngr)
         self._original_size = None
+        self._metadata_editor = MetadataEditor(self.ui.metadata_table_view, self, db_mngr)
+        self._item_metadata_editor = ItemMetadataEditor(self.ui.item_metadata_table_view, db_mngr)
         self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
         self._timer_refresh_tab_order = QTimer(self)  # Used to limit refresh
         self._timer_refresh_tab_order.setSingleShot(True)
@@ -1041,11 +1054,17 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
 
     def connect_signals(self):
         super().connect_signals()
+        self._metadata_editor.connect_signals(self.ui)
+        self._item_metadata_editor.connect_signals(self.ui)
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
         self.pivot_action_group.triggered.connect(self.apply_pivot_style)
         for dock in self._dock_views:
             dock.visibilityChanged.connect(self._restart_timer_refresh_tab_order)
+
+    def init_models(self):
+        super().init_models()
+        self._metadata_editor.init_models(self.db_maps)
 
     @Slot(bool)
     def _restart_timer_refresh_tab_order(self, _visible=False):
@@ -1124,6 +1143,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(
             self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
         )
+        self.splitDockWidget(self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Vertical)
+        self.splitDockWidget(self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget, Qt.Vertical)
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -1147,6 +1168,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_tool_feature_tree,
             self.ui.dockWidget_parameter_value_list,
             self.ui.dockWidget_alternative_scenario_tree,
+            self.ui.metadata_dock_widget,
+            self.ui.item_metadata_dock_widget,
         ]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.4 * height], Qt.Vertical)
@@ -1213,6 +1236,22 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resizeDocks(docks, [0.5 * height, 0.5 * height], Qt.Vertical)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
+
+    def receive_metadata_added(self, db_map_data):
+        super().receive_metadata_added(db_map_data)
+        self._metadata_editor.add_metadata(db_map_data)
+
+    def receive_metadata_updated(self, db_map_data):
+        super().receive_metadata_updated(db_map_data)
+        self._metadata_editor.update_metadata(db_map_data)
+
+    def receive_metadata_removed(self, db_map_data):
+        super().receive_metadata_removed(db_map_data)
+        self._metadata_editor.remove_metadata(db_map_data)
+
+    def receive_session_rolled_back(self, db_maps):
+        super().receive_session_rolled_back(db_maps)
+        self._metadata_editor.roll_back(db_maps)
 
     @staticmethod
     def _get_base_dir():

@@ -85,6 +85,8 @@ class SpineDBManager(QObject):
     tools_added = Signal(object)
     tool_features_added = Signal(object)
     tool_feature_methods_added = Signal(object)
+    metadata_added = Signal(object)
+    entity_metadata_added = Signal(object)
     # Removed
     scenarios_removed = Signal(object)
     alternatives_removed = Signal(object)
@@ -101,6 +103,7 @@ class SpineDBManager(QObject):
     tools_removed = Signal(object)
     tool_features_removed = Signal(object)
     tool_feature_methods_removed = Signal(object)
+    metadata_removed = Signal(object)
     items_removed = Signal(object)
     # Updated
     scenarios_updated = Signal(object)
@@ -117,6 +120,7 @@ class SpineDBManager(QObject):
     tools_updated = Signal(object)
     tool_features_updated = Signal(object)
     tool_feature_methods_updated = Signal(object)
+    metadata_updated = Signal(object)
     # Uncached
     items_removed_from_cache = Signal(object)
     # Internal
@@ -164,6 +168,7 @@ class SpineDBManager(QObject):
             "tool": self.tools_added,
             "tool_feature": self.tool_features_added,
             "tool_feature_method": self.tool_feature_methods_added,
+            "metadata": self.metadata_added,
         }
         self.updated_signals = {
             "object_class": self.object_classes_updated,
@@ -181,6 +186,7 @@ class SpineDBManager(QObject):
             "tool": self.tools_updated,
             "tool_feature": self.tool_features_updated,
             "tool_feature_method": self.tool_feature_methods_updated,
+            "metadata": self.metadata_updated,
         }
         self.removed_signals = {
             "parameter_value": self.parameter_values_removed,
@@ -199,6 +205,7 @@ class SpineDBManager(QObject):
             "list_value": self.list_values_removed,
             "relationship_class": self.relationship_classes_removed,
             "object_class": self.object_classes_removed,
+            "metadata": self.metadata_removed,
         }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
         self.connect_signals()
 
@@ -1021,6 +1028,15 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object"))
 
+    def add_object_metadata(self, db_map_data):
+        """Adds object metadata to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object_metadata"))
+
     def add_relationship_classes(self, db_map_data):
         """Adds relationship classes to db.
 
@@ -1128,6 +1144,15 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool_feature_method"))
+
+    def add_metadata(self, db_map_data):
+        """Adds metadata to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "metadata"))
 
     def update_alternatives(self, db_map_data):
         """Updates alternatives in db.
@@ -1278,6 +1303,15 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool_feature_method"))
+
+    def update_metadata(self, db_map_data):
+        """Updates metadata in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "metadata"))
 
     def set_scenario_alternatives(self, db_map_data):
         """Sets scenario alternatives in db.

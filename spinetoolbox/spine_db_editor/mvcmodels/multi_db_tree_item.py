@@ -31,8 +31,8 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         """Init class.
 
         Args:
-            db_mngr (SpineDBManager): a database manager
-            db_map_ids (dict): maps instances of DiffDatabaseMapping to the id of the item in that db
+            model (MinimalTreeModel, optional): item's model
+            db_map_ids (dict, optional): maps instances of DiffDatabaseMapping to the id of the item in that db
         """
         super().__init__(model)
         if db_map_ids is None:
