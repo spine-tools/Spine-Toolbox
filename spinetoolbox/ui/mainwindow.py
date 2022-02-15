@@ -234,6 +234,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_7 = QVBoxLayout()
+        self.verticalLayout_7.setSpacing(0)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.textBrowser_eventlog = CustomQTextBrowser(self.dockWidgetContents)
         self.textBrowser_eventlog.setObjectName(u"textBrowser_eventlog")
@@ -246,7 +247,11 @@ class Ui_MainWindow(object):
 
         self.toolButton_executions = QToolButton(self.dockWidgetContents)
         self.toolButton_executions.setObjectName(u"toolButton_executions")
+        icon19 = QIcon()
+        icon19.addFile(u":/icons/check-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_executions.setIcon(icon19)
         self.toolButton_executions.setPopupMode(QToolButton.InstantPopup)
+        self.toolButton_executions.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
         self.verticalLayout_7.addWidget(self.toolButton_executions)
 

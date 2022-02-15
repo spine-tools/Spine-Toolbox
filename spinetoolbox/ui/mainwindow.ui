@@ -175,6 +175,9 @@
      </property>
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_7">
+       <property name="spacing">
+        <number>0</number>
+       </property>
        <item>
         <widget class="CustomQTextBrowser" name="textBrowser_eventlog">
          <property name="sizePolicy">
@@ -196,8 +199,15 @@
          <property name="text">
           <string>...</string>
          </property>
+         <property name="icon">
+          <iconset resource="resources/resources_icons.qrc">
+           <normaloff>:/icons/check-circle.svg</normaloff>:/icons/check-circle.svg</iconset>
+         </property>
          <property name="popupMode">
           <enum>QToolButton::InstantPopup</enum>
+         </property>
+         <property name="toolButtonStyle">
+          <enum>Qt::ToolButtonTextBesideIcon</enum>
          </property>
         </widget>
        </item>
