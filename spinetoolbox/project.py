@@ -27,7 +27,7 @@ import networkx as nx
 from spine_engine.exception import EngineInitFailed
 from spine_engine.utils.helpers import create_timestamp
 from .project_item.logging_connection import LoggingConnection, LoggingJump
-from spine_engine.spine_engine import ExecutionDirection, validate_jumps
+from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
 from spine_engine.utils.helpers import shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from .metaobject import MetaObject
@@ -655,6 +655,7 @@ class SpineToolboxProject(MetaObject):
         self._connections.append(connection)
         dag = self.dag_with_node(connection.source)
         self.connection_established.emit(connection)
+        self._update_jump_icons()
         if not self._is_dag_valid(dag):
             return True  # Connection was added successfully even though DAG is not valid.
         destination = self._project_items[connection.destination]
@@ -665,41 +666,6 @@ class SpineToolboxProject(MetaObject):
             destination.notify_destination(source)
         self._update_ranks(dag)
         return True
-
-    def _dag_iterator(self):
-        """Iterates directed graphs in the project.
-
-        Yields:
-            nx.DiGraph
-        """
-        graph = nx.DiGraph()
-        graph.add_nodes_from(self._project_items)
-        graph.add_edges_from(((x.source, x.destination) for x in self._connections))
-        for nodes in nx.weakly_connected_components(graph):
-            yield graph.subgraph(nodes)
-
-    def dags(self):
-        """Used in tests. Returns a list of dags in the project.
-
-        Returns:
-            list
-        """
-        return list(self._dag_iterator())
-
-    def node_is_isolated(self, node):
-        """Used in tests. Checks if the project item with the given name has any connections.
-
-        Args:
-            node (str): Project item name
-
-        Returns:
-            bool
-        """
-        g = self.dag_with_node(node)
-        return nx.is_isolate(g, node)
-
-    def dag_with_node(self, node):
-        return next((x for x in self._dag_iterator() if x.has_node(node)), None)
 
     def remove_connection(self, connection):
         """Removes a connection from the project.
@@ -720,6 +686,7 @@ class SpineToolboxProject(MetaObject):
             self._update_item_resources(source, ExecutionDirection.BACKWARD)
         for dag in valid_dags:
             self._update_ranks(dag)
+        self._update_jump_icons()
 
     def replace_connection(self, existing_connection, new_connection):
         """Replaces an existing connection between items.
@@ -818,10 +785,45 @@ class SpineToolboxProject(MetaObject):
         if not dag.has_node(jump.destination):
             issues.append("Loop cannot span over separate DAGs.")
         try:
-            validate_jumps(self._jumps, dag)
+            validate_single_jump(jump, self._jumps, dag)
         except EngineInitFailed as issue:
             issues.append(str(issue))
         return issues
+
+    def _dag_iterator(self):
+        """Iterates directed graphs in the project.
+
+        Yields:
+            nx.DiGraph
+        """
+        graph = nx.DiGraph()
+        graph.add_nodes_from(self._project_items)
+        graph.add_edges_from(((x.source, x.destination) for x in self._connections))
+        for nodes in nx.weakly_connected_components(graph):
+            yield graph.subgraph(nodes)
+
+    def dags(self):
+        """Used in tests. Returns a list of dags in the project.
+
+        Returns:
+            list
+        """
+        return list(self._dag_iterator())
+
+    def node_is_isolated(self, node):
+        """Used in tests. Checks if the project item with the given name has any connections.
+
+        Args:
+            node (str): Project item name
+
+        Returns:
+            bool
+        """
+        g = self.dag_with_node(node)
+        return nx.is_isolate(g, node)
+
+    def dag_with_node(self, node):
+        return next((x for x in self._dag_iterator() if x.has_node(node)), None)
 
     def restore_project_items(self, items_dict, item_factories, silent):
         """Restores project items from dictionary.
