@@ -187,7 +187,7 @@ class LinkBase(QGraphicsPathItem):
         Returns:
             QPainterPath
         """
-        c_factor = min(3 * self.magic_number, (self.src_center - self.dst_center).manhattanLength() / 4)
+        c_factor = min(4.5 * self.magic_number, (self.src_center - self.dst_center).manhattanLength() / 4)
         src = self.src_center + c_factor * self._get_src_offset()
         dst = self.dst_center + c_factor * self._get_dst_offset()
         src_points = [self.src_center, src]
@@ -301,7 +301,7 @@ class LinkBase(QGraphicsPathItem):
         arrow_p0 = self.dst_center
         d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
         d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
-        arrow_diag = self.magic_number / sin(self.arrow_angle)
+        arrow_diag = 1.5 * self.magic_number / sin(self.arrow_angle)
         arrow_p1 = arrow_p0 - d1 * arrow_diag
         arrow_p2 = arrow_p0 - d2 * arrow_diag
         arrow_path = QPainterPath(arrow_p1)
