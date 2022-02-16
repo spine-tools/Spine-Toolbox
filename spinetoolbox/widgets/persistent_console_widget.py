@@ -447,9 +447,6 @@ class CommandIssuer(PersistentRunnableBase):
                 self.stdout_msg.emit(msg["data"])
             elif msg_type == "stderr":
                 self.stderr_msg.emit(msg["data"])
-            elif msg_type == "process_dead":
-                self.stderr_msg.emit("Console process has been killed.")
-                self.finished.emit(True)
                 break
             elif msg_type == "command_finished":
                 self.finished.emit(msg["is_complete"])
