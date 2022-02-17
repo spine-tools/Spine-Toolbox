@@ -18,6 +18,7 @@ from PySide2.QtWidgets import QApplication, QPlainTextEdit
 from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
+from .custom_qtextbrowser import TextEditHouseKeepingMixin
 
 
 class PersistentConsoleLineEdit(QPlainTextEdit):
@@ -84,7 +85,7 @@ class PersistentConsoleLineEdit(QPlainTextEdit):
         self.parent().keyPressEvent(ev)
 
 
-class PersistentConsoleWidget(QPlainTextEdit):
+class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
     """A widget to interact with a persistent process."""
 
     def __init__(self, toolbox, key, language, owner=None):
@@ -185,9 +186,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor.removeSelectedText()
         start = cursor.position()
         text = self._line_edit.toPlainText()
-        self._insert_formatted_text(cursor, text)
+        with self.housekeeping():
+            self._insert_formatted_text(cursor, text)
         self._line_edit_char_count = cursor.position() - start
-        self._scroll_to_bottom()
 
     def move_history(self, text, step):
         """Moves history.
@@ -259,10 +260,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._history_index = 0
         self._thread_pool.start(issuer)
 
-    def _scroll_to_bottom(self):
-        vertical_scroll_bar = self.verticalScrollBar()
-        vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
-
     def _cursor_at_start_of_prompt(self):
         """Returns a cursor at the start of the prompt.
 
@@ -284,17 +281,14 @@ class PersistentConsoleWidget(QPlainTextEdit):
         Args:
             text (str)
         """
-        vertical_scroll_bar = self.verticalScrollBar()
-        at_bottom = vertical_scroll_bar.value() == vertical_scroll_bar.maximum()
         cursor = self._cursor_at_start_of_prompt()
-        if with_prompt:
-            cursor.insertText(self._prompt, self._prompt_format)
-            self._insert_formatted_text(cursor, text)
-        else:
-            cursor.insertText(text, text_format)
-        cursor.insertBlock()
-        if at_bottom:
-            self._scroll_to_bottom()
+        with self.housekeeping():
+            if with_prompt:
+                cursor.insertText(self._prompt, self._prompt_format)
+                self._insert_formatted_text(cursor, text)
+            else:
+                cursor.insertText(text, text_format)
+            cursor.insertBlock()
 
     def add_stdin(self, data):
         """Adds new prompt with data. Used when adding stdin from external execution.

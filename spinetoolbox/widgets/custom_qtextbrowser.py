@@ -23,7 +23,47 @@ from PySide2.QtWidgets import QTextBrowser, QAction, QMenu
 from ..config import TEXTBROWSER_SS
 
 
-class CustomQTextBrowser(QTextBrowser):
+class TextEditHouseKeepingMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._max_blocks = 2000
+
+    @property
+    def max_blocks(self):
+        """int: the upper limit of text blocks that can be appended to the widget."""
+        return self._max_blocks
+
+    @max_blocks.setter
+    def max_blocks(self, new_max):
+        self._max_blocks = new_max if new_max > 0 else 2000
+
+    @Slot()
+    def scroll_to_bottom(self):
+        vertical_scroll_bar = self.verticalScrollBar()
+        vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
+
+    @contextmanager
+    def housekeeping(self):
+        """A context manager to keep the text browser at bottom and manage the maximum number of blocks."""
+        scrollbar = self.verticalScrollBar()
+        at_bottom = scrollbar.value() in (scrollbar.maximum(), 0)
+        try:
+            yield None
+        finally:
+            block_count = self.document().blockCount()
+            if block_count > self._max_blocks:
+                blocks_to_remove = block_count - self._max_blocks
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.Start)
+                for _ in range(blocks_to_remove):
+                    cursor.select(QTextCursor.BlockUnderCursor)
+                    cursor.removeSelectedText()
+                    cursor.deleteChar()  # Remove the trailing newline
+            if at_bottom:
+                self.scroll_to_bottom()
+
+
+class CustomQTextBrowser(TextEditHouseKeepingMixin, QTextBrowser):
     """Custom QTextBrowser class."""
 
     _ALL_RUNS = "All executions"
@@ -36,7 +76,6 @@ class CustomQTextBrowser(QTextBrowser):
         super().__init__(parent=parent)
         self._toolbox = None
         self.setStyleSheet(TEXTBROWSER_SS)
-        self._max_blocks = 2000
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
         self._executions_menu = QMenu(self)
@@ -60,31 +99,6 @@ class CustomQTextBrowser(QTextBrowser):
         self._toolbox = toolbox
         self._toolbox.ui.toolButton_executions.setMenu(self._executions_menu)
         self._toolbox.ui.toolButton_executions.hide()
-
-    @Slot()
-    def scroll_to_bottom(self):
-        vertical_scroll_bar = self.verticalScrollBar()
-        vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
-
-    @contextmanager
-    def housekeeping(self):
-        """A context manager to keep the text browser at bottom and manage the maximum number of blocks."""
-        scrollbar = self.verticalScrollBar()
-        keep_at_bottom = scrollbar.value() in (scrollbar.maximum(), 0)
-        try:
-            yield None
-        finally:
-            block_count = self.document().blockCount()
-            if block_count > self._max_blocks:
-                blocks_to_remove = block_count - self._max_blocks
-                cursor = self.textCursor()
-                cursor.movePosition(QTextCursor.Start)
-                for _ in range(blocks_to_remove):
-                    cursor.select(QTextCursor.BlockUnderCursor)
-                    cursor.removeSelectedText()
-                    cursor.deleteChar()  # Remove the trailing newline
-            if keep_at_bottom:
-                self.scroll_to_bottom()
 
     @Slot(str)
     def append(self, text):
@@ -116,15 +130,6 @@ class CustomQTextBrowser(QTextBrowser):
         menu.addSeparator()
         menu.addAction(clear_action)
         menu.exec_(event.globalPos())
-
-    @property
-    def max_blocks(self):
-        """int: the upper limit of text blocks that can be appended to the widget."""
-        return self._max_blocks
-
-    @max_blocks.setter
-    def max_blocks(self, new_max):
-        self._max_blocks = new_max if new_max > 0 else 2000
 
     def clear(self):
         super().clear()
