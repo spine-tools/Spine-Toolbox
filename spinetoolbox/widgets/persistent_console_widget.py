@@ -441,7 +441,6 @@ class CommandIssuer(PersistentRunnableBase):
                 self.stdout_msg.emit(msg["data"])
             elif msg_type == "stderr":
                 self.stderr_msg.emit(msg["data"])
-                break
             elif msg_type == "command_finished":
                 self.finished.emit(msg["is_complete"])
                 break
