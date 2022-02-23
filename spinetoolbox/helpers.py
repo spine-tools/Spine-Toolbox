@@ -1486,9 +1486,9 @@ def fix_lightness_color(color, lightness=240):
 
 
 @contextmanager
-def scrolling_to_bottom(widget):
+def scrolling_to_bottom(widget, tolerance=1):
     scrollbar = widget.verticalScrollBar()
-    at_bottom = scrollbar.value() == scrollbar.maximum()
+    at_bottom = scrollbar.value() >= scrollbar.maximum() - tolerance
     try:
         yield None
     finally:
