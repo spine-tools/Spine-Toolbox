@@ -442,7 +442,6 @@ class ToolboxUI(QMainWindow):
             self.msg.emit(welcome_msg)
             return
         if not os.path.isdir(project_dir):
-            self.ui.statusbar.showMessage("Opening previous project failed", 10000)
             self.msg_error.emit(
                 "Cannot open previous project. Directory <b>{0}</b> may have been moved.".format(project_dir)
             )

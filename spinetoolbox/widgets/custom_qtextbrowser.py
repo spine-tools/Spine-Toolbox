@@ -21,49 +21,10 @@ from PySide2.QtCore import Slot
 from PySide2.QtGui import QTextCursor, QFontDatabase, QTextBlockFormat, QTextFrameFormat, QBrush
 from PySide2.QtWidgets import QTextBrowser, QAction, QMenu
 from ..config import TEXTBROWSER_SS
+from ..helpers import scrolling_to_bottom
 
 
-class TextEditHouseKeepingMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._max_blocks = 2000
-
-    @property
-    def max_blocks(self):
-        """int: the upper limit of text blocks that can be appended to the widget."""
-        return self._max_blocks
-
-    @max_blocks.setter
-    def max_blocks(self, new_max):
-        self._max_blocks = new_max if new_max > 0 else 2000
-
-    @Slot()
-    def scroll_to_bottom(self):
-        vertical_scroll_bar = self.verticalScrollBar()
-        vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
-
-    @contextmanager
-    def housekeeping(self):
-        """A context manager to keep the text browser at bottom and manage the maximum number of blocks."""
-        scrollbar = self.verticalScrollBar()
-        at_bottom = scrollbar.value() in (scrollbar.maximum(), 0)
-        try:
-            yield None
-        finally:
-            block_count = self.document().blockCount()
-            if block_count > self._max_blocks:
-                blocks_to_remove = block_count - self._max_blocks
-                cursor = self.textCursor()
-                cursor.movePosition(QTextCursor.Start)
-                for _ in range(blocks_to_remove):
-                    cursor.select(QTextCursor.BlockUnderCursor)
-                    cursor.removeSelectedText()
-                    cursor.deleteChar()  # Remove the trailing newline
-            if at_bottom:
-                self.scroll_to_bottom()
-
-
-class CustomQTextBrowser(TextEditHouseKeepingMixin, QTextBrowser):
+class CustomQTextBrowser(QTextBrowser):
     """Custom QTextBrowser class."""
 
     _ALL_RUNS = "All executions"
@@ -75,6 +36,7 @@ class CustomQTextBrowser(TextEditHouseKeepingMixin, QTextBrowser):
         """
         super().__init__(parent=parent)
         self._toolbox = None
+        self.document().setMaximumBlockCount(2000)
         self.setStyleSheet(TEXTBROWSER_SS)
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
@@ -111,7 +73,7 @@ class CustomQTextBrowser(TextEditHouseKeepingMixin, QTextBrowser):
         Args:
             text (str): text to add
         """
-        with self.housekeeping():
+        with scrolling_to_bottom(self):
             cursor = self.textCursor()
             cursor.movePosition(cursor.End)
             cursor.insertBlock()
@@ -176,7 +138,7 @@ class CustomQTextBrowser(TextEditHouseKeepingMixin, QTextBrowser):
         item_blocks = self._execution_blocks.setdefault(timestamp, {})
         cursor = self.textCursor()
         cursor.movePosition(cursor.End)
-        with self.housekeeping():
+        with scrolling_to_bottom(self):
             for name in item_names:
                 cursor.insertFrame(self._frame_format)
                 item_blocks[name] = [cursor.block()]
@@ -199,7 +161,7 @@ class CustomQTextBrowser(TextEditHouseKeepingMixin, QTextBrowser):
             message (str): formatted message
         """
         blocks = self._execution_blocks[self._visible_timestamp][item_name]
-        with self.housekeeping():
+        with scrolling_to_bottom(self):
             cursor = self._item_cursors[self._visible_timestamp, item_name]
             if filter_id:
                 filter_cursors = self._item_filter_cursors[self._visible_timestamp, item_name]
@@ -244,7 +206,7 @@ class CustomQTextBrowser(TextEditHouseKeepingMixin, QTextBrowser):
         item_blocks = self._execution_blocks.get(timestamp, {})
         all_blocks = [block for blocks in item_blocks.values() for block in blocks]
         cursor = self.textCursor()
-        with self.housekeeping():
+        with scrolling_to_bottom(self):
             for block in all_blocks:
                 block.setVisible(visible)
                 cursor.setPosition(block.position())

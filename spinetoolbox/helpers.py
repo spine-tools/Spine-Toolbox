@@ -1267,9 +1267,11 @@ class CustomSyntaxHighlighter(QSyntaxHighlighter):
         if self.lexer is None:
             return ()
         for start, ttype, subtext in self.lexer.get_tokens_unprocessed(text):
-            while ttype not in self._formats:
+            while True:
+                text_format = self._formats.get(ttype)
+                if text_format is not None:
+                    break
                 ttype = ttype.parent
-            text_format = self._formats.get(ttype, QTextCharFormat())
             yield start, len(subtext), text_format
 
     def highlightBlock(self, text):
@@ -1481,3 +1483,14 @@ def merge_dicts(source, target):
 def fix_lightness_color(color, lightness=240):
     h, s, _, a = color.getHsl()
     return QColor.fromHsl(h, s, lightness, a)
+
+
+@contextmanager
+def scrolling_to_bottom(widget):
+    scrollbar = widget.verticalScrollBar()
+    at_bottom = scrollbar.value() == scrollbar.maximum()
+    try:
+        yield None
+    finally:
+        if at_bottom:
+            scrollbar.setValue(scrollbar.maximum())

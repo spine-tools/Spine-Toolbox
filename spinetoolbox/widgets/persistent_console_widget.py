@@ -14,15 +14,15 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Qt, QRunnable, QObject, Signal, QThreadPool, Slot
+from PySide2.QtCore import Qt, QRunnable, QObject, Signal, QThreadPool, Slot, QTimer
 from PySide2.QtWidgets import QPlainTextEdit
-from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor
+from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
-from .custom_qtextbrowser import TextEditHouseKeepingMixin
+from ..helpers import scrolling_to_bottom
 
 
-class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
+class PersistentConsoleWidget(QPlainTextEdit):
     """A widget to interact with a persistent process."""
 
     def __init__(self, toolbox, key, language, owner=None):
@@ -44,11 +44,15 @@ class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
         self.owners = {owner}
         self._prompt, self._prompt_format = self._make_prompt()
         self._cont_prompt = self._make_cont_prompt()
-        self._has_prompt = False
         self._history_index = 0
         self._history_item_zero = ""
         self._pending_command_count = 0
         self._is_last_command_complete = True
+        self._text_buffer = []
+        self._timer = QTimer()
+        self._timer.setInterval(200)
+        self._timer.timeout.connect(self._drain_text_buffer)
+        self._timer.start()
         cursor_width = self.fontMetrics().horizontalAdvance("x")
         self.setCursorWidth(cursor_width)
         self.setTabStopDistance(4 * cursor_width)
@@ -64,6 +68,7 @@ class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
             self._highlighter.lexer = get_lexer_by_name(self._language)
         except ClassNotFound:
             pass
+        self._ansi_esc_code_handler = AnsiEscapeCodeHandler(foreground_color, background_color)
         self._prompt_block = None
         self._prompt_length = 0
         self._make_prompt_block(prompt=self._prompt)
@@ -112,16 +117,20 @@ class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
         self._prompt_block = cursor.block()
         self._insert_prompt(prompt=prompt, replace=False)
 
+    def _insert_text(self, cursor, text, text_format=QTextCharFormat()):
+        with scrolling_to_bottom(self):
+            cursor.insertText(text, text_format)
+
     def _insert_prompt(self, prompt="", replace=False):
         cursor = self.textCursor()
         cursor.setPosition(self._prompt_block.position())
         if replace:
             cursor.setPosition(self._input_start_pos, QTextCursor.KeepAnchor)
-        cursor.insertText(prompt, self._prompt_format)
+        self._insert_text(cursor, prompt, self._prompt_format)
         self._prompt_length = len(prompt)
 
-    def _insert_formatted_text(self, cursor, text):
-        """Inserts formatted text.
+    def _insert_stdin_text(self, cursor, text):
+        """Inserts highlighted text.
 
         Args:
             cursor (QTextCursor)
@@ -130,22 +139,43 @@ class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
         for start, count, text_format in self._highlighter.yield_formats(text):
             chunk = text[start : start + count]
             chunk = chunk.replace("\n", "\n" + self._cont_prompt).replace("\t", 4 * " ")
-            cursor.insertText(chunk, text_format)
+            self._insert_text(cursor, chunk, text_format)
 
-    def _insert_text_before_prompt(self, text, with_prompt=False, text_format=QTextCharFormat()):
+    def _insert_stdout_text(self, cursor, text):
+        """Inserts ansi highlighted text.
+
+        Args:
+            cursor (QTextCursor)
+            text (str)
+        """
+        for chunk, text_format in self._ansi_esc_code_handler.parse_text(text):
+            self._insert_text(cursor, chunk, text_format)
+
+    def _insert_text_before_prompt(self, text, with_prompt=False):
         """Inserts given text before the prompt. Used when adding input and output from external execution.
 
         Args:
             text (str)
         """
-        cursor = self.textCursor()
-        cursor.setPosition(self._prompt_block.position() - 1)
-        cursor.insertBlock()
-        if with_prompt:
-            cursor.insertText(self._prompt, self._prompt_format)
-            self._insert_formatted_text(cursor, text)
-        else:
-            cursor.insertText(text, text_format)
+        self._text_buffer.append((text, with_prompt))
+
+    @Slot()
+    def _drain_text_buffer(self):
+        """Inserts all text from buffer."""
+        if not self._text_buffer:
+            return
+        for text, with_prompt in self._text_buffer:
+            cursor = self.textCursor()
+            cursor.setPosition(self._prompt_block.position() - 1)
+            cursor.insertBlock()
+            if with_prompt:
+                prompt = self._prompt if self._is_last_command_complete else self._cont_prompt
+                self._insert_text(cursor, prompt, self._prompt_format)
+                self._insert_stdin_text(cursor, text)
+            else:
+                self._insert_stdout_text(cursor, text)
+
+        self._text_buffer.clear()
 
     def _get_current_text(self):
         """Returns current text.
@@ -202,16 +232,21 @@ class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
         issuer.finished.connect(self._handle_command_finished)
         if self._pending_command_count:
             issuer.stdin_msg.connect(self.add_stdin)
+        else:
+            self._ansi_esc_code_handler.endFormatScope()
         self._make_prompt_block(prompt="")
         self._history_index = 0
         self._pending_command_count += 1
         self._thread_pool.start(issuer)
 
+    @Slot(bool)
     def _handle_command_finished(self, is_complete):
+        self._ansi_esc_code_handler.endFormatScope()
         self._pending_command_count -= 1
         self._is_last_command_complete = is_complete
-        prompt = self._prompt if is_complete else self._cont_prompt
-        self._insert_prompt(prompt=prompt)
+        if self._pending_command_count == 0:
+            prompt = self._prompt if is_complete else self._cont_prompt
+            self._insert_prompt(prompt=prompt)
 
     def move_history(self, text, step):
         """Moves history.
@@ -233,10 +268,10 @@ class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
         cursor = self.textCursor()
         cursor.setPosition(self._input_start_pos)
         cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        cursor.insertText(history_item)
+        self._insert_text(cursor, history_item)
 
     def autocomplete(self, text, partial_text):
-        """Autocompletes current text in the prompt (or print options if multiple matches).
+        """Autocompletes current text in the prompt (or output options if multiple matches).
 
         Args:
             text (str)
@@ -247,14 +282,14 @@ class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
         completions = engine_mngr.get_persistent_completions(self._key, partial_text)
         prefix = os.path.commonprefix(completions)
         if partial_text.endswith(prefix) and len(completions) > 1:
-            # Can't complete, but there is more than one option: 'commit' stdin and print options to stdout
+            # Can't complete, but there is more than one option: 'commit' stdin and output options to stdout
             self.add_stdin(text)
             self.add_stdout("\t\t".join(completions))
         else:
             # Complete in current line
             cursor = self.textCursor()
             last_word = partial_text.split(" ")[-1]
-            cursor.insertText(prefix[len(last_word) :])
+            self._insert_text(cursor, prefix[len(last_word) :])
 
     def add_stdin(self, data):
         """Adds new prompt with data. Used when adding stdin from external execution.
@@ -262,6 +297,7 @@ class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
         Args:
             data (str)
         """
+        self._ansi_esc_code_handler.endFormatScope()
         self._insert_text_before_prompt(data, with_prompt=True)
 
     @Slot(str)
@@ -280,9 +316,7 @@ class PersistentConsoleWidget(TextEditHouseKeepingMixin, QPlainTextEdit):
         Args:
             data (str)
         """
-        text_format = QTextCharFormat()
-        text_format.setForeground(Qt.red)
-        self._insert_text_before_prompt(data, text_format=text_format)
+        self._insert_text_before_prompt(data)
 
     @Slot(bool)
     def _restart_persistent(self, _=False):
@@ -384,3 +418,207 @@ class CommandIssuer(PersistentRunnableBase):
             elif msg_type == "command_finished":
                 self.finished.emit(msg["is_complete"])
                 break
+
+
+# Translated from
+# https://code.qt.io/cgit/qt-creator/qt-creator.git/tree/src/libs/utils/ansiescapecodehandler.cpp?h=master
+class AnsiEscapeCodeHandler:
+    def __init__(self, fg_color, bg_color):
+        self._previous_format_closed = True
+        self._previous_format = QTextCharFormat()
+        self._pending_text = ""
+        self._bg_color = QColor(bg_color)
+        self._fg_color = QColor(fg_color)
+
+    def _make_default_format(self):
+        default_format = QTextCharFormat()
+        default_format.setBackground(self._bg_color)
+        default_format.setForeground(self._fg_color)
+        return default_format
+
+    def endFormatScope(self):
+        self._previous_format_closed = True
+
+    def setFormatScope(self, char_format):
+        self._previous_format = char_format
+        self._previous_format_closed = False
+
+    def parse_text(self, text):
+        class AnsiEscapeCodes:
+            ResetFormat = 0
+            BoldText = 1
+            NormalIntensity = 22
+            TextColorStart = 30
+            TextColorEnd = 37
+            RgbTextColor = 38
+            DefaultTextColor = 39
+            BackgroundColorStart = 40
+            BackgroundColorEnd = 47
+            RgbBackgroundColor = 48
+            DefaultBackgroundColor = 49
+            BrightTextColorStart = 90
+            BrightTextColorEnd = 97
+            BrightBackgroundColorStart = 100
+            BrightBackgroundColorEnd = 107
+
+        escape = "\x1b["
+        semicolon = ";"
+        color_terminator = "m"
+        erase_to_eol = "K"
+        char_format = self._make_default_format() if self._previous_format_closed else self._previous_format
+        stripped_text = self._pending_text + text
+        self._pending_text = ""
+        while stripped_text:
+            if self._pending_text:
+                break
+            try:
+                escape_pos = stripped_text.index(escape[0])
+            except ValueError:
+                yield stripped_text, char_format
+                break
+            if escape_pos != 0:
+                yield stripped_text[:escape_pos], char_format
+                stripped_text = stripped_text[escape_pos:]
+            if stripped_text[0] != escape[0]:
+                break
+            while stripped_text and escape[0] == stripped_text[0]:
+                if escape.startswith(stripped_text):
+                    # control sequence is not complete
+                    self._pending_text += stripped_text
+                    stripped_text = ""
+                    break
+                if not stripped_text.startswith(escape):
+                    # not a control sequence
+                    self._pending_text = ""
+                    yield stripped_text[:1], char_format
+                    stripped_text = stripped_text[1:]
+                    continue
+                self._pending_text += stripped_text[: len(escape)]
+                stripped_text = stripped_text[len(escape) :]
+                # \e[K is not supported. Just strip it.
+                if stripped_text.startswith(erase_to_eol):
+                    self._pending_text = ""
+                    stripped_text = stripped_text[1:]
+                    continue
+                # get the number
+                str_number = ""
+                numbers = []
+                while stripped_text:
+                    if stripped_text[0].isdigit():
+                        str_number += stripped_text[0]
+                    else:
+                        if str_number:
+                            numbers.append(str_number)
+                        if not str_number or stripped_text[0] != semicolon:
+                            break
+                        str_number = ""
+                    self._pending_text += stripped_text[0:1]
+                    stripped_text = stripped_text[1:]
+                if not stripped_text:
+                    break
+                # remove terminating char
+                if not stripped_text.startswith(color_terminator):
+                    self._pending_text = ""
+                    stripped_text = stripped_text[1:]
+                    break
+                # got consistent control sequence, ok to clear pending text
+                self._pending_text = ""
+                stripped_text = stripped_text[1:]
+                if not numbers:
+                    char_format = self._make_default_format()
+                    self.endFormatScope()
+                for i in range(len(numbers)):  # pylint: disable=consider-using-enumerate
+                    code = int(numbers[i])
+                    if AnsiEscapeCodes.TextColorStart <= code <= AnsiEscapeCodes.TextColorEnd:
+                        char_format.setForeground(_ansi_color(code - AnsiEscapeCodes.TextColorStart))
+                        self.setFormatScope(char_format)
+                    elif AnsiEscapeCodes.BrightTextColorStart <= code <= AnsiEscapeCodes.BrightTextColorEnd:
+                        char_format.setForeground(_ansi_color(code - AnsiEscapeCodes.BrightTextColorStart, bright=True))
+                        self.setFormatScope(char_format)
+                    elif AnsiEscapeCodes.BackgroundColorStart <= code <= AnsiEscapeCodes.BackgroundColorEnd:
+                        char_format.setBackground(_ansi_color(code - AnsiEscapeCodes.BackgroundColorStart))
+                        self.setFormatScope(char_format)
+                    elif AnsiEscapeCodes.BrightBackgroundColorStart <= code <= AnsiEscapeCodes.BrightBackgroundColorEnd:
+                        char_format.setForeground(
+                            _ansi_color(code - AnsiEscapeCodes.BrightBackgroundColorStart, bright=True)
+                        )
+                        self.setFormatScope(char_format)
+                    else:
+                        if code == AnsiEscapeCodes.ResetFormat:
+                            char_format = self._make_default_format()
+                            self.endFormatScope()
+                            break
+                        if code == AnsiEscapeCodes.BoldText:
+                            char_format.setFontWeight(QFont.Bold)
+                            self.setFormatScope(char_format)
+                            break
+                        if code == AnsiEscapeCodes.NormalIntensity:
+                            char_format.setFontWeight(QFont.Normal)
+                            self.setFormatScope(char_format)
+                            break
+                        if code == AnsiEscapeCodes.DefaultTextColor:
+                            char_format.setForeground(self._fg_color)
+                            self.setFormatScope(char_format)
+                            break
+                        if code == AnsiEscapeCodes.DefaultBackgroundColor:
+                            char_format.setBackground(self._bg_color)
+                            self.setFormatScope(char_format)
+                            break
+                        if code == AnsiEscapeCodes.RgbBackgroundColor:
+                            # See http://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+                            i += 1
+                            if i >= len(numbers):
+                                break
+                            j = int(numbers[i])
+                            if j == 2:
+                                # RGB set with format: 38;2;<r>;<g>;<b>
+                                if i + 3 < len(numbers):
+                                    color = QColor(
+                                        int(numbers[i + 1]),
+                                        int(numbers[i + 2]),
+                                        int(numbers[i + 3]),
+                                    )
+                                    if code == AnsiEscapeCodes.RgbTextColor:
+                                        char_format.setForeground(color)
+                                    else:
+                                        char_format.setBackground(color)
+                                self.setFormatScope(char_format)
+                                i += 3
+                                break
+                            if j == 5:
+                                # 256 color mode with format: 38;5;<i>
+                                index = int(numbers[i + 1])
+                                color = QColor()
+                                if index < 8:
+                                    # The first 8 colors are standard low-intensity ANSI colors.
+                                    color = _ansi_color(index)
+                                elif index < 16:
+                                    # The next 8 colors are standard high-intensity ANSI colors.
+                                    color = _ansi_color(index - 8).lighter(150)
+                                elif index < 232:
+                                    # The next 216 colors are a 6x6x6 RGB cube.
+                                    o = index - 16
+                                    color = QColor((o / 36) * 51, ((o / 6) % 6) * 51, (o % 6) * 51)
+                                else:
+                                    # The last 24 colors are a greyscale gradient.
+                                    grey = int((index - 232) * 11)
+                                    color = QColor(grey, grey, grey)
+                                if code == AnsiEscapeCodes.RgbTextColor:
+                                    char_format.setForeground(color)
+                                else:
+                                    char_format.setBackground(color)
+                                self.setFormatScope(char_format)
+                                i += 1
+                            break
+                        break
+
+
+def _ansi_color(code, bright=False):
+    if code >= 8:
+        return QColor()
+    on = 170 if not bright else 255
+    off = 0 if not bright else 85
+    red = on if code & 1 else off
+    green = on if code & 2 else off
+    blue = on if code & 4 else off
+    return QColor(red, green, blue)
