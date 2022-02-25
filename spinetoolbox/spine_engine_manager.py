@@ -74,7 +74,7 @@ class SpineEngineManagerBase:
             command (str): command to issue
 
         Returns:
-            generator: stdio and stderr messages (dictionaries with two keys: type, and data)
+            generator: stdin, stdout, and stderr messages (dictionaries with two keys: type, and data)
         """
         raise NotImplementedError()
 
@@ -83,6 +83,9 @@ class SpineEngineManagerBase:
 
         Args:
             persistent_key (tuple): persistent identifier
+
+        Returns:
+            generator: stdout and stderr messages (dictionaries with two keys: type, and data)
         """
         raise NotImplementedError()
 
@@ -254,7 +257,7 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         # pylint: disable=import-outside-toplevel
         from spine_engine.execution_managers.persistent_execution_manager import restart_persistent
 
-        restart_persistent(persistent_key)
+        yield from restart_persistent(persistent_key)
 
     def interrupt_persistent(self, persistent_key):
         # pylint: disable=import-outside-toplevel

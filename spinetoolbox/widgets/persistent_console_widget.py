@@ -318,12 +318,12 @@ class PersistentConsoleWidget(QPlainTextEdit):
     @Slot(bool)
     def _restart_persistent(self, _=False):
         """Restarts underlying persistent process."""
-        cursor = self.textCursor()
-        cursor.setPosition(self._prompt_block.position() - 1)
-        cursor.movePosition(QTextCursor.Start, QTextCursor.KeepAnchor)
-        cursor.removeSelectedText()
+        self.clear()
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         restarter = Restarter(engine_server_address, self._key)
+        restarter.stdout_msg.connect(self.add_stdout)
+        restarter.stderr_msg.connect(self.add_stderr)
+        restarter.finished.connect(lambda prompt=self._prompt: self._make_prompt_block(prompt=prompt))
         self._thread_pool.start(restarter)
 
     @Slot(bool)
@@ -368,8 +368,28 @@ class PersistentRunnableBase(QRunnable):
 class Restarter(PersistentRunnableBase):
     """A runnable that restarts a persistent process."""
 
+    class Signals(QObject):
+        finished = Signal()
+        stdout_msg = Signal(str)
+        stderr_msg = Signal(str)
+
+    def __init__(self, engine_server_address, persistent_key):
+        """
+        Args:
+            engine_server_address (str): address of the remote engine, currently should always be an empty string
+            persistent_key (tuple): persistent process identifier
+        """
+        super().__init__(engine_server_address, persistent_key)
+        self.stdout_msg = self._signals.stdout_msg
+        self.stderr_msg = self._signals.stderr_msg
+
     def run(self):
-        self._engine_mngr.restart_persistent(self._persistent_key)
+        for msg in self._engine_mngr.restart_persistent(self._persistent_key):
+            msg_type = msg["type"]
+            if msg_type == "stdout":
+                self.stdout_msg.emit(msg["data"])
+            elif msg_type == "stderr":
+                self.stderr_msg.emit(msg["data"])
         self.finished.emit()
 
 
@@ -541,7 +561,7 @@ class AnsiEscapeCodeHandler:
                         char_format.setBackground(_ansi_color(code - AnsiEscapeCodes.BackgroundColorStart))
                         self.setFormatScope(char_format)
                     elif AnsiEscapeCodes.BrightBackgroundColorStart <= code <= AnsiEscapeCodes.BrightBackgroundColorEnd:
-                        char_format.setForeground(
+                        char_format.setBackground(
                             _ansi_color(code - AnsiEscapeCodes.BrightBackgroundColorStart, bright=True)
                         )
                         self.setFormatScope(char_format)
