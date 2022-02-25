@@ -34,9 +34,6 @@ from PySide2.QtGui import (
     QLinearGradient,
     QFont,
     QCursor,
-    QFontMetrics,
-    QPixmap,
-    QPainter,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.helpers import color_from_index
@@ -122,7 +119,7 @@ class LinkBase(QGraphicsPathItem):
         connecting_path = self._make_connecting_path()
         arrow_path = self._make_arrow_path()
         path = ellipse_path + connecting_path + arrow_path
-        self.setPath(path.simplified())
+        self.setPath(path)
 
     def _make_ellipse_path(self):
         """Returns an ellipse path for the link's base.
@@ -275,7 +272,7 @@ class LinkBase(QGraphicsPathItem):
         curve_path.lineTo(p0 - off0)
         curve_path.closeSubpath()
         curve_path.setFillRule(Qt.WindingFill)
-        return curve_path.simplified()
+        return curve_path
 
     @staticmethod
     def _follow_points(curve_path, points):

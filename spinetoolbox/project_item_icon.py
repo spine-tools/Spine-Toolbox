@@ -17,7 +17,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 import math
-from PySide2.QtCore import Qt, QPointF, QRectF, QParallelAnimationGroup, QLineF
+from PySide2.QtCore import Qt, QPointF, QRectF, QLineF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -268,12 +268,13 @@ class ProjectItemIcon(QGraphicsPathItem):
 
     def update_links_geometry(self):
         """Updates geometry of connected links to reflect this item's most recent position."""
-        if not self.scene():
+        scene = self.scene()
+        if not scene:
             return
-        icon_group = self.scene().icon_group | {self}
-        links = set(link for icon in icon_group for conn in icon.connectors.values() for link in conn.links)
-        for link in links:
-            link.update_geometry()
+        icon_group = scene.icon_group | {self}
+        scene.dirty_links |= set(
+            link for icon in icon_group for conn in icon.connectors.values() for link in conn.links
+        )
 
     def mouseReleaseEvent(self, event):
         """Clears pre-bump rects, and pushes a move icon command if necessary."""
@@ -370,7 +371,9 @@ class ProjectItemIcon(QGraphicsPathItem):
         intersection = other.sceneBoundingRect() & self.sceneBoundingRect()
         delta = math.atan(line.angle()) * min(intersection.width(), intersection.height())
         unit_vector = line.unitVector()
+        self._bumping = False
         self.moveBy(delta * unit_vector.dx(), delta * unit_vector.dy())
+        self._bumping = True
 
     def _restablish_bumped_items(self):
         """Moves bumped items back to their original position if no collision would happen anymore."""
