@@ -113,21 +113,22 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def _make_prompt_block(self, prompt=""):
         cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.End)
         cursor.insertBlock()
         self._prompt_block = cursor.block()
-        self._insert_prompt(prompt=prompt, replace=False)
+        self._insert_prompt(prompt=prompt)
 
     def _insert_text(self, cursor, text, text_format=QTextCharFormat()):
         with scrolling_to_bottom(self):
             cursor.insertText(text, text_format)
 
-    def _insert_prompt(self, prompt="", replace=False):
+    def _insert_prompt(self, prompt=""):
         cursor = self.textCursor()
         cursor.setPosition(self._prompt_block.position())
-        if replace:
-            cursor.setPosition(self._input_start_pos, QTextCursor.KeepAnchor)
         self._insert_text(cursor, prompt, self._prompt_format)
+        cursor.movePosition(QTextCursor.End)
         self._prompt_length = len(prompt)
+        self.setTextCursor(cursor)
 
     def _insert_stdin_text(self, cursor, text):
         """Inserts highlighted text.
@@ -232,8 +233,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         issuer.finished.connect(self._handle_command_finished)
         if self._pending_command_count:
             issuer.stdin_msg.connect(self.add_stdin)
-        else:
-            self._ansi_esc_code_handler.endFormatScope()
         self._make_prompt_block(prompt="")
         self._history_index = 0
         self._pending_command_count += 1
@@ -241,7 +240,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     @Slot(bool)
     def _handle_command_finished(self, is_complete):
-        self._ansi_esc_code_handler.endFormatScope()
         self._pending_command_count -= 1
         self._is_last_command_complete = is_complete
         if self._pending_command_count == 0:
@@ -297,7 +295,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         Args:
             data (str)
         """
-        self._ansi_esc_code_handler.endFormatScope()
         self._insert_text_before_prompt(data, with_prompt=True)
 
     @Slot(str)
