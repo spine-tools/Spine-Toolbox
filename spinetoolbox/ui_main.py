@@ -783,6 +783,8 @@ class ToolboxUI(QMainWindow):
         # Note: cannot use booleans since Windows saves them as strings to registry
         if window_size != "false":
             self.resize(window_size)  # Expects QSize
+        else:
+            self.resize(1024, 800)
         if window_pos != "false":
             self.move(window_pos)  # Expects QPoint
         if window_state != "false":
