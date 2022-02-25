@@ -404,17 +404,19 @@ class CommandIssuer(PersistentRunnableBase):
         self.stderr_msg = self._signals.stderr_msg
 
     def run(self):
-        for msg in self._engine_mngr.issue_persistent_command(self._persistent_key, self._command):
-            msg_type = msg["type"]
-            if msg_type == "stdin":
-                self.stdin_msg.emit(msg["data"])
-            elif msg_type == "stdout":
-                self.stdout_msg.emit(msg["data"])
-            elif msg_type == "stderr":
-                self.stderr_msg.emit(msg["data"])
-            elif msg_type == "command_finished":
-                self.finished.emit(msg["is_complete"])
-                break
+        for line in self._command.splitlines():
+            for msg in self._engine_mngr.issue_persistent_command(self._persistent_key, line):
+                msg_type = msg["type"]
+                if msg_type == "stdin":
+                    self.stdin_msg.emit(msg["data"])
+                elif msg_type == "stdout":
+                    self.stdout_msg.emit(msg["data"])
+                elif msg_type == "stderr":
+                    self.stderr_msg.emit(msg["data"])
+                elif msg_type == "command_finished":
+                    is_complete = msg["is_complete"]
+                    break
+        self.finished.emit(is_complete)
 
 
 # Translated from
