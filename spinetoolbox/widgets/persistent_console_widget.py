@@ -447,7 +447,10 @@ class AnsiEscapeCodeHandler:
         class AnsiEscapeCodes:
             ResetFormat = 0
             BoldText = 1
+            FaintText = 2
+            ItalicText = 3
             NormalIntensity = 22
+            NotItalic = 23
             TextColorStart = 30
             TextColorEnd = 37
             RgbTextColor = 38
@@ -552,8 +555,20 @@ class AnsiEscapeCodeHandler:
                             char_format.setFontWeight(QFont.Bold)
                             self.setFormatScope(char_format)
                             break
+                        if code == AnsiEscapeCodes.FaintText:
+                            char_format.setFontWeight(QFont.Light)
+                            self.setFormatScope(char_format)
+                            break
+                        if code == AnsiEscapeCodes.ItalicText:
+                            char_format.setFontItalic(True)
+                            self.setFormatScope(char_format)
+                            break
                         if code == AnsiEscapeCodes.NormalIntensity:
                             char_format.setFontWeight(QFont.Normal)
+                            self.setFormatScope(char_format)
+                            break
+                        if code == AnsiEscapeCodes.NotItalic:
+                            char_format.setFontItalic(False)
                             self.setFormatScope(char_format)
                             break
                         if code == AnsiEscapeCodes.DefaultTextColor:
