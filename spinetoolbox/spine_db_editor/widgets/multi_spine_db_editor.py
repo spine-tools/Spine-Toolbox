@@ -124,7 +124,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         ]
         for dup in duplicates:
             self.statusBar().removeWidget(dup)
-            dup.delegateLater()
+            dup.deleteLater()
         self.statusBar().insertWidget(0, button)
         self.statusBar().show()
         destination = QPoint(16, 0) + button.mapTo(self, QPoint(0, 0))
