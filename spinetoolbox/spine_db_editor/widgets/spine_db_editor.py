@@ -44,8 +44,7 @@ from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .url_toolbar import UrlToolBar
-from ...widgets.notification import ChangeNotifier
-from ...widgets.notification import NotificationStack
+from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
 from ...widgets.commit_dialog import CommitDialog
@@ -66,7 +65,6 @@ class SpineDBEditorBase(QMainWindow):
     """Base class for SpineDBEditor (i.e. Spine database editor)."""
 
     msg = Signal(str)
-    link_msg = Signal(str, object)
     msg_error = Signal(str)
     file_exported = Signal(str)
     sqlite_file_exported = Signal(str)
@@ -102,7 +100,6 @@ class SpineDBEditorBase(QMainWindow):
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
-        self.notification_stack = NotificationStack(self)
         self.silenced = False
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / preferred_row_height(self))
@@ -329,7 +326,6 @@ class SpineDBEditorBase(QMainWindow):
         """Connects signals to slots."""
         # Message signals
         self.msg.connect(self.add_message)
-        self.link_msg.connect(self.add_link_msg)
         self.msg_error.connect(self.err_msg.showMessage)
         # Menu actions
         self.ui.actionCommit.triggered.connect(self.commit_session)
@@ -395,19 +391,7 @@ class SpineDBEditorBase(QMainWindow):
         """
         if self.silenced:
             return
-        self.notification_stack.push(msg)
-
-    @Slot(str, object)
-    def add_link_msg(self, msg, open_link=None):
-        """Pushes link message to notification stack.
-
-        Args:
-            msg (str): String to show in notification
-            open_link (Callable, optional): callback to invoke when notification's link is opened
-        """
-        if self.silenced:
-            return
-        self.notification_stack.push_link(msg, open_link=open_link)
+        Notification(self, msg, corner=Qt.BottomRightCorner).show()
 
     @Slot()
     def refresh_copy_paste_actions(self):

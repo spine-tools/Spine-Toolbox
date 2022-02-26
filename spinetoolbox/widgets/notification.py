@@ -98,7 +98,7 @@ class Notification(QFrame):
         self.fade_in_anim.start(QPropertyAnimation.DeleteWhenStopped)
 
     def show(self):
-        # Move to the top right corner of the parent
+        # Move to the selected corner of the parent
         super().show()
         if self._corner in (Qt.TopRightCorner, Qt.BottomRightCorner):
             x = self._parent.size().width() - self.width() - 2
@@ -193,50 +193,8 @@ class LinkNotification(Notification):
             self.label.linkActivated.connect(open_link)
 
 
-class NotificationStack(QObject):
-    def __init__(self, parent, anim_duration=500, life_span=None):
-        super().__init__()
-        self._parent = parent
-        self._anim_duration = anim_duration
-        self._life_span = life_span
-        self.notifications = list()
-
-    def push_notification(self, notification):
-        """Pushes a notification to the stack with the given text."""
-        offset = sum((x.height() for x in self.notifications), 0)
-        additional_life_span = 0.8 * self.notifications[-1].remaining_time() if self.notifications else 0
-        notification.timer.setInterval(notification.timer.interval() + additional_life_span)
-        notification.move(notification.pos().x(), offset)
-        notification.destroyed.connect(
-            lambda obj=None, n=notification, h=notification.height(): self.handle_notification_destroyed(n, h)
-        )
-        for existing in self.notifications:
-            existing.start_self_destruction()
-        self.notifications.append(notification)
-        notification.show()
-
-    def push(self, txt):
-        notification = Notification(self._parent, txt, anim_duration=self._anim_duration, life_span=self._life_span)
-        self.push_notification(notification)
-
-    def push_link(self, txt, open_link=None):
-        notification = LinkNotification(
-            self._parent, txt, anim_duration=self._anim_duration, life_span=self._life_span, open_link=open_link
-        )
-        self.push_notification(notification)
-
-    def handle_notification_destroyed(self, notification, height):
-        """Removes from the stack the given notification and move up
-        subsequent ones.
-        """
-        i = self.notifications.index(notification)
-        self.notifications.remove(notification)
-        for n in self.notifications[i:]:
-            n.move(n.pos().x(), n.pos().y() - height)
-
-
 class ChangeNotifier(QObject):
-    def __init__(self, parent, undo_stack, settings, settings_key, corner=Qt.BottomLeftCorner):
+    def __init__(self, parent, undo_stack, settings, settings_key, corner=Qt.BottomRightCorner):
         """
         Args:
             parent (QWidget)
