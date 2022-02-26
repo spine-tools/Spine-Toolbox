@@ -129,11 +129,14 @@ class Notification(QFrame):
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
 
     def enterEvent(self, e):
+        """Pauses timer as the mouse hovers the notification."""
         super().enterEvent(e)
-        self.start_self_destruction()
+        if self.remaining_time():
+            self.timer.stop()
 
-    def dragEnterEvent(self, e):
-        super().dragEnterEvent(e)
+    def leaveEvent(self, e):
+        """Starts self destruction after the mouse leaves the notification."""
+        super().leaveEvent(e)
         self.start_self_destruction()
 
     def remaining_time(self):
@@ -146,23 +149,7 @@ class Notification(QFrame):
     opacity = Property(float, get_opacity, set_opacity)
 
 
-class InteractiveNotification(Notification):
-    """A notification that doesn't dissapear when the cursor is on it."""
-
-    def enterEvent(self, e):
-        """Pauses timer as the mouse hovers the notification."""
-        QFrame.enterEvent(self, e)
-        if self.remaining_time():
-            self.timer.stop()
-
-    def leaveEvent(self, e):
-        """Starts self destruction after the mouse leaves the notification."""
-        QFrame.leaveEvent(self, e)
-        if self.remaining_time():
-            self.timer.start()
-
-
-class ButtonNotification(InteractiveNotification):
+class ButtonNotification(Notification):
     """A notification with a button."""
 
     def __init__(self, *args, button_text="", button_slot=None, **kwargs):
@@ -194,7 +181,7 @@ class ButtonNotification(InteractiveNotification):
         button.setFont(font)
 
 
-class LinkNotification(InteractiveNotification):
+class LinkNotification(Notification):
     """A notification that may have a link."""
 
     def __init__(self, *args, open_link=None, **kwargs):
