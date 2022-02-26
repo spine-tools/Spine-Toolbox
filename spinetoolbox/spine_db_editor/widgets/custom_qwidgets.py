@@ -77,10 +77,11 @@ class OpenFileButton(QToolButton):
                 border-radius: 6px;
             }
             QToolButton:hover {
-                background-color: #eeeeee;
+                background-color: #dddddd;
             }
             QToolButton:pressed {
-                background-color: #dddddd;
+                background-color: #bbbbbb;
+                border-style: inset;
             }
             QToolButton::menu-button {
                 border: 1px solid #cccccc;
@@ -88,6 +89,9 @@ class OpenFileButton(QToolButton):
                 border-top-right-radius: 6px;
                 border-bottom-right-radius: 6px;
                 width: 20px;
+            }
+            QToolButton::menu-button:pressed {
+                border-style: inset;
             }
             """
         )
