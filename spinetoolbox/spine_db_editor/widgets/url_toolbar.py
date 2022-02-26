@@ -68,8 +68,8 @@ class UrlToolBar(QToolBar):
         self._filter_action.triggered.connect(self._show_filter_menu)
         self.addWidget(self._line_edit)
         toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
-        self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (ESC)")
-        self.show_toolbox_action.setShortcut(QKeySequence.Cancel)
+        self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (Ctrl+ESC)")
+        self.show_toolbox_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Escape))
         self.setMovable(False)
         self.setIconSize(QSize(20, 20))
 
