@@ -33,8 +33,7 @@ from PySide2.QtWidgets import (
     QUndoCommand,
     QErrorMessage,
 )
-from spinetoolbox.config import STATUSBAR_SS
-from spinetoolbox.widgets.notification import ChangeNotifier
+from spinetoolbox.widgets.notification import ChangeNotifier, Notification
 from spinetoolbox.helpers import CharIconEngine, restore_ui, save_ui
 
 
@@ -97,7 +96,6 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._spec_toolbar = _SpecNameDescriptionToolbar(self, specification, self._undo_stack)
         self._spec_toolbar.show_toolbox_action.triggered.connect(self._toolbox.restore_and_activate)
         self.addToolBar(Qt.TopToolBarArea, self._spec_toolbar)
-        self._ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self._populate_main_menu()
         self._spec_toolbar.save_action.triggered.connect(self._save)
         self._spec_toolbar.duplicate_action.triggered.connect(self._duplicate)
@@ -144,7 +142,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         word_count = len(msg.split(" "))
         mspw = 60000 / 140  # Assume we can read ~140 words per minute
         duration = mspw * word_count
-        self._ui.statusbar.showMessage(msg, duration)
+        Notification(self, msg, life_span=duration, corner=Qt.BottomRightCorner).show()
 
     def _populate_main_menu(self):
         undo_action = self._undo_stack.createUndoAction(self)
