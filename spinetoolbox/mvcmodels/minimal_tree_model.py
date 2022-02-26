@@ -238,7 +238,7 @@ class MinimalTreeModel(QAbstractItemModel):
         Args:
             index (QModelIndex): an index to start. If not given, we start at the root
             view (QTreeView): a tree view. If given, we only yield items that are visible
-                from that view. So for example, if a tree item is not expanded then we don't yield
+                to that view. So for example, if a tree item is not expanded then we don't yield
                 its children.
 
         Yields:

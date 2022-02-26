@@ -16,8 +16,8 @@ Contains PropertiesWidgetBase.
 :date: 20.01.2022
 """
 
-from PySide2.QtWidgets import QWidget, QAbstractItemView, QLineEdit
-from PySide2.QtCore import Qt, QRect, QPoint, QEvent
+from PySide2.QtWidgets import QWidget, QAbstractItemView, QLineEdit, QHeaderView
+from PySide2.QtCore import Qt, QRect, QPoint
 from PySide2.QtGui import QPainter, QPixmap
 from ..helpers import fix_lightness_color
 
@@ -31,10 +31,8 @@ class PropertiesWidgetBase(QWidget):
         self._pixmap = None
         self._bg_color = None
         self._fg_color = None
-        self._transparent_class_fns = {
-            QAbstractItemView: lambda x: x.viewport(),
-            QLineEdit: lambda x: x,
-        }
+        self._transparent_classes = {QAbstractItemView, QLineEdit}
+        self._non_transparent_classes = {QHeaderView}
         self._transparent_widgets = set()
         if base_color is not None:
             self.set_color_and_icon(base_color)
@@ -53,25 +51,22 @@ class PropertiesWidgetBase(QWidget):
         self._pixmap.fill(self._fg_color)
         self._pixmap.setMask(bnw_pixmap.createMaskFromColor(Qt.transparent))
 
-    def event(self, ev):
-        if ev.type() is QEvent.ChildAdded:
-            new_transparent_widgets = {
-                widget
-                for klass, fn in self._transparent_class_fns.items()
-                for widget in {fn(x) for x in self.findChildren(klass)}
-            }
-            new_transparent_widgets -= self._transparent_widgets
-            self._transparent_widgets |= new_transparent_widgets
-            for widget in new_transparent_widgets:
-                widget.setStyleSheet("background-color: rgba(255,255,255,180);")
-        return super().event(ev)
-
     def paintEvent(self, ev):
         """Paints background"""
         settings = self._toolbox.qsettings()
         if settings.value("appSettings/colorPropertiesWidgets", defaultValue="false") == "false":
             super().paintEvent(ev)
             return
+        new_transparent_widgets = {
+            widget
+            for transparent in self._transparent_classes
+            for widget in self.findChildren(transparent)
+            if not any(isinstance(widget, non_transparent) for non_transparent in self._non_transparent_classes)
+        }
+        new_transparent_widgets -= self._transparent_widgets
+        self._transparent_widgets |= new_transparent_widgets
+        for widget in new_transparent_widgets:
+            widget.setStyleSheet(f"{type(widget).__name__}{{background-color: rgba(255,255,255,180);}}")
         rect = self.rect()
         painter = QPainter(self)
         painter.fillRect(rect, self._bg_color)
