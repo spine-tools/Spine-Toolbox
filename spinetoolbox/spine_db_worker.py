@@ -20,7 +20,7 @@ import threading
 import queue
 import itertools
 from enum import auto, Enum, unique
-from PySide2.QtCore import QObject, Signal, QEvent, QCoreApplication
+from PySide2.QtCore import QObject, QEvent, QCoreApplication
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinetoolbox.helpers import busy_effect
 
@@ -97,8 +97,6 @@ class _Signal:
 class SpineDBWorker(QObject):
     """Does all the DB communication for SpineDBManager, in the non-GUI thread."""
 
-    session_rolled_back = Signal(set)
-
     @unique
     class _Request(Enum):
         GET_DB_MAP = auto()
@@ -147,9 +145,9 @@ class SpineDBWorker(QObject):
         self._finished = _Signal(self._Request.QUIT, self._queue)
         self._thread = threading.Thread(target=self._target)
         self._thread.start()
+        self.destroyed.connect(lambda obj=None: self._clean_up())
 
-    def deleteLater(self):
-        super().deleteLater()
+    def _clean_up(self):
         self._finished.emit()
         self._thread.join()
 
@@ -210,13 +208,16 @@ class SpineDBWorker(QObject):
         except (SpineDBVersionError, SpineDBAPIError) as err:
             out_queue.put(err)
 
-    def reset_queries(self, item_type):
-        affected_parents = [parent for parent in self._queries if parent.fetch_item_type == item_type]
-        for parent in affected_parents:
+    def reset_queries(self, item_type=None):
+        parents = list(self._queries)
+        for parent in parents:
+            if item_type is not None and parent.fetch_item_type != item_type:
+                continue
             self._iterators.pop(parent, None)
             query = self._queries.pop(parent)
             key = self._query_keys.pop(query)
             self._query_has_elements_by_key.pop(key, None)
+            self._fetched_parents.discard(parent)
             parent.restart_fetching()
 
     def can_fetch_more(self, parent):

@@ -233,7 +233,6 @@ class SpineDBManager(QObject):
         self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
         self.entity_groups_added.connect(self._cascade_refresh_objects_by_group)
         self.entity_groups_added.connect(self._cascade_refresh_relationships_by_group)
-        # FIXME: self._worker.session_rolled_back.connect(self._finish_rolling_back)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
     def _make_worker(self, db_url):
@@ -582,27 +581,14 @@ class SpineDBManager(QObject):
         refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self._cache)
         if not refreshed_db_maps:
             return
-        for db_map in refreshed_db_maps:
-            self._cache.pop(db_map, None)
         self._clear_workers(refreshed_db_maps)
         self.session_refreshed.emit(refreshed_db_maps)
-
-    def _finish_rolling_back(self, rolled_back_db_maps):
-        """Clears caches and emits ``session_rolled_back`` signal.
-
-        Args:
-            rolled_back_db_maps (set of DiffDatabaseMap): database maps that have been rolled back
-        """
-        for db_map in rolled_back_db_maps:
-            del self._cache[db_map]
-        self.session_rolled_back.emit(rolled_back_db_maps)
 
     def _clear_workers(self, db_maps):
         # FIXME: This rather needs to restart the fetching
         for db_map in db_maps:
-            worker = self._workers.pop(db_map, None)
-            if worker is not None:
-                worker.deleteLater()
+            del self._cache[db_map]
+            self._get_worker(db_map).reset_queries()
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
         """
