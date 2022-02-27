@@ -18,7 +18,7 @@ The SpineDBManager class
 
 import json
 import os
-from PySide2.QtCore import Qt, QObject, Signal, QThread, QMutex
+from PySide2.QtCore import Qt, QObject, Signal, QMutex
 from PySide2.QtWidgets import QMessageBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont, QWindow
 from sqlalchemy.engine.url import URL
@@ -48,7 +48,6 @@ from spinedb_api.parameter_value import join_value_and_type, split_value_and_typ
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_signaller import SpineDBSignaller
-from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
@@ -137,9 +136,7 @@ class SpineDBManager(QObject):
         self.qsettings = settings
         self._db_maps = {}
         self.db_map_locks = {}
-        self._worker_thread = QThread()
-        self._worker = SpineDBWorker(self)
-        self._fetchers = {}
+        self._workers = {}
         self.undo_stack = {}
         self.undo_action = {}
         self.redo_action = {}
@@ -212,7 +209,7 @@ class SpineDBManager(QObject):
         self.object_classes_updated.connect(self.update_icons)
         self.relationship_classes_added.connect(self.update_icons)
         self.relationship_classes_updated.connect(self.update_icons)
-        self.session_rolled_back.connect(self._clear_fetchers)
+        self.session_rolled_back.connect(self._clear_workers)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
         # Refresh (after caching, so items are there when listeners receive signals)
@@ -237,22 +234,33 @@ class SpineDBManager(QObject):
         self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
         self.entity_groups_added.connect(self._cascade_refresh_objects_by_group)
         self.entity_groups_added.connect(self._cascade_refresh_relationships_by_group)
-        self._worker.session_rolled_back.connect(self._finish_rolling_back)
-        self._worker.connect_signals()
+        # FIXME: self._worker.session_rolled_back.connect(self._finish_rolling_back)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
-    def _get_fetcher(self, db_map):
-        """Returns a fetcher.
+    def _make_worker(self, db_url):
+        """Registers and returns a worker.
+
+        Args:
+            db_url (str or URL)
+
+        Returns:
+            SpineDBWorker
+        """
+        db_url = str(db_url)
+        if db_url not in self._workers:
+            self._workers[db_url] = SpineDBWorker(self, db_url)
+        return self._workers[db_url]
+
+    def _get_worker(self, db_map):
+        """Returns a worker.
 
         Args:
             db_map (DiffDatabaseMapping)
 
         Returns:
-            SpineDBFetcher
+            SpineDBWorker
         """
-        if db_map not in self._fetchers:
-            self._fetchers[db_map] = SpineDBFetcher(self, db_map)
-        return self._fetchers[db_map]
+        return self._workers[str(db_map.db_url)]
 
     def can_fetch_more(self, db_map, parent):
         """Whether or not we can fetch more items of given type from given db.
@@ -266,7 +274,7 @@ class SpineDBManager(QObject):
         """
         if db_map.connection.closed:
             return False
-        return self._get_fetcher(db_map).can_fetch_more(parent)
+        return self._get_worker(db_map).can_fetch_more(parent)
 
     def fetch_more(self, db_map, parent):
         """Fetches more items of given type from given db.
@@ -277,7 +285,7 @@ class SpineDBManager(QObject):
         """
         if db_map.connection.closed:
             return
-        self._get_fetcher(db_map).fetch_more(parent)
+        self._get_worker(db_map).fetch_more(parent)
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
@@ -308,8 +316,8 @@ class SpineDBManager(QObject):
                 items = [item for item in (self._pop_item(db_map, item_type, id_) for id_ in ids) if item]
                 if items:
                     db_map_data[db_map] = items
-                    fetcher = self._get_fetcher(db_map)
-                    fetcher.reset_queries(item_type)
+                    worker = self._get_worker(db_map)
+                    worker.reset_queries(item_type)
             if db_map_data:
                 typed_db_map_data[item_type] = db_map_data
                 signal.emit(db_map_data)
@@ -318,8 +326,8 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def get_db_map_cache(self, db_map, item_types=None, only_descendants=False, include_ancestors=False):
-        fetcher = self._get_fetcher(db_map)
-        fetcher.fetch_all(item_types=item_types, only_descendants=only_descendants, include_ancestors=include_ancestors)
+        worker = self._get_worker(db_map)
+        worker.fetch_all(item_types=item_types, only_descendants=only_descendants, include_ancestors=include_ancestors)
         return self._cache.setdefault(db_map, {})
 
     def get_icon_mngr(self, db_map):
@@ -343,11 +351,6 @@ class SpineDBManager(QObject):
         """
         for db_map, classes in db_map_data.items():
             self.get_icon_mngr(db_map).update_icon_caches(classes)
-
-    @property
-    def worker_thread(self):
-        self._worker_thread.start()
-        return self._worker_thread
 
     @property
     def db_maps(self):
@@ -407,10 +410,10 @@ class SpineDBManager(QObject):
                 lock_failed_reported = True
             qApp.processEvents()
         try:
-            fetcher = self._fetchers.pop(db_map, None)
-            if fetcher is not None:
-                fetcher.deleteLater()
-            self._worker.close_db_map(db_map)
+            worker = self._workers.pop(str(db_map.db_url), None)
+            if worker is not None:
+                worker.deleteLater()
+                worker.close_db_map()
             del self.undo_stack[db_map]
             del self.undo_action[db_map]
             del self.redo_action[db_map]
@@ -487,7 +490,7 @@ class SpineDBManager(QObject):
             if codename is not None:
                 db_map.codename = codename
             return db_map
-        db_map, err = self._worker.get_db_map(url, codename=codename, upgrade=upgrade, create=create)
+        db_map, err = self._make_worker(url).get_db_map(codename=codename, upgrade=upgrade, create=create)
         if err is not None:
             raise err
         self._db_maps[url] = db_map
@@ -533,9 +536,9 @@ class SpineDBManager(QObject):
                 pass
         if dirty_orphan_db_maps:
             if commit_dirty:
-                self._worker.commit_session(dirty_orphan_db_maps, commit_msg)
+                self.commit_session(commit_msg, *dirty_orphan_db_maps)
             else:
-                self._worker.rollback_session(dirty_orphan_db_maps)
+                self.rollback_session(*dirty_orphan_db_maps)
         for db_map in db_maps:
             if not self.signaller.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
@@ -571,12 +574,9 @@ class SpineDBManager(QObject):
         return [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
 
     def clean_up(self):
-        while self._fetchers:
-            _, fetcher = self._fetchers.popitem()
-            fetcher.deleteLater()
-        self._worker_thread.quit()
-        self._worker_thread.wait()
-        self._worker_thread.deleteLater()
+        while self._workers:
+            _, worker = self._workers.popitem()
+            worker.deleteLater()
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
@@ -585,7 +585,7 @@ class SpineDBManager(QObject):
             return
         for db_map in refreshed_db_maps:
             self._cache.pop(db_map, None)
-        self._clear_fetchers(refreshed_db_maps)
+        self._clear_workers(refreshed_db_maps)
         self.session_refreshed.emit(refreshed_db_maps)
 
     def _finish_rolling_back(self, rolled_back_db_maps):
@@ -598,11 +598,12 @@ class SpineDBManager(QObject):
             del self._cache[db_map]
         self.session_rolled_back.emit(rolled_back_db_maps)
 
-    def _clear_fetchers(self, db_maps):
+    def _clear_workers(self, db_maps):
+        # FIXME: This rather needs to restart the fetching
         for db_map in db_maps:
-            fetcher = self._fetchers.pop(db_map, None)
-            if fetcher is not None:
-                fetcher.deleteLater()
+            worker = self._workers.pop(db_map, None)
+            if worker is not None:
+                worker.deleteLater()
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
         """
@@ -613,7 +614,8 @@ class SpineDBManager(QObject):
             *dirty_db_maps: dirty database maps to commit
             cookie (object, optional): a free form identifier which will be forwarded to ``session_committed`` signal
         """
-        self._worker.commit_session(dirty_db_maps, commit_msg, cookie)
+        for db_map in dirty_db_maps:
+            self._get_worker(db_map).commit_session(commit_msg, cookie)
 
     def rollback_session(self, *dirty_db_maps):
         """
@@ -622,7 +624,8 @@ class SpineDBManager(QObject):
         Args:
             *dirty_db_maps: dirty database maps to commit
         """
-        self._worker.rollback_session(dirty_db_maps)
+        for db_map in dirty_db_maps:
+            self._get_worker(db_map).rollback_session()
 
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an icon renderer for a given entity class.
@@ -679,8 +682,8 @@ class SpineDBManager(QObject):
         item = self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
         if only_visible and item:
             return item
-        fetcher = self._get_fetcher(db_map)
-        fetcher.fetch_all(item_types={item_type})
+        worker = self._get_worker(db_map)
+        worker.fetch_all(item_types={item_type})
         return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
 
     def get_field(self, db_map, item_type, id_, field, only_visible=True):
@@ -700,8 +703,8 @@ class SpineDBManager(QObject):
         items = list(self._cache.get(db_map, {}).get(item_type, {}).values())
         if only_visible:
             return items
-        fetcher = self._get_fetcher(db_map)
-        fetcher.fetch_all(item_types={item_type})
+        worker = self._get_worker(db_map)
+        worker.fetch_all(item_types={item_type})
         return list(self._cache.get(db_map, {}).get(item_type, {}).values())
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
@@ -977,7 +980,19 @@ class SpineDBManager(QObject):
             self.error_msg.emit(db_map_error_log)
 
     def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
-        self._worker.add_or_update_items(db_map_data, method_name, item_type, signal_name, readd=readd, check=check)
+        if readd:
+            self._readd_items(db_map_data, method_name, item_type, signal_name)
+        else:
+            self._add_or_update_items(db_map_data, method_name, item_type, signal_name, check)
+
+    def _add_or_update_items(self, db_map_data, method_name, item_type, signal_name, check):
+        for db_map, data in db_map_data.items():
+            cache = self.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
+            self._get_worker(db_map).add_or_update_items(data, method_name, item_type, signal_name, check, cache)
+
+    def _readd_items(self, db_map_data, method_name, item_type, signal_name):
+        for db_map, data in db_map_data.items():
+            self._get_worker(db_map).readd_items(data, method_name, item_type, signal_name)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.
@@ -1293,9 +1308,10 @@ class SpineDBManager(QObject):
         """Removes items from database.
 
         Args:
-            db_map_typed_ids (dict): lists of items to remove, keyed by item type (str), keyed by DiffDatabaseMapping
+            db_map_typed_ids (dict): mapping DiffDatabaseMapping to item type (str) to lists of items to remove
         """
-        self._worker.remove_items(db_map_typed_ids)
+        for db_map, ids_per_type in db_map_typed_ids.items():
+            self._get_worker(db_map).remove_items(ids_per_type)
 
     @staticmethod
     def db_map_ids(db_map_data):
@@ -1799,15 +1815,15 @@ class SpineDBManager(QObject):
             db_map.connection.close()
 
     def get_metadata_per_entity(self, db_map, entity_ids):
-        return self._worker.get_metadata_per_entity(db_map, entity_ids)
+        return self._get_worker(db_map).get_metadata_per_entity(entity_ids)
 
     def get_metadata_per_parameter_value(self, db_map, parameter_value_ids):
-        return self._worker.get_metadata_per_parameter_value(db_map, parameter_value_ids)
+        return self._get_worker(db_map).get_metadata_per_parameter_value(parameter_value_ids)
 
     def get_items_for_commit(self, db_map, commit_id):
-        fetcher = self._get_fetcher(db_map)
-        fetcher.fetch_all()
-        return fetcher.commit_cache.get(commit_id, {})
+        worker = self._get_worker(db_map)
+        worker.fetch_all()
+        return worker.commit_cache.get(commit_id, {})
 
     @staticmethod
     def get_all_multi_spine_db_editors():
