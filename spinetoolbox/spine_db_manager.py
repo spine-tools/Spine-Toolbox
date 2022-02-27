@@ -32,7 +32,6 @@ from spinedb_api import (
     to_database,
     relativedelta_to_duration,
     ParameterValueFormatError,
-    ParameterValueEncoder,
     IndexedValue,
     Array,
     TimeSeries,
@@ -1778,9 +1777,7 @@ class SpineDBManager(QObject):
                     + json.dumps(key)
                     + ": [{0}{1}{0}]".format(
                         "\n" + indent if values else "",
-                        (",\n" + indent).join(
-                            [indent + json.dumps(value, cls=ParameterValueEncoder) for value in values]
-                        ),
+                        (",\n" + indent).join([indent + json.dumps(value) for value in values]),
                     )
                     for key, values in data_for_export.items()
                 ]
