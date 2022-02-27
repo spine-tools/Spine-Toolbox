@@ -463,7 +463,7 @@ class AnsiEscapeCodeHandler:
         self._previous_format_closed = False
 
     def parse_text(self, text):
-        class AnsiEscapeCodes:
+        class AnsiEscapeCode:
             ResetFormat = 0
             BoldText = 1
             FaintText = 2
@@ -551,54 +551,54 @@ class AnsiEscapeCodeHandler:
                     self.endFormatScope()
                 for i in range(len(numbers)):  # pylint: disable=consider-using-enumerate
                     code = int(numbers[i])
-                    if AnsiEscapeCodes.TextColorStart <= code <= AnsiEscapeCodes.TextColorEnd:
-                        char_format.setForeground(_ansi_color(code - AnsiEscapeCodes.TextColorStart))
+                    if AnsiEscapeCode.TextColorStart <= code <= AnsiEscapeCode.TextColorEnd:
+                        char_format.setForeground(_ansi_color(code - AnsiEscapeCode.TextColorStart))
                         self.setFormatScope(char_format)
-                    elif AnsiEscapeCodes.BrightTextColorStart <= code <= AnsiEscapeCodes.BrightTextColorEnd:
-                        char_format.setForeground(_ansi_color(code - AnsiEscapeCodes.BrightTextColorStart, bright=True))
+                    elif AnsiEscapeCode.BrightTextColorStart <= code <= AnsiEscapeCode.BrightTextColorEnd:
+                        char_format.setForeground(_ansi_color(code - AnsiEscapeCode.BrightTextColorStart, bright=True))
                         self.setFormatScope(char_format)
-                    elif AnsiEscapeCodes.BackgroundColorStart <= code <= AnsiEscapeCodes.BackgroundColorEnd:
-                        char_format.setBackground(_ansi_color(code - AnsiEscapeCodes.BackgroundColorStart))
+                    elif AnsiEscapeCode.BackgroundColorStart <= code <= AnsiEscapeCode.BackgroundColorEnd:
+                        char_format.setBackground(_ansi_color(code - AnsiEscapeCode.BackgroundColorStart))
                         self.setFormatScope(char_format)
-                    elif AnsiEscapeCodes.BrightBackgroundColorStart <= code <= AnsiEscapeCodes.BrightBackgroundColorEnd:
+                    elif AnsiEscapeCode.BrightBackgroundColorStart <= code <= AnsiEscapeCode.BrightBackgroundColorEnd:
                         char_format.setBackground(
-                            _ansi_color(code - AnsiEscapeCodes.BrightBackgroundColorStart, bright=True)
+                            _ansi_color(code - AnsiEscapeCode.BrightBackgroundColorStart, bright=True)
                         )
                         self.setFormatScope(char_format)
                     else:
-                        if code == AnsiEscapeCodes.ResetFormat:
+                        if code == AnsiEscapeCode.ResetFormat:
                             char_format = self._make_default_format()
                             self.endFormatScope()
                             break
-                        if code == AnsiEscapeCodes.BoldText:
+                        if code == AnsiEscapeCode.BoldText:
                             char_format.setFontWeight(QFont.Bold)
                             self.setFormatScope(char_format)
                             break
-                        if code == AnsiEscapeCodes.FaintText:
+                        if code == AnsiEscapeCode.FaintText:
                             char_format.setFontWeight(QFont.Light)
                             self.setFormatScope(char_format)
                             break
-                        if code == AnsiEscapeCodes.ItalicText:
+                        if code == AnsiEscapeCode.ItalicText:
                             char_format.setFontItalic(True)
                             self.setFormatScope(char_format)
                             break
-                        if code == AnsiEscapeCodes.NormalIntensity:
+                        if code == AnsiEscapeCode.NormalIntensity:
                             char_format.setFontWeight(QFont.Normal)
                             self.setFormatScope(char_format)
                             break
-                        if code == AnsiEscapeCodes.NotItalic:
+                        if code == AnsiEscapeCode.NotItalic:
                             char_format.setFontItalic(False)
                             self.setFormatScope(char_format)
                             break
-                        if code == AnsiEscapeCodes.DefaultTextColor:
+                        if code == AnsiEscapeCode.DefaultTextColor:
                             char_format.setForeground(self._fg_color)
                             self.setFormatScope(char_format)
                             break
-                        if code == AnsiEscapeCodes.DefaultBackgroundColor:
+                        if code == AnsiEscapeCode.DefaultBackgroundColor:
                             char_format.setBackground(self._bg_color)
                             self.setFormatScope(char_format)
                             break
-                        if code == AnsiEscapeCodes.RgbBackgroundColor:
+                        if code == AnsiEscapeCode.RgbBackgroundColor:
                             # See http://en.wikipedia.org/wiki/ANSI_escape_code#Colors
                             i += 1
                             if i >= len(numbers):
@@ -612,7 +612,7 @@ class AnsiEscapeCodeHandler:
                                         int(numbers[i + 2]),
                                         int(numbers[i + 3]),
                                     )
-                                    if code == AnsiEscapeCodes.RgbTextColor:
+                                    if code == AnsiEscapeCode.RgbTextColor:
                                         char_format.setForeground(color)
                                     else:
                                         char_format.setBackground(color)
@@ -637,7 +637,7 @@ class AnsiEscapeCodeHandler:
                                     # The last 24 colors are a greyscale gradient.
                                     grey = int((index - 232) * 11)
                                     color = QColor(grey, grey, grey)
-                                if code == AnsiEscapeCodes.RgbTextColor:
+                                if code == AnsiEscapeCode.RgbTextColor:
                                     char_format.setForeground(color)
                                 else:
                                     char_format.setBackground(color)
