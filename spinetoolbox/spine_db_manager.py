@@ -208,7 +208,7 @@ class SpineDBManager(QObject):
         self.object_classes_updated.connect(self.update_icons)
         self.relationship_classes_added.connect(self.update_icons)
         self.relationship_classes_updated.connect(self.update_icons)
-        self.session_rolled_back.connect(self._clear_workers)
+        self.session_rolled_back.connect(self._restart_fetching)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
         # Refresh (after caching, so items are there when listeners receive signals)
@@ -235,20 +235,6 @@ class SpineDBManager(QObject):
         self.entity_groups_added.connect(self._cascade_refresh_relationships_by_group)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
-    def _make_worker(self, db_url):
-        """Registers and returns a worker.
-
-        Args:
-            db_url (str or URL)
-
-        Returns:
-            SpineDBWorker
-        """
-        db_url = str(db_url)
-        if db_url not in self._workers:
-            self._workers[db_url] = SpineDBWorker(self, db_url)
-        return self._workers[db_url]
-
     def _get_worker(self, db_map):
         """Returns a worker.
 
@@ -258,7 +244,7 @@ class SpineDBManager(QObject):
         Returns:
             SpineDBWorker
         """
-        return self._workers[str(db_map.db_url)]
+        return self._workers[db_map]
 
     def can_fetch_more(self, db_map, parent):
         """Whether or not we can fetch more items of given type from given db.
@@ -272,7 +258,10 @@ class SpineDBManager(QObject):
         """
         if db_map.connection.closed:
             return False
-        return self._get_worker(db_map).can_fetch_more(parent)
+        try:
+            return self._get_worker(db_map).can_fetch_more(parent)
+        except KeyError:
+            return False
 
     def fetch_more(self, db_map, parent):
         """Fetches more items of given type from given db.
@@ -408,10 +397,10 @@ class SpineDBManager(QObject):
                 lock_failed_reported = True
             qApp.processEvents()
         try:
-            worker = self._workers.pop(str(db_map.db_url), None)
+            worker = self._workers.pop(db_map, None)
             if worker is not None:
-                worker.deleteLater()
                 worker.close_db_map()
+                worker.clean_up()
             del self.undo_stack[db_map]
             del self.undo_action[db_map]
             del self.redo_action[db_map]
@@ -488,9 +477,11 @@ class SpineDBManager(QObject):
             if codename is not None:
                 db_map.codename = codename
             return db_map
-        db_map, err = self._make_worker(url).get_db_map(codename=codename, upgrade=upgrade, create=create)
+        worker = SpineDBWorker(self, url)
+        db_map, err = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
         if err is not None:
             raise err
+        self._workers[db_map] = worker
         self._db_maps[url] = db_map
         self.db_map_locks[db_map] = QMutex(QMutex.Recursive)
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
@@ -574,18 +565,18 @@ class SpineDBManager(QObject):
     def clean_up(self):
         while self._workers:
             _, worker = self._workers.popitem()
-            worker.deleteLater()
+            worker.clean_up()
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self._cache)
         if not refreshed_db_maps:
             return
-        self._clear_workers(refreshed_db_maps)
+        self._restart_fetching(refreshed_db_maps)
         self.session_refreshed.emit(refreshed_db_maps)
 
-    def _clear_workers(self, db_maps):
-        # FIXME: This rather needs to restart the fetching
+    def _restart_fetching(self, db_maps):
+        """Restarts fetching"""
         for db_map in db_maps:
             del self._cache[db_map]
             self._get_worker(db_map).reset_queries()
