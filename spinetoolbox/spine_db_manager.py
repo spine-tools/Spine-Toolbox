@@ -208,7 +208,6 @@ class SpineDBManager(QObject):
         self.object_classes_updated.connect(self.update_icons)
         self.relationship_classes_added.connect(self.update_icons)
         self.relationship_classes_updated.connect(self.update_icons)
-        self.session_rolled_back.connect(self._restart_fetching)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
         # Refresh (after caching, so items are there when listeners receive signals)
@@ -579,12 +578,6 @@ class SpineDBManager(QObject):
         self._restart_fetching(refreshed_db_maps)
         self.session_refreshed.emit(refreshed_db_maps)
 
-    def _restart_fetching(self, db_maps):
-        """Restarts fetching"""
-        for db_map in db_maps:
-            del self._cache[db_map]
-            self._get_worker(db_map).reset_queries()
-
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
         """
         Commits the current session.
@@ -606,6 +599,13 @@ class SpineDBManager(QObject):
         """
         for db_map in dirty_db_maps:
             self._get_worker(db_map).rollback_session()
+        self._restart_fetching(dirty_db_maps)
+
+    def _restart_fetching(self, db_maps):
+        """Restarts fetching"""
+        for db_map in db_maps:
+            del self._cache[db_map]
+            self._get_worker(db_map).reset_queries()
 
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an icon renderer for a given entity class.

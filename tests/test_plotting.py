@@ -20,7 +20,7 @@ import unittest
 from contextlib import contextmanager
 from unittest.mock import Mock, MagicMock, patch
 from PySide2.QtCore import QModelIndex, QItemSelectionModel, QObject
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QMessageBox
 
 from spinedb_api import DateTime, Map, TimeSeries, TimeSeriesVariableResolution, to_database, TimeSeriesFixedResolution
 from spinetoolbox.spine_db_manager import SpineDBManager
