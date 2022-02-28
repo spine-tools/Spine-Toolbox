@@ -16,10 +16,8 @@ The SpineDBWorker class
 :date:   2.10.2019
 """
 
-import threading
-import queue
+from concurrent.futures import ThreadPoolExecutor, wait
 import itertools
-from enum import auto, Enum, unique
 from PySide2.QtCore import QObject, QEvent, QCoreApplication
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinetoolbox.helpers import busy_effect
@@ -85,33 +83,8 @@ class _RollbackSessionEvent(QEvent):
         self.undo_stack = undo_stack
 
 
-class _Signal:
-    def __init__(self, request, queue_):
-        self._request = request
-        self._queue = queue_
-
-    def emit(self, *args, **kwargs):
-        self._queue.put((self._request, args, kwargs))
-
-
 class SpineDBWorker(QObject):
     """Does all the DB communication for SpineDBManager, in the non-GUI thread."""
-
-    @unique
-    class _Request(Enum):
-        GET_DB_MAP = auto()
-        INIT_QUERY = auto()
-        FETCH_MORE = auto()
-        FETCH_ALL = auto()
-        CLOSE_DB_MAP = auto()
-        ADD_OR_UPDATE_ITEMS = auto()
-        READD_ITEMS = auto()
-        REMOVE_ITEMS = auto()
-        COMMIT_SESSION = auto()
-        ROLLBACK_SESSION = auto()
-        GET_METADATA_PER_ENTITY = auto()
-        GET_METADATA_PER_PARAMETER_VALUE = auto()
-        QUIT = auto()
 
     def __init__(self, db_mngr, db_url):
         super().__init__()
@@ -127,49 +100,11 @@ class SpineDBWorker(QObject):
         self._fetched_parents = set()
         self._fetched_item_types = set()
         self.commit_cache = {}
-        self._queue = queue.Queue()
-        self._get_db_map_called = _Signal(self._Request.GET_DB_MAP, self._queue)
-        self._init_query_requested = _Signal(self._Request.INIT_QUERY, self._queue)
-        self._fetch_more_requested = _Signal(self._Request.FETCH_MORE, self._queue)
-        self._fetch_all_requested = _Signal(self._Request.FETCH_ALL, self._queue)
-        self._close_db_map_called = _Signal(self._Request.CLOSE_DB_MAP, self._queue)
-        self._add_or_update_items_called = _Signal(self._Request.ADD_OR_UPDATE_ITEMS, self._queue)
-        self._readd_items_called = _Signal(self._Request.READD_ITEMS, self._queue)
-        self._remove_items_called = _Signal(self._Request.REMOVE_ITEMS, self._queue)
-        self._commit_session_called = _Signal(self._Request.COMMIT_SESSION, self._queue)
-        self._rollback_session_called = _Signal(self._Request.ROLLBACK_SESSION, self._queue)
-        self._get_metadata_per_entity_called = _Signal(self._Request.GET_METADATA_PER_ENTITY, self._queue)
-        self._get_metadata_per_parameter_value_called = _Signal(
-            self._Request.GET_METADATA_PER_PARAMETER_VALUE, self._queue
-        )
-        self._finished = _Signal(self._Request.QUIT, self._queue)
-        self._thread = threading.Thread(target=self._target)
-        self._thread.start()
-        self.destroyed.connect(lambda obj=None: self._clean_up())
+        self._executor = ThreadPoolExecutor(max_workers=1)
 
-    def _clean_up(self):
-        self._finished.emit()
-        self._thread.join()
-
-    def _target(self):
-        while True:
-            request, args, kwargs = self._queue.get()
-            if request == self._Request.QUIT:
-                break
-            {
-                self._Request.GET_DB_MAP: self._get_db_map,
-                self._Request.INIT_QUERY: self._init_query,
-                self._Request.FETCH_MORE: self._fetch_more,
-                self._Request.FETCH_ALL: self._fetch_all,
-                self._Request.CLOSE_DB_MAP: self._close_db_map,
-                self._Request.ADD_OR_UPDATE_ITEMS: self._add_or_update_items,
-                self._Request.READD_ITEMS: self._readd_items,
-                self._Request.REMOVE_ITEMS: self._remove_items,
-                self._Request.COMMIT_SESSION: self._commit_session,
-                self._Request.ROLLBACK_SESSION: self._rollback_session,
-                self._Request.GET_METADATA_PER_ENTITY: self._get_metadata_per_entity,
-                self._Request.GET_METADATA_PER_PARAMETER_VALUE: self._get_metadata_per_parameter_value,
-            }[request](*args, **kwargs)
+    def clean_up(self):
+        self.deleteLater()
+        self._executor.shutdown()
 
     def event(self, ev):
         if ev.type() == _FETCH:
@@ -196,17 +131,15 @@ class SpineDBWorker(QObject):
         return super().event(ev)
 
     def get_db_map(self, *args, **kwargs):
-        out_queue = queue.Queue()
-        self._get_db_map_called.emit(out_queue, *args, **kwargs)
-        err = out_queue.get()
+        future = self._executor.submit(self._get_db_map, *args, **kwargs)
+        self._db_map, err = future.result()
         return self._db_map, err
 
-    def _get_db_map(self, out_queue, *args, **kwargs):
+    def _get_db_map(self, *args, **kwargs):
         try:
-            self._db_map = DiffDatabaseMapping(self._db_url, *args, **kwargs)
-            out_queue.put(None)
+            return DiffDatabaseMapping(self._db_url, *args, **kwargs), None
         except (SpineDBVersionError, SpineDBAPIError) as err:
-            out_queue.put(err)
+            return None, err
 
     def reset_queries(self, item_type=None):
         parents = list(self._queries)
@@ -226,7 +159,7 @@ class SpineDBWorker(QObject):
         query = self._queries.get(parent)
         if query is None:
             # Query not made yet. Init query and return True
-            self._init_query_requested.emit(parent)
+            self._executor.submit(self._init_query, parent)
             return True
         return self._query_has_elements(query)
 
@@ -269,7 +202,7 @@ class SpineDBWorker(QObject):
             parent (object)
         """
         self._busy_parents.add(parent)
-        self._fetch_more_requested.emit(parent)
+        self._executor.submit(self._fetch_more, parent)
 
     @busy_effect
     def _fetch_more(self, parent):
@@ -310,18 +243,13 @@ class SpineDBWorker(QObject):
         if not item_types:
             # FIXME: Needed? QCoreApplication.processEvents()
             return
-        ev = threading.Event()
-        self._fetch_all_requested.emit(ev, item_types)
-        while True:
-            if ev.wait(timeout=0):
-                break
-            QCoreApplication.processEvents()
+        future = self._executor.submit(self._fetch_all, item_types)
+        wait((future,))
 
     @busy_effect
-    def _fetch_all(self, ev, item_types):
+    def _fetch_all(self, item_types):
         lock = self._db_mngr.db_map_locks.get(self._db_map)
         if lock is None or not lock.tryLock():
-            ev.set()
             return
         try:
             for item_type in item_types:
@@ -330,7 +258,6 @@ class SpineDBWorker(QObject):
                     self._populate_commit_cache(item_type, chunk)
                     self._db_mngr.cache_items(item_type, {self._db_map: chunk})
                 self._fetched_item_types.add(item_type)
-            ev.set()
         finally:
             lock.unlock()
 
@@ -360,42 +287,40 @@ class SpineDBWorker(QObject):
     def _populate_commit_cache(self, item_type, items):
         if item_type == "commit":
             return
-        if item_type == "entity_group":  # FIXME
+        if item_type == "entity_group":  # FIXME: the entity_group table has no commit_id column :(
             return
         for item in items:
             self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])
 
     def close_db_map(self):
-        self._close_db_map_called.emit()
+        self._executor.submit(self._close_db_map)
 
     def _close_db_map(self):
         if not self._db_map.connection.closed:
             self._db_map.connection.close()
 
     def get_metadata_per_entity(self, entity_ids):
-        out_queue = queue.Queue()
-        self._get_metadata_per_entity_called.emit(out_queue, entity_ids)
-        return out_queue.get()
+        future = self._executor.submit(self._get_metadata_per_entity, entity_ids)
+        return future.result()
 
-    def _get_metadata_per_entity(self, out_queue, entity_ids):
+    def _get_metadata_per_entity(self, entity_ids):
         d = {}
         sq = self._db_map.ext_entity_metadata_sq
         for x in self._db_map.query(sq).filter(self._db_map.in_(sq.c.entity_id, entity_ids)):
             d.setdefault(x.entity_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        out_queue.put(d)
+        return d
 
     def get_metadata_per_parameter_value(self, parameter_value_ids):
-        out_queue = queue.Queue()
-        self._get_metadata_per_parameter_value_called.emit(out_queue, parameter_value_ids)
-        return out_queue.get()
+        future = self._executor.submit(self._get_metadata_per_parameter_value, parameter_value_ids)
+        return future.result()
 
-    def _get_metadata_per_parameter_value(self, out_queue, parameter_value_ids):
+    def _get_metadata_per_parameter_value(self, parameter_value_ids):
         d = {}
         sq = self._db_map.ext_parameter_value_metadata_sq
         for x in self._db_map.query(sq).filter(self._db_map.in_(sq.c.parameter_value_id, parameter_value_ids)):
             param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
             d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        out_queue.put(d)
+        return d
 
     def add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
         """Adds or updates items in db.
@@ -408,7 +333,7 @@ class SpineDBWorker(QObject):
             check (bool): Whether or not to check integrity
             cache (dict): Cache
         """
-        self._add_or_update_items_called.emit(items, method_name, item_type, signal_name, check, cache)
+        self._executor.submit(self._add_or_update_items, items, method_name, item_type, signal_name, check, cache)
 
     @busy_effect
     def _add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
@@ -431,7 +356,7 @@ class SpineDBWorker(QObject):
             item_type (str): item type
             signal_name (str) : signal attribute of SpineDBManager to emit if successful
         """
-        self._readd_items_called.emit(items, method_name, item_type, signal_name)
+        self._executor.submit(self._readd_items, items, method_name, item_type, signal_name)
 
     @busy_effect
     def _readd_items(self, items, method_name, item_type, signal_name):
@@ -449,7 +374,7 @@ class SpineDBWorker(QObject):
         Args:
             ids_per_type (dict): lists of items to remove keyed by item type (str)
         """
-        self._remove_items_called.emit(ids_per_type)
+        self._executor.submit(self._remove_items, ids_per_type)
 
     @busy_effect
     def _remove_items(self, ids_per_type):
@@ -475,7 +400,7 @@ class SpineDBWorker(QObject):
         # Make sure that the worker thread has a reference to undo stacks even if they get deleted
         # in the GUI thread.
         undo_stack = self._db_mngr.undo_stack[self._db_map]
-        self._commit_session_called.emit(commit_msg, undo_stack, cookie)
+        self._executor.submit(self._commit_session, commit_msg, undo_stack, cookie)
 
     def _commit_session(self, commit_msg, undo_stack, cookie=None):
         """Commits session for given database maps.
@@ -508,7 +433,7 @@ class SpineDBWorker(QObject):
         # Make sure that the worker thread has a reference to undo stacks even if they get deleted
         # in the GUI thread.
         undo_stack = self._db_mngr.undo_stack[self._db_map]
-        self._rollback_session_called.emit(undo_stack)
+        self._executor.submit(self._rollback_session, undo_stack)
 
     def _rollback_session(self, undo_stack):
         """Rolls back session for given database maps.
