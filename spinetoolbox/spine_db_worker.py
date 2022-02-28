@@ -16,8 +16,8 @@ The SpineDBWorker class
 :date:   2.10.2019
 """
 
-from concurrent.futures import ThreadPoolExecutor, wait
 import itertools
+from concurrent.futures import ThreadPoolExecutor
 from PySide2.QtCore import QObject, QEvent, QCoreApplication
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinetoolbox.helpers import busy_effect
@@ -129,6 +129,13 @@ class SpineDBWorker(QObject):
             self._receive_rollback_session(ev)
             return True
         return super().event(ev)
+
+    def query(self, sq_name):
+        """For tests."""
+        return self._executor.submit(self._query, sq_name).result()
+
+    def _query(self, sq_name):
+        return self._db_map.query(getattr(self._db_map, sq_name)).all()
 
     def get_db_map(self, *args, **kwargs):
         future = self._executor.submit(self._get_db_map, *args, **kwargs)
@@ -244,7 +251,7 @@ class SpineDBWorker(QObject):
             # FIXME: Needed? QCoreApplication.processEvents()
             return
         future = self._executor.submit(self._fetch_all, item_types)
-        wait((future,))
+        _ = future.result()  # Just wait
 
     @busy_effect
     def _fetch_all(self, item_types):

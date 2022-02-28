@@ -17,6 +17,7 @@ Classes and functions that can be shared among unit test modules.
 """
 from contextlib import contextmanager
 from unittest import mock
+from concurrent.futures import Executor
 
 from PySide2.QtCore import QObject, Signal, Slot
 from PySide2.QtWidgets import QApplication
@@ -300,71 +301,25 @@ class MockInstantQProcess(mock.Mock):
 
 
 class TestSpineDBManager(SpineDBManager):
-    @property
-    def worker_thread(self):
-        return QApplication.instance().thread()
-
-    def clean_up(self):
-        while self._fetchers:
-            _, fetcher = self._fetchers.popitem()
-            fetcher.deleteLater()
-        self.deleteLater()
-
     def fetch_all(self, db_map):
-        fetcher = self._get_fetcher(db_map)
+        worker = self._get_worker(db_map)
         for item_type in self.added_signals:
-            fetcher.fetch_more(ItemTypeFetchParent(item_type))
+            worker.fetch_more(ItemTypeFetchParent(item_type))
+
+    def get_db_map(self, *args, **kwargs):
+        with mock.patch("spinetoolbox.spine_db_worker.ThreadPoolExecutor") as mock_executor:
+            mock_executor.return_value = _MockExecutor()
+            return super().get_db_map(*args, **kwargs)
 
 
-@contextmanager
-def access_database(db_mngr, db_map, subquery_name):
-    """A context manager to access databases in database manager.
-
-    Args:
-        db_mngr (SpineDBManager): database manager that contains the DB mapping
-        db_map (DiffDatabaseMapping): database mapping to access
-        subquery_name (str): name of the query in db_map to access
-    """
-    db_map_access = DBMapAccess(subquery_name, db_mngr.worker_thread)
-    with signal_waiter(db_map_access.finished) as waiter:
-        db_map_access.fetch_data.emit(db_map)
-        waiter.wait()
-    try:
-        yield db_map_access
-    finally:
-        db_map_access.deleteLater()
+class _MockExecutor(Executor):
+    def submit(self, fn, *args, **kwargs):
+        return _MockFuture(result=fn(*args, **kwargs))
 
 
-class DBMapAccess(QObject):
-    """Helper class that accesses given database map in database manager's worker thread.
+class _MockFuture:
+    def __init__(self, result):
+        self._result = result
 
-    Attributes:
-        data (list): query result after ``finished`` has been emitted
-    """
-
-    fetch_data = Signal(object)
-    """Starts querying data using a database mapping."""
-    finished = Signal()
-    """Emitted when the query has finished."""
-
-    def __init__(self, subquery_name, thread):
-        """
-        Args:
-            subquery_name (str): database mapping's subquery attribute
-            thread (QThread): thread that connected to the database
-        """
-        super().__init__()
-        self.data = None
-        self._subquery_name = subquery_name
-        self.moveToThread(thread)
-        self.fetch_data.connect(self._do_subquery)
-
-    @Slot(object)
-    def _do_subquery(self, db_map):
-        """Queries the database.
-
-        Args:
-            db_map (DatabaseMappingBase): database map to query
-        """
-        self.data = db_map.query(getattr(db_map, self._subquery_name)).all()
-        self.finished.emit()
+    def result(self):
+        return self._result

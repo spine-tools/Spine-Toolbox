@@ -489,6 +489,10 @@ class SpineDBManager(QObject):
         self.redo_action[db_map] = stack.createRedoAction(self)
         return db_map
 
+    def query(self, db_map, sq_name):
+        """For tests."""
+        return self._get_worker(db_map).query(sq_name)
+
     def register_listener(self, listener, *db_maps):
         """Register given listener for all given db_map's signals.
 

@@ -81,7 +81,6 @@ class TestEmptyParameterModel(unittest.TestCase):
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         self._db_mngr.clean_up()
-        self._db_mngr.deleteLater()
 
     def test_add_object_parameter_values_to_db(self):
         """Test that object parameter values are added to the db when editing the table."""
