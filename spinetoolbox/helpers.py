@@ -1411,8 +1411,8 @@ class FetchParent:
         """
         return query
 
-    def restart_fetching(self):
-        """Restarts fetching this item. Can be called from a different thread than ``qApp.thread()``."""
+    def fetch_status_change(self):
+        """Called when fetch status changes."""
 
 
 class ItemTypeFetchParent(FetchParent):

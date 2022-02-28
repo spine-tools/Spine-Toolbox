@@ -18,12 +18,12 @@ The SpineDBWorker class
 
 import itertools
 from concurrent.futures import ThreadPoolExecutor
-from PySide2.QtCore import QObject, QEvent, QCoreApplication
+from PySide2.QtCore import QObject, QEvent, QCoreApplication, QTimer
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinetoolbox.helpers import busy_effect
 
 _FETCH = QEvent.Type(QEvent.registerEventType())
-_FETCH_COMPLETE = QEvent.Type(QEvent.registerEventType())
+_FETCH_STATUS_CHANGE = QEvent.Type(QEvent.registerEventType())
 _ADD_OR_UPDATE_ITEMS = QEvent.Type(QEvent.registerEventType())
 _READD_ITEMS = QEvent.Type(QEvent.registerEventType())
 _REMOVE_ITEMS = QEvent.Type(QEvent.registerEventType())
@@ -38,9 +38,9 @@ class _FetchEvent(QEvent):
         self.chunk = chunk
 
 
-class _FetchCompleteEvent(QEvent):
+class _FetchStatusChangeEvent(QEvent):
     def __init__(self, parent):
-        super().__init__(_FETCH_COMPLETE)
+        super().__init__(_FETCH_STATUS_CHANGE)
         self.parent = parent
 
 
@@ -108,25 +108,25 @@ class SpineDBWorker(QObject):
 
     def event(self, ev):
         if ev.type() == _FETCH:
-            self._receive_fetch(ev)
+            self._fetch_event(ev)
             return True
-        if ev.type() == _FETCH_COMPLETE:
-            ev.parent.restart_fetching()
+        if ev.type() == _FETCH_STATUS_CHANGE:
+            ev.parent.fetch_status_change()
             return True
         if ev.type() == _ADD_OR_UPDATE_ITEMS:
-            self._receive_add_or_update_items(ev)
+            self._add_or_update_items_event(ev)
             return True
         if ev.type() == _READD_ITEMS:
-            self._receive_readd_items(ev)
+            self._readd_items_event(ev)
             return True
         if ev.type() == _REMOVE_ITEMS:
-            self._receive_remove_items(ev)
+            self._remove_items_event(ev)
             return True
         if ev.type() == _COMMIT_SESSION:
-            self._receive_commit_session(ev)
+            self._commit_session_event(ev)
             return True
         if ev.type() == _ROLLBACK_SESSION:
-            self._receive_rollback_session(ev)
+            self._rollback_session_event(ev)
             return True
         return super().event(ev)
 
@@ -158,7 +158,7 @@ class SpineDBWorker(QObject):
             key = self._query_keys.pop(query)
             self._query_has_elements_by_key.pop(key, None)
             self._fetched_parents.discard(parent)
-            parent.restart_fetching()
+            parent.fetch_status_change()
 
     def can_fetch_more(self, parent):
         if parent in self._fetched_parents | self._busy_parents:
@@ -180,7 +180,7 @@ class SpineDBWorker(QObject):
             query = self._get_query(parent)
             if not self._query_has_elements(query):
                 self._fetched_parents.add(parent)
-                QCoreApplication.postEvent(self, _FetchCompleteEvent(parent))
+                QCoreApplication.postEvent(self, _FetchStatusChangeEvent(parent))
         finally:
             lock.unlock()
 
@@ -224,14 +224,14 @@ class SpineDBWorker(QObject):
         finally:
             lock.unlock()
 
-    def _receive_fetch(self, ev):
+    def _fetch_event(self, ev):
+        # Mark parent as unbusy, but later, otherwise emitting the singal below will trigger another fetch
+        QTimer.singleShot(0, lambda parent=ev.parent: self._busy_parents.discard(parent))
         if ev.chunk:
             signal = self._db_mngr.added_signals[ev.parent.fetch_item_type]
             signal.emit({self._db_map: ev.chunk})
         else:
             self._fetched_parents.add(ev.parent)
-        self._busy_parents.discard(ev.parent)
-        # TODO: Do we need this? QTimer.singleShot(0, lambda parent=parent: self._busy_parents.discard(parent))
 
     def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
         if item_types is None:
@@ -347,7 +347,7 @@ class SpineDBWorker(QObject):
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
         QCoreApplication.postEvent(self, _AddOrUpdateItemsEvent(item_type, items, errors, signal_name))
 
-    def _receive_add_or_update_items(self, ev):
+    def _add_or_update_items_event(self, ev):
         signal = getattr(self._db_mngr, ev.signal_name)
         items = [self._db_mngr.db_to_cache(self._db_map, ev.item_type, item) for item in ev.items]
         signal.emit({self._db_map: items})
@@ -370,7 +370,7 @@ class SpineDBWorker(QObject):
         getattr(self._db_map, method_name)(*items, readd=True)
         QCoreApplication.postEvent(self, _ReaddItemsEvent(item_type, items, signal_name))
 
-    def _receive_readd_items(self, ev):
+    def _readd_items_event(self, ev):
         items = [self._db_mngr.db_to_cache(self._db_map, ev.item_type, item) for item in ev.items]
         signal = getattr(self._db_mngr, ev.signal_name)
         signal.emit({self._db_map: items})
@@ -392,7 +392,7 @@ class SpineDBWorker(QObject):
             errors = [err]
         QCoreApplication.postEvent(self, _RemoveItemsEvent(ids_per_type, errors))
 
-    def _receive_remove_items(self, ev):
+    def _remove_items_event(self, ev):
         if ev.errors:
             self._db_mngr.error_msg.emit({self._db_map: ev.errors})
         self._db_mngr.items_removed.emit({self._db_map: ev.ids_per_type})
@@ -424,7 +424,7 @@ class SpineDBWorker(QObject):
             errors = [e.msg]
         QCoreApplication.postEvent(self, _CommitSessionEvent(errors, undo_stack, cookie))
 
-    def _receive_commit_session(self, ev):
+    def _commit_session_event(self, ev):
         ev.undo_stack.setClean()
         if ev.errors:
             self._db_mngr.error_msg.emit({self._db_map: ev.errors})
@@ -455,7 +455,7 @@ class SpineDBWorker(QObject):
             errors = [e.msg]
         QCoreApplication.postEvent(self, _RollbackSessionEvent(errors, undo_stack))
 
-    def _receive_rollback_session(self, ev):
+    def _rollback_session_event(self, ev):
         ev.undo_stack.setClean()
         if ev.errors:
             self._db_mngr.error_msg.emit({self._db_map: ev.errors})

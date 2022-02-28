@@ -226,10 +226,10 @@ class MultiDBTreeItem(FetchParent, TreeItem):
     def _children_sort_key(self):
         return lambda item: item.display_id
 
-    def restart_fetching(self):
+    def fetch_status_change(self):
         """Notifies the view that the model's layout has changed.
         This triggers a repaint so this item may be painted gray if no children."""
-        QTimer.singleShot(0, self.model.layoutChanged)
+        self.model.layoutChanged.emit()
 
     @property
     def fetch_item_type(self):
