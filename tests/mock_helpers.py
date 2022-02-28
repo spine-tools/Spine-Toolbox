@@ -15,14 +15,12 @@ Classes and functions that can be shared among unit test modules.
 :author: P. Savolainen (VTT)
 :date:   18.4.2019
 """
-from contextlib import contextmanager
 from unittest import mock
 from concurrent.futures import Executor
 
-from PySide2.QtCore import QObject, Signal, Slot
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.helpers import signal_waiter, ItemTypeFetchParent
+from spinetoolbox.helpers import ItemTypeFetchParent
 from spinetoolbox.ui_main import ToolboxUI
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -305,6 +303,7 @@ class TestSpineDBManager(SpineDBManager):
         worker = self._get_worker(db_map)
         for item_type in self.added_signals:
             worker.fetch_more(ItemTypeFetchParent(item_type))
+            qApp.processEvents()
 
     def get_db_map(self, *args, **kwargs):
         with mock.patch("spinetoolbox.spine_db_worker.ThreadPoolExecutor") as mock_executor:
