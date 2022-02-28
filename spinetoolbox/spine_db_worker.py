@@ -225,7 +225,7 @@ class SpineDBWorker(QObject):
             lock.unlock()
 
     def _fetch_event(self, ev):
-        # Mark parent as unbusy, but later, otherwise emitting the singal below will trigger another fetch
+        # Mark parent as unbusy, but after emitting the signal below otherwise we have an infinite fetch loop
         QTimer.singleShot(0, lambda parent=ev.parent: self._busy_parents.discard(parent))
         if ev.chunk:
             signal = self._db_mngr.added_signals[ev.parent.fetch_item_type]
@@ -251,7 +251,7 @@ class SpineDBWorker(QObject):
             # FIXME: Needed? QCoreApplication.processEvents()
             return
         future = self._executor.submit(self._fetch_all, item_types)
-        _ = future.result()  # Just wait
+        _ = future.result()
 
     @busy_effect
     def _fetch_all(self, item_types):
