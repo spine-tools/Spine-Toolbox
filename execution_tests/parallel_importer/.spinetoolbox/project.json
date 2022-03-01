@@ -1,0 +1,131 @@
+{
+    "project": {
+        "version": 7,
+        "name": "parallel_importer",
+        "description": "",
+        "specifications": {
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/test_tool.json"
+                }
+            ],
+            "Importer": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Importer/import_tool_output.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Source to Write output",
+                "from": [
+                    "Source",
+                    "right"
+                ],
+                "to": [
+                    "Write output",
+                    "left"
+                ],
+                "resource_filters": {
+                    "db_url@Source": {
+                        "scenario_filter": [
+                            1,
+                            2
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "from Write output to Import",
+                "from": [
+                    "Write output",
+                    "right"
+                ],
+                "to": [
+                    "Import",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Import to Sink",
+                "from": [
+                    "Import",
+                    "right"
+                ],
+                "to": [
+                    "Sink",
+                    "left"
+                ]
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Source": {
+            "type": "Data Store",
+            "description": "",
+            "x": -245.78125,
+            "y": -4.0625,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/source/Source.sqlite"
+                }
+            }
+        },
+        "Write output": {
+            "type": "Tool",
+            "description": "",
+            "x": -108.671875,
+            "y": -4.0625,
+            "specification": "Test tool",
+            "execute_in_work": true,
+            "cmd_line_args": [
+                {
+                    "type": "resource",
+                    "arg": "db_url@Source"
+                }
+            ]
+        },
+        "Import": {
+            "type": "Importer",
+            "description": "",
+            "x": 20.3125,
+            "y": -4.0625,
+            "specification": "Import tool output",
+            "cancel_on_error": false,
+            "purge_before_writing": false,
+            "on_conflict": "merge",
+            "file_selection": [
+                [
+                    "out.csv",
+                    true
+                ]
+            ]
+        },
+        "Sink": {
+            "type": "Data Store",
+            "description": "",
+            "x": 135.078125,
+            "y": -4.0625,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/sink/Sink.sqlite"
+                }
+            }
+        }
+    }
+}

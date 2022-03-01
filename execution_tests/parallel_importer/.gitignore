@@ -1,0 +1,4 @@
+out.csv
+.spinetoolbox/local/
+.spinetoolbox/items/write_output/
+*.bak
