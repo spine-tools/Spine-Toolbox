@@ -225,7 +225,7 @@ class SpineDBWorker(QObject):
             lock.unlock()
 
     def _fetch_event(self, ev):
-        # Mark parent as unbusy, but after emitting the signal below otherwise we have an infinite fetch loop
+        # Mark parent as unbusy, but after emitting the 'added' signal below otherwise we have an infinite fetch loop
         QTimer.singleShot(0, lambda parent=ev.parent: self._busy_parents.discard(parent))
         if ev.chunk:
             signal = self._db_mngr.added_signals[ev.parent.fetch_item_type]

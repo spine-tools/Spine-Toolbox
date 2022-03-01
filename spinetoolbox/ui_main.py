@@ -1022,6 +1022,11 @@ class ToolboxUI(QMainWindow):
 
     def replace_specification(self, name, specification):
         """Pushes an ReplaceSpecificationCommand to undo stack."""
+        if name == specification.name:
+            # If the spec name didn't change, we don't need to make a command.
+            # This is because the changes don't affect the project.json file.
+            self._project.replace_specification(name, specification)
+            return
         self.undo_stack.push(ReplaceSpecificationCommand(self._project, name, specification))
 
     @Slot(str)
