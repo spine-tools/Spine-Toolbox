@@ -45,6 +45,7 @@ class CustomQTextBrowser(QTextBrowser):
         self._item_filter_cursors = {}
         self._item_anchors = {}
         self._visible_timestamp = None
+        self._executing_timestamp = None
         self._execution_blocks = {}
         self._frame_format = QTextFrameFormat()
         self._frame_format.setMargin(4)
@@ -128,28 +129,14 @@ class CustomQTextBrowser(QTextBrowser):
     def _make_log_entry_title(title):
         return f'<b>{title}</b>'
 
-    def create_item_log_entry_points(self, item_names, timestamp):
+    def start_execution(self, timestamp):
         """Creates cursors (log entry points) for given items in event log.
 
         Args:
-            item_names (list of str): list of item names in the order of execution
+            timestamp (str): time stamp
         """
         self._toolbox.ui.toolButton_executions.setVisible(True)
-        item_blocks = self._execution_blocks.setdefault(timestamp, {})
-        cursor = self.textCursor()
-        cursor.movePosition(cursor.End)
-        with scrolling_to_bottom(self):
-            for name in item_names:
-                cursor.insertFrame(self._frame_format)
-                item_blocks[name] = [cursor.block()]
-                self._item_anchors[timestamp, name] = anchor = timestamp + name
-                title = self._make_log_entry_title(name)
-                cursor.insertHtml(f'<a name="{anchor}">{title}</a>')
-                self._item_cursors[timestamp, name] = cursor
-                cursor = self.textCursor()
-                cursor.movePosition(cursor.End)
-                item_blocks[name].append(cursor.block())
-                self._item_filter_cursors[timestamp, name] = {}
+        self._executing_timestamp = timestamp
         self.select_execution(timestamp)
 
     def add_log_message(self, item_name, filter_id, message):
@@ -160,11 +147,25 @@ class CustomQTextBrowser(QTextBrowser):
             filter_id (str): filter identifier
             message (str): formatted message
         """
-        blocks = self._execution_blocks[self._visible_timestamp][item_name]
+        item_blocks = self._execution_blocks.setdefault(self._executing_timestamp, {})
+        if item_name not in item_blocks:
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.End)
+            cursor.insertFrame(self._frame_format)
+            item_blocks[item_name] = [cursor.block()]
+            self._item_anchors[self._executing_timestamp, item_name] = anchor = self._executing_timestamp + item_name
+            title = self._make_log_entry_title(item_name)
+            cursor.insertHtml(f'<a name="{anchor}">{title}</a>')
+            self._item_cursors[self._executing_timestamp, item_name] = cursor
+            cursor = self.textCursor()
+            cursor.movePosition(cursor.End)
+            item_blocks[item_name].append(cursor.block())
+            self._item_filter_cursors[self._executing_timestamp, item_name] = {}
+        blocks = item_blocks[item_name]
         with scrolling_to_bottom(self):
-            cursor = self._item_cursors[self._visible_timestamp, item_name]
+            cursor = self._item_cursors[self._executing_timestamp, item_name]
             if filter_id:
-                filter_cursors = self._item_filter_cursors[self._visible_timestamp, item_name]
+                filter_cursors = self._item_filter_cursors[self._executing_timestamp, item_name]
                 if filter_id not in filter_cursors:
                     filter_cursor = QTextCursor(cursor)
                     filter_cursor.insertFrame(self._frame_format)

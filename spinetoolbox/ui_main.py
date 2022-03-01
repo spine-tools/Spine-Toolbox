@@ -2387,13 +2387,13 @@ class ToolboxUI(QMainWindow):
     def _make_log_entry_title(title):
         return f'<b>{title}</b>'
 
-    def create_item_log_entry_points(self, item_names, timestamp):
-        """Creates cursors (log entry points) for given items in event log.
+    def start_execution(self, timestamp):
+        """Starts execution.
 
         Args:
-            item_names (list of str): list of item names in the order of execution
+            timestamp (str): time stamp
         """
-        self.ui.textBrowser_eventlog.create_item_log_entry_points(item_names, timestamp)
+        self.ui.textBrowser_eventlog.start_execution(timestamp)
 
     def add_log_message(self, item_name, filter_id, message):
         """Adds a message to an item's execution log.

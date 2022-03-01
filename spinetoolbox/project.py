@@ -923,20 +923,12 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg.emit(darker(" -> ").join(item_names))
             worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
             self._engine_workers.append(worker)
+        timestamp = create_timestamp()
+        self._toolbox.start_execution(timestamp)
         # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others
         # are added to ``_engine_workers``, and thus ``_handle_engine_worker_finished()`` will believe
         # that the project is done executing before it's fully loaded.
-        timestamp = create_timestamp()
         for worker in self._engine_workers:
-            items = worker.engine_data["items"]
-            execution_permits = worker.engine_data["execution_permits"]
-            jumps = worker.engine_data["jumps"]
-            items_and_jumps = [x for x in items if execution_permits[x]]
-            for jump in jumps:
-                from_item, _ = jump["from"]
-                pos = items_and_jumps.index(from_item) + 1
-                items_and_jumps.insert(pos, jump["name"])
-            self._toolbox.create_item_log_entry_points(items_and_jumps, timestamp)
             worker.start()
 
     def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
