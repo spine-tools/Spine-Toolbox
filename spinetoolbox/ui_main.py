@@ -1438,6 +1438,8 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item is None:
             return
         filter_consoles = self._item_consoles.get(self.active_project_item, dict())
+        if not isinstance(filter_consoles, dict):
+            return
         self.ui.listView_console_executions.setVisible(bool(filter_consoles))
         self.ui.listView_console_executions.model().reset_model(filter_consoles)
         current = self.ui.listView_console_executions.currentIndex()
