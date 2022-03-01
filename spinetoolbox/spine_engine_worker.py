@@ -265,7 +265,7 @@ class SpineEngineWorker(QObject):
         item = self._project_items[msg["item_name"]]
         msg_type = msg["type"]
         if msg_type == "persistent_started":
-            item.persistent_console_requested.emit(msg["filter_id"], msg["key"], msg["language"])
+            self._logger.persistent_console_requested.emit(item, msg["filter_id"], msg["key"], msg["language"])
         elif msg_type == "persistent_failed_to_start":
             msg_text = (
                 f"Unable to start persistent process <b>{msg['args']}</b>: {msg['error']}."
@@ -273,11 +273,11 @@ class SpineEngineWorker(QObject):
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg_type == "stdin":
-            item.persistent_stdin_available.emit(msg["filter_id"], msg["data"])
+            self._logger.persistent_stdin_available.emit(item, msg["filter_id"], msg["data"])
         elif msg_type == "stdout":
-            item.persistent_stdout_available.emit(msg["filter_id"], msg["data"])
+            self._logger.persistent_stdout_available.emit(item, msg["filter_id"], msg["data"])
         elif msg_type == "stderr":
-            item.persistent_stderr_available.emit(msg["filter_id"], msg["data"])
+            self._logger.persistent_stderr_available.emit(item, msg["filter_id"], msg["data"])
         elif msg_type == "execution_started":
             self._event_message_arrived.emit(
                 item, msg["filter_id"], "msg", f"*** Starting execution on persistent process <b>{msg['args']}</b> ***"

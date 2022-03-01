@@ -124,6 +124,11 @@ class ToolboxUI(QMainWindow):
     information_box = Signal(str, str)
     error_box = Signal(str, str)
     # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
+    jupyter_console_requested = Signal(object, str, str, str)
+    persistent_console_requested = Signal(object, str, tuple, str)
+    persistent_stdin_available = Signal(object, str, str)
+    persistent_stdout_available = Signal(object, str, str)
+    persistent_stderr_available = Signal(object, str, str)
 
     def __init__(self):
         """Initializes application and main window."""
@@ -192,8 +197,9 @@ class ToolboxUI(QMainWindow):
         self._base_python_console = None  # 'base' Python console, independent of project items
         self._base_julia_console = None  # 'base' Julia console, independent of project items
         # Additional consoles for item execution
-        self._extra_jupyter_consoles = {}
-        self._extra_persistent_consoles = {}
+        self._item_consoles = {}
+        self._persistent_consoles = {}
+        self._jupyter_consoles = {}
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -315,6 +321,12 @@ class ToolboxUI(QMainWindow):
         self.ui.actionStop_execution.triggered.connect(self._stop_execution)
         # Open dir
         self._button_item_dir.clicked.connect(self._open_active_item_dir)
+        # Consoles
+        self.jupyter_console_requested.connect(self._setup_jupyter_console)
+        self.persistent_console_requested.connect(self._setup_persistent_console)
+        self.persistent_stdin_available.connect(self._add_persistent_stdin)
+        self.persistent_stdout_available.connect(self._add_persistent_stdout)
+        self.persistent_stderr_available.connect(self._add_persistent_stderr)
 
     @Slot(bool)
     def _open_active_item_dir(self, _checked=False):
@@ -1412,11 +1424,11 @@ class ToolboxUI(QMainWindow):
         """Sets the jupyter console of the active project item in Jupyter Console and updates title."""
         if self.active_project_item is None:
             return
-        console = self.active_project_item.console
+        console = self._item_consoles.get(self.active_project_item)
         self._do_override_console(console)
 
     def _do_override_console(self, console):
-        if console is None:
+        if not isinstance(console, (PersistentConsoleWidget, JupyterConsoleWidget)):
             self.restore_original_console()
             return
         self._set_override_console(console)
@@ -1425,8 +1437,9 @@ class ToolboxUI(QMainWindow):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
-        self.ui.listView_console_executions.setVisible(bool(self.active_project_item.filter_consoles))
-        self.ui.listView_console_executions.model().reset_model(self.active_project_item)
+        filter_consoles = self._item_consoles.get(self.active_project_item, dict())
+        self.ui.listView_console_executions.setVisible(bool(filter_consoles))
+        self.ui.listView_console_executions.model().reset_model(filter_consoles)
         current = self.ui.listView_console_executions.currentIndex()
         self._select_console_execution(current, None)
 
@@ -1450,10 +1463,7 @@ class ToolboxUI(QMainWindow):
     @Slot()
     def _refresh_console_execution_list(self):
         """Refreshes console executions as the active project item starts new executions."""
-        self._refresh_execution_list(self.ui.listView_console_executions, self._select_console_execution)
-
-    @staticmethod
-    def _refresh_execution_list(view, select):
+        view = self.ui.listView_console_executions
         view.show()
         model = view.model()
         if model.rowCount() == 0:
@@ -1463,7 +1473,7 @@ class ToolboxUI(QMainWindow):
             view.setCurrentIndex(index)
         else:
             current = view.currentIndex()
-            select(current, None)
+            self._select_console_execution(current, None)
 
     @Slot(QModelIndex, QModelIndex)
     def _select_console_execution(self, current, _previous):
@@ -2269,7 +2279,60 @@ class ToolboxUI(QMainWindow):
         self._base_julia_console.deleteLater()
         self._base_julia_console = None
 
-    def make_jupyter_console(self, item, kernel_name, connection_file):
+    @Slot(object, str, str, str)
+    def _setup_jupyter_console(self, item, filter_id, kernel_name, connection_file):
+        """Sets up jupyter console, eventually for a filter execution.
+
+        Args:
+            item (ProjectItem): item
+            filter_id (str): filter identifier
+            kernel_name (str): jupyter kernel name
+            connection_file (str): path to connection file
+        """
+        if not filter_id:
+            self._item_consoles[item] = self._make_jupyter_console(item, kernel_name, connection_file)
+            self.override_console()
+        else:
+            d = self._item_consoles[item] = dict()
+            d[filter_id] = self._make_jupyter_console(item, kernel_name, connection_file)
+            self.override_execution_list()
+
+    @Slot(object, str, tuple, str)
+    def _setup_persistent_console(self, item, filter_id, key, language):
+        """Sets up persistent console, eventually for a filter execution.
+
+        Args:
+            item (ProjectItem): item
+            filter_id (str): filter identifier
+            key (tuple)
+            language (str)
+        """
+        if not filter_id:
+            self._item_consoles[item] = self._make_persistent_console(item, key, language)
+            self.override_console()
+        else:
+            d = self._item_consoles[item] = dict()
+            d[filter_id] = self._make_persistent_console(item, key, language)
+            self.override_execution_list()
+
+    @Slot(object, str, str)
+    def _add_persistent_stdin(self, item, filter_id, data):
+        self._get_console(item, filter_id).add_stdin(data)
+
+    @Slot(object, str, str)
+    def _add_persistent_stdout(self, item, filter_id, data):
+        self._get_console(item, filter_id).add_stdout(data)
+
+    @Slot(object, str, str)
+    def _add_persistent_stderr(self, item, filter_id, data):
+        self._get_console(item, filter_id).add_stderr(data)
+
+    def _get_console(self, item, filter_id):
+        if not filter_id:
+            return self._item_consoles[item]
+        return self._item_consoles[item][filter_id]
+
+    def _make_jupyter_console(self, item, kernel_name, connection_file):
         """Creates a new JupyterConsoleWidget for given connection file if none exists yet, and returns it.
 
         Args:
@@ -2280,15 +2343,15 @@ class ToolboxUI(QMainWindow):
         Returns:
             JupyterConsoleWidget
         """
-        console = self._extra_jupyter_consoles.get(connection_file)
+        console = self._jupyter_consoles.get(connection_file)
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._extra_jupyter_consoles[connection_file] = JupyterConsoleWidget(self, kernel_name, owner=item)
+        console = self._jupyter_consoles[connection_file] = JupyterConsoleWidget(self, kernel_name, owner=item)
         console.connect_to_kernel(kernel_name, connection_file)
         return console
 
-    def make_persistent_console(self, item, key, language):
+    def _make_persistent_console(self, item, key, language):
         """Creates a new PersistentConsoleWidget for given process key.
 
         Args:
@@ -2299,19 +2362,19 @@ class ToolboxUI(QMainWindow):
         Returns:
             PersistentConsoleWidget
         """
-        console = self._extra_persistent_consoles.get(key)
+        console = self._persistent_consoles.get(key)
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._extra_persistent_consoles[key] = PersistentConsoleWidget(self, key, language, owner=item)
+        console = self._persistent_consoles[key] = PersistentConsoleWidget(self, key, language, owner=item)
         return console
 
     def _shutdown_engine_kernels(self):
         """Shuts down all kernels managed by Spine Engine."""
         engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
-        while self._extra_jupyter_consoles:
-            connection_file, console = self._extra_jupyter_consoles.popitem()
+        while self._jupyter_consoles:
+            connection_file, console = self._jupyter_consoles.popitem()
             engine_mngr.shutdown_kernel(connection_file)
             console.deleteLater()
 

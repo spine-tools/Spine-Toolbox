@@ -57,8 +57,6 @@ class ProjectItem(LogMixin, MetaObject):
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
-        self.console = None
-        self._filter_consoles = {}
 
     def create_data_dir(self):
         try:
@@ -87,10 +85,6 @@ class ProjectItem(LogMixin, MetaObject):
     @property
     def logger(self):
         return self._logger
-
-    @property
-    def filter_consoles(self):
-        return self._filter_consoles
 
     # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
