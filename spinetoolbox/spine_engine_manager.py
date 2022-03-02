@@ -78,6 +78,18 @@ class SpineEngineManagerBase:
         """
         raise NotImplementedError()
 
+    def is_persistent_command_complete(self, persistent_key, command):
+        """Checkes whether a command is complete.
+
+        Args:
+            key (tuple): persistent identifier
+            cmd (str): command to issue
+
+        Returns:
+            bool
+        """
+        raise NotImplementedError()
+
     def restart_persistent(self, persistent_key):
         """Restart a persistent process.
 
@@ -160,6 +172,10 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         self._send("shutdown_kernel", connection_file)
 
     def issue_persistent_command(self, persistent_key, command):
+        """See base class."""
+        raise NotImplementedError()
+
+    def is_persistent_command_complete(self, persistent_key, command):
         """See base class."""
         raise NotImplementedError()
 
@@ -252,6 +268,12 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         from spine_engine.execution_managers.persistent_execution_manager import issue_persistent_command
 
         yield from issue_persistent_command(persistent_key, command)
+
+    def is_persistent_command_complete(self, persistent_key, command):
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.persistent_execution_manager import is_persistent_command_complete
+
+        return is_persistent_command_complete(persistent_key, command)
 
     def restart_persistent(self, persistent_key):
         # pylint: disable=import-outside-toplevel

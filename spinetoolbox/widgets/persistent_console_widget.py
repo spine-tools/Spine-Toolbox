@@ -10,19 +10,20 @@
 ######################################################################################################################
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Qt, QRunnable, QObject, Signal, QThreadPool, Slot, QTimer
-from PySide2.QtWidgets import QPlainTextEdit
-from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor
+from PySide2.QtCore import Qt, Slot, QTimer
+from PySide2.QtWidgets import QTextEdit
+from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor, QTextBlockFormat
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
 from ..helpers import scrolling_to_bottom
 
 
-class PersistentConsoleWidget(QPlainTextEdit):
+class PersistentConsoleWidget(QTextEdit):
     """A widget to interact with a persistent process."""
 
     def __init__(self, toolbox, key, language, owner=None):
@@ -36,33 +37,32 @@ class PersistentConsoleWidget(QPlainTextEdit):
         super().__init__(parent=toolbox)
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         self.setFont(font)
-        self.setMaximumBlockCount(2000)
-        self._thread_pool = QThreadPool()
+        self.document().setMaximumBlockCount(2000)
+        cursor_width = self.fontMetrics().horizontalAdvance("x")
+        self.setCursorWidth(cursor_width)
+        self.document().setIndentWidth(cursor_width)
+        self.setTabStopDistance(4 * cursor_width)
+        self._executor = ThreadPoolExecutor()
         self._toolbox = toolbox
         self._key = key
         self._language = language
         self.owners = {owner}
         self._prompt, self._prompt_format = self._make_prompt()
-        self._cont_prompt = self._make_cont_prompt()
         self._history_index = 0
         self._history_item_zero = ""
         self._pending_command_count = 0
-        self._is_last_command_complete = True
         self._text_buffer = []
         self._timer = QTimer()
         self._timer.setInterval(200)
         self._timer.timeout.connect(self._drain_text_buffer)
         self._timer.start()
-        cursor_width = self.fontMetrics().horizontalAdvance("x")
-        self.setCursorWidth(cursor_width)
-        self.setTabStopDistance(4 * cursor_width)
         self._style = get_style_by_name("monokai")
         background_color = self._style.background_color
         foreground_color = self._style.styles[Token.Text]
         self.setStyleSheet(
-            f"QPlainTextEdit {{background-color: {background_color}; color: {foreground_color}; border: 0px}}"
+            f"QTextEdit {{background-color: {background_color}; color: {foreground_color}; border: 0px}}"
         )
-        self._highlighter = CustomSyntaxHighlighter(self)
+        self._highlighter = CustomSyntaxHighlighter(None)
         self._highlighter.set_style(self._style)
         try:
             self._highlighter.lexer = get_lexer_by_name(self._language)
@@ -102,25 +102,12 @@ class PersistentConsoleWidget(QPlainTextEdit):
             prompt = "$ "
         return prompt, text_format
 
-    def _make_cont_prompt(self):
-        if self._language == "julia":
-            prompt = len("julia> ") * " "
-        elif self._language == "python":
-            prompt = "... "
-        else:
-            prompt = "  "
-        return prompt
-
     def _make_prompt_block(self, prompt=""):
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.End)
-        cursor.insertBlock()
+        cursor.insertBlock(QTextBlockFormat())
         self._prompt_block = cursor.block()
         self._insert_prompt(prompt=prompt)
-
-    def _insert_text(self, cursor, text, text_format=QTextCharFormat()):
-        with scrolling_to_bottom(self):
-            cursor.insertText(text, text_format)
 
     def _insert_prompt(self, prompt=""):
         cursor = self.textCursor()
@@ -130,6 +117,15 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._prompt_length = len(prompt)
         self.setTextCursor(cursor)
 
+    def _make_continuation_block(self, cursor):
+        block_format = QTextBlockFormat()
+        block_format.setIndent(len(self._prompt.lstrip()))
+        cursor.insertBlock(block_format)
+
+    def _insert_text(self, cursor, text, text_format=QTextCharFormat()):
+        with scrolling_to_bottom(self):
+            cursor.insertText(text, text_format)
+
     def _insert_stdin_text(self, cursor, text):
         """Inserts highlighted text.
 
@@ -137,9 +133,18 @@ class PersistentConsoleWidget(QPlainTextEdit):
             cursor (QTextCursor)
             text (str)
         """
+        if not text:
+            return
+        lines = iter(text.splitlines())
+        line = next(lines)
+        self._do_insert_stdin_text(cursor, line)
+        for line in lines:
+            self._make_continuation_block(cursor)
+            self._do_insert_stdin_text(cursor, line)
+
+    def _do_insert_stdin_text(self, cursor, text):
         for start, count, text_format in self._highlighter.yield_formats(text):
             chunk = text[start : start + count]
-            chunk = chunk.replace("\n", "\n" + self._cont_prompt).replace("\t", 4 * " ")
             self._insert_text(cursor, chunk, text_format)
 
     def _insert_stdout_text(self, cursor, text):
@@ -168,126 +173,13 @@ class PersistentConsoleWidget(QPlainTextEdit):
         for text, with_prompt in self._text_buffer:
             cursor = self.textCursor()
             cursor.setPosition(self._prompt_block.position() - 1)
-            cursor.insertBlock()
+            cursor.insertBlock(QTextBlockFormat())
             if with_prompt:
-                prompt = self._prompt if self._is_last_command_complete else self._cont_prompt
-                self._insert_text(cursor, prompt, self._prompt_format)
+                self._insert_text(cursor, self._prompt, self._prompt_format)
                 self._insert_stdin_text(cursor, text)
             else:
                 self._insert_stdout_text(cursor, text)
-
         self._text_buffer.clear()
-
-    def _get_current_text(self):
-        """Returns current text.
-
-        Returns:
-            str: the complete text
-            str: the text before the cursor (for autocompletion)
-        """
-        cursor = self.textCursor()
-        cursor.setPosition(self._input_start_pos)
-        cursor.setPosition(self.textCursor().position(), QTextCursor.KeepAnchor)
-        partial_text = cursor.selectedText()
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        text = cursor.selectedText()
-        return text, partial_text
-
-    def _highlight(self):
-        cursor = self.textCursor()
-        cursor.setPosition(self._input_start_pos)
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        text = cursor.selectedText()
-        for start, count, text_format in self._highlighter.yield_formats(text):
-            start += self._input_start_pos
-            cursor.setPosition(start)
-            cursor.setPosition(start + count, QTextCursor.KeepAnchor)
-            cursor.setCharFormat(text_format)
-        cursor.movePosition(QTextCursor.NextCharacter)
-        cursor.setCharFormat(QTextCharFormat())
-
-    def keyPressEvent(self, ev):
-        text, partial_text = self._get_current_text()
-        if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
-            self.issue_command(text)
-        elif ev.key() == Qt.Key_Up:
-            self.move_history(text, 1)
-        elif ev.key() == Qt.Key_Down:
-            self.move_history(text, -1)
-        elif ev.key() == Qt.Key_Tab and partial_text.strip():
-            self.autocomplete(text, partial_text)
-        elif ev.key() not in (Qt.Key_Backspace, Qt.Key_Left) or self.textCursor().position() > self._input_start_pos:
-            super().keyPressEvent(ev)
-        self._highlight()
-
-    def issue_command(self, text):
-        """Issues command.
-
-        Args:
-            text (str)
-        """
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        issuer = CommandIssuer(engine_server_address, self._key, text)
-        issuer.stdout_msg.connect(self.add_stdout)
-        issuer.stderr_msg.connect(self.add_stderr)
-        issuer.finished.connect(self._handle_command_finished)
-        if self._pending_command_count:
-            issuer.stdin_msg.connect(self.add_stdin)
-        self._make_prompt_block(prompt="")
-        self._history_index = 0
-        self._pending_command_count += 1
-        self._thread_pool.start(issuer)
-
-    @Slot(bool)
-    def _handle_command_finished(self, is_complete):
-        self._pending_command_count -= 1
-        self._is_last_command_complete = is_complete
-        if self._pending_command_count == 0:
-            prompt = self._prompt if is_complete else self._cont_prompt
-            self._insert_prompt(prompt=prompt)
-
-    def move_history(self, text, step):
-        """Moves history.
-
-        Args:
-            text (str)
-            step (int)
-        """
-        if self._history_index == 0:
-            self._history_item_zero = text
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
-        self._history_index += step
-        if self._history_index < 1:
-            self._history_index = 0
-            history_item = self._history_item_zero
-        else:
-            history_item = engine_mngr.get_persistent_history_item(self._key, self._history_index)
-        cursor = self.textCursor()
-        cursor.setPosition(self._input_start_pos)
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        self._insert_text(cursor, history_item)
-
-    def autocomplete(self, text, partial_text):
-        """Autocompletes current text in the prompt (or output options if multiple matches).
-
-        Args:
-            text (str)
-            partial_text (str)
-        """
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
-        completions = engine_mngr.get_persistent_completions(self._key, partial_text)
-        prefix = os.path.commonprefix(completions)
-        if partial_text.endswith(prefix) and len(completions) > 1:
-            # Can't complete, but there is more than one option: 'commit' stdin and output options to stdout
-            self.add_stdin(text)
-            self.add_stdout("\t\t".join(completions))
-        else:
-            # Complete in current line
-            cursor = self.textCursor()
-            last_word = partial_text.split(" ")[-1]
-            self._insert_text(cursor, prefix[len(last_word) :])
 
     def add_stdin(self, data):
         """Adds new prompt with data. Used when adding stdin from external execution.
@@ -315,23 +207,148 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """
         self._insert_text_before_prompt(data)
 
+    def _get_current_text(self):
+        """Returns current text.
+
+        Returns:
+            str: the complete text
+            str: the text before the cursor (for autocompletion)
+        """
+        cursor = self.textCursor()
+        cursor.setPosition(self._input_start_pos)
+        cursor.setPosition(self.textCursor().position(), QTextCursor.KeepAnchor)
+        partial_text = cursor.selectedText()
+        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        text = cursor.selectedText()
+        return text, partial_text
+
+    def _highlight_current_text(self):
+        cursor = self.textCursor()
+        cursor.setPosition(self._input_start_pos)
+        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        text = cursor.selectedText()
+        for start, count, text_format in self._highlighter.yield_formats(text):
+            start += self._input_start_pos
+            cursor.setPosition(start)
+            cursor.setPosition(start + count, QTextCursor.KeepAnchor)
+            cursor.setCharFormat(text_format)
+        cursor.movePosition(QTextCursor.NextCharacter)
+        cursor.setCharFormat(QTextCharFormat())
+
+    def keyPressEvent(self, ev):
+        text, partial_text = self._get_current_text()
+        if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
+            self.issue_command(text)
+        elif ev.key() == Qt.Key_Up:
+            self.move_history(text, 1)
+        elif ev.key() == Qt.Key_Down:
+            self.move_history(text, -1)
+        elif ev.key() == Qt.Key_Tab and partial_text.strip():
+            self.autocomplete(text, partial_text)
+        elif ev.key() not in (Qt.Key_Backspace, Qt.Key_Left) or self.textCursor().position() > self._input_start_pos:
+            super().keyPressEvent(ev)
+        self._highlight_current_text()
+
+    def issue_command(self, text):
+        """Issues command.
+
+        Args:
+            text (str)
+        """
+        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        engine_mngr = make_engine_manager(engine_server_address)
+        if not engine_mngr.is_persistent_command_complete(self._key, text):
+            self._make_continuation_block(self.textCursor())
+            return
+        log_stdin = bool(self._pending_command_count)
+        self._make_prompt_block(prompt="")
+        self._history_index = 0
+        self._pending_command_count += 1
+        self._executor.submit(self._do_issue_command, engine_mngr, text, log_stdin)
+
+    def _do_issue_command(self, engine_mngr, text, log_stdin):
+        for line in text.splitlines():
+            for msg in engine_mngr.issue_persistent_command(self._key, line):
+                msg_type = msg["type"]
+                if msg_type == "stdin" and log_stdin:
+                    self.add_stdin(msg["data"])
+                elif msg_type == "stdout":
+                    self.add_stdout(msg["data"])
+                elif msg_type == "stderr":
+                    self.add_stderr(msg["data"])
+        self._handle_command_finished()
+
+    def _handle_command_finished(self):
+        self._pending_command_count -= 1
+        if self._pending_command_count == 0:
+            self._insert_prompt(prompt=self._prompt)
+
+    def move_history(self, text, step):
+        """Moves history.
+
+        Args:
+            text (str)
+            step (int)
+        """
+        if self._history_index == 0:
+            self._history_item_zero = text
+        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        engine_mngr = make_engine_manager(engine_server_address)
+        self._history_index += step
+        if self._history_index < 1:
+            self._history_index = 0
+            history_item = self._history_item_zero
+        else:
+            history_item = engine_mngr.get_persistent_history_item(self._key, self._history_index)
+        cursor = self.textCursor()
+        cursor.setPosition(self._input_start_pos)
+        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        self._insert_stdin_text(cursor, history_item)
+
+    def autocomplete(self, text, partial_text):
+        """Autocompletes current text in the prompt (or output options if multiple matches).
+
+        Args:
+            text (str)
+            partial_text (str)
+        """
+        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        engine_mngr = make_engine_manager(engine_server_address)
+        completions = engine_mngr.get_persistent_completions(self._key, partial_text)
+        prefix = os.path.commonprefix(completions)
+        if partial_text.endswith(prefix) and len(completions) > 1:
+            # Can't complete, but there is more than one option: 'commit' stdin and output options to stdout
+            self.add_stdin(text)
+            self.add_stdout("\t\t".join(completions))
+        else:
+            # Complete in current line
+            cursor = self.textCursor()
+            last_word = partial_text.split(" ")[-1]
+            self._insert_text(cursor, prefix[len(last_word) :])
+
     @Slot(bool)
     def _restart_persistent(self, _=False):
         """Restarts underlying persistent process."""
         self.clear()
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        restarter = Restarter(engine_server_address, self._key)
-        restarter.stdout_msg.connect(self.add_stdout)
-        restarter.stderr_msg.connect(self.add_stderr)
-        restarter.finished.connect(lambda prompt=self._prompt: self._make_prompt_block(prompt=prompt))
-        self._thread_pool.start(restarter)
+        engine_mngr = make_engine_manager(engine_server_address)
+        self._executor.submit(self._do_restart_persistent, engine_mngr)
+
+    def _do_restart_persistent(self, engine_mngr):
+        for msg in engine_mngr.restart_persistent(self._key):
+            msg_type = msg["type"]
+            if msg_type == "stdout":
+                self.add_stdout(msg["data"])
+            elif msg_type == "stderr":
+                self.add_stderr(msg["data"])
+        self._make_prompt_block(prompt=self._prompt)
 
     @Slot(bool)
     def _interrupt_persistent(self, _=False):
         """Interrupts underlying persistent process."""
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        interrupter = Interrupter(engine_server_address, self._key)
-        self._thread_pool.start(interrupter)
+        engine_mngr = make_engine_manager(engine_server_address)
+        self._executor.submit(engine_mngr.interrupt_persistent, self._key)
 
     def _extend_menu(self, menu):
         """Adds two more actions: Restart, and Interrupt."""
@@ -344,99 +361,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         menu = self.createStandardContextMenu()
         self._extend_menu(menu)
         menu.exec_(event.globalPos())
-
-
-class PersistentRunnableBase(QRunnable):
-    """Base class for runnables that talk to the persistent process in another QThread."""
-
-    class Signals(QObject):
-        finished = Signal()
-
-    def __init__(self, engine_server_address, persistent_key):
-        """
-        Args:
-            engine_server_address (str): address of the remote engine, currently should always be an empty string
-            persistent_key (tuple): persistent process identifier
-        """
-        super().__init__()
-        self._persistent_key = persistent_key
-        self._engine_mngr = make_engine_manager(engine_server_address)
-        self._signals = self.Signals()
-        self.finished = self._signals.finished
-
-
-class Restarter(PersistentRunnableBase):
-    """A runnable that restarts a persistent process."""
-
-    class Signals(QObject):
-        finished = Signal()
-        stdout_msg = Signal(str)
-        stderr_msg = Signal(str)
-
-    def __init__(self, engine_server_address, persistent_key):
-        """
-        Args:
-            engine_server_address (str): address of the remote engine, currently should always be an empty string
-            persistent_key (tuple): persistent process identifier
-        """
-        super().__init__(engine_server_address, persistent_key)
-        self.stdout_msg = self._signals.stdout_msg
-        self.stderr_msg = self._signals.stderr_msg
-
-    def run(self):
-        for msg in self._engine_mngr.restart_persistent(self._persistent_key):
-            msg_type = msg["type"]
-            if msg_type == "stdout":
-                self.stdout_msg.emit(msg["data"])
-            elif msg_type == "stderr":
-                self.stderr_msg.emit(msg["data"])
-        self.finished.emit()
-
-
-class Interrupter(PersistentRunnableBase):
-    """A runnable that interrupts a persistent process."""
-
-    def run(self):
-        self._engine_mngr.interrupt_persistent(self._persistent_key)
-        self.finished.emit()
-
-
-class CommandIssuer(PersistentRunnableBase):
-    """A runnable that issues a command."""
-
-    class Signals(QObject):
-        finished = Signal(bool)
-        stdin_msg = Signal(str)
-        stdout_msg = Signal(str)
-        stderr_msg = Signal(str)
-
-    def __init__(self, engine_server_address, persistent_key, command):
-        """
-        Args:
-            engine_server_address (str): address of the remote engine, currently should always be an empty string
-            persistent_key (tuple): persistent process identifier
-            command (str): command to execute
-        """
-        super().__init__(engine_server_address, persistent_key)
-        self._command = command
-        self.stdin_msg = self._signals.stdin_msg
-        self.stdout_msg = self._signals.stdout_msg
-        self.stderr_msg = self._signals.stderr_msg
-
-    def run(self):
-        for line in self._command.splitlines():
-            for msg in self._engine_mngr.issue_persistent_command(self._persistent_key, line):
-                msg_type = msg["type"]
-                if msg_type == "stdin":
-                    self.stdin_msg.emit(msg["data"])
-                elif msg_type == "stdout":
-                    self.stdout_msg.emit(msg["data"])
-                elif msg_type == "stderr":
-                    self.stderr_msg.emit(msg["data"])
-                elif msg_type == "command_finished":
-                    is_complete = msg["is_complete"]
-                    break
-        self.finished.emit(is_complete)
 
 
 # Translated from
