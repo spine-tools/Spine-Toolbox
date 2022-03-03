@@ -20,7 +20,6 @@ from PySide2.QtWidgets import QTextEdit
 from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor, QTextBlockFormat
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
-from ..helpers import scrolling_to_bottom
 
 
 class PersistentConsoleWidget(QTextEdit):
@@ -70,9 +69,21 @@ class PersistentConsoleWidget(QTextEdit):
             pass
         self._ansi_esc_code_handler = AnsiEscapeCodeHandler(foreground_color, background_color)
         self._prompt_block = None
-        self._prompt_length = 0
+        self._current_prompt = ""
         self._make_prompt_block(prompt=self._prompt)
+        self._at_bottom = True
         self.cursorPositionChanged.connect(self._handle_cursor_position_changed)
+        self.document().contentsChanged.connect(self._handle_contents_changed)
+
+    def scrollContentsBy(self, dx, dy):
+        super().scrollContentsBy(dx, dy)
+        scrollbar = self.verticalScrollBar()
+        self._at_bottom = scrollbar.value() == scrollbar.maximum()
+
+    def _handle_contents_changed(self):
+        if self._at_bottom:
+            scrollbar = self.verticalScrollBar()
+            scrollbar.setValue(scrollbar.maximum())
 
     def name(self):
         """Returns console name for display purposes."""
@@ -84,7 +95,7 @@ class PersistentConsoleWidget(QTextEdit):
 
     @property
     def _input_start_pos(self):
-        return self._prompt_block.position() + self._prompt_length
+        return self._prompt_block.position() + len(self._current_prompt)
 
     @Slot()
     def _handle_cursor_position_changed(self):
@@ -112,19 +123,15 @@ class PersistentConsoleWidget(QTextEdit):
     def _insert_prompt(self, prompt=""):
         cursor = self.textCursor()
         cursor.setPosition(self._prompt_block.position())
-        self._insert_text(cursor, prompt, self._prompt_format)
+        cursor.insertText(prompt, self._prompt_format)
         cursor.movePosition(QTextCursor.End)
-        self._prompt_length = len(prompt)
+        self._current_prompt = prompt
         self.setTextCursor(cursor)
 
     def _make_continuation_block(self, cursor):
         block_format = QTextBlockFormat()
-        block_format.setIndent(len(self._prompt.lstrip()))
+        block_format.setIndent(len(self._current_prompt.lstrip()))
         cursor.insertBlock(block_format)
-
-    def _insert_text(self, cursor, text, text_format=QTextCharFormat()):
-        with scrolling_to_bottom(self):
-            cursor.insertText(text, text_format)
 
     def _insert_stdin_text(self, cursor, text):
         """Inserts highlighted text.
@@ -145,7 +152,7 @@ class PersistentConsoleWidget(QTextEdit):
     def _do_insert_stdin_text(self, cursor, text):
         for start, count, text_format in self._highlighter.yield_formats(text):
             chunk = text[start : start + count]
-            self._insert_text(cursor, chunk, text_format)
+            cursor.insertText(chunk, text_format)
 
     def _insert_stdout_text(self, cursor, text):
         """Inserts ansi highlighted text.
@@ -155,7 +162,7 @@ class PersistentConsoleWidget(QTextEdit):
             text (str)
         """
         for chunk, text_format in self._ansi_esc_code_handler.parse_text(text):
-            self._insert_text(cursor, chunk, text_format)
+            cursor.insertText(chunk, text_format)
 
     def _insert_text_before_prompt(self, text, with_prompt=False):
         """Inserts given text before the prompt. Used when adding input and output from external execution.
@@ -175,7 +182,7 @@ class PersistentConsoleWidget(QTextEdit):
             cursor.setPosition(self._prompt_block.position() - 1)
             cursor.insertBlock(QTextBlockFormat())
             if with_prompt:
-                self._insert_text(cursor, self._prompt, self._prompt_format)
+                cursor.insertText(self._prompt, self._prompt_format)
                 self._insert_stdin_text(cursor, text)
             else:
                 self._insert_stdout_text(cursor, text)
@@ -215,9 +222,9 @@ class PersistentConsoleWidget(QTextEdit):
             str: the text before the cursor (for autocompletion)
         """
         cursor = self.textCursor()
-        cursor.setPosition(self._input_start_pos)
-        cursor.setPosition(self.textCursor().position(), QTextCursor.KeepAnchor)
+        cursor.movePosition(QTextCursor.StartOfBlock, QTextCursor.KeepAnchor)
         partial_text = cursor.selectedText()
+        cursor.setPosition(self._input_start_pos)
         cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
         text = cursor.selectedText()
         return text, partial_text
@@ -236,6 +243,7 @@ class PersistentConsoleWidget(QTextEdit):
         cursor.setCharFormat(QTextCharFormat())
 
     def keyPressEvent(self, ev):
+        self._at_bottom = True
         text, partial_text = self._get_current_text()
         if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
             self.issue_command(text)
@@ -324,7 +332,7 @@ class PersistentConsoleWidget(QTextEdit):
             # Complete in current line
             cursor = self.textCursor()
             last_word = partial_text.split(" ")[-1]
-            self._insert_text(cursor, prefix[len(last_word) :])
+            cursor.insertText(prefix[len(last_word) :])
 
     @Slot(bool)
     def _restart_persistent(self, _=False):
