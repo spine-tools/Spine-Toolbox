@@ -1439,7 +1439,7 @@ class ToolboxUI(QMainWindow):
             return
         filter_consoles = self._item_consoles.get(self.active_project_item, dict())
         if not isinstance(filter_consoles, dict):
-            return
+            filter_consoles = dict()
         self.ui.listView_console_executions.setVisible(bool(filter_consoles))
         self.ui.listView_console_executions.model().reset_model(filter_consoles)
         current = self.ui.listView_console_executions.currentIndex()
@@ -2293,11 +2293,10 @@ class ToolboxUI(QMainWindow):
         """
         if not filter_id:
             self._item_consoles[item] = self._make_jupyter_console(item, kernel_name, connection_file)
-            self.override_console()
         else:
             d = self._item_consoles[item] = dict()
             d[filter_id] = self._make_jupyter_console(item, kernel_name, connection_file)
-            self.override_execution_list()
+        self.override_console_and_execution_list()
 
     @Slot(object, str, tuple, str)
     def _setup_persistent_console(self, item, filter_id, key, language):
@@ -2311,11 +2310,10 @@ class ToolboxUI(QMainWindow):
         """
         if not filter_id:
             self._item_consoles[item] = self._make_persistent_console(item, key, language)
-            self.override_console()
         else:
             d = self._item_consoles[item] = dict()
             d[filter_id] = self._make_persistent_console(item, key, language)
-            self.override_execution_list()
+        self.override_console_and_execution_list()
 
     @Slot(object, str, str)
     def _add_persistent_stdin(self, item, filter_id, data):
