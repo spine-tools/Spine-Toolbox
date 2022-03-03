@@ -275,15 +275,14 @@ class PersistentConsoleWidget(QTextEdit):
         self._executor.submit(self._do_issue_command, engine_mngr, text, log_stdin)
 
     def _do_issue_command(self, engine_mngr, text, log_stdin):
-        for line in text.splitlines():
-            for msg in engine_mngr.issue_persistent_command(self._key, line):
-                msg_type = msg["type"]
-                if msg_type == "stdin" and log_stdin:
-                    self.add_stdin(msg["data"])
-                elif msg_type == "stdout":
-                    self.add_stdout(msg["data"])
-                elif msg_type == "stderr":
-                    self.add_stderr(msg["data"])
+        for msg in engine_mngr.issue_persistent_command(self._key, text):
+            msg_type = msg["type"]
+            if msg_type == "stdin" and log_stdin:
+                self.add_stdin(msg["data"])
+            elif msg_type == "stdout":
+                self.add_stdout(msg["data"])
+            elif msg_type == "stderr":
+                self.add_stderr(msg["data"])
         self._handle_command_finished()
 
     def _handle_command_finished(self):
