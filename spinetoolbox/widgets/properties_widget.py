@@ -17,8 +17,8 @@ Contains PropertiesWidgetBase.
 """
 
 from PySide2.QtWidgets import QWidget, QAbstractItemView, QLineEdit, QHeaderView
-from PySide2.QtCore import Qt, QRect, QPoint
-from PySide2.QtGui import QPainter, QPixmap
+from PySide2.QtCore import Qt, QRect, QPoint, QEvent
+from PySide2.QtGui import QPainter, QPixmap, QColor
 from ..helpers import fix_lightness_color
 
 
@@ -51,6 +51,12 @@ class PropertiesWidgetBase(QWidget):
         self._pixmap.fill(self._fg_color)
         self._pixmap.setMask(bnw_pixmap.createMaskFromColor(Qt.transparent))
 
+    def eventFilter(self, obj, ev):
+        if ev.type() == QEvent.Paint:
+            painter = QPainter(obj)
+            painter.fillRect(obj.rect(), QColor(255, 255, 255, 180))
+        return super().eventFilter(obj, ev)
+
     def paintEvent(self, ev):
         """Paints background"""
         settings = self._toolbox.qsettings()
@@ -66,7 +72,12 @@ class PropertiesWidgetBase(QWidget):
         new_transparent_widgets -= self._transparent_widgets
         self._transparent_widgets |= new_transparent_widgets
         for widget in new_transparent_widgets:
-            widget.setStyleSheet(f"{type(widget).__name__}{{background-color: rgba(255,255,255,180);}}")
+            widget.setAttribute(Qt.WA_NoSystemBackground)
+            widget.installEventFilter(self)
+            try:
+                widget.viewport().setAttribute(Qt.WA_TranslucentBackground)
+            except AttributeError:
+                pass
         rect = self.rect()
         painter = QPainter(self)
         painter.fillRect(rect, self._bg_color)

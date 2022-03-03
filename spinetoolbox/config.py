@@ -90,7 +90,6 @@ SETTINGS_SS = (
     "QSlider::sub-page:horizontal{background: transparent;}"
 )
 
-
 ICON_BACKGROUND = "qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
 
 ICON_TOOLBAR_SS = f"QToolBar{{spacing: 6px; background: {ICON_BACKGROUND}; padding: 3px; border-style: solid;}}"
