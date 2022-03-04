@@ -114,7 +114,7 @@ class SpineDBWorker(QObject):
         self._fetched_item_types = set()
         self.commit_cache = {}
         self._executor = ThreadPoolExecutor(max_workers=1)
-        self._executor = _MockExecutor()
+        self._executor = _MockExecutor()  # FIXME
 
     def clean_up(self):
         self.deleteLater()

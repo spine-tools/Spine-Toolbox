@@ -233,6 +233,8 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_paremeter_value_list)
         self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_removed_value_list)
         self.features_updated.connect(self._cascade_refresh_tool_features_by_feature)
+        self.list_values_added.connect(self._refresh_parameter_value_lists)
+        self.list_values_removed.connect(self._refresh_parameter_value_lists)
         self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
@@ -1549,6 +1551,30 @@ class SpineDBManager(QObject):
                 if item["feature_id"] in ids:
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
+
+    def _refresh_parameter_value_lists(self, db_map_data):
+        """Refreshes cached parameter value lists when updating list values.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_value_list_data = {}
+        for db_map, data in db_map_data.items():
+            list_ids = {item["parameter_value_list_id"] for item in data}
+            for list_id in list_ids:
+                sorted_list_values = sorted(
+                    self.get_items_by_field(
+                        db_map, "list_value", "parameter_value_list_id", list_id, only_visible=False
+                    ),
+                    key=lambda x: x["index"],
+                )
+                value_index_list = [x["index"] for x in sorted_list_values]
+                value_id_list = [x["id"] for x in sorted_list_values]
+                value_list = self.get_item(db_map, "parameter_value_list", list_id, only_visible=False)
+                value_list["value_index_list"] = ",".join(str(id_) for id_ in value_index_list)
+                value_list["value_id_list"] = ",".join(str(id_) for id_ in value_id_list)
+                db_map_value_list_data.setdefault(db_map, []).append(value_list)
+        self.parameter_value_lists_updated.emit(db_map_value_list_data)
 
     def _refresh_scenario_alternatives(self, db_map_data):
         """Refreshes cached scenarios when updating scenario alternatives.

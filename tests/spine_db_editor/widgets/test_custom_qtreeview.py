@@ -109,12 +109,14 @@ class _ParameterValueListEdits:
         self._view = view
         self.view_editor = _EditorDelegateMocking()
 
-    def append_value_list(self, list_name):
+    def append_value_list(self, db_mngr, list_name):
         model = self._view.model()
         root_index = model.index(0, 0)
         empty_name_row = model.rowCount(root_index) - 1
         empty_name_index = model.index(empty_name_row, 0, root_index)
-        self.view_editor.write_to_index(self._view, empty_name_index, list_name)
+        with signal_waiter(db_mngr.parameter_value_lists_added) as waiter:
+            self.view_editor.write_to_index(self._view, empty_name_index, list_name)
+            waiter.wait()
         new_name_row = model.rowCount(root_index) - 2
         return model.index(new_name_row, 0, root_index)
 
@@ -126,7 +128,7 @@ class _ParameterValueListEdits:
             if list_index.data() == list_name:
                 last_row = model.rowCount(list_index) - 1
                 empty_value_index = model.index(last_row, 0, list_index)
-                with signal_waiter(db_mngr.parameter_value_lists_added) as waiter:
+                with signal_waiter(db_mngr.list_values_added) as waiter:
                     self.view_editor.write_to_index(self._view, empty_value_index, value)
                     waiter.wait()
                 return model.index(last_row, 0, list_index)
@@ -812,7 +814,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_Base):
         self.assertEqual(model.rowCount(list_name_index), 0)
 
     def test_add_parameter_value_list(self):
-        list_name_index = self._edits.append_value_list("a_value_list")
+        list_name_index = self._edits.append_value_list(self._db_mngr, "a_value_list")
         self.assertEqual(list_name_index.data(), "a_value_list")
         view = self._db_editor.ui.treeView_parameter_value_list
         model = view.model()
@@ -826,7 +828,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_Base):
         self.assertEqual(model.rowCount(new_name_index), 0)
 
     def test_add_list_then_remove_it(self):
-        list_name_index = self._edits.append_value_list("a_value_list")
+        list_name_index = self._edits.append_value_list(self._db_mngr, "a_value_list")
         self.assertEqual(list_name_index.data(), "a_value_list")
         view = self._db_editor.ui.treeView_parameter_value_list
         view.selectionModel().select(list_name_index, QItemSelectionModel.ClearAndSelect)
@@ -838,11 +840,11 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_Base):
         self.assertEqual(list_name_index.data(), "Type new list name here...")
 
     def test_add_two_parameter_value_list_values(self):
-        list_name_index = self._edits.append_value_list("a_value_list")
+        list_name_index = self._edits.append_value_list(self._db_mngr, "a_value_list")
         view = self._db_editor.ui.treeView_parameter_value_list
         model = view.model()
         value_index1 = model.index(0, 0, list_name_index)
-        with signal_waiter(self._db_mngr.parameter_value_lists_added) as waiter:
+        with signal_waiter(self._db_mngr.list_values_added) as waiter:
             self._edits.view_editor.write_to_index(view, value_index1, "value_1")
             waiter.wait()
         root_index = model.index(0, 0)
@@ -850,7 +852,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_Base):
         self.assertEqual(model.index(0, 0, list_name_index).data(), "value_1")
         self.assertEqual(model.rowCount(list_name_index), 2)
         value_index2 = model.index(1, 0, list_name_index)
-        with signal_waiter(self._db_mngr.parameter_value_lists_updated) as waiter:
+        with signal_waiter(self._db_mngr.list_values_updated) as waiter:
             self._edits.view_editor.write_to_index(view, value_index2, "value_2")
             waiter.wait()
         while model.rowCount(list_name_index) != 3:
@@ -873,6 +875,7 @@ class TestParameterValueListTreeViewWithExistingData(_Base):
         db_map.commit_session("Add parameter value list.")
         db_map.connection.close()
         self._common_setup(url, create=False)
+
         view = self._db_editor.ui.treeView_parameter_value_list
         self._edits = _ParameterValueListEdits(view)
         model = view.model()
@@ -880,6 +883,9 @@ class TestParameterValueListTreeViewWithExistingData(_Base):
         while model.rowCount(root_index) != 2:
             # Wait for fetching to finish.
             QApplication.processEvents()
+        for i in range(model.rowCount(root_index)):
+            model.fetchMore(model.index(i, 0, root_index))
+        QApplication.processEvents()
 
     def tearDown(self):
         self._common_tear_down()
@@ -905,7 +911,7 @@ class TestParameterValueListTreeViewWithExistingData(_Base):
         list_name_index = model.index(0, 0, root_index)
         value_index = model.index(0, 0, list_name_index)
         view.selectionModel().setCurrentIndex(value_index, QItemSelectionModel.ClearAndSelect)
-        with signal_waiter(self._db_mngr.parameter_value_lists_updated) as waiter:
+        with signal_waiter(self._db_mngr.list_values_removed) as waiter:
             view.remove_selected()
             waiter.wait()
         root_index = model.index(0, 0)
@@ -921,7 +927,9 @@ class TestParameterValueListTreeViewWithExistingData(_Base):
         data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "value_list_1")
-        self.assertEqual(from_database(data[0].value), "value_2")
+        data = self._db_mngr.query(self._db_map, "list_value_sq")
+        self.assertEqual(len(data), 1)
+        self.assertEqual(from_database(data[0].value, data[0].type), "value_2")
 
     def test_remove_list(self):
         view = self._db_editor.ui.treeView_parameter_value_list
@@ -941,42 +949,25 @@ class TestParameterValueListTreeViewWithExistingData(_Base):
         data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
         self.assertEqual(len(data), 0)
 
-    def test_removing_all_values_from_list_removes_the_list_too(self):
-        view = self._db_editor.ui.treeView_parameter_value_list
-        model = view.model()
-        root_index = model.index(0, 0)
-        list_name_index = model.index(0, 0, root_index)
-        view.selectionModel().select(model.index(0, 0, list_name_index), QItemSelectionModel.ClearAndSelect)
-        view.selectionModel().select(model.index(1, 0, list_name_index), QItemSelectionModel.Select)
-        with signal_waiter(self._db_mngr.parameter_value_lists_removed) as waiter:
-            view.remove_selected()
-            waiter.wait()
-        root_index = model.index(0, 0)
-        self.assertEqual(model.rowCount(root_index), 1)
-        list_name_index = model.index(0, 0, root_index)
-        self.assertEqual(model.rowCount(list_name_index), 0)
-        self.assertEqual(list_name_index.data(), "Type new list name here...")
-        self._commit_changes_to_database("Remove parameter value list.")
-        data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
-        self.assertEqual(len(data), 0)
-
     def test_change_value(self):
         view = self._db_editor.ui.treeView_parameter_value_list
         model = view.model()
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
         value_index1 = model.index(0, 0, list_name_index)
-        with signal_waiter(self._db_mngr.parameter_value_lists_updated) as waiter:
+        with signal_waiter(self._db_mngr.list_values_updated) as waiter:
             self._edits.view_editor.write_to_index(view, value_index1, "new_value")
             waiter.wait()
         self.assertEqual(model.index(0, 0, list_name_index).data(), "new_value")
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
         self._commit_changes_to_database("Update parameter value list value.")
         data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0].name, "value_list_1")
+        data = self._db_mngr.query(self._db_map, "list_value_sq")
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("new_value", "value_2")):
-            self.assertEqual(data[i].name, "value_list_1")
-            self.assertEqual(from_database(data[i].value), expected_value)
+            self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
     def test_rename_list(self):
         view = self._db_editor.ui.treeView_parameter_value_list
@@ -997,9 +988,11 @@ class TestParameterValueListTreeViewWithExistingData(_Base):
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Rename parameter value list.")
         data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0].name, "new_list_name")
+        data = self._db_mngr.query(self._db_map, "list_value_sq")
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("value_1", "value_2")):
-            self.assertEqual(data[i].name, "new_list_name")
             self.assertEqual(from_database(data[i].value), expected_value)
 
 
@@ -1120,7 +1113,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(_Base):
         self.assertEqual(model.index(1, 0, method_root_index).data(), "Enter new method here...")
 
     def _add_parameter_with_value_list(self):
-        self._value_list_edits.append_value_list("my_value_list")
+        self._value_list_edits.append_value_list(self._db_mngr, "my_value_list")
         self._value_list_edits.append_value(self._db_mngr, "my_value_list", 2.3)
         object_tree_view = self._db_editor.ui.treeView_object
         _add_object_class(object_tree_view, "my_object_class")
@@ -1223,6 +1216,16 @@ class TestToolFeatureTreeViewWithExistingData(_Base):
         while model.rowCount(method_root_index) != 2:
             model.fetchMore(method_root_index)
             QApplication.processEvents()
+        # Also fetch parameter value lists
+        view = self._db_editor.ui.treeView_parameter_value_list
+        model = view.model()
+        root_index = model.index(0, 0)
+        while model.rowCount(root_index) != 3:
+            # Wait for fetching to finish.
+            QApplication.processEvents()
+        for i in range(model.rowCount(root_index)):
+            model.fetchMore(model.index(i, 0, root_index))
+        QApplication.processEvents()
 
     def tearDown(self):
         self._common_tear_down()
