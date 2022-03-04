@@ -220,7 +220,7 @@ class TreeViewMixin:
     @Slot()
     def update_export_enabled(self):
         """Update export enabled."""
-        # TODO: check if db_mngr had any cache or something like that
+        # TODO: check if db_mngr has any cache or something like that
 
     def log_changes(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
