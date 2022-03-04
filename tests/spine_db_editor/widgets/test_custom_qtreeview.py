@@ -847,12 +847,10 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_Base):
         with signal_waiter(self._db_mngr.list_values_added) as waiter:
             self._edits.view_editor.write_to_index(view, value_index1, "value_1")
             waiter.wait()
-        root_index = model.index(0, 0)
-        list_name_index = model.index(model.rowCount(root_index) - 2, 0, root_index)
         self.assertEqual(model.index(0, 0, list_name_index).data(), "value_1")
         self.assertEqual(model.rowCount(list_name_index), 2)
         value_index2 = model.index(1, 0, list_name_index)
-        with signal_waiter(self._db_mngr.list_values_updated) as waiter:
+        with signal_waiter(self._db_mngr.list_values_added) as waiter:
             self._edits.view_editor.write_to_index(view, value_index2, "value_2")
             waiter.wait()
         while model.rowCount(list_name_index) != 3:
@@ -860,9 +858,11 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_Base):
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
         self._commit_changes_to_database("Add parameter value list.")
         data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0].name, "a_value_list")
+        data = self._db_mngr.query(self._db_map, "list_value_sq")
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("value_1", "value_2")):
-            self.assertEqual(data[i].name, "a_value_list")
             self.assertEqual(from_database(data[i].value), expected_value)
 
 
