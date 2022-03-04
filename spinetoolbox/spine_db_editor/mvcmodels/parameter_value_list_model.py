@@ -30,7 +30,8 @@ class ParameterValueListModel(TreeModelBase):
 
     def add_list_values(self, db_map_data):
         for list_item, items in self._items_per_list_item(db_map_data):
-            children = [ValueItem(item["id"]) for item in items]
+            existing_ids = {x.id for x in list_item.non_empty_children}
+            children = [ValueItem(item["id"]) for item in items if item["id"] not in existing_ids]
             list_item.insert_children(len(list_item.non_empty_children), children)
 
     def update_parameter_value_lists(self, db_map_data):

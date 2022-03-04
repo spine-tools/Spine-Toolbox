@@ -609,7 +609,6 @@ class SpineDBManager(QObject):
 
     def _restart_fetching(self, db_maps):
         """Restarts fetching"""
-        print("hey")
         for db_map in db_maps:
             del self._cache[db_map]
             self._get_worker(db_map).reset_queries()
