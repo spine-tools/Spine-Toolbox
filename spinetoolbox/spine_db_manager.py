@@ -78,6 +78,7 @@ class SpineDBManager(QObject):
     parameter_definitions_added = Signal(object)
     parameter_values_added = Signal(object)
     parameter_value_lists_added = Signal(object)
+    list_values_added = Signal(object)
     features_added = Signal(object)
     tools_added = Signal(object)
     tool_features_added = Signal(object)
@@ -93,6 +94,7 @@ class SpineDBManager(QObject):
     parameter_definitions_removed = Signal(object)
     parameter_values_removed = Signal(object)
     parameter_value_lists_removed = Signal(object)
+    list_values_removed = Signal(object)
     features_removed = Signal(object)
     tools_removed = Signal(object)
     tool_features_removed = Signal(object)
@@ -108,6 +110,7 @@ class SpineDBManager(QObject):
     parameter_definitions_updated = Signal(object)
     parameter_values_updated = Signal(object)
     parameter_value_lists_updated = Signal(object)
+    list_values_updated = Signal(object)
     features_updated = Signal(object)
     tools_updated = Signal(object)
     tool_features_updated = Signal(object)
@@ -146,6 +149,7 @@ class SpineDBManager(QObject):
             "object_class": self.object_classes_added,
             "relationship_class": self.relationship_classes_added,
             "parameter_value_list": self.parameter_value_lists_added,
+            "list_value": self.list_values_added,
             "parameter_definition": self.parameter_definitions_added,
             "alternative": self.alternatives_added,
             "scenario": self.scenarios_added,
@@ -163,6 +167,7 @@ class SpineDBManager(QObject):
             "object_class": self.object_classes_updated,
             "relationship_class": self.relationship_classes_updated,
             "parameter_value_list": self.parameter_value_lists_updated,
+            "list_value": self.list_values_updated,
             "parameter_definition": self.parameter_definitions_updated,
             "alternative": self.alternatives_updated,
             "scenario": self.scenarios_updated,
@@ -189,6 +194,7 @@ class SpineDBManager(QObject):
             "tool": self.tools_removed,
             "parameter_definition": self.parameter_definitions_removed,
             "parameter_value_list": self.parameter_value_lists_removed,
+            "list_value": self.list_values_removed,
             "relationship_class": self.relationship_classes_removed,
             "object_class": self.object_classes_removed,
         }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
@@ -603,6 +609,7 @@ class SpineDBManager(QObject):
 
     def _restart_fetching(self, db_maps):
         """Restarts fetching"""
+        print("hey")
         for db_map in db_maps:
             del self._cache[db_map]
             self._get_worker(db_map).reset_queries()
@@ -765,7 +772,7 @@ class SpineDBManager(QObject):
 
         Args:
             db_map (DiffDatabaseMapping)
-            item_type (str): either "parameter_definition" or "parameter_value"
+            item_type (str): either "parameter_definition", "parameter_value", or "list_value"
             id_ (int): The parameter_value or definition id
             role (int, optional)
 
@@ -777,6 +784,7 @@ class SpineDBManager(QObject):
             return None
         value_field, type_field = {
             "parameter_value": ("value", "type"),
+            "list_value": ("value", "type"),
             "parameter_definition": ("default_value", "default_type"),
         }[item_type]
         complex_types = {"array": "Array", "time_series": "Time series", "time_pattern": "Time pattern", "map": "Map"}
@@ -867,7 +875,7 @@ class SpineDBManager(QObject):
             return parsed_value
         return None
 
-    def get_value_list_item(self, db_map, id_, index, role=Qt.DisplayRole):
+    def get_value_list_item(self, db_map, id_, index, role=Qt.DisplayRole, only_visible=True):
         """Returns one value item of a parameter_value_list.
 
         Args:
@@ -876,15 +884,10 @@ class SpineDBManager(QObject):
             index (int): The value item index
             role (int, optional)
         """
-        item = self.get_item(db_map, "parameter_value_list", id_)
-        if not item:
+        try:
+            return self.get_parameter_value_list(db_map, id_, role=role, only_visible=only_visible)[index]
+        except IndexError:
             return None
-        _split_and_parse_value_list(item)
-        if index < 0 or index >= len(item["split_value_list"]):
-            return None
-        if role == Qt.EditRole:
-            return item["split_value_list"][index]
-        return self._format_value(item["split_parsed_value_list"][index], role)
 
     def get_parameter_value_list(self, db_map, id_, role=Qt.DisplayRole, only_visible=True):
         """Returns a parameter_value_list formatted for the given role.
@@ -897,10 +900,12 @@ class SpineDBManager(QObject):
         item = self.get_item(db_map, "parameter_value_list", id_, only_visible=only_visible)
         if not item:
             return []
-        _split_and_parse_value_list(item)
-        if role == Qt.EditRole:
-            return item["split_value_list"]
-        return [self._format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
+        return [
+            self.get_value(db_map, "list_value", item["id"], role=role)
+            for item in self.get_items_by_field(
+                db_map, "list_value", "parameter_value_list_id", item["id"], only_visible=only_visible
+            )
+        ]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id, only_visible=True):
         alternative_id_list = self.get_item(db_map, "scenario", scen_id, only_visible=only_visible).get(
@@ -1073,6 +1078,15 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_value_list"))
 
+    def add_list_values(self, db_map_data):
+        """Adds parameter_value list values to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "list_value"))
+
     def add_features(self, db_map_data):
         """Adds features to db.
 
@@ -1213,6 +1227,15 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_value_list"))
+
+    def update_list_values(self, db_map_data):
+        """Updates parameter_value list values in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "list_value"))
 
     def update_features(self, db_map_data):
         """Updates features in db.
@@ -1941,9 +1964,6 @@ class SpineDBManager(QObject):
             item["object_id_list"] = relationship.get("object_id_list")
             item["object_name_list"] = relationship.get("object_name_list")
             item["alternative_name"] = self.get_item(db_map, "alternative", item["alternative_id"])["name"]
-        elif item_type == "parameter_value_list":
-            item["value_list"] = ";".join(str(val, "UTF8") for val in item["value_list"])
-            item["value_index_list"] = ";".join(str(k) for k in range(len(item["value_list"])))
         elif item_type == "entity_group":
             item["class_id"] = item["entity_class_id"]
             item["group_id"] = item["entity_id"]
@@ -1985,10 +2005,3 @@ class SpineDBManager(QObject):
             item["parameter_value_list_name"] = par_val_lst["name"]
             item["required"] = item.get("required", False)
         return item
-
-
-def _split_and_parse_value_list(item):
-    if "split_value_list" not in item:
-        item["split_value_list"] = item["value_list"].split(";")
-    if "split_parsed_value_list" not in item:
-        item["split_parsed_value_list"] = [json.loads(value) for value in item["split_value_list"]]

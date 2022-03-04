@@ -736,6 +736,9 @@ class SpineDBEditorBase(QMainWindow):
     def receive_parameter_value_lists_added(self, db_map_data):
         self.log_changes("added", "parameter_value_list", db_map_data)
 
+    def receive_list_values_added(self, db_map_data):
+        self.log_changes("added", "list_value", db_map_data)
+
     def receive_features_added(self, db_map_data):
         self.log_changes("added", "feature", db_map_data)
 
@@ -774,6 +777,9 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.log_changes("updated", "parameter_value_list", db_map_data)
+
+    def receive_list_values_updated(self, db_map_data):
+        self.log_changes("updated", "list_value", db_map_data)
 
     def receive_features_updated(self, db_map_data):
         self.log_changes("updated", "feature", db_map_data)
@@ -816,6 +822,9 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.log_changes("removed", "parameter_value_list", db_map_data)
+
+    def receive_list_values_removed(self, db_map_data):
+        self.log_changes("removed", "list_value", db_map_data)
 
     def receive_features_removed(self, db_map_data):
         self.log_changes("removed", "feature", db_map_data)

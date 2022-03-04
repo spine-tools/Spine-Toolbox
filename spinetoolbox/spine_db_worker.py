@@ -17,7 +17,7 @@ The SpineDBWorker class
 """
 
 import itertools
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, Executor
 from PySide2.QtCore import QObject, QEvent, QCoreApplication, QTimer
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinetoolbox.helpers import busy_effect
@@ -29,6 +29,19 @@ _READD_ITEMS = QEvent.Type(QEvent.registerEventType())
 _REMOVE_ITEMS = QEvent.Type(QEvent.registerEventType())
 _COMMIT_SESSION = QEvent.Type(QEvent.registerEventType())
 _ROLLBACK_SESSION = QEvent.Type(QEvent.registerEventType())
+
+
+class _MockExecutor(Executor):
+    def submit(self, fn, *args, **kwargs):
+        return _MockFuture(result=fn(*args, **kwargs))
+
+
+class _MockFuture:
+    def __init__(self, result):
+        self._result = result
+
+    def result(self):
+        return self._result
 
 
 class _FetchEvent(QEvent):
@@ -101,6 +114,7 @@ class SpineDBWorker(QObject):
         self._fetched_item_types = set()
         self.commit_cache = {}
         self._executor = ThreadPoolExecutor(max_workers=1)
+        self._executor = _MockExecutor()
 
     def clean_up(self):
         self.deleteLater()

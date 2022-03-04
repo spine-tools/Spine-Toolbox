@@ -65,13 +65,11 @@ class TreeModelBase(MinimalTreeModel):
         raise NotImplementedError()
 
     def _items_per_db_item(self, db_map_data):
-        d = {}
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
                 continue
-            d[db_item] = items
-        return d
+            yield db_item, items
 
     def _items_per_root(self, db_map_data, root_number=0):
         d = {}
