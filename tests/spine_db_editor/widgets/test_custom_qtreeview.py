@@ -883,9 +883,10 @@ class TestParameterValueListTreeViewWithExistingData(_Base):
         while model.rowCount(root_index) != 2:
             # Wait for fetching to finish.
             QApplication.processEvents()
-        for i in range(model.rowCount(root_index)):
-            model.fetchMore(model.index(i, 0, root_index))
-        QApplication.processEvents()
+        list_name_index = model.index(0, 0, root_index)
+        model.fetchMore(list_name_index)
+        while model.rowCount(list_name_index) != 3:
+            QApplication.processEvents()
 
     def tearDown(self):
         self._common_tear_down()
@@ -1223,9 +1224,15 @@ class TestToolFeatureTreeViewWithExistingData(_Base):
         while model.rowCount(root_index) != 3:
             # Wait for fetching to finish.
             QApplication.processEvents()
-        for i in range(model.rowCount(root_index)):
-            model.fetchMore(model.index(i, 0, root_index))
-        QApplication.processEvents()
+        list_name_index1 = model.index(0, 0, root_index)
+        list_name_index2 = model.index(1, 0, root_index)
+        model.fetchMore(list_name_index1)
+        while model.rowCount(list_name_index1) != 3:
+            # Wait for fetching to finish.
+            QApplication.processEvents()
+        model.fetchMore(list_name_index2)
+        while model.rowCount(list_name_index2) != 2:
+            QApplication.processEvents()
 
     def tearDown(self):
         self._common_tear_down()
