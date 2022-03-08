@@ -16,7 +16,6 @@ Tree items for parameter_value lists.
 :date:   28.6.2019
 """
 
-import json
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
 from spinedb_api import to_database
@@ -29,8 +28,9 @@ from .tree_item_utility import (
     StandardDBItem,
     FetchMoreMixin,
     LeafItem,
+    ListValueFetchParent,
 )
-from ...helpers import CharIconEngine, rows_to_row_count_tuples
+from ...helpers import CharIconEngine
 
 
 class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
@@ -54,17 +54,14 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, F
     def __init__(self, identifier=None, name=None):
         super().__init__(identifier=identifier)
         self._name = name
+        self._list_value_fetch_parent = ListValueFetchParent(identifier)
 
     @property
     def item_type(self):
         return "parameter_value_list"
 
-    @property
-    def fetch_item_type(self):
-        return "list_value"
-
-    def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.parameter_value_list_id == self.id)
+    def _fetch_parents(self):
+        yield self._list_value_fetch_parent
 
     def _make_item_data(self):
         return {"name": "Type new list name here..." if self._name is None else self._name}
