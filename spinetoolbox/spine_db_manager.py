@@ -2013,8 +2013,15 @@ class SpineDBManager(QObject):
             item["object_class_name_list"] = relationship_class.get("object_class_name_list")
             item["value_list_id"] = value_list_id = item.pop("parameter_value_list_id", item.get("value_list_id"))
             item["value_list_name"] = self.get_item(db_map, "parameter_value_list", value_list_id).get("name")
-            item["default_value"] = item.get("default_value")
-            item["default_type"] = item.get("default_type")
+            if item.get("default_type") == "list_value_ref":
+                item["list_value_id"] = list_value_id = int(item["default_value"])
+                list_value_item = self.get_item(db_map, "list_value", list_value_id)
+                item["default_value"] = list_value_item["value"]
+                item["default_type"] = list_value_item["type"]
+            else:
+                item["default_value"] = item.get("default_value")
+                item["default_type"] = item.get("default_type")
+                item["list_value_id"] = None
             item["description"] = item.get("description")
         elif item_type == "parameter_value":
             item["parameter_id"] = parameter_id = item.pop("parameter_definition_id", item.get("parameter_id"))
@@ -2035,6 +2042,13 @@ class SpineDBManager(QObject):
             item["object_id_list"] = relationship.get("object_id_list")
             item["object_name_list"] = relationship.get("object_name_list")
             item["alternative_name"] = self.get_item(db_map, "alternative", item["alternative_id"])["name"]
+            if item["type"] == "list_value_ref":
+                item["list_value_id"] = list_value_id = int(item["value"])
+                list_value_item = self.get_item(db_map, "list_value", list_value_id)
+                item["value"] = list_value_item["value"]
+                item["type"] = list_value_item["type"]
+            else:
+                item["list_value_id"] = None
         elif item_type == "entity_group":
             item["class_id"] = item["entity_class_id"]
             item["group_id"] = item["entity_id"]
