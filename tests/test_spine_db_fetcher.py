@@ -226,6 +226,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'value_list_name': None,
             'default_value': None,
             'default_type': None,
+            'list_value_id': None,
             'description': None,
             'commit_id': 2,
         }
@@ -263,6 +264,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'alternative_name': 'Base',
             'value': b'2.3',
             'type': None,
+            'list_value_id': None,
             'commit_id': 2,
         }
         self._listener.receive_parameter_values_added.assert_any_call({self._db_map: [item]})
@@ -281,7 +283,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_features(self):
         self._import_data(
             object_classes=("oc",),
-            parameter_value_lists=(("value_list", (2.3,)),),
+            parameter_value_lists=(("value_list", 2.3),),
             object_parameters=(("oc", "param", 2.3, "value_list"),),
             features=(("oc", "param"),),
         )
@@ -310,7 +312,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_tool_features(self):
         self._import_data(
             object_classes=("oc",),
-            parameter_value_lists=(("value_list", (2.3,)),),
+            parameter_value_lists=(("value_list", 2.3),),
             object_parameters=(("oc", "param", 2.3, "value_list"),),
             features=(("oc", "param"),),
             tools=("tool",),
