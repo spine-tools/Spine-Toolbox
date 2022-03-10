@@ -21,7 +21,7 @@ from PySide2.QtCore import QModelIndex, QPoint, Qt, Signal
 from PySide2.QtWidgets import QStyledItemDelegate
 from PySide2.QtGui import QFontMetrics
 from spinedb_api import to_database
-from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api.parameter_value import join_value_and_type, ListValueRef
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
@@ -302,6 +302,7 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
         """If the parameter has associated a value list, returns a SearchBarEditor.
         Otherwise returns or requests a dedicated parameter_value editor.
         """
+        self._db_value_list_lookup = {}
         db_map = self._get_db_map(index)
         if not db_map:
             return None
@@ -310,9 +311,9 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
             display_value_list = self.db_mngr.get_parameter_value_list(
                 db_map, value_list_id, Qt.DisplayRole, only_visible=False
             )
-            db_value_list = self.db_mngr.get_parameter_value_list(
-                db_map, value_list_id, Qt.EditRole, only_visible=False
-            )
+            value_id_list = self.db_mngr.get_item(db_map, "parameter_value_list", value_list_id)["value_id_list"]
+            value_id_list = [] if value_id_list is None else [int(id_) for id_ in value_id_list.split(",")]
+            db_value_list = [join_value_and_type(*to_database(ListValueRef(id_))) for id_ in value_id_list]
             self._db_value_list_lookup = dict(zip(display_value_list, db_value_list))
             editor = SearchBarEditor(self.parent(), parent)
             editor.set_data(index.data(), self._db_value_list_lookup)

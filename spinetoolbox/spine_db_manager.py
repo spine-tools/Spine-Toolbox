@@ -230,11 +230,13 @@ class SpineDBManager(QObject):
         self.parameter_definitions_updated.connect(self._cascade_refresh_features_by_paremeter_definition)
         self.parameter_value_lists_added.connect(self._cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_updated.connect(self._cascade_refresh_parameter_definitions_by_value_list)
-        self.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_paremeter_value_list)
+        self.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_parameter_value_list)
         self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_removed_value_list)
         self.features_updated.connect(self._cascade_refresh_tool_features_by_feature)
         self.list_values_added.connect(self._refresh_parameter_value_lists)
         self.list_values_removed.connect(self._refresh_parameter_value_lists)
+        self.list_values_updated.connect(self._cascade_refresh_parameter_values_by_list_value)
+        self.list_values_updated.connect(self._cascade_refresh_parameter_definitions_by_list_value)
         self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
@@ -796,22 +798,30 @@ class SpineDBManager(QObject):
         key = "parsed_value"
         if key not in item:
             item[key] = self._parse_value(item[value_field], item[type_field])
-        return self._format_value(item[key], role)
+        parsed_value = item[key]
+        if item[type_field] == "list_value_ref":
+            return self.get_value(db_map, "list_value", parsed_value.list_value_id, role=role)
+        return self._format_value(parsed_value, role)
 
-    def get_value_from_data(self, data, role=Qt.DisplayRole):
+    def get_value_from_data(self, db_map, data, role=Qt.DisplayRole):
         """Returns the value or default value of a parameter directly from data.
         Used by ``EmptyParameterModel.data()``.
 
         Args:
+            db_map (DiffDatabaseMapping)
             data (str): joined value and type
             role (int, optional)
 
         Returns:
             any
         """
+        # TODO: Handle db_map None
         if data is None:
             return None
-        parsed_value = self._parse_value(*split_value_and_type(data))
+        value, type_ = split_value_and_type(data)
+        parsed_value = self._parse_value(value, type_)
+        if type_ == "list_value_ref":
+            return self.get_value(db_map, "list_value", parsed_value.list_value_id, role=role)
         return self._format_value(parsed_value, role)
 
     @staticmethod
@@ -1552,6 +1562,24 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
+    def find_cascading_parameter_values_by_list_value(self, db_map_ids, only_visible=True):
+        """Finds and returns cascading parameter values for the given list value ids."""
+        db_map_cascading_data = dict()
+        for db_map, ids in db_map_ids.items():
+            for item in self.get_items(db_map, "parameter_value", only_visible=only_visible):
+                if item["type"] == "list_value_ref" and int(item["value"]) in ids:
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
+        return db_map_cascading_data
+
+    def find_cascading_parameter_definitions_by_list_value(self, db_map_ids, only_visible=True):
+        """Finds and returns cascading parameter definitions for the given list value ids."""
+        db_map_cascading_data = dict()
+        for db_map, ids in db_map_ids.items():
+            for item in self.get_items(db_map, "parameter_definition", only_visible=only_visible):
+                if item["default_type"] == "list_value_ref" and int(item["default_value"]) in ids:
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
+        return db_map_cascading_data
+
     def _refresh_parameter_value_lists(self, db_map_data):
         """Refreshes cached parameter value lists when updating list values.
 
@@ -1710,7 +1738,7 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_features_by_parameter_definition(self.db_map_ids(db_map_data))
         self.features_updated.emit(db_map_cascading_data)
 
-    def _cascade_refresh_features_by_paremeter_value_list(self, db_map_data):
+    def _cascade_refresh_features_by_parameter_value_list(self, db_map_data):
         """Refreshes cached features in cascade when updating parameter value lists.
 
         Args:
@@ -1727,6 +1755,24 @@ class SpineDBManager(QObject):
         """
         db_map_cascading_data = self.find_cascading_tool_features_by_feature(self.db_map_ids(db_map_data))
         self.tool_features_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_parameter_values_by_list_value(self, db_map_data):
+        """Refreshes cached parameter values in cascade when updating list values.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_values_by_list_value(self.db_map_ids(db_map_data))
+        self.parameter_values_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_parameter_definitions_by_list_value(self, db_map_data):
+        """Refreshes cached parameter definitions in cascade when updating list values.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_list_value(self.db_map_ids(db_map_data))
+        self.parameter_definitions_updated.emit(db_map_cascading_data)
 
     def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
         _replace_name = lambda name_list: [name if name != orig_name else dup_name for name in name_list]
