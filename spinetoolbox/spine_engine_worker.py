@@ -287,7 +287,9 @@ class SpineEngineWorker(QObject):
     def _handle_kernel_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
         if msg["type"] == "kernel_started":
-            item.jupyter_console_requested.emit(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
+            self._logger.jupyter_console_requested.emit(
+                item, msg["filter_id"], msg["kernel_name"], msg["connection_file"]
+            )
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
                 f"Unable to find kernel spec <b>{msg['kernel_name']}</b>"
