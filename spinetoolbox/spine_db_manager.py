@@ -2023,6 +2023,7 @@ class SpineDBManager(QObject):
                 item["default_type"] = item.get("default_type")
                 item["list_value_id"] = None
             item["description"] = item.get("description")
+            item.pop("parsed_value", None)
         elif item_type == "parameter_value":
             item["parameter_id"] = parameter_id = item.pop("parameter_definition_id", item.get("parameter_id"))
             param_def = self.get_item(db_map, "parameter_definition", parameter_id)
@@ -2049,6 +2050,7 @@ class SpineDBManager(QObject):
                 item["type"] = list_value_item["type"]
             else:
                 item["list_value_id"] = None
+            item.pop("parsed_value", None)
         elif item_type == "entity_group":
             item["class_id"] = item["entity_class_id"]
             item["group_id"] = item["entity_id"]
@@ -2089,4 +2091,6 @@ class SpineDBManager(QObject):
             item["tool_name"] = tool["name"]
             item["parameter_value_list_name"] = par_val_lst["name"]
             item["required"] = item.get("required", False)
+        elif item_type == "list_value":
+            item.pop("parsed_value", None)
         return item
