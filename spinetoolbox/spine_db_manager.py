@@ -798,30 +798,22 @@ class SpineDBManager(QObject):
         key = "parsed_value"
         if key not in item:
             item[key] = self._parse_value(item[value_field], item[type_field])
-        parsed_value = item[key]
-        if item[type_field] == "list_value_ref":
-            return self.get_value(db_map, "list_value", parsed_value.list_value_id, role=role)
-        return self._format_value(parsed_value, role)
+        return self._format_value(item[key], role)
 
-    def get_value_from_data(self, db_map, data, role=Qt.DisplayRole):
+    def get_value_from_data(self, data, role=Qt.DisplayRole):
         """Returns the value or default value of a parameter directly from data.
         Used by ``EmptyParameterModel.data()``.
 
         Args:
-            db_map (DiffDatabaseMapping)
             data (str): joined value and type
             role (int, optional)
 
         Returns:
             any
         """
-        # TODO: Handle db_map None
         if data is None:
             return None
-        value, type_ = split_value_and_type(data)
-        parsed_value = self._parse_value(value, type_)
-        if type_ == "list_value_ref":
-            return self.get_value(db_map, "list_value", parsed_value.list_value_id, role=role)
+        parsed_value = self._parse_value(*split_value_and_type(data))
         return self._format_value(parsed_value, role)
 
     @staticmethod
@@ -1567,7 +1559,11 @@ class SpineDBManager(QObject):
         db_map_cascading_data = dict()
         for db_map, ids in db_map_ids.items():
             for item in self.get_items(db_map, "parameter_value", only_visible=only_visible):
-                if item["type"] == "list_value_ref" and int(item["value"]) in ids:
+                if item["list_value_id"] in ids:
+                    list_value_item = self.get_item(db_map, "list_value", item["list_value_id"])
+                    item["value"] = list_value_item["value"]
+                    item["type"] = list_value_item["type"]
+                    item.pop("parsed_value", None)
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
@@ -1576,7 +1572,11 @@ class SpineDBManager(QObject):
         db_map_cascading_data = dict()
         for db_map, ids in db_map_ids.items():
             for item in self.get_items(db_map, "parameter_definition", only_visible=only_visible):
-                if item["default_type"] == "list_value_ref" and int(item["default_value"]) in ids:
+                if item["list_value_id"] in ids:
+                    list_value_item = self.get_item(db_map, "list_value", item["list_value_id"])
+                    item["default_value"] = list_value_item["value"]
+                    item["default_type"] = list_value_item["type"]
+                    item.pop("parsed_value", None)
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 

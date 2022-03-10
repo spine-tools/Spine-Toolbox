@@ -94,9 +94,7 @@ class EmptyParameterModel(EmptyRowModel):
             PARSED_ROLE,
         ):
             data = super().data(index, role=Qt.EditRole)
-            database = index.siblingAtColumn(self.header.index("database")).data()
-            db_map = next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
-            return self.db_mngr.get_value_from_data(db_map, data, role)
+            return self.db_mngr.get_value_from_data(data, role)
         return super().data(index, role)
 
     def _make_unique_id(self, item):
