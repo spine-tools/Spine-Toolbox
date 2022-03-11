@@ -256,8 +256,7 @@ class AddItemsCommand(SpineDBCommand):
             self.setObsolete(True)
             return
         self.redo_db_map_data = {
-            db_map: [self.db_mngr.cache_to_db(self.item_type, item) for item in data]
-            for db_map, data in db_map_data.items()
+            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
         }
         self.undo_db_map_typed_ids = {
             db_map: db_map.cascading_ids(
@@ -296,7 +295,7 @@ class UpdateItemsCommand(SpineDBCommand):
 
     def _undo_item(self, db_map, id_):
         undo_item = self.db_mngr.get_item(db_map, self.item_type, id_)
-        return self.db_mngr.cache_to_db(self.item_type, undo_item)
+        return db_map.cache_to_db(self.item_type, undo_item)
 
     @SpineDBCommand.redomethod
     def redo(self):
@@ -315,8 +314,7 @@ class UpdateItemsCommand(SpineDBCommand):
             self.setObsolete(True)
             return
         self.redo_db_map_data = {
-            db_map: [self.db_mngr.cache_to_db(self.item_type, item) for item in data]
-            for db_map, data in db_map_data.items()
+            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
         }
         self._check = False
 
@@ -361,7 +359,7 @@ class RemoveItemsCommand(SpineDBCommand):
             return
         self.undo_typed_db_map_data = {
             item_type: {
-                self.db_map: [self.db_mngr.cache_to_db(item_type, item) for item in db_map_data.get(self.db_map, [])]
+                self.db_map: [self.db_map.cache_to_db(item_type, item) for item in db_map_data.get(self.db_map, [])]
             }
             for item_type, db_map_data in typed_db_map_data.items()
         }

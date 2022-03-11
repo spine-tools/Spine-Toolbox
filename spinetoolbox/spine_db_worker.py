@@ -45,18 +45,16 @@ class _FetchStatusChangeEvent(QEvent):
 
 
 class _AddOrUpdateItemsEvent(QEvent):
-    def __init__(self, item_type, items, errors, signal_name):
+    def __init__(self, items, errors, signal_name):
         super().__init__(_ADD_OR_UPDATE_ITEMS)
-        self.item_type = item_type
         self.items = items
         self.errors = errors
         self.signal_name = signal_name
 
 
 class _ReaddItemsEvent(QEvent):
-    def __init__(self, item_type, items, signal_name):
+    def __init__(self, items, signal_name):
         super().__init__(_READD_ITEMS)
-        self.item_type = item_type
         self.items = items
         self.signal_name = signal_name
 
@@ -345,16 +343,16 @@ class SpineDBWorker(QObject):
     @busy_effect
     def _add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
-        QCoreApplication.postEvent(self, _AddOrUpdateItemsEvent(item_type, items, errors, signal_name))
+        items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
+        QCoreApplication.postEvent(self, _AddOrUpdateItemsEvent(items, errors, signal_name))
 
     def _add_or_update_items_event(self, ev):
         signal = getattr(self._db_mngr, ev.signal_name)
-        items = [self._db_mngr.db_to_cache(self._db_map, ev.item_type, item) for item in ev.items]
-        signal.emit({self._db_map: items})
+        signal.emit({self._db_map: ev.items})
         if ev.errors:
             self._db_mngr.error_msg.emit({self._db_map: ev.errors})
 
-    def readd_items(self, items, method_name, item_type, signal_name):
+    def readd_items(self, items, method_name, item_type, signal_name, cache):
         """Adds or updates items in db.
 
         Args:
@@ -363,17 +361,17 @@ class SpineDBWorker(QObject):
             item_type (str): item type
             signal_name (str) : signal attribute of SpineDBManager to emit if successful
         """
-        self._executor.submit(self._readd_items, items, method_name, item_type, signal_name)
+        self._executor.submit(self._readd_items, items, method_name, item_type, signal_name, cache)
 
     @busy_effect
-    def _readd_items(self, items, method_name, item_type, signal_name):
-        getattr(self._db_map, method_name)(*items, readd=True)
-        QCoreApplication.postEvent(self, _ReaddItemsEvent(item_type, items, signal_name))
+    def _readd_items(self, items, method_name, item_type, signal_name, cache):
+        getattr(self._db_map, method_name)(*items, readd=True, cache=cache)
+        items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
+        QCoreApplication.postEvent(self, _ReaddItemsEvent(items, signal_name))
 
     def _readd_items_event(self, ev):
-        items = [self._db_mngr.db_to_cache(self._db_map, ev.item_type, item) for item in ev.items]
         signal = getattr(self._db_mngr, ev.signal_name)
-        signal.emit({self._db_map: items})
+        signal.emit({self._db_map: ev.items})
 
     def remove_items(self, ids_per_type):
         """Removes items from database.
