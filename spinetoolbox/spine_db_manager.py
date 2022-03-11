@@ -45,13 +45,14 @@ from spinedb_api import (
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spinedb_api.helpers import CacheItem
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, CacheItem, signal_waiter, busy_effect
+from .helpers import get_upgrade_db_promt_text, signal_waiter, busy_effect
 
 
 @busy_effect

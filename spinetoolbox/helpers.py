@@ -1296,21 +1296,6 @@ def inquire_index_name(model, column, title, parent_widget):
     model.setHeaderData(column, Qt.Horizontal, new_name)
 
 
-class CacheItem(dict):
-    """A dictionary that behaves kinda like a row from a query result.
-
-    It is used to store items in a cache, so we can access them as if they were rows from a query result.
-    This is mainly because we want to use the cache as a replacement for db queries in some methods.
-    """
-
-    def __getattr__(self, name):
-        """Overridden method to return the dictionary key named after the attribute, or None if it doesn't exist."""
-        return self.get(name)
-
-    def _asdict(self):
-        return dict(**self)
-
-
 def preferred_row_height(widget, factor=1.5):
     return factor * widget.fontMetrics().lineSpacing()
 
