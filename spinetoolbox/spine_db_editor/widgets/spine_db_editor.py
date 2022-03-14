@@ -164,7 +164,7 @@ class SpineDBEditorBase(QMainWindow):
         self.init_models()
         self.init_add_undo_redo_actions()
         self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
-        self.restore_ui()
+        QTimer.singleShot(0, self.restore_ui)
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
 
