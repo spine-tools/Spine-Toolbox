@@ -198,6 +198,7 @@ class ToolboxUI(QMainWindow):
         self._base_julia_console = None  # 'base' Julia console, independent of project items
         # Additional consoles for item execution
         self._item_consoles = {}
+        self._filter_item_consoles = {}
         self._persistent_consoles = {}
         self._jupyter_consoles = {}
         # Setup main window menu
@@ -1437,9 +1438,7 @@ class ToolboxUI(QMainWindow):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
-        filter_consoles = self._item_consoles.get(self.active_project_item, dict())
-        if not isinstance(filter_consoles, dict):
-            filter_consoles = dict()
+        filter_consoles = self._filter_item_consoles.get(self.active_project_item, dict())
         self.ui.listView_console_executions.setVisible(bool(filter_consoles))
         self.ui.listView_console_executions.model().reset_model(filter_consoles)
         current = self.ui.listView_console_executions.currentIndex()
@@ -2294,7 +2293,7 @@ class ToolboxUI(QMainWindow):
         if not filter_id:
             self._item_consoles[item] = self._make_jupyter_console(item, kernel_name, connection_file)
         else:
-            d = self._item_consoles[item] = dict()
+            d = self._filter_item_consoles.setdefault(item, dict())
             d[filter_id] = self._make_jupyter_console(item, kernel_name, connection_file)
         self.override_console_and_execution_list()
 
@@ -2311,7 +2310,7 @@ class ToolboxUI(QMainWindow):
         if not filter_id:
             self._item_consoles[item] = self._make_persistent_console(item, key, language)
         else:
-            d = self._item_consoles[item] = dict()
+            d = self._filter_item_consoles.setdefault(item, dict())
             d[filter_id] = self._make_persistent_console(item, key, language)
         self.override_console_and_execution_list()
 
@@ -2330,7 +2329,7 @@ class ToolboxUI(QMainWindow):
     def _get_console(self, item, filter_id):
         if not filter_id:
             return self._item_consoles[item]
-        return self._item_consoles[item][filter_id]
+        return self._filter_item_consoles[item][filter_id]
 
     def _make_jupyter_console(self, item, kernel_name, connection_file):
         """Creates a new JupyterConsoleWidget for given connection file if none exists yet, and returns it.

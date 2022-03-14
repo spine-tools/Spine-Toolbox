@@ -23,8 +23,6 @@ class FilterExecutionModel(QAbstractListModel):
     _filter_consoles = dict()
 
     def reset_model(self, filter_consoles):
-        if filter_consoles == self._filter_consoles:
-            return
         self.beginResetModel()
         self._filter_consoles = filter_consoles
         self.endResetModel()
