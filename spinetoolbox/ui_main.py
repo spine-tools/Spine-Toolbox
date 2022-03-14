@@ -813,7 +813,7 @@ class ToolboxUI(QMainWindow):
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
         self.activate_no_selection_tab()  # Clear properties widget
-        self.restore_original_console()
+        self._restore_original_console()
         self.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self._shutdown_engine_kernels()
 
@@ -918,7 +918,7 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item:
             self.activate_item_tab()
             return
-        self.restore_original_console()
+        self._restore_original_console()
         if self.active_link_item:
             self.activate_link_tab()
             return
@@ -1418,10 +1418,10 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_eventlog.append(message)
 
     def override_console_and_execution_list(self):
-        self.override_console()
-        self.override_execution_list()
+        self._override_console()
+        self._override_execution_list()
 
-    def override_console(self):
+    def _override_console(self):
         """Sets the jupyter console of the active project item in Jupyter Console and updates title."""
         if self.active_project_item is None:
             return
@@ -1430,11 +1430,11 @@ class ToolboxUI(QMainWindow):
 
     def _do_override_console(self, console):
         if not isinstance(console, (PersistentConsoleWidget, JupyterConsoleWidget)):
-            self.restore_original_console()
+            self._restore_original_console()
             return
         self._set_override_console(console)
 
-    def override_execution_list(self):
+    def _override_execution_list(self):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
@@ -1444,7 +1444,7 @@ class ToolboxUI(QMainWindow):
         current = self.ui.listView_console_executions.currentIndex()
         self._select_console_execution(current, None)
 
-    def restore_original_console(self):
+    def _restore_original_console(self):
         """Sets the Console back to the original."""
         self.ui.listView_console_executions.hide()
         self._set_override_console(self.ui.label_no_console)
