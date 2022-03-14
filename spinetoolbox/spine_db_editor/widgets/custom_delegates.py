@@ -655,7 +655,11 @@ class ParameterValueListDelegate(QStyledItemDelegate):
     def setModelData(self, editor, model, index):
         """Send signal."""
         self.closeEditor.emit(editor)
-        self.data_committed.emit(index, to_database(editor.data()))
+        item = model.item_from_index(index)
+        data = editor.data()
+        if item.item_type == "list_value":
+            data = to_database(data)
+        self.data_committed.emit(index, data)
 
     def setEditorData(self, editor, index):
         """Do nothing. We're setting editor data right away in createEditor."""
