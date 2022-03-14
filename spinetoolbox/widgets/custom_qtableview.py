@@ -137,9 +137,14 @@ class CopyPasteTableView(QTableView):
             We identify our complex values by checking if the word "type" is in them.
             See ``spinedb_api.helpers.join_value_and_type`` for the reason why this works.
             """
-            if '"type"' in value:
+            new_value = locale.delocalize(value)
+            try:
+                float(new_value)
+                return new_value
+            except ValueError:
+                # The new delocalized value is not even a number, so ignore it
+                # This prevents comma separated strings to become dot separated strings
                 return value
-            return locale.delocalize(value)
 
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter="\t", quotechar="'")

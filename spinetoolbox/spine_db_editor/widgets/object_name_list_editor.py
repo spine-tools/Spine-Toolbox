@@ -25,8 +25,7 @@ from ...widgets.custom_editors import SearchBarEditor
 
 
 class SearchBarDelegate(QItemDelegate):
-    """A custom delegate to use with ObjectNameListEditor.
-    """
+    """A custom delegate to use with ObjectNameListEditor."""
 
     data_committed = Signal("QModelIndex", "QVariant")
 

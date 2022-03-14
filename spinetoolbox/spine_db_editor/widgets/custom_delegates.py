@@ -461,7 +461,7 @@ class AlternativeNameDelegate(ParameterDelegate):
 class ObjectNameListDelegate(ParameterDelegate):
     """A delegate for the object name list."""
 
-    object_name_list_editor_requested = Signal("QModelIndex", int, "QVariant")
+    object_name_list_editor_requested = Signal(QModelIndex, int, object)
 
     def createEditor(self, parent, option, index):
         """Returns editor."""

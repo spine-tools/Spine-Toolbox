@@ -16,7 +16,7 @@ Contains the ParameterViewMixin class.
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt, Slot, QModelIndex
 from PySide2.QtWidgets import QHeaderView
 from .object_name_list_editor import ObjectNameListEditor
 from ..mvcmodels.compound_parameter_models import (
@@ -86,7 +86,7 @@ class ParameterViewMixin:
         self.relationship_parameter_definition_model.init_model()
         self._set_default_parameter_data()
 
-    @Slot("QModelIndex", int, "QVariant")
+    @Slot(QModelIndex, int, object)
     def show_object_name_list_editor(self, index, rel_cls_id, db_map):
         """Shows the object names list editor.
 
