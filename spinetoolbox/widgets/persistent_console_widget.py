@@ -57,7 +57,7 @@ class PersistentConsoleWidget(QTextEdit):
         self._timer.start()
         self._style = get_style_by_name("monokai")
         background_color = self._style.background_color
-        foreground_color = self._style.styles[Token.Text]
+        foreground_color = self._style.styles[Token] or self._style.styles[Token.Text]
         self.setStyleSheet(
             f"QTextEdit {{background-color: {background_color}; color: {foreground_color}; border: 0px}}"
         )

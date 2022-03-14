@@ -198,6 +198,7 @@ class ToolboxUI(QMainWindow):
         self._base_julia_console = None  # 'base' Julia console, independent of project items
         # Additional consoles for item execution
         self._item_consoles = {}
+        self._filter_item_consoles = {}
         self._persistent_consoles = {}
         self._jupyter_consoles = {}
         # Setup main window menu
@@ -812,7 +813,7 @@ class ToolboxUI(QMainWindow):
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
         self.activate_no_selection_tab()  # Clear properties widget
-        self.restore_original_console()
+        self._restore_original_console()
         self.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self._shutdown_engine_kernels()
 
@@ -917,7 +918,7 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item:
             self.activate_item_tab()
             return
-        self.restore_original_console()
+        self._restore_original_console()
         if self.active_link_item:
             self.activate_link_tab()
             return
@@ -1417,10 +1418,10 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_eventlog.append(message)
 
     def override_console_and_execution_list(self):
-        self.override_console()
-        self.override_execution_list()
+        self._override_console()
+        self._override_execution_list()
 
-    def override_console(self):
+    def _override_console(self):
         """Sets the jupyter console of the active project item in Jupyter Console and updates title."""
         if self.active_project_item is None:
             return
@@ -1429,23 +1430,21 @@ class ToolboxUI(QMainWindow):
 
     def _do_override_console(self, console):
         if not isinstance(console, (PersistentConsoleWidget, JupyterConsoleWidget)):
-            self.restore_original_console()
+            self._restore_original_console()
             return
         self._set_override_console(console)
 
-    def override_execution_list(self):
+    def _override_execution_list(self):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
-        filter_consoles = self._item_consoles.get(self.active_project_item, dict())
-        if not isinstance(filter_consoles, dict):
-            filter_consoles = dict()
+        filter_consoles = self._filter_item_consoles.get(self.active_project_item, dict())
         self.ui.listView_console_executions.setVisible(bool(filter_consoles))
         self.ui.listView_console_executions.model().reset_model(filter_consoles)
         current = self.ui.listView_console_executions.currentIndex()
         self._select_console_execution(current, None)
 
-    def restore_original_console(self):
+    def _restore_original_console(self):
         """Sets the Console back to the original."""
         self.ui.listView_console_executions.hide()
         self._set_override_console(self.ui.label_no_console)
@@ -2294,7 +2293,7 @@ class ToolboxUI(QMainWindow):
         if not filter_id:
             self._item_consoles[item] = self._make_jupyter_console(item, kernel_name, connection_file)
         else:
-            d = self._item_consoles[item] = dict()
+            d = self._filter_item_consoles.setdefault(item, dict())
             d[filter_id] = self._make_jupyter_console(item, kernel_name, connection_file)
         self.override_console_and_execution_list()
 
@@ -2311,7 +2310,7 @@ class ToolboxUI(QMainWindow):
         if not filter_id:
             self._item_consoles[item] = self._make_persistent_console(item, key, language)
         else:
-            d = self._item_consoles[item] = dict()
+            d = self._filter_item_consoles.setdefault(item, dict())
             d[filter_id] = self._make_persistent_console(item, key, language)
         self.override_console_and_execution_list()
 
@@ -2330,7 +2329,7 @@ class ToolboxUI(QMainWindow):
     def _get_console(self, item, filter_id):
         if not filter_id:
             return self._item_consoles[item]
-        return self._item_consoles[item][filter_id]
+        return self._filter_item_consoles[item][filter_id]
 
     def _make_jupyter_console(self, item, kernel_name, connection_file):
         """Creates a new JupyterConsoleWidget for given connection file if none exists yet, and returns it.

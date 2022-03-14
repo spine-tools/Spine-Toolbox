@@ -32,10 +32,11 @@ from PySide2.QtGui import QDropEvent
 from spinetoolbox.project_item_icon import ProjectItemIcon
 from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
+from spinetoolbox.widgets.persistent_console_widget import PersistentConsoleWidget
 from spinetoolbox.link import Link
 from spinetoolbox.mvcmodels.project_tree_item import RootProjectTreeItem
 from spinetoolbox.resources_icons_rc import qInitResources
-from .mock_helpers import clean_up_toolbox, create_toolboxui, create_project, add_ds, add_dc
+from .mock_helpers import clean_up_toolbox, create_toolboxui, create_project, add_ds, add_dc, add_tool
 
 
 # noinspection PyUnusedLocal,DuplicatedCode
@@ -824,6 +825,46 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
+
+    def test_persistent_console_requested(self):
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
+        add_tool(self.toolbox.project(), self.toolbox.item_factories, "tool")
+        index = self.toolbox.project_item_model.find_item("tool")
+        item = self.toolbox.project_item_model.item(index).project_item
+        filter_id = ""
+        key = ("too", "")
+        language = "julia"
+        self.toolbox.refresh_active_elements(item, None, {"tool"})
+        self.toolbox.persistent_console_requested.emit(item, filter_id, key, language)
+        console = self.toolbox.ui.splitter_console.widget(1)
+        self.assertTrue(isinstance(console, PersistentConsoleWidget))
+        self.assertEqual(console.owners, {item})
+        self.assertFalse(self.toolbox.ui.listView_console_executions.isVisible())
+        self.assertEqual(self.toolbox.ui.listView_console_executions.model().rowCount(), 0)
+
+    def test_filtered_persistent_consoles_requested(self):
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
+        add_tool(self.toolbox.project(), self.toolbox.item_factories, "tool")
+        index = self.toolbox.project_item_model.find_item("tool")
+        item = self.toolbox.project_item_model.item(index).project_item
+        language = "julia"
+        self.toolbox.refresh_active_elements(item, None, {"tool"})
+        self.toolbox.persistent_console_requested.emit(item, "filter1", ("tool", "filter1"), language)
+        self.toolbox.persistent_console_requested.emit(item, "filter2", ("tool", "filter2"), language)
+        self.toolbox.persistent_console_requested.emit(item, "filter3", ("tool", "filter3"), language)
+        view = self.toolbox.ui.listView_console_executions
+        self.assertEqual(view.model().rowCount(), 3)
+        # Scroll to item -> get rectangle -> click
+        for row in range(view.model().rowCount()):
+            ind = view.model().index(row, 0)
+            view.scrollTo(ind)
+            rect = view.visualRect(ind)
+            QTest.mouseClick(view.viewport(), Qt.LeftButton, Qt.ControlModifier, rect.center())
+            console = self.toolbox.ui.splitter_console.widget(1)
+            self.assertTrue(isinstance(console, PersistentConsoleWidget))
+            self.assertEqual(console.owners, {item})
 
     def test_closeEvent_saves_window_state(self):
         self.toolbox._qsettings = mock.NonCallableMagicMock()
