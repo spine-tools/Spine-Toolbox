@@ -655,9 +655,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
     def setModelData(self, editor, model, index):
         """Send signal."""
         self.closeEditor.emit(editor)
-        if editor.data() == index.data(Qt.EditRole):
-            return
-        self.data_committed.emit(index, editor.data())
+        self.data_committed.emit(index, to_database(editor.data()))
 
     def setEditorData(self, editor, index):
         """Do nothing. We're setting editor data right away in createEditor."""

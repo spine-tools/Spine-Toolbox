@@ -87,4 +87,4 @@ class ParameterValueListModel(TreeModelBase):
             Callable
         """
         item = self.item_from_index(index)
-        return lambda value, item=item: item.add_item_to_db(item.make_item_to_add(value[0]))
+        return lambda value, item=item: item.set_data(0, value)

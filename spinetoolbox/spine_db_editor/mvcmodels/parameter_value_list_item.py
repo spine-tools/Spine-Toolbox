@@ -107,12 +107,12 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
         return self.db_mngr.get_item(self.db_map, self.item_type, self.id)["index"]
 
     def _make_item_to_add(self, value):
-        db_value, db_type = to_database(value)
+        db_value, db_type = value
         index = 0 if self.child_number() == 0 else self.parent_item.child(self.child_number() - 1).list_index() + 1
         return dict(value=db_value, type=db_type, parameter_value_list_id=self.parent_item.id, index=index)
 
     def _make_item_to_update(self, _column, value):
-        db_value, db_type = to_database(value)
+        db_value, db_type = value
         return dict(id=self.id, value=db_value, type=db_type)
 
     def add_item_to_db(self, db_item):
