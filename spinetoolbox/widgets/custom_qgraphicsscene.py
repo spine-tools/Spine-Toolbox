@@ -63,7 +63,6 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self.bg_choice = settings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = settings.value("appSettings/bgColor", defaultValue="false")
         self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
-        self.bg_origin = None
         self._connection_drawer = ConnectionLinkDrawer(toolbox)
         self._connection_drawer.hide()
         self._jump_drawer = JumpLinkDrawer(toolbox)
@@ -242,8 +241,6 @@ class DesignGraphicsScene(CustomGraphicsScene):
             painter (QPainter): Painter that is used to paint background
             rect (QRectF): The exposed (viewport) rectangle in scene coordinates
         """
-        if self.bg_origin is None:
-            self.bg_origin = rect.center()
         {"solid": self._draw_solid_bg, "grid": self._draw_grid_bg, "tree": self._draw_tree_bg}.get(
             self.bg_choice, self._draw_solid_bg
         )(painter, rect)
@@ -256,9 +253,9 @@ class DesignGraphicsScene(CustomGraphicsScene):
         """Draws grid bg."""
         step = round(ProjectItemIcon.ITEM_EXTENT / 3)  # Grid step
         painter.setPen(QPen(self.bg_color))
-        delta = rect.topLeft() - self.bg_origin
-        x_start = round(delta.x() / step)
-        y_start = round(delta.y() / step)
+        top_left = rect.topLeft()
+        x_start = round(top_left.x() / step)
+        y_start = round(top_left.y() / step)
         x_stop = x_start + round(rect.width() / step) + 1
         y_stop = y_start + round(rect.height() / step) + 1
         for i in range(x_start, x_stop):
@@ -268,8 +265,8 @@ class DesignGraphicsScene(CustomGraphicsScene):
             y = step * j
             painter.drawLine(rect.left(), y, rect.right(), y)
         painter.setPen(QPen(self.bg_color.darker(110)))
-        painter.drawLine(self.bg_origin.x(), rect.top(), self.bg_origin.x(), rect.bottom())
-        painter.drawLine(rect.left(), self.bg_origin.y(), rect.right(), self.bg_origin.y())
+        painter.drawLine(rect.center().x(), rect.top(), rect.center().x(), rect.bottom())
+        painter.drawLine(rect.left(), rect.center().y(), rect.right(), rect.center().y())
 
     def _draw_tree_bg(self, painter, rect):
         """Draws 'tree of life' bg."""
@@ -277,9 +274,9 @@ class DesignGraphicsScene(CustomGraphicsScene):
         radius = ProjectItemIcon.ITEM_EXTENT
         dx = math.sin(math.pi / 3) * radius
         dy = math.cos(math.pi / 3) * radius
-        delta = rect.topLeft() - self.bg_origin
-        x_start = round(delta.x() / dx)
-        y_start = round(delta.y() / radius)
+        top_left = rect.topLeft()
+        x_start = round(top_left.x() / dx)
+        y_start = round(top_left.y() / radius)
         x_stop = x_start + round(rect.width() / dx) + 1
         y_stop = y_start + round(rect.height() / radius) + 1
         for i in range(x_start, x_stop):
@@ -287,7 +284,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
             for j in range(y_start, y_stop):
                 painter.drawEllipse(ref + QPointF(0, j * radius), radius, radius)
         painter.setPen(QPen(self.bg_color.darker(110)))
-        painter.drawEllipse(self.bg_origin, 2 * radius, 2 * radius)
+        painter.drawEllipse(rect.center(), 2 * radius, 2 * radius)
 
     def select_link_drawer(self, drawer_type):
         """Selects current link drawer.
