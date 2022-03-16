@@ -64,6 +64,13 @@ class ProjectItem(LogMixin, MetaObject):
         except OSError:
             self._logger.msg_error.emit(f"[OSError] Creating directory {self.data_dir} failed. Check permissions.")
 
+    def data_files(self):
+        """Returns a list of files that are in the data directory."""
+        if not os.path.isdir(self.data_dir):
+            return []
+        with os.scandir(self.data_dir) as scan_iterator:
+            return [entry.path for entry in scan_iterator if entry.is_file()]
+
     @staticmethod
     def item_type():
         """Item's type identifier string.
