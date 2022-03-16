@@ -62,6 +62,13 @@ class ParameterViewMixin:
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
             view.connect_spine_db_editor(self)
+        # Header state keys
+        self._table_header_state_key_by_view = {
+            self.ui.tableView_object_parameter_definition: "objParDefHeaderState",
+            self.ui.tableView_object_parameter_value: "objParValHeaderState",
+            self.ui.tableView_relationship_parameter_definition: "relParDefHeaderState",
+            self.ui.tableView_relationship_parameter_value: "relParValHeaderState",
+        }
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -209,29 +216,35 @@ class ParameterViewMixin:
         self._filter_alternative_ids = {db_map: alt_ids.copy() for db_map, alt_ids in selected_db_map_alt_ids.items()}
         self._reset_filters()
 
-    def restore_ui(self):
-        """Restores UI state from previous session."""
-        super().restore_ui()
-        self.qsettings.beginGroup(self.settings_group)
-        self.qsettings.beginGroup(self.settings_subgroup)
-        header_states = (
-            self.qsettings.value("objParDefHeaderState"),
-            self.qsettings.value("objParValHeaderState"),
-            self.qsettings.value("relParDefHeaderState"),
-            self.qsettings.value("relParValHeaderState"),
-        )
-        self.qsettings.endGroup()
-        self.qsettings.endGroup()
-        views = (
-            self.ui.tableView_object_parameter_definition,
-            self.ui.tableView_object_parameter_value,
-            self.ui.tableView_relationship_parameter_definition,
-            self.ui.tableView_relationship_parameter_value,
-        )
-        for view, state in zip(views, header_states):
+    def _items_change_event(self, ev):
+        super()._items_change_event(ev)
+        self._restore_table_view(ev.item_type)
+
+    def _restore_table_view(self, item_type):
+        """Restores view state from previous session."""
+        views = {
+            "parameter_value": (
+                self.ui.tableView_relationship_parameter_value,
+                self.ui.tableView_object_parameter_value,
+            ),
+            "parameter_definition": (
+                self.ui.tableView_relationship_parameter_definition,
+                self.ui.tableView_object_parameter_definition,
+            ),
+        }.get(item_type, ())
+        for view in views:
+            state_key = self._table_header_state_key_by_view.get(view)
+            if state_key is None:
+                continue
+            self.qsettings.beginGroup(self.settings_group)
+            self.qsettings.beginGroup(self.settings_subgroup)
+            state = self.qsettings.value(state_key)
+            self.qsettings.endGroup()
+            self.qsettings.endGroup()
             if not state:
                 view.resizeColumnsToContents()
                 continue
+            del self._table_header_state_key_by_view[view]
             header = view.horizontalHeader()
             curr_state = header.saveState()
             header.restoreState(state)
@@ -244,14 +257,9 @@ class ParameterViewMixin:
         super().save_window_state()
         self.qsettings.beginGroup(self.settings_group)
         self.qsettings.beginGroup(self.settings_subgroup)
-        h = self.ui.tableView_object_parameter_definition.horizontalHeader()
-        self.qsettings.setValue("objParDefHeaderState", h.saveState())
-        h = self.ui.tableView_object_parameter_value.horizontalHeader()
-        self.qsettings.setValue("objParValHeaderState", h.saveState())
-        h = self.ui.tableView_relationship_parameter_definition.horizontalHeader()
-        self.qsettings.setValue("relParDefHeaderState", h.saveState())
-        h = self.ui.tableView_relationship_parameter_value.horizontalHeader()
-        self.qsettings.setValue("relParValHeaderState", h.saveState())
+        for view, state_key in self._table_header_state_key_by_view.items():
+            h = view.horizontalHeader()
+            self.qsettings.setValue(state_key, h.saveState())
         self.qsettings.endGroup()
         self.qsettings.endGroup()
 

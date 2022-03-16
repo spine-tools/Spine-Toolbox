@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
     QDialog,
     QInputDialog,
 )
-from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
+from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer, QEvent
 from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
@@ -59,6 +59,15 @@ from ...helpers import (
 )
 from ...spine_db_parcel import SpineDBParcel
 from ...config import APPLICATION_PATH
+
+
+_ITEMS_CHANGE = QEvent.Type(QEvent.registerEventType())
+
+
+class ItemsChangeEvent(QEvent):
+    def __init__(self, item_type):
+        super().__init__(_ITEMS_CHANGE)
+        self.item_type = item_type
 
 
 class SpineDBEditorBase(QMainWindow):
@@ -164,7 +173,6 @@ class SpineDBEditorBase(QMainWindow):
         self.init_models()
         self.init_add_undo_redo_actions()
         self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
-        QTimer.singleShot(0, self.restore_ui)
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
 
@@ -381,6 +389,12 @@ class SpineDBEditorBase(QMainWindow):
 
     def init_models(self):
         """Initializes models."""
+
+    def event(self, ev):
+        if ev.type() == _ITEMS_CHANGE:
+            self._items_change_event(ev)
+            return True
+        return super().event(ev)
 
     @Slot(str)
     def add_message(self, msg):
@@ -700,143 +714,152 @@ class SpineDBEditorBase(QMainWindow):
             msgs.append(msg)
         self.msg_error.emit(format_string_list(msgs))
 
-    def log_changes(self, action, item_type, db_map_data):
+    def _items_change_event(self, ev):
+        """Handle _ITEMS_CHANGE events."""
+        self._update_export_enabled()
+
+    def _update_export_enabled(self):
+        """Update export enabled."""
+        # TODO: check if db_mngr has any cache or something like that
+
+    def _receive_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self._changelog.append(msg)
+        qApp.postEvent(self, ItemsChangeEvent(item_type))
 
     def receive_scenarios_added(self, db_map_data):
-        self.log_changes("added", "scenario", db_map_data)
+        self._receive_items_changed("added", "scenario", db_map_data)
 
     def receive_alternatives_added(self, db_map_data):
-        self.log_changes("added", "alternative", db_map_data)
+        self._receive_items_changed("added", "alternative", db_map_data)
 
     def receive_object_classes_added(self, db_map_data):
-        self.log_changes("added", "object_class", db_map_data)
+        self._receive_items_changed("added", "object_class", db_map_data)
 
     def receive_objects_added(self, db_map_data):
-        self.log_changes("added", "object", db_map_data)
+        self._receive_items_changed("added", "object", db_map_data)
 
     def receive_relationship_classes_added(self, db_map_data):
-        self.log_changes("added", "relationship_class", db_map_data)
+        self._receive_items_changed("added", "relationship_class", db_map_data)
 
     def receive_relationships_added(self, db_map_data):
-        self.log_changes("added", "relationship", db_map_data)
+        self._receive_items_changed("added", "relationship", db_map_data)
 
     def receive_entity_groups_added(self, db_map_data):
-        self.log_changes("added", "entity_group", db_map_data)
+        self._receive_items_changed("added", "entity_group", db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
-        self.log_changes("added", "parameter_definition", db_map_data)
+        self._receive_items_changed("added", "parameter_definition", db_map_data)
 
     def receive_parameter_values_added(self, db_map_data):
-        self.log_changes("added", "parameter_value", db_map_data)
+        self._receive_items_changed("added", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_added(self, db_map_data):
-        self.log_changes("added", "parameter_value_list", db_map_data)
+        self._receive_items_changed("added", "parameter_value_list", db_map_data)
 
     def receive_list_values_added(self, db_map_data):
-        self.log_changes("added", "list_value", db_map_data)
+        self._receive_items_changed("added", "list_value", db_map_data)
 
     def receive_features_added(self, db_map_data):
-        self.log_changes("added", "feature", db_map_data)
+        self._receive_items_changed("added", "feature", db_map_data)
 
     def receive_tools_added(self, db_map_data):
-        self.log_changes("added", "tool", db_map_data)
+        self._receive_items_changed("added", "tool", db_map_data)
 
     def receive_tool_features_added(self, db_map_data):
-        self.log_changes("added", "tool_feature", db_map_data)
+        self._receive_items_changed("added", "tool_feature", db_map_data)
 
     def receive_tool_feature_methods_added(self, db_map_data):
-        self.log_changes("added", "tool_feature_method", db_map_data)
+        self._receive_items_changed("added", "tool_feature_method", db_map_data)
 
     def receive_scenarios_updated(self, db_map_data):
-        self.log_changes("updated", "scenario", db_map_data)
+        self._receive_items_changed("updated", "scenario", db_map_data)
 
     def receive_alternatives_updated(self, db_map_data):
-        self.log_changes("updated", "alternative", db_map_data)
+        self._receive_items_changed("updated", "alternative", db_map_data)
 
     def receive_object_classes_updated(self, db_map_data):
-        self.log_changes("updated", "object_class", db_map_data)
+        self._receive_items_changed("updated", "object_class", db_map_data)
 
     def receive_objects_updated(self, db_map_data):
-        self.log_changes("updated", "object", db_map_data)
+        self._receive_items_changed("updated", "object", db_map_data)
 
     def receive_relationship_classes_updated(self, db_map_data):
-        self.log_changes("updated", "relationship_class", db_map_data)
+        self._receive_items_changed("updated", "relationship_class", db_map_data)
 
     def receive_relationships_updated(self, db_map_data):
-        self.log_changes("updated", "relationship", db_map_data)
+        self._receive_items_changed("updated", "relationship", db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
-        self.log_changes("updated", "parameter_definition", db_map_data)
+        self._receive_items_changed("updated", "parameter_definition", db_map_data)
 
     def receive_parameter_values_updated(self, db_map_data):
-        self.log_changes("updated", "parameter_value", db_map_data)
+        self._receive_items_changed("updated", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_updated(self, db_map_data):
-        self.log_changes("updated", "parameter_value_list", db_map_data)
+        self._receive_items_changed("updated", "parameter_value_list", db_map_data)
 
     def receive_list_values_updated(self, db_map_data):
-        self.log_changes("updated", "list_value", db_map_data)
+        self._receive_items_changed("updated", "list_value", db_map_data)
 
     def receive_features_updated(self, db_map_data):
-        self.log_changes("updated", "feature", db_map_data)
+        self._receive_items_changed("updated", "feature", db_map_data)
 
     def receive_tools_updated(self, db_map_data):
-        self.log_changes("updated", "tool", db_map_data)
+        self._receive_items_changed("updated", "tool", db_map_data)
 
     def receive_tool_features_updated(self, db_map_data):
-        self.log_changes("updated", "tool_feature", db_map_data)
+        self._receive_items_changed("updated", "tool_feature", db_map_data)
 
     def receive_tool_feature_methods_updated(self, db_map_data):
-        self.log_changes("updated", "tool_feature_method", db_map_data)
+        self._receive_items_changed("updated", "tool_feature_method", db_map_data)
 
     def receive_scenarios_removed(self, db_map_data):
-        self.log_changes("removed", "scenarios", db_map_data)
+        self._receive_items_changed("removed", "scenarios", db_map_data)
 
     def receive_alternatives_removed(self, db_map_data):
-        self.log_changes("removed", "alternatives", db_map_data)
+        self._receive_items_changed("removed", "alternatives", db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
-        self.log_changes("removed", "object_class", db_map_data)
+        self._receive_items_changed("removed", "object_class", db_map_data)
 
     def receive_objects_removed(self, db_map_data):
-        self.log_changes("removed", "object", db_map_data)
+        self._receive_items_changed("removed", "object", db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
-        self.log_changes("removed", "relationship_class", db_map_data)
+        self._receive_items_changed("removed", "relationship_class", db_map_data)
 
     def receive_relationships_removed(self, db_map_data):
-        self.log_changes("removed", "relationship", db_map_data)
+        self._receive_items_changed("removed", "relationship", db_map_data)
 
     def receive_entity_groups_removed(self, db_map_data):
-        self.log_changes("removed", "entity_group", db_map_data)
+        self._receive_items_changed("removed", "entity_group", db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
-        self.log_changes("removed", "parameter_definition", db_map_data)
+        self._receive_items_changed("removed", "parameter_definition", db_map_data)
 
     def receive_parameter_values_removed(self, db_map_data):
-        self.log_changes("removed", "parameter_value", db_map_data)
+        self._receive_items_changed("removed", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_removed(self, db_map_data):
-        self.log_changes("removed", "parameter_value_list", db_map_data)
+        self._receive_items_changed("removed", "parameter_value_list", db_map_data)
 
     def receive_list_values_removed(self, db_map_data):
-        self.log_changes("removed", "list_value", db_map_data)
+        self._receive_items_changed("removed", "list_value", db_map_data)
 
     def receive_features_removed(self, db_map_data):
-        self.log_changes("removed", "feature", db_map_data)
+        self._receive_items_changed("removed", "feature", db_map_data)
 
     def receive_tools_removed(self, db_map_data):
-        self.log_changes("removed", "tool", db_map_data)
+        self._receive_items_changed("removed", "tool", db_map_data)
 
     def receive_tool_features_removed(self, db_map_data):
-        self.log_changes("removed", "tool_feature", db_map_data)
+        self._receive_items_changed("removed", "tool_feature", db_map_data)
 
     def receive_tool_feature_methods_removed(self, db_map_data):
-        self.log_changes("removed", "tool_feature_method", db_map_data)
+        self._receive_items_changed("removed", "tool_feature_method", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -945,6 +968,10 @@ class SpineDBEditorBase(QMainWindow):
         message_box.button(QMessageBox.Ok).setText("Rollback")
         answer = message_box.exec_()
         return answer == QMessageBox.Ok
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.restore_ui()
 
     def closeEvent(self, event):
         """Handle close window.
