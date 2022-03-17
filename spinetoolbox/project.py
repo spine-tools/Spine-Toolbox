@@ -234,16 +234,19 @@ class SpineToolboxProject(MetaObject):
             local_entries = self._project_items[name].item_dict_local_entries()
             if not local_entries:
                 continue
-            local_data = {}
-            local_data_dict[name] = local_data
-            for entry in local_entries:
-                data = None
-                for component in entry[:-1]:
-                    data = item_dict[component]
-                    local_data = local_data.setdefault(component, {})
-                last_component = entry[-1]
-                local_data[last_component] = data.pop(last_component)
-                local_data = local_data_dict[name]
+            for prefix in local_entries:
+                # Pop value from item_dict
+                d = item_dict
+                for part in prefix[:-1]:
+                    d = d.get(part, {})
+                value = d.pop(prefix[-1], None)
+                if value is None:
+                    continue
+                # Put value in local_data_dict
+                d = local_data_dict.setdefault(name, {})
+                for part in prefix[:-1]:
+                    d = d.setdefault(part, {})
+                d[prefix[-1]] = value
         return local_data_dict
 
     @staticmethod
