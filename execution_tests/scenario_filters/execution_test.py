@@ -21,9 +21,7 @@ class ScenarioFilters(unittest.TestCase):
         db_map = DiffDatabaseMapping(url, create=True)
         import_alternatives(db_map, ("alternative_1", "alternative_2"))
         import_scenarios(db_map, (("scenario_1", True), ("scenario_2", True)))
-        import_scenario_alternatives(
-            db_map, (("scenario_1", "alternative_1"), ("scenario_2", "alternative_2"))
-        )
+        import_scenario_alternatives(db_map, (("scenario_1", "alternative_1"), ("scenario_2", "alternative_2")))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
 

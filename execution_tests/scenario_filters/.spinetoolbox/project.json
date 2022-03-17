@@ -83,13 +83,15 @@
             "description": "",
             "x": -196.59913736619956,
             "y": 3.257322027503136,
-            "references": [
+            "file_references": [
                 {
                     "type": "path",
                     "relative": true,
                     "path": "input_data.csv"
                 }
-            ]
+            ],
+            "db_references": [],
+            "db_credentials": {}
         },
         "Output writer": {
             "type": "Tool",
