@@ -258,15 +258,19 @@ class DesignGraphicsScene(CustomGraphicsScene):
         y_start = round(top_left.y() / step)
         x_stop = x_start + round(rect.width() / step) + 1
         y_stop = y_start + round(rect.height() / step) + 1
-        for i in range(x_start, x_stop):
-            x = step * i
+        x_ticks = [step * i for i in range(x_start, x_stop)]
+        y_ticks = [step * i for i in range(y_start, y_stop)]
+        x_zero = next((x for x in x_ticks if abs(x) < step), None)
+        y_zero = next((y for y in y_ticks if abs(y) < step), None)
+        for x in x_ticks:
             painter.drawLine(x, rect.top(), x, rect.bottom())
-        for j in range(y_start, y_stop):
-            y = step * j
+        for y in y_ticks:
             painter.drawLine(rect.left(), y, rect.right(), y)
         painter.setPen(QPen(self.bg_color.darker(110)))
-        painter.drawLine(rect.center().x(), rect.top(), rect.center().x(), rect.bottom())
-        painter.drawLine(rect.left(), rect.center().y(), rect.right(), rect.center().y())
+        if x_zero is not None:
+            painter.drawLine(x_zero, rect.top(), x_zero, rect.bottom())
+        if y_zero is not None:
+            painter.drawLine(rect.left(), y_zero, rect.right(), y_zero)
 
     def _draw_tree_bg(self, painter, rect):
         """Draws 'tree of life' bg."""
@@ -279,12 +283,19 @@ class DesignGraphicsScene(CustomGraphicsScene):
         y_start = round(top_left.y() / radius)
         x_stop = x_start + round(rect.width() / dx) + 1
         y_stop = y_start + round(rect.height() / radius) + 1
+        centers = list()
+        centers_append = centers.append
         for i in range(x_start, x_stop):
             ref = QPointF(i * dx, (i & 1) * dy)
             for j in range(y_start, y_stop):
-                painter.drawEllipse(ref + QPointF(0, j * radius), radius, radius)
-        painter.setPen(QPen(self.bg_color.darker(110)))
-        painter.drawEllipse(rect.center(), 2 * radius, 2 * radius)
+                center = ref + QPointF(0, j * radius)
+                centers_append(center)
+        for center in centers:
+            painter.drawEllipse(center, radius, radius)
+        center = next((c for c in centers if (c - QPointF(0, 0)).manhattanLength() < radius), None)
+        if center is not None:
+            painter.setPen(QPen(self.bg_color.darker(110)))
+            painter.drawEllipse(center, 2 * radius, 2 * radius)
 
     def select_link_drawer(self, drawer_type):
         """Selects current link drawer.
