@@ -387,6 +387,8 @@ class RelationshipItem(EntityItem):
         )
 
     def _make_tool_tip(self):
+        if not self.first_id:
+            return None
         return (
             f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
             f"""{self.object_name_list.replace(",", DB_ITEM_SEPARATOR)}<br>"""
@@ -477,6 +479,8 @@ class ObjectItem(EntityItem):
         return False
 
     def _make_tool_tip(self):
+        if not self.first_id:
+            return None
         return f"<html><p style='text-align:center;'>{self.entity_name}<br>@{self.display_database}</html>"
 
     def block_move_by(self, dx, dy):
