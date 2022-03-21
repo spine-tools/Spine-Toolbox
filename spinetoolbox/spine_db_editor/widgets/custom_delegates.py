@@ -238,7 +238,7 @@ class ParameterDelegate(QStyledItemDelegate):
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
         if isinstance(editor, (SearchBarEditor, CheckListEditor)):
-            editor.update_geometry()
+            editor.update_geometry(option)
 
     def _close_editor(self, editor, index):
         """Closes editor. Needed by SearchBarEditor."""
@@ -553,7 +553,7 @@ class ToolFeatureDelegate(QStyledItemDelegate):
             if item.item_type == "tool_feature required":
                 dx = QFontMetrics(index.data(Qt.FontRole)).horizontalAdvance("required:")
                 editor.set_base_offset(QPoint(dx, 0))
-            editor.update_geometry()
+            editor.update_geometry(option)
 
     def _close_editor(self, editor, index):
         """Closes editor. Needed by SearchBarEditor."""
@@ -628,7 +628,7 @@ class AlternativeScenarioDelegate(QStyledItemDelegate):
             if item.item_type == "scenario active":
                 dx = QFontMetrics(index.data(Qt.FontRole)).horizontalAdvance("active:")
                 editor.set_base_offset(QPoint(dx, 0))
-            editor.update_geometry()
+            editor.update_geometry(option)
 
     def _close_editor(self, editor, index):
         """Closes editor. Needed by SearchBarEditor."""
@@ -691,7 +691,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
         if isinstance(editor, (SearchBarEditor, CheckListEditor)):
-            editor.update_geometry()
+            editor.update_geometry(option)
 
     def connect_editor_signals(self, editor, index):
         """Connect editor signals if necessary."""

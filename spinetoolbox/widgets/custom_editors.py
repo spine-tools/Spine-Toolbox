@@ -117,7 +117,6 @@ class SearchBarEditor(QTableView):
         """
         super().__init__(parent)
         self._tutor = tutor
-        self._base_size = QSize()
         self._base_offset = QPoint()
         self._original_text = None
         self._orig_pos = None
@@ -150,21 +149,14 @@ class SearchBarEditor(QTableView):
             qitem.setFlags(~Qt.ItemIsEditable)
         self.model.invisibleRootItem().appendRows(item_list)
         self.first_index = self.proxy_model.mapFromSource(self.model.index(0, 0))
-        rects = [self.fontMetrics().boundingRect(item) for item in items]
-        margins = self.contentsMargins()
-        width = max(rect.width() for rect in rects) + margins.left() + margins.right() + 2 * (self.frameWidth())
-        height = max(rect.height() for rect in rects)
-        if self.parent() and height * (len(items) + 1) + 2 * self.frameWidth() > self.parent().size().height():
-            width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        self._base_size = QSize(width, height)
 
     def set_base_offset(self, offset):
         self._base_offset = offset
 
-    def update_geometry(self):
+    def update_geometry(self, option):
         """Updates geometry."""
-        self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
-        self.verticalHeader().setDefaultSectionSize(self._base_size.height())
+        self.resizeColumnsToContents()
+        self.verticalHeader().setDefaultSectionSize(option.rect.height())
         self._orig_pos = self.pos() + self._base_offset
         if self._tutor:
             self._orig_pos += self._tutor.mapTo(self.parent(), self._tutor.rect().topLeft())
@@ -172,8 +164,12 @@ class SearchBarEditor(QTableView):
 
     def refit(self):
         self.move(self._orig_pos)
-        table_height = self.verticalHeader().length() + 2 * self.frameWidth()
-        size = QSize(self._base_size.width(), table_height).boundedTo(self.parent().size())
+        margins = self.contentsMargins()
+        table_height = self.verticalHeader().length() + margins.top() + margins.bottom()
+        table_width = self.horizontalHeader().length() + margins.left() + margins.right()
+        if table_height > self.parent().size().height():
+            table_width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        size = QSize(table_width, table_height).boundedTo(self.parent().size())
         self.resize(size)
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
@@ -255,7 +251,6 @@ class CheckListEditor(QTableView):
         super().__init__(parent)
         self._tutor = tutor
         self._ranked = ranked
-        self._base_size = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
         self.verticalHeader().hide()
@@ -355,15 +350,16 @@ class CheckListEditor(QTableView):
         """
         return ",".join(self._selected)
 
-    def set_base_size(self, size):
-        self._base_size = size
-
-    def update_geometry(self):
+    def update_geometry(self, option):
         """Updates geometry."""
-        self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
-        self.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        total_height = self.verticalHeader().length() + 2
-        size = QSize(self._base_size.width(), total_height).boundedTo(self.parent().size())
+        self.resizeColumnsToContents()
+        self.verticalHeader().setDefaultSectionSize(option.rect.height())
+        margins = self.contentsMargins()
+        table_height = self.verticalHeader().length() + margins.top() + margins.bottom()
+        table_width = self.horizontalHeader().length() + margins.left() + margins.right()
+        if table_height > self.parent().size().height():
+            table_width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        size = QSize(table_width, table_height).boundedTo(self.parent().size())
         self.resize(size)
         if self._tutor:
             self.move(self.pos() + self._tutor.mapTo(self.parent(), self._tutor.rect().topLeft()))
