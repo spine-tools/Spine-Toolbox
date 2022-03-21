@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
     QDialog,
     QInputDialog,
 )
-from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer, QEvent
+from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
@@ -59,15 +59,6 @@ from ...helpers import (
 )
 from ...spine_db_parcel import SpineDBParcel
 from ...config import APPLICATION_PATH
-
-
-_ITEMS_CHANGE = QEvent.Type(QEvent.registerEventType())
-
-
-class ItemsChangeEvent(QEvent):
-    def __init__(self, item_type):
-        super().__init__(_ITEMS_CHANGE)
-        self.item_type = item_type
 
 
 class SpineDBEditorBase(QMainWindow):
@@ -390,12 +381,6 @@ class SpineDBEditorBase(QMainWindow):
     def init_models(self):
         """Initializes models."""
 
-    def event(self, ev):
-        if ev.type() == _ITEMS_CHANGE:
-            self._items_change_event(ev)
-            return True
-        return super().event(ev)
-
     @Slot(str)
     def add_message(self, msg):
         """Pushes message to notification stack.
@@ -714,8 +699,8 @@ class SpineDBEditorBase(QMainWindow):
             msgs.append(msg)
         self.msg_error.emit(format_string_list(msgs))
 
-    def _items_change_event(self, ev):
-        """Handle _ITEMS_CHANGE events."""
+    def _finalize_items_change(self, _item_type):
+        """Do stuff after items changes are reflected in the UI."""
         self._update_export_enabled()
 
     def _update_export_enabled(self):
@@ -727,7 +712,7 @@ class SpineDBEditorBase(QMainWindow):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self._changelog.append(msg)
-        qApp.postEvent(self, ItemsChangeEvent(item_type))
+        self._finalize_items_change(item_type)
 
     def receive_scenarios_added(self, db_map_data):
         self._receive_items_changed("added", "scenario", db_map_data)

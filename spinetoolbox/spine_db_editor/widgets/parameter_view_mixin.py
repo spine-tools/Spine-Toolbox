@@ -217,9 +217,9 @@ class ParameterViewMixin:
         self._filter_alternative_ids = {db_map: alt_ids.copy() for db_map, alt_ids in selected_db_map_alt_ids.items()}
         self._reset_filters()
 
-    def _items_change_event(self, ev):
-        super()._items_change_event(ev)
-        self._restore_table_view(ev.item_type)
+    def _finalize_items_change(self, item_type):
+        super()._finalize_items_change(item_type)
+        self._restore_table_view(item_type)
 
     def _restore_table_view(self, item_type):
         """Restores view state from previous session."""
@@ -265,46 +265,46 @@ class ParameterViewMixin:
         self.qsettings.endGroup()
 
     def receive_alternatives_updated(self, db_map_data):
-        super().receive_alternatives_updated(db_map_data)
         self.object_parameter_value_model.receive_alternatives_updated(db_map_data)
         self.relationship_parameter_value_model.receive_alternatives_updated(db_map_data)
+        super().receive_alternatives_updated(db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
-        super().receive_parameter_definitions_added(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
         self.relationship_parameter_definition_model.receive_parameter_data_added(db_map_data)
+        super().receive_parameter_definitions_added(db_map_data)
 
     def receive_parameter_values_added(self, db_map_data):
-        super().receive_parameter_values_added(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_added(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_added(db_map_data)
+        super().receive_parameter_values_added(db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
-        super().receive_parameter_definitions_updated(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_updated(db_map_data)
         self.relationship_parameter_definition_model.receive_parameter_data_updated(db_map_data)
+        super().receive_parameter_definitions_updated(db_map_data)
 
     def receive_parameter_values_updated(self, db_map_data):
-        super().receive_parameter_values_updated(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_updated(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_updated(db_map_data)
+        super().receive_parameter_values_updated(db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
-        super().receive_object_classes_removed(db_map_data)
         self.object_parameter_definition_model.receive_entity_classes_removed(db_map_data)
         self.object_parameter_value_model.receive_entity_classes_removed(db_map_data)
+        super().receive_object_classes_removed(db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
-        super().receive_relationship_classes_removed(db_map_data)
         self.relationship_parameter_definition_model.receive_entity_classes_removed(db_map_data)
         self.relationship_parameter_value_model.receive_entity_classes_removed(db_map_data)
+        super().receive_relationship_classes_removed(db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
-        super().receive_parameter_definitions_removed(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_removed(db_map_data)
         self.relationship_parameter_definition_model.receive_parameter_data_removed(db_map_data)
+        super().receive_parameter_definitions_removed(db_map_data)
 
     def receive_parameter_values_removed(self, db_map_data):
-        super().receive_parameter_values_removed(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_removed(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_removed(db_map_data)
+        super().receive_parameter_values_removed(db_map_data)
