@@ -36,6 +36,7 @@ from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from spinedb_api.helpers import vacuum
 from .custom_menus import MainMenu
 from .commit_viewer import CommitViewer
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
@@ -135,6 +136,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionImport.setEnabled(False)
         self.ui.actionExport.setEnabled(False)
         self.ui.actionMass_remove_items.setEnabled(False)
+        self.ui.actionVacuum.setEnabled(False)
         self.url_toolbar.reload_action.setEnabled(False)
         if not db_url_codenames:
             return
@@ -150,15 +152,16 @@ class SpineDBEditorBase(QMainWindow):
                 self.db_maps.append(db_map)
         if not self.db_maps:
             return
+        self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.ui.actionImport.setEnabled(True)
         self.ui.actionExport.setEnabled(True)
         self.ui.actionMass_remove_items.setEnabled(True)
+        self.ui.actionVacuum.setEnabled(any(url.startswith("sqlite") for url in self.db_urls))
         self.url_toolbar.reload_action.setEnabled(True)
         self._change_notifiers = [
             ChangeNotifier(self, self.db_mngr.undo_stack[db_map], self.qsettings, "appSettings/dbEditorShowUndo")
             for db_map in self.db_maps
         ]
-        self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.url_toolbar.set_current_urls(self.db_urls)
         self.db_mngr.register_listener(self, *self.db_maps)
         self.init_models()
@@ -265,7 +268,7 @@ class SpineDBEditorBase(QMainWindow):
         edit_action.tool_bar.addSeparator()
         edit_action.tool_bar.addActions([self.ui.actionCopy, self.ui.actionPaste])
         edit_action.tool_bar.addSeparator()
-        edit_action.tool_bar.addAction(self.ui.actionMass_remove_items)
+        edit_action.tool_bar.addActions([self.ui.actionMass_remove_items, self.ui.actionVacuum])
         view_action = ToolBarWidgetAction("View", menu)
         view_action.tool_bar.addActions([self.ui.actionStacked_style, self.ui.actionGraph_style])
         pivot_actions = self.pivot_action_group.actions()
@@ -304,6 +307,8 @@ class SpineDBEditorBase(QMainWindow):
             self.ui.actionRedo,
             self.ui.actionCopy,
             self.ui.actionPaste,
+            self.ui.actionMass_remove_items,
+            self.ui.actionVacuum,
             self.ui.actionStacked_style,
             self.ui.actionGraph_style,
             *docks_menu.actions(),
@@ -340,6 +345,15 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
+        self.ui.actionVacuum.triggered.connect(self.vacuum)
+
+    @Slot(bool)
+    def vacuum(self, _checked=False):
+        msg = ""
+        for url in self.db_urls:
+            freed, unit = vacuum(url)
+            msg += f"Freed {freed} {unit} from {url}"
+        self.msg.emit(msg)
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
