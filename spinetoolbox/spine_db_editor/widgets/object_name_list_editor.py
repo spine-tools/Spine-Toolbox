@@ -41,8 +41,6 @@ class SearchBarDelegate(QItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
-        size = option.rect.size()
-        editor.set_base_size(size)
         editor.update_geometry()
 
     def close_editor(self, editor, index, model):

@@ -238,10 +238,6 @@ class ParameterDelegate(QStyledItemDelegate):
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
         if isinstance(editor, (SearchBarEditor, CheckListEditor)):
-            size = option.rect.size()
-            if index.data(Qt.DecorationRole):
-                size.setWidth(size.width() - 22)  # FIXME
-            editor.set_base_size(size)
             editor.update_geometry()
 
     def _close_editor(self, editor, index):
@@ -554,12 +550,9 @@ class ToolFeatureDelegate(QStyledItemDelegate):
         super().updateEditorGeometry(editor, option, index)
         item = index.model().item_from_index(index)
         if item.item_type in ("feature", "tool_feature", "tool_feature required", "tool_feature_method"):
-            size = option.rect.size()
             if item.item_type == "tool_feature required":
                 dx = QFontMetrics(index.data(Qt.FontRole)).horizontalAdvance("required:")
-                size.setWidth(size.width() - dx)
                 editor.set_base_offset(QPoint(dx, 0))
-            editor.set_base_size(size)
             editor.update_geometry()
 
     def _close_editor(self, editor, index):
@@ -632,12 +625,9 @@ class AlternativeScenarioDelegate(QStyledItemDelegate):
         super().updateEditorGeometry(editor, option, index)
         item = index.model().item_from_index(index)
         if item.item_type in ("scenario active", "scenario_alternative"):
-            size = option.rect.size()
             if item.item_type == "scenario active":
                 dx = QFontMetrics(index.data(Qt.FontRole)).horizontalAdvance("active:")
-                size.setWidth(size.width() - dx)
                 editor.set_base_offset(QPoint(dx, 0))
-            editor.set_base_size(size)
             editor.update_geometry()
 
     def _close_editor(self, editor, index):
@@ -701,10 +691,6 @@ class ManageItemsDelegate(QStyledItemDelegate):
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
         if isinstance(editor, (SearchBarEditor, CheckListEditor)):
-            size = option.rect.size()
-            if index.data(Qt.DecorationRole):
-                size.setWidth(size.width() - 22)  # FIXME
-            editor.set_base_size(size)
             editor.update_geometry()
 
     def connect_editor_signals(self, editor, index):
