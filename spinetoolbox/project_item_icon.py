@@ -351,10 +351,10 @@ class ProjectItemIcon(QGraphicsPathItem):
         prevent_overlapping = self._toolbox.qsettings().value("appSettings/preventOverlapping", defaultValue="false")
         if not self.scene() or not self._bumping or prevent_overlapping != "true":
             return
-        for other in self.collidingItems():
+        restablished = self._restablish_bumped_items()
+        for other in set(self.collidingItems()) - restablished:
             if isinstance(other, ProjectItemIcon):
                 other.make_room_for_item(self)
-        self._restablish_bumped_items()
 
     def make_room_for_item(self, other):
         """Makes room for another item.
@@ -371,19 +371,21 @@ class ProjectItemIcon(QGraphicsPathItem):
         intersection = other.sceneBoundingRect() & self.sceneBoundingRect()
         delta = math.atan(line.angle()) * min(intersection.width(), intersection.height())
         unit_vector = line.unitVector()
-        self._bumping = False
         self.moveBy(delta * unit_vector.dx(), delta * unit_vector.dy())
-        self._bumping = True
 
     def _restablish_bumped_items(self):
         """Moves bumped items back to their original position if no collision would happen anymore."""
+        restablished = set()
         try:
             for other, rect in self.bumped_rects.items():
                 if not self.sceneBoundingRect().intersects(rect):
                     other.setPos(rect.center())
-                    self.bumped_rects.pop(other, None)
+                    restablished.add(other)
+            for other in restablished:
+                self.bumped_rects.pop(other, None)
         except RuntimeError:
             pass
+        return restablished
 
     def select_item(self):
         """Update GUI to show the details of the selected item."""
