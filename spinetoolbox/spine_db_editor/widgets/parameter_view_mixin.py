@@ -69,6 +69,7 @@ class ParameterViewMixin:
             self.ui.tableView_relationship_parameter_definition: "relParDefHeaderState",
             self.ui.tableView_relationship_parameter_value: "relParValHeaderState",
         }
+        self._orig_table_header_state_key_by_view = self._table_header_state_key_by_view.copy()
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -257,7 +258,7 @@ class ParameterViewMixin:
         super().save_window_state()
         self.qsettings.beginGroup(self.settings_group)
         self.qsettings.beginGroup(self.settings_subgroup)
-        for view, state_key in self._table_header_state_key_by_view.items():
+        for view, state_key in self._orig_table_header_state_key_by_view.items():
             h = view.horizontalHeader()
             self.qsettings.setValue(state_key, h.saveState())
         self.qsettings.endGroup()

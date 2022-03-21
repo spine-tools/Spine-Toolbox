@@ -15,7 +15,7 @@ Contains the TreeViewMixin class.
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import Slot
 from .add_items_dialogs import (
     AddObjectClassesDialog,
     AddObjectsDialog,
@@ -69,6 +69,7 @@ class TreeViewMixin:
             self.ui.treeView_object: "objTreeHeaderState",
             self.ui.treeView_relationship: "relTreeHeaderState",
         }
+        self._orig_tree_header_state_key_by_view = self._tree_header_state_key_by_view.copy()
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -417,7 +418,7 @@ class TreeViewMixin:
         super().save_window_state()
         self.qsettings.beginGroup(self.settings_group)
         self.qsettings.beginGroup(self.settings_subgroup)
-        for view, state_key in self._tree_header_state_key_by_view.items():
+        for view, state_key in self._orig_tree_header_state_key_by_view.items():
             h = view.header()
             self.qsettings.setValue(state_key, h.saveState())
         self.qsettings.endGroup()
