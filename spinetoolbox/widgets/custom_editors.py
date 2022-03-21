@@ -152,14 +152,9 @@ class SearchBarEditor(QTableView):
         self.first_index = self.proxy_model.mapFromSource(self.model.index(0, 0))
         rects = [self.fontMetrics().boundingRect(item) for item in items]
         margins = self.contentsMargins()
-        width = (
-            max(rect.width() for rect in rects)
-            + margins.left()
-            + margins.right()
-            + 2 * (self.frameWidth() + self.lineWidth())
-        )
+        width = max(rect.width() for rect in rects) + margins.left() + margins.right() + 2 * (self.frameWidth())
         height = max(rect.height() for rect in rects)
-        if height * (len(items) + 1) > self.parent().size().height():
+        if self.parent() and height * (len(items) + 1) + 2 * self.frameWidth() > self.parent().size().height():
             width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
         self._base_size = QSize(width, height)
 
@@ -177,8 +172,8 @@ class SearchBarEditor(QTableView):
 
     def refit(self):
         self.move(self._orig_pos)
-        table_height = self.verticalHeader().length()
-        size = QSize(self._base_size.width(), table_height + 2 * self.frameWidth()).boundedTo(self.parent().size())
+        table_height = self.verticalHeader().length() + 2 * self.frameWidth()
+        size = QSize(self._base_size.width(), table_height).boundedTo(self.parent().size())
         self.resize(size)
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
