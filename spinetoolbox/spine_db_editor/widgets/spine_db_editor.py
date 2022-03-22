@@ -349,10 +349,11 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def vacuum(self, _checked=False):
-        msg = ""
-        for url in self.db_urls:
-            freed, unit = vacuum(url)
-            msg += f"Freed {freed} {unit} from {url}"
+        msg = "Vacuum finished<ul>"
+        for db_map in self.db_maps:
+            freed, unit = vacuum(db_map.db_url)
+            msg += f"<li>{freed} {unit} freed from {db_map.codename}</li>"
+        msg += "</ul>"
         self.msg.emit(msg)
 
     @Slot(int)
