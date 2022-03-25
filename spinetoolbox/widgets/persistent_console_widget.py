@@ -538,11 +538,7 @@ class AnsiEscapeCodeHandler:
                             if j == 2:
                                 # RGB set with format: 38;2;<r>;<g>;<b>
                                 if i + 3 < len(numbers):
-                                    color = QColor(
-                                        int(numbers[i + 1]),
-                                        int(numbers[i + 2]),
-                                        int(numbers[i + 3]),
-                                    )
+                                    color = QColor(int(numbers[i + 1]), int(numbers[i + 2]), int(numbers[i + 3]))
                                     if code == AnsiEscapeCode.RgbTextColor:
                                         char_format.setForeground(color)
                                     else:

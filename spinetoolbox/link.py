@@ -26,15 +26,7 @@ from PySide2.QtWidgets import (
     QStyle,
     QToolTip,
 )
-from PySide2.QtGui import (
-    QColor,
-    QPen,
-    QBrush,
-    QPainterPath,
-    QLinearGradient,
-    QFont,
-    QCursor,
-)
+from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.helpers import color_from_index
 from .project_item_icon import ConnectorButton

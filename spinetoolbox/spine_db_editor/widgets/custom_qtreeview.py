@@ -673,10 +673,7 @@ class ParameterValueListTreeView(ItemTreeView):
         db_map_typed_data_to_rm = {}
         items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
         for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {
-                "parameter_value_list": set(),
-                "list_value": set(),
-            }
+            db_map_typed_data_to_rm[db_item.db_map] = {"parameter_value_list": set(), "list_value": set()}
             for list_item in db_item.children[:-1]:
                 if list_item.id is None:
                     continue
