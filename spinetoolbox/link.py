@@ -388,7 +388,9 @@ class JumpOrLink(LinkBase):
     def shape(self):
         shape = super().shape()
         for icon in self._icons:
-            shape.addEllipse(icon.sceneBoundingRect())
+            path = QPainterPath()
+            path.addEllipse(icon.sceneBoundingRect())
+            shape += path
         return shape
 
     def wipe_out(self):
