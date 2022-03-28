@@ -26,7 +26,7 @@ from PySide2.QtWidgets import (
     QStyle,
     QToolTip,
 )
-from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor
+from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor, QPainterPathStroker
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.helpers import color_from_index
 from .project_item_icon import ConnectorButton
@@ -56,14 +56,27 @@ class LinkBase(QGraphicsPathItem):
         self.dst_connector = dst_connector
         self.arrow_angle = pi / 4
         self.setCursor(Qt.PointingHandCursor)
-        self.selected_pen = QPen(self.pen_brush, 1, Qt.DashLine)
-        self.normal_pen = QPen(self.pen_brush, 0.5)
         self._guide_path = None
-        self.setBrush(QBrush(self._COLOR))
+        self._pen = QPen(self._COLOR)
+        self._pen.setWidthF(self.magic_number)
+        self._pen.setJoinStyle(Qt.MiterJoin)
+        self.setPen(self._pen)
+        self.selected_pen = QPen(self.outline_color, 2, Qt.DotLine)
+        self.normal_pen = QPen(self.outline_color, 1)
+        self._outline = QGraphicsPathItem(self)
+        self._outline.setFlag(QGraphicsPathItem.ItemStacksBehindParent)
+        self._outline.setPen(self.normal_pen)
+        self._stroker = QPainterPathStroker()
+        self._stroker.setWidth(self.magic_number)
+        self._stroker.setJoinStyle(Qt.MiterJoin)
+        self._shape = QPainterPath()
+
+    def shape(self):
+        return self._shape
 
     @property
-    def pen_brush(self):
-        return QBrush(self._COLOR.darker())
+    def outline_color(self):
+        return self._COLOR.darker()
 
     @property
     def magic_number(self):
@@ -107,23 +120,46 @@ class LinkBase(QGraphicsPathItem):
 
     def _do_update_geometry(self):
         """Sets the path for this item."""
-        ellipse_path = self._make_ellipse_path()
-        connecting_path = self._make_connecting_path()
-        arrow_path = self._make_arrow_path()
-        path = ellipse_path + connecting_path + arrow_path
+        path = QPainterPath(self._guide_path)
+        self._add_arrow_path(path)
+        self._add_ellipse_path(path)
         self.setPath(path)
+        stroke = self._stroker.createStroke(path)
+        self._outline.setPath(stroke)
+        self._shape.clear()
+        self._shape.addPath(stroke)
 
-    def _make_ellipse_path(self):
-        """Returns an ellipse path for the link's base.
+    def _add_ellipse_path(self, path):
+        """Adds an ellipse for the link's base.
 
-        Returns:
+        Args:
             QPainterPath
         """
-        ellipse_path = QPainterPath()
-        rect = QRectF(0, 0, 1.6 * self.magic_number, 1.6 * self.magic_number)
+        radius = 0.5 * self.magic_number
+        rect = QRectF(0, 0, radius, radius)
         rect.moveCenter(self.src_center)
-        ellipse_path.addEllipse(rect)
-        return ellipse_path
+        path.addEllipse(rect)
+
+    def _get_joint_angle(self):
+        return radians(self._guide_path.angleAtPercent(0.99))
+
+    def _add_arrow_path(self, path):
+        """Returns an arrow path for the link's tip.
+
+        Args:
+            QPainterPath
+        """
+        angle = self._get_joint_angle()
+        arrow_p0 = self.dst_center + 0.5 * self.magic_number * self._get_dst_offset()
+        d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
+        d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
+        arrow_diag = 1.5 / sin(self.arrow_angle)
+        arrow_p1 = arrow_p0 - d1 * arrow_diag
+        arrow_p2 = arrow_p0 - d2 * arrow_diag
+        path.moveTo(arrow_p1)
+        path.lineTo(arrow_p0)
+        path.lineTo(arrow_p2)
+        path.closeSubpath()
 
     @staticmethod
     def _get_offset(button):
@@ -163,8 +199,6 @@ class LinkBase(QGraphicsPathItem):
         return line_to_target.center()
 
     def _close_enough(self, p1, p2):
-        if p1 is None:
-            return False
         return (p1 - p2).manhattanLength() < 2 * self.magic_number
 
     def _make_guide_path(self, curved_links=False):
@@ -176,7 +210,7 @@ class LinkBase(QGraphicsPathItem):
         Returns:
             QPainterPath
         """
-        c_factor = min(3.5 * self.magic_number, (self.src_center - self.dst_center).manhattanLength() / 4)
+        c_factor = 3 * self.magic_number
         src = self.src_center + c_factor * self._get_src_offset()
         dst = self.dst_center + c_factor * self._get_dst_offset()
         src_points = [self.src_center, src]
@@ -184,20 +218,18 @@ class LinkBase(QGraphicsPathItem):
         while True:
             # Bring source points closer to destination
             new_src = self._find_new_point(src_points, dst)
-            if self._close_enough(new_src, dst):
-                src_points.append(new_src)
-                break
-            # Bring destination points closer to source
-            new_dst = self._find_new_point(dst_points, src)
-            if self._close_enough(new_dst, src):
-                dst_points.append(new_dst)
-                break
             if new_src is not None:
                 src_points.append(new_src)
                 src = new_src
+            if self._close_enough(src, dst):
+                break
+            # Bring destination points closer to source
+            new_dst = self._find_new_point(dst_points, src)
             if new_dst is not None:
                 dst_points.append(new_dst)
                 dst = new_dst
+            if self._close_enough(src, dst):
+                break
             if new_src is new_dst is None:
                 break
         points = src_points + list(reversed(dst_points))
@@ -209,7 +241,7 @@ class LinkBase(QGraphicsPathItem):
         # Correct last point so it doesn't go beyond the arrow
         head = QPainterPath(points[-2])
         head.lineTo(points[-1])
-        points[-1] = head.pointAtPercent(1 - head.percentAtLength(self.magic_number / 2))
+        points[-1] = head.pointAtPercent(1 - head.percentAtLength(self.magic_number))
         # Make path
         path = QPainterPath(points.pop(0))
         if not curved_links:
@@ -220,84 +252,6 @@ class LinkBase(QGraphicsPathItem):
             path.quadTo(p1, (p1 + p2) / 2)
         path.quadTo(points[-2], points[-1])
         return path
-
-    def _get_joint_angle(self):
-        line = QLineF(self._get_dst_offset(), QPointF(0, 0))
-        return radians(line.angle())
-
-    def _points_and_angles_from_path(self, path):
-        """Returns a list of representative points and angles from given path.
-
-        Args:
-            path (QPainterPath)
-
-        Returns:
-            list(QPointF): points
-            list(float): angles
-        """
-        count = 100
-        percents = [k / count for k in range(count + 1)]
-        points = list(map(path.pointAtPercent, percents))
-        angles = list(map(path.angleAtPercent, percents))
-        return points, angles
-
-    def _make_connecting_path(self):
-        """Returns a 'thick' path connecting source and destination, by following the given 'guide' path.
-
-        Returns:
-            QPainterPath
-        """
-        points, angles = self._points_and_angles_from_path(self._guide_path)
-        outgoing_points = []
-        incoming_points = []
-        for point, angle in zip(points, angles):
-            off = self._radius_from_point_and_angle(point, angle)
-            outgoing_points.append(point + off)
-            incoming_points.insert(0, point - off)
-        p0 = self._guide_path.pointAtPercent(0)
-        a0 = self._guide_path.angleAtPercent(0)
-        off0 = self._radius_from_point_and_angle(p0, a0)
-        curve_path = QPainterPath(p0 + off0)
-        self._follow_points(curve_path, outgoing_points)
-        curve_path.lineTo(incoming_points[0])
-        self._follow_points(curve_path, incoming_points)
-        curve_path.lineTo(p0 - off0)
-        curve_path.closeSubpath()
-        curve_path.setFillRule(Qt.WindingFill)
-        return curve_path
-
-    @staticmethod
-    def _follow_points(curve_path, points):
-        for p0, p1 in zip(points[:-1], points[1:]):
-            curve_path.quadTo(p0, p1)
-        curve_path.lineTo(points[-1])
-
-    def _radius_from_point_and_angle(self, point, angle):
-        line = QLineF()
-        line.setP1(point)
-        line.setAngle(angle)
-        normal = line.normalVector()
-        normal.setLength(self.magic_number / 2)
-        return QPointF(normal.dx(), normal.dy())
-
-    def _make_arrow_path(self):
-        """Returns an arrow path for the link's tip.
-
-        Returns:
-            QPainterPath
-        """
-        angle = self._get_joint_angle()
-        arrow_p0 = self.dst_center
-        d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
-        d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
-        arrow_diag = 1.5 * self.magic_number / sin(self.arrow_angle)
-        arrow_p1 = arrow_p0 - d1 * arrow_diag
-        arrow_p2 = arrow_p0 - d2 * arrow_diag
-        arrow_path = QPainterPath(arrow_p1)
-        arrow_path.lineTo(arrow_p0)
-        arrow_path.lineTo(arrow_p2)
-        arrow_path.closeSubpath()
-        return arrow_path
 
     def itemChange(self, change, value):
         """Wipes out the link when removed from scene."""
@@ -422,11 +376,11 @@ class JumpOrLink(LinkBase):
         """Sets a dashed pen if selected."""
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
-            self.setPen(self.selected_pen)
+            self._outline.setPen(self.selected_pen)
             for icon in self._icons:
                 icon.setPen(self.selected_pen)
         else:
-            self.setPen(self.normal_pen)
+            self._outline.setPen(self.normal_pen)
             for icon in self._icons:
                 icon.setPen(self.normal_pen)
         super().paint(painter, option, widget)
@@ -452,7 +406,7 @@ class JumpOrLink(LinkBase):
         animation.setStartValue(0.0)
         animation.setEndValue(1.0)
         animation.valueChanged.connect(self._handle_execution_animation_value_changed)
-        animation.finished.connect(lambda: self.setBrush(self._COLOR))
+        animation.finished.connect(lambda: self.setPen(self._pen))
         return animation
 
     def run_execution_animation(self):
@@ -472,7 +426,9 @@ class JumpOrLink(LinkBase):
         gradient.setColorAt(step, exec_color)
         gradient.setColorAt(min(1.0, step + delta), self._COLOR)
         gradient.setColorAt(1.0, self._COLOR)
-        self.setBrush(gradient)
+        pen = QPen(self._pen)
+        pen.setBrush(gradient)
+        self.setPen(pen)
 
 
 class Link(JumpOrLink):
@@ -598,7 +554,6 @@ class LinkDrawerBase(LinkBase):
         """
         super().__init__(toolbox, None, None)
         self.tip = None
-        self.setPen(QPen(self.pen_brush, 0.5))
         self.setZValue(1)  # A drawer should be on top of every other item.
 
     @property
@@ -626,9 +581,6 @@ class LinkDrawerBase(LinkBase):
             return QPointF(0, 0)
         return super()._get_dst_offset()
 
-    def _get_joint_angle(self):
-        return radians(self._guide_path.angleAtPercent(0.99))
-
     def add_link(self):
         """Makes link between source and destination connectors."""
         raise NotImplementedError()
@@ -644,6 +596,9 @@ class LinkDrawerBase(LinkBase):
         self.tip = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         self.src_connector = src_connector
         self.src_connector.scene().addItem(self)
+        self._stroker.setWidth(self.magic_number)
+        self._pen.setWidthF(self.magic_number)
+        self.setPen(self._pen)
         self.update_geometry()
         self.show()
 
@@ -668,7 +623,7 @@ class ConnectionLinkDrawer(LinkDrawerBase):
             toolbox (ToolboxUI): main UI class instance
         """
         super().__init__(toolbox)
-        self.setBrush(QBrush(self._COLOR))
+        self._pen.setBrush(QBrush(self._COLOR))
 
     def add_link(self):
         self._toolbox.ui.graphicsView.add_link(self.src_connector, self.dst_connector)
@@ -694,7 +649,7 @@ class JumpLinkDrawer(LinkDrawerBase):
             toolbox (ToolboxUI): main UI class instance
         """
         super().__init__(toolbox)
-        self.setBrush(QBrush(self._COLOR))
+        self._pen.setBrush(QBrush(self._COLOR))
 
     def add_link(self):
         self._toolbox.ui.graphicsView.add_jump(self.src_connector, self.dst_connector)

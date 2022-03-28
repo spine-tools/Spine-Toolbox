@@ -434,6 +434,9 @@ class ConnectorButton(QGraphicsPathItem):
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.PointingHandCursor)
 
+    def rect(self):
+        return self._rect
+
     def update_path(self, parent_radius):
         radius = 0.2 * parent_radius
         path = QPainterPath()
