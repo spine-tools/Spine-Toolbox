@@ -52,7 +52,6 @@ class PlotWidget(QWidget):
         for name, widget in PlotWidget.plot_windows.items():
             if self is widget:
                 del PlotWidget.plot_windows[name]
-                break
         super().closeEvent(event)
 
     def infer_plot_type(self, values):
