@@ -49,9 +49,9 @@ class PlotWidget(QWidget):
 
     def closeEvent(self, event):
         """Removes the window from plot_windows and closes."""
-        for name, widget in PlotWidget.plot_windows.items():
-            if self is widget:
-                del PlotWidget.plot_windows[name]
+        closed = set(name for name, widget in PlotWidget.plot_windows.items() if widget is self)
+        for name in closed:
+            del PlotWidget.plot_windows[name]
         super().closeEvent(event)
 
     def infer_plot_type(self, values):
