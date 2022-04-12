@@ -141,6 +141,7 @@ class PersistentConsoleWidget(QTextEdit):
             text (str)
         """
         if not text:
+            cursor.insertText("")
             return
         lines = iter(text.splitlines())
         line = next(lines)
