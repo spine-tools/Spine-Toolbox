@@ -432,16 +432,15 @@ class TestSpineToolboxProject(unittest.TestCase):
         project.remove_connection(connection)
         self.assertEqual(t._input_file_model.rowCount(), 1)  # There should 1 resource left
 
-    def test_replace_connection(self):
+    def test_update_connection(self):
         project = self.toolbox.project()
         dc1_name = "DC 1"
         add_dc(project, self.toolbox.item_factories, dc1_name)
         dc2_name = "DC 2"
         add_dc(project, self.toolbox.item_factories, dc2_name)
-        project.add_connection(Connection(dc1_name, "left", dc2_name, "right"))
-        project.replace_connection(
-            Connection(dc1_name, "left", dc2_name, "right"), Connection(dc1_name, "top", dc2_name, "bottom")
-        )
+        conn = Connection(dc1_name, "left", dc2_name, "right")
+        project.add_connection(conn)
+        project.update_connection(conn, "top", "bottom")
         self.assertEqual(project.connections_for_item(dc1_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
         self.assertEqual(project.connections_for_item(dc2_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
         dag = project.dag_with_node(dc1_name)
