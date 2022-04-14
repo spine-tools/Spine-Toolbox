@@ -16,7 +16,7 @@ Spine Toolbox project class.
 :date:   10.1.2018
 """
 from enum import auto, Enum, unique
-from itertools import takewhile, chain
+from itertools import chain
 import os
 from pathlib import Path
 import json
@@ -76,13 +76,13 @@ class SpineToolboxProject(MetaObject):
     """Emitted after new connection has been added to project."""
     connection_about_to_be_removed = Signal(object)
     """Emitted before connection removal."""
-    connection_replaced = Signal(object, object)
-    """Emitted after a connection has been replaced by another."""
+    connection_updated = Signal(object)
+    """Emitted after a connection has been updated."""
     jump_added = Signal(object)
     """Emitted after a jump has been added."""
     jump_about_to_be_removed = Signal(object)
     """Emitted before a jump is removed."""
-    jump_replaced = Signal(object, object)
+    jump_updated = Signal(object)
     """Emitted after a jump has been replaced by another."""
     item_added = Signal(str)
     """Emitted after a project item has been added."""
@@ -623,12 +623,10 @@ class SpineToolboxProject(MetaObject):
         Returns:
             Connection: connection instance or None if there is no connection
         """
-        i = len(
-            list(takewhile(lambda c: source_name != c.source or destination_name != c.destination, self._connections))
+        return next(
+            (c for c in self._connections if c.source == source_name and c.destination == destination_name),
+            None,
         )
-        if i == len(self._connections):
-            return None
-        return self._connections[i]
 
     def connections_for_item(self, item_name):
         """Returns connections that have given item as source or destination.
@@ -691,18 +689,19 @@ class SpineToolboxProject(MetaObject):
             self._update_ranks(dag)
         self._update_jump_icons()
 
-    def replace_connection(self, existing_connection, new_connection):
-        """Replaces an existing connection between items.
+    def update_connection(self, connection, source_position, destination_position):
+        """Updates existing connection between items.
 
-        Replacing does not trigger any updates to the DAG or project items.
+        Updating does not trigger any updates to the DAG or project items.
 
         Args:
-            existing_connection (Connection): an established connection
-            new_connection (Connection): connection to replace by
+            connection (LoggingConnection): connection to update
+            source_position (str): link's position on source item's icon
+            destination_position (str): link's position on destination item's icon
         """
-        self._connections.remove(existing_connection)
-        self._connections.append(new_connection)
-        self.connection_replaced.emit(existing_connection, new_connection)
+        connection.source_position = source_position
+        connection.destination_position = destination_position
+        self.connection_updated.emit(connection)
 
     def jumps_for_item(self, item_name):
         """Returns jumps that have given item as source or destination.
@@ -743,10 +742,10 @@ class SpineToolboxProject(MetaObject):
         Returns:
             Jump: connection instance or None if there is no jump
         """
-        for jump in self._jumps:
-            if jump.source == source_name and jump.destination == destination_name:
-                return jump
-        return None
+        return next(
+            (j for j in self._jumps if j.source == source_name and j.destination == destination_name),
+            None,
+        )
 
     def remove_jump(self, jump):
         """Removes a jump from the project.
@@ -758,16 +757,17 @@ class SpineToolboxProject(MetaObject):
         self._jumps.remove(jump)
         self._update_jump_icons()
 
-    def replace_jump(self, existing_jump, new_jump):
-        """Replaces an existing jump between items.
+    def update_jump(self, jump, source_position, destination_position):
+        """Updates an existing jump between items.
 
         Args:
-            existing_jump (Jump): an established jump
-            new_jump (Jump): jump to replace by
+            jump (LoggingJump): jump to update
+            source_position (str): link's position on source item's icon
+            destination_position (str): link's position on destination item's icon
         """
-        self._jumps.remove(existing_jump)
-        self._jumps.append(new_jump)
-        self.jump_replaced.emit(existing_jump, new_jump)
+        jump.source_position = source_position
+        jump.destination_position = destination_position
+        self.jump_updated.emit(jump)
 
     def _update_jump_icons(self):
         """Updates icons for all jumps in the project."""

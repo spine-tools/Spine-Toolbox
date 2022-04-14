@@ -73,7 +73,6 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
             jump (LoggingJump): link to hook into
         """
         self._jump = jump
-        self._jump.activate()
         self._ui.condition_edit.setPlainText(self._jump.condition)
         self._toolbox.label_item_name.setText(f"<b>Loop {self._jump.jump_link.name}</b>")
         self._input_file_model.update(self._jump.resources)
@@ -83,7 +82,6 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
 
     def unset_link(self):
         """Releases the widget from any links."""
-        self._jump.deactivate()
         self._jump = None
 
     def set_condition(self, jump, condition):

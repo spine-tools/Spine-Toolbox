@@ -16,7 +16,6 @@ QUndoCommand subclasses for modifying the project.
 :date:   12.2.2020
 """
 
-from copy import copy
 from enum import IntEnum, unique
 from PySide2.QtWidgets import QUndoCommand
 from spine_engine.project_item.connection import Connection, Jump
@@ -266,41 +265,32 @@ class AddConnectionCommand(SpineToolboxCommand):
         """
         super().__init__()
         self._project = project
-        self._source_name = source_name
-        self._destination_name = destination_name
-        replaced_connection = self._project.find_connection(source_name, destination_name)
-        if replaced_connection is not None:
-            self._replaced_connection_dict = replaced_connection.to_dict()
-            connection = copy(replaced_connection)
-            connection.source_position = source_position
-            connection.destination_position = destination_position
+        self._source_position = source_position
+        self._destination_position = destination_position
+        self._existing = self._project.find_connection(source_name, destination_name)
+        if self._existing is not None:
+            self._old_source_position = self._existing.source_position
+            self._old_destination_position = self._existing.destination_position
+            action = "update"
         else:
-            self._replaced_connection_dict = None
-            connection = Connection(source_name, source_position, destination_name, destination_position)
-        self._connection_dict = connection.to_dict()
-        self._connection_name = f"link from {source_name} to {destination_name}"
+            conn_dict = Connection(source_name, source_position, destination_name, destination_position).to_dict()
+            self._connection = self._project.connection_from_dict(conn_dict)
+            action = "add"
+        connection_name = f"link from {source_name} to {destination_name}"
+        self.setText(f"{action} {connection_name}")
 
     def redo(self):
-        if self._replaced_connection_dict is None:
-            success = self._project.add_connection(self._project.connection_from_dict(self._connection_dict))
-            if not success:
-                self.setObsolete(True)
-        else:
-            self._project.replace_connection(
-                self._project.connection_from_dict(self._replaced_connection_dict),
-                self._project.connection_from_dict(self._connection_dict),
-            )
-        action = "add" if self._replaced_connection_dict is None else "replace"
-        self.setText(f"{action} {self._connection_name}")
+        if self._existing:
+            self._project.update_connection(self._existing, self._source_position, self._destination_position)
+            return
+        if not self._project.add_connection(self._connection):
+            self.setObsolete(True)
 
     def undo(self):
-        connection = self._project.find_connection(self._source_name, self._destination_name)
-        if self._replaced_connection_dict is None:
-            self._project.remove_connection(connection)
-        else:
-            self._project.replace_connection(
-                connection, self._project.connection_from_dict(self._replaced_connection_dict)
-            )
+        if self._existing:
+            self._project.update_connection(self._existing, self._old_source_position, self._old_destination_position)
+            return
+        self._project.remove_connection(self._connection)
 
 
 class RemoveConnectionsCommand(SpineToolboxCommand):
@@ -345,38 +335,32 @@ class AddJumpCommand(SpineToolboxCommand):
         """
         super().__init__()
         self._project = project
-        self._source_name = source_name
-        self._destination_name = destination_name
-        replaced_jump = self._project.find_jump(source_name, destination_name)
-        if replaced_jump is not None:
-            self._replaced_jump_dict = replaced_jump.to_dict()
-            jump = copy(replaced_jump)
-            jump.source_position = source_position
-            jump.destination_position = destination_position
+        self._source_position = source_position
+        self._destination_position = destination_position
+        self._existing = self._project.find_jump(source_name, destination_name)
+        if self._existing is not None:
+            self._old_source_position = self._existing.source_position
+            self._old_destination_position = self._existing.destination_position
+            action = "update"
         else:
-            self._replaced_jump_dict = None
-            jump = Jump(source_name, source_position, destination_name, destination_position)
-        self._jump_dict = jump.to_dict()
-        self._jump_name = f"jump from {source_name} to {destination_name}"
+            jump_dict = Jump(source_name, source_position, destination_name, destination_position).to_dict()
+            self._jump = self._project.jump_from_dict(jump_dict)
+            action = "add"
+        jump_name = f"jump link from {source_name} to {destination_name}"
+        self.setText(f"{action} {jump_name}")
 
     def redo(self):
-        if self._replaced_jump_dict is None:
-            success = self._project.add_jump(self._project.jump_from_dict(self._jump_dict))
-            if not success:
-                self.setObsolete(True)
-        else:
-            self._project.replace_jump(
-                self._project.jump_from_dict(self._replaced_jump_dict), self._project.jump_from_dict(self._jump_dict)
-            )
-        action = "add" if self._replaced_jump_dict is None else "replace"
-        self.setText(f"{action} {self._jump_name}")
+        if self._existing:
+            self._project.update_jump(self._existing, self._source_position, self._destination_position)
+            return
+        if not self._project.add_jump(self._jump):
+            self.setObsolete(True)
 
     def undo(self):
-        jump = self._project.find_jump(self._source_name, self._destination_name)
-        if self._replaced_jump_dict is None:
-            self._project.remove_jump(jump)
-        else:
-            self._project.replace_jump(jump, self._project.jump_from_dict(self._replaced_jump_dict))
+        if self._existing:
+            self._project.update_jump(self._existing, self._old_source_position, self._old_destination_position)
+            return
+        self._project.remove_jump(self._jump)
 
 
 class RemoveJumpsCommand(SpineToolboxCommand):

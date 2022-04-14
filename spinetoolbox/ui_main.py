@@ -2043,11 +2043,11 @@ class ToolboxUI(QMainWindow):
         self._project.item_added.connect(self.ui.graphicsView.add_icon)
         self._project.item_about_to_be_removed.connect(self.ui.graphicsView.remove_icon)
         self._project.connection_established.connect(self.ui.graphicsView.do_add_link)
-        self._project.connection_replaced.connect(self.ui.graphicsView.do_replace_link)
+        self._project.connection_updated.connect(self.ui.graphicsView.do_update_link)
         self._project.connection_about_to_be_removed.connect(self.ui.graphicsView.do_remove_link)
         self._project.jump_added.connect(self.ui.graphicsView.do_add_jump)
         self._project.jump_about_to_be_removed.connect(self.ui.graphicsView.do_remove_jump)
-        self._project.jump_replaced.connect(self.ui.graphicsView.do_replace_jump)
+        self._project.jump_updated.connect(self.ui.graphicsView.do_update_jump)
         self._project.specification_added.connect(self.repair_specification)
         self._project.specification_saved.connect(self._log_specification_saved)
 

@@ -19,7 +19,6 @@ class LoggingConnection(LogMixin, Connection):
     def __init__(self, *args, toolbox=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._toolbox = toolbox
-        self._active = False
         self.resource_filter_model = ResourceFilterModel(self, toolbox.undo_stack, toolbox)
         self.link = None
 
@@ -33,12 +32,6 @@ class LoggingConnection(LogMixin, Connection):
     def refresh_resource_filter_model(self):
         """Makes resource filter mode fetch filter data from database."""
         self.resource_filter_model.build_tree()
-
-    def activate(self):
-        self._active = True
-
-    def deactivate(self):
-        self._active = False
 
     @busy_effect
     def set_connection_options(self, options):
@@ -56,7 +49,6 @@ class LoggingJump(LogMixin, Jump):
     def __init__(self, *args, toolbox=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._toolbox = toolbox
-        self._active = False
         self.jump_link = None
 
     @property
@@ -65,9 +57,3 @@ class LoggingJump(LogMixin, Jump):
 
     def item_type(self):
         return "jump"
-
-    def activate(self):
-        self._active = True
-
-    def deactivate(self):
-        self._active = False
