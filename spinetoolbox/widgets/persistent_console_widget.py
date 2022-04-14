@@ -15,7 +15,7 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Qt, Slot, QTimer
+from PySide2.QtCore import Qt, Slot, QTimer, Signal
 from PySide2.QtWidgets import QTextEdit
 from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor, QTextBlockFormat
 from spinetoolbox.helpers import CustomSyntaxHighlighter
@@ -24,6 +24,9 @@ from spinetoolbox.spine_engine_manager import make_engine_manager
 
 class PersistentConsoleWidget(QTextEdit):
     """A widget to interact with a persistent process."""
+
+    _history_item_available = Signal(str)
+    _completions_available = Signal(str, str, list)
 
     def __init__(self, toolbox, key, language, owner=None):
         """
@@ -53,8 +56,6 @@ class PersistentConsoleWidget(QTextEdit):
         self._text_buffer = []
         self._timer = QTimer()
         self._timer.setInterval(200)
-        self._timer.timeout.connect(self._drain_text_buffer)
-        self._timer.start()
         self._style = get_style_by_name("monokai")
         background_color = self._style.background_color
         foreground_color = self._style.styles[Token] or self._style.styles[Token.Text]
@@ -74,6 +75,10 @@ class PersistentConsoleWidget(QTextEdit):
         self._at_bottom = True
         self.cursorPositionChanged.connect(self._handle_cursor_position_changed)
         self.document().contentsChanged.connect(self._handle_contents_changed)
+        self._history_item_available.connect(self._display_history_item)
+        self._completions_available.connect(self._display_completions)
+        self._timer.timeout.connect(self._drain_text_buffer)
+        self._timer.start()
 
     def scrollContentsBy(self, dx, dy):
         super().scrollContentsBy(dx, dy)
@@ -300,14 +305,22 @@ class PersistentConsoleWidget(QTextEdit):
         """
         if self._history_index == 0:
             self._history_item_zero = text
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
         self._history_index += step
         if self._history_index < 1:
             self._history_index = 0
             history_item = self._history_item_zero
-        else:
-            history_item = engine_mngr.get_persistent_history_item(self._key, self._history_index)
+            self._display_history_item(history_item)
+            return
+        self._executor.submit(self._do_move_history)
+
+    def _do_move_history(self):
+        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        engine_mngr = make_engine_manager(engine_server_address)
+        history_item = engine_mngr.get_persistent_history_item(self._key, self._history_index)
+        self._history_item_available.emit(history_item)
+
+    @Slot(str)
+    def _display_history_item(self, history_item):
         cursor = self.textCursor()
         cursor.setPosition(self._input_start_pos)
         cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
@@ -320,9 +333,16 @@ class PersistentConsoleWidget(QTextEdit):
             text (str)
             partial_text (str)
         """
+        self._executor.submit(self._do_autocomplete, text, partial_text)
+
+    def _do_autocomplete(self, text, partial_text):
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
         completions = engine_mngr.get_persistent_completions(self._key, partial_text)
+        self._completions_available.emit(text, partial_text, completions)
+
+    @Slot(str, str, list)
+    def _display_completions(self, text, partial_text, completions):
         prefix = os.path.commonprefix(completions)
         if partial_text.endswith(prefix) and len(completions) > 1:
             # Can't complete, but there is more than one option: 'commit' stdin and output options to stdout
