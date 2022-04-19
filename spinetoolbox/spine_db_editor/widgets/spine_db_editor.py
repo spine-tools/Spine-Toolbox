@@ -1012,7 +1012,7 @@ class SpineDBEditorBase(QMainWindow):
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
 
-    values_pinned = Signal("QString", "QVariant")
+    pinned_values_updated = Signal(list)
 
     def __init__(self, db_mngr, db_url_codenames=None):
         """Initializes everything.
@@ -1031,19 +1031,13 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         if db_url_codenames is not None:
             self.load_db_urls(db_url_codenames)
 
-    def can_pin_values(self):
-        return self.receivers(SIGNAL("values_pinned(QString, QVariant)")) > 0
-
-    def pin_values(self, values):
-        name, ok = QInputDialog.getText(
-            self,
-            "Pin values",
-            "Enter a name for the pin:",
-            flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint,
-        )
-        if not ok:
-            return
-        self.values_pinned.emit(name, values)
+    def emit_pinned_values_updated(self):
+        pinned_values = [
+            value
+            for view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value)
+            for value in view.pinned_values
+        ]
+        self.pinned_values_updated.emit(pinned_values)
 
     def connect_signals(self):
         super().connect_signals()
