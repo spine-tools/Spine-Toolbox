@@ -54,6 +54,10 @@ class PlotWidget(QWidget):
             del PlotWidget.plot_windows[name]
         super().closeEvent(event)
 
+    def add_legend(self):
+        h, l = self.canvas.axes.get_legend_handles_labels()
+        self.canvas.legend_axes.legend(h, l, loc="upper center")
+
     def infer_plot_type(self, values):
         """Decides suitable plot_type according to a list of values."""
         first_value = values[0]

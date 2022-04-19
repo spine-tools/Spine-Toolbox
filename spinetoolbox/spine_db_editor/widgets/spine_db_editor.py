@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
     QDialog,
     QInputDialog,
 )
-from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
+from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer, SIGNAL
 from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
@@ -1012,6 +1012,8 @@ class SpineDBEditorBase(QMainWindow):
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
 
+    values_pinned = Signal("QString", "QVariant")
+
     def __init__(self, db_mngr, db_url_codenames=None):
         """Initializes everything.
 
@@ -1028,6 +1030,20 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.apply_stacked_style()
         if db_url_codenames is not None:
             self.load_db_urls(db_url_codenames)
+
+    def can_pin_values(self):
+        return self.receivers(SIGNAL("values_pinned(QString, QVariant)")) > 0
+
+    def pin_values(self, values):
+        name, ok = QInputDialog.getText(
+            self,
+            "Pin values",
+            "Enter a name for the pin:",
+            flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint,
+        )
+        if not ok:
+            return
+        self.values_pinned.emit(name, values)
 
     def connect_signals(self):
         super().connect_signals()

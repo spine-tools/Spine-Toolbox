@@ -67,6 +67,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._spine_db_editor = None
         self._open_in_editor_action = None
         self._plot_action = None
+        self._pin_values_action = None
         self._plot_separator = None
 
     @property
@@ -122,6 +123,23 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
             plot_widget.use_as_window(self.window(), self.value_column_header)
             plot_widget.show()
 
+    @property
+    def _pk_fields(self):
+        raise NotImplementedError()
+
+    @Slot(bool)
+    def _pin_values(self, checked=False):
+        """Pins values."""
+        values = []
+        for index in self.selectedIndexes():
+            values.append(self._make_pinned_value(index))
+        self._spine_db_editor.pin_values(values)
+
+    def _make_pinned_value(self, index):
+        db_map, _ = self.model().db_map_id(index)
+        db_item = self.model().db_item(index)
+        return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
+
     @Slot(QAction)
     def plot_in_window(self, action):
         """Plots current index in the window given by action's name."""
@@ -148,6 +166,8 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addSeparator()
         self._menu.addAction("Filter by", self.filter_by_selection)
         self._menu.addAction("Filter excluding", self.filter_excluding_selection)
+        self._menu.addSeparator()
+        self._pin_values_action = self._menu.addAction("Pin values...", self._pin_values)
         self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
         # Shortcuts
         remove_rows_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
@@ -172,6 +192,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
             plot_in_window_menu.triggered.connect(self.plot_in_window)
             _prepare_plot_in_window_menu(plot_in_window_menu)
             self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
+        self._pin_values_action.setEnabled(self._spine_db_editor.can_pin_values())
         self._menu.exec_(event.globalPos())
         if is_value:
             plot_in_window_menu.deleteLater()
@@ -304,6 +325,10 @@ class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTab
         super().create_delegates()
         self._make_delegate("object_name", ObjectNameDelegate)
 
+    @property
+    def _pk_fields(self):
+        return ("object_class_name", "object_name", "parameter_name", "alternative_name")
+
 
 class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
     """A custom QTableView for the relationship parameter_value pane in Spine db editor."""
@@ -312,6 +337,10 @@ class RelationshipParameterValueTableView(RelationshipParameterTableMixin, Param
         super().create_delegates()
         delegate = self._make_delegate("object_name_list", ObjectNameListDelegate)
         delegate.object_name_list_editor_requested.connect(self._spine_db_editor.show_object_name_list_editor)
+
+    @property
+    def _pk_fields(self):
+        return ("relationship_class_name", "object_name_list", "parameter_name", "alternative_name")
 
 
 class PivotTableView(CopyPasteTableView):
