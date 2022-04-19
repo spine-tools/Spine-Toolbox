@@ -567,7 +567,8 @@ class TabBarPlus(QTabBar):
         if self._plus_button.underMouse():
             self._parent.show_plus_button_context_menu(event.globalPos())
             return
-        if self.tabButton(index, QTabBar.RightSide).underMouse():
+        tab_button = self.tabButton(index, QTabBar.RightSide)
+        if tab_button is None or tab_button.underMouse():
             return
         menu = self._parent.make_context_menu(index)
         if menu is None:
