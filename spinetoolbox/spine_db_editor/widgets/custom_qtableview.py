@@ -84,20 +84,6 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._spine_db_editor = spine_db_editor
         self.populate_context_menu()
         self.create_delegates()
-        self.selectionModel().selectionChanged.connect(self._update_pinned_values)
-
-    def _update_pinned_values(self, _selected, _deselected):
-        self.pinned_values = [self._make_pinned_value(index) for index in self.selectedIndexes()]
-        self._spine_db_editor.emit_pinned_values_updated()
-
-    @property
-    def _pk_fields(self):
-        raise NotImplementedError()
-
-    def _make_pinned_value(self, index):
-        db_map, _ = self.model().db_map_id(index)
-        db_item = self.model().db_item(index)
-        return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
 
     def _make_delegate(self, column_name, delegate_class):
         """Creates a delegate for the given column and returns it.
@@ -284,6 +270,10 @@ class ParameterValueTableView(ParameterTableView):
     def value_column_header(self):
         return "value"
 
+    def connect_spine_db_editor(self, spine_db_editor):
+        super().connect_spine_db_editor(spine_db_editor)
+        self.selectionModel().selectionChanged.connect(self._update_pinned_values)
+
     def create_delegates(self):
         super().create_delegates()
         self._make_delegate("parameter_name", ParameterNameDelegate)
@@ -303,6 +293,19 @@ class ParameterValueTableView(ParameterTableView):
             db_map, id_ = self.model().db_map_id(index)
             db_map_ids.setdefault(db_map, []).append(id_)
         self._spine_db_editor.show_db_map_parameter_value_metadata(db_map_ids)
+
+    def _update_pinned_values(self, _selected, _deselected):
+        self.pinned_values = [self._make_pinned_value(index) for index in self.selectedIndexes()]
+        self._spine_db_editor.emit_pinned_values_updated()
+
+    @property
+    def _pk_fields(self):
+        raise NotImplementedError()
+
+    def _make_pinned_value(self, index):
+        db_map, _ = self.model().db_map_id(index)
+        db_item = self.model().db_item(index)
+        return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
 
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
