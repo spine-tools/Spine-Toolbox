@@ -295,7 +295,9 @@ class ParameterValueTableView(ParameterTableView):
         self._spine_db_editor.show_db_map_parameter_value_metadata(db_map_ids)
 
     def _update_pinned_values(self, _selected, _deselected):
-        self.pinned_values = [self._make_pinned_value(index) for index in self.selectedIndexes()]
+        self.pinned_values = list(
+            {index.row(): self._make_pinned_value(index) for index in self.selectedIndexes()}.values()
+        )
         self._spine_db_editor.emit_pinned_values_updated()
 
     @property
