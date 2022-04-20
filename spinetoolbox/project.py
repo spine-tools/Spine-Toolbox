@@ -624,8 +624,7 @@ class SpineToolboxProject(MetaObject):
             Connection: connection instance or None if there is no connection
         """
         return next(
-            (c for c in self._connections if c.source == source_name and c.destination == destination_name),
-            None,
+            (c for c in self._connections if c.source == source_name and c.destination == destination_name), None
         )
 
     def connections_for_item(self, item_name):
@@ -742,10 +741,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             Jump: connection instance or None if there is no jump
         """
-        return next(
-            (j for j in self._jumps if j.source == source_name and j.destination == destination_name),
-            None,
-        )
+        return next((j for j in self._jumps if j.source == source_name and j.destination == destination_name), None)
 
     def remove_jump(self, jump):
         """Removes a jump from the project.

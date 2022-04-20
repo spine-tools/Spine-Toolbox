@@ -526,7 +526,7 @@ def _collect_column_values(model, column, rows, hints):
     values, labels = _collect_single_column_values(model, column, rows, hints)
     if not values:
         return values, labels
-    if isinstance(first_non_null(values), Map):
+    if len(values) == len(labels):
         values, labels = expand_maps(values, labels)
     if isinstance(first_non_null(values), (Array, Map, TimeSeries)):
         values = [x for x in values if x is not None]
@@ -559,6 +559,10 @@ def expand_maps(maps, labels):
     for map_, label in zip(maps, labels):
         if map_ is None:
             continue
+        if not isinstance(map_, Map):
+            expanded_values.append(map_)
+            expanded_labels.append(label)
+            continue
         map_ = convert_leaf_maps_to_specialized_containers(map_)
         if isinstance(map_, (Array, TimeSeries)):
             expanded_values.append(map_)
@@ -572,7 +576,7 @@ def expand_maps(maps, labels):
 
 def _label_nested_maps(map_, label):
     """
-    Collects leaf values from given Maps and labels them.
+    Collects leaf values from given Map and labels them.
 
     Args:
         map_ (Map): a map

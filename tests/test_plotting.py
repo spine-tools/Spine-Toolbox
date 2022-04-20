@@ -428,6 +428,24 @@ class TestPlotting(unittest.TestCase):
         self.assertEqual(len(lines), 1)
         self.assertEqual(list(lines[0].get_ydata(orig=True)), [0.0, 100.0])
 
+    def test_plot_time_series_and_maps(self):
+        ts = TimeSeriesFixedResolution("2019-07-11T09:00", "3 days", [0.5, 2.3], False, False)
+        map_ = Map([DateTime("2019-07-11T09:00"), DateTime("2019-07-17T10:35")], [-5.0, -3.3])
+        nested_map = Map(["A"], [Map([DateTime("2019-07-11T09:00"), DateTime("2019-07-17T10:35")], [-2.3, -1.2])])
+        self._fill_parameter_value_table({"indexed_values": [ts, map_, nested_map]})
+        model = self._db_editor.object_parameter_value_model
+        selected_indexes = list()
+        selected_indexes.append(model.index(0, 4))
+        selected_indexes.append(model.index(1, 4))
+        selected_indexes.append(model.index(2, 4))
+        support = ParameterTablePlottingHints()
+        plot_widget = plot_selection(model, selected_indexes, support)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 3)
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [0.5, 2.3])
+        self.assertEqual(list(lines[1].get_ydata(orig=True)), [-5.0, -3.3])
+        self.assertEqual(list(lines[2].get_ydata(orig=True)), [-2.3, -1.2])
+
 
 class MultiSignalWaiter(QObject):
     """A 'traffic light' that allows waiting for a set number of signals to be emitted in another thread."""
