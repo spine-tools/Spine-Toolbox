@@ -295,8 +295,9 @@ class ParameterValueTableView(ParameterTableView):
         self._spine_db_editor.show_db_map_parameter_value_metadata(db_map_ids)
 
     def _update_pinned_values(self, _selected, _deselected):
+        row_pinned_value_iter = ((index.row(), self._make_pinned_value(index)) for index in self.selectedIndexes())
         self.pinned_values = list(
-            {index.row(): self._make_pinned_value(index) for index in self.selectedIndexes()}.values()
+            {row: pinned_value for row, pinned_value in row_pinned_value_iter if pinned_value is not None}.values()
         )
         self._spine_db_editor.emit_pinned_values_updated()
 
@@ -306,6 +307,8 @@ class ParameterValueTableView(ParameterTableView):
 
     def _make_pinned_value(self, index):
         db_map, _ = self.model().db_map_id(index)
+        if db_map is None:
+            return None
         db_item = self.model().db_item(index)
         return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
 
