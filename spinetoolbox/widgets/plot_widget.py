@@ -17,11 +17,14 @@ A Qt widget showing a toolbar and a matplotlib plotting canvas.
 """
 
 import itertools
+import numpy as np
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
 from PySide2.QtCore import QMetaObject, Qt
-from PySide2.QtWidgets import QVBoxLayout, QWidget
+from PySide2.QtWidgets import QVBoxLayout, QWidget, QMenu
 from spinedb_api import IndexedValue, Map, TimeSeries
 from .plot_canvas import PlotCanvas
+from .custom_qtableview import CopyPasteTableView
+from ..mvcmodels.minimal_table_model import MinimalTableModel
 
 
 class PlotWidget(QWidget):
@@ -53,6 +56,30 @@ class PlotWidget(QWidget):
         for name in closed:
             del PlotWidget.plot_windows[name]
         super().closeEvent(event)
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        menu.addAction("Get data behind plot...", self._get_data_behind_plot)
+        menu.exec_(event.globalPos())
+
+    def _get_data_behind_plot(self):
+        header = ["indexes"]
+        indexes = []
+        data_dicts = []
+        for line in self.canvas.axes.get_lines():
+            label = line.get_label()
+            xdata = line.get_xdata()
+            ydata = line.get_ydata()
+            header.append(label)
+            indexes.append(xdata)
+            data_dict = dict(zip(xdata, ydata))
+            data_dicts.append(data_dict)
+        all_indexes = np.unique(np.concatenate(indexes))
+        rows = []
+        for index in all_indexes:
+            row = [str(index)] + [str(data_dict.get(index, "")) for data_dict in data_dicts]
+            rows.append(row)
+        _PlotDataWidget(self, header, rows).show()
 
     def add_legend(self):
         h, l = self.canvas.axes.get_legend_handles_labels()
@@ -93,6 +120,30 @@ class PlotWidget(QWidget):
             proposition = f"{document_name} ({i + 1})"
             if proposition not in PlotWidget.plot_windows:
                 return proposition
+
+
+class _PlotDataView(CopyPasteTableView):
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        menu.addAction("Select all", self.selectAll)
+        menu.addAction("Copy", self.copy).setEnabled(self.can_copy())
+        menu.exec_(event.globalPos())
+
+
+class _PlotDataWidget(QWidget):
+    def __init__(self, parent, header, rows):
+        super().__init__(parent=parent, f=Qt.Dialog)
+        self.setWindowTitle("Data behind plot")
+        layout = QVBoxLayout(self)
+        self._view = _PlotDataView(self)
+        self._model = MinimalTableModel(self, header=header)
+        self._view.setModel(self._model)
+        self._model.reset_model([header] + rows)
+        self._view.resizeColumnsToContents()
+        self._view.horizontalHeader().hide()
+        self._view.verticalHeader().hide()
+        layout.addWidget(self._view)
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
 
 def _prepare_plot_in_window_menu(menu):
