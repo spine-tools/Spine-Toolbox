@@ -195,7 +195,6 @@ class MinimalTableModel(QAbstractTableModel):
                 new_main_row = [None]
             else:
                 new_main_row = [None for j in range(self.columnCount())]
-            # Notice if insert index > rowCount(), new object is inserted to end
             self._main_data.insert(row + i, new_main_row)
         self.endInsertRows()
         return True

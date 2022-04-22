@@ -17,7 +17,7 @@ Models that vertically concatenate two or more table models.
 """
 
 import bisect
-from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
+from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QTimer
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 
 
@@ -208,10 +208,11 @@ class CompoundTableModel(MinimalTableModel):
             return False
         if count < 1:
             return False
-        try:
+        if row < self.rowCount():
             sub_model, sub_row = self._row_map[row]
-        except IndexError:
+        else:
             sub_model, sub_row = self._row_map[-1]
+            sub_row += 1
         self.beginInsertRows(parent, row, row + count - 1)
         sub_model.insertRows(sub_row, count, self.map_to_sub(parent))
         self.endInsertRows()
@@ -356,7 +357,10 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     def _insert_row_map(self, pos, single_row_map):
         if not single_row_map:
-            self.layoutChanged.emit()  # To trigger fetching
+            # To trigger fetching. The QTimer is to avoid funny situations where the user enters new data
+            # via the empty row model, and those rows need to be removed at the same time as we fetch the added data.
+            # Doing it in the same loop cycle causes bugs.
+            QTimer.singleShot(0, self.layoutChanged.emit)
             return
         row = self._get_row_for_insertion(pos)
         self._row_map, tail_row_map = self._row_map[:row], self._row_map[row:]
