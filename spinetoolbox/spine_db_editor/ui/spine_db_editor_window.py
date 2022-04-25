@@ -507,6 +507,9 @@ class Ui_MainWindow(object):
         self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
         self.item_metadata_table_view = ItemMetadataTableView(self.item_metadata_dock_contents)
         self.item_metadata_table_view.setObjectName(u"item_metadata_table_view")
+        self.item_metadata_table_view.setEnabled(False)
+        self.item_metadata_table_view.setSortingEnabled(True)
+        self.item_metadata_table_view.verticalHeader().setVisible(False)
 
         self.verticalLayout_9.addWidget(self.item_metadata_table_view)
 

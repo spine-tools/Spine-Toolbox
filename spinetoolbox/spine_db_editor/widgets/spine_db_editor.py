@@ -611,34 +611,6 @@ class SpineDBEditorBase(QMainWindow):
             return
         self.db_mngr.export_data(self, db_map_ids_for_export, file_path, file_filter)
 
-    @staticmethod
-    def _parse_db_map_metadata(db_map_metadata):
-        s = "<ul>"
-        for db_map_name, element_metadata in db_map_metadata.items():
-            s += f"<li>{db_map_name}<ul>"
-            for element_name, metadata in element_metadata.items():
-                s += f"<li>{element_name}<ul>"
-                for name, value in metadata.items():
-                    s += f"<li>{name}: {value}</li>"
-                s += "</ul>"
-            s += "</ul>"
-        s += "</ul>"
-        return s
-
-    def show_db_map_entity_metadata(self, db_map_ids):
-        metadata = {
-            db_map.codename: self.db_mngr.get_metadata_per_entity(db_map, entity_ids)
-            for db_map, entity_ids in db_map_ids.items()
-        }
-        QMessageBox.information(self, "Entity metadata", self._parse_db_map_metadata(metadata))
-
-    def show_db_map_parameter_value_metadata(self, db_map_ids):
-        metadata = {
-            db_map.codename: self.db_mngr.get_metadata_per_parameter_value(db_map, param_val_ids)
-            for db_map, param_val_ids in db_map_ids.items()
-        }
-        QMessageBox.information(self, "Parameter value metadata", self._parse_db_map_metadata(metadata))
-
     @Slot(bool)
     def refresh_session(self, checked=False):
         self.db_mngr.refresh_session(*self.db_maps)
@@ -779,6 +751,12 @@ class SpineDBEditorBase(QMainWindow):
     def receive_metadata_added(self, db_map_data):
         self._receive_items_changed("added", "metadata", db_map_data)
 
+    def receive_entity_metadata_added(self, db_map_data):
+        self._receive_items_changed("added", "entity_metadata", db_map_data)
+
+    def receive_parameter_value_metadata_added(self, db_map_data):
+        self._receive_items_changed("added", "parameter_value_metadata", db_map_data)
+
     def receive_scenarios_updated(self, db_map_data):
         self._receive_items_changed("updated", "scenario", db_map_data)
 
@@ -823,6 +801,12 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_metadata_updated(self, db_map_data):
         self._receive_items_changed("updated", "metadata", db_map_data)
+
+    def receive_entity_metadata_updated(self, db_map_data):
+        self._receive_items_changed("updated", "entity_metadata", db_map_data)
+
+    def receive_parameter_value_metadata_updated(self, db_map_data):
+        self._receive_items_changed("updated", "parameter_value_metadata", db_map_data)
 
     def receive_scenarios_removed(self, db_map_data):
         self._receive_items_changed("removed", "scenarios", db_map_data)
@@ -871,6 +855,12 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_metadata_removed(self, db_map_data):
         self._receive_items_changed("removed", "metadata", db_map_data)
+
+    def receive_entity_metadata_removed(self, db_map_data):
+        self._receive_items_changed("removed", "entity_metadata", db_map_data)
+
+    def receive_parameter_value_metadata_removed(self, db_map_data):
+        self._receive_items_changed("removed", "parameter_value_metadata", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -1034,7 +1024,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         super().__init__(db_mngr)
         self._original_size = None
         self._metadata_editor = MetadataEditor(self.ui.metadata_table_view, self, db_mngr)
-        self._item_metadata_editor = ItemMetadataEditor(self.ui.item_metadata_table_view, db_mngr)
+        self._item_metadata_editor = ItemMetadataEditor(
+            self.ui.item_metadata_table_view, self, self._metadata_editor, db_mngr
+        )
         self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
         self._timer_refresh_tab_order = QTimer(self)  # Used to limit refresh
         self._timer_refresh_tab_order.setSingleShot(True)
@@ -1065,6 +1057,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
     def init_models(self):
         super().init_models()
         self._metadata_editor.init_models(self.db_maps)
+        self._item_metadata_editor.init_models(self.db_maps)
 
     @Slot(bool)
     def _restart_timer_refresh_tab_order(self, _visible=False):
@@ -1241,17 +1234,44 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         super().receive_metadata_added(db_map_data)
         self._metadata_editor.add_metadata(db_map_data)
 
+    def receive_entity_metadata_added(self, db_map_data):
+        super().receive_entity_metadata_added(db_map_data)
+        self._item_metadata_editor.add_item_metadata(db_map_data)
+
+    def receive_parameter_value_metadata_added(self, db_map_data):
+        super().receive_parameter_value_metadata_added(db_map_data)
+        self._item_metadata_editor.add_item_metadata(db_map_data)
+
     def receive_metadata_updated(self, db_map_data):
         super().receive_metadata_updated(db_map_data)
         self._metadata_editor.update_metadata(db_map_data)
+        self._item_metadata_editor.update_metadata(db_map_data)
+
+    def receive_entity_metadata_updated(self, db_map_data):
+        super().receive_entity_metadata_updated(db_map_data)
+        self._item_metadata_editor.update_item_metadata(db_map_data)
+
+    def receive_parameter_value_metadata_updated(self, db_map_data):
+        super().receive_parameter_value_metadata_updated(db_map_data)
+        self._item_metadata_editor.update_item_metadata(db_map_data)
 
     def receive_metadata_removed(self, db_map_data):
         super().receive_metadata_removed(db_map_data)
         self._metadata_editor.remove_metadata(db_map_data)
+        self._item_metadata_editor.remove_metadata(db_map_data)
+
+    def receive_entity_metadata_removed(self, db_map_data):
+        super().receive_entity_metadata_removed(db_map_data)
+        self._item_metadata_editor.remove_item_metadata(db_map_data)
+
+    def receive_parameter_value_metadata_removed(self, db_map_data):
+        super().receive_parameter_value_metadata_removed(db_map_data)
+        self._item_metadata_editor.remove_item_metadata(db_map_data)
 
     def receive_session_rolled_back(self, db_maps):
         super().receive_session_rolled_back(db_maps)
         self._metadata_editor.roll_back(db_maps)
+        self._item_metadata_editor.roll_back(db_maps)
 
     @staticmethod
     def _get_base_dir():

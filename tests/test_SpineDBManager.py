@@ -218,7 +218,7 @@ class TestAddOrUpdateItems(unittest.TestCase):
         db_map = DatabaseMapping(self._db_url, create=True)
         import_functions.import_object_classes(db_map, ("my_class",))
         import_functions.import_objects(db_map, (("my_class", "my_object"),))
-        import_functions.import_metadata(db_map, (("metaname", "metavalue"),))
+        import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger)
@@ -232,7 +232,7 @@ class TestAddOrUpdateItems(unittest.TestCase):
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
         with signal_waiter(self._db_mngr.entity_metadata_added) as waiter:
             self._db_mngr.add_or_update_items(
-                db_map_data, "add_entity_metadata", "ext_entity_metadata", "entity_metadata_added"
+                db_map_data, "add_entity_metadata", "entity_metadata", "entity_metadata_added"
             )
             waiter.wait()
             self.assertEqual(waiter.args, ({db_map: [{"id": 1, "entity_id": 1, "metadata_id": 1, "commit_id": None}]},))

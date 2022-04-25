@@ -16,30 +16,23 @@ Contains :class:`MetadataTableModel` and associated functionality.
 :date:   7.2.2022
 """
 from enum import IntEnum, unique
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
+from PySide2.QtCore import QModelIndex, Qt
 from spinetoolbox.helpers import rows_to_row_count_tuples, FetchParent
-from .colors import FIXED_FIELD_COLOR
+from .metadata_table_model_base import Column, FLAGS_FIXED, FLAGS_EDITABLE, MetadataTableModelBase
 
 
 @unique
-class Column(IntEnum):
-    """Identifiers for table columns."""
+class ExtraColumn(IntEnum):
+    """Identifiers for hidden table columns."""
 
-    NAME = 0
-    VALUE = 1
-    DB_MAP = 2
-    ID = 3
+    ID = Column.max() + 1
 
 
-HEADER = "name", "value", "db_map"
-FLAGS_FIXED = Qt.ItemIsEnabled | Qt.ItemIsSelectable
-FLAGS_EDITABLE = FLAGS_FIXED | Qt.ItemIsEditable
-
-
-class MetadataTableModel(QAbstractTableModel, FetchParent):
+class MetadataTableModel(MetadataTableModelBase, FetchParent):
     """Model for metadata."""
 
-    msg_error = Signal(str)
+    _ITEM_NAME_KEY = "name"
+    _ITEM_VALUE_KEY = "value"
 
     def __init__(self, db_mngr, db_maps, parent=None):
         """
@@ -48,151 +41,27 @@ class MetadataTableModel(QAbstractTableModel, FetchParent):
             db_maps (Iterable of DatabaseMappingBase): database maps
             parent (QObject): parent object
         """
-        super().__init__(parent)
-        self._db_mngr = db_mngr
-        self._data = []
-        self._db_maps = db_maps
-        default_db_map = next(iter(db_maps)) if db_maps else None
-        self._adder_row = self._make_adder_row(default_db_map)
+        super().__init__(db_mngr, db_maps, parent)
 
     @staticmethod
-    def _make_adder_row(default_db_map):
-        return ["", "", default_db_map, None]
+    def _make_hidden_adder_columns():
+        """See base class."""
+        return [None]
 
-    def set_db_maps(self, db_maps):
-        self.beginResetModel()
-        self._db_maps = db_maps
-        new_data = [row for row in self._data if row[Column.DB_MAP] in db_maps]
-        self._data = new_data
-        default_db_map = next(iter(db_maps)) if db_maps else None
-        self._adder_row = self._make_adder_row(default_db_map)
-        self.endResetModel()
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self._data) + 1
-
-    def columnCount(self, parent=QModelIndex()):
-        return 3
-
-    def data(self, index, role=Qt.DisplayRole):
-        column = index.column()
-        row = index.row()
-        if role == Qt.DisplayRole:
-            if column == Column.DB_MAP:
-                db_map = self._data[row][column] if row < len(self._data) else self._adder_row[column]
-                return db_map.codename if db_map is not None else ""
-            return self._data[row][column] if row < len(self._data) else self._adder_row[column]
-        if (
-            role == Qt.BackgroundRole
-            and column == Column.DB_MAP
-            and row < len(self._data)
-            and self._data[row][Column.ID] is not None
-        ):
-            return FIXED_FIELD_COLOR
-        return None
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation != Qt.Horizontal or role != Qt.DisplayRole:
-            return None
-        return HEADER[section]
-
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
-            return False
-        column = index.column()
-        row = index.row()
-        data_length = len(self._data)
-        target_row = self._data[row] if row < data_length else self._adder_row
-        if column == Column.DB_MAP:
-            match = None
-            for db_map in self._db_maps:
-                if value == db_map.codename:
-                    match = db_map
-                    break
-            value = match
-        if value == target_row[column]:
-            return False
-        reserved = self._reserved_metadata()
-        previous_value = target_row[column]
-        target_row[column] = value
-        name = target_row[Column.NAME]
-        value = target_row[Column.VALUE]
-        db_map = target_row[Column.DB_MAP]
-        if not name or not value or db_map is None:
-            self.dataChanged.emit(index, index, [Qt.DisplayRole])
-            return True
-        if reserved.get(db_map, {}).get(name) == value:
-            target_row[column] = previous_value
-            self.msg_error.emit("Duplicate metadata name and value.")
-            return False
-        id_ = target_row[Column.ID]
-        if id_ is not None:
-            self._db_mngr.update_metadata({db_map: [{"id": id_, "name": name, "value": value}]})
-            return True
+    def _add_data_to_db_mngr(self, name, value, db_map):
+        """See base class."""
         self._db_mngr.add_metadata({db_map: [{"name": name, "value": value}]})
-        if row == data_length:
-            if db_map is None:
-                db_map = next(iter(self._db_maps)) if self._db_maps else None
-            self._adder_row = self._make_adder_row(db_map)
-            top_left = self.index(data_length, 0)
-            bottom_right = self.index(data_length, Column.DB_MAP)
-            self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
-        return True
 
-    def batch_set_data(self, indexes, values):
-        rows = []
-        columns = []
-        previous_values = []
-        data_length = len(self._data)
-        available_codenames = {db_map.codename for db_map in self._db_maps}
-        reserved = self._reserved_metadata()
-        for index, value in zip(indexes, values):
-            column = index.column()
-            if column == Column.DB_MAP and value not in available_codenames:
-                continue
-            row = index.row()
-            data_row = self._data[row] if row < data_length else self._adder_row
-            previous_values.append(data_row[column])
-            data_row[column] = value
-            rows.append(row)
-            columns.append(column)
-        metadata_to_add = {}
-        metadata_to_update = {}
-        duplicates_found = False
-        for i, row in enumerate(rows):
-            data_row = self._data[row] if row < data_length else self._adder_row
-            name = data_row[Column.NAME]
-            if not name:
-                continue
-            value = data_row[Column.VALUE]
-            if not value:
-                continue
-            db_map = data_row[Column.DB_MAP]
-            if db_map is None:
-                continue
-            if reserved.get(db_map, {}).get(name) == value:
-                data_row[columns[i]] = previous_values[i]
-                duplicates_found = True
-                continue
-            if row == data_length:
-                self._adder_row = self._make_adder_row(db_map)
-            id_ = data_row[Column.ID]
-            if id_ is not None:
-                metadata_to_update.setdefault(db_map, []).append({"name": name, "value": value, "id": id_})
-            else:
-                metadata_to_add.setdefault(db_map, []).append({"name": name, "value": value})
-        if metadata_to_add:
-            self._db_mngr.add_metadata(metadata_to_add)
-        if metadata_to_update:
-            self._db_mngr.update_metadata(metadata_to_update)
-        if rows:
-            top_left = self.index(min(rows), min(columns))
-            bottom_right = self.index(max(rows), max(columns))
-            self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
-        if duplicates_found:
-            self.msg_error.emit("Duplicate metadata names and values.")
+    def _update_data_in_db_mngr(self, id_, name, value, db_map):
+        """See base class"""
+        self._db_mngr.update_metadata({db_map: [{"id": id_, "name": name, "value": value}]})
 
     def roll_back(self, db_maps):
+        """Rolls back changes in database.
+
+        Args:
+            db_maps (Iterable of DiffDatabaseMapping): database mappings that have been rolled back
+        """
         spans = rows_to_row_count_tuples(
             i for db_map in db_maps for i, row in enumerate(self._data) if row[Column.DB_MAP] == db_map
         )
@@ -204,39 +73,18 @@ class MetadataTableModel(QAbstractTableModel, FetchParent):
             self.endRemoveRows()
         self.fetchMore(QModelIndex())
 
-    def insertRows(self, row, count, parent=QModelIndex()):
-        row = min(row, len(self._data))
-        if self._data:
-            db_map_row = row - 1 if row > 0 else 0
-            db_map = self._data[db_map_row][Column.DB_MAP]
-        else:
-            db_map = next(iter(self._db_maps)) if self._db_maps else None
-        added = [["", "", db_map, None] for _ in range(count)]
-        self.beginInsertRows(parent, row, row + count - 1)
-        self._data = self._data[:row] + added + self._data[row:]
-        self.endInsertRows()
-        return True
+    def _database_table_name(self):
+        """See base class"""
+        return "metadata"
 
-    def removeRows(self, row, count, parent=QModelIndex()):
-        if row == len(self._data):
-            return False
-        count = min(count, len(self._data) - row)
-        ids_to_remove = {}
-        for i, row in enumerate(self._data[row : row + count]):
-            if row[Column.ID] is not None:
-                ids_to_remove.setdefault(row[Column.DB_MAP], {}).setdefault("metadata", set()).add(row[Column.ID])
-            else:
-                self.beginRemoveRows(parent, i, i + count - 1)
-                del self._data[i]
-                self.endRemoveRows()
-        if ids_to_remove:
-            self._db_mngr.remove_items(ids_to_remove)
-        return True
+    def _row_id(self, row):
+        """See base class."""
+        return row[ExtraColumn.ID]
 
     def flags(self, index):
         row = index.row()
         column = index.column()
-        if column == Column.DB_MAP and row < len(self._data) and self._data[row][Column.ID] is not None:
+        if column == Column.DB_MAP and row < len(self._data) and self._data[row][ExtraColumn.ID] is not None:
             return FLAGS_FIXED
         return FLAGS_EDITABLE
 
@@ -251,41 +99,41 @@ class MetadataTableModel(QAbstractTableModel, FetchParent):
         for db_map in self._db_maps:
             self._db_mngr.fetch_more(db_map, self)
 
+    @staticmethod
+    def _ids_from_added_item(item):
+        """See base class."""
+        return item["id"]
+
+    @staticmethod
+    def _extra_cells_from_added_item(item):
+        """See base class."""
+        return [item["id"]]
+
+    def _set_extra_columns(self, row, ids):
+        """See base class."""
+        row[ExtraColumn.ID] = ids
+
     def add_metadata(self, db_map_data):
-        """Adds new metadata from database manager to the model."""
-        id_update_rows = set()
-        for db_map, items in db_map_data.items():
-            ids = {}
-            for item in items:
-                ids.setdefault(item["name"], {})[item["value"]] = item["id"]
-            for i, row in enumerate(self._data):
-                if row[Column.DB_MAP] != db_map:
-                    continue
-                id_ = ids.get(row[Column.NAME], {}).pop(row[Column.VALUE], None)
-                if id_ is None:
-                    continue
-                row[Column.ID] = id_
-                id_update_rows.add(i)
-            ids_to_insert = {id_ for ids_by_name in ids.values() for id_ in ids_by_name.values()}
-            if ids_to_insert:
-                added = [[i["name"], i["value"], db_map, i["id"]] for i in items if i["id"] in ids_to_insert]
-                first = len(self._data)
-                self.beginInsertRows(QModelIndex(), first, first + len(added) - 1)
-                self._data += added
-                self.endInsertRows()
-        if id_update_rows:
-            top_left = self.index(min(id_update_rows), Column.DB_MAP)
-            bottom_right = self.index(max(id_update_rows), Column.DB_MAP)
-            self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
+        """Adds new metadata from database manager to the model.
+
+        Args:
+            db_map_data (dict): added metadata items keyed by database mapping
+        """
+        self._add_data(db_map_data)
 
     def update_metadata(self, db_map_data):
+        """Updates model according to data received from database manager.
+
+        Args:
+            db_map_data (dict): updated metadata items keyed by database mapping
+        """
         for db_map, items in db_map_data.items():
             items_by_id = {item["id"]: item for item in items}
             updated_rows = []
             for row_index, row in enumerate(self._data):
-                if row[Column.ID] is None:
+                if row[ExtraColumn.ID] is None:
                     continue
-                db_item = items_by_id.get(row[Column.ID])
+                db_item = items_by_id.get(row[ExtraColumn.ID])
                 if db_item is None:
                     continue
                 if row[Column.NAME] != db_item["name"]:
@@ -300,41 +148,31 @@ class MetadataTableModel(QAbstractTableModel, FetchParent):
                 self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
 
     def remove_metadata(self, db_map_data):
-        for db_map, items in db_map_data.items():
-            ids_to_remove = {item["id"] for item in items}
-            removed_rows = []
-            for row_index, row in enumerate(self._data):
-                if row[Column.ID] is None:
-                    continue
-                if row[Column.ID] not in ids_to_remove:
-                    continue
-                removed_rows.append(row_index)
-            if removed_rows:
-                spans = rows_to_row_count_tuples(removed_rows)
-                for row, count in spans:
-                    self.beginRemoveRows(QModelIndex(), row, row + count - 1)
-                    self._data = self._data[:row] + self._data[row + count :]
-                    self.endRemoveRows()
+        """Removes metadata from model after it has been removed from databases.
 
-    def sort(self, column, order=Qt.AscendingOrder):
-        if not self._data or column < 0:
-            return
-        self._data.sort(key=lambda row: row[column], reverse=order == Qt.DescendingOrder)
-        top_left = self.index(0, 0)
-        bottom_right = self.index(len(self._data) - 1, Column.DB_MAP)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+        Args:
+            db_map_data (dict): removed items keyed by database mapping
+        """
+        self._remove_data(db_map_data, ExtraColumn.ID)
 
-    def _reserved_metadata(self):
-        reserved = {}
+    def add_and_update_metadata(self, db_map_data):
+        """Adds and updates metadata after changes in database.
+
+        Args:
+            db_map_data (dict): changed items keyed by database mapping
+        """
+        existing_ids = {}
         for row in self._data:
-            db_map = row[Column.DB_MAP]
-            if db_map is None:
-                continue
-            name = row[Column.NAME]
-            if not name:
-                continue
-            value = row[Column.VALUE]
-            if not value:
-                continue
-            reserved.setdefault(db_map, {})[name] = value
-        return reserved
+            id_ = row[ExtraColumn.ID]
+            if id_ is not None:
+                existing_ids.setdefault(row[Column.DB_MAP], set()).add(id_)
+        updated = {}
+        added = {}
+        for db_map, items in db_map_data.items():
+            for item in items:
+                if item["id"] in existing_ids[db_map]:
+                    updated.setdefault(db_map, []).append(item)
+                else:
+                    added.setdefault(db_map, []).append(item)
+        self.update_metadata(updated)
+        self.add_metadata(added)

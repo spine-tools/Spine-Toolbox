@@ -20,11 +20,13 @@ from ..mvcmodels.metadata_table_model import MetadataTableModel
 
 
 class MetadataEditor:
+    """A DB editor helper class that manages metadata editor."""
+
     def __init__(self, metadata_table_view, db_editor, db_mngr):
         """
         Args:
             metadata_table_view (MetadataTableView): editor's view
-            db_editor (SpineDBEditor) database editor
+            db_editor (SpineDBEditor): database editor
             db_mngr (SpineDBManager): database manager
         """
         self._db_editor = db_editor
@@ -35,20 +37,68 @@ class MetadataEditor:
         self._metadata_table_view.connect_spine_db_editor(db_editor)
 
     def connect_signals(self, ui):
+        """Connects user interface signals.
+
+        Args:
+            ui (Ui_MainWindow): DB editor's user interface
+        """
         self._metadata_table_model.msg_error.connect(self._db_editor.msg_error)
 
     def init_models(self, db_maps):
+        """Initializes editor's models.
+
+        Args:
+            db_maps (Iterable of DiffDatabaseMapping): database mappings
+        """
         self._metadata_table_model.set_db_maps(db_maps)
         self._metadata_table_model.fetchMore(QModelIndex())
 
+    def metadata_model(self):
+        """Returns metadata model.
+
+        Returns:
+            MetadataModel: model
+        """
+        return self._metadata_table_model
+
     def add_metadata(self, db_map_data):
+        """Adds metadata.
+
+        Args:
+            db_map_data (dict): added metadata records
+        """
         self._metadata_table_model.add_metadata(db_map_data)
 
     def update_metadata(self, db_map_data):
+        """Updates metadata.
+
+        Args:
+            db_map_data (dict): updated metadata records
+        """
         self._metadata_table_model.update_metadata(db_map_data)
 
     def remove_metadata(self, db_map_data):
+        """Removes entries corresponding to removed metadata from the model.
+
+        Args:
+            db_map_data (dict): removed metadata records
+        """
         self._metadata_table_model.remove_metadata(db_map_data)
 
+    def add_and_update_metadata(self, db_map_data):
+        """Adds and updates metadata.
+
+        Combined metadata additions and updates may happen when item metadata has been updated.
+
+        Args:
+            db_map_data (dict): removed metadata records
+        """
+        self._metadata_table_model.add_and_update_metadata(db_map_data)
+
     def roll_back(self, db_maps):
+        """Rolls back database changes.
+
+        Args:
+            db_maps (Iterable of DiffDatabaseMapping): rolled back databases
+        """
         self._metadata_table_model.roll_back(db_maps)

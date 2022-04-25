@@ -27,7 +27,7 @@ from ..mvcmodels.pivot_table_models import (
     IndexExpansionPivotTableModel,
     ScenarioAlternativePivotTableModel,
 )
-from ..mvcmodels.metadata_table_model import Column as MetadataColumn
+from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
@@ -51,6 +51,7 @@ from .custom_delegates import (
     RelationshipClassNameDelegate,
     ObjectNameListDelegate,
     AlternativeNameDelegate,
+    ItemMetadataDelegate,
 )
 
 
@@ -855,8 +856,14 @@ class FrozenTableView(QTableView):
         self.header_dropped.emit(event.source(), self)
 
 
-class MetadataTableView(CopyPasteTableView):
+class MetadataTableViewBase(CopyPasteTableView):
+    """Base for metadata and item metadata table views."""
+
     def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget, optional): parent widget
+        """
         super().__init__(parent)
         self.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
         self._menu = QMenu(self)
@@ -875,6 +882,7 @@ class MetadataTableView(CopyPasteTableView):
         self._menu.exec_(menu_position)
 
     def _remove_selected(self):
+        """Removes selected rows from view's model."""
         selected = self.selectionModel().selectedIndexes()
         if len(selected) == 1:
             self.model().removeRow(selected[0].row())
@@ -884,12 +892,18 @@ class MetadataTableView(CopyPasteTableView):
             self.model().removeRows(span[0], span[1])
 
     def _enable_delegates(self, db_editor):
-        """Creates delegates for this view"""
-        delegate = DatabaseNameDelegate(self, db_editor.db_mngr)
-        self.setItemDelegateForColumn(MetadataColumn.DB_MAP, delegate)
-        delegate.data_committed.connect(self._set_model_data)
+        """Creates delegates for this view
+
+        Args:
+            db_editor (SpineDBEditor): database editor
+        """
 
     def _populate_context_menu(self, db_editor):
+        """Fills context menu with actions.
+
+        Args:
+            db_editor (SpineDBEditor): database editor
+        """
         self._menu.addAction(db_editor.ui.actionCopy)
         self._menu.addAction(db_editor.ui.actionPaste)
         self._menu.addSeparator()
@@ -897,8 +911,57 @@ class MetadataTableView(CopyPasteTableView):
 
     @Slot(QModelIndex, str)
     def _set_model_data(self, index, value):
+        """Sets model data.
+
+        Args:
+            index (QModelIndex): model index to set
+            value (str): value
+        """
         self.model().setData(index, value)
 
 
-class ItemMetadataTableView(CopyPasteTableView):
-    pass
+class MetadataTableView(MetadataTableViewBase):
+    """Table view for metadata."""
+
+    def _enable_delegates(self, db_editor):
+        """See base class."""
+        delegate = DatabaseNameDelegate(self, db_editor.db_mngr)
+        self.setItemDelegateForColumn(MetadataColumn.DB_MAP, delegate)
+        delegate.data_committed.connect(self._set_model_data)
+
+
+class ItemMetadataTableView(MetadataTableViewBase):
+    """Table view for entity and parameter value metadata."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
+        super().__init__(parent)
+        self._item_metadata_model = None
+        self._metadata_model = None
+
+    def set_models(self, item_metadata_model, metadata_model):
+        """Sets models.
+
+        Args:
+            item_metadata_model (ItemMetadataModel): item metadata model
+            metadata_model (MetadataTableModel): metadata model
+        """
+        self._item_metadata_model = item_metadata_model
+        self._metadata_model = metadata_model
+
+    def _enable_delegates(self, db_editor):
+        """See base class"""
+        name_column_delegate = ItemMetadataDelegate(
+            self._item_metadata_model, self._metadata_model, MetadataColumn.NAME, self
+        )
+        self.setItemDelegateForColumn(MetadataColumn.NAME, name_column_delegate)
+        value_column_delegate = ItemMetadataDelegate(
+            self._item_metadata_model, self._metadata_model, MetadataColumn.VALUE, self
+        )
+        self.setItemDelegateForColumn(MetadataColumn.VALUE, value_column_delegate)
+        database_column_delegate = DatabaseNameDelegate(self, db_editor.db_mngr)
+        self.setItemDelegateForColumn(MetadataColumn.DB_MAP, database_column_delegate)
+        database_column_delegate.data_committed.connect(self._set_model_data)

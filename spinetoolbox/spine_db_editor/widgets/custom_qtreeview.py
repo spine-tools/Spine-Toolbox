@@ -82,10 +82,6 @@ class EntityTreeView(CopyTreeView):
         self._menu.addSeparator()
         self._add_middle_actions()
         self._menu.addSeparator()
-        self._show_entity_metadata_action = self._menu.addAction(
-            QIcon(CharIconEngine("\uf4ad")), "View metadata", self.show_entity_metadata
-        )
-        self._menu.addSeparator()
         self._edit_action = self._menu.addAction(self._cube_pen_icon, "Edit...", self.edit_selected)
         self._remove_action = self._menu.addAction(self._cube_minus_icon, "Remove...", self.remove_selected)
         self._menu.addSeparator()
@@ -193,17 +189,6 @@ class EntityTreeView(CopyTreeView):
 
     def manage_relationships(self):
         self._spine_db_editor.show_manage_relationships_form(self._context_item)
-
-    def show_entity_metadata(self):
-        """Shows entity's metadata."""
-        db_map_ids = {}
-        for index in set(self._selected_indexes.get("object", {})) | set(
-            self._selected_indexes.get("relationship", {})
-        ):
-            item = self.model().item_from_index(index)
-            for db_map, id_ in item.db_map_ids.items():
-                db_map_ids.setdefault(db_map, list()).append(id_)
-        self._spine_db_editor.show_db_map_entity_metadata(db_map_ids)
 
     def contextMenuEvent(self, event):
         """Shows context menu.

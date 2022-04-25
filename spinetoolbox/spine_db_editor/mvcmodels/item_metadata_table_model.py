@@ -15,23 +15,59 @@ Contains :class:`ItemMetadataTableModel` and associated functionality.
 :author: A. Soininen (VTT)
 :date:   25.3.2022
 """
+from enum import auto, Enum, IntEnum, unique
+
 from PySide2.QtCore import QModelIndex
 
-from spinetoolbox.mvcmodels.empty_row_model import EmptyRowModel
+from spinetoolbox.helpers import rows_to_row_count_tuples
+from .metadata_table_model_base import Column, FLAGS_EDITABLE, FLAGS_FIXED, MetadataTableModelBase
 
 
-class ItemMetadataTableModel(EmptyRowModel):
+@unique
+class ExtraColumn(IntEnum):
+    """Identifiers for hidden table columns."""
+
+    ITEM_METADATA_ID = Column.max() + 1
+    METADATA_ID = Column.max() + 2
+
+
+@unique
+class ItemType(Enum):
+    """Allowed item types."""
+
+    ENTITY = auto()
+    VALUE = auto()
+
+
+class ItemMetadataTableModel(MetadataTableModelBase):
     """Model for entity and parameter value metadata."""
 
-    def __init__(self, db_mngr, parent=None):
+    _ITEM_NAME_KEY = "metadata_name"
+    _ITEM_VALUE_KEY = "metadata_value"
+
+    def __init__(self, db_mngr, db_maps, parent=None):
         """
         Args:
             db_mngr (SpineDBManager): database manager
+            db_maps (Iterable of DatabaseMappingBase): database maps
             parent (QObject): parent object
         """
-        super().__init__(parent, ["name", "value"])
-        self._db_mngr = db_mngr
-        self._db_map_ids = {}
+        super().__init__(db_mngr, db_maps, parent)
+        self._item_type = None
+        self._item_ids = {}
+
+    def clear(self):
+        """Clears the model."""
+        self.beginResetModel()
+        self._item_ids = {}
+        self._data = []
+        self._adder_row = self._make_adder_row(None)
+        self.endResetModel()
+
+    @staticmethod
+    def _make_hidden_adder_columns():
+        """See base class."""
+        return [None, None]
 
     def set_entity_ids(self, db_map_ids):
         """Sets the model to show metadata from given entity.
@@ -39,85 +75,183 @@ class ItemMetadataTableModel(EmptyRowModel):
         Args:
             db_map_ids (dict): mapping from database mapping to entity's id in that database
         """
-        self._db_map_ids = db_map_ids
         metadata = {
-            db_map.codename: self._db_mngr.get_metadata_per_entity(db_map, [entity_id])
-            for db_map, entity_id in db_map_ids.items()
+            db_map: self._db_mngr.get_entity_metadata(db_map, entity_id) for db_map, entity_id in db_map_ids.items()
         }
-        data = [
-            [name, value, codename]
-            for codename, entity_metadata in metadata.items()
-            for item in entity_metadata.values()
-            for name, value in item.items()
+        self._reset_metadata(ItemType.ENTITY, db_map_ids, metadata)
+
+    def set_parameter_value_ids(self, db_map_ids):
+        """Sets the model to show metadata from given parameter value.
+
+        Args:
+            db_map_ids (dict): mapping from database mapping to value's id in that database
+        """
+        metadata = {
+            db_map: self._db_mngr.get_parameter_value_metadata(db_map, id_) for db_map, id_ in db_map_ids.items()
+        }
+        self._reset_metadata(ItemType.VALUE, db_map_ids, metadata)
+
+    def _reset_metadata(self, item_type, db_map_ids, metadata):
+        """Resets model.
+
+        Args:
+            item_type (ItemType): current item type
+            db_map_ids (dict): mapping from database mapping to value's id in that database
+            metadata (dict): mapping from database mapping to metadata records
+        """
+        self.beginResetModel()
+        self._item_type = item_type
+        self._item_ids = dict(db_map_ids)
+        self._db_maps = set(db_map_ids.keys())
+        default_db_map = next(iter(self._db_maps)) if self._db_maps else None
+        self._adder_row = self._make_adder_row(default_db_map)
+        self._data = [
+            [record.metadata_name, record.metadata_value, db_map, record.id, record.metadata_id]
+            for db_map, records in metadata.items()
+            for record in records
         ]
-        self.default_row = {"database": list(metadata.keys())[-1]}
-        self.reset_model(data)
+        if db_map_ids:
+            db_map = next(iter(db_map_ids))
+        elif self._db_maps:
+            db_map = next(iter(self._db_maps))
+        else:
+            db_map = None
+        self._adder_row = self._make_adder_row(db_map)
+        self.endResetModel()
 
-    def batch_set_data(self, indexes, data):
+    def _add_data_to_db_mngr(self, name, value, db_map):
         """See base class."""
-        if not super().batch_set_data(indexes, data):
-            return False
-        rows = {ind.row() for ind in indexes}
-        db_map_data = self._make_db_map_data(rows)
-        self.add_items_to_db(db_map_data)
-        return True
+        item_id = self._item_ids[db_map]
+        if self._item_type == ItemType.ENTITY:
+            self._db_mngr.add_entity_metadata(
+                {db_map: [{"entity_id": item_id, "metadata_name": name, "metadata_value": value}]}
+            )
+        else:
+            self._db_mngr.add_parameter_value_metadata(
+                {db_map: [{"parameter_value_id": item_id, "metadata_name": name, "metadata_value": value}]}
+            )
 
-    def _make_metadata_db_map_data(self, rows):
-        """Makes database add/update data for given rows.
+    def _update_data_in_db_mngr(self, id_, name, value, db_map):
+        """See base class"""
+        if self._item_type == ItemType.ENTITY:
+            self._db_mngr.update_entity_metadata(
+                {db_map: [{"id": id_, "metadata_name": name, "metadata_value": value}]}
+            )
+        else:
+            self._db_mngr.update_parameter_value_metadata(
+                {db_map: [{"id": id_, "metadata_name": name, "metadata_value": value}]}
+            )
+
+    def roll_back(self, db_maps):
+        """Rolls back changes in database.
 
         Args:
-            rows (Iterable of int): rows for which to make the data
-
-        Returns:
-            list of dict: add/update data
+            db_maps (Iterable of DiffDatabaseMapping): database mappings that have been rolled back
         """
-        db_map_data = []
-        for row in rows:
-            row_data = self._main_data[row]
-            if any(element is None for element in row_data):
+        spans = rows_to_row_count_tuples(
+            i for db_map in db_maps for i, row in enumerate(self._data) if row[Column.DB_MAP] == db_map
+        )
+        for span in spans:
+            first = span[0]
+            last = span[0] + span[1] - 1
+            self.beginRemoveRows(QModelIndex(), first, last)
+            self._data = self._data[:first] + self._data[last + 1 :]
+            self.endRemoveRows()
+        if self._item_type == ItemType.ENTITY:
+            get_item_metadata = self._db_mngr.get_entity_metadata
+        else:
+            get_item_metadata = self._db_mngr.get_parameter_value_metadata
+        metadata = {}
+        for db_map in db_maps:
+            id_ = self._item_ids.get(db_map)
+            if id_ is None:
                 continue
-            db_map_data.append({row_data[0]: row_data[1]})
-        return db_map_data
+            metadata.update({db_map: get_item_metadata(db_map, id_)})
+        if not metadata:
+            return
+        rolled_back_data = [
+            [record.metadata_name, record.metadata_value, db_map, record.id, record.metadata_id]
+            for db_map, records in metadata.items()
+            for record in records
+        ]
+        self.beginInsertRows(QModelIndex(), len(self._data), len(self._data) + len(rolled_back_data) - 1)
+        self._data += rolled_back_data
+        self.endInsertRows()
 
-    def add_items_to_db(self, db_map_data):
-        """Adds items to db.
+    def flags(self, index):
+        row = index.row()
+        column = index.column()
+        if column == Column.DB_MAP and row < len(self._data):
+            data_row = self._data[row]
+            if data_row[ExtraColumn.ITEM_METADATA_ID] is not None and data_row[ExtraColumn.METADATA_ID] is not None:
+                return FLAGS_FIXED
+        return FLAGS_EDITABLE
+
+    @staticmethod
+    def _ids_from_added_item(item):
+        """See base class."""
+        return item["id"], item["metadata_id"]
+
+    @staticmethod
+    def _extra_cells_from_added_item(item):
+        """See base class."""
+        return [item["id"], item["metadata_id"]]
+
+    def _set_extra_columns(self, row, ids):
+        """See base class."""
+        row[ExtraColumn.ITEM_METADATA_ID] = ids[0]
+        row[ExtraColumn.METADATA_ID] = ids[1]
+
+    def _database_table_name(self):
+        """See base class"""
+        return "entity_metadata" if self._item_type == ItemType.ENTITY else "parameter_value_metadata"
+
+    def _row_id(self, row):
+        """See base class."""
+        return row[ExtraColumn.ITEM_METADATA_ID]
+
+    def add_item_metadata(self, db_map_data):
+        """Adds new item metadata from database manager to the model.
 
         Args:
-            db_map_data (dict): mapping DiffDatabaseMapping instance to list of items
+            db_map_data (dict): added items keyed by database mapping
         """
-        self.build_lookup_dictionary(db_map_data)
-        db_map_param_def = dict()
-        db_map_error_log = dict()
+        self._add_data(db_map_data)
+
+    def update_item_metadata(self, db_map_data):
+        """Updates item metadata in model after it has been updated in databases.
+
+        Args:
+            db_map_data (dict): updated metadata records
+        """
         for db_map, items in db_map_data.items():
             for item in items:
-                def_item, errors = self._convert_to_db(item, db_map)
-                if self._check_item(def_item):
-                    db_map_param_def.setdefault(db_map, []).append(def_item)
-                if errors:
-                    db_map_error_log.setdefault(db_map, []).extend(errors)
-        if any(db_map_param_def.values()):
-            self.db_mngr.add_parameter_definitions(db_map_param_def)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)
+                for row in self._data:
+                    if db_map != row[Column.DB_MAP] or item["id"] != row[ExtraColumn.ITEM_METADATA_ID]:
+                        continue
+                    row[ExtraColumn.METADATA_ID] = item["metadata_id"]
+                    break
 
-    def update_items_in_db(self, items):
-        """Updates items in db.
+    def remove_item_metadata(self, db_map_data):
+        """Removes item metadata from model after it has been removed from databases.
 
         Args:
-            items (list): dictionary-items
+            db_map_data (dict): removed items keyed by database mapping
         """
-        parameter_values = list()
-        error_log = list()
-        db_map_data = dict()
-        db_map_data[self.db_map] = items
-        self.build_lookup_dictionary(db_map_data)
-        for item in items:
-            param_val, errors = self._convert_to_db(item, self.db_map)
-            if tuple(param_val.keys()) != ("id",):
-                parameter_values.append(param_val)
-            if errors:
-                error_log += errors
-        if parameter_values:
-            self.db_mngr.update_parameter_values({self.db_map: parameter_values})
-        if error_log:
-            self.db_mngr.error_msg.emit({self.db_map: error_log})
+        self._remove_data(db_map_data, ExtraColumn.ITEM_METADATA_ID)
+
+    def update_metadata(self, db_map_data):
+        """Updates metadata.
+
+        Args:
+            db_map_data (dict): updated items keyed by database mapping
+        """
+        self._update_data(db_map_data, ExtraColumn.METADATA_ID)
+
+    def remove_metadata(self, db_map_data):
+        """Removes entries that correspond to removed metadata.
+
+        Args:
+            db_map_data (dict): removed items keyed by database mapping
+        """
+        self._remove_data(db_map_data, ExtraColumn.METADATA_ID)

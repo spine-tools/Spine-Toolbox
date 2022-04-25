@@ -18,7 +18,7 @@ QUndoCommand subclasses for modifying the db.
 
 import time
 from PySide2.QtWidgets import QUndoCommand, QUndoStack
-from spinetoolbox.helpers import signal_waiter
+from spinetoolbox.helpers import signal_waiter, separate_metadata_and_item_metadata
 
 
 class AgedUndoStack(QUndoStack):
@@ -78,6 +78,8 @@ class SpineDBCommand(AgedUndoCommand):
         "tool_feature": "add tool features",
         "tool_feature_method": "add tool feature methods",
         "metadata": "add metadata",
+        "entity_metadata": "add entity metadata",
+        "parameter_value_metadata": "add parameter value metadata",
     }
     _update_command_name = {
         "object_class": "update object classes",
@@ -95,6 +97,8 @@ class SpineDBCommand(AgedUndoCommand):
         "tool_feature": "update tool features",
         "tool_feature_method": "update tool feature methods",
         "metadata": "update metadata",
+        "entity_metadata": "update entity metadata",
+        "parameter_value_metadata": "update parameter value metadata",
     }
     _add_method_name = {
         "object_class": "add_object_classes",
@@ -114,6 +118,8 @@ class SpineDBCommand(AgedUndoCommand):
         "tool_feature": "add_tool_features",
         "tool_feature_method": "add_tool_feature_methods",
         "metadata": "add_metadata",
+        "entity_metadata": "add_ext_entity_metadata",
+        "parameter_value_metadata": "add_ext_parameter_value_metadata",
     }
     _update_method_name = {
         "object_class": "update_object_classes",
@@ -132,6 +138,8 @@ class SpineDBCommand(AgedUndoCommand):
         "tool_feature": "update_tool_features",
         "tool_feature_method": "update_tool_feature_methods",
         "metadata": "update_metadata",
+        "entity_metadata": "update_ext_entity_metadata",
+        "parameter_value_metadata": "update_ext_parameter_value_metadata",
     }
     _added_signal_name = {
         "object_class": "object_classes_added",
@@ -151,6 +159,8 @@ class SpineDBCommand(AgedUndoCommand):
         "tool_feature": "tool_features_added",
         "tool_feature_method": "tool_feature_methods_added",
         "metadata": "metadata_added",
+        "entity_metadata": "entity_metadata_added",
+        "parameter_value_metadata": "parameter_value_metadata_added",
     }
     _updated_signal_name = {
         "object_class": "object_classes_updated",
@@ -169,6 +179,8 @@ class SpineDBCommand(AgedUndoCommand):
         "tool_feature": "tool_features_updated",
         "tool_feature_method": "tool_feature_methods_updated",
         "metadata": "metadata_updated",
+        "entity_metadata": "entity_metadata_updated",
+        "parameter_value_metadata": "parameter_value_metadata_updated",
     }
 
     def __init__(self, db_mngr, db_map, parent=None):
@@ -258,9 +270,11 @@ class AddItemsCommand(SpineDBCommand):
         self._readd = True
 
     def receive_items_changed(self, db_map_data):
-        if not db_map_data.get(self.db_map):
+        if self.db_map not in db_map_data:
             self.setObsolete(True)
             return
+        if self.item_type == "entity_metadata" or self.item_type == "parameter_value_metadata":
+            db_map_data, _ = separate_metadata_and_item_metadata(db_map_data)
         self.redo_db_map_data = {
             db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
         }
