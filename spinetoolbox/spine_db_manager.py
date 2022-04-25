@@ -43,6 +43,7 @@ from spinedb_api import (
     import_data,
     export_data,
 )
+from spinedb_api.parameter_value import load_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.helpers import CacheItem
@@ -1803,7 +1804,7 @@ class SpineDBManager(QObject):
             make_cache = lambda tablenames, db_map=db_map, **kwargs: self.get_db_map_cache(
                 db_map, item_types=tablenames, **kwargs
             )
-            for key, items in export_data(db_map, make_cache=make_cache, **item_ids).items():
+            for key, items in export_data(db_map, make_cache=make_cache, parse_value=load_db_value, **item_ids).items():
                 data.setdefault(key, []).extend(items)
         return data
 
