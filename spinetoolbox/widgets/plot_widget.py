@@ -17,11 +17,17 @@ A Qt widget showing a toolbar and a matplotlib plotting canvas.
 """
 
 import itertools
+import io
+import csv
+import numpy as np
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
 from PySide2.QtCore import QMetaObject, Qt
-from PySide2.QtWidgets import QVBoxLayout, QWidget
+from PySide2.QtWidgets import QVBoxLayout, QWidget, QMenu, QApplication
 from spinedb_api import IndexedValue, Map, TimeSeries
 from .plot_canvas import PlotCanvas
+from .custom_qtableview import CopyPasteTableView
+from ..mvcmodels.minimal_table_model import MinimalTableModel
+from ..helpers import busy_effect
 
 
 class PlotWidget(QWidget):
@@ -44,15 +50,66 @@ class PlotWidget(QWidget):
         self._toolbar = NavigationToolBar(self.canvas, self)
         self._layout.addWidget(self._toolbar)
         self._layout.addWidget(self.canvas)
+        self.all_labels = list()
         QMetaObject.connectSlotsByName(self)
 
     def closeEvent(self, event):
         """Removes the window from plot_windows and closes."""
-        for name, widget in PlotWidget.plot_windows.items():
-            if self is widget:
-                del PlotWidget.plot_windows[name]
-                break
+        closed = set(name for name, widget in PlotWidget.plot_windows.items() if widget is self)
+        for name in closed:
+            del PlotWidget.plot_windows[name]
         super().closeEvent(event)
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        menu.addAction("Show plot data...", self.show_plot_data)
+        menu.addAction("Copy plot data", self.copy_plot_data)
+        menu.exec_(event.globalPos())
+
+    def _get_plot_data(self, parent=None, document_name=""):
+        header = ["indexes"]
+        indexes = []
+        data_dicts = []
+        for line in self.canvas.axes.get_lines():
+            label = line.get_label()
+            xdata = line.get_xdata()
+            ydata = line.get_ydata()
+            header.append(label)
+            indexes.append(xdata)
+            data_dict = dict(zip(xdata, ydata))
+            data_dicts.append(data_dict)
+        all_indexes = np.unique(np.concatenate(indexes))
+        rows = [header]
+        for index in all_indexes:
+            row = [str(index)] + [str(data_dict.get(index, "")) for data_dict in data_dicts]
+            rows.append(row)
+        return rows
+
+    @busy_effect
+    def copy_plot_data(self, parent=None, document_name=""):
+        rows = self._get_plot_data()
+        with io.StringIO() as output:
+            writer = csv.writer(output, delimiter="\t", quotechar="'")
+            for row in rows:
+                writer.writerow(row)
+            QApplication.clipboard().setText(output.getvalue())
+
+    def show_plot_data(self, parent=None, document_name=""):
+        if parent is None:
+            parent = self
+        rows = self._get_plot_data()
+        widget = _PlotDataWidget(rows)
+        widget.setParent(parent)
+        widget.setWindowFlag(Qt.Window, True)
+        title = "Plot data"
+        if document_name:
+            title += f"\t-- {document_name} --"
+        widget.setWindowTitle(title)
+        widget.show()
+
+    def add_legend(self):
+        h, l = self.canvas.axes.get_legend_handles_labels()
+        self.canvas.legend_axes.legend(h, l, loc="upper center")
 
     def infer_plot_type(self, values):
         """Decides suitable plot_type according to a list of values."""
@@ -77,7 +134,10 @@ class PlotWidget(QWidget):
         """
         self.setParent(parent_window)
         self.setWindowFlag(Qt.Window, True)
-        self.setWindowTitle(f"Plot    -- {document_name} --")
+        title = "Plot"
+        if document_name:
+            title += f"\t-- {document_name} --"
+        self.setWindowTitle(title)
         PlotWidget.plot_windows[self._unique_window_name(document_name)] = self
 
     @staticmethod
@@ -89,6 +149,30 @@ class PlotWidget(QWidget):
             proposition = f"{document_name} ({i + 1})"
             if proposition not in PlotWidget.plot_windows:
                 return proposition
+
+
+class _PlotDataView(CopyPasteTableView):
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        menu.addAction("Select all", self.selectAll)
+        menu.addAction("Copy", self.copy).setEnabled(self.can_copy())
+        menu.exec_(event.globalPos())
+
+
+class _PlotDataWidget(QWidget):
+    def __init__(self, rows, parent=None):
+        super().__init__(parent=parent)
+        self.setWindowTitle("Plot data")
+        layout = QVBoxLayout(self)
+        self._view = _PlotDataView(self)
+        self._model = MinimalTableModel(self)
+        self._view.setModel(self._model)
+        self._model.reset_model(rows)
+        self._view.resizeColumnsToContents()
+        self._view.horizontalHeader().hide()
+        self._view.verticalHeader().hide()
+        layout.addWidget(self._view)
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
 
 def _prepare_plot_in_window_menu(menu):

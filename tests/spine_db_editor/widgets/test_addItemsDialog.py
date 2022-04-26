@@ -27,7 +27,6 @@ from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog
-from tests.mock_helpers import access_database
 
 
 class TestAddItemsDialog(unittest.TestCase):
@@ -83,9 +82,9 @@ class TestAddItemsDialog(unittest.TestCase):
         model.batch_set_data(indexes, values)
         dialog.accept()
         self._commit_changes_to_database("Add object class.")
-        with access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
-            self.assertEqual(len(db_access.data), 1)
-            self.assertEqual(db_access.data[0].name, "fish")
+        data = self._db_mngr.query(self._db_map, "object_class_sq")
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0].name, "fish")
 
     def test_do_not_add_object_classes_with_invalid_db(self):
         """Test object classes aren't added when the database is not correct."""

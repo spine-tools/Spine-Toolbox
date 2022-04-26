@@ -15,6 +15,7 @@ QUndoCommand subclasses for modifying the project.
 :authors: M. Marin (KTH)
 :date:   12.2.2020
 """
+
 from enum import IntEnum, unique
 from PySide2.QtWidgets import QUndoCommand
 from spine_engine.project_item.connection import Connection, Jump
@@ -28,11 +29,13 @@ class Id(IntEnum):
 
 
 class SpineToolboxCommand(QUndoCommand):
-    successfully_undone = False
-    """Flag to register the outcome of undoing a critical command, so toolbox can react afterwards."""
+    def __init__(self):
+        super().__init__()
+        self.successfully_undone = False
+        """Flag to register the outcome of undoing a critical command, so toolbox can react afterwards."""
 
-    @staticmethod
-    def is_critical():
+    @property
+    def is_critical(self):
         """Returns True if this command needs to be undone before
         closing the project without saving changes.
         """
@@ -176,7 +179,7 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     def undo(self):
         self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
         for connection_dict in self._connection_dicts:
-            self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
+            self._project.add_connection(self._project.connection_from_dict(connection_dict), silent=True)
 
 
 class RemoveProjectItemsCommand(SpineToolboxCommand):
@@ -198,6 +201,9 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
         connections = sum((self._project.connections_for_item(name) for name in item_names), [])
         unique_connections = {(c.source, c.destination): c for c in connections}.values()
         self._connection_dicts = [c.to_dict() for c in unique_connections]
+        jumps = sum((self._project.jumps_for_item(name) for name in item_names), [])
+        unique_jumps = {(c.source, c.destination): c for c in jumps}.values()
+        self._jump_dicts = [c.to_dict() for c in unique_jumps]
         if not item_names:
             self.setObsolete(True)
         elif len(item_names) == 1:
@@ -212,7 +218,9 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
     def undo(self):
         self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
         for connection_dict in self._connection_dicts:
-            self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
+            self._project.add_connection(self._project.connection_from_dict(connection_dict), silent=True)
+        for jump_dict in self._jump_dicts:
+            self._project.add_jump(self._project.jump_from_dict(jump_dict), silent=True)
 
 
 class RenameProjectItemCommand(SpineToolboxCommand):
@@ -239,8 +247,8 @@ class RenameProjectItemCommand(SpineToolboxCommand):
         box_title = f"Undoing '{self.text()}'"
         self.successfully_undone = self._project.rename_item(self._new_name, self._previous_name, box_title)
 
-    @staticmethod
-    def is_critical():
+    @property
+    def is_critical(self):
         return True
 
 
@@ -257,34 +265,32 @@ class AddConnectionCommand(SpineToolboxCommand):
         """
         super().__init__()
         self._project = project
-        self._source_name = source_name
-        self._destination_name = destination_name
-        self._connection_dict = Connection(
-            source_name, source_position, destination_name, destination_position
-        ).to_dict()
-        replaced_connection = self._project.find_connection(source_name, destination_name)
-        self._replaced_connection_dict = replaced_connection.to_dict() if replaced_connection is not None else None
-        self._connection_name = f"link from {source_name} to {destination_name}"
+        self._source_position = source_position
+        self._destination_position = destination_position
+        self._existing = self._project.find_connection(source_name, destination_name)
+        if self._existing is not None:
+            self._old_source_position = self._existing.source_position
+            self._old_destination_position = self._existing.destination_position
+            action = "update"
+        else:
+            conn_dict = Connection(source_name, source_position, destination_name, destination_position).to_dict()
+            self._connection = self._project.connection_from_dict(conn_dict)
+            action = "add"
+        connection_name = f"link from {source_name} to {destination_name}"
+        self.setText(f"{action} {connection_name}")
 
     def redo(self):
-        if self._replaced_connection_dict is None:
-            success = self._project.add_connection(Connection.from_dict(self._connection_dict))
-            if not success:
-                self.setObsolete(True)
-        else:
-            self._project.replace_connection(
-                Connection.from_dict(self._replaced_connection_dict), Connection.from_dict(self._connection_dict)
-            )
-        action = "add" if self._replaced_connection_dict is None else "replace"
-        self.setText(f"{action} {self._connection_name}")
+        if self._existing:
+            self._project.update_connection(self._existing, self._source_position, self._destination_position)
+            return
+        if not self._project.add_connection(self._connection):
+            self.setObsolete(True)
 
     def undo(self):
-        if self._replaced_connection_dict is None:
-            connection = self._project.find_connection(self._source_name, self._destination_name)
-            self._project.remove_connection(connection)
-        else:
-            connection = self._project.find_connection(self._source_name, self._destination_name)
-            self._project.replace_connection(connection, Connection.from_dict(self._replaced_connection_dict))
+        if self._existing:
+            self._project.update_connection(self._existing, self._old_source_position, self._old_destination_position)
+            return
+        self._project.remove_connection(self._connection)
 
 
 class RemoveConnectionsCommand(SpineToolboxCommand):
@@ -293,7 +299,7 @@ class RemoveConnectionsCommand(SpineToolboxCommand):
 
         Args:
             project (SpineToolboxProject): project
-            connections (list of Connection): the connections
+            connections (list of LoggingConnection): the connections
         """
         super().__init__()
         self._project = project
@@ -313,7 +319,7 @@ class RemoveConnectionsCommand(SpineToolboxCommand):
 
     def undo(self):
         for connection_dict in self._connections_dict.values():
-            self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
+            self._project.add_connection(self._project.connection_from_dict(connection_dict), silent=True)
 
 
 class AddJumpCommand(SpineToolboxCommand):
@@ -329,30 +335,32 @@ class AddJumpCommand(SpineToolboxCommand):
         """
         super().__init__()
         self._project = project
-        self._source_name = source_name
-        self._destination_name = destination_name
-        self._jump_dict = Jump(source_name, source_position, destination_name, destination_position).to_dict()
-        replaced_jump = self._project.find_jump(source_name, destination_name)
-        self._replaced_jump_dict = replaced_jump.to_dict() if replaced_jump is not None else None
-        self._jump_name = f"jump from {source_name} to {destination_name}"
+        self._source_position = source_position
+        self._destination_position = destination_position
+        self._existing = self._project.find_jump(source_name, destination_name)
+        if self._existing is not None:
+            self._old_source_position = self._existing.source_position
+            self._old_destination_position = self._existing.destination_position
+            action = "update"
+        else:
+            jump_dict = Jump(source_name, source_position, destination_name, destination_position).to_dict()
+            self._jump = self._project.jump_from_dict(jump_dict)
+            action = "add"
+        jump_name = f"jump link from {source_name} to {destination_name}"
+        self.setText(f"{action} {jump_name}")
 
     def redo(self):
-        if self._replaced_jump_dict is None:
-            success = self._project.add_jump(Jump.from_dict(self._jump_dict))
-            if not success:
-                self.setObsolete(True)
-        else:
-            self._project.replace_jump(Jump.from_dict(self._replaced_jump_dict), Jump.from_dict(self._jump_dict))
-        action = "add" if self._replaced_jump_dict is None else "replace"
-        self.setText(f"{action} {self._jump_name}")
+        if self._existing:
+            self._project.update_jump(self._existing, self._source_position, self._destination_position)
+            return
+        if not self._project.add_jump(self._jump):
+            self.setObsolete(True)
 
     def undo(self):
-        if self._replaced_jump_dict is None:
-            jump = self._project.find_jump(self._source_name, self._destination_name)
-            self._project.remove_jump(jump)
-        else:
-            jump = self._project.find_jump(self._source_name, self._destination_name)
-            self._project.replace_jump(jump, Jump.from_dict(self._replaced_jump_dict))
+        if self._existing:
+            self._project.update_jump(self._existing, self._old_source_position, self._old_destination_position)
+            return
+        self._project.remove_jump(self._jump)
 
 
 class RemoveJumpsCommand(SpineToolboxCommand):
@@ -362,7 +370,7 @@ class RemoveJumpsCommand(SpineToolboxCommand):
         """
         Args:
             project (SpineToolboxProject): project
-            jumps (list of Jump): the jumps
+            jumps (list of LoggingJump): the jumps
         """
         super().__init__()
         self._project = project
@@ -382,7 +390,7 @@ class RemoveJumpsCommand(SpineToolboxCommand):
 
     def undo(self):
         for jump_dict in self._jump_dicts.values():
-            self._project.add_jump(Jump.from_dict(jump_dict), silent=True)
+            self._project.add_jump(self._project.jump_from_dict(jump_dict), silent=True)
 
 
 class SetJumpConditionCommand(SpineToolboxCommand):
@@ -418,6 +426,28 @@ class SetJumpConditionCommand(SpineToolboxCommand):
         self._jump_properties.set_condition(self._jump, self._previous_condition)
 
 
+class UpdateJumpCmdLineArgsCommand(SpineToolboxCommand):
+    def __init__(self, jump_properties, jump, cmd_line_args):
+        """Command to update Jump command line args.
+
+        Args:
+            jump_properties (JumpPropertiesWidget): the item
+            cmd_line_args (list): list of command line args
+        """
+        super().__init__()
+        self._jump_properties = jump_properties
+        self._jump = jump
+        self._redo_cmd_line_args = cmd_line_args
+        self._undo_cmd_line_args = self._jump.cmd_line_args
+        self.setText(f"change command line arguments of {jump.name}")
+
+    def redo(self):
+        self._jump_properties.update_cmd_line_args(self._jump, self._redo_cmd_line_args)
+
+    def undo(self):
+        self._jump_properties.update_cmd_line_args(self._jump, self._undo_cmd_line_args)
+
+
 class SetFiltersOnlineCommand(SpineToolboxCommand):
     def __init__(self, resource_filter_model, resource, filter_type, online):
         """Command to toggle filter value.
@@ -446,25 +476,25 @@ class SetFiltersOnlineCommand(SpineToolboxCommand):
 
 
 class SetConnectionOptionsCommand(SpineToolboxCommand):
-    def __init__(self, link, options):
+    def __init__(self, connection, options):
         """Command to set connection options.
 
         Args:
-            link (Link)
+            connection (LoggingConnection)
             options (dict): containing options to be set
         """
         super().__init__()
-        self._link = link
-        self._new_options = link.connection.options.copy()
+        self._connection = connection
+        self._new_options = connection.options.copy()
         self._new_options.update(options)
-        self._old_options = link.connection.options.copy()
-        self.setText(f"change options in link {link.name}")
+        self._old_options = connection.options.copy()
+        self.setText(f"change options in connection {connection.name}")
 
     def redo(self):
-        self._link.set_connection_options(self._new_options)
+        self._connection.set_connection_options(self._new_options)
 
     def undo(self):
-        self._link.set_connection_options(self._old_options)
+        self._connection.set_connection_options(self._old_options)
 
 
 class AddSpecificationCommand(SpineToolboxCommand):
@@ -518,8 +548,8 @@ class ReplaceSpecificationCommand(SpineToolboxCommand):
     def undo(self):
         self.successfully_undone = self._project.replace_specification(self._undo_name, self._undo_specification)
 
-    @staticmethod
-    def is_critical():
+    @property
+    def is_critical(self):
         return True
 
 

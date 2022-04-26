@@ -16,7 +16,14 @@ Classes to represent tool and feature items in a tree.
 :date:    1.9.2020
 """
 from PySide2.QtCore import Qt
-from .tree_item_utility import GrayIfLastMixin, EditableMixin, RootItem, EmptyChildRootItem, LeafItem, StandardTreeItem
+from .tree_item_utility import (
+    GrayIfLastMixin,
+    EditableMixin,
+    EmptyChildRootItem,
+    LeafItem,
+    StandardTreeItem,
+    ListValueFetchParent,
+)
 
 _FEATURE_ICON = "\uf5bc"  # splotch
 _TOOL_ICON = "\uf6e3"  # hammer
@@ -265,6 +272,19 @@ class ToolFeatureRequiredItem(StandardTreeItem):
 
 class ToolFeatureMethodRootItem(EmptyChildRootItem):
     """A tool_feature_method root item."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._list_value_fetch_parent = None
+
+    def _do_finalize(self):
+        super()._do_finalize()
+        parameter_value_list_id = self.parent_item.item_data["parameter_value_list_id"]
+        self._list_value_fetch_parent = ListValueFetchParent(parameter_value_list_id)
+
+    def _fetch_parents(self):
+        yield from super()._fetch_parents()
+        yield self._list_value_fetch_parent
 
     @property
     def item_type(self):

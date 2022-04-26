@@ -31,56 +31,26 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(386, 462)
+        Form.resize(298, 288)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.label_link_name = QLabel(Form)
-        self.label_link_name.setObjectName(u"label_link_name")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_link_name.sizePolicy().hasHeightForWidth())
-        self.label_link_name.setSizePolicy(sizePolicy)
-        self.label_link_name.setMinimumSize(QSize(0, 20))
-        self.label_link_name.setMaximumSize(QSize(16777215, 20))
-        font = QFont()
-        font.setPointSize(10)
-        font.setBold(False)
-        font.setWeight(50)
-        self.label_link_name.setFont(font)
-        self.label_link_name.setStyleSheet(u"background-color: #ecd8c6;")
-        self.label_link_name.setFrameShape(QFrame.Box)
-        self.label_link_name.setFrameShadow(QFrame.Sunken)
-        self.label_link_name.setAlignment(Qt.AlignCenter)
-        self.label_link_name.setWordWrap(True)
-
-        self.verticalLayout.addWidget(self.label_link_name)
-
-        self.scrollArea = QScrollArea(Form)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 384, 440))
-        self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.treeView_filters = QTreeView(self.scrollAreaWidgetContents)
+        self.treeView_filters = QTreeView(Form)
         self.treeView_filters.setObjectName(u"treeView_filters")
         self.treeView_filters.setAcceptDrops(True)
         self.treeView_filters.setDragDropMode(QAbstractItemView.DragDrop)
         self.treeView_filters.header().setVisible(True)
 
-        self.verticalLayout_2.addWidget(self.treeView_filters)
+        self.verticalLayout.addWidget(self.treeView_filters)
 
-        self.checkBox_use_datapackage = QCheckBox(self.scrollAreaWidgetContents)
+        self.checkBox_use_memory_db = QCheckBox(Form)
+        self.checkBox_use_memory_db.setObjectName(u"checkBox_use_memory_db")
+
+        self.verticalLayout.addWidget(self.checkBox_use_memory_db)
+
+        self.checkBox_use_datapackage = QCheckBox(Form)
         self.checkBox_use_datapackage.setObjectName(u"checkBox_use_datapackage")
 
-        self.verticalLayout_2.addWidget(self.checkBox_use_datapackage)
-
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-
-        self.verticalLayout.addWidget(self.scrollArea)
+        self.verticalLayout.addWidget(self.checkBox_use_datapackage)
 
 
         self.retranslateUi(Form)
@@ -90,7 +60,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.label_link_name.setText(QCoreApplication.translate("Form", u"Name", None))
+        self.checkBox_use_memory_db.setText(QCoreApplication.translate("Form", u"Use memory DB for tool execution", None))
         self.checkBox_use_datapackage.setText(QCoreApplication.translate("Form", u"Pack CSV files (datapackage.json)", None))
     # retranslateUi
 

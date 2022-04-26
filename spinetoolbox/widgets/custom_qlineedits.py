@@ -17,9 +17,10 @@ Classes for custom line edits.
 """
 
 import os
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtWidgets import QLineEdit, QUndoStack
+from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtWidgets import QLineEdit, QUndoStack, QStyle
 from PySide2.QtGui import QKeySequence
+from .custom_qwidgets import ElidedTextMixin
 
 
 class PropertyQLineEdit(QLineEdit):
@@ -53,14 +54,23 @@ class PropertyQLineEdit(QLineEdit):
         self.setCursorPosition(pos)
 
 
-class CustomQLineEdit(PropertyQLineEdit):
+class CustomQLineEdit(ElidedTextMixin, PropertyQLineEdit):
     """A custom QLineEdit that accepts file drops and displays the path.
 
     Attributes:
         parent (QMainWindow): Parent for line edit widget
     """
 
-    file_dropped = Signal("QString", name="file_dropped")
+    file_dropped = Signal(str)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._editing = False
+        self.textEdited.connect(self._set_full_text)
+
+    @Slot(str)
+    def _set_full_text(self, text):
+        self._full_text = text
 
     def dragEnterEvent(self, event):
         """Accept a single file drop from the filesystem."""
@@ -86,3 +96,29 @@ class CustomQLineEdit(PropertyQLineEdit):
         """Emit file_dropped signal with the file for the dropped url."""
         url = event.mimeData().urls()[0]
         self.file_dropped.emit(url.toLocalFile())
+
+    def _elided_offset(self):
+        if self.isClearButtonEnabled():
+            # icon width and margin hardcoded in qlineedit.cpp
+            # pylint: disable=undefined-variable
+            icon_width = qApp.style().pixelMetric(QStyle.PM_SmallIconSize, None, self)
+            margin = icon_width / 4
+            return icon_width + margin + 6
+        return super()._offset()
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self._editing = True
+        self._update_text(self._full_text)
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        self._editing = False
+        self._update_text(self._full_text)
+
+    def _update_text(self, text):
+        if not self._editing:
+            super()._update_text(text)
+            return
+        self._full_text = text
+        PropertyQLineEdit.setText(self, text)

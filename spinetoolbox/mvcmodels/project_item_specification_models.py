@@ -16,11 +16,14 @@ Contains a class for storing Tool specifications.
 :date:   23.1.2018
 """
 
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot
+import bisect
+from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot, Signal
 
 
 class ProjectItemSpecificationModel(QAbstractListModel):
     """Class to store specs that are available in a project e.g. GAMS or Julia models."""
+
+    specification_replaced = Signal(str, str)
 
     def __init__(self, icons):
         super().__init__()
@@ -35,7 +38,8 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         Args:
             name (str): specification's name
         """
-        self.insertRow(name)
+        pos = bisect.bisect_left([x.lower() for x in self._spec_names], name.lower())
+        self.insertRow(name, pos)
 
     @Slot(str)
     def remove_specification(self, name):
@@ -57,12 +61,9 @@ class ProjectItemSpecificationModel(QAbstractListModel):
             old_name (str): previous name
             new_name (str): new name
         """
-        for i, spec_name in enumerate(self._spec_names):
-            if spec_name == old_name:
-                self._spec_names[i] = new_name
-                index = self.index(i, 0)
-                self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
-                break
+        self.remove_specification(old_name)
+        self.add_specification(new_name)
+        self.specification_replaced.emit(old_name, new_name)
 
     def connect_to_project(self, project):
         """Connects the model to a project.
@@ -164,7 +165,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         return True
 
     def specification(self, row):
-        """Returns spec specification on given row.
+        """Returns spec on given row.
 
         Args:
             row (int): Row of spec specification
@@ -172,6 +173,8 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         Returns:
             ProjectItemSpecification from specification list or None if given row is zero
         """
+        if row < 0 or row >= self.rowCount():
+            return None
         return self._project.get_specification(self._spec_names[row])
 
     def specification_row(self, name):
@@ -208,3 +211,11 @@ class FilteredSpecificationModel(QSortFilterProxyModel):
         for row in range(self.rowCount()):
             source_row = self.mapToSource(self.index(row, 0)).row()
             yield self.sourceModel().specification(source_row)
+
+    def specification(self, row):
+        if row < 0 or row >= self.rowCount():
+            return None
+        index = self.index(row, 0)
+        source_index = self.mapToSource(index)
+        source_row = source_index.row()
+        return self.sourceModel().specification(source_row)

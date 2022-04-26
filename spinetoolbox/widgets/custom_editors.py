@@ -37,8 +37,7 @@ from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_numb
 
 
 class CustomLineEditor(QLineEdit):
-    """A custom QLineEdit to handle data from models.
-    """
+    """A custom QLineEdit to handle data from models."""
 
     def set_data(self, data):
         """Sets editor's text.
@@ -74,8 +73,7 @@ class ParameterValueLineEditor(CustomLineEditor):
 
 
 class _CustomLineEditDelegate(QStyledItemDelegate):
-    """A delegate for placing a CustomLineEditor on the first row of SearchBarEditor.
-    """
+    """A delegate for placing a CustomLineEditor on the first row of SearchBarEditor."""
 
     text_edited = Signal("QString")
 
@@ -83,16 +81,14 @@ class _CustomLineEditDelegate(QStyledItemDelegate):
         model.setData(index, editor.data())
 
     def createEditor(self, parent, option, index):
-        """Create editor and 'forward' `textEdited` signal.
-        """
+        """Create editor and 'forward' `textEdited` signal."""
         editor = CustomLineEditor(parent)
         editor.set_data(index.data())
         editor.textEdited.connect(lambda s: self.text_edited.emit(s))  # pylint: disable=unnecessary-lambda
         return editor
 
     def eventFilter(self, editor, event):
-        """Handle all sort of special cases.
-        """
+        """Handle all sort of special cases."""
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Tab, Qt.Key_Backtab):
             # Bring focus to parent so tab editing works as expected
             self.parent().setFocus()
@@ -108,8 +104,7 @@ class _CustomLineEditDelegate(QStyledItemDelegate):
 
 
 class SearchBarEditor(QTableView):
-    """A Google-like search bar, implemented as a QTableView with a _CustomLineEditDelegate in the first row.
-    """
+    """A Google-like search bar, implemented as a QTableView with a _CustomLineEditDelegate in the first row."""
 
     data_committed = Signal()
 
@@ -122,7 +117,6 @@ class SearchBarEditor(QTableView):
         """
         super().__init__(parent)
         self._tutor = tutor
-        self._base_size = QSize()
         self._base_offset = QPoint()
         self._original_text = None
         self._orig_pos = None
@@ -156,17 +150,13 @@ class SearchBarEditor(QTableView):
         self.model.invisibleRootItem().appendRows(item_list)
         self.first_index = self.proxy_model.mapFromSource(self.model.index(0, 0))
 
-    def set_base_size(self, size):
-        self._base_size = size
-
     def set_base_offset(self, offset):
         self._base_offset = offset
 
-    def update_geometry(self):
-        """Updates geometry.
-        """
-        self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
-        self.verticalHeader().setDefaultSectionSize(self._base_size.height())
+    def update_geometry(self, option):
+        """Updates geometry."""
+        self.resizeColumnsToContents()
+        self.verticalHeader().setDefaultSectionSize(option.rect.height())
         self._orig_pos = self.pos() + self._base_offset
         if self._tutor:
             self._orig_pos += self._tutor.mapTo(self.parent(), self._tutor.rect().topLeft())
@@ -174,8 +164,12 @@ class SearchBarEditor(QTableView):
 
     def refit(self):
         self.move(self._orig_pos)
-        table_height = self.verticalHeader().length()
-        size = QSize(self._base_size.width(), table_height + 2).boundedTo(self.parent().size())
+        margins = self.contentsMargins()
+        table_height = self.verticalHeader().length() + margins.top() + margins.bottom()
+        table_width = self.horizontalHeader().length() + margins.left() + margins.right()
+        if table_height > self.parent().size().height():
+            table_width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        size = QSize(table_width, table_height).boundedTo(self.parent().size())
         self.resize(size)
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
@@ -196,8 +190,7 @@ class SearchBarEditor(QTableView):
         self.refit()
 
     def _proxy_model_filter_accepts_row(self, source_row, source_parent):
-        """Always accept first row.
-        """
+        """Always accept first row."""
         if source_row == 0:
             return True
         return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
@@ -225,8 +218,7 @@ class SearchBarEditor(QTableView):
         self.edit_first_index()
 
     def edit_first_index(self):
-        """Edits first index if valid and not already being edited.
-        """
+        """Edits first index if valid and not already being edited."""
         if not self.first_index.isValid():
             return
         if self.isPersistentEditorOpen(self.first_index):
@@ -259,7 +251,6 @@ class CheckListEditor(QTableView):
         super().__init__(parent)
         self._tutor = tutor
         self._ranked = ranked
-        self._base_size = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
         self.verticalHeader().hide()
@@ -359,16 +350,16 @@ class CheckListEditor(QTableView):
         """
         return ",".join(self._selected)
 
-    def set_base_size(self, size):
-        self._base_size = size
-
-    def update_geometry(self):
-        """Updates geometry.
-        """
-        self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
-        self.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        total_height = self.verticalHeader().length() + 2
-        size = QSize(self._base_size.width(), total_height).boundedTo(self.parent().size())
+    def update_geometry(self, option):
+        """Updates geometry."""
+        self.resizeColumnsToContents()
+        self.verticalHeader().setDefaultSectionSize(option.rect.height())
+        margins = self.contentsMargins()
+        table_height = self.verticalHeader().length() + margins.top() + margins.bottom()
+        table_width = self.horizontalHeader().length() + margins.left() + margins.right()
+        if table_height > self.parent().size().height():
+            table_width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        size = QSize(table_width, table_height).boundedTo(self.parent().size())
         self.resize(size)
         if self._tutor:
             self.move(self.pos() + self._tutor.mapTo(self.parent(), self._tutor.rect().topLeft()))
@@ -391,8 +382,7 @@ class _IconPainterDelegate(QStyledItemDelegate):
 
 
 class IconColorEditor(QDialog):
-    """An editor to let the user select an icon and a color for an object_class.
-    """
+    """An editor to let the user select an icon and a color for an object_class."""
 
     def __init__(self, parent):
         """Init class."""
@@ -435,8 +425,7 @@ class IconColorEditor(QDialog):
         self.connect_signals()
 
     def _proxy_model_filter_accepts_row(self, source_row, source_parent):
-        """Filters icons according to search terms.
-        """
+        """Filters icons according to search terms."""
         text = self.line_edit.text()
         if not text:
             return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)

@@ -96,6 +96,8 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v4_to_v5(project_dict)
             elif v == 5:
                 project_dict = self.upgrade_v5_to_v6(project_dict, project_dir)
+            elif v == 6:
+                project_dict = self.upgrade_v6_to_v7(project_dict, project_dir)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -366,6 +368,56 @@ class ProjectUpgrader:
         return new
 
     @staticmethod
+    def upgrade_v6_to_v7(old, project_dir):
+        """Upgrades version 6 project dictionary to version 7.
+
+        Changes:
+            1. Introduces Mergers in between DS -> DS links.
+
+        Args:
+            old (dict): Version 6 project dictionary
+
+        Returns:
+            dict: Version 7 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 7
+        data_stores = []
+        for name, item_dict in new["items"].items():
+            if item_dict["type"] == "Data Store":
+                data_stores.append(name)
+        ds_ds_connections = {}
+        to_remove = []
+        for conn in new["project"]["connections"]:
+            from_name, _ = conn["from"]
+            to_name, _ = conn["to"]
+            if from_name in data_stores and to_name in data_stores:
+                ds_ds_connections.setdefault(tuple(conn["to"]), []).append(conn["from"])
+                to_remove.append(conn)
+        for to_conn, from_conns in ds_ds_connections.items():
+            to_name, to_pos = to_conn
+            from_names, from_positions = zip(*from_conns)
+            from_pos = max(set(from_positions), key=from_positions.count)
+            names = from_names + (to_name,)
+            items = [new["items"][name] for name in names]
+            x = sum(item["x"] for item in items) / len(items)
+            y = sum(item["y"] for item in items) / len(items)
+            merger_name = f"{to_name} merger"
+            new["items"][merger_name] = {
+                "type": "Merger",
+                "description": f"Merges data into {to_name}",
+                "x": x,
+                "y": y,
+                "cancel_on_error": new["items"][to_name].pop("cancel_on_error", False),
+            }
+            for from_name in from_names:
+                new["project"]["connections"].append({"from": [from_name, from_pos], "to": [merger_name, to_pos]})
+            new["project"]["connections"].append({"from": [merger_name, "right"], "to": list(to_conn)})
+        for conn in to_remove:
+            new["project"]["connections"].remove(conn)
+        return new
+
+    @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
 
@@ -409,8 +461,8 @@ class ProjectUpgrader:
         """Checks given project dict if it is valid for given version."""
         if v == 1:
             return self.is_valid_v1(p)
-        if 2 <= v <= 6:
-            return self.is_valid_v2_to_6(p, v)
+        if 2 <= v <= 7:
+            return self.is_valid_v2_to_7(p, v)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -459,7 +511,7 @@ class ProjectUpgrader:
             return False
         return True
 
-    def is_valid_v2_to_6(self, p, v):
+    def is_valid_v2_to_7(self, p, v):
         """Checks that the given project JSON dictionary contains
         a valid version 2 to 6 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct

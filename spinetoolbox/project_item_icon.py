@@ -17,26 +17,37 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 import math
-from PySide2.QtCore import Qt, QPointF, QRectF, QParallelAnimationGroup, QLineF
+from PySide2.QtCore import Qt, QPointF, QRectF, QLineF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
     QGraphicsSimpleTextItem,
-    QGraphicsRectItem,
+    QGraphicsPathItem,
     QGraphicsEllipseItem,
     QGraphicsColorizeEffect,
     QGraphicsDropShadowEffect,
     QApplication,
     QToolTip,
+    QStyle,
 )
-from PySide2.QtGui import QColor, QPen, QBrush, QTextCursor, QPalette, QTextBlockFormat, QFont
+from PySide2.QtGui import (
+    QColor,
+    QPen,
+    QBrush,
+    QTextCursor,
+    QPalette,
+    QTextBlockFormat,
+    QFont,
+    QPainterPath,
+    QRadialGradient,
+)
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spine_engine.spine_engine import ItemExecutionFinishState
 from .project_commands import MoveIconCommand
-from .helpers import LinkType
+from .helpers import LinkType, fix_lightness_color
 
 
-class ProjectItemIcon(QGraphicsRectItem):
+class ProjectItemIcon(QGraphicsPathItem):
     """Base class for project item icons drawn in Design View."""
 
     ITEM_EXTENT = 64
@@ -54,14 +65,21 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._bumping = True
         self.bumped_rects = {}  # Item rect before it was bumped
         self.icon_file = icon_file
+        self._icon_color = icon_color
         self._moved_on_scene = False
         self.previous_pos = QPointF()
         self.icon_group = {self}
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem(self)
         self.colorizer = QGraphicsColorizeEffect()
-        self.setRect(QRectF(-self.ITEM_EXTENT / 2, -self.ITEM_EXTENT / 2, self.ITEM_EXTENT, self.ITEM_EXTENT))
         self.text_font_size = 10  # point size
+        self._rect = QRectF(-self.ITEM_EXTENT / 2, -self.ITEM_EXTENT / 2, self.ITEM_EXTENT, self.ITEM_EXTENT)
+        self.component_rect = QRectF(0, 0, self.ITEM_EXTENT / 4, self.ITEM_EXTENT / 4)
+        self._selection_halo = QGraphicsPathItem(self)
+        # Make exclamation, rank, and execution icons
+        self.exclamation_icon = ExclamationIcon(self)
+        self.execution_icon = ExecutionIcon(self)
+        self.rank_icon = RankIcon(self)
         # Make item name graphics item.
         self._name = ""
         self.name_item = QGraphicsSimpleTextItem(self._name)
@@ -69,22 +87,44 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector buttons
         self.connectors = dict(
-            bottom=ConnectorButton(self, toolbox, position="bottom"),
-            left=ConnectorButton(self, toolbox, position="left"),
-            right=ConnectorButton(self, toolbox, position="right"),
+            bottom=ConnectorButton(toolbox, self, position="bottom"),
+            left=ConnectorButton(toolbox, self, position="left"),
+            right=ConnectorButton(toolbox, self, position="right"),
         )
-        # Make exclamation and rank icons
-        self.exclamation_icon = ExclamationIcon(self)
-        self.execution_icon = ExecutionIcon(self)
-        self.rank_icon = RankIcon(self)
-        h, s, _, a = icon_color.getHsl()
-        background_color = QColor.fromHsl(h, s, 240, a)
-        brush = QBrush(background_color)
-        self._setup(brush, icon_file, icon_color)
+        self._setup()
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setOffset(1)
         shadow_effect.setEnabled(False)
         self.setGraphicsEffect(shadow_effect)
+        self._update_path()
+
+    def rect(self):
+        return self._rect
+
+    def _update_path(self):
+        rounded = self._toolbox.qsettings().value("appSettings/roundedItems", defaultValue="false") == "true"
+        self._do_update_path(rounded)
+
+    def update_path(self, rounded):
+        self._do_update_path(rounded)
+
+    def _do_update_path(self, rounded):
+        radius = self.component_rect.width() / 2 if rounded else 0
+        path = QPainterPath()
+        path.addRoundedRect(self._rect, radius, radius)
+        self.setPath(path)
+        self.rank_icon.update_path(radius)
+        for conn in self.connectors.values():
+            conn.update_path(radius)
+        # Selection halo
+        pen_width = 1
+        margin = 1
+        path = QPainterPath()
+        path.addRoundedRect(self._rect.adjusted(-margin, -margin, margin, margin), radius + margin, radius + margin)
+        self._selection_halo.setPath(path)
+        selection_pen = QPen(Qt.DashLine)
+        selection_pen.setWidthF(pen_width)
+        self._selection_halo.setPen(selection_pen)
 
     def finalize(self, name, x, y):
         """
@@ -98,21 +138,24 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.moveBy(x, y)
         self.update_name_item(name)
 
-    def _setup(self, brush, svg, svg_color):
-        """Setup item's attributes.
-
-        Args:
-            brush (QBrush): Used in filling the background rectangle
-            svg (str): Path to SVG icon file
-            svg_color (QColor): Color of SVG icon
-        """
-        self.setPen(QPen(Qt.black, 1, Qt.SolidLine))
+    def _setup(self):
+        """Setup item's attributes."""
+        self.colorizer.setColor(self._icon_color)
+        background_color = fix_lightness_color(self._icon_color)
+        gradient = QRadialGradient(self._rect.center(), 1 * self._rect.width())
+        gradient.setColorAt(0, background_color.lighter(105))
+        gradient.setColorAt(1, background_color.darker(105))
+        brush = QBrush(gradient)
+        pen = QPen(QBrush(background_color.darker()), 1, Qt.SolidLine)
+        self.setPen(pen)
+        for conn in self.connectors.values():
+            conn.setPen(pen)
+        self.rank_icon.bg.setPen(pen)
         self.setBrush(brush)
-        self.colorizer.setColor(svg_color)
         # Load SVG
-        loading_ok = self.renderer.load(svg)
+        loading_ok = self.renderer.load(self.icon_file)
         if not loading_ok:
-            self._toolbox.msg_error.emit("Loading SVG icon from resource:{0} failed".format(svg))
+            self._toolbox.msg_error.emit("Loading SVG icon from resource:{0} failed".format(self.icon_file))
             return
         size = self.renderer.defaultSize()
         self.svg_item.setSharedRenderer(self.renderer)
@@ -152,7 +195,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         self._name = new_name
         self.name_item.setText(new_name)
-        self.set_name_attributes()
+        self._reposition_name_item()
 
     def set_name_attributes(self):
         """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
@@ -195,19 +238,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         return [l for conn in self.connectors.values() for l in conn.incoming_links()]
 
-    def run_execution_leave_animation(self, excluded):
-        """
-        Starts the animation associated with execution leaving the icon.
-
-        Args:
-            excluded (bool): True if project item was not actually executed.
-        """
-        animation_group = QParallelAnimationGroup()
-        for link in self.outgoing_connection_links():
-            animation_group.addAnimation(link.make_execution_animation(excluded))
-        animation_group.finished.connect(animation_group.deleteLater)
-        animation_group.start()
-
     def hoverEnterEvent(self, event):
         """Sets a drop shadow effect to icon when mouse enters its boundaries.
 
@@ -238,12 +268,13 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def update_links_geometry(self):
         """Updates geometry of connected links to reflect this item's most recent position."""
-        if not self.scene():
+        scene = self.scene()
+        if not scene:
             return
-        icon_group = self.scene().icon_group | {self}
-        links = set(link for icon in icon_group for conn in icon.connectors.values() for link in conn.links)
-        for link in links:
-            link.update_geometry()
+        icon_group = scene.icon_group | {self}
+        scene.dirty_links |= set(
+            link for icon in icon_group for conn in icon.connectors.values() for link in conn.links
+        )
 
     def mouseReleaseEvent(self, event):
         """Clears pre-bump rects, and pushes a move icon command if necessary."""
@@ -320,10 +351,10 @@ class ProjectItemIcon(QGraphicsRectItem):
         prevent_overlapping = self._toolbox.qsettings().value("appSettings/preventOverlapping", defaultValue="false")
         if not self.scene() or not self._bumping or prevent_overlapping != "true":
             return
-        for other in self.collidingItems():
+        restablished = self._restablish_bumped_items()
+        for other in set(self.collidingItems()) - restablished:
             if isinstance(other, ProjectItemIcon):
                 other.make_room_for_item(self)
-        self._restablish_bumped_items()
 
     def make_room_for_item(self, other):
         """Makes room for another item.
@@ -344,32 +375,43 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def _restablish_bumped_items(self):
         """Moves bumped items back to their original position if no collision would happen anymore."""
+        restablished = set()
         try:
             for other, rect in self.bumped_rects.items():
                 if not self.sceneBoundingRect().intersects(rect):
                     other.setPos(rect.center())
-                    self.bumped_rects.pop(other, None)
+                    restablished.add(other)
+            for other in restablished:
+                self.bumped_rects.pop(other, None)
         except RuntimeError:
             pass
+        return restablished
 
     def select_item(self):
         """Update GUI to show the details of the selected item."""
         ind = self._toolbox.project_item_model.find_item(self.name())
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
+    def paint(self, painter, option, widget=None):
+        """Sets a dashed pen if selected."""
+        selected = option.state & QStyle.State_Selected
+        self._selection_halo.setVisible(selected)
+        option.state &= ~QStyle.State_Selected
+        super().paint(painter, option, widget)
 
-class ConnectorButton(QGraphicsRectItem):
+
+class ConnectorButton(QGraphicsPathItem):
     """Connector button graphics item. Used for Link drawing between project items."""
 
     # Regular and hover brushes
     brush = QBrush(QColor(255, 255, 255))  # Used in filling the item
     hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
 
-    def __init__(self, parent, toolbox, position="left"):
+    def __init__(self, toolbox, parent, position="left"):
         """
         Args:
-            parent (QGraphicsItem): Project item bg rectangle
             toolbox (ToolboxUI): QMainWindow instance
+            parent (ProjectItemIcon): parent graphics item
             position (str): Either "top", "left", "bottom", or "right"
         """
         super().__init__(parent)
@@ -377,23 +419,29 @@ class ConnectorButton(QGraphicsRectItem):
         self._toolbox = toolbox
         self.position = position
         self.links = list()
-        pen = QPen(Qt.black, 0.5, Qt.SolidLine)
-        self.setPen(pen)
         self.setBrush(self.brush)
         parent_rect = parent.rect()
         extent = 0.2 * parent_rect.width()
-        rect = QRectF(0, 0, extent, extent)
+        self._rect = QRectF(0, 0, extent, extent)
         if position == "top":
-            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top() + extent / 2))
+            self._rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top() + extent / 2))
         elif position == "left":
-            rect.moveCenter(QPointF(parent_rect.left() + extent / 2, parent_rect.center().y()))
+            self._rect.moveCenter(QPointF(parent_rect.left() + extent / 2, parent_rect.center().y()))
         elif position == "bottom":
-            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom() - extent / 2))
+            self._rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom() - extent / 2))
         elif position == "right":
-            rect.moveCenter(QPointF(parent_rect.right() - extent / 2, parent_rect.center().y()))
-        self.setRect(rect)
+            self._rect.moveCenter(QPointF(parent_rect.right() - extent / 2, parent_rect.center().y()))
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.PointingHandCursor)
+
+    def rect(self):
+        return self._rect
+
+    def update_path(self, parent_radius):
+        radius = 0.2 * parent_radius
+        path = QPainterPath()
+        path.addRoundedRect(self._rect, radius, radius)
+        self.setPath(path)
 
     @property
     def parent(self):
@@ -626,9 +674,8 @@ class RankIcon(QGraphicsTextItem):
         """
         super().__init__(parent)
         self._parent = parent
-        rect_w = parent.rect().width()  # Parent rect width
-        self.text_margin = 0.05 * rect_w
-        self.bg = QGraphicsRectItem(self.boundingRect(), self)
+        self._rect = parent.component_rect
+        self.bg = QGraphicsPathItem(self)
         bg_brush = QApplication.palette().brush(QPalette.ToolTipBase)
         self.bg.setBrush(bg_brush)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
@@ -640,11 +687,27 @@ class RankIcon(QGraphicsTextItem):
         doc = self.document()
         doc.setDocumentMargin(0)
 
+    def _make_path(self, radius):
+        path = QPainterPath()
+        if radius == 0:
+            path.addRect(self._rect)
+            return path
+        path.moveTo(0, self._rect.height())
+        path.lineTo(0.5 * self._rect.width(), self._rect.height())
+        path.arcTo(self._rect, 270, 90)
+        path.lineTo(self._rect.width(), 0)
+        path.lineTo(0.5 * self._rect.width(), 0)
+        path.arcTo(self._rect, 90, 90)
+        path.lineTo(0, self._rect.height())
+        return path
+
+    def update_path(self, radius):
+        path = self._make_path(radius)
+        self.bg.setPath(path)
+
     def set_rank(self, rank):
         self.setPlainText(str(rank))
-        self.adjustSize()
-        self.setTextWidth(self.text_margin + self.textWidth())
-        self.bg.setRect(self.boundingRect())
+        self.setTextWidth(self._rect.width())
         # Align center
         fmt = QTextBlockFormat()
         fmt.setAlignment(Qt.AlignHCenter)

@@ -824,7 +824,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         if not self.index_in_data(index):
             return ""
         object_names, parameter_name, alternative_name, db_name = self._all_header_names(index)
-        db_name = db_name if len(self._parent.db_maps) > 1 else None
         return parameter_identifier(db_name, parameter_name, object_names, alternative_name)
 
     def column_name(self, column):

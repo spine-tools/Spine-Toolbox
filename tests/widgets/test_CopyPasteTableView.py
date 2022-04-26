@@ -142,6 +142,18 @@ class TestCopyPasteTableView(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), "B")
         self.assertEqual(model.index(0, 2).data(), "-1.1")
 
+    @patch('locale.str', str_with_comma_decimal_separator)
+    @patch('spinetoolbox.widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
+    @patch('spinetoolbox.widgets.custom_qtableview.locale.delocalize', delocalize_comma_decimal_separator)
+    def test_paste_single_comma_separated_string(self):
+        view = CopyPasteTableView()
+        model = _MockModel()
+        view.setModel(model)
+        view.setCurrentIndex(model.index(0, 2))
+        QApplication.clipboard().setText("unit,node")
+        self.assertTrue(view.paste())
+        self.assertEqual(model.index(0, 2).data(), "unit,node")
+
 
 if __name__ == '__main__':
     unittest.main()

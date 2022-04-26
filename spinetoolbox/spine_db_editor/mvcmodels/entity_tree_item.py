@@ -163,7 +163,7 @@ class ObjectRelationshipClassItem(RelationshipClassItem):
 
     def filter_query(self, query, subquery, db_map):
         object_id = self.parent_item.db_map_id(db_map)
-        ids = (x.id for x in db_map.query(db_map.relationship_sq).filter_by(object_id=object_id))
+        ids = set(x.id for x in db_map.query(db_map.relationship_sq).filter_by(object_id=object_id))
         query = query.filter(db_map.in_(subquery.c.id, ids))
         return super().filter_query(query, subquery, db_map)
 
@@ -281,7 +281,7 @@ class ObjectItem(EntityItem):
 
     def filter_query(self, query, subquery, db_map):
         object_class_id = self.db_map_data_field(db_map, 'class_id')
-        ids = (x.id for x in db_map.query(db_map.relationship_class_sq).filter_by(object_class_id=object_class_id))
+        ids = set(x.id for x in db_map.query(db_map.relationship_class_sq).filter_by(object_class_id=object_class_id))
         return query.filter(db_map.in_(subquery.c.id, ids))
 
 

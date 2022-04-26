@@ -14,7 +14,7 @@ Spine Toolbox is an open source Python package to manage data, scenarios and wor
 - Python 3.7
 - Python 3.8
 
-Please note that Python 3.9 is not supported yet. 
+Python 3.8.0 is not supported (use Python 3.8.1 or later). Please note that Python 3.9 or 3.10 are not supported yet.
 
 ## License
 
@@ -23,6 +23,12 @@ All accompanying documentation, original graphics and other material are release
 [Creative Commons BY-SA 4.0 license](https://creativecommons.org/licenses/by-sa/4.0/).
 Licenses of all packages used by Spine Toolbox are listed in the Spine Toolbox User 
 Guide.
+
+## Attribution
+
+If you use Spine Toolbox in a published work, please cite the following publication (Chicago/Turabian Style).
+
+Kiviluoma Juha, Pallonetto Fabiano, Marin Manuel, Savolainen Pekka T., Soininen Antti, Vennström Per, Rinne Erkka, Huang Jiangyi, Kouveliotis-Lysikatos Iasonas, Ihlemann Maren, Delarue Erik, O’Dwyer Ciara, O’Donnel Terence, Amelin Mikael, Söder Lennart, and Dillon Joseph. 2022. "Spine Toolbox: A flexible open-source workflow management system with scenario and data management" SoftwareX, Vol. 17, 100967, https://doi.org/10.1016/j.softx.2021.100967.
 
 ## Installation
 
@@ -124,7 +130,7 @@ is active.
 
 ### About requirements
 
-Python 3.7 or Python 3.8 is required.
+Python 3.7 or Python 3.8.1 or later is required. Python 3.8.0 is not allowed due to problems in DLL loading on Windows.
 
 See file `setup.cfg` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
@@ -181,6 +187,8 @@ are not needed and there is a chance of conflicts between the packages.
 
 **Note**: Supported PySide2 version is **5.14**. Spine Toolbox does not support 
 PySide2 version 5.15 (yet).
+
+**Note**: Python 3.8.0 is not supported. Use Python 3.8.1 or later.
 
 ## Contribution Guide
 

@@ -33,8 +33,7 @@ from PySide2.QtWidgets import (
     QUndoCommand,
     QErrorMessage,
 )
-from spinetoolbox.config import STATUSBAR_SS
-from spinetoolbox.widgets.notification import ChangeNotifier
+from spinetoolbox.widgets.notification import ChangeNotifier, Notification
 from spinetoolbox.helpers import CharIconEngine, restore_ui, save_ui
 
 
@@ -84,6 +83,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._ui = self._make_ui()
         self._ui.setupUi(self)
         self._ui_error = QErrorMessage(self)
+        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self._ui_error.setWindowTitle("Error")
         self.setWindowTitle(specification.name if specification else "")
         # Restore ui
@@ -96,7 +96,6 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._spec_toolbar = _SpecNameDescriptionToolbar(self, specification, self._undo_stack)
         self._spec_toolbar.show_toolbox_action.triggered.connect(self._toolbox.restore_and_activate)
         self.addToolBar(Qt.TopToolBarArea, self._spec_toolbar)
-        self._ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self._populate_main_menu()
         self._spec_toolbar.save_action.triggered.connect(self._save)
         self._spec_toolbar.duplicate_action.triggered.connect(self._duplicate)
@@ -136,14 +135,14 @@ class SpecificationEditorWindowBase(QMainWindow):
         raise NotImplementedError()
 
     @Slot(str)
-    def _show_error(self, message):
+    def show_error(self, message):
         self._ui_error.showMessage(message)
 
     def _show_status_bar_msg(self, msg):
         word_count = len(msg.split(" "))
         mspw = 60000 / 140  # Assume we can read ~140 words per minute
         duration = mspw * word_count
-        self._ui.statusbar.showMessage(msg, duration)
+        Notification(self, msg, life_span=duration, corner=Qt.BottomRightCorner).show()
 
     def _populate_main_menu(self):
         undo_action = self._undo_stack.createUndoAction(self)
@@ -167,18 +166,18 @@ class SpecificationEditorWindowBase(QMainWindow):
             bool: True if operation was successful, False otherwise
         """
         if not self._toolbox.project():
-            self._show_error("Please open or create a project first")
+            self.show_error("Please open or create a project first")
             return False
         name = self._spec_toolbar.name()
         if not name:
-            self._show_error("Please enter a name for the specification.")
+            self.show_error("Please enter a name for the specification.")
             return False
         spec = self._make_new_specification(name)
         if spec is None:
             return False
         if not self._original_spec_name:
             if self._toolbox.project().is_specification_name_reserved(name):
-                self._show_error("Specification name already in use. Please enter a new name.")
+                self.show_error("Specification name already in use. Please enter a new name.")
                 return False
             self._toolbox.add_specification(spec)
             if not self._toolbox.project().is_specification_name_reserved(name):
@@ -187,7 +186,7 @@ class SpecificationEditorWindowBase(QMainWindow):
                 self.item.set_specification(spec)
         else:
             if name != self._original_spec_name and self._toolbox.project().is_specification_name_reserved(name):
-                self._show_error("Specification name already in use. Please enter a new name.")
+                self.show_error("Specification name already in use. Please enter a new name.")
                 return False
             spec.definition_file_path = self.specification.definition_file_path
             self._toolbox.replace_specification(self._original_spec_name, spec)
@@ -206,7 +205,7 @@ class SpecificationEditorWindowBase(QMainWindow):
 
     def _duplicate(self):
         if not self._toolbox.project():
-            self._show_error("Please open or create a project first")
+            self.show_error("Please open or create a project first")
             return
         new_spec = self._make_new_specification("")
         self._toolbox.show_specification_form(new_spec.item_type, new_spec, **self._duplicate_kwargs)
@@ -261,8 +260,8 @@ class _SpecNameDescriptionToolbar(QToolBar):
         layout.setStretchFactor(self._line_edit_description, 3)
         self.addWidget(widget)
         toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
-        self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (ESC)")
-        self.show_toolbox_action.setShortcut(QKeySequence.Cancel)
+        self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (Ctrl+ESC)")
+        self.show_toolbox_action.setShortcut(Qt.CTRL + Qt.Key_Escape)
         self.menu = self._make_main_menu()
         self.save_action = self.menu.addAction("Save")
         self.duplicate_action = self.menu.addAction("Duplicate")

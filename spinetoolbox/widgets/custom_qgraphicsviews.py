@@ -272,8 +272,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     @Slot()
     def _set_preferred_scene_rect(self):
-        """Sets the scene rect to the result of uniting the scene viewport rect and the items bounding rect.
-        """
+        """Sets the scene rect to the result of uniting the scene viewport rect and the items bounding rect."""
         viewport_scene_rect = self._get_viewport_scene_rect()
         items_scene_rect = self.scene().itemsBoundingRect()
         self.scene().setSceneRect(viewport_scene_rect.united(items_scene_rect))
@@ -370,21 +369,20 @@ class DesignQGraphicsView(CustomQGraphicsView):
         destination_connector = (
             project.get_item(connection.destination).get_icon().conn_button(connection.destination_position)
         )
-        link = Link(self._toolbox, source_connector, destination_connector, connection)
+        connection.link = link = Link(self._toolbox, source_connector, destination_connector, connection)
         source_connector.links.append(link)
         destination_connector.links.append(link)
         self.scene().addItem(link)
 
-    @Slot(object, object)
-    def do_replace_link(self, original_connection, new_connection):
+    @Slot(object)
+    def do_update_link(self, updated_connection):
         """Replaces a link on the Design view.
 
         Args:
-            original_connection (Connection): connection that was replaced
-            new_connection (Connection): replacing connection
+            updated_connection (Connection): connection that was updated
         """
-        self.do_remove_link(original_connection)
-        self.do_add_link(new_connection)
+        self.do_remove_link(updated_connection)
+        self.do_add_link(updated_connection)
 
     def remove_links(self, links):
         """Pushes a RemoveConnectionsCommand to the Toolbox undo stack.
@@ -408,12 +406,18 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             connection (ConnectionBase): link's connection
         """
-        for link in [item for item in self.items() if isinstance(item, Link)]:
-            source_name = link.src_connector.parent_name()
-            destination_name = link.dst_connector.parent_name()
-            if source_name == connection.source and destination_name == connection.destination:
-                link.scene().removeItem(link)
-                break
+        link = next(
+            (
+                item
+                for item in self.items()
+                if isinstance(item, Link)
+                and item.src_connector.parent_name() == connection.source
+                and item.dst_connector.parent_name() == connection.destination
+            ),
+            None,
+        )
+        if link is not None:
+            link.scene().removeItem(link)
 
     def remove_selected_links(self):
         self.remove_links([item for item in self.scene().selectedItems() if isinstance(item, (JumpLink, Link))])
@@ -457,21 +461,20 @@ class DesignQGraphicsView(CustomQGraphicsView):
         project = self._toolbox.project()
         source_connector = project.get_item(jump.source).get_icon().conn_button(jump.source_position)
         destination_connector = project.get_item(jump.destination).get_icon().conn_button(jump.destination_position)
-        jump_link = JumpLink(self._toolbox, source_connector, destination_connector, jump)
+        jump.jump_link = jump_link = JumpLink(self._toolbox, source_connector, destination_connector, jump)
         source_connector.links.append(jump_link)
         destination_connector.links.append(jump_link)
         self.scene().addItem(jump_link)
 
-    @Slot(object, object)
-    def do_replace_jump(self, original_jump, new_jump):
+    @Slot(object)
+    def do_update_jump(self, updated_jump):
         """Replaces a jump link on the Design view.
 
         Args:
-            original_jump (Jump): jump that was replaced
-            new_jump (Jump): replacing jump
+            updated_jump (Jump): jump that was updated
         """
-        self.do_remove_jump(original_jump)
-        self.do_add_jump(new_jump)
+        self.do_remove_jump(updated_jump)
+        self.do_add_jump(updated_jump)
 
     @Slot(object)
     def do_remove_jump(self, jump):

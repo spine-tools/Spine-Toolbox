@@ -21,13 +21,13 @@ import unittest
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_item.project_item import ProjectItem
-from spinetoolbox.project_tree_item import (
+from spinetoolbox.mvcmodels.project_tree_item import (
     BaseProjectTreeItem,
     CategoryProjectTreeItem,
     LeafProjectTreeItem,
     RootProjectTreeItem,
 )
-from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from ..mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestLeafProjectTreeItem(unittest.TestCase):

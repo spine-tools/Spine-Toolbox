@@ -50,11 +50,17 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
     QWidget,
+    QLabel,
+    QScrollArea,
+    QToolButton,
+    QVBoxLayout,
+    QHBoxLayout,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .project_item_icon import ProjectItemIcon
 from .load_project_items import load_project_items
+from .mvcmodels.project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
@@ -71,7 +77,6 @@ from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.jump_properties_widget import JumpPropertiesWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
 from .widgets.console_window import ConsoleWindow
-from .widgets.statusbars import MainStatusBar
 from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
@@ -91,7 +96,6 @@ from .helpers import (
     load_specification_from_file,
     make_settings_dict_for_engine,
 )
-from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .project_commands import (
     AddSpecificationCommand,
     ReplaceSpecificationCommand,
@@ -104,7 +108,8 @@ from .project_commands import (
     RemoveProjectItemsCommand,
 )
 from .plugin_manager import PluginManager
-from .link import JumpLink, Link
+from .link import JumpLink, Link, LINK_COLOR, JUMP_COLOR
+from .project_item.logging_connection import LoggingConnection, LoggingJump
 
 
 class ToolboxUI(QMainWindow):
@@ -120,6 +125,11 @@ class ToolboxUI(QMainWindow):
     information_box = Signal(str, str)
     error_box = Signal(str, str)
     # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
+    jupyter_console_requested = Signal(object, str, str, str)
+    persistent_console_requested = Signal(object, str, tuple, str)
+    persistent_stdin_available = Signal(object, str, str)
+    persistent_stdout_available = Signal(object, str, str)
+    persistent_stderr_available = Signal(object, str, str)
 
     def __init__(self):
         """Initializes application and main window."""
@@ -133,6 +143,10 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.label_item_name = QLabel()
+        self._button_item_dir = QToolButton()
+        self._properties_title = QWidget()
+        self._setup_properties_title()
         self.takeCentralWidget().deleteLater()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers.py
@@ -140,7 +154,6 @@ class ToolboxUI(QMainWindow):
         self.key_press_filter = ChildCyclingKeyPressFilter(self)
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._share_item_edit_actions()
-        self.ui.listView_log_executions.setModel(FilterExecutionModel(self))
         self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
         # Set style sheets
         self.setStyleSheet(MAINWINDOW_SS)
@@ -156,11 +169,20 @@ class ToolboxUI(QMainWindow):
         self.filtered_spec_factory_models = {}
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
-        self.active_link = None
+        self.active_link_item = None
+        self._selected_item_names = set()
         self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
-        self.link_properties_widgets = {Link: LinkPropertiesWidget(self), JumpLink: JumpPropertiesWidget(self)}
+        self.link_properties_widgets = {
+            LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
+            LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
+        }
+        link_tab = self._make_properties_tab(self.link_properties_widgets[LoggingConnection])
+        jump_tab = self._make_properties_tab(self.link_properties_widgets[LoggingJump])
+        self.ui.tabWidget_item_properties.addTab(link_tab, "Link properties")
+        self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._anchor_callbacks = {}
+        self.ui.textBrowser_eventlog.set_toolbox(self)
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
@@ -172,12 +194,14 @@ class ToolboxUI(QMainWindow):
             self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
         )
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
-        self.setStatusBar(MainStatusBar(self))
+        self.setStatusBar(None)
         self._base_python_console = None  # 'base' Python console, independent of project items
         self._base_julia_console = None  # 'base' Julia console, independent of project items
         # Additional consoles for item execution
-        self._extra_jupyter_consoles = {}
-        self._extra_persistent_consoles = {}
+        self._item_consoles = {}
+        self._filter_item_consoles = {}
+        self._persistent_consoles = {}
+        self._jupyter_consoles = {}
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -194,10 +218,7 @@ class ToolboxUI(QMainWindow):
         self._proposed_item_name_counts = dict()
         self.restore_dock_widgets()
         self.restore_ui()
-        self.ui.textBrowser_itemlog.hide()
-        self.ui.listView_log_executions.hide()
         self.ui.listView_console_executions.hide()
-        self.ui.listView_log_executions.installEventFilter(self)
         self.ui.listView_console_executions.installEventFilter(self)
         self.parse_project_item_modules()
         self.init_project_item_model()
@@ -212,13 +233,6 @@ class ToolboxUI(QMainWindow):
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
-        if obj == self.ui.listView_log_executions:
-            if ev.type() == QEvent.Hide:
-                self._qsettings.setValue("mainWindow/itemLogSplitterState", self.ui.splitter_item_log.saveState())
-            elif ev.type() == QEvent.Show:
-                splitter_state = self._qsettings.value("mainWindow/itemLogSplitterState", defaultValue="false")
-                if splitter_state != "false":
-                    self.ui.splitter_item_log.restoreState(splitter_state)
         if obj == self.ui.listView_console_executions:
             if ev.type() == QEvent.Hide:
                 self._qsettings.setValue("mainWindow/consoleSplitterState", self.ui.splitter_console.saveState())
@@ -227,6 +241,16 @@ class ToolboxUI(QMainWindow):
                 if splitter_state != "false":
                     self.ui.splitter_console.restoreState(splitter_state)
         return super().eventFilter(obj, ev)
+
+    def _setup_properties_title(self):
+        self.label_item_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.label_item_name.setMinimumHeight(28)
+        self._button_item_dir.setIcon(QIcon(":icons/folder-open-regular.svg"))
+        layout = QHBoxLayout(self._properties_title)
+        layout.addWidget(self.label_item_name)
+        layout.addWidget(self._button_item_dir)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
     def connect_signals(self):
         """Connect signals."""
@@ -238,7 +262,6 @@ class ToolboxUI(QMainWindow):
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
-        self.ui.textBrowser_itemlog.anchorClicked.connect(self.open_anchor)
         # Message box signals
         self.information_box.connect(self._show_message_box)
         self.error_box.connect(self._show_error_box)
@@ -288,9 +311,7 @@ class ToolboxUI(QMainWindow):
         # Undo stack
         self.undo_stack.cleanChanged.connect(self.update_window_modified)
         # Views
-        self.ui.listView_log_executions.selectionModel().currentChanged.connect(self._select_log_execution)
         self.ui.listView_console_executions.selectionModel().currentChanged.connect(self._select_console_execution)
-        self.ui.listView_log_executions.model().layoutChanged.connect(self._refresh_log_execution_list)
         self.ui.listView_console_executions.model().layoutChanged.connect(self._refresh_console_execution_list)
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Models
@@ -300,6 +321,18 @@ class ToolboxUI(QMainWindow):
         self.ui.actionExecute_project.triggered.connect(self._execute_project)
         self.ui.actionExecute_selection.triggered.connect(self._execute_selection)
         self.ui.actionStop_execution.triggered.connect(self._stop_execution)
+        # Open dir
+        self._button_item_dir.clicked.connect(self._open_active_item_dir)
+        # Consoles
+        self.jupyter_console_requested.connect(self._setup_jupyter_console)
+        self.persistent_console_requested.connect(self._setup_persistent_console)
+        self.persistent_stdin_available.connect(self._add_persistent_stdin)
+        self.persistent_stdout_available.connect(self._add_persistent_stdout)
+        self.persistent_stderr_available.connect(self._add_persistent_stderr)
+
+    @Slot(bool)
+    def _open_active_item_dir(self, _checked=False):
+        self.active_project_item.open_directory()
 
     @staticmethod
     def set_error_mode():
@@ -328,7 +361,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionExecute_project.setEnabled(first_index is not None and not self.execution_in_progress)
 
     def _update_execute_selected_enabled(self):
-        has_selection = bool(self.ui.treeView_project.selectedIndexes())
+        has_selection = bool(self._selected_item_names)
         self.ui.actionExecute_selection.setEnabled(has_selection and not self.execution_in_progress)
 
     @Slot(bool)
@@ -423,7 +456,6 @@ class ToolboxUI(QMainWindow):
             self.msg.emit(welcome_msg)
             return
         if not os.path.isdir(project_dir):
-            self.ui.statusbar.showMessage("Opening previous project failed", 10000)
             self.msg_error.emit(
                 "Cannot open previous project. Directory <b>{0}</b> may have been moved.".format(project_dir)
             )
@@ -675,7 +707,6 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.setClean()
         self.update_window_title()
         self.ui.textBrowser_eventlog.clear()
-        self.ui.textBrowser_itemlog.clear()
         return True
 
     @Slot(bool)
@@ -716,7 +747,23 @@ class ToolboxUI(QMainWindow):
 
     def make_item_properties_uis(self):
         for item_type, factory in self.item_factories.items():
-            self._item_properties_uis[item_type] = factory.make_properties_widget(self)
+            properties_ui = self._item_properties_uis[item_type] = factory.make_properties_widget(self)
+            color = factory.icon_color()
+            icon = factory.icon()
+            properties_ui.set_color_and_icon(color, icon)
+            scroll_area = QScrollArea(self)
+            scroll_area.setWidget(properties_ui)
+            scroll_area.setWidgetResizable(True)
+            tab = self._make_properties_tab(scroll_area)
+            self.ui.tabWidget_item_properties.addTab(tab, item_type)
+
+    def _make_properties_tab(self, properties_ui):
+        tab = QWidget(self)
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(properties_ui)
+        return tab
 
     def add_project_items(self, items_dict, silent=False):
         """Pushes an AddProjectItemsCommand to the undo stack.
@@ -750,6 +797,8 @@ class ToolboxUI(QMainWindow):
         # Note: cannot use booleans since Windows saves them as strings to registry
         if window_size != "false":
             self.resize(window_size)  # Expects QSize
+        else:
+            self.resize(1024, 800)
         if window_pos != "false":
             self.move(window_pos)  # Expects QPoint
         if window_state != "false":
@@ -765,7 +814,7 @@ class ToolboxUI(QMainWindow):
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
         self.activate_no_selection_tab()  # Clear properties widget
-        self.restore_original_logs_and_consoles()
+        self._restore_original_console()
         self.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self._shutdown_engine_kernels()
 
@@ -781,15 +830,20 @@ class ToolboxUI(QMainWindow):
 
         def is_critical(cmd):
             if isinstance(cmd, SpineToolboxCommand):
-                return cmd.is_critical()
+                return cmd.is_critical
             return any(is_critical(cmd.child(i)) for i in range(cmd.childCount()))
+
+        def successfully_undone(cmd):
+            if isinstance(cmd, SpineToolboxCommand):
+                return cmd.successfully_undone
+            return all(successfully_undone(cmd.child(i)) for i in range(cmd.childCount()))
 
         critical_commands = [cmd for cmd in commands if is_critical(cmd)]
         if not critical_commands:
             return True
         for cmd in reversed(critical_commands):
             cmd.undo()
-            if not cmd.successfully_undone:
+            if not successfully_undone(cmd):
                 return False
         return True
 
@@ -836,18 +890,13 @@ class ToolboxUI(QMainWindow):
                     return False
         return True
 
-    def selected_item_names(self):
-        """Returns names of selected project items.
-
-        Returns:
-            list of str: names of selected project items
-        """
-        return [self.project_item_model.item(i).name for i in self.ui.treeView_project.selectedIndexes()]
-
     @Slot(QItemSelection, QItemSelection)
     def item_selection_changed(self, selected, deselected):
         """Synchronizes selection with scene. The scene handles item/link de/activation."""
         inds = self.ui.treeView_project.selectedIndexes()
+        self._selected_item_names = {
+            self.project_item_model.item(i).name for i in self.ui.treeView_project.selectedIndexes()
+        }
         self._update_execute_selected_enabled()
         if not self.sync_item_selection_with_scene:
             return
@@ -857,15 +906,21 @@ class ToolboxUI(QMainWindow):
         for icon in scene.project_item_icons():
             icon.setSelected(icon.name() in project_item_names)
 
-    def refresh_active_elements(self, active_project_item, active_link):
+    def refresh_active_elements(self, active_project_item, active_link_item, selected_item_names):
+        self._selected_item_names = selected_item_names
+        self._update_execute_selected_enabled()
+        self.ui.textBrowser_eventlog.set_item_log_selected(False)
         self._set_active_project_item(active_project_item)
-        self._set_active_link(active_link)
+        self._set_active_link_item(active_link_item)
+        self._activate_properties_tab()
+        self.ui.textBrowser_eventlog.set_item_log_selected(True)
+
+    def _activate_properties_tab(self):
         if self.active_project_item:
             self.activate_item_tab()
-            self.override_logs_and_consoles()
             return
-        self.restore_original_logs_and_consoles()
-        if self.active_link:
+        self._restore_original_console()
+        if self.active_link_item:
             self.activate_link_tab()
             return
         self.activate_no_selection_tab()
@@ -887,20 +942,20 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item:
             self.active_project_item.activate()
 
-    def _set_active_link(self, active_link):
+    def _set_active_link_item(self, active_link_item):
         """
         Sets active link and connects to corresponding properties widget.
 
         Args:
-            active_link (JumpLink or Link, optional)
+            active_link_item (LoggingConnection or LoggingJump, optional)
         """
-        if self.active_link is active_link:
+        if self.active_link_item is active_link_item:
             return
-        if self.active_link:
-            self.link_properties_widgets[type(self.active_link)].unset_link()
-        self.active_link = active_link
-        if self.active_link:
-            self.link_properties_widgets[type(self.active_link)].set_link(self.active_link)
+        if self.active_link_item:
+            self.link_properties_widgets[type(self.active_link_item)].unset_link()
+        self.active_link_item = active_link_item
+        if self.active_link_item:
+            self.link_properties_widgets[type(self.active_link_item)].set_link(self.active_link_item)
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
@@ -917,17 +972,40 @@ class ToolboxUI(QMainWindow):
             if self.ui.tabWidget_item_properties.tabText(i) == self.active_project_item.item_type():
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
+        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self._properties_title)
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
+        color = self._item_properties_uis[self.active_project_item.item_type()].fg_color
+        ss = f"QWidget{{background: {color.name()};}}"
+        self._properties_title.setStyleSheet(ss)
+        self._button_item_dir.show()
+        self._button_item_dir.setToolTip(f"<html>Open <b>{self.active_project_item.name}</b> directory.</html>")
 
     def activate_link_tab(self):
         """Shows link properties tab."""
-        tab_text = {Link: "Link properties", JumpLink: "Loop properties"}[type(self.active_link)]
+        tab_text = {LoggingConnection: "Link properties", LoggingJump: "Loop properties"}[type(self.active_link_item)]
         for i in range(self.ui.tabWidget_item_properties.count()):
             if self.ui.tabWidget_item_properties.tabText(i) == tab_text:
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
+        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self._properties_title)
         self.ui.dockWidget_item.setWindowTitle(tab_text)
+        color = self.link_properties_widgets[type(self.active_link_item)].fg_color
+        ss = f"QWidget{{background: {color.name()};}}"
+        self._properties_title.setStyleSheet(ss)
+        self._button_item_dir.hide()
+
+    def update_properties_ui(self):
+        widget = self._get_active_properties_widget()
+        if widget is not None:
+            widget.repaint()
+
+    def _get_active_properties_widget(self):
+        if self.active_project_item is not None:
+            return self._item_properties_uis[self.active_project_item.item_type()]
+        if self.active_link_item is not None:
+            return self.link_properties_widgets[type(self.active_link_item)]
+        return None
 
     def add_specification(self, specification):
         """Pushes an AddSpecificationCommand to undo stack."""
@@ -958,6 +1036,11 @@ class ToolboxUI(QMainWindow):
 
     def replace_specification(self, name, specification):
         """Pushes an ReplaceSpecificationCommand to undo stack."""
+        if name == specification.name:
+            # If the spec name didn't change, we don't need to make a command.
+            # This is because the changes don't affect the project.json file.
+            self._project.replace_specification(name, specification)
+            return
         self.undo_stack.push(ReplaceSpecificationCommand(self._project, name, specification))
 
     @Slot(str)
@@ -1220,7 +1303,6 @@ class ToolboxUI(QMainWindow):
             dock.setFloating(False)
         self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_eventlog, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Horizontal)
-        self.tabifyDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_itemlog)
         self.ui.dockWidget_eventlog.raise_()
         self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Horizontal)
@@ -1250,7 +1332,6 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_itemlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_console.toggleViewAction())
         undo_action = self.undo_stack.createUndoAction(self)
@@ -1337,78 +1418,37 @@ class ToolboxUI(QMainWindow):
         message = format_log_message("msg_error", msg)
         self.ui.textBrowser_eventlog.append(message)
 
-    def restore_original_logs_and_consoles(self):
-        self.restore_original_item_log_document()
-        self.restore_original_console()
+    def override_console_and_execution_list(self):
+        self._override_console()
+        self._override_execution_list()
 
-    def override_logs_and_consoles(self):
-        self.override_item_log()
-        self.override_console()
-        self.override_execution_list()
-
-    def override_item_log(self):
-        """Sets the log document of the active project item in Item Execution Log and updates title."""
-        if self.active_project_item is None:
-            return
-        document = self.active_project_item.log_document
-        self._do_override_item_log(document)
-
-    def _do_override_item_log(self, document):
-        if document is None:
-            self.restore_original_item_log_document()
-            return
-        self.ui.textBrowser_itemlog.set_override_document(document)
-        self.ui.textBrowser_itemlog.show()
-        self.ui.label_no_itemlog.hide()
-        self._update_item_log_title()
-
-    def override_console(self):
+    def _override_console(self):
         """Sets the jupyter console of the active project item in Jupyter Console and updates title."""
         if self.active_project_item is None:
             return
-        console = self.active_project_item.console
+        console = self._item_consoles.get(self.active_project_item)
         self._do_override_console(console)
 
     def _do_override_console(self, console):
-        if console is None:
-            self.restore_original_console()
+        if not isinstance(console, (PersistentConsoleWidget, JupyterConsoleWidget)):
+            self._restore_original_console()
             return
         self._set_override_console(console)
 
-    def override_execution_list(self):
+    def _override_execution_list(self):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
-        # log
-        self.ui.listView_log_executions.setVisible(bool(self.active_project_item.filter_log_documents))
-        self.ui.listView_log_executions.model().reset_model(self.active_project_item)
-        current = self.ui.listView_log_executions.currentIndex()
-        self._select_log_execution(current, None)
-        # console
-        self.ui.listView_console_executions.setVisible(bool(self.active_project_item.filter_consoles))
-        self.ui.listView_console_executions.model().reset_model(self.active_project_item)
+        filter_consoles = self._filter_item_consoles.get(self.active_project_item, dict())
+        self.ui.listView_console_executions.setVisible(bool(filter_consoles))
+        self.ui.listView_console_executions.model().reset_model(filter_consoles)
         current = self.ui.listView_console_executions.currentIndex()
         self._select_console_execution(current, None)
 
-    def restore_original_item_log_document(self):
-        """Sets the Item Execution Log document back to the original."""
-        self.ui.listView_log_executions.hide()
-        self.ui.textBrowser_itemlog.restore_original_document()
-        self.ui.textBrowser_itemlog.hide()
-        self.ui.label_no_itemlog.show()
-        self._update_item_log_title()
-
-    def restore_original_console(self):
+    def _restore_original_console(self):
         """Sets the Console back to the original."""
         self.ui.listView_console_executions.hide()
         self._set_override_console(self.ui.label_no_console)
-
-    def _update_item_log_title(self):
-        """Updates Event Log title."""
-        owner = self.ui.textBrowser_itemlog.document().owner
-        owner_name = owner.name if owner else "Item"
-        new_title = f"{owner_name} Execution Log"
-        self.ui.dockWidget_itemlog.setWindowTitle(new_title)
 
     def _set_override_console(self, console):
         splitter = self.ui.splitter_console
@@ -1420,20 +1460,12 @@ class ToolboxUI(QMainWindow):
             new_title = console.name()
         except AttributeError:
             new_title = "Console"
-        splitter.parent().setWindowTitle(new_title)
-
-    @Slot()
-    def _refresh_log_execution_list(self):
-        """Refreshes log executions as the active project item starts new executions."""
-        self._refresh_execution_list(self.ui.listView_log_executions, self._select_log_execution)
+        self.ui.dockWidget_console.setWindowTitle(new_title)
 
     @Slot()
     def _refresh_console_execution_list(self):
         """Refreshes console executions as the active project item starts new executions."""
-        self._refresh_execution_list(self.ui.listView_console_executions, self._select_console_execution)
-
-    @staticmethod
-    def _refresh_execution_list(view, select):
+        view = self.ui.listView_console_executions
         view.show()
         model = view.model()
         if model.rowCount() == 0:
@@ -1443,31 +1475,13 @@ class ToolboxUI(QMainWindow):
             view.setCurrentIndex(index)
         else:
             current = view.currentIndex()
-            select(current, None)
-
-    @Slot(QModelIndex, QModelIndex)
-    def _select_log_execution(self, current, _previous):
-        """Sets the log documents of the selected execution in Event and Process Log."""
-        if not current.data():
-            return
-        item_log_doc = current.model().get_log_document(current.data())
-        self._do_override_item_log(item_log_doc)
+            self._select_console_execution(current, None)
 
     @Slot(QModelIndex, QModelIndex)
     def _select_console_execution(self, current, _previous):
         """Sets the console of the selected execution in Console."""
         if not current.data():
             return
-        console = current.model().get_console(current.data())
-        self._do_override_console(console)
-
-    def _select_execution(self, view, current):
-        """Sets the log documents of the selected execution in Event and Process Log,
-        and any consoles in Python and Julia Console."""
-        if not current.data():
-            return
-        item_log_doc = current.model().get_log_document(current.data())
-        self._do_override_item_log(item_log_doc)
         console = current.model().get_console(current.data())
         self._do_override_console(console)
 
@@ -2030,11 +2044,11 @@ class ToolboxUI(QMainWindow):
         self._project.item_added.connect(self.ui.graphicsView.add_icon)
         self._project.item_about_to_be_removed.connect(self.ui.graphicsView.remove_icon)
         self._project.connection_established.connect(self.ui.graphicsView.do_add_link)
-        self._project.connection_replaced.connect(self.ui.graphicsView.do_replace_link)
+        self._project.connection_updated.connect(self.ui.graphicsView.do_update_link)
         self._project.connection_about_to_be_removed.connect(self.ui.graphicsView.do_remove_link)
         self._project.jump_added.connect(self.ui.graphicsView.do_add_jump)
         self._project.jump_about_to_be_removed.connect(self.ui.graphicsView.do_remove_jump)
-        self._project.jump_replaced.connect(self.ui.graphicsView.do_replace_jump)
+        self._project.jump_updated.connect(self.ui.graphicsView.do_update_jump)
         self._project.specification_added.connect(self.repair_specification)
         self._project.specification_saved.connect(self._log_specification_saved)
 
@@ -2060,8 +2074,7 @@ class ToolboxUI(QMainWindow):
         if self._project is None:
             self.msg.emit("Please create a new project or open an existing one first")
             return
-        selected_names = self.selected_item_names()
-        self._project.execute_selected(selected_names)
+        self._project.execute_selected(self._selected_item_names)
 
     @Slot(bool)
     def _stop_execution(self, checked=False):
@@ -2268,7 +2281,58 @@ class ToolboxUI(QMainWindow):
         self._base_julia_console.deleteLater()
         self._base_julia_console = None
 
-    def make_jupyter_console(self, item, kernel_name, connection_file):
+    @Slot(object, str, str, str)
+    def _setup_jupyter_console(self, item, filter_id, kernel_name, connection_file):
+        """Sets up jupyter console, eventually for a filter execution.
+
+        Args:
+            item (ProjectItem): item
+            filter_id (str): filter identifier
+            kernel_name (str): jupyter kernel name
+            connection_file (str): path to connection file
+        """
+        if not filter_id:
+            self._item_consoles[item] = self._make_jupyter_console(item, kernel_name, connection_file)
+        else:
+            d = self._filter_item_consoles.setdefault(item, dict())
+            d[filter_id] = self._make_jupyter_console(item, kernel_name, connection_file)
+        self.override_console_and_execution_list()
+
+    @Slot(object, str, tuple, str)
+    def _setup_persistent_console(self, item, filter_id, key, language):
+        """Sets up persistent console, eventually for a filter execution.
+
+        Args:
+            item (ProjectItem): item
+            filter_id (str): filter identifier
+            key (tuple)
+            language (str)
+        """
+        if not filter_id:
+            self._item_consoles[item] = self._make_persistent_console(item, key, language)
+        else:
+            d = self._filter_item_consoles.setdefault(item, dict())
+            d[filter_id] = self._make_persistent_console(item, key, language)
+        self.override_console_and_execution_list()
+
+    @Slot(object, str, str)
+    def _add_persistent_stdin(self, item, filter_id, data):
+        self._get_console(item, filter_id).add_stdin(data)
+
+    @Slot(object, str, str)
+    def _add_persistent_stdout(self, item, filter_id, data):
+        self._get_console(item, filter_id).add_stdout(data)
+
+    @Slot(object, str, str)
+    def _add_persistent_stderr(self, item, filter_id, data):
+        self._get_console(item, filter_id).add_stderr(data)
+
+    def _get_console(self, item, filter_id):
+        if not filter_id:
+            return self._item_consoles[item]
+        return self._filter_item_consoles[item][filter_id]
+
+    def _make_jupyter_console(self, item, kernel_name, connection_file):
         """Creates a new JupyterConsoleWidget for given connection file if none exists yet, and returns it.
 
         Args:
@@ -2279,15 +2343,15 @@ class ToolboxUI(QMainWindow):
         Returns:
             JupyterConsoleWidget
         """
-        console = self._extra_jupyter_consoles.get(connection_file)
+        console = self._jupyter_consoles.get(connection_file)
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._extra_jupyter_consoles[connection_file] = JupyterConsoleWidget(self, kernel_name, owner=item)
+        console = self._jupyter_consoles[connection_file] = JupyterConsoleWidget(self, kernel_name, owner=item)
         console.connect_to_kernel(kernel_name, connection_file)
         return console
 
-    def make_persistent_console(self, item, key, language):
+    def _make_persistent_console(self, item, key, language):
         """Creates a new PersistentConsoleWidget for given process key.
 
         Args:
@@ -2298,19 +2362,20 @@ class ToolboxUI(QMainWindow):
         Returns:
             PersistentConsoleWidget
         """
-        console = self._extra_persistent_consoles.get(key)
+        console = self._persistent_consoles.get(key)
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._extra_persistent_consoles[key] = PersistentConsoleWidget(self, key, language, owner=item)
+        console = self._persistent_consoles[key] = PersistentConsoleWidget(self, key, language, owner=item)
         return console
 
     def _shutdown_engine_kernels(self):
         """Shuts down all kernels managed by Spine Engine."""
+        engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
-        while self._extra_jupyter_consoles:
-            connection_file, console = self._extra_jupyter_consoles.popitem()
+        while self._jupyter_consoles:
+            connection_file, console = self._jupyter_consoles.popitem()
             engine_mngr.shutdown_kernel(connection_file)
             console.deleteLater()
 
@@ -2318,3 +2383,25 @@ class ToolboxUI(QMainWindow):
         if self.isMinimized():
             self.showNormal()
         self.activateWindow()
+
+    @staticmethod
+    def _make_log_entry_title(title):
+        return f'<b>{title}</b>'
+
+    def start_execution(self, timestamp):
+        """Starts execution.
+
+        Args:
+            timestamp (str): time stamp
+        """
+        self.ui.textBrowser_eventlog.start_execution(timestamp)
+
+    def add_log_message(self, item_name, filter_id, message):
+        """Adds a message to an item's execution log.
+
+        Args:
+            item_name (str): item name
+            filter_id (str): filter identifier
+            message (str): formatted message
+        """
+        self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)

@@ -17,40 +17,44 @@ Link properties widget.
 """
 
 from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QWidget
+from .properties_widget import PropertiesWidgetBase
 from ..project_commands import SetConnectionOptionsCommand
 
 
-class LinkPropertiesWidget(QWidget):
+class LinkPropertiesWidget(PropertiesWidgetBase):
     """Widget for connection link properties."""
 
-    def __init__(self, toolbox):
+    def __init__(self, toolbox, base_color=None):
         """
         Args:
             toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
         """
         from ..ui.link_properties import Ui_Form  # pylint: disable=import-outside-toplevel
 
-        super().__init__(toolbox)
-        self._toolbox = toolbox
-        self._link = None
+        super().__init__(toolbox, base_color=base_color)
+        self._connection = None
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        toolbox.ui.tabWidget_item_properties.addTab(self, "Link properties")
         self.ui.checkBox_use_datapackage.stateChanged.connect(self._handle_use_datapackage_state_changed)
+        self.ui.checkBox_use_memory_db.stateChanged.connect(self._handle_use_memory_db_state_changed)
 
-    def set_link(self, link):
+    def set_link(self, connection):
         """Hooks the widget to given link, so that user actions are reflected in the link's filter configuration.
 
         Args:
-            link (Link)
+            connection (LoggingConnection)
         """
-        self._link = link
-        link.refresh_resource_filter_model()
-        self.ui.treeView_filters.setModel(link.resource_filter_model)
+        self._connection = connection
+        self._connection.refresh_resource_filter_model()
+        self.ui.treeView_filters.setModel(self._connection.resource_filter_model)
         self.ui.treeView_filters.expandAll()
-        self.ui.label_link_name.setText(f"Link {link.name}")
+        self._toolbox.label_item_name.setText(f"<b>Link {self._connection.link.name}</b>")
         self.load_connection_options()
+        source_item_type = self._toolbox.project().get_item(self._connection.source).item_type()
+        destination_item_type = self._toolbox.project().get_item(self._connection.destination).item_type()
+        self.ui.treeView_filters.setEnabled(bool(self._connection.database_resources))
+        self.ui.checkBox_use_memory_db.setEnabled({"Tool", "Data Store"} == {source_item_type, destination_item_type})
+        self.ui.checkBox_use_datapackage.setEnabled(source_item_type in {"Exporter", "Data Connection", "Tool"})
 
     def unset_link(self):
         """Releases the widget from any links."""
@@ -59,10 +63,19 @@ class LinkPropertiesWidget(QWidget):
     @Slot(int)
     def _handle_use_datapackage_state_changed(self, _state):
         checked = self.ui.checkBox_use_datapackage.isChecked()
-        if self._link.connection.use_datapackage == checked:
+        if self._connection.use_datapackage == checked:
             return
         options = {"use_datapackage": checked}
-        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._link, options))
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._connection, options))
+
+    @Slot(int)
+    def _handle_use_memory_db_state_changed(self, _state):
+        checked = self.ui.checkBox_use_memory_db.isChecked()
+        if self._connection.use_memory_db == checked:
+            return
+        options = {"use_memory_db": checked}
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._connection, options))
 
     def load_connection_options(self):
-        self.ui.checkBox_use_datapackage.setChecked(self._link.connection.use_datapackage)
+        self.ui.checkBox_use_datapackage.setChecked(self._connection.use_datapackage)
+        self.ui.checkBox_use_memory_db.setChecked(self._connection.use_memory_db)

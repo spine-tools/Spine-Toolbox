@@ -1070,6 +1070,15 @@
     <string>Add database file to the current view</string>
    </property>
   </action>
+  <action name="actionVacuum">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/broom.svg</normaloff>:/icons/menu_icons/broom.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Vacuum</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

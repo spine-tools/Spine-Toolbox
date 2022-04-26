@@ -13,7 +13,9 @@
   </qresource>
   <qresource prefix="/icons">
     <file>menu_icons/server.svg</file>
+    <file>menu_icons/broom.svg</file>
     <file>tractor.svg</file>
+    <file>check-circle.svg</file>
     <file>double-at.svg</file>
     <file>file-link.svg</file>
     <file>wrench.svg</file>

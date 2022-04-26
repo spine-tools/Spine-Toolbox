@@ -57,6 +57,10 @@ class EntityTreeView(CopyTreeView):
         self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
 
+    def reset(self):
+        super().reset()
+        self._selected_indexes = {}
+
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
 
@@ -185,7 +189,7 @@ class EntityTreeView(CopyTreeView):
 
     def remove_selected(self):
         """Removes selected indexes using the connected Spine db editor."""
-        self._spine_db_editor.show_remove_entity_tree_items_form(self._selected_indexes)
+        self._spine_db_editor.remove_entity_tree_items(self._selected_indexes)
 
     def manage_relationships(self):
         self._spine_db_editor.show_manage_relationships_form(self._context_item)
@@ -502,6 +506,10 @@ class AlternativeScenarioTreeView(ItemTreeView):
         self._generate_scenarios_action = None
         self.setMouseTracking(True)
 
+    def reset(self):
+        super().reset()
+        self._selected_alternative_ids = dict()
+
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
@@ -663,36 +671,17 @@ class ParameterValueListTreeView(ItemTreeView):
         if not self.selectionModel().hasSelection():
             return
         db_map_typed_data_to_rm = {}
-        db_map_data_to_upd = {}
         items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
         for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"parameter_value_list": set()}
-            db_map_data_to_upd[db_item.db_map] = []
-            for list_item in reversed(db_item.children[:-1]):
-                if list_item.id:
-                    if list_item in items:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].add(list_item.id)
-                        continue
-                    curr_value_list = list_item.value_list
-                    new_value_list = [
-                        value
-                        for value_item, value in zip(list_item.children, curr_value_list)
-                        if value_item not in items
-                    ]
-                    if not new_value_list:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].add(list_item.id)
-                        continue
-                    if new_value_list != curr_value_list:
-                        item = {"id": list_item.id, "value_list": [bytes(val, "UTF-8") for val in new_value_list]}
-                        db_map_data_to_upd[db_item.db_map].append(item)
+            db_map_typed_data_to_rm[db_item.db_map] = {"parameter_value_list": set(), "list_value": set()}
+            for list_item in db_item.children[:-1]:
+                if list_item.id is None:
+                    continue
+                if list_item in items:
+                    db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].add(list_item.id)
+                    removed_value_item_ids = {x.id for x in list_item.children[:-1]}
                 else:
-                    # WIP lists, just remove everything selected
-                    if list_item in items:
-                        db_item.remove_children(list_item.child_number(), 1)
-                        continue
-                    for value_item in reversed(list_item.children[:-1]):
-                        if value_item in items:
-                            list_item.remove_children(value_item.child_number(), 1)
-        self.model().db_mngr.update_parameter_value_lists(db_map_data_to_upd)
+                    removed_value_item_ids = {x.id for x in list_item.children[:-1] if x in items}
+                db_map_typed_data_to_rm[db_item.db_map]["list_value"].update(removed_value_item_ids)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()

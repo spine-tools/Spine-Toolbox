@@ -42,7 +42,6 @@ from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_widget import PlotWidget
 
 
-_LEGEND_SETTINGS = {"bbox_to_anchor": (1.02, 1.0), "fontsize": "small", "loc": "upper left"}
 _PLOT_SETTINGS = {"alpha": 0.7}
 
 
@@ -87,9 +86,9 @@ def plot_pivot_column(proxy_model, column, hints, plot_widget=None):
             plot_widget.infer_plot_type(values)
         else:
             _raise_if_value_types_clash(values, plot_widget)
-    _add_plot_to_widget(values, labels, plot_widget)
+    add_plot_to_widget(values, labels, plot_widget)
     if len(plot_widget.canvas.axes.get_lines()) > 1:
-        plot_widget.canvas.axes.legend(**_LEGEND_SETTINGS)
+        plot_widget.add_legend()
     plot_widget.canvas.axes.set_xlabel(hints.x_label(proxy_model))
     plot_lines = plot_widget.canvas.axes.get_lines()
     if plot_lines:
@@ -117,21 +116,21 @@ def plot_selection(model, indexes, hints, plot_widget=None):
     else:
         needs_redraw = True
     selections = hints.filter_columns(_organize_selection_to_columns(indexes), model)
-    all_labels = list()
     for column, rows in selections.items():
         values, labels = _collect_column_values(model, column, rows, hints)
-        all_labels += labels
+        plot_widget.all_labels += labels
         if values:
             if plot_widget.plot_type is None:
                 plot_widget.infer_plot_type(values)
             else:
                 _raise_if_value_types_clash(values, plot_widget)
-        _add_plot_to_widget(values, labels, plot_widget)
+        add_plot_to_widget(values, labels, plot_widget)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
-    if len(all_labels) > 1:
-        plot_widget.canvas.axes.legend(**_LEGEND_SETTINGS)
-    elif len(all_labels) == 1:
-        plot_widget.canvas.axes.set_title(all_labels[0])
+    if len(plot_widget.all_labels) > 1:
+        plot_widget.canvas.axes.set_title("")
+        plot_widget.add_legend()
+    elif len(plot_widget.all_labels) == 1:
+        plot_widget.canvas.axes.set_title(plot_widget.all_labels[0])
     if needs_redraw:
         plot_widget.canvas.draw()
     return plot_widget
@@ -189,7 +188,8 @@ def add_time_series_plot(plot_widget, value, label=None):
     if left < 1.0:
         # 1.0 corresponds to 0001-01-01T00:00
         plot_widget.canvas.axes.set_xlim(left=1.0)
-    plot_widget.canvas.figure.autofmt_xdate()
+    # FIXME: The below causes xticklabels to disappear when plotting legend as a subplot
+    # plot_widget.canvas.figure.autofmt_xdate()
 
 
 class PlottingHints:
@@ -359,7 +359,7 @@ class PivotTablePlottingHints(PlottingHints):
         return proxy_model.mapFromSource(source_index).column()
 
 
-def _add_plot_to_widget(values, labels, plot_widget):
+def add_plot_to_widget(values, labels, plot_widget):
     """Adds a new plot to plot_widget."""
     if not values:
         return
@@ -385,7 +385,7 @@ def _add_plot_to_widget(values, labels, plot_widget):
 def _raise_if_not_all_indexed_values(values):
     """Raises an exception if not all values are TimeSeries or Maps."""
     if not values:
-        return values
+        return
     first_value_type = type(values[0])
     if issubclass(first_value_type, TimeSeries):
         # Clump fixed and variable step time series together. We can plot both at the same time.
@@ -526,8 +526,8 @@ def _collect_column_values(model, column, rows, hints):
     values, labels = _collect_single_column_values(model, column, rows, hints)
     if not values:
         return values, labels
-    if isinstance(first_non_null(values), Map):
-        values, labels = _expand_maps(values, labels)
+    if len(values) == len(labels):
+        values, labels = expand_maps(values, labels)
     if isinstance(first_non_null(values), (Array, Map, TimeSeries)):
         values = [x for x in values if x is not None]
         _raise_if_not_all_indexed_values(values)
@@ -543,7 +543,7 @@ def _collect_column_values(model, column, rows, hints):
     return (usable_x, usable_y), labels
 
 
-def _expand_maps(maps, labels):
+def expand_maps(maps, labels):
     """
     Gathers the leaf elements from ``maps`` and expands ``labels`` accordingly.
 
@@ -559,6 +559,10 @@ def _expand_maps(maps, labels):
     for map_, label in zip(maps, labels):
         if map_ is None:
             continue
+        if not isinstance(map_, Map):
+            expanded_values.append(map_)
+            expanded_labels.append(label)
+            continue
         map_ = convert_leaf_maps_to_specialized_containers(map_)
         if isinstance(map_, (Array, TimeSeries)):
             expanded_values.append(map_)
@@ -572,7 +576,7 @@ def _expand_maps(maps, labels):
 
 def _label_nested_maps(map_, label):
     """
-    Collects leaf values from given Maps and labels them.
+    Collects leaf values from given Map and labels them.
 
     Args:
         map_ (Map): a map

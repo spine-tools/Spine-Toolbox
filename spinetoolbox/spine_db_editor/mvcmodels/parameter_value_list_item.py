@@ -16,7 +16,6 @@ Tree items for parameter_value lists.
 :date:   28.6.2019
 """
 
-import json
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
 from spinedb_api import to_database
@@ -29,8 +28,9 @@ from .tree_item_utility import (
     StandardDBItem,
     FetchMoreMixin,
     LeafItem,
+    ListValueFetchParent,
 )
-from ...helpers import CharIconEngine, rows_to_row_count_tuples
+from ...helpers import CharIconEngine
 
 
 class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
@@ -47,44 +47,33 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
     def empty_child(self):
         return ListItem()
 
-    def remove_wip_items(self, names):
-        removed_rows = [
-            row for row, list_item in enumerate(self.children[:-1]) if list_item.id is None and list_item.name in names
-        ]
-        for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
-            self.remove_children(row, count)
 
-
-class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, LeafItem):
+class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, FetchMoreMixin, LeafItem):
     """A list item."""
 
     def __init__(self, identifier=None, name=None):
         super().__init__(identifier=identifier)
         self._name = name
+        self._list_value_fetch_parent = ListValueFetchParent(identifier)
 
     @property
     def item_type(self):
         return "parameter_value_list"
 
+    def _fetch_parents(self):
+        yield self._list_value_fetch_parent
+
     def _make_item_data(self):
         return {"name": "Type new list name here..." if self._name is None else self._name}
-
-    @property
-    def value_list(self):
-        if not self.id:
-            return []
-        return self.db_mngr.get_parameter_value_list(self.db_map, self.id, role=Qt.EditRole)
 
     def _do_finalize(self):
         if not self.id and not self._name:
             return
         super()._do_finalize()
-        children = [ValueItem(self.id) for _ in self.value_list]
-        self.append_children(children)
 
     # pylint: disable=no-self-use
     def empty_child(self):
-        return ValueItem(self.id)
+        return ValueItem()
 
     def data(self, column, role=Qt.DisplayRole):
         if role == Qt.DecorationRole:
@@ -92,34 +81,14 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, L
             return QIcon(engine.pixmap())
         return super().data(column, role)
 
-    def set_data(self, column, value, role=Qt.EditRole):
-        if role != Qt.EditRole or value == self.data(column, role):
-            return False
-        if self.id:
-            db_item = self._make_item_to_update(column, value)
-            self.update_item_in_db(db_item)
-            return True
-        # Don't add item to db. Items are only added when the first list value is set.
-        # Instead, insert a wip list item with a just name, and no values yet
-        self.parent_item.insert_children(self.child_number(), [ListItem(name=value)])
-        return True
+    def _make_item_to_add(self, value):
+        return dict(name=value)
 
     def add_item_to_db(self, db_item):
-        raise NotImplementedError()
+        self.db_mngr.add_parameter_value_lists({self.db_map: [db_item]})
 
     def update_item_in_db(self, db_item):
         self.db_mngr.update_parameter_value_lists({self.db_map: [db_item]})
-
-    def handle_updated_in_db(self):
-        value_count = len(self.value_list)
-        curr_value_count = self.child_count() - 1
-        if value_count > curr_value_count:
-            added_count = value_count - curr_value_count
-            children = [ValueItem(self.id) for _ in range(added_count)]
-            self.insert_children(curr_value_count, children)
-        elif curr_value_count > value_count:
-            removed_count = curr_value_count - value_count
-            self.remove_children(value_count, removed_count)
 
 
 class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
@@ -127,35 +96,27 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def item_type(self):
         return "list_value"
 
-    @property
-    def value(self):
-        return self.db_mngr.get_value_list_item(self.db_map, self.id, self.child_number(), Qt.EditRole)
-
     def data(self, column, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole and not self.id:
+            return "Enter new list value here..."
         if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, PARSED_ROLE):
-            value = self.db_mngr.get_value_list_item(self.db_map, self.id, self.child_number(), role)
-            if value is not None:
-                return value
-            return "Enter new list value here..." if role != PARSED_ROLE else None
+            return self.db_mngr.get_value(self.db_map, self.item_type, self.id, role)
         return super().data(column, role)
 
-    def _make_item_to_add(self, value):
-        db_value = to_database(value)[0]
-        return self.make_item_to_add(db_value)
+    def list_index(self):
+        return self.db_mngr.get_item(self.db_map, self.item_type, self.id)["index"]
 
-    def make_item_to_add(self, db_value):
-        value_list = self.parent_item.value_list.copy()
-        try:
-            value_list[self.child_number()] = db_value
-        except IndexError:
-            value_list.append(db_value)
-        return [(self.parent_item.name, json.loads(value)) for value in value_list]
+    def _make_item_to_add(self, value):
+        db_value, db_type = value
+        index = 0 if self.child_number() == 0 else self.parent_item.child(self.child_number() - 1).list_index() + 1
+        return dict(value=db_value, type=db_type, parameter_value_list_id=self.parent_item.id, index=index)
 
     def _make_item_to_update(self, _column, value):
-        return self._make_item_to_add(value)
+        db_value, db_type = value
+        return dict(id=self.id, value=db_value, type=db_type)
 
     def add_item_to_db(self, db_item):
-        self.db_mngr.import_data({self.db_map: {"parameter_value_lists": db_item}})
+        self.db_mngr.add_list_values({self.db_map: [db_item]})
 
     def update_item_in_db(self, db_item):
-        self.add_item_to_db(db_item)
+        self.db_mngr.update_list_values({self.db_map: [db_item]})

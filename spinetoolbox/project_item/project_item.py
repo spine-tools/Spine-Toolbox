@@ -17,16 +17,16 @@ Contains base classes for project items and item factories.
 
 import os
 import logging
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, Qt
 from spine_engine.utils.helpers import shorten
 from ..helpers import create_dir, open_url
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
-from ..widgets.custom_qtextbrowser import SignedTextDocument
-from ..helpers import format_log_message, add_message_to_document, rename_dir
+from ..helpers import rename_dir
+from ..log_mixin import LogMixin
 
 
-class ProjectItem(MetaObject):
+class ProjectItem(LogMixin, MetaObject):
     """Class for project items that are not category nor root.
     These items can be executed, refreshed, and so on.
 
@@ -51,22 +51,25 @@ class ProjectItem(MetaObject):
         self._logger = project.toolbox()
         self._properties_ui = None
         self._icon = None
-        self._sigs = None
+        self._sigs = dict()
         self._active = False
         self._actions = list()
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
-        self._log_document = None
-        self._filter_log_documents = {}
-        self.console = None
-        self._filter_consoles = {}
 
     def create_data_dir(self):
         try:
             create_dir(self.data_dir)
         except OSError:
             self._logger.msg_error.emit(f"[OSError] Creating directory {self.data_dir} failed. Check permissions.")
+
+    def data_files(self):
+        """Returns a list of files that are in the data directory."""
+        if not os.path.isdir(self.data_dir):
+            return []
+        with os.scandir(self.data_dir) as scan_iterator:
+            return [entry.path for entry in scan_iterator if entry.is_file()]
 
     @staticmethod
     def item_type():
@@ -90,18 +93,6 @@ class ProjectItem(MetaObject):
     def logger(self):
         return self._logger
 
-    @property
-    def log_document(self):
-        return self._log_document
-
-    @property
-    def filter_log_documents(self):
-        return self._filter_log_documents
-
-    @property
-    def filter_consoles(self):
-        return self._filter_consoles
-
     # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -113,6 +104,7 @@ class ProjectItem(MetaObject):
     def activate(self):
         """Restore selections and connect signals."""
         self._active = True
+        self.update_name_label()
         self.restore_selections()  # Do this before connecting signals or funny things happen
         self._connect_signals()
 
@@ -133,6 +125,7 @@ class ProjectItem(MetaObject):
 
     def _connect_signals(self):
         """Connect signals to handlers."""
+        self._sigs = self.make_signal_handler_dict()
         for signal, handler in self._sigs.items():
             signal.connect(handler)
 
@@ -162,8 +155,6 @@ class ProjectItem(MetaObject):
             properties_ui (QWidget): item's properties UI
         """
         self._properties_ui = properties_ui
-        if self._sigs is None:
-            self._sigs = self.make_signal_handler_dict()
 
     def specification(self):
         """Returns the specification for this item."""
@@ -173,8 +164,7 @@ class ProjectItem(MetaObject):
         return self._specification
 
     def set_specification(self, specification):
-        """Pushes a new SetItemSpecificationCommand to the toolbox' undo stack.
-        """
+        """Pushes a new SetItemSpecificationCommand to the toolbox' undo stack."""
         if specification == self._specification:
             return
         self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification, self.undo_specification()))
@@ -336,13 +326,26 @@ class ProjectItem(MetaObject):
         self.remove_notification("The workflow defined for this item has loops and thus cannot be executed.")
 
     def item_dict(self):
-        """Returns a dictionary corresponding to this item."""
+        """Returns a dictionary corresponding to this item.
+
+        Returns:
+            dict: serialized project item
+        """
         return {
             "type": self.item_type(),
             "description": self.description,
             "x": self.get_icon().x(),
             "y": self.get_icon().y(),
         }
+
+    @staticmethod
+    def item_dict_local_entries():
+        """Returns entries or 'paths' in item dict that should be stored in project's local data directory.
+
+        Returns:
+            list of tuple of str: local data item dict entries
+        """
+        return []
 
     @staticmethod
     def parse_item_dict(item_dict):
@@ -377,6 +380,7 @@ class ProjectItem(MetaObject):
             item_dict (dict): serialized item
             toolbox (ToolboxUI): the main window
             project (SpineToolboxProject): a project
+
         Returns:
             ProjectItem: deserialized item
         """
@@ -410,10 +414,10 @@ class ProjectItem(MetaObject):
             return False
         self.set_name(new_name)
         self.data_dir = new_data_dir
+        self.get_icon().update_name_item(new_name)
         if self._active:
             self.update_name_label()
-            self._project._toolbox.override_logs_and_consoles()
-        self.get_icon().update_name_item(new_name)
+            self._project.toolbox().override_console_and_execution_list()
         return True
 
     @Slot(bool)
@@ -444,11 +448,9 @@ class ProjectItem(MetaObject):
 
     def update_name_label(self):
         """
-        Updates the name label on the properties widget when renaming an item.
-
-        Must be reimplemented by subclasses.
+        Updates the name label on the properties widget, used when selecting an item and renaming the selected one.
         """
-        raise NotImplementedError()
+        self._project.toolbox().label_item_name.setText(f"<b>{self.name}</b>")
 
     def notify_destination(self, source_item):
         """
@@ -465,75 +467,6 @@ class ProjectItem(MetaObject):
             f"<b>{source_item.item_type()}</b> and a <b>{self.item_type()}</b> has not been "
             "implemented yet."
         )
-
-    def _create_filter_log_document(self, filter_id):
-        """Creates log document for a filter execution if none yet, and returns it
-
-        Args:
-            filter_id (str): filter identifier
-
-        Returns:
-            SignedTextDocument
-        """
-        if filter_id not in self._filter_log_documents:
-            self._filter_log_documents[filter_id] = SignedTextDocument(self)
-            if self._active:
-                self._project._toolbox.ui.listView_log_executions.model().layoutChanged.emit()
-        return self._filter_log_documents[filter_id]
-
-    def _create_log_document(self):
-        """Creates log document if none yet, and returns it
-
-        Args:
-            filter_id (str): filter identifier
-
-        Returns:
-            SignedTextDocument
-        """
-        if self._log_document is None:
-            self._log_document = SignedTextDocument(self)
-            if self._active:
-                self._project._toolbox.override_item_log()
-        return self._log_document
-
-    def add_log_message(self, filter_id, message):
-        """Adds a message to the log document.
-
-        Args:
-            filter_id (str): filter identifier
-            message (str): formatted message
-        """
-        if filter_id:
-            document = self._create_filter_log_document(filter_id)
-        else:
-            document = self._create_log_document()
-        scrollbar = self._project._toolbox.ui.textBrowser_itemlog.verticalScrollBar()
-        scrollbar_at_max = scrollbar.value() == scrollbar.maximum()
-        add_message_to_document(document, message)
-        if scrollbar_at_max:  # if scrollbar was at maximum before document was appended -> scroll to bottom
-            self._project._toolbox.ui.textBrowser_itemlog.scroll_to_bottom()
-
-    def add_event_message(self, filter_id, msg_type, msg_text):
-        """Adds a message to the log document.
-
-        Args:
-            filter_id (str): filter identifier
-            msg_type (str): message type
-            msg_text (str): message text
-        """
-        message = format_log_message(msg_type, msg_text)
-        self.add_log_message(filter_id, message)
-
-    def add_process_message(self, filter_id, msg_type, msg_text):
-        """Adds a message to the log document.
-
-        Args:
-            filter_id (str): filter identifier
-            msg_type (str): message type
-            msg_text (str): message text
-        """
-        message = format_log_message(msg_type, msg_text, show_datetime=False)
-        self.add_log_message(filter_id, message)
 
     @staticmethod
     def upgrade_v1_to_v2(item_name, item_dict):

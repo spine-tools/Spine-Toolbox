@@ -17,9 +17,9 @@ Contains the MultiSpineDBEditor class.
 """
 
 import os
-from PySide2.QtWidgets import QMessageBox, QToolBar, QWidget, QSizePolicy, QMenu
-from PySide2.QtCore import Qt, Slot, QPoint, QSize
-from PySide2.QtGui import QIcon
+from PySide2.QtWidgets import QMessageBox, QMenu, QStatusBar, QToolButton
+from PySide2.QtCore import Slot, QPoint
+from PySide2.QtGui import QIcon, QFont
 from .spine_db_editor import SpineDBEditor
 from .custom_qwidgets import ShootingLabel, OpenFileButton, OpenSQLiteFileButton
 from ...widgets.multi_tab_window import MultiTabWindow
@@ -47,9 +47,8 @@ class MultiSpineDBEditor(MultiTabWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         self.setWindowTitle("Spine DB Editor")
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        self._file_open_toolbar = _FileOpenToolBar(self)
-        self._file_open_toolbar.hide()
-        self.addToolBar(Qt.BottomToolBarArea, self._file_open_toolbar)
+        self.setStatusBar(_CustomStatusBar(self))
+        self.statusBar().hide()
         if db_url_codenames is not None:
             self.add_new_tab(db_url_codenames)
 
@@ -121,14 +120,13 @@ class MultiSpineDBEditor(MultiTabWindow):
             button (OpenFileButton)
         """
         duplicates = [
-            x
-            for x in self._file_open_toolbar.findChildren(OpenFileButton)
-            if os.path.samefile(x.file_path, button.file_path)
+            x for x in self.statusBar().findChildren(OpenFileButton) if os.path.samefile(x.file_path, button.file_path)
         ]
         for dup in duplicates:
-            self._file_open_toolbar.remove_widget(dup)
-        self._file_open_toolbar.preppend_widget(button)
-        self._file_open_toolbar.show()
+            self.statusBar().removeWidget(dup)
+            dup.deleteLater()
+        self.statusBar().insertWidget(0, button)
+        self.statusBar().show()
         destination = QPoint(16, 0) + button.mapTo(self, QPoint(0, 0))
         label = ShootingLabel(destination - QPoint(0, 64), destination, self)
         pixmap = QIcon(":/icons/file-download.svg").pixmap(32, 32)
@@ -176,25 +174,29 @@ class MultiSpineDBEditor(MultiTabWindow):
         self._waiting_box = None
 
 
-class _FileOpenToolBar(QToolBar):
+class _CustomStatusBar(QStatusBar):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("multi_spine_db_editor_file_open_toolbar")
-        empty = QWidget()
-        empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        self.addWidget(empty)
-        self.addAction(QIcon(CharIconEngine("\uf00d")), "Close", self.hide)
-        self.setMovable(False)
-        self.setIconSize(QSize(20, 20))
-
-    def preppend_widget(self, widget):
-        first_action = next(iter(self.actions()), None)
-        if first_action:
-            self.insertWidget(first_action, widget)
-        else:
-            self.addWidget(widget)
-
-    def remove_widget(self, widget):
-        action = next(iter(a for a in self.actions() if self.widgetForAction(a) is widget), None)
-        if action:
-            self.removeAction(action)
+        self.setContentsMargins(0, 0, 4, 0)
+        self._hide_button = QToolButton()
+        self._hide_button.setStyleSheet(
+            """
+            QToolButton {
+                background-color: transparent;
+                border: 0px;
+                border-radius: 6px;
+            }
+            QToolButton:hover {
+                background-color: #dddddd;
+            }
+            QToolButton:pressed {
+                background-color: #bbbbbb;
+            }
+            """
+        )
+        self._hide_button.setText("\uf00d")
+        self._hide_button.setFont(QFont('Font Awesome 5 Free Solid'))
+        self._hide_button.setFixedSize(24, 24)
+        self.insertPermanentWidget(0, self._hide_button)
+        self.setSizeGripEnabled(False)
+        self._hide_button.clicked.connect(self.hide)

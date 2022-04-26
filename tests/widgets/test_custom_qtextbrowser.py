@@ -22,6 +22,8 @@ import sys
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 
+# XXX: This modules just tests QTextBrowser.maximumBlockCount, so maybe we can remove it?
+
 
 class TestCustomQTextBrowser(unittest.TestCase):
     """Tests the CustomQTextBrowser class."""
@@ -42,12 +44,12 @@ class TestCustomQTextBrowser(unittest.TestCase):
 
     def test_default_max_blocks(self):
         browser = CustomQTextBrowser(None)
-        self.assertEqual(browser.max_blocks, 2000)
+        self.assertEqual(browser.document().maximumBlockCount(), 2000)
 
     def test_append_obeys_max_blocks(self):
         browser = CustomQTextBrowser(None)
         self.assertEqual(browser.document().blockCount(), 1)
-        browser.max_blocks = 5
+        browser.document().setMaximumBlockCount(5)
         for _ in range(5):
             browser.append('test text')
         self.assertEqual(browser.document().blockCount(), 5)
@@ -58,7 +60,7 @@ class TestCustomQTextBrowser(unittest.TestCase):
     def test_extra_blocks_removed_from_start(self):
         browser = CustomQTextBrowser(None)
         self.assertEqual(browser.document().blockCount(), 1)
-        browser.max_blocks = 3
+        browser.document().setMaximumBlockCount(3)
         texts = ['1', '2', '3', '4', '5']
         for t in texts:
             browser.append(t)

@@ -15,17 +15,16 @@ Models to represent items in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject
+from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex
 
 
-class TreeItem(QObject):
+class TreeItem:
     """A tree item that can fetch its children."""
 
     def __init__(self, model=None):
-        """Initializes item.
-
+        """
         Args:
-            model (MinimalTreeModel, NoneType): The model where the item belongs.
+            model (MinimalTreeModel, optional): The model where the item belongs.
         """
         super().__init__()
         self._children = []
@@ -239,7 +238,7 @@ class MinimalTreeModel(QAbstractItemModel):
         Args:
             index (QModelIndex): an index to start. If not given, we start at the root
             view (QTreeView): a tree view. If given, we only yield items that are visible
-                from that view. So for example, if a tree item is not expanded then we don't yield
+                to that view. So for example, if a tree item is not expanded then we don't yield
                 its children.
 
         Yields:

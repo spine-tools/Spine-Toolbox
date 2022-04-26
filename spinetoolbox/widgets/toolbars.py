@@ -16,8 +16,8 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QToolBar, QLabel, QToolButton, QAbstractButton
+from PySide2.QtCore import Qt, Slot
+from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
 from PySide2.QtGui import QIcon, QPainter
 from ..helpers import make_icon_toolbar_ss, ColoredIcon, CharIconEngine
 from .project_item_drag import ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
@@ -66,6 +66,8 @@ class PluginToolBar(ToolBar):
         """
         super().__init__(name, parent)  # Inherits stylesheet from ToolboxUI
         self._name = name
+        self._buttons = {}
+        self._toolbox.specification_model.specification_replaced.connect(self._update_spec_button_name)
 
     def setup(self, plugin_specs, disabled_names):
         """Sets up the toolbar.
@@ -84,9 +86,18 @@ class PluginToolBar(ToolBar):
                 if spec.name in disabled_names:
                     button.setEnabled(False)
                 self.addWidget(button)
+                self._buttons[spec.name] = button
 
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
+
+    @Slot(str, str)
+    def _update_spec_button_name(self, old_name, new_name):
+        button = self._buttons.pop(old_name, None)
+        if button is None:
+            return
+        self._buttons[new_name] = button
+        button.spec_name = new_name
 
 
 class MainToolBar(ToolBar):

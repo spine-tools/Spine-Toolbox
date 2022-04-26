@@ -46,16 +46,18 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.pos_x_parameter = "x"
         self.pos_y_parameter = "y"
         self.selected_items = list()
-        self.removed_items = list()
+        self.removed_items = set()
         self.hidden_items = dict()
-        self.pruned_entity_ids = dict()
+        self.pruned_db_map_entity_ids = dict()
         self.heat_map_items = list()
         self._point_value_tuples_per_parameter_name = dict()  # Used in the heat map menu
         self._hovered_obj_item = None
         self.relationship_class = None
         self.cross_hairs_items = []
         self.auto_expand_objects = None
+        self.merge_dbs = None
         self._auto_expand_objects_action = None
+        self._merge_dbs_action = None
         self._add_objects_action = None
         self._select_pos_param_action = None
         self._save_pos_action = None
@@ -76,7 +78,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._prune_classes_menu = None
         self._restore_pruned_menu = None
         self._parameter_heat_map_menu = None
-        self._items_per_db_map_class = {}
+        self._items_per_class = {}
 
     @property
     def _qsettings(self):
@@ -108,13 +110,16 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.populate_context_menu()
 
     def populate_context_menu(self):
+        self.auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
+        self.merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
         self._auto_expand_objects_action = self._menu.addAction("Auto-expand objects")
         self._auto_expand_objects_action.setCheckable(True)
-        self.auto_expand_objects = (
-            self._spine_db_editor.qsettings.value("appSettings/autoExpandObjects", defaultValue="false") == "true"
-        )
         self._auto_expand_objects_action.setChecked(self.auto_expand_objects)
-        self._auto_expand_objects_action.toggled.connect(self.set_auto_expand_objects)
+        self._auto_expand_objects_action.triggered.connect(self._set_auto_expand_objects)
+        self._merge_dbs_action = self._menu.addAction("Merge databases")
+        self._merge_dbs_action.setCheckable(True)
+        self._merge_dbs_action.setChecked(self.merge_dbs)
+        self._merge_dbs_action.triggered.connect(self._set_merge_dbs)
         self._menu.addSeparator()
         self._add_objects_action = self._menu.addAction("Add objects", self.add_objects_at_position)
         self._menu.addSeparator()
@@ -187,24 +192,24 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._show_hidden_menu.setEnabled(any(self.hidden_items.values()))
         self._show_all_hidden_action.setEnabled(bool(self.hidden_items))
         self._prune_selected_action.setEnabled(bool(self.selected_items))
-        self._restore_pruned_menu.setEnabled(any(self.pruned_entity_ids.values()))
-        self._restore_all_pruned_action.setEnabled(any(self.pruned_entity_ids.values()))
+        self._restore_pruned_menu.setEnabled(any(self.pruned_db_map_entity_ids.values()))
+        self._restore_all_pruned_action.setEnabled(any(self.pruned_db_map_entity_ids.values()))
         self._prune_selected_action.setText(f"Prune {self._get_selected_entity_names()}")
         self._rebuild_action.setEnabled(has_graph)
         self._zoom_action.setEnabled(has_graph)
         self._rotate_action.setEnabled(has_graph)
         self._export_as_pdf_action.setEnabled(has_graph)
-        self._items_per_db_map_class = {}
+        self._items_per_class = {}
         for item in self.entity_items:
-            key = f"{item.entity_class_name}@{item.db_map.codename}"
-            self._items_per_db_map_class.setdefault(key, list()).append(item)
+            key = f"{item.entity_class_name}"
+            self._items_per_class.setdefault(key, list()).append(item)
         self._hide_classes_menu.clear()
-        self._hide_classes_menu.setEnabled(bool(self._items_per_db_map_class))
+        self._hide_classes_menu.setEnabled(bool(self._items_per_class))
         self._prune_classes_menu.clear()
-        self._prune_classes_menu.setEnabled(bool(self._items_per_db_map_class))
-        for key in sorted(self._items_per_db_map_class - self.hidden_items.keys()):
+        self._prune_classes_menu.setEnabled(bool(self._items_per_class))
+        for key in sorted(self._items_per_class.keys() - self.hidden_items.keys()):
             self._hide_classes_menu.addAction(key)
-        for key in sorted(self._items_per_db_map_class.keys() - self.pruned_entity_ids.keys()):
+        for key in sorted(self._items_per_class.keys() - self.pruned_db_map_entity_ids.keys()):
             self._prune_classes_menu.addAction(key)
         # FIXME: The heap map doesn't seem to be working nicely
         # self._parameter_heat_map_menu.setEnabled(has_graph)
@@ -225,10 +230,32 @@ class EntityQGraphicsView(CustomQGraphicsView):
         return menu
 
     @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
+    def _set_auto_expand_objects(self, _checked=False, save_setting=True):
+        checked = self._auto_expand_objects_action.isChecked()
+        if checked == self.auto_expand_objects:
+            return
+        if save_setting:
+            self._qsettings.setValue("appSettings/autoExpandObjects", "true" if checked else "false")
         self.auto_expand_objects = checked
-        self._auto_expand_objects_action.setChecked(checked)
         self._spine_db_editor.build_graph()
+
+    def set_auto_expand_objects(self, checked):
+        self._auto_expand_objects_action.setChecked(checked)
+        self._set_auto_expand_objects(save_setting=False)
+
+    @Slot(bool)
+    def _set_merge_dbs(self, _checked=False, save_setting=True):
+        checked = self._merge_dbs_action.isChecked()
+        if checked == self.merge_dbs:
+            return
+        if save_setting:
+            self._qsettings.setValue("appSettings/mergeDBs", "true" if checked else "false")
+        self.merge_dbs = checked
+        self._spine_db_editor.build_graph()
+
+    def set_merge_dbs(self, checked):
+        self._merge_dbs_action.setChecked(checked)
+        self._set_merge_dbs(save_setting=False)
 
     @Slot(bool)
     def add_objects_at_position(self, checked=False):
@@ -247,11 +274,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Removes selected items."""
         if not self.selected_items:
             return
-        db_map_typed_data = {}
-        for item in self.selected_items:
-            db_map, entity_id = item.db_map_entity_id
-            db_map_typed_data.setdefault(db_map, {}).setdefault(item.entity_type, set()).add(entity_id)
-        self.db_mngr.remove_items(db_map_typed_data)
+        selected = {
+            "object": [item for item in self.selected_items if isinstance(item, ObjectItem)],
+            "relationship": [item for item in self.selected_items if isinstance(item, RelationshipItem)],
+        }
+        self._spine_db_editor.show_remove_entity_tree_items_form(selected)
 
     def _get_selected_entity_names(self):
         if not self.selected_items:
@@ -274,7 +301,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def _hide_class(self, action):
         """Hides some class."""
         key = action.text()
-        items = self._items_per_db_map_class[key]
+        items = self._items_per_class[key]
         self.hidden_items[key] = items
         self._show_hidden_menu.addAction(key)
         for item in items:
@@ -285,6 +312,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Shows all hidden items."""
         if not self.scene():
             return
+        self._show_hidden_menu.clear()
         while self.hidden_items:
             _, items = self.hidden_items.popitem()
             for item in items:
@@ -304,9 +332,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def prune_selected_items(self, checked=False):
         """Prunes selected items."""
-        entity_ids = {x.db_map_entity_id for x in self.selected_items}
+        entity_ids = {db_map_id for x in self.selected_items for db_map_id in x.db_map_ids}
         key = self._get_selected_entity_names()
-        self.pruned_entity_ids[key] = entity_ids
+        self.pruned_db_map_entity_ids[key] = entity_ids
         self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
 
@@ -314,13 +342,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def _prune_class(self, action):
         """Prunnes some class."""
         key = action.text()
-        item = next(iter(self._items_per_db_map_class[key]))
-        class_id = item.entity_class_id
-        db_map = item.db_map
-        self.pruned_entity_ids[key] = {
+        self.pruned_db_map_entity_ids[key] = {
             (db_map, x["id"])
+            for item in self._items_per_class[key]
+            for db_map in item.db_maps
             for item_type in ("object", "relationship")
-            for x in self.db_mngr.get_items_by_field(db_map, item_type, "class_id", class_id, only_visible=False)
+            for x in self.db_mngr.get_items_by_field(
+                db_map, item_type, "class_id", item.entity_class_id(db_map), only_visible=False
+            )
         }
         self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
@@ -328,14 +357,15 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def restore_all_pruned_items(self, checked=False):
         """Reinstates all pruned items."""
-        self.pruned_entity_ids.clear()
+        self.pruned_db_map_entity_ids.clear()
+        self._restore_pruned_menu.clear()
         self._spine_db_editor.build_graph()
 
     @Slot("QAction")
     def restore_pruned_items(self, action):
         """Reinstates some pruned items."""
         key = action.text()
-        if self.pruned_entity_ids.pop(key, None) is not None:
+        if self.pruned_db_map_entity_ids.pop(key, None) is not None:
             action = next(iter(a for a in self._restore_pruned_menu.actions() if a.text() == key))
             self._restore_pruned_menu.removeAction(action)
             self._spine_db_editor.build_graph()
@@ -362,9 +392,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
         db_map_class_obj_items = {}
         db_map_class_rel_items = {}
         for item in obj_items:
-            db_map_class_obj_items.setdefault(item.db_map, {}).setdefault(item.entity_class_name, []).append(item)
+            for db_map in item.db_maps:
+                db_map_class_obj_items.setdefault(db_map, {}).setdefault(item.entity_class_name, []).append(item)
         for item in rel_items:
-            db_map_class_rel_items.setdefault(item.db_map, {}).setdefault(item.entity_class_name, []).append(item)
+            for db_map in item.db_maps:
+                db_map_class_rel_items.setdefault(db_map, {}).setdefault(item.entity_class_name, []).append(item)
         db_map_data = {}
         for db_map, class_obj_items in db_map_class_obj_items.items():
             data = db_map_data.setdefault(db_map, {})
@@ -519,10 +551,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.viewport().unsetCursor()
 
     def _cross_hairs_has_valid_target(self):
-        return (
-            self._hovered_obj_item.db_map == self.cross_hairs_items[0].db_map
-            and self._hovered_obj_item.entity_class_id in self.relationship_class["object_class_ids_to_go"]
-        )
+        db_map = self.relationship_class["db_map"]
+        return self._hovered_obj_item.entity_class_id(db_map) in self.relationship_class["object_class_ids_to_go"]
 
     def mousePressEvent(self, event):
         """Handles relationship creation if one it's in process."""
@@ -534,7 +564,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self.clear_cross_hairs_items()
             return
         if self._cross_hairs_has_valid_target():
-            self.relationship_class["object_class_ids_to_go"].remove(self._hovered_obj_item.entity_class_id)
+            db_map = self.relationship_class["db_map"]
+            self.relationship_class["object_class_ids_to_go"].remove(self._hovered_obj_item.entity_class_id(db_map))
             if self.relationship_class["object_class_ids_to_go"]:
                 # Add hovered as member and keep going, we're not done yet
                 ch_rel_item = self.cross_hairs_items[1]

@@ -29,7 +29,7 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import matplotlib
-from PySide2.QtCore import Qt, Signal, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
@@ -44,7 +44,6 @@ from PySide2.QtGui import (
     QStandardItem,
     QDesktopServices,
     QKeySequence,
-    QTextCursor,
     QPalette,
     QSyntaxHighlighter,
     QTextCharFormat,
@@ -55,7 +54,13 @@ from PySide2.QtGui import (
 )
 from spine_engine.utils.serialization import deserialize_path
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
-from .config import DEFAULT_WORK_DIR, PLUGINS_PATH
+from .config import (
+    DEFAULT_WORK_DIR,
+    PLUGINS_PATH,
+    PROJECT_FILENAME,
+    PROJECT_LOCAL_DATA_DIR_NAME,
+    PROJECT_LOCAL_DATA_FILENAME,
+)
 
 if os.name == "nt":
     import ctypes
@@ -98,23 +103,6 @@ def format_log_message(msg_type, message, show_datetime=True):
     open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"
-
-
-def add_message_to_document(document, message):
-    """Adds a message to a document and return the cursor.
-
-    Args:
-        document (QTextDocument)
-        message (str)
-
-    Returns:
-        QTextCursor
-    """
-    cursor = QTextCursor(document)
-    cursor.movePosition(QTextCursor.End)
-    cursor.insertBlock()
-    cursor.insertHtml(message)
-    return cursor
 
 
 def busy_effect(func):
@@ -1060,10 +1048,10 @@ def get_upgrade_db_promt_text(url, current, expected):
         "version of Spine Toolbox."
     )
     info_text = (
-        "Do you want to upgrade the database now?"
-        "<p><b>WARNING</b>: After the upgrade, "
+        "<b>WARNING</b>: After the upgrade, "
         "the database may no longer be used "
         "with previous versions of Spine."
+        "<p>Do you want to upgrade the database now?"
     )
     return text, info_text
 
@@ -1292,9 +1280,11 @@ class CustomSyntaxHighlighter(QSyntaxHighlighter):
         if self.lexer is None:
             return ()
         for start, ttype, subtext in self.lexer.get_tokens_unprocessed(text):
-            while ttype not in self._formats:
+            while True:
+                text_format = self._formats.get(ttype)
+                if text_format is not None:
+                    break
                 ttype = ttype.parent
-            text_format = self._formats.get(ttype, QTextCharFormat())
             yield start, len(subtext), text_format
 
     def highlightBlock(self, text):
@@ -1317,21 +1307,6 @@ def inquire_index_name(model, column, title, parent_widget):
     if not ok:
         return
     model.setHeaderData(column, Qt.Horizontal, new_name)
-
-
-class CacheItem(dict):
-    """A dictionary that behaves kinda like a row from a query result.
-
-    It is used to store items in a cache, so we can access them as if they were rows from a query result.
-    This is mainly because we want to use the cache as a replacement for db queries in some methods.
-    """
-
-    def __getattr__(self, name):
-        """Overridden method to return the dictionary key named after the attribute, or None if it doesn't exist."""
-        return self.get(name)
-
-    def _asdict(self):
-        return dict(**self)
 
 
 def preferred_row_height(widget, factor=1.5):
@@ -1434,8 +1409,8 @@ class FetchParent:
         """
         return query
 
-    def restart_fetching(self):
-        """Restarts fetching this item. Can be called from a different thread than ``qApp.thread()``."""
+    def fetch_status_change(self):
+        """Called when fetch status changes."""
 
 
 class ItemTypeFetchParent(FetchParent):
@@ -1445,3 +1420,75 @@ class ItemTypeFetchParent(FetchParent):
     @property
     def fetch_item_type(self):
         return self._fetch_item_type
+
+
+def load_project_dict(project_config_dir, logger):
+    """Loads project dictionary from project directory.
+
+    Args:
+        project_config_dir (str): project's .spinetoolbox directory
+        logger (LoggerInterface): a logger
+
+    Returns:
+        dict: project dictionary
+    """
+    load_path = os.path.abspath(os.path.join(project_config_dir, PROJECT_FILENAME))
+    try:
+        with open(load_path, "r") as fh:
+            try:
+                project_dict = json.load(fh)
+            except json.decoder.JSONDecodeError:
+                logger.msg_error.emit(f"Error in project file <b>{load_path}</b>. Invalid JSON.")
+                return None
+    except OSError:
+        logger.msg_error.emit(f"Project file <b>{load_path}</b> missing")
+        return None
+    return project_dict
+
+
+def load_local_project_data(project_config_dir, logger):
+    """Loads local project data.
+
+    Args:
+        project_config_dir (Path or str): project's .spinetoolbox directory
+        logger (LoggerInterface): a logger
+
+    Returns:
+        dict: project's local data
+    """
+    load_path = pathlib.Path(project_config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME)
+    if not load_path.exists():
+        return {}
+    with load_path.open() as fh:
+        try:
+            local_data_dict = json.load(fh)
+        except json.decoder.JSONDecodeError:
+            logger.msg_error.emit(f"Error in project's local data file <b>{load_path}</b>. Invalid JSON.")
+            return {}
+    return local_data_dict
+
+
+def merge_dicts(source, target):
+    """Merges two dictionaries that may contain nested dictionaries recursively."""
+    for key, value in source.items():
+        target_entry = target.get(key)
+        if isinstance(value, dict) and target_entry is not None:
+            merge_dicts(value, target_entry)
+        else:
+            target[key] = value
+
+
+def fix_lightness_color(color, lightness=240):
+    h, s, _, a = color.getHsl()
+    return QColor.fromHsl(h, s, lightness, a)
+
+
+@contextmanager
+def scrolling_to_bottom(widget, tolerance=1):
+    scrollbar = widget.verticalScrollBar()
+    at_bottom = scrollbar.value() >= scrollbar.maximum() - tolerance
+    try:
+        yield None
+    finally:
+        if at_bottom:
+            scrollbar.setValue(scrollbar.maximum())

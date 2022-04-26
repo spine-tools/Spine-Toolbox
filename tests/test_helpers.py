@@ -15,7 +15,7 @@ Unit tests for the helpers module.
 :authors: A. Soininen (VTT)
 :date:   23.3.2020
 """
-import os
+import json
 import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -23,12 +23,11 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from PySide2.QtCore import QSettings
-from PySide2.QtGui import QTextDocument
 from PySide2.QtWidgets import QApplication, QLineEdit
 
 from spine_engine.load_project_items import load_item_specification_factories
+from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
-    add_message_to_document,
     copy_files,
     create_dir,
     dir_is_valid,
@@ -50,6 +49,9 @@ from spinetoolbox.helpers import (
     try_number_from_string,
     tuple_itemgetter,
     unique_name,
+    load_project_dict,
+    load_local_project_data,
+    merge_dicts,
 )
 
 
@@ -77,14 +79,6 @@ class TestHelpers(unittest.TestCase):
         test_correctness("msg_success", "#00ff00")
         test_correctness("msg_error", "#ff3333")
         test_correctness("msg_warning", "yellow")
-
-    def test_add_message_to_document(self):
-        document = QTextDocument()
-        cursor = add_message_to_document(document, "test message")
-        self.assertTrue(cursor.atEnd())
-        self.assertEqual(document.blockCount(), 2)
-        self.assertEqual(document.toPlainText(), "\ntest message")
-        document.deleteLater()
 
     def test_make_icon_id(self):
         icon_id = make_icon_id(3, 7)
@@ -293,6 +287,46 @@ class TestHelpers(unittest.TestCase):
         self.assertIsNotNone(tool_spec)
         self.assertEqual(tool_spec.name, "Python Tool Specification")
         app_settings.deleteLater()
+
+    def test_load_project_dict(self):
+        with TemporaryDirectory() as project_dir:
+            project_file = Path(project_dir, PROJECT_FILENAME)
+            with project_file.open("w") as fp:
+                json.dump("don't panic this is a test", fp)
+            logger = MagicMock()
+            project_dict = load_project_dict(project_dir, logger)
+            self.assertEqual(project_dict, "don't panic this is a test")
+
+    def test_load_local_project_data(self):
+        with TemporaryDirectory() as project_dir:
+            local_data_path = Path(project_dir, PROJECT_LOCAL_DATA_DIR_NAME)
+            local_data_path.mkdir()
+            local_data_file = local_data_path / PROJECT_LOCAL_DATA_FILENAME
+            with local_data_file.open("w") as fp:
+                json.dump("don't panic this is a test", fp)
+            logger = MagicMock()
+            project_dict = load_local_project_data(project_dir, logger)
+            self.assertEqual(project_dict, "don't panic this is a test")
+
+    def test_merge_dicts_with_empty_source(self):
+        target = {}
+        merge_dicts({}, target)
+        self.assertEqual(target, {})
+
+    def test_merge_dicts(self):
+        target = {"a": {"b": 1}}
+        merge_dicts({"a": {"c": 2}}, target)
+        self.assertEqual(target, {"a": {"b": 1, "c": 2}})
+
+    def test_merge_dicts_when_source_contains_nested_dict_not_present_in_target(self):
+        target = {"a": {"b": {"c": 2}}}
+        merge_dicts({"a": {"d": 3}}, target)
+        self.assertEqual(target, {"a": {"b": {"c": 2}, "d": 3}})
+
+    def test_merge_dicts_when_source_overwrites_data_in_target(self):
+        target = {"a": {"b": 1}}
+        merge_dicts({"a": {"b": 2}}, target)
+        self.assertEqual(target, {"a": {"b": 2}})
 
 
 if __name__ == "__main__":

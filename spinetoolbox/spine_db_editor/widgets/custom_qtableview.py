@@ -68,6 +68,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._open_in_editor_action = None
         self._plot_action = None
         self._plot_separator = None
+        self.pinned_values = []
 
     @property
     def value_column_header(self):
@@ -148,6 +149,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addSeparator()
         self._menu.addAction("Filter by", self.filter_by_selection)
         self._menu.addAction("Filter excluding", self.filter_excluding_selection)
+        self._menu.addSeparator()
         self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
         # Shortcuts
         remove_rows_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
@@ -268,6 +270,10 @@ class ParameterValueTableView(ParameterTableView):
     def value_column_header(self):
         return "value"
 
+    def connect_spine_db_editor(self, spine_db_editor):
+        super().connect_spine_db_editor(spine_db_editor)
+        self.selectionModel().selectionChanged.connect(self._update_pinned_values)
+
     def create_delegates(self):
         super().create_delegates()
         self._make_delegate("parameter_name", ParameterNameDelegate)
@@ -288,6 +294,24 @@ class ParameterValueTableView(ParameterTableView):
             db_map_ids.setdefault(db_map, []).append(id_)
         self._spine_db_editor.show_db_map_parameter_value_metadata(db_map_ids)
 
+    def _update_pinned_values(self, _selected, _deselected):
+        row_pinned_value_iter = ((index.row(), self._make_pinned_value(index)) for index in self.selectedIndexes())
+        self.pinned_values = list(
+            {row: pinned_value for row, pinned_value in row_pinned_value_iter if pinned_value is not None}.values()
+        )
+        self._spine_db_editor.emit_pinned_values_updated()
+
+    @property
+    def _pk_fields(self):
+        raise NotImplementedError()
+
+    def _make_pinned_value(self, index):
+        db_map, _ = self.model().db_map_id(index)
+        if db_map is None:
+            return None
+        db_item = self.model().db_item(index)
+        return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
+
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
     """A custom QTableView for the object parameter_definition pane in Spine db editor."""
@@ -304,6 +328,10 @@ class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTab
         super().create_delegates()
         self._make_delegate("object_name", ObjectNameDelegate)
 
+    @property
+    def _pk_fields(self):
+        return ("object_class_name", "object_name", "parameter_name", "alternative_name")
+
 
 class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
     """A custom QTableView for the relationship parameter_value pane in Spine db editor."""
@@ -312,6 +340,10 @@ class RelationshipParameterValueTableView(RelationshipParameterTableMixin, Param
         super().create_delegates()
         delegate = self._make_delegate("object_name_list", ObjectNameListDelegate)
         delegate.object_name_list_editor_requested.connect(self._spine_db_editor.show_object_name_list_editor)
+
+    @property
+    def _pk_fields(self):
+        return ("relationship_class_name", "object_name_list", "parameter_name", "alternative_name")
 
 
 class PivotTableView(CopyPasteTableView):

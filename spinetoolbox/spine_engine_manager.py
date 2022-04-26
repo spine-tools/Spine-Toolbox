@@ -93,7 +93,19 @@ class SpineEngineManagerBase:
             command (str): command to issue
 
         Returns:
-            generator: stdio and stderr messages (dictionaries with two keys: type, and data)
+            generator: stdin, stdout, and stderr messages (dictionaries with two keys: type, and data)
+        """
+        raise NotImplementedError()
+
+    def is_persistent_command_complete(self, persistent_key, command):
+        """Checkes whether a command is complete.
+
+        Args:
+            key (tuple): persistent identifier
+            cmd (str): command to issue
+
+        Returns:
+            bool
         """
         raise NotImplementedError()
 
@@ -102,6 +114,9 @@ class SpineEngineManagerBase:
 
         Args:
             persistent_key (tuple): persistent identifier
+
+        Returns:
+            generator: stdout and stderr messages (dictionaries with two keys: type, and data)
         """
         raise NotImplementedError()
 
@@ -179,11 +194,17 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
         yield from issue_persistent_command(persistent_key, command)
 
+    def is_persistent_command_complete(self, persistent_key, command):
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.persistent_execution_manager import is_persistent_command_complete
+
+        return is_persistent_command_complete(persistent_key, command)
+
     def restart_persistent(self, persistent_key):
         # pylint: disable=import-outside-toplevel
         from spine_engine.execution_managers.persistent_execution_manager import restart_persistent
 
-        restart_persistent(persistent_key)
+        yield from restart_persistent(persistent_key)
 
     def interrupt_persistent(self, persistent_key):
         # pylint: disable=import-outside-toplevel
@@ -381,6 +402,10 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         """See base class."""
         self._send("shutdown_kernel", connection_file)
 
+    def is_persistent_command_complete(self, persistent_key, command):
+        # pylint: disable=import-outside-toplevel
+        raise NotImplementedError()
+
     def issue_persistent_command(self, persistent_key, command):
         """See base class."""
         # TODO: Implementing this needs a new ServerMessage type (with 'execute' and 'ping')
@@ -433,3 +458,96 @@ class RemoteEngineWorker(threading.Thread):
     def __init__(self):
         super().__init__()
 
+# TODO: This class is in master as the RemoteSpineEngineManager stub. See if _send() can be used.
+# class RemoteSpineEngineManager(SpineEngineManagerBase):
+#     _ENCODING = "ascii"
+#
+#     def __init__(self, engine_server_address):
+#         """
+#         Args:
+#             engine_server_address (str)
+#         """
+#         super().__init__()
+#         self._engine_server_address = engine_server_address
+#         self.request = None
+#         self._engine_id = None
+#
+#     def run_engine(self, engine_data):
+#         """See base class."""
+#         self._engine_id = self._send("run_engine", engine_data)
+#
+#     def get_engine_event(self):
+#         """See base class."""
+#         return self._send("get_engine_event", self._engine_id)
+#
+#     def stop_engine(self):
+#         """See base class."""
+#         self._send("stop_engine", self._engine_id, receive=False)
+#
+#     def answer_prompt(self, item_name, accepted):
+#         """See base class."""
+#         raise NotImplementedError()
+#
+#     def restart_kernel(self, connection_file):
+#         """See base class."""
+#         self._send("restart_kernel", connection_file)
+#
+#     def shutdown_kernel(self, connection_file):
+#         """See base class."""
+#         self._send("shutdown_kernel", connection_file)
+#
+#     def issue_persistent_command(self, persistent_key, command):
+#         """See base class."""
+#         raise NotImplementedError()
+#
+#     def is_persistent_command_complete(self, persistent_key, command):
+#         """See base class."""
+#         raise NotImplementedError()
+#
+#     def restart_persistent(self, persistent_key):
+#         """See base class."""
+#         raise NotImplementedError()
+#
+#     def interrupt_persistent(self, persistent_key):
+#         """See base class."""
+#         raise NotImplementedError()
+#
+#     def get_persistent_completions(self, persistent_key, text):
+#         """See base class."""
+#         raise NotImplementedError()
+#
+#     def _send(self, request, *args, receive=True):
+#         """
+#         Sends a request to the server with the given arguments.
+#
+#         Args:
+#             request (str): One of the supported engine server requests
+#             args: Request arguments
+#             receive (bool, optional): If True (the default) also receives the response and returns it.
+#
+#         Returns:
+#             str or NoneType: response, or None if receive is False
+#         """
+#         msg = json.dumps((request, args))
+#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.request:
+#             self.request.connect(self._engine_server_address)
+#             self.request.sendall(bytes(msg, "ascii"))
+#             if receive:
+#                 response = self._recvall()
+#                 return json.loads(response)
+#
+#     def _recvall(self):
+#         """
+#         Receives and returns all data in the current request.
+#
+#         Returns:
+#             str
+#         """
+#         BUFF_SIZE = 4096
+#         fragments = []
+#         while True:
+#             chunk = str(self.request.recv(BUFF_SIZE), self._ENCODING)
+#             fragments.append(chunk)
+#             if len(chunk) < BUFF_SIZE:
+#                 break
+#         return "".join(fragments)

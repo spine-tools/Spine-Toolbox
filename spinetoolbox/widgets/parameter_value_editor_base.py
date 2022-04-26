@@ -103,7 +103,7 @@ class ParameterValueEditorBase(QWidget):
         try:
             value = editor.value()
         except ParameterValueFormatError as error:
-            QMessageBox.warning(self.parent(), "Error", str(error))
+            QMessageBox.warning(self, "Error", str(error))
             return
         success = self._set_data(value)
         if success:

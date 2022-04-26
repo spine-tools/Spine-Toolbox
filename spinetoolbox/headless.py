@@ -21,12 +21,23 @@ import logging
 import pathlib
 import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
+import networkx as nx
+
 from spine_engine import SpineEngineState
+from spine_engine.project_item.connection import Connection
 from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import deserialize_path
-from .dag_handler import DirectedGraphHandler
-from .helpers import make_settings_dict_for_engine, plugins_dirs, load_plugin_dict, load_plugin_specifications
+from .config import LATEST_PROJECT_VERSION
+from .helpers import (
+    make_settings_dict_for_engine,
+    plugins_dirs,
+    load_plugin_dict,
+    load_plugin_specifications,
+    load_project_dict,
+    load_local_project_data,
+    merge_dicts,
+)
 from .spine_engine_manager import make_engine_manager
 
 
@@ -122,7 +133,13 @@ class ActionsWithProject(QObject):
         self._plugin_specifications = None
         self._connection_dicts = None
         self._jump_dicts = None
-        self._dag_handler = None
+
+    def _dags(self):
+        graph = nx.DiGraph()
+        graph.add_nodes_from(self._item_dicts)
+        connections = map(Connection.from_dict, self._connection_dicts)
+        graph.add_edges_from(((x.source, x.destination) for x in connections))
+        return [graph.subgraph(nodes) for nodes in nx.weakly_connected_components(graph)]
 
     @Slot()
     def _execute(self):
@@ -137,8 +154,9 @@ class ActionsWithProject(QObject):
                 QCoreApplication.instance().exit(status)
                 return
             if self._args.list_items:
-                for dag_number, dag in enumerate(self._dag_handler.dags()):
-                    print(f"DAG {dag_number + 1}/{len(self._dag_handler.dags())}:")
+                dags = self._dags()
+                for dag_number, dag in enumerate(dags):
+                    print(f"DAG {dag_number + 1}/{len(dags)}:")
                     print(" ".join(sorted(dag.nodes)))
             if self._args.execute_only:
                 status = self._execute_project()
@@ -151,7 +169,7 @@ class ActionsWithProject(QObject):
         QCoreApplication.instance().exit(Status.OK)
 
     def _open_project(self):
-        """Opens a project and executes all DAGs in that project.
+        """Opens a project.
 
         Returns:
             Status: status code
@@ -170,20 +188,35 @@ class ActionsWithProject(QObject):
                 for spec in spec_list:
                     self._plugin_specifications.setdefault(spec.item_type, []).append(spec)
         self._project_dir = pathlib.Path(self._args.project).resolve()
-        project_file_path = self._project_dir / ".spinetoolbox" / "project.json"
-        try:
-            with project_file_path.open() as project_file:
-                try:
-                    project_dict = json.load(project_file)
-                except json.decoder.JSONDecodeError:
-                    self._logger.msg_error.emit(f"Error in project file {project_file_path}. Invalid JSON.")
-                    return Status.ERROR
-        except OSError:
-            self._logger.msg_error.emit(f"Project file {project_file_path} missing")
-            return Status.ERROR
-        self._item_dicts, self._specification_dicts, self._connection_dicts, self._jump_dicts, self._dag_handler = open_project(
+        project_dict = load_project_dict(str(self._project_dir / ".spinetoolbox"), self._logger)
+        version_status = self._check_project_version(project_dict)
+        if version_status != Status.OK:
+            return version_status
+        local_data_dict = load_local_project_data(self._project_dir / ".spinetoolbox", self._logger)
+        merge_dicts(local_data_dict, project_dict)
+        self._item_dicts, self._specification_dicts, self._connection_dicts, self._jump_dicts = open_project(
             project_dict, self._project_dir, self._logger
         )
+        return Status.OK
+
+    def _check_project_version(self, project_dict):
+        """Checks project dict version.
+
+        Args:
+            project_dict (dict): project dict
+
+        Returns:
+            Status: status code
+        """
+        version = project_dict["project"]["version"]
+        if version > LATEST_PROJECT_VERSION:
+            self._logger.msg_error.emit(
+                "Failed to open a project that is newer than what is supported by this version of Toolbox."
+            )
+            return Status.ERROR
+        if version < LATEST_PROJECT_VERSION:
+            self._logger.msg_error.emit("Unsupported project version. Open project in Toolbox GUI to upgrade it.")
+            return Status.ERROR
         return Status.OK
 
     def _execute_project(self):
@@ -197,7 +230,7 @@ class ActionsWithProject(QObject):
                 spec_dict = spec.to_dict()
                 spec_dict["definition_file_path"] = spec.definition_file_path
                 self._specification_dicts.setdefault(item_type, []).append(spec_dict)
-        dags = self._dag_handler.dags()
+        dags = self._dags()
         settings = make_settings_dict_for_engine(self._app_settings)
         # Force local execution in headless mode
         if not settings.get("engineSettings/remoteExecutionEnabled", "false") == "false":
@@ -205,24 +238,24 @@ class ActionsWithProject(QObject):
         selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
         for dag in dags:
             item_names_in_dag = set(dag.nodes)
-            node_successors = self._dag_handler.node_successors(dag)
-            if not node_successors:
+            if not nx.is_directed_acyclic_graph(dag):
                 self._logger.msg_error.emit("The project contains a graph that is not a Directed Acyclic Graph.")
                 return Status.ERROR
             item_dicts_in_dag = {
                 name: item_dict for name, item_dict in self._item_dicts.items() if name in item_names_in_dag
             }
-            if selected:
+            if selected is not None:
                 execution_permits = {item_name: item_name in selected for item_name in dag.nodes}
                 selected = selected - item_names_in_dag
             else:
                 execution_permits = {item_name: True for item_name in item_names_in_dag}
+            if all(not permitted for permitted in execution_permits.values()):
+                continue
             engine_data = {
                 "items": item_dicts_in_dag,
                 "specifications": self._specification_dicts,
                 "connections": self._connection_dicts,
                 "jumps": self._jump_dicts,
-                "node_successors": node_successors,
                 "execution_permits": execution_permits,
                 "items_module_name": "spine_items",
                 "settings": settings,
@@ -240,7 +273,7 @@ class ActionsWithProject(QObject):
                 event_type, data = engine_manager.get_engine_event()
                 self._process_engine_event(event_type, data)
                 if event_type == "dag_exec_finished":
-                    if data == SpineEngineState.FAILED:
+                    if data == str(SpineEngineState.FAILED):
                         return Status.ERROR
                     break
         if selected:
@@ -363,21 +396,11 @@ def open_project(project_dict, project_dir, logger):
         tuple: item dicts, specification dicts, connection dicts, jump dicts and a DagHandler object
     """
     specification_dicts = _specification_dicts(project_dict, project_dir, logger)
-    item_dicts = dict()
-    dag_handler = DirectedGraphHandler()
-    for item_name, item_dict in project_dict["items"].items():
-        dag_handler.add_dag_node(item_name)
-        item_dicts[item_name] = item_dict
-    for connection in project_dict["project"]["connections"]:
-        from_name = connection["from"][0]
-        to_name = connection["to"][0]
-        dag_handler.add_graph_edge(from_name, to_name)
     return (
         project_dict["items"],
         specification_dicts,
         project_dict["project"]["connections"],
         project_dict["project"]["jumps"],
-        dag_handler,
     )
 
 

@@ -15,7 +15,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QLineF, QPointF
+from PySide2.QtCore import Qt, Signal, Slot, QLineF
 from PySide2.QtSvg import QGraphicsSvgItem
 from PySide2.QtWidgets import (
     QAction,
@@ -66,19 +66,20 @@ def make_figure_graphics_item(scene, z=0, static=True):
 class EntityItem(QGraphicsRectItem):
     """Base class for ObjectItem and RelationshipItem."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_ids):
         """
         Args:
             spine_db_editor (SpineDBEditor): 'owner'
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): Preferred extent
-            db_map_entity_id (tuple): db_map, entity id
+            db_map_ids (tuple): tuple of (db_map, id) tuples
         """
         super().__init__()
         self._spine_db_editor = spine_db_editor
         self.db_mngr = spine_db_editor.db_mngr
-        self.db_map_entity_id = db_map_entity_id
+        self._db_map_ids = db_map_ids
+        self._removed_db_map_ids = ()
         self.arc_items = list()
         self._extent = extent
         self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
@@ -113,32 +114,42 @@ class EntityItem(QGraphicsRectItem):
         raise NotImplementedError()
 
     @property
-    def entity_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["name"]
+    def db_map_ids(self):
+        return tuple(x for x in self._db_map_ids if x not in self._removed_db_map_ids)
+
+    @property
+    def original_db_map_ids(self):
+        return self._db_map_ids
 
     @property
     def entity_class_type(self):
         return {"relationship": "relationship_class", "object": "object_class"}[self.entity_type]
 
     @property
-    def entity_class_id(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["class_id"]
+    def entity_name(self):
+        return self.db_mngr.get_item(self.first_db_map, self.entity_type, self.first_id).get("name", "")
+
+    @property
+    def first_entity_class_id(self):
+        return self.db_mngr.get_item(self.first_db_map, self.entity_type, self.first_id).get("class_id")
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
+        return self.db_mngr.get_item(self.first_db_map, self.entity_class_type, self.first_entity_class_id).get(
+            "name", ""
+        )
 
     @property
-    def db_map(self):
-        return self.db_map_entity_id[0]
+    def first_db_map_id(self):
+        return next(iter(self.db_map_ids), (None, None))
 
     @property
-    def entity_id(self):
-        return self.db_map_entity_id[1]
+    def first_id(self):
+        return self.first_db_map_id[1]
 
     @property
     def first_db_map(self):
-        return self.db_map
+        return self.first_db_map_id[0]
 
     @property
     def display_data(self):
@@ -146,19 +157,25 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def display_database(self):
-        return self.db_map.codename
+        return ",".join([db_map.codename for db_map in self.db_maps])
 
     @property
     def db_maps(self):
-        return (self.db_map,)
+        return list(db_map for db_map, _id in self.db_map_ids)
 
-    def db_map_data(self, _db_map):
-        # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)
+    def entity_class_id(self, db_map):
+        return self.db_mngr.get_item(db_map, self.entity_type, self.entity_id(db_map)).get("class_id")
 
-    def db_map_id(self, _db_map):
+    def entity_id(self, db_map):
+        return dict(self.db_map_ids).get(db_map)
+
+    def db_map_data(self, db_map):
         # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
-        return self.entity_id
+        return self.db_mngr.get_item(db_map, self.entity_type, self.entity_id(db_map))
+
+    def db_map_id(self, db_map):
+        # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
+        return self.entity_id(db_map)
 
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
@@ -174,7 +191,9 @@ class EntityItem(QGraphicsRectItem):
 
     def refresh_icon(self):
         """Refreshes the icon."""
-        renderer = self.db_mngr.entity_class_renderer(self.db_map, self.entity_class_type, self.entity_class_id)
+        renderer = self.db_mngr.entity_class_renderer(
+            self.first_db_map, self.entity_class_type, self.first_entity_class_id
+        )
         self._set_renderer(renderer)
 
     def _set_renderer(self, renderer):
@@ -304,11 +323,24 @@ class EntityItem(QGraphicsRectItem):
         menu = self._make_menu()
         menu.popup(e.screenPos())
 
+    def remove_db_map_ids(self, db_map_ids):
+        """Removes db_map_ids."""
+        self._removed_db_map_ids += tuple(db_map_ids)
+        self.setToolTip(self._make_tool_tip())
+
+    def add_db_map_ids(self, db_map_ids):
+        for db_map_id in db_map_ids:
+            if db_map_id not in self._db_map_ids:
+                self._db_map_ids += (db_map_id,)
+            else:
+                self._removed_db_map_ids = tuple(x for x in self._removed_db_map_ids if x != db_map_id)
+        self.setToolTip(self._make_tool_tip())
+
 
 class RelationshipItem(EntityItem):
     """Represents a relationship in the Entity graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_ids):
         """Initializes the item.
 
         Args:
@@ -316,9 +348,9 @@ class RelationshipItem(EntityItem):
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): preferred extent
-            db_map_entity_id (tuple): db_map, relationship id
+            db_map_ids (tuple): tuple of (db_map, id) tuples
         """
-        super().__init__(spine_db_editor, x, y, extent, db_map_entity_id=db_map_entity_id)
+        super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -334,34 +366,33 @@ class RelationshipItem(EntityItem):
 
     @property
     def object_class_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship_class", self.entity_class_id)["object_class_id_list"]
+        # FIXME: where is this used?
+        return self.db_mngr.get_item(self.first_db_map, "relationship_class", self.first_entity_class_id).get(
+            "object_class_id_list"
+        )
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_name_list"]
+        return self.db_mngr.get_item(self.first_db_map, "relationship", self.first_id).get("object_name_list", "")
 
-    @property
-    def object_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_id_list"]
+    def object_id_list(self, db_map):
+        return self.db_mngr.get_item(db_map, "relationship", self.entity_id(db_map)).get("object_id_list")
 
-    @property
-    def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["class_name"]
-
-    @property
-    def db_representation(self):
+    def db_representation(self, db_map):
         return dict(
-            class_id=self.entity_class_id,
-            id=self.entity_id,
-            object_id_list=self.object_id_list,
+            class_id=self.entity_class_id(db_map),
+            id=self.entity_id(db_map),
+            object_id_list=self.object_id_list(db_map),
             object_name_list=self.object_name_list,
         )
 
     def _make_tool_tip(self):
+        if not self.first_id:
+            return None
         return (
             f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
             f"""{self.object_name_list.replace(",", DB_ITEM_SEPARATOR)}<br>"""
-            f"""@{self.db_map.codename}</p></html>"""
+            f"""@{self.display_database}</p></html>"""
         )
 
     def _init_bg(self):
@@ -399,7 +430,7 @@ class RelationshipItem(EntityItem):
 class ObjectItem(EntityItem):
     """Represents an object in the Entity graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_ids):
         """Initializes the item.
 
         Args:
@@ -407,13 +438,13 @@ class ObjectItem(EntityItem):
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): preferred extent
-            db_map_entity_id (tuple): db_map, object id
+            db_map_ids (tuple): tuple of (db_map, id) tuples
         """
-        super().__init__(spine_db_editor, x, y, extent, db_map_entity_id=db_map_entity_id)
-        self._relationship_classes = {}
+        super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
+        self._db_map_relationship_class_lists = {}
         self.label_item = ObjectLabelItem(self)
         self.setZValue(0.5)
-        self.update_name(self.entity_name)
+        self.update_name()
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -425,21 +456,32 @@ class ObjectItem(EntityItem):
     def entity_type(self):
         return "object"
 
-    @property
-    def db_representation(self):
-        return dict(class_id=self.entity_class_id, id=self.entity_id, name=self.entity_name)
+    def db_representation(self, db_map):
+        return dict(class_id=self.entity_class_id(db_map), id=self.entity_id(db_map), name=self.entity_name)
 
     def shape(self):
         path = super().shape()
         path.addPolygon(self.label_item.mapToItem(self, self.label_item.boundingRect()))
         return path
 
-    def update_name(self, name):
+    def update_name(self):
         """Refreshes the name."""
-        self.label_item.setPlainText(name)
+        db_map_ids_by_name = dict()
+        for db_map, id_ in self.db_map_ids:
+            name = self.db_mngr.get_item(db_map, self.entity_type, id_)["name"]
+            db_map_ids_by_name.setdefault(name, list()).append((db_map, id_))
+        if len(db_map_ids_by_name) == 1:
+            name = next(iter(db_map_ids_by_name))
+            self.label_item.setPlainText(name)
+            return True
+        current_name = self.label_item.toPlainText()
+        self.db_map_ids = tuple(db_map_ids_by_name.get(current_name, ()))
+        return False
 
     def _make_tool_tip(self):
-        return f"<html><p style='text-align:center;'>{self.entity_name}<br>@{self.db_map.codename}</html>"
+        if not self.first_id:
+            return None
+        return f"<html><p style='text-align:center;'>{self.entity_name}<br>@{self.display_database}</html>"
 
     def block_move_by(self, dx, dy):
         super().block_move_by(dx, dy)
@@ -488,17 +530,19 @@ class ObjectItem(EntityItem):
         self._spine_db_editor.duplicate_object(self)
 
     def _refresh_relationship_classes(self):
-        self._relationship_classes.clear()
-        db_map_object_ids = {self.db_map: {self.entity_id}}
+        self._db_map_relationship_class_lists.clear()
+        db_map_object_ids = {db_map: {id_} for db_map, id_ in self.db_map_ids}
         relationship_ids_per_class = {}
-        for rel in self.db_mngr.find_cascading_relationships(db_map_object_ids).get(self.db_map, []):
-            relationship_ids_per_class.setdefault(rel["class_id"], set()).add((self.db_map, rel["id"]))
-        db_map_object_class_ids = {self.db_map: {self.entity_class_id}}
-        for rel_cls in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).get(self.db_map, []):
-            rel_cls = rel_cls.copy()
-            rel_cls["object_class_id_list"] = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
-            rel_cls["relationship_ids"] = relationship_ids_per_class.get(rel_cls["id"], set())
-            self._relationship_classes[rel_cls["name"]] = rel_cls
+        for db_map, rels in self.db_mngr.find_cascading_relationships(db_map_object_ids).items():
+            for rel in rels:
+                relationship_ids_per_class.setdefault((db_map, rel["class_id"]), set()).add(rel["id"])
+        db_map_object_class_ids = {db_map: {self.entity_class_id(db_map)} for db_map in self.db_maps}
+        for db_map, rel_clss in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).items():
+            for rel_cls in rel_clss:
+                rel_cls = rel_cls.copy()
+                rel_cls["object_class_id_list"] = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
+                rel_cls["relationship_ids"] = relationship_ids_per_class.get((db_map, rel_cls["id"]), set())
+                self._db_map_relationship_class_lists.setdefault(rel_cls["name"], []).append((db_map, rel_cls))
 
     def _populate_expand_collapse_menu(self, menu):
         """
@@ -507,15 +551,18 @@ class ObjectItem(EntityItem):
         Args:
             menu (QMenu)
         """
-        if not self._relationship_classes:
+        if not self._db_map_relationship_class_lists:
             menu.setEnabled(False)
             return
         menu.setEnabled(True)
         menu.addAction("All")
         menu.addSeparator()
-        for name, rel_cls in self._relationship_classes.items():
-            icon = self.db_mngr.entity_class_icon(self.db_map, "relationship_class", rel_cls["id"])
-            menu.addAction(icon, name).setEnabled(bool(rel_cls["relationship_ids"]))
+        for name, db_map_rel_cls_lst in sorted(self._db_map_relationship_class_lists.items()):
+            db_map, rel_cls = next(iter(db_map_rel_cls_lst))
+            icon = self.db_mngr.entity_class_icon(db_map, "relationship_class", rel_cls["id"])
+            menu.addAction(icon, name).setEnabled(
+                any(rel_cls["relationship_ids"] for (db_map, rel_cls) in db_map_rel_cls_lst)
+            )
 
     def _populate_add_relationships_menu(self, menu):
         """
@@ -524,35 +571,53 @@ class ObjectItem(EntityItem):
         Args:
             menu (QMenu)
         """
-        object_class_ids_in_graph = {
-            x.entity_class_id for x in self._spine_db_editor.ui.graphicsView.entity_items if isinstance(x, ObjectItem)
-        }
-        for name, rel_cls in self._relationship_classes.items():
-            icon = self.db_mngr.entity_class_icon(self.db_map, "relationship_class", rel_cls["id"])
-            menu.addAction(icon, name).setEnabled(set(rel_cls["object_class_id_list"]) <= object_class_ids_in_graph)
-        menu.setEnabled(bool(self._relationship_classes))
+        object_class_ids_in_graph = {}
+        for item in self._spine_db_editor.ui.graphicsView.entity_items:
+            if not isinstance(item, ObjectItem):
+                continue
+            for db_map in item.db_maps:
+                object_class_ids_in_graph.setdefault(db_map, set()).add(item.entity_class_id(db_map))
+        action_name_icon_enabled = []
+        for name, db_map_rel_cls_lst in self._db_map_relationship_class_lists.items():
+            for db_map, rel_cls in db_map_rel_cls_lst:
+                icon = self.db_mngr.entity_class_icon(db_map, "relationship_class", rel_cls["id"])
+                action_name = name + "@" + db_map.codename
+                enabled = set(rel_cls["object_class_id_list"]) <= object_class_ids_in_graph.get(db_map, set())
+                action_name_icon_enabled.append((action_name, icon, enabled))
+        for action_name, icon, enabled in sorted(action_name_icon_enabled):
+            menu.addAction(icon, action_name).setEnabled(enabled)
+        menu.setEnabled(bool(self._db_map_relationship_class_lists))
 
-    def _get_relationship_ids_to_expand_or_collapse(self, action):
-        rel_cls = self._relationship_classes.get(action.text())
-        if rel_cls is not None:
-            return rel_cls["relationship_ids"]
-        return {id_ for rel_cls in self._relationship_classes.values() for id_ in rel_cls["relationship_ids"]}
+    def _get_db_map_relationship_ids_to_expand_or_collapse(self, action):
+        db_map_rel_clss = self._db_map_relationship_class_lists.get(action.text())
+        if db_map_rel_clss is not None:
+            return {(db_map, id_) for db_map, rel_cls in db_map_rel_clss for id_ in rel_cls["relationship_ids"]}
+        return {
+            (db_map, id_)
+            for db_map, rel_cls in self._db_map_relationship_class_lists.values()
+            for id_ in rel_cls["relationship_ids"]
+        }
 
     @Slot(QAction)
     def _expand(self, action):
-        relationship_ids = self._get_relationship_ids_to_expand_or_collapse(action)
-        self._spine_db_editor.added_relationship_ids.update(relationship_ids)
+        db_map_relationship_ids = self._get_db_map_relationship_ids_to_expand_or_collapse(action)
+        self._spine_db_editor.added_db_map_relationship_ids.update(db_map_relationship_ids)
         self._spine_db_editor.build_graph(persistent=True)
 
     @Slot(QAction)
     def _collapse(self, action):
-        relationship_ids = self._get_relationship_ids_to_expand_or_collapse(action)
-        self._spine_db_editor.added_relationship_ids.difference_update(relationship_ids)
+        db_map_relationship_ids = self._get_db_map_relationship_ids_to_expand_or_collapse(action)
+        self._spine_db_editor.added_db_map_relationship_ids.difference_update(db_map_relationship_ids)
         self._spine_db_editor.build_graph(persistent=True)
 
     @Slot(QAction)
     def _start_relationship(self, action):
-        self._spine_db_editor.start_relationship(self._relationship_classes[action.text()], self)
+        class_name, db_name = action.text().split("@")
+        db_map_rel_cls_lst = self._db_map_relationship_class_lists[class_name]
+        db_map, rel_cls = next(
+            iter((db_map, rel_cls) for db_map, rel_cls in db_map_rel_cls_lst if db_map.codename == db_name)
+        )
+        self._spine_db_editor.start_relationship(db_map, rel_cls, self)
 
 
 class ArcItem(QGraphicsPathItem):
@@ -650,7 +715,7 @@ class CrossHairsItem(RelationshipItem):
         return "<p>Click on an object to add it to the relationship.</p>"
 
     def refresh_icon(self):
-        renderer = self.db_mngr.get_icon_mngr(self.db_map).icon_renderer("\uf05b", 0)
+        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer("\uf05b", 0)
         self._set_renderer(renderer)
 
     def set_plus_icon(self):
@@ -669,7 +734,7 @@ class CrossHairsItem(RelationshipItem):
         """Refreshes the icon."""
         if (unicode, color) == self._current_icon:
             return
-        renderer = self.db_mngr.get_icon_mngr(self.db_map).icon_renderer(unicode, color)
+        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer(unicode, color)
         self._set_renderer(renderer)
         self._current_icon = (unicode, color)
 
@@ -704,7 +769,9 @@ class CrossHairsRelationshipItem(RelationshipItem):
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         ]
         object_class_name_list = ",".join(object_class_name_list)
-        renderer = self.db_mngr.get_icon_mngr(self.db_map).relationship_class_renderer(None, object_class_name_list)
+        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).relationship_class_renderer(
+            None, object_class_name_list
+        )
         self._set_renderer(renderer)
 
     def contextMenuEvent(self, e):

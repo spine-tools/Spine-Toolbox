@@ -70,6 +70,7 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_definition": "add parameter definitions",
         "parameter_value": "add parameter values",
         "parameter_value_list": "add parameter value lists",
+        "list_value": "add parameter value list values",
         "alternative": "add alternative",
         "scenario": "add scenario",
         "feature": "add feature",
@@ -85,10 +86,11 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_definition": "update parameter definitions",
         "parameter_value": "update parameter values",
         "parameter_value_list": "update parameter value lists",
-        "alternative": "update alternative",
-        "scenario": "update scenario",
-        "feature": "update feature",
-        "tool": "update tool",
+        "list_value": "update parameter value list values",
+        "alternative": "update alternatives",
+        "scenario": "update scenarios",
+        "feature": "update features",
+        "tool": "update tools",
         "tool_feature": "update tool features",
         "tool_feature_method": "update tool feature methods",
     }
@@ -100,7 +102,8 @@ class SpineDBCommand(AgedUndoCommand):
         "entity_group": "add_entity_groups",
         "parameter_definition": "add_parameter_definitions",
         "parameter_value": "add_parameter_values",
-        "parameter_value_list": "add_wide_parameter_value_lists",
+        "parameter_value_list": "add_parameter_value_lists",
+        "list_value": "add_list_values",
         "alternative": "add_alternatives",
         "scenario": "add_scenarios",
         "scenario_alternative": "add_scenario_alternatives",
@@ -116,7 +119,8 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship": "update_wide_relationships",
         "parameter_definition": "update_parameter_definitions",
         "parameter_value": "update_parameter_values",
-        "parameter_value_list": "update_wide_parameter_value_lists",
+        "parameter_value_list": "update_parameter_value_lists",
+        "list_value": "update_list_values",
         "alternative": "update_alternatives",
         "scenario": "update_scenarios",
         "scenario_alternative": "update_scenario_alternatives",
@@ -134,6 +138,7 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_definition": "parameter_definitions_added",
         "parameter_value": "parameter_values_added",
         "parameter_value_list": "parameter_value_lists_added",
+        "list_value": "list_values_added",
         "alternative": "alternatives_added",
         "scenario": "scenarios_added",
         "scenario_alternative": "scenario_alternatives_added",
@@ -150,6 +155,7 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_definition": "parameter_definitions_updated",
         "parameter_value": "parameter_values_updated",
         "parameter_value_list": "parameter_value_lists_updated",
+        "list_value": "list_values_updated",
         "alternative": "alternatives_updated",
         "scenario": "scenarios_updated",
         "scenario_alternative": "scenario_alternatives_updated",
@@ -250,8 +256,7 @@ class AddItemsCommand(SpineDBCommand):
             self.setObsolete(True)
             return
         self.redo_db_map_data = {
-            db_map: [self.db_mngr.cache_to_db(self.item_type, item) for item in data]
-            for db_map, data in db_map_data.items()
+            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
         }
         self.undo_db_map_typed_ids = {
             db_map: db_map.cascading_ids(
@@ -290,7 +295,7 @@ class UpdateItemsCommand(SpineDBCommand):
 
     def _undo_item(self, db_map, id_):
         undo_item = self.db_mngr.get_item(db_map, self.item_type, id_)
-        return self.db_mngr.cache_to_db(self.item_type, undo_item)
+        return db_map.cache_to_db(self.item_type, undo_item)
 
     @SpineDBCommand.redomethod
     def redo(self):
@@ -309,8 +314,7 @@ class UpdateItemsCommand(SpineDBCommand):
             self.setObsolete(True)
             return
         self.redo_db_map_data = {
-            db_map: [self.db_mngr.cache_to_db(self.item_type, item) for item in data]
-            for db_map, data in db_map_data.items()
+            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
         }
         self._check = False
 
@@ -355,7 +359,7 @@ class RemoveItemsCommand(SpineDBCommand):
             return
         self.undo_typed_db_map_data = {
             item_type: {
-                self.db_map: [self.db_mngr.cache_to_db(item_type, item) for item in db_map_data.get(self.db_map, [])]
+                self.db_map: [self.db_map.cache_to_db(item_type, item) for item in db_map_data.get(self.db_map, [])]
             }
             for item_type, db_map_data in typed_db_map_data.items()
         }

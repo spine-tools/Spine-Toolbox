@@ -33,48 +33,59 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(386, 462)
-        self.verticalLayout_2 = QVBoxLayout(Form)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.link_name_label = QLabel(Form)
-        self.link_name_label.setObjectName(u"link_name_label")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.link_name_label.sizePolicy().hasHeightForWidth())
-        self.link_name_label.setSizePolicy(sizePolicy)
-        self.link_name_label.setMinimumSize(QSize(0, 20))
-        self.link_name_label.setMaximumSize(QSize(16777215, 20))
-        font = QFont()
-        font.setPointSize(10)
-        font.setBold(False)
-        font.setWeight(50)
-        self.link_name_label.setFont(font)
-        self.link_name_label.setStyleSheet(u"background-color: #ecd8c6;")
-        self.link_name_label.setFrameShape(QFrame.Box)
-        self.link_name_label.setFrameShadow(QFrame.Sunken)
-        self.link_name_label.setAlignment(Qt.AlignCenter)
-        self.link_name_label.setWordWrap(True)
-
-        self.verticalLayout_2.addWidget(self.link_name_label)
-
-        self.scrollArea = QScrollArea(Form)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 384, 434))
-        self.verticalLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        Form.resize(276, 628)
+        self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.condition_edit = CodeTextEdit(self.scrollAreaWidgetContents)
+        self.splitter = QSplitter(Form)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Vertical)
+        self.condition_edit = CodeTextEdit(self.splitter)
         self.condition_edit.setObjectName(u"condition_edit")
+        self.splitter.addWidget(self.condition_edit)
+        self.treeView_cmd_line_args = QTreeView(self.splitter)
+        self.treeView_cmd_line_args.setObjectName(u"treeView_cmd_line_args")
+        self.treeView_cmd_line_args.setDragDropMode(QAbstractItemView.DragDrop)
+        self.splitter.addWidget(self.treeView_cmd_line_args)
+        self.verticalLayoutWidget = QWidget(self.splitter)
+        self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
+        self.gridLayout = QGridLayout(self.verticalLayoutWidget)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.toolButton_add_arg = QToolButton(self.verticalLayoutWidget)
+        self.toolButton_add_arg.setObjectName(u"toolButton_add_arg")
+        icon = QIcon()
+        icon.addFile(u":/icons/file-upload.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_add_arg.setIcon(icon)
 
-        self.verticalLayout.addWidget(self.condition_edit)
+        self.horizontalLayout.addWidget(self.toolButton_add_arg)
 
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        self.verticalLayout_2.addWidget(self.scrollArea)
+        self.horizontalLayout.addItem(self.horizontalSpacer_2)
+
+        self.toolButton_remove_arg = QToolButton(self.verticalLayoutWidget)
+        self.toolButton_remove_arg.setObjectName(u"toolButton_remove_arg")
+        icon1 = QIcon()
+        icon1.addFile(u":/icons/minus.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_remove_arg.setIcon(icon1)
+
+        self.horizontalLayout.addWidget(self.toolButton_remove_arg)
+
+
+        self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
+
+        self.treeView_input_files = QTreeView(self.verticalLayoutWidget)
+        self.treeView_input_files.setObjectName(u"treeView_input_files")
+        self.treeView_input_files.setDragDropMode(QAbstractItemView.DragDrop)
+        self.treeView_input_files.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        self.gridLayout.addWidget(self.treeView_input_files, 1, 0, 1, 1)
+
+        self.splitter.addWidget(self.verticalLayoutWidget)
+
+        self.verticalLayout.addWidget(self.splitter)
 
 
         self.retranslateUi(Form)
@@ -84,6 +95,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.link_name_label.setText(QCoreApplication.translate("Form", u"Name", None))
+        self.toolButton_add_arg.setText(QCoreApplication.translate("Form", u"...", None))
+        self.toolButton_remove_arg.setText(QCoreApplication.translate("Form", u"...", None))
     # retranslateUi
 

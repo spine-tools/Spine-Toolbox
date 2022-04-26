@@ -20,7 +20,7 @@ import unittest
 from PySide2.QtGui import QTextCursor
 from PySide2.QtWidgets import QApplication
 from spine_items.data_connection.data_connection import DataConnection
-from spine_engine.project_item.connection import Connection, Jump
+from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.widgets.jump_properties_widget import JumpPropertiesWidget
 from spinetoolbox.link import JumpLink
 from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
@@ -42,13 +42,10 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_properties_widget_in_toolbox(self):
-        tab_widget = self._toolbox.ui.tabWidget_item_properties
         widget_count = 0
-        for i in range(tab_widget.count()):
-            widget = tab_widget.widget(i)
+        for widget in self._toolbox.link_properties_widgets.values():
             if isinstance(widget, JumpPropertiesWidget):
                 widget_count += 1
-                self.assertEqual(tab_widget.tabText(i), "Loop properties")
         self.assertEqual(widget_count, 1)
 
     def test_set_link(self):
@@ -61,7 +58,7 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         self._set_link(properties_widget)
         self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(23)")
         properties_widget.unset_link()
-        self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "")
+        self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(23)")
 
     def test_edit_condition(self):
         properties_widget = self._find_widget()
@@ -78,15 +75,13 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         item2 = DataConnection("dc 2", "", 50.0, 0.0, self._toolbox, project)
         project.add_item(item1)
         project.add_item(item2)
-        project.add_connection(Connection("dc 1", "right", "dc 2", "left"))
-        project.add_jump(Jump("dc 2", "bottom", "dc 1", "bottom", "exit(23)"))
+        project.add_connection(LoggingConnection("dc 1", "right", "dc 2", "left", toolbox=self._toolbox))
+        project.add_jump(LoggingJump("dc 2", "bottom", "dc 1", "bottom", "exit(23)", toolbox=self._toolbox))
         link = next(item for item in self._toolbox.ui.graphicsView.items() if isinstance(item, JumpLink))
-        properties_widget.set_link(link)
+        properties_widget.set_link(link.item)
 
     def _find_widget(self):
-        tab_widget = self._toolbox.ui.tabWidget_item_properties
-        for i in range(tab_widget.count()):
-            widget = tab_widget.widget(i)
+        for widget in self._toolbox.link_properties_widgets.values():
             if isinstance(widget, JumpPropertiesWidget):
                 return widget
         return None

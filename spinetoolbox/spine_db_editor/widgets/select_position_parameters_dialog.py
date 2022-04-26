@@ -80,9 +80,7 @@ class ParameterNameDelegate(QStyledItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
-        size = option.rect.size()
-        editor.set_base_size(size)
-        editor.update_geometry()
+        editor.update_geometry(option)
 
     def _close_editor(self, editor, index):
         """Closes editor. Needed by SearchBarEditor."""

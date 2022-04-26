@@ -31,7 +31,8 @@ from .notification import Notification
 from .install_julia_wizard import InstallJuliaWizard
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
-from ..link import Link
+from ..link import Link, JumpLink
+from ..project_item_icon import ProjectItemIcon
 from ..widgets.kernel_editor import (
     KernelEditor,
     MiniPythonKernelEditor,
@@ -157,6 +158,7 @@ class SpineDBEditorSettingsMixin:
         """Connect signals."""
         super().connect_signals()
         self.ui.checkBox_auto_expand_objects.clicked.connect(self.set_auto_expand_objects)
+        self.ui.checkBox_merge_dbs.clicked.connect(self.set_merge_dbs)
 
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
@@ -166,6 +168,7 @@ class SpineDBEditorSettingsMixin:
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
         auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true")
+        merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true")
         db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
@@ -178,6 +181,7 @@ class SpineDBEditorSettingsMixin:
         self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
         self.ui.checkBox_relationship_items_follow.setChecked(relationship_items_follow == "true")
         self.ui.checkBox_auto_expand_objects.setChecked(auto_expand_objects == "true")
+        self.ui.checkBox_merge_dbs.setChecked(merge_dbs == "true")
         if db_editor_show_undo == 2:
             self.ui.checkBox_db_editor_show_undo.setChecked(True)
 
@@ -197,6 +201,8 @@ class SpineDBEditorSettingsMixin:
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
         auto_expand_objects = "true" if int(self.ui.checkBox_auto_expand_objects.checkState()) else "false"
         self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_objects)
+        merge_dbs = "true" if int(self.ui.checkBox_merge_dbs.checkState()) else "false"
+        self._qsettings.setValue("appSettings/mergeDBs", merge_dbs)
         db_editor_show_undo = str(int(self.ui.checkBox_db_editor_show_undo.checkState()))
         self._qsettings.setValue("appSettings/dbEditorShowUndo", db_editor_show_undo)
         return True
@@ -204,7 +210,19 @@ class SpineDBEditorSettingsMixin:
     def update_ui(self):
         super().update_ui()
         auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
+        merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
         self.set_auto_expand_objects(auto_expand_objects)
+        self.set_merge_dbs(merge_dbs)
+
+    @Slot(bool)
+    def set_auto_expand_objects(self, checked=False):
+        for db_editor in self.db_mngr.get_all_spine_db_editors():
+            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
+
+    @Slot(bool)
+    def set_merge_dbs(self, checked=False):
+        for db_editor in self.db_mngr.get_all_spine_db_editors():
+            db_editor.ui.graphicsView.set_merge_dbs(checked)
 
 
 class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
@@ -222,10 +240,9 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
         super().show()
         self.read_settings()
 
-    @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
-        for db_editor in self._multi_db_editor.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
+    @property
+    def db_mngr(self):
+        return self._multi_db_editor.db_mngr
 
 
 class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
@@ -275,6 +292,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
         self.ui.checkBox_color_toolbar_icons.clicked.connect(self.set_toolbar_colored_icons)
         self.ui.checkBox_use_curved_links.clicked.connect(self.update_links_geometry)
+        self.ui.checkBox_use_rounded_items.clicked.connect(self.update_items_path)
         self.ui.pushButton_install_julia.clicked.connect(self._show_install_julia_wizard)
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
         self.ui.radioButton_use_python_jupyter_console.toggled.connect(self._update_python_widgets_enabled)
@@ -336,10 +354,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         wizard = AddUpSpineOptWizard(self, julia_exe, julia_project)
         wizard.show()
 
-    @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
-        for db_editor in self._toolbox.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
+    @property
+    def db_mngr(self):
+        return self._toolbox.db_mngr
 
     @Slot(bool)
     def browse_gams_button_clicked(self, checked=False):
@@ -490,12 +507,22 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     @Slot(bool)
     def update_links_geometry(self, checked=False):
         for item in self._toolbox.ui.graphicsView.items():
-            if isinstance(item, Link):
+            if isinstance(item, (Link, JumpLink)):
                 item.update_geometry(curved_links=checked)
+
+    @Slot(bool)
+    def update_items_path(self, checked=False):
+        for item in self._toolbox.ui.graphicsView.items():
+            if isinstance(item, ProjectItemIcon):
+                item.update_path(checked)
 
     @Slot(bool)
     def set_toolbar_colored_icons(self, checked=False):
         self._toolbox.main_toolbar.set_colored_icons(checked)
+
+    @Slot(bool)
+    def _update_properties_widget(self, _checked=False):
+        self._toolbox.ui.tabWidget_item_properties.update()
 
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
@@ -510,7 +537,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         custom_open_project_dialog = self._qsettings.value("appSettings/customOpenProjectDialog", defaultValue="true")
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
+        color_properties_widgets = self._qsettings.value("appSettings/colorPropertiesWidgets", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
+        rounded_items = self._qsettings.value("appSettings/roundedItems", defaultValue="false")
         prevent_overlapping = self._qsettings.value("appSettings/preventOverlapping", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
@@ -547,8 +576,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
         if color_toolbar_icons == "true":
             self.ui.checkBox_color_toolbar_icons.setCheckState(Qt.Checked)
+        if color_properties_widgets == "true":
+            self.ui.checkBox_color_properties_widgets.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
+        if rounded_items == "true":
+            self.ui.checkBox_use_rounded_items.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if prevent_overlapping == "true":
             self.ui.checkBox_prevent_overlapping.setCheckState(Qt.Checked)
@@ -676,8 +709,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
         color_toolbar_icons = "true" if int(self.ui.checkBox_color_toolbar_icons.checkState()) else "false"
         self._qsettings.setValue("appSettings/colorToolbarIcons", color_toolbar_icons)
+        color_properties_widgets = "true" if int(self.ui.checkBox_color_properties_widgets.checkState()) else "false"
+        self._qsettings.setValue("appSettings/colorPropertiesWidgets", color_properties_widgets)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
+        rounded_items = "true" if int(self.ui.checkBox_use_rounded_items.checkState()) else "false"
+        self._qsettings.setValue("appSettings/roundedItems", rounded_items)
         prevent_overlapping = "true" if int(self.ui.checkBox_prevent_overlapping.checkState()) else "false"
         self._qsettings.setValue("appSettings/preventOverlapping", prevent_overlapping)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
@@ -807,11 +844,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def update_ui(self):
         super().update_ui()
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
+        rounded_items = self._qsettings.value("appSettings/roundedItems", defaultValue="false")
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         self.set_toolbar_colored_icons(color_toolbar_icons == "true")
         self.update_links_geometry(curved_links == "true")
+        self.update_items_path(rounded_items == "true")
         if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
         elif bg_choice == "tree":
@@ -841,6 +880,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.ui.lineEdit_host.setText(prep_str + new)  # Add prep str + user input
         self._remote_host = new
+
+    def closeEvent(self, ev):
+        super().closeEvent(ev)
+        self._toolbox.update_properties_ui()
 
 
 def _get_python_kernel_name_by_exe(python_exe):

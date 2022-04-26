@@ -50,18 +50,21 @@ class MassSelectItemsDialog(QDialog):
         "tool",
         "tool_feature",
         "tool_feature_method",
+        "metadata",
+        "entity_metadata",
+        "parameter_value_metadata",
     )
     _COLUMN_COUNT = 3
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Initialize class.
-
+        """
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (DiffDatabaseMapping): the dbs to select items from
         """
         super().__init__(parent)
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         top_widget = QWidget()
@@ -157,8 +160,7 @@ class MassExportItemsDialog(MassSelectItemsDialog):
     data_submitted = Signal(object)
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Initialize class.
-
+        """
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)

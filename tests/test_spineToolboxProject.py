@@ -15,19 +15,25 @@ Unit tests for SpineToolboxProject class.
 :author: P. Savolainen (VTT)
 :date:   14.11.2018
 """
+import json
 import os.path
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import QVariantAnimation, QEventLoop
+from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
+
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.connection import Connection
 from spine_engine.utils.helpers import shorten
 from spinetoolbox.helpers import SignalWaiter
-from .mock_helpers import (
+from spinetoolbox.project_item.project_item import ProjectItem
+from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
+from spinetoolbox.config import PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
+from spinetoolbox.project import node_successors
+from tests.mock_helpers import (
     clean_up_toolbox,
     create_toolboxui_with_project,
     add_ds,
@@ -78,9 +84,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         """Check that project dag handler contains only one
         graph, which has one node and its name matches the
         given argument."""
-        dag = self.toolbox.project().dag_handler
-        self.assertTrue(len(dag.dags()) == 1)
-        g = dag.dag_with_node(name)
+        self.assertTrue(len(self.toolbox.project().dags()) == 1)
+        g = self.toolbox.project().dag_with_node(name)
         self.assertTrue(len(g.nodes()) == 1)
         for node_name in g.nodes():
             self.assertTrue(node_name == name)
@@ -167,27 +172,26 @@ class TestSpineToolboxProject(unittest.TestCase):
         gdx_exporter = p.get_item(gdx_exporter_name)
         self.assertEqual(gdx_exporter_name, gdx_exporter.name)
         # DAG handler should now have six graphs, each with one item
-        dag_hndlr = self.toolbox.project().dag_handler
-        n_dags = len(dag_hndlr.dags())
+        n_dags = len(self.toolbox.project().dags())
         self.assertEqual(9, n_dags)
         # Check that all created items are in graphs
-        ds_graph = dag_hndlr.dag_with_node(ds_name)
+        ds_graph = self.toolbox.project().dag_with_node(ds_name)
         self.assertIsNotNone(ds_graph)
-        dc_graph = dag_hndlr.dag_with_node(dc_name)
+        dc_graph = self.toolbox.project().dag_with_node(dc_name)
         self.assertIsNotNone(dc_graph)
-        dt_graph = dag_hndlr.dag_with_node(dt_name)
+        dt_graph = self.toolbox.project().dag_with_node(dt_name)
         self.assertIsNotNone(dt_graph)
-        tool_graph = dag_hndlr.dag_with_node(tool_name)
+        tool_graph = self.toolbox.project().dag_with_node(tool_name)
         self.assertIsNotNone(tool_graph)
-        gimlet_graph = dag_hndlr.dag_with_node(gimlet_name)
+        gimlet_graph = self.toolbox.project().dag_with_node(gimlet_name)
         self.assertIsNotNone(gimlet_graph)
-        view_graph = dag_hndlr.dag_with_node(view_name)
+        view_graph = self.toolbox.project().dag_with_node(view_name)
         self.assertIsNotNone(view_graph)
-        importer_graph = dag_hndlr.dag_with_node(imp_name)
+        importer_graph = self.toolbox.project().dag_with_node(imp_name)
         self.assertIsNotNone(importer_graph)
-        exporter_graph = dag_hndlr.dag_with_node(exporter_name)
+        exporter_graph = self.toolbox.project().dag_with_node(exporter_name)
         self.assertIsNotNone(exporter_graph)
-        gdx_exporter_graph = dag_hndlr.dag_with_node(gdx_exporter_name)
+        gdx_exporter_graph = self.toolbox.project().dag_with_node(gdx_exporter_name)
         self.assertIsNotNone(gdx_exporter_graph)
 
     def test_remove_item_by_name(self):
@@ -215,7 +219,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(len(project.connections), 0)
         view = self.toolbox.project_item_model.get_item(view2_name)
         self.assertEqual(view2_name, view.name)
-        self.assertTrue(project.dag_handler.node_is_isolated(view2_name))
+        self.assertTrue(project.node_is_isolated(view2_name))
 
     def test_remove_item_by_name_removes_incoming_connections(self):
         project = self.toolbox.project()
@@ -234,7 +238,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(len(project.connections), 0)
         view = self.toolbox.project_item_model.get_item(view1_name)
         self.assertEqual(view1_name, view.name)
-        self.assertTrue(project.dag_handler.node_is_isolated(view1_name))
+        self.assertTrue(project.node_is_isolated(view1_name))
 
     def _execute_project(self):
         waiter = SignalWaiter()
@@ -345,11 +349,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertTrue(bool(project.get_item("renamed source")))
         self.assertEqual(source_item.name, "renamed source")
         self.assertEqual(project.connections, [Connection("renamed source", "left", destination_name, "right")])
-        dags = project.dag_handler.dags()
+        dags = project.dags()
         self.assertEqual(len(dags), 1)
-        self.assertEqual(
-            project.dag_handler.node_successors(dags[0]), {"destination": [], "renamed source": ["destination"]}
-        )
+        self.assertEqual(node_successors(dags[0]), {"destination": [], "renamed source": ["destination"]})
         self.assertEqual(source_item.get_icon().name(), "renamed source")
         self.assertEqual(os.path.split(source_item.data_dir)[1], shorten("renamed source"))
 
@@ -384,8 +386,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_importer(project, self.toolbox.item_factories, importer_name)
         project.add_connection(Connection(dc_name, "right", importer_name, "left"))
         self.assertEqual(len(project.connections), 1)
-        dag = project.dag_handler.dag_with_node(dc_name)
-        self.assertEqual(project.dag_handler.node_successors(dag), {dc_name: [importer_name], importer_name: []})
+        dag = project.dag_with_node(dc_name)
+        self.assertEqual(node_successors(dag), {dc_name: [importer_name], importer_name: []})
 
     def test_add_connection_updates_resources(self):
         project = self.toolbox.project()
@@ -443,20 +445,64 @@ class TestSpineToolboxProject(unittest.TestCase):
         project.remove_connection(connection)
         self.assertEqual(t._input_file_model.rowCount(), 1)  # There should 1 resource left
 
-    def test_replace_connection(self):
+    def test_update_connection(self):
         project = self.toolbox.project()
         dc1_name = "DC 1"
         add_dc(project, self.toolbox.item_factories, dc1_name)
         dc2_name = "DC 2"
         add_dc(project, self.toolbox.item_factories, dc2_name)
-        project.add_connection(Connection(dc1_name, "left", dc2_name, "right"))
-        project.replace_connection(
-            Connection(dc1_name, "left", dc2_name, "right"), Connection(dc1_name, "top", dc2_name, "bottom")
-        )
+        conn = Connection(dc1_name, "left", dc2_name, "right")
+        project.add_connection(conn)
+        project.update_connection(conn, "top", "bottom")
         self.assertEqual(project.connections_for_item(dc1_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
         self.assertEqual(project.connections_for_item(dc2_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
-        dag = project.dag_handler.dag_with_node(dc1_name)
-        self.assertEqual(project.dag_handler.node_successors(dag), {dc1_name: [dc2_name], dc2_name: []})
+        dag = project.dag_with_node(dc1_name)
+        self.assertEqual(node_successors(dag), {dc1_name: [dc2_name], dc2_name: []})
+
+    def test_save_when_storing_item_local_data(self):
+        project = self.toolbox.project()
+        item = _MockItemWithLocalData(project)
+        with mock.patch.object(self.toolbox, "project_item_properties_ui"), mock.patch.object(
+            self.toolbox, "project_item_icon"
+        ):
+            project.add_item(item)
+        project.save()
+        with open(project.config_file) as fp:
+            project_dict = json.load(fp)
+        self.assertEqual(
+            project_dict,
+            {
+                "items": {"test item": {"type": "Tester", "a": {"c": 2}}},
+                "project": {
+                    "connections": [],
+                    "description": "Project for unit tests.",
+                    "jumps": [],
+                    "name": "UnitTest Project",
+                    "specifications": {},
+                    "version": 7,
+                },
+            },
+        )
+        with Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME).open() as fp:
+            local_data_dict = json.load(fp)
+        self.assertEqual(local_data_dict, {'items': {'test item': {'a': {'b': 1, 'd': 3}}}})
+
+    def test_load_when_storing_item_local_data(self):
+        project = self.toolbox.project()
+        item = _MockItemWithLocalData(project)
+        with mock.patch.object(self.toolbox, "project_item_properties_ui"), mock.patch.object(
+            self.toolbox, "project_item_icon"
+        ):
+            project.add_item(item)
+        project.save()
+        self.assertTrue(self.toolbox.close_project(ask_confirmation=False))
+        self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests()}
+        with mock.patch.object(self.toolbox, "update_recent_projects"), mock.patch.object(
+            self.toolbox, "project_item_properties_ui"
+        ), mock.patch.object(self.toolbox, "project_item_icon"):
+            self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
+        item = self.toolbox.project().get_item("test item")
+        self.assertEqual(item.kwargs, {"type": "Tester", "a": {"b": 1, "c": 2, "d": 3}})
 
     def _make_mock_executable(self, item):
         item_name = item.name
@@ -488,6 +534,39 @@ class _MockExecutableItem(ExecutableItemBase):
     @classmethod
     def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
         raise NotImplementedError()
+
+
+class _MockItemWithLocalData(ProjectItem):
+    def __init__(self, project, **kwargs):
+        super().__init__("test item", "a mock item for testing project items' local data", 0.0, 0.0, project)
+        self.kwargs = kwargs
+
+    def item_dict(self):
+        return {"type": self.item_type(), "a": {"b": 1, "c": 2, "d": 3}}
+
+    @staticmethod
+    def item_dict_local_entries():
+        return [("a", "b"), ("a", "d")]
+
+    @staticmethod
+    def item_type():
+        return "Tester"
+
+    @staticmethod
+    def item_category():
+        return "Tools"
+
+    def set_rank(self, rank):
+        pass
+
+    def set_icon(self, icon):
+        return
+
+
+class _MockItemFactoryForLocalDataTests(ProjectItemFactory):
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project):
+        return _MockItemWithLocalData(project, **item_dict)
 
 
 if __name__ == '__main__':

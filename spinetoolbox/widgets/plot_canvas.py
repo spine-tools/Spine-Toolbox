@@ -32,7 +32,10 @@ class PlotCanvas(FigureCanvasQTAgg):
         width = 7.0  # inches
         height = 4.0  # inches
         fig = Figure(figsize=(width, height), tight_layout=True)
-        self._axes = fig.add_subplot(111)
+        grid_spec = fig.add_gridspec(2, 1, height_ratios=[1, 0])
+        self._axes = fig.add_subplot(grid_spec[0, 0])
+        self._legend_axes = fig.add_subplot(grid_spec[1, 0])
+        self._legend_axes.axis("off")
         super().__init__(fig)
         self.setParent(parent)
         super().setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -42,3 +45,8 @@ class PlotCanvas(FigureCanvasQTAgg):
     def axes(self):
         """:obj:`matplotlib.axes.Axes`: figure's axes"""
         return self._axes
+
+    @property
+    def legend_axes(self):
+        """:obj:`matplotlib.axes.Axes`: figure's legend axes"""
+        return self._legend_axes

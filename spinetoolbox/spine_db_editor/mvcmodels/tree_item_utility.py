@@ -19,10 +19,10 @@ A tree model for parameter_value lists.
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine, bisect_chunks, FetchParent
+from spinetoolbox.helpers import CharIconEngine, FetchParent, ItemTypeFetchParent, bisect_chunks
 
 
-class StandardTreeItem(FetchParent, TreeItem):
+class StandardTreeItem(TreeItem):
     """A tree item that fetches their children as they are inserted."""
 
     @property
@@ -137,15 +137,24 @@ class SortsChildrenMixin:
 class FetchMoreMixin:
     # FIXME: Use parent for calls to fetch_more can_fetch_more
     # and also insert items from db map cache in case they were already fetched
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._natural_fetch_parent = ItemTypeFetchParent(self.fetch_item_type)
+
     @property
     def fetch_item_type(self):
         return self.item_type
 
+    def _fetch_parents(self):
+        yield self._natural_fetch_parent
+
     def can_fetch_more(self):
-        return self.db_mngr.can_fetch_more(self.db_map, self)
+        return any(self.db_mngr.can_fetch_more(self.db_map, parent) for parent in self._fetch_parents())
 
     def fetch_more(self):
-        self.db_mngr.fetch_more(self.db_map, self)
+        for parent in self._fetch_parents():
+            self.db_mngr.fetch_more(self.db_map, parent)
 
 
 class StandardDBItem(SortsChildrenMixin, StandardTreeItem):
@@ -265,3 +274,16 @@ class LeafItem(StandardTreeItem):
 
     def can_fetch_more(self):
         return False
+
+
+class ListValueFetchParent(FetchParent):
+    def __init__(self, parameter_value_list_id):
+        super().__init__()
+        self._parameter_value_list_id = parameter_value_list_id
+
+    @property
+    def fetch_item_type(self):
+        return "list_value"
+
+    def filter_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.parameter_value_list_id == self._parameter_value_list_id)

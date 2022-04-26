@@ -1,0 +1,61 @@
+{
+    "name": "Import tool output",
+    "item_type": "Importer",
+    "mapping": {
+        "table_mappings": {
+            "out": [
+                {
+                    "Mapping 1": {
+                        "mapping": [
+                            {
+                                "map_type": "ObjectClass",
+                                "position": "hidden",
+                                "value": "result"
+                            },
+                            {
+                                "map_type": "Object",
+                                "position": "hidden",
+                                "value": "test_data"
+                            },
+                            {
+                                "map_type": "ObjectMetadata",
+                                "position": "hidden"
+                            },
+                            {
+                                "map_type": "ParameterDefinition",
+                                "position": "header",
+                                "value": 0
+                            },
+                            {
+                                "map_type": "Alternative",
+                                "position": "hidden"
+                            },
+                            {
+                                "map_type": "ParameterValueMetadata",
+                                "position": "hidden"
+                            },
+                            {
+                                "map_type": "ParameterValue",
+                                "position": 0
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "selected_tables": [
+            "out"
+        ],
+        "table_options": {
+            "out": {}
+        },
+        "table_types": {
+            "out": {
+                "0": "float"
+            }
+        },
+        "table_row_types": {},
+        "source_type": "DataPackageConnector"
+    },
+    "description": ""
+}

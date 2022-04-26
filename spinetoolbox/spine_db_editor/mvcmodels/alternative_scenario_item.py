@@ -193,7 +193,7 @@ class ScenarioAlternativeLeafItem(GrayIfLastMixin, LeafItem):
         return "<p>Drag and drop this item to reorder scenario alternatives</p>"
 
     def _make_item_data(self):
-        return {"name": f"Type scenario alternative name here...", "description": ""}
+        return {"name": "Type scenario alternative name here...", "description": ""}
 
     @property
     def item_data(self):
