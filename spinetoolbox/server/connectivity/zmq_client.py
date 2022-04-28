@@ -121,7 +121,6 @@ class ZMQClient:
             a list of tuples containing events+data
         """
         # check if folder and file exist
-        # print("ZMQClient.send(): path %s exists: %s file %s exists: %s." % (fileLocation, os.path.isdir(fileLocation), fileName, os.path.exists(fileLocation+fileName)))
         if not os.path.isdir(fileLocation) or not os.path.exists(os.path.join(fileLocation, fileName)):
             # print("ZMQClient.send(): invalid path or file.")
             raise ValueError("invalid path or file.")
@@ -148,12 +147,17 @@ class ZMQClient:
         msgStr = message.decode('utf-8')
         # print("ZMQClient()..Received reply %s" %msgStr)
         parsedMsg = ServerMessageParser.parse(msgStr)
+        print(f"msgStr:{msgStr}")
         # get and decode events+data
         data = parsedMsg.getData()
-        # print(type(data))
-        jsonData = json.dumps(data)
-        dataEvents = EventDataConverter.convertJSON(jsonData, True)
-        return dataEvents
+        # If something went wrong, data is an error string instead of a list of tuples when everything worked
+        if type(data) == str:  # Error occurred on server
+            return data
+        else:
+            print(f"This should be a list of tuples: data:{data}. type(data):{type(data)}")
+            data_events = EventDataConverter.convertJSON(data, True)
+            print(f"data_events:{data_events}")
+            return data_events
 
     def close(self):
         if not self._closed:

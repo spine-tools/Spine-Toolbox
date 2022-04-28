@@ -19,26 +19,27 @@ import os
 
 
 class FilePackager:
-    """Converts a folder into a ZIP-file
-
-    Args:
-        sourceFolder(string): the folder to be included to the ZIP-file
-        destinationFolder(string):destination folder of the ZIP-file to be created
-        zipFileName(string): name of the ZIP-file to be created
-    """
 
     @staticmethod
-    def package(sourceFolder, destinationFolder, zipFileName):
-        if not destinationFolder or not zipFileName or not sourceFolder:
-            raise ValueError("source folder,destination folder or file name were invalid")
+    def package(src_folder, dst_folder, zip_file_name):
+        """Converts a folder into a ZIP-file
+
+        Args:
+            src_folder (string): Folder to be included to the ZIP-file
+            dst_folder (string): Destination folder of the ZIP-file to be created
+            zip_file_name (string): Name of the ZIP-file without extension (it's added by shutil.make_archive())
+        """
+        if not dst_folder or not zip_file_name or not src_folder:
+            raise ValueError("source folder, destination folder or file name were invalid")
         # check if the source folder exists
-        if not os.path.isdir(sourceFolder):
-            raise ValueError("provided sourceFolder %s doesn't exist." % sourceFolder)
-        zipPath = os.path.join(destinationFolder, zipFileName)
-        # print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, destinationFolder + zipFileName,))
-        print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, zipPath))
-        # shutil.make_archive(destinationFolder + zipFileName, 'zip', sourceFolder)
-        shutil.make_archive(zipPath, 'zip', sourceFolder)
+        if not os.path.isdir(src_folder):
+            raise ValueError(f"provided src_folder {src_folder} doesn't exist")
+        zip_path = os.path.join(dst_folder, zip_file_name)
+        shutil.make_archive(zip_path, "zip", src_folder)
+        if os.path.isfile(zip_path + ".zip"):  # Extension is added by make_archive
+            print(f"FilePackager.package() ZIP-file created: {zip_path + '.zip'}")
+        else:
+            print(f"FilePackager.package() Error in creating ZIP-file. src_folder:{src_folder}, dest_file:{zip_path}")
 
     @staticmethod
     def deleteFile(file):

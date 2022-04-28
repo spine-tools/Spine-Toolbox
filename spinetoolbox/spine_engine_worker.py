@@ -18,10 +18,9 @@ import time
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from PySide2.QtWidgets import QMessageBox
-
 from spine_engine.exception import EngineInitFailed, RemoteEngineFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
-from .spine_engine_manager import make_engine_manager
+from .spine_engine_manager import make_engine_manager, LocalSpineEngineManager
 from .helpers import get_upgrade_db_promt_text
 
 
@@ -223,11 +222,24 @@ class SpineEngineWorker(QObject):
             self.finished.emit()
             return
         while True:
-            event_type, data = self._engine_mngr.get_engine_event()
-            self._process_event(event_type, data)
-            if event_type == "dag_exec_finished":
-                self._engine_final_state = data
-                break
+            if isinstance(self._engine_mngr, LocalSpineEngineManager):
+                event_type, data = self._engine_mngr.get_engine_event()
+                self._process_event(event_type, data)
+                if event_type == "dag_exec_finished":
+                    self._engine_final_state = data
+                    break
+            else:
+                event_type, data = self._engine_mngr.engine_event_getter_thread.q.get()
+                print(f"SpineEngineWorker processing event_type:{event_type}, data:{data}")
+                self._process_event(event_type, data)
+                if event_type == "dag_exec_finished":
+                    self._engine_final_state = data
+                    break
+                elif event_type == "remote_engine_failed":
+                    self._logger.msg_error.emit(f"{data}")
+                    self._engine_final_state = str(SpineEngineState.FAILED)
+                    self._all_items_failed.emit(list(self._project_items.values()))
+                    break
         self.finished.emit()
 
     def _process_event(self, event_type, data):
@@ -245,7 +257,7 @@ class SpineEngineWorker(QObject):
 
         #debugs
         #if event_type=='exec_finished':
-        #    print("spine_engine_worker._process_event(): exec_fininshed data %s and type %s"%(data,type(data)))
+        #    print("spine_engine_worker._process_event(): exec_finished data %s and type %s"%(data,type(data)))
         #    print("spine_engine_worker._process_event(): item_state type: %s"%type(data['item_state']))
 
         if handler is None:
@@ -367,6 +379,10 @@ class SpineEngineWorker(QObject):
     def clean_up(self):
         for item in self._executing_items:
             self._node_execution_finished.emit(item, None, None)
+        if isinstance(self._engine_mngr, LocalSpineEngineManager):
+            self._engine_mngr.stop_engine()
+        else:
+            self._engine_mngr.close()
         self._thread.quit()
         self._thread.wait()
         self._thread.deleteLater()
