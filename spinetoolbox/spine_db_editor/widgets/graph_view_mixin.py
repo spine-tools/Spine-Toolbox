@@ -15,6 +15,8 @@ Contains the GraphViewMixin class.
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
+
+import sys
 import itertools
 from time import monotonic
 from PySide2.QtCore import Slot, QTimer, QThreadPool
@@ -379,6 +381,11 @@ class GraphViewMixin:
         db_map_relationship_ids -= pruned_db_map_entity_ids
         db_map_relationships = self._get_db_map_relationships_for_graph(db_map_object_ids, db_map_relationship_ids)
         db_map_object_id_lists = dict()
+        max_rel_dim = (
+            self.ui.graphicsView.max_relationship_dimension
+            if not self.ui.graphicsView.disable_max_relationship_dimension
+            else sys.maxsize
+        )
         for db_map, relationship in db_map_relationships:
             if (db_map, relationship["id"]) in pruned_db_map_entity_ids:
                 continue
@@ -387,7 +394,7 @@ class GraphViewMixin:
                 for id_ in (int(x) for x in relationship["object_id_list"].split(","))
                 if (db_map, id_) not in pruned_db_map_entity_ids
             ]
-            if len(db_map_object_id_list) < 2:
+            if len(db_map_object_id_list) < 2 or len(db_map_object_id_list) > max_rel_dim:
                 continue
             db_map_object_ids.update(db_map_object_id_list)
             db_map_object_id_lists[db_map, relationship["id"]] = db_map_object_id_list

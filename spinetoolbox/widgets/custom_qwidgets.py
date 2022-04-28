@@ -36,7 +36,7 @@ from PySide2.QtWidgets import (
     QPushButton,
 )
 from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
-from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont
+from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont, QIntValidator
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from ..helpers import format_log_message
 
@@ -609,3 +609,58 @@ class ElidedTextMixin:
 
 class ElidedLabel(ElidedTextMixin, QLabel):
     """A QLabel with elided text."""
+
+
+class HorizontalSpinBox(QToolBar):
+    valueChanged = Signal(int)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._validator = QIntValidator()
+        self._value = None
+        self._line_edit = QLineEdit(self)
+        width = self.fontMetrics().width("99") + 12
+        self._line_edit.setFixedWidth(width)
+        self._line_edit.setAlignment(Qt.AlignCenter)
+        self._line_edit.textEdited.connect(self.setValue)
+        self._line_edit.setValidator(self._validator)
+        self.addAction("-", self._dec_value)
+        self.addWidget(self._line_edit)
+        self.addAction("+", self._inc_value)
+        self.setStyleSheet("margin: 0px")
+
+    def value(self):
+        return self._value
+
+    def setMinimum(self, minimum):
+        try:
+            self._validator.setBottom(minimum)
+        except TypeError:
+            pass
+
+    def setValue(self, value, strict=False):
+        try:
+            value = int(value)
+        except ValueError:
+            return
+        if value == self._value:
+            return
+        acceptable = self._validator.validate(str(value), 0)[0] == QIntValidator.Acceptable
+        if strict and not acceptable:
+            return
+        self._line_edit.setText(str(value))
+        self._value = value
+        if acceptable:
+            self.valueChanged.emit(self._value)
+
+    def _dec_value(self):
+        self.setValue(self._value - 1, strict=True)
+        self._focus_line_edit()
+
+    def _inc_value(self):
+        self.setValue(self._value + 1, strict=True)
+        self._focus_line_edit()
+
+    def _focus_line_edit(self):
+        self._line_edit.selectAll()
+        self._line_edit.setFocus()

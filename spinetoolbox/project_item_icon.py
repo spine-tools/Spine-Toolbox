@@ -71,6 +71,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.icon_group = {self}
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem(self)
+        self.svg_item.setZValue(100)
         self.colorizer = QGraphicsColorizeEffect()
         self.text_font_size = 10  # point size
         self._rect = QRectF(-self.ITEM_EXTENT / 2, -self.ITEM_EXTENT / 2, self.ITEM_EXTENT, self.ITEM_EXTENT)
