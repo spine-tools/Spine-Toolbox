@@ -119,7 +119,7 @@ class SpineToolboxProject(MetaObject):
         self._logger = logger
         self._settings = settings
         self._engine_workers = []
-        self._execution_stopped = True
+        self._execution_in_progress = False
         self.project_dir = None  # Full path to project directory
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
@@ -902,7 +902,7 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("-------------------------------------------------")
         self._logger.msg.emit(f"<b>{msg}</b>")
         self._logger.msg.emit("-------------------------------------------------")
-        self._execution_stopped = False
+        self._execution_in_progress = True
         self._execute_dags(dags, execution_permits_list)
 
     def _execute_dags(self, dags, execution_permits_list):
@@ -1048,12 +1048,12 @@ class SpineToolboxProject(MetaObject):
 
     def stop(self):
         """Stops execution."""
-        if self._execution_stopped:
+        if not self._execution_in_progress:
             self._logger.msg.emit("No execution in progress")
             return
         self._logger.msg.emit("Stopping...")
-        self._execution_stopped = True
-        # Stop experimental engines
+        self._execution_in_progress = False
+        # Stop engines
         for worker in self._engine_workers:
             worker.stop_engine()
 
@@ -1300,6 +1300,8 @@ class SpineToolboxProject(MetaObject):
 
     def tear_down(self):
         """Cleans up project."""
+        if self._execution_in_progress:
+            self.stop()
         self.project_about_to_be_torn_down.emit()
         for item in self._project_items.values():
             item.tear_down()

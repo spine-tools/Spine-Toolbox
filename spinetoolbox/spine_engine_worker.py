@@ -134,6 +134,7 @@ class SpineEngineWorker(QObject):
         self._project_items = project_items
         self._connections = connections
         self._logger = logger
+        self._process_events = True
         self.event_messages = {}
         self.process_messages = {}
         self.successful_executions = []
@@ -172,6 +173,7 @@ class SpineEngineWorker(QObject):
         self.process_messages.setdefault(msg_type, []).append(msg_text)
 
     def stop_engine(self):
+        self._process_events = False
         self._engine_mngr.stop_engine()
 
     def engine_final_state(self):
@@ -225,6 +227,8 @@ class SpineEngineWorker(QObject):
         self.finished.emit()
 
     def _process_event(self, event_type, data):
+        if not self._process_events:
+            return
         handler = {
             "exec_started": self._handle_node_execution_started,
             "exec_finished": self._handle_node_execution_finished,
