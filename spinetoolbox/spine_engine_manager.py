@@ -283,15 +283,18 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
     def stop_engine(self):
         """Stops engine currently running."""
         self._state = RemoteSpineEngineManagerState.CLOSED
-        self._runner.join()
-        self.zmq_client.close()
+        if self._runner.is_alive():
+            self._runner.join()
+        if self.zmq_client is not None:
+            self.zmq_client.close()
         print("RemoteSpineEngineManager.stop_engine()")
 
     def close(self):
         """Closes zmq_client and _runner thread when execution has finished."""
         self._state = RemoteSpineEngineManagerState.CLOSED
         self.zmq_client.close()
-        self._runner.join()
+        if self._runner.is_alive():
+            self._runner.join()
         print(f"ZMQ client and {self._runner.name} have been closed")
 
     def _run(self):

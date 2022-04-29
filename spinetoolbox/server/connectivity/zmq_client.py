@@ -103,10 +103,10 @@ class ZMQClient:
         self._closed = False  # for tracking multiple closing calls
 
     def getConnectionState(self):
-        """
-        Returns connection state
+        """Returns connection state
+
         Returns:
-            ZMQClientConnectionState
+            int: ZMQClientConnectionState
         """
         return self._connection_state
 
@@ -166,10 +166,11 @@ class ZMQClient:
             print("ZMQClient(): Connection closed.")
             self._closed = True
         else:
-            print("ZMQClient(): Connection was closed before.")
+            print("ZMQClient(): Connection was already closed")
 
     def _check_connectivity(self, timeout):
-        """
+        """Sends ping command to server, waits for the response, and acts accordingly.
+
         Args:
             timeout (int): Time to wait before giving up [ms]
         """
