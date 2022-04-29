@@ -1602,6 +1602,8 @@ class SpineDBManager(QObject):
                 value_index_list = [x["index"] for x in sorted_list_values]
                 value_id_list = [x["id"] for x in sorted_list_values]
                 value_list = self.get_item(db_map, "parameter_value_list", list_id, only_visible=False)
+                if not value_list:
+                    continue
                 value_list["value_index_list"] = ",".join(str(id_) for id_ in value_index_list)
                 value_list["value_id_list"] = ",".join(str(id_) for id_ in value_id_list)
                 db_map_value_list_data.setdefault(db_map, []).append(value_list)
