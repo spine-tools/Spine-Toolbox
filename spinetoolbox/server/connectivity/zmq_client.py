@@ -103,70 +103,61 @@ class ZMQClient:
         self._closed = False  # for tracking multiple closing calls
 
     def getConnectionState(self):
-        """Returns connection state
+        """Returns ZMQ client connection state.
 
         Returns:
             int: ZMQClientConnectionState
         """
         return self._connection_state
 
-    def send(self, text, fileLocation, fileName):
-        """
+    def send(self, text, file_path, filename):
+        """Sends the project and the execution request to the server, waits for the response and acts accordingly.
+
         Args:
-            text (string): 
-            fileLocation (string): location of the binary file to be transferred
-            fileName (string): name of the binary file to be transferred
+            text (str): Input for SpineEngine as text. Includes most of project.json, settings, etc.
+            file_path (string): location of the binary file (project zip-file) to be transferred
+            filename (string): name of the binary file to be transferred
 
         Returns:
             a list of tuples containing events+data
         """
-        # check if folder and file exist
-        if not os.path.isdir(fileLocation) or not os.path.exists(os.path.join(fileLocation, fileName)):
-            # print("ZMQClient.send(): invalid path or file.")
-            raise ValueError("invalid path or file.")
+        if not os.path.exists(os.path.join(file_path, filename)):
+            raise ValueError(f"Zipped project file {filename} not found in {file_path}")
         if not text:
-            raise ValueError("invalid input text")
+            raise ValueError("Invalid input text")
+        print(f"type(text):{type(text)}")
         # Read file content
-        f = open(os.path.join(fileLocation, fileName), 'rb')
-        fileData = f.read()
-        f.close()
+        with open(os.path.join(file_path, filename), 'rb') as f:
+            file_data = f.read()
         # create message content
-        randomId = random.randrange(10000000)
+        random_id = random.randrange(10000000)  # The request ID
         msg_parts = []
-        listFiles = [fileName]
-        msg = ServerMessage("execute", str(randomId), text, listFiles)
+        list_files = [filename]
+        msg = ServerMessage("execute", str(random_id), text, list_files)
         print("ZMQClient(): msg to be sent : %s" % msg.toJSON())
-        part1Bytes = bytes(msg.toJSON(), 'utf-8')
+        part1Bytes = bytes(msg.toJSON(), "utf-8")
         msg_parts.append(part1Bytes)
-        msg_parts.append(fileData)
-        # transfer
-        self._socket.send_multipart(msg_parts)
-        # print("ZMQClient(): listening to a reply.")
-        message = self._socket.recv()
-        # decode
-        msgStr = message.decode('utf-8')
-        # print("ZMQClient()..Received reply %s" %msgStr)
-        parsedMsg = ServerMessageParser.parse(msgStr)
-        print(f"msgStr:{msgStr}")
-        # get and decode events+data
-        data = parsedMsg.getData()
-        # If something went wrong, data is an error string instead of a list of tuples when everything worked
-        if type(data) == str:  # Error occurred on server
+        msg_parts.append(file_data)  # Append the actual zip-file (project_package.zip) as the last part
+        self._socket.send_multipart(msg_parts)  # Send request
+        message = self._socket.recv()  # Blocks until a response is received
+        msg_str = message.decode("utf-8")  # Decode received bytes to get (JSON) string
+        parsed_msg = ServerMessageParser.parse(msg_str)  # Parse (JSON) string into a ServerMessage
+        data = parsed_msg.getData()  # Get events+data in a dictionary
+        # If something went wrong, data is an error string instead of a dictionary
+        if type(data) == str:
             return data
         else:
-            print(f"This should be a list of tuples: data:{data}. type(data):{type(data)}")
+            # Convert dictionary into a list of tuples and the base64 stuff to sane text
             data_events = EventDataConverter.convertJSON(data, True)
-            print(f"data_events:{data_events}")
             return data_events
 
     def close(self):
+        """Closes ZMQ client socket, context and thread."""
         if not self._closed:
             self._socket.close()
             self._context.term()
             print("ZMQClient(): Connection closed.")
             self._closed = True
-        else:
-            print("ZMQClient(): Connection was already closed")
 
     def _check_connectivity(self, timeout):
         """Sends ping command to server, waits for the response, and acts accordingly.
@@ -174,21 +165,27 @@ class ZMQClient:
         Args:
             timeout (int): Time to wait before giving up [ms]
         """
-        startTimeMs = round(time.time() * 1000.0)  # debugging
+        start_time_ms = round(time.time() * 1000.0)
         msg_parts = []
-        randomId = random.randrange(10000000)
-        pingMsg = ServerMessage("ping", str(randomId), "", None)
-        pingAsJson = pingMsg.toJSON()
+        random_id = random.randrange(10000000)
+        ping_request = ServerMessage("ping", str(random_id), "", None)
+        pingAsJson = ping_request.toJSON()
         pingInBytes = bytes(pingAsJson, 'utf-8')
         msg_parts.append(pingInBytes)
         sendRet = self._socket.send_multipart(msg_parts, flags=zmq.NOBLOCK)
         event = self._socket.poll(timeout=timeout)
         if event == 0:
-            print("ZMQClient._check_connectivity(): timeout occurred, no reply will be listened to")
+            print("Timeout expired. Pinging the server failed.")
             return False
         else:
             msg = self._socket.recv()
-            msgStr = msg.decode("utf-8")
-            stopTimeMs = round(time.time() * 1000.0)  # debugging
-            print("ZMQClient._check_connectivity(): ping message was received, RTT: %d ms" % (stopTimeMs - startTimeMs))
+            msg_str = msg.decode("utf-8")
+            response = ServerMessageParser.parse(msg_str)
+            # Check that request ID matches the response ID
+            response_id = int(response.getId())
+            if not response_id == random_id:
+                print(f"Ping failed. Request ID '{random_id}' does not match response ID '{response_id}'")
+                return False
+            stop_time_ms = round(time.time() * 1000.0)  # debugging
+            print("Ping message received, RTT: %d ms" % (stop_time_ms - start_time_ms))
             return True

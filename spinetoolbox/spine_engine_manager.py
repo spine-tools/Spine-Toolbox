@@ -319,7 +319,6 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                     json_txt, self._inputData['project_dir'], RemoteSpineEngineManager.ZipFileName + ".zip"
                 )
                 self.engine_event_getter_thread.server_output_msg_q.put(data_events)
-                self.engine_event_getter_thread.output_iterator_index_q.put(0)
                 # Delete the transmitted zip file
                 FilePackager.deleteFile(
                     os.path.abspath(
@@ -401,7 +400,7 @@ class RemoteEngineEventGetter(threading.Thread):
         super().__init__(name="RemoteEngineEventGetterThread")
         self._state = start_state
         self.server_output_msg_q = queue.Queue()  # Queue for messages from remote server
-        self.output_iterator_index_q = queue.Queue()
+        self.output_iterator_index_q = 0
         self.q = queue.Queue()  # Queue for sending data forward to SpineEngineWorker
         self.start()
 
@@ -414,41 +413,33 @@ class RemoteEngineEventGetter(threading.Thread):
         while True:
             if self._state == RemoteSpineEngineManagerState.REPLY_RECEIVED:
                 output_data = self.server_output_msg_q.get()
-                output_data_iterator_index = self.output_iterator_index_q.get()
-                print(f"REPLY_RECEIVED. output_data:{output_data}. output_data_iterator_index:{output_data_iterator_index}")
+                output_data_iterator_index = 0
+                print(f"REPLY_RECEIVED. output_data:{output_data}")
                 if isinstance(output_data, str):
                     # Error happened on server
                     self.q.put(("remote_engine_failed", output_data))
                     self._state = RemoteSpineEngineManagerState.CLOSED
                     break
-                eventData = output_data[output_data_iterator_index]
-                self.output_iterator_index_q += 1
-                if self.output_iterator_index_q == len(output_data):
-                    # print("get_engine_event() all events+data has been received, returning to CLOSED")
-                    self._state = RemoteSpineEngineManagerState.CLOSED
-                    break
-                try:
-                    dataDict = dict()
-                    # print("get_engine_event() transforming data: %s"%eventData[1])
-                    # handle execution state transformation, see returned data from SpineEngine._process_event()
-                    if eventData[1].find('\'item_state\': <') != -1:
-                        dataDict = self.transform_execution_state(eventData[1])
-                    else:
-                        dataDict = ast.literal_eval(eventData[1])
-                    # dataDict=json.loads(eventData[1])
-                    # print(type(dataDict))
-                    # print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
-                    self.q.put((eventData[0], dataDict))
-                # this exception is needed due to status code return (not a dict string), see: SpineEngine._process_event()
-                except Exception as e:
-                    if eventData[1].find('{') == -1:
-                        # print("get_engine_event() Handled exception in parsing, returning a status code.")
-                        self.q.put((eventData[0], eventData[1]))
-                    else:
-                        # print(e)
-                        # print("event data: %s;%s"%(eventData[0], eventData[1]))
-                        print("RemoteEngineEventGetter.run() Failure in parsing,returning empty..")
-                        self.q.put((None, None))
+                for event in output_data:
+                    # output_data is a list of tuples
+                    # event is eg. ('exec_started', "{'item_name': 'DC', 'direction': 'BACKWARD'}")
+                    try:
+                        # handle execution state transformation, see returned data from SpineEngine._process_event()
+                        if event[1].find('\'item_state\': <') != -1:
+                            data_dict = self.transform_execution_state(event[1])
+                        else:
+                            data_dict = ast.literal_eval(event[1])
+                        self.q.put((event[0], data_dict))
+                    # this exception is needed due to status code return (not a dict string), see: SpineEngine._process_event()
+                    except Exception as e:
+                        if event[1].find('{') == -1:
+                            print("RemoteEngineEventGetter.run() Handled exception in parsing, returning a status code.")
+                            self.q.put((event[0], event[1]))
+                        else:
+                            print("RemoteEngineEventGetter.run() Failure in parsing,returning empty..")
+                            self.q.put((None, None))
+                self._state = RemoteSpineEngineManagerState.CLOSED
+                break
             else:
                 # print("get_engine_event(): returning empty tuple, reply has not been received yet.")
                 time.sleep(0.01)
