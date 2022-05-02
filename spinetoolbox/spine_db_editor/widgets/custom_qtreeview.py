@@ -43,7 +43,6 @@ class EntityTreeView(CopyTreeView):
         self._add_relationship_classes_action = None
         self._add_relationships_action = None
         self._manage_relationships_action = None
-        self._show_entity_metadata_action = None
         self._export_action = None
         self._edit_action = None
         self._remove_action = None
@@ -250,7 +249,6 @@ class EntityTreeView(CopyTreeView):
         self._fully_collapse_action.setEnabled(item_has_children)
         self._add_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
         self._manage_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
-        self._show_entity_metadata_action.setEnabled(item.item_type in ("object", "relationship"))
         read_only = item.item_type in ("root", "members")
         self._export_action.setEnabled(not read_only)
         self._edit_action.setEnabled(not read_only)
