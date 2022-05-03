@@ -10,12 +10,13 @@
 ######################################################################################################################
 
 import os
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Qt, Slot, QTimer, Signal
+from PySide2.QtCore import Qt, Slot, QTimer, Signal, QThreadPool, QRunnable
 from PySide2.QtWidgets import QTextEdit
 from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor, QTextBlockFormat
 from spinetoolbox.helpers import CustomSyntaxHighlighter
@@ -27,6 +28,9 @@ class PersistentConsoleWidget(QTextEdit):
 
     _history_item_available = Signal(str)
     _completions_available = Signal(str, str, list)
+    _FLUSH_INTERVAL = 200
+    _MAX_LINES_PER_SECOND = 2000
+    _MAX_LINES_PER_CYCLE = _MAX_LINES_PER_SECOND * 1000 / _FLUSH_INTERVAL
 
     def __init__(self, toolbox, key, language, owner=None):
         """
@@ -39,11 +43,12 @@ class PersistentConsoleWidget(QTextEdit):
         super().__init__(parent=toolbox)
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         self.setFont(font)
-        self.document().setMaximumBlockCount(2000)
         cursor_width = self.fontMetrics().horizontalAdvance("x")
         self.setCursorWidth(cursor_width)
         self.document().setIndentWidth(cursor_width)
         self.setTabStopDistance(4 * cursor_width)
+        self._pool = QThreadPool()
+        self._pool.setMaxThreadCount(1)
         self._executor = ThreadPoolExecutor()
         self._toolbox = toolbox
         self._key = key
@@ -54,8 +59,10 @@ class PersistentConsoleWidget(QTextEdit):
         self._history_item_zero = ""
         self._pending_command_count = 0
         self._text_buffer = []
-        self._timer = QTimer()
-        self._timer.setInterval(200)
+        self._skipped = {}
+        self._anchor = None
+        self._flush_timer = QTimer()
+        self._flush_timer.setInterval(self._FLUSH_INTERVAL)
         self._style = get_style_by_name("monokai")
         background_color = self._style.background_color
         foreground_color = self._style.styles[Token] or self._style.styles[Token.Text]
@@ -77,8 +84,44 @@ class PersistentConsoleWidget(QTextEdit):
         self.document().contentsChanged.connect(self._handle_contents_changed)
         self._history_item_available.connect(self._display_history_item)
         self._completions_available.connect(self._display_completions)
-        self._timer.timeout.connect(self._drain_text_buffer)
-        self._timer.start()
+        self._flush_timer.timeout.connect(self._flush_text_buffer)
+        self._flush_timer.start()
+
+    def name(self):
+        """Returns console name for display purposes."""
+        return f"{self._language.capitalize()} Console - {self.owner_names}"
+
+    @property
+    def owner_names(self):
+        return " & ".join(x.name for x in self.owners if x is not None)
+
+    def mouseMoveEvent(self, ev):
+        super().mousePressEvent(ev)
+        if self.anchorAt(ev.pos()):
+            self.viewport().setCursor(Qt.PointingHandCursor)
+        else:
+            self.viewport().setCursor(Qt.IBeamCursor)
+
+    def mousePressEvent(self, ev):
+        super().mousePressEvent(ev)
+        self._anchor = self.anchorAt(ev.pos())
+
+    def mouseReleaseEvent(self, ev):
+        super().mouseReleaseEvent(ev)
+        if self._anchor is None:
+            return
+        text_buffer = self._skipped.pop(self._anchor, None)
+        if text_buffer is None:
+            return
+        cursor = self.cursorForPosition(ev.pos())
+        cursor.select(cursor.BlockUnderCursor)
+        cursor.removeSelectedText()
+        cursor.beginEditBlock()
+        while text_buffer:
+            text, with_prompt = text_buffer.pop(0)
+            self._insert_text(cursor, text, with_prompt)
+        cursor.endEditBlock()
+        self._anchor = None
 
     def scrollContentsBy(self, dx, dy):
         super().scrollContentsBy(dx, dy)
@@ -89,14 +132,6 @@ class PersistentConsoleWidget(QTextEdit):
         if self._at_bottom:
             scrollbar = self.verticalScrollBar()
             scrollbar.setValue(scrollbar.maximum())
-
-    def name(self):
-        """Returns console name for display purposes."""
-        return f"{self._language.capitalize()} Console - {self.owner_names}"
-
-    @property
-    def owner_names(self):
-        return " & ".join(x.name for x in self.owners if x is not None)
 
     @property
     def _input_start_pos(self):
@@ -179,20 +214,42 @@ class PersistentConsoleWidget(QTextEdit):
         self._text_buffer.append((text, with_prompt))
 
     @Slot()
-    def _drain_text_buffer(self):
+    def _flush_text_buffer(self):
         """Inserts all text from buffer."""
-        if not self._text_buffer:
-            return
-        for text, with_prompt in self._text_buffer:
-            cursor = self.textCursor()
+        self._pool.start(_CustomRunnable(self._do_flush_text_buffer))
+
+    def _do_flush_text_buffer(self):
+        self.blockSignals(True)
+        k = 0
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+        while self._text_buffer and k < self._MAX_LINES_PER_CYCLE:
+            cursor.setPosition(self._prompt_block.position() - 1)
+            text, with_prompt = self._text_buffer.pop(0)
+            self._insert_text(cursor, text, with_prompt)
+            k += 1
+        if self._text_buffer:
+            address = uuid.uuid4().hex
+            char_format = cursor.charFormat()
+            char_format.setBackground(QColor('white'))
+            char_format.setForeground(QColor('blue'))
+            char_format.setAnchor(True)
+            char_format.setAnchorHref(address)
+            self._skipped[address] = self._text_buffer.copy()
             cursor.setPosition(self._prompt_block.position() - 1)
             cursor.insertBlock(QTextBlockFormat())
-            if with_prompt:
-                cursor.insertText(self._prompt, self._prompt_format)
-                self._insert_stdin_text(cursor, text)
-            else:
-                self._insert_stdout_text(cursor, text)
-        self._text_buffer.clear()
+            cursor.insertText(f"<--- {len(self._text_buffer)} more lines --->", char_format)
+            self._text_buffer.clear()
+        cursor.endEditBlock()
+        self.blockSignals(False)
+
+    def _insert_text(self, cursor, text, with_prompt):
+        cursor.insertBlock(QTextBlockFormat())
+        if with_prompt:
+            cursor.insertText(self._prompt, self._prompt_format)
+            self._insert_stdin_text(cursor, text)
+        else:
+            self._insert_stdout_text(cursor, text)
 
     def add_stdin(self, data):
         """Adds new prompt with data. Used when adding stdin from external execution.
@@ -202,16 +259,15 @@ class PersistentConsoleWidget(QTextEdit):
         """
         self._insert_text_before_prompt(data, with_prompt=True)
 
-    @Slot(str)
     def add_stdout(self, data):
         """Adds new line to stdout. Used when adding stdout from external execution.
 
         Args:
             data (str)
         """
+
         self._insert_text_before_prompt(data)
 
-    @Slot(str)
     def add_stderr(self, data):
         """Adds new line to stderr. Used when adding stderr from external execution.
 
@@ -252,18 +308,18 @@ class PersistentConsoleWidget(QTextEdit):
         self._at_bottom = True
         text, partial_text = self._get_current_text()
         if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
-            self.issue_command(text)
+            self._issue_command(text)
         elif ev.key() == Qt.Key_Up:
-            self.move_history(text, 1)
+            self._move_history(text, 1)
         elif ev.key() == Qt.Key_Down:
-            self.move_history(text, -1)
+            self._move_history(text, -1)
         elif ev.key() == Qt.Key_Tab and partial_text.strip():
-            self.autocomplete(text, partial_text)
+            self._autocomplete(text, partial_text)
         elif ev.key() not in (Qt.Key_Backspace, Qt.Key_Left) or self.textCursor().position() > self._input_start_pos:
             super().keyPressEvent(ev)
         self._highlight()
 
-    def issue_command(self, text):
+    def _issue_command(self, text):
         """Issues command.
 
         Args:
@@ -296,7 +352,7 @@ class PersistentConsoleWidget(QTextEdit):
         if self._pending_command_count == 0:
             self._insert_prompt(prompt=self._prompt)
 
-    def move_history(self, text, step):
+    def _move_history(self, text, step):
         """Moves history.
 
         Args:
@@ -326,7 +382,7 @@ class PersistentConsoleWidget(QTextEdit):
         cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
         self._insert_stdin_text(cursor, history_item)
 
-    def autocomplete(self, text, partial_text):
+    def _autocomplete(self, text, partial_text):
         """Autocompletes current text in the prompt (or output options if multiple matches).
 
         Args:
@@ -391,8 +447,18 @@ class PersistentConsoleWidget(QTextEdit):
         menu.exec_(event.globalPos())
 
 
+class _CustomRunnable(QRunnable):
+    def __init__(self, function_to_run):
+        super().__init__(self)
+        self._function_to_run = function_to_run
+
+    def run(self):
+        self._function_to_run()
+
+
 # Translated from
 # https://code.qt.io/cgit/qt-creator/qt-creator.git/tree/src/libs/utils/ansiescapecodehandler.cpp?h=master
+# TODO: Consider qtconsole's QtAnsiCodeProcessor
 class AnsiEscapeCodeHandler:
     def __init__(self, fg_color, bg_color):
         self._previous_format_closed = True

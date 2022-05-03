@@ -273,11 +273,11 @@ class SpineEngineWorker(QObject):
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg_type == "stdin":
-            self._logger.persistent_stdin_available.emit(item, msg["filter_id"], msg["data"])
+            self._logger.add_persistent_stdin(item, msg["filter_id"], msg["data"])
         elif msg_type == "stdout":
-            self._logger.persistent_stdout_available.emit(item, msg["filter_id"], msg["data"])
+            self._logger.add_persistent_stdout(item, msg["filter_id"], msg["data"])
         elif msg_type == "stderr":
-            self._logger.persistent_stderr_available.emit(item, msg["filter_id"], msg["data"])
+            self._logger.add_persistent_stderr(item, msg["filter_id"], msg["data"])
         elif msg_type == "execution_started":
             self._event_message_arrived.emit(
                 item, msg["filter_id"], "msg", f"*** Starting execution on persistent process <b>{msg['args']}</b> ***"
