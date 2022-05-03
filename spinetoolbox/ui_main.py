@@ -321,7 +321,7 @@ class ToolboxUI(QMainWindow):
         self._button_item_dir.clicked.connect(self._open_active_item_dir)
         # Consoles
         self.jupyter_console_requested.connect(self._setup_jupyter_console)
-        self.persistent_console_requested.connect(self._setup_persistent_console)
+        self.persistent_console_requested.connect(self._setup_persistent_console, Qt.BlockingQueuedConnection)
 
     @Slot(bool)
     def _open_active_item_dir(self, _checked=False):
