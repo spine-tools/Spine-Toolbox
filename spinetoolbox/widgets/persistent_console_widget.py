@@ -315,8 +315,12 @@ class PersistentConsoleWidget(QTextEdit):
             self._move_history(text, -1)
         elif ev.key() == Qt.Key_Tab and partial_text.strip():
             self._autocomplete(text, partial_text)
-        elif ev.key() not in (Qt.Key_Backspace, Qt.Key_Left) or self.textCursor().position() > self._input_start_pos:
+        elif ev.key() != Qt.Key_Backspace or self.textCursor().position() > self._input_start_pos:
             super().keyPressEvent(ev)
+            cursor = self.textCursor()
+            if cursor.position() < self._input_start_pos:
+                cursor.setPosition(self._input_start_pos)
+                self.setTextCursor(cursor)
         self._highlight_current_text()
 
     def _issue_command(self, text):
