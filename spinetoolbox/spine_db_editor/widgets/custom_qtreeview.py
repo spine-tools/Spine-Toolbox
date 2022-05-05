@@ -247,7 +247,7 @@ class EntityTreeView(CopyTreeView):
         item_has_children = item.has_children()
         self._fully_expand_action.setEnabled(item_has_children)
         self._fully_collapse_action.setEnabled(item_has_children)
-        self._add_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
+        self._add_relationships_action.setEnabled(item.item_type == "relationship_class")
         self._manage_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
         read_only = item.item_type in ("root", "members")
         self._export_action.setEnabled(not read_only)
