@@ -89,7 +89,6 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._parents = {}
         self._queries = {}
         self._query_has_elements_by_key = {}
         self._query_keys = {}
@@ -156,6 +155,7 @@ class SpineDBWorker(QObject):
             key = self._query_keys.pop(query)
             self._query_has_elements_by_key.pop(key, None)
             self._fetched_parents.discard(parent)
+            self._fetched_item_types.discard(parent.fetch_item_type)
             parent.fetch_status_change()
 
     def can_fetch_more(self, parent):
