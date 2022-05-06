@@ -26,7 +26,7 @@ from spinetoolbox.spine_engine_manager import make_engine_manager
 class PersistentConsoleWidget(QTextEdit):
     """A widget to interact with a persistent process."""
 
-    _history_item_available = Signal(str)
+    _history_item_available = Signal(str, str)
     _completions_available = Signal(str, str, list)
     _FLUSH_INTERVAL = 200
     _MAX_LINES_PER_SECOND = 2000
@@ -55,8 +55,8 @@ class PersistentConsoleWidget(QTextEdit):
         self._language = language
         self.owners = {owner}
         self._prompt, self._prompt_format = self._make_prompt()
-        self._history_index = 0
-        self._history_item_zero = ""
+        self._prefix = None
+        self._reset_prefix = True
         self._pending_command_count = 0
         self._text_buffer = []
         self._skipped = {}
@@ -140,6 +140,8 @@ class PersistentConsoleWidget(QTextEdit):
     @Slot()
     def _handle_cursor_position_changed(self):
         self.setReadOnly(self.textCursor().position() < self._input_start_pos)
+        if self._reset_prefix:
+            self._prefix = None
 
     def _make_prompt(self):
         text_format = QTextCharFormat()
@@ -281,17 +283,20 @@ class PersistentConsoleWidget(QTextEdit):
 
         Returns:
             str: the complete text
-            str: the text before the cursor (for autocompletion)
         """
         cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.StartOfBlock, QTextCursor.KeepAnchor)
-        partial_text = cursor.selectedText()
         cursor.setPosition(self._input_start_pos)
         cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        text = cursor.selectedText()
-        return text, partial_text
+        return cursor.selectedText()
 
-    def _highlight_current_text(self):
+    def _get_prefix(self):
+        if self._prefix is None:
+            cursor = self.textCursor()
+            cursor.setPosition(self._input_start_pos, QTextCursor.KeepAnchor)
+            self._prefix = cursor.selectedText()
+        return self._prefix
+
+    def _highlight_current_input(self):
         cursor = self.textCursor()
         cursor.setPosition(self._input_start_pos)
         cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
@@ -306,22 +311,22 @@ class PersistentConsoleWidget(QTextEdit):
 
     def keyPressEvent(self, ev):
         self._at_bottom = True
-        text, partial_text = self._get_current_text()
+        text = self._get_current_text()
         if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
             self._issue_command(text)
         elif ev.key() == Qt.Key_Up:
-            self._move_history(text, 1)
+            self._move_history(text, True)
         elif ev.key() == Qt.Key_Down:
-            self._move_history(text, -1)
-        elif ev.key() == Qt.Key_Tab and partial_text.strip():
-            self._autocomplete(text, partial_text)
+            self._move_history(text, False)
+        elif ev.key() == Qt.Key_Tab:
+            self._autocomplete(text)
         elif ev.key() != Qt.Key_Backspace or self.textCursor().position() > self._input_start_pos:
-            super().keyPressEvent(ev)
             cursor = self.textCursor()
-            if cursor.position() < self._input_start_pos:
+            super().keyPressEvent(ev)
+            if cursor.position() >= self._input_start_pos and self.textCursor().position() < self._input_start_pos:
                 cursor.setPosition(self._input_start_pos)
                 self.setTextCursor(cursor)
-        self._highlight_current_text()
+            self._highlight_current_input()
 
     def _issue_command(self, text):
         """Issues command.
@@ -336,7 +341,6 @@ class PersistentConsoleWidget(QTextEdit):
             return
         log_stdin = bool(self._pending_command_count)
         self._make_prompt_block(prompt="")
-        self._history_index = 0
         self._pending_command_count += 1
         self._executor.submit(self._do_issue_command, engine_mngr, text, log_stdin)
 
@@ -356,63 +360,59 @@ class PersistentConsoleWidget(QTextEdit):
         if self._pending_command_count == 0:
             self._insert_prompt(prompt=self._prompt)
 
-    def _move_history(self, text, step):
-        """Moves history.
+    def _move_history(self, text, backwards):
+        """Moves history."""
+        self._executor.submit(self._do_move_history, text, backwards)
 
-        Args:
-            text (str)
-            step (int)
-        """
-        if self._history_index == 0:
-            self._history_item_zero = text
-        self._history_index += step
-        if self._history_index < 1:
-            self._history_index = 0
-            history_item = self._history_item_zero
-            self._display_history_item(history_item)
-            return
-        self._executor.submit(self._do_move_history)
-
-    def _do_move_history(self):
+    def _do_move_history(self, text, backwards):
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
-        history_item = engine_mngr.get_persistent_history_item(self._key, self._history_index)
-        self._history_item_available.emit(history_item)
+        prefix = self._get_prefix()
+        history_item = engine_mngr.get_persistent_history_item(self._key, text, prefix, backwards)
+        self._history_item_available.emit(history_item, prefix)
 
-    @Slot(str)
-    def _display_history_item(self, history_item):
+    @Slot(str, str)
+    def _display_history_item(self, history_item, prefix):
+        self._reset_prefix = False
         cursor = self.textCursor()
-        cursor.setPosition(self._input_start_pos)
+        pos = self._input_start_pos + len(prefix)
+        cursor.setPosition(pos)
         cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        self._insert_stdin_text(cursor, history_item)
+        self._insert_stdin_text(cursor, history_item[len(prefix) :])
+        if prefix:
+            cursor.setPosition(pos)
+        self.setTextCursor(cursor)
+        self._reset_prefix = True
+        self._highlight_current_input()
 
-    def _autocomplete(self, text, partial_text):
+    def _autocomplete(self, text):
         """Autocompletes current text in the prompt (or output options if multiple matches).
 
         Args:
             text (str)
-            partial_text (str)
         """
-        self._executor.submit(self._do_autocomplete, text, partial_text)
+        self._executor.submit(self._do_autocomplete, text)
 
-    def _do_autocomplete(self, text, partial_text):
+    def _do_autocomplete(self, text):
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
-        completions = engine_mngr.get_persistent_completions(self._key, partial_text)
-        self._completions_available.emit(text, partial_text, completions)
+        prefix = self._get_prefix()
+        completions = engine_mngr.get_persistent_completions(self._key, prefix)
+        self._completions_available.emit(text, prefix, completions)
 
     @Slot(str, str, list)
-    def _display_completions(self, text, partial_text, completions):
-        prefix = os.path.commonprefix(completions)
-        if partial_text.endswith(prefix) and len(completions) > 1:
+    def _display_completions(self, text, prefix, completions):
+        completion = os.path.commonprefix(completions)
+        if prefix.endswith(completion) and len(completions) > 1:
             # Can't complete, but there is more than one option: 'commit' stdin and output options to stdout
             self.add_stdin(text)
             self.add_stdout("\t\t".join(completions))
         else:
             # Complete in current line
             cursor = self.textCursor()
-            last_word = partial_text.split(" ")[-1]
-            cursor.insertText(prefix[len(last_word) :])
+            last_prefix_word = prefix.split(" ")[-1]
+            cursor.insertText(completion[len(last_prefix_word) :])
+            self._highlight_current_input()
 
     @Slot(bool)
     def _restart_persistent(self, _=False):
