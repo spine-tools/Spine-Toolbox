@@ -82,11 +82,10 @@ development version.
 
 ### Windows 64-bit installer package
 
-Windows installer packages are published periodically
-but not as frequently as the standard Python installation above.
-This option is suitable for users who cannot install Python or don’t need to get 
-the most recent updates. This should be the most stable option.
-Download the latest installer package from 
+There are old Windows installer packages available for a quick install, but they are
+at this point (7.5.2022) quite obsolete and cannot be recommended for anything but 
+a quick look at how Spine Toolbox looks and feels (although even that has changed).
+Download the installer package from 
 [here](https://github.com/Spine-project/Spine-Toolbox/releases),
 run it, and follow the instructions to install Spine Toolbox.
 
