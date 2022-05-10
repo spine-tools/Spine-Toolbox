@@ -222,7 +222,7 @@ class SpineDBParcel:
             self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter_definition", only_visible=False)
         )
         self.push_parameter_definition_ids(param_def_ids, "object")
-        db_map_ids = {db_map: ids for db_map, ids in db_map_ids.items() if db_map not in param_def_ids}
+        db_map_ids = {db_map: ids - param_def_ids.get(db_map, set()) for db_map, ids in db_map_ids.items()}
         self.push_object_class_ids(db_map_ids)
 
     def full_push_relationship_class_ids(self, db_map_ids):
@@ -233,7 +233,7 @@ class SpineDBParcel:
             self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter_definition", only_visible=False)
         )
         self.push_parameter_definition_ids(param_def_ids, "relationship")
-        db_map_ids = {db_map: ids for db_map, ids in db_map_ids.items() if db_map not in param_def_ids}
+        db_map_ids = {db_map: ids - param_def_ids.get(db_map, set()) for db_map, ids in db_map_ids.items()}
         self.push_relationship_class_ids(db_map_ids)
 
     def full_push_object_ids(self, db_map_ids):
@@ -248,7 +248,7 @@ class SpineDBParcel:
             self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids, only_visible=False)
         )
         self.push_parameter_value_ids(param_val_ids, "object")
-        db_map_ids = {db_map: ids for db_map, ids in db_map_ids.items() if db_map not in param_val_ids}
+        db_map_ids = {db_map: ids - param_val_ids.get(db_map, set()) for db_map, ids in db_map_ids.items()}
         self.push_object_ids(db_map_ids)
         self.push_object_group_ids(self.db_mngr.db_map_ids(self.db_mngr.find_groups_by_entity(db_map_ids)))
 
@@ -261,7 +261,7 @@ class SpineDBParcel:
             self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids, only_visible=False)
         )
         self.push_parameter_value_ids(param_val_ids, "relationship")
-        db_map_ids = {db_map: ids for db_map, ids in db_map_ids.items() if db_map not in param_val_ids}
+        db_map_ids = {db_map: ids - param_val_ids.get(db_map, set()) for db_map, ids in db_map_ids.items()}
         self.push_relationship_ids(db_map_ids)
 
     def inner_push_object_ids(self, db_map_ids):
