@@ -1165,7 +1165,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.item_metadata_dock_widget,
         ]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.4 * height], Qt.Vertical)
+        self.resizeDocks(docks, [0.2 * height, 0.2 * height, 0.3 * height, 0.2 * height, 0.1 * height], Qt.Vertical)
         self.end_style_change()
 
     @Slot(QAction)
