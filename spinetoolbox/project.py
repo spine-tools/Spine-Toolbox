@@ -895,7 +895,7 @@ class SpineToolboxProject(MetaObject):
 
         Args:
             dags (Sequence(DiGraph))
-            execution_permits (Sequence(dict))
+            execution_permits_list (Sequence(dict))
         """
         self.project_execution_about_to_start.emit()
         self._logger.msg.emit("")

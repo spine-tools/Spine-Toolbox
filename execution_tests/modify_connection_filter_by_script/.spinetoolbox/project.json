@@ -1,0 +1,63 @@
+{
+    "project": {
+        "version": 7,
+        "name": "modify_connection_filter_by_script",
+        "description": "",
+        "specifications": {
+            "Exporter": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Exporter/exporter.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Data to Export values",
+                "from": [
+                    "Data",
+                    "right"
+                ],
+                "to": [
+                    "Export values",
+                    "left"
+                ]
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Data": {
+            "type": "Data Store",
+            "description": "",
+            "x": -133.2892447607749,
+            "y": 4.008699090549623,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/data/Data.sqlite"
+                }
+            }
+        },
+        "Export values": {
+            "type": "Exporter",
+            "description": "",
+            "x": 16.034796362198488,
+            "y": 4.0086990905496265,
+            "output_time_stamps": false,
+            "cancel_on_error": true,
+            "output_labels": [
+                {
+                    "in_label": "db_url@Data",
+                    "out_label": "out.csv"
+                }
+            ],
+            "specification": "Exporter"
+        }
+    }
+}

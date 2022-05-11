@@ -15,6 +15,7 @@ Contains facilities to open and execute projects without GUI.
 :authors: A. Soininen (VTT)
 :date:   29.4.2020
 """
+from copy import deepcopy
 from enum import IntEnum, unique
 import json
 import logging
@@ -103,6 +104,66 @@ class HeadlessLogger(QObject):
         logging.error(title + ": " + message)
 
 
+class ModifiableProject:
+    """A simple project that is available for modification script."""
+
+    def __init__(self, project_dir, items_dict, connection_dicts):
+        """
+        Args:
+            project_dir (Path): project directory
+            items_dict (dict): project item dictionaries
+            connection_dicts (list of dict): connection dictionaries
+        """
+        self._project_dir = project_dir
+        self._items = deepcopy(items_dict)
+        self._connections = [Connection.from_dict(d) for d in connection_dicts]
+
+    @property
+    def project_dir(self):
+        return self._project_dir
+
+    def find_connection(self, source_name, destination_name):
+        """Searches for a connection between given items.
+
+        Args:
+            source_name (str): source item's name
+            destination_name (str): destination item's name
+
+        Returns:
+            Connection: connection instance or None if there is no connection
+        """
+        return next(
+            (c for c in self._connections if c.source == source_name and c.destination == destination_name), None
+        )
+
+    def find_item(self, name):
+        """Searches for a project item.
+
+        Args:
+            name (str): item's name
+
+        Returns:
+            dict: item dict or None if no such item exists
+        """
+        return self._items.get(name)
+
+    def items_to_dict(self):
+        """Stores project items back to dictionaries.
+
+        Returns:
+            dict: item dictionaries
+        """
+        return self._items
+
+    def connections_to_dict(self):
+        """Stores connections back to dictionaries.
+
+        Returns:
+            list of dict: connection dictionaries
+        """
+        return [c.to_dict() for c in self._connections]
+
+
 class ActionsWithProject(QObject):
     """
     A 'task' which opens Toolbox project and operates on it.
@@ -153,6 +214,11 @@ class ActionsWithProject(QObject):
             if status != Status.OK:
                 QCoreApplication.instance().exit(status)
                 return
+            if self._args.mod_script:
+                status = self._exec_mod_script()
+                if status != Status.OK:
+                    QCoreApplication.instance().exit(status)
+                    return
             if self._args.list_items:
                 dags = self._dags()
                 for dag_number, dag in enumerate(dags):
@@ -217,6 +283,25 @@ class ActionsWithProject(QObject):
         if version < LATEST_PROJECT_VERSION:
             self._logger.msg_error.emit("Unsupported project version. Open project in Toolbox GUI to upgrade it.")
             return Status.ERROR
+        return Status.OK
+
+    def _exec_mod_script(self):
+        """Executes project modification script given in command line arguments.
+
+        Returns:
+             Status: status code
+        """
+        script_path = pathlib.Path(self._args.mod_script)
+        if not script_path.exists() or not script_path.is_file():
+            self._logger.msg_error.emit("Modification script doesn't exist.")
+            return Status.ERROR
+        with open(script_path, encoding="utf-8") as script_file:
+            script_code = script_file.read()
+        self._logger.msg.emit(f"Applying {script_path} to project.")
+        project = ModifiableProject(self._project_dir, self._item_dicts, self._connection_dicts)
+        exec(script_code, {"project": project})
+        self._item_dicts = project.items_to_dict()
+        self._connection_dicts = project.connections_to_dict()
         return Status.OK
 
     def _execute_project(self):
