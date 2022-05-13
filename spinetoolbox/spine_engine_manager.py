@@ -320,9 +320,9 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 )
                 self.engine_event_getter_thread.server_output_msg_q.put(data_events)
                 # Delete the transmitted zip file
-                FilePackager.deleteFile(
-                    os.path.abspath(
-                        os.path.join(self._inputData['project_dir'], RemoteSpineEngineManager.ZipFileName + ".zip")))
+                # FilePackager.deleteFile(
+                #     os.path.abspath(
+                #         os.path.join(self._inputData['project_dir'], RemoteSpineEngineManager.ZipFileName + ".zip")))
                 stop_time = round(time.time() * 1000.0)
                 print("RemoteSpineEngineManager.run() run time after execution %d ms" % (stop_time - start_time))
                 self._state = RemoteSpineEngineManagerState.REPLY_RECEIVED  # Change state to REPLY_RECEIVED

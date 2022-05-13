@@ -11,7 +11,7 @@
 
 """
 Contains a helper class for packaging project folders into ZIP-files.
-:authors: P. Pääkkönen (VTT)
+:authors: P. Pääkkönen (VTT), P. Savolainen (VTT)
 :date:   03.09.2021
 """
 import shutil
@@ -34,6 +34,12 @@ class FilePackager:
         # check if the source folder exists
         if not os.path.isdir(src_folder):
             raise ValueError(f"provided src_folder {src_folder} doesn't exist")
+        # Use parent dir of project directory as destination directory
+        # If zip-file is created to the same directory as root_dir,
+        # there's a corrupted project_package.zip inside the actual project_package.zip file, which
+        # makes unzipping the file fail.
+        # TODO: Find a better dst dir and handle what happens if file already exists. Or use a temp dir
+        dst_folder = os.path.join(dst_folder, os.pardir)
         zip_path = os.path.join(dst_folder, zip_file_name)
         shutil.make_archive(zip_path, "zip", src_folder)
         if os.path.isfile(zip_path + ".zip"):  # Extension is added by make_archive

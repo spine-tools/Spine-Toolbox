@@ -115,26 +115,27 @@ class ZMQClient:
 
         Args:
             text (str): Input for SpineEngine as text. Includes most of project.json, settings, etc.
-            file_path (string): location of the binary file (project zip-file) to be transferred
-            filename (string): name of the binary file to be transferred
+            file_path (string): Path to project zip-file
+            filename (string): Name of the binary file to be transferred
 
         Returns:
             a list of tuples containing events+data
         """
-        if not os.path.exists(os.path.join(file_path, filename)):
+        zip_path = os.path.join(file_path, os.pardir, filename)  # Note: zip-file is in parent dir of file_path now
+        if not os.path.exists(zip_path):
             raise ValueError(f"Zipped project file {filename} not found in {file_path}")
         if not text:
             raise ValueError("Invalid input text")
-        print(f"type(text):{type(text)}")
+        print(f"Zip-file size:{os.path.getsize(zip_path)}")
         # Read file content
-        with open(os.path.join(file_path, filename), 'rb') as f:
+        with open(zip_path, "rb") as f:
             file_data = f.read()
         # create message content
         random_id = random.randrange(10000000)  # The request ID
         msg_parts = []
         list_files = [filename]
         msg = ServerMessage("execute", str(random_id), text, list_files)
-        print("ZMQClient(): msg to be sent : %s" % msg.toJSON())
+        print(f"ZMQClient(): msg to be sent: {msg.toJSON()} + {len(file_data)} of data in bytes (zip-file)")
         part1Bytes = bytes(msg.toJSON(), "utf-8")
         msg_parts.append(part1Bytes)
         msg_parts.append(file_data)  # Append the actual zip-file (project_package.zip) as the last part
