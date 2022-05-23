@@ -33,7 +33,7 @@ from ..graphics_items import (
     CrossHairsRelationshipItem,
     CrossHairsArcItem,
 )
-from .graph_layout_generator import GraphLayoutGenerator, ProgressBarWidget
+from .graph_layout_generator import GraphLayoutGeneratorRunnable, ProgressBarWidget
 from .add_items_dialogs import AddObjectsDialog, AddReadyRelationshipsDialog
 
 
@@ -107,7 +107,7 @@ class GraphViewMixin:
             return
         if self._pos_for_added_objects is not None:
             spread = self.VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
-            gen = GraphLayoutGenerator(None, len(new_db_map_id_sets), spread=spread)
+            gen = GraphLayoutGeneratorRunnable(None, len(new_db_map_id_sets), spread=spread)
             gen.run()
             x = self._pos_for_added_objects.x()
             y = self._pos_for_added_objects.y()
@@ -465,7 +465,7 @@ class GraphViewMixin:
         """Returns a layout generator for the current graph.
 
         Returns:
-            GraphLayoutGenerator
+            GraphLayoutGeneratorRunnable
         """
         fixed_positions = {}
         if self._persistent:
@@ -483,7 +483,7 @@ class GraphViewMixin:
             for db_map_entity_id in db_map_entity_ids
             if db_map_entity_id in fixed_positions
         }
-        return GraphLayoutGenerator(
+        return GraphLayoutGeneratorRunnable(
             self._layout_gen_id,
             len(db_map_entity_ids),
             self.src_inds,
