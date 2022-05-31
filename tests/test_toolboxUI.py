@@ -836,7 +836,7 @@ class TestToolboxUI(unittest.TestCase):
         key = ("too", "")
         language = "julia"
         self.toolbox.refresh_active_elements(item, None, {"tool"})
-        self.toolbox.persistent_console_requested.emit(item, filter_id, key, language)
+        self.toolbox._setup_persistent_console(item, filter_id, key, language)
         console = self.toolbox.ui.splitter_console.widget(1)
         self.assertTrue(isinstance(console, PersistentConsoleWidget))
         self.assertEqual(console.owners, {item})
@@ -851,9 +851,9 @@ class TestToolboxUI(unittest.TestCase):
         item = self.toolbox.project_item_model.item(index).project_item
         language = "julia"
         self.toolbox.refresh_active_elements(item, None, {"tool"})
-        self.toolbox.persistent_console_requested.emit(item, "filter1", ("tool", "filter1"), language)
-        self.toolbox.persistent_console_requested.emit(item, "filter2", ("tool", "filter2"), language)
-        self.toolbox.persistent_console_requested.emit(item, "filter3", ("tool", "filter3"), language)
+        self.toolbox._setup_persistent_console(item, "filter1", ("tool", "filter1"), language)
+        self.toolbox._setup_persistent_console(item, "filter2", ("tool", "filter2"), language)
+        self.toolbox._setup_persistent_console(item, "filter3", ("tool", "filter3"), language)
         view = self.toolbox.ui.listView_console_executions
         self.assertEqual(view.model().rowCount(), 3)
         # Scroll to item -> get rectangle -> click
