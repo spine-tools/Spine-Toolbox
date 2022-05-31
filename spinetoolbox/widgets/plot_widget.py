@@ -94,6 +94,7 @@ class PlotWidget(QWidget):
                 writer.writerow(row)
             QApplication.clipboard().setText(output.getvalue())
 
+    @busy_effect
     def show_plot_data(self, parent=None, document_name=""):
         if parent is None:
             parent = self

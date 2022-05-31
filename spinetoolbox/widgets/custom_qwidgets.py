@@ -619,7 +619,7 @@ class HorizontalSpinBox(QToolBar):
         self._validator = QIntValidator()
         self._value = None
         self._line_edit = QLineEdit(self)
-        width = self.fontMetrics().width("99") + 12
+        width = self.fontMetrics().horizontalAdvance("99") + 12
         self._line_edit.setFixedWidth(width)
         self._line_edit.setAlignment(Qt.AlignCenter)
         self._line_edit.textEdited.connect(self.setValue)

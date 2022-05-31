@@ -515,7 +515,7 @@ class CharIconEngine(TransparentIconEngine):
     def paint(self, painter, rect, mode=None, state=None):
         painter.save()
         size = 0.875 * round(min(rect.width(), rect.height()))
-        self.font.setPixelSize(size)
+        self.font.setPixelSize(max(1, size))
         painter.setFont(self.font)
         if self.color:
             color = self.color

@@ -250,7 +250,10 @@ class LinkBase(QGraphicsPathItem):
             return path
         for p1, p2 in zip(points[:-2], points[1:-1]):
             path.quadTo(p1, (p1 + p2) / 2)
-        path.quadTo(points[-2], points[-1])
+        if len(points) == 1:
+            path.lineTo(points[-1])
+        else:
+            path.quadTo(points[-2], points[-1])
         return path
 
     def itemChange(self, change, value):
