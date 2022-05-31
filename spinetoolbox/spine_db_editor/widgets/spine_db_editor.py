@@ -688,10 +688,6 @@ class SpineDBEditorBase(QMainWindow):
             msgs.append(msg)
         self.msg_error.emit(format_string_list(msgs))
 
-    def _finalize_items_change(self, _item_type):
-        """Do stuff after items changes are reflected in the UI."""
-        self._update_export_enabled()
-
     def _update_export_enabled(self):
         """Update export enabled."""
         # TODO: check if db_mngr has any cache or something like that
@@ -701,7 +697,7 @@ class SpineDBEditorBase(QMainWindow):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self._changelog.append(msg)
-        self._finalize_items_change(item_type)
+        self._update_export_enabled()
 
     def receive_scenarios_added(self, db_map_data):
         self._receive_items_changed("added", "scenario", db_map_data)

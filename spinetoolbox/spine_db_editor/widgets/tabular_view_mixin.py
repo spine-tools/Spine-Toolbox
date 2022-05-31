@@ -820,122 +820,122 @@ class TabularViewMixin:
 
     def receive_alternatives_added(self, db_map_data):
         """Reacts to alternatives added event."""
-        self.receive_alternatives_added_or_removed(db_map_data, action="add")
         super().receive_alternatives_added(db_map_data)
+        self.receive_alternatives_added_or_removed(db_map_data, action="add")
 
     def receive_scenarios_added(self, db_map_data):
         """Reacts to scenarios added event."""
-        self.receive_scenarios_added_or_removed(db_map_data, action="add")
         super().receive_scenarios_added(db_map_data)
+        self.receive_scenarios_added_or_removed(db_map_data, action="add")
 
     def receive_objects_added(self, db_map_data):
         """Reacts to objects added event."""
-        self.receive_objects_added_or_removed(db_map_data, action="add")
         super().receive_objects_added(db_map_data)
+        self.receive_objects_added_or_removed(db_map_data, action="add")
 
     def receive_relationships_added(self, db_map_data):
         """Reacts to relationships added event."""
-        self.receive_relationships_added_or_removed(db_map_data, action="add")
         super().receive_relationships_added(db_map_data)
+        self.receive_relationships_added_or_removed(db_map_data, action="add")
 
     def receive_parameter_definitions_added(self, db_map_data):
         """Reacts to parameter definitions added event."""
-        self.receive_parameter_definitions_added_or_removed(db_map_data, action="add")
         super().receive_parameter_definitions_added(db_map_data)
+        self.receive_parameter_definitions_added_or_removed(db_map_data, action="add")
 
     def receive_parameter_values_added(self, db_map_data):
         """Reacts to parameter values added event."""
-        self.receive_parameter_values_added_or_removed(db_map_data, action="add")
         super().receive_parameter_values_added(db_map_data)
+        self.receive_parameter_values_added_or_removed(db_map_data, action="add")
 
     def receive_alternatives_updated(self, db_map_data):
         """Reacts to alternatives updated event."""
+        super().receive_alternatives_updated(db_map_data)
         if self.pivot_table_model:
             self.refresh_table_view(self.ui.pivot_table)
             self.refresh_table_view(self.ui.frozen_table)
             self.make_pivot_headers()
-        super().receive_alternatives_updated(db_map_data)
 
     def receive_object_classes_updated(self, db_map_data):
         """Reacts to object classes updated event."""
-        self.receive_classes_updated(db_map_data)
         super().receive_object_classes_updated(db_map_data)
+        self.receive_classes_updated(db_map_data)
 
     def receive_relationship_classes_updated(self, db_map_data):
         """Reacts to relationship classes updated event."""
-        self.receive_classes_updated(db_map_data)
         super().receive_relationship_classes_updated(db_map_data)
+        self.receive_classes_updated(db_map_data)
 
     def receive_objects_updated(self, db_map_data):
         """Reacts to objects updated event."""
-        self.receive_db_map_data_updated(db_map_data, get_class_id=lambda x: x["class_id"])
         super().receive_objects_updated(db_map_data)
+        self.receive_db_map_data_updated(db_map_data, get_class_id=lambda x: x["class_id"])
 
     def receive_relationships_updated(self, db_map_data):
         """Reacts to relationships updated event."""
-        self.receive_db_map_data_updated(db_map_data, get_class_id=lambda x: x["class_id"])
         super().receive_relationships_updated(db_map_data)
+        self.receive_db_map_data_updated(db_map_data, get_class_id=lambda x: x["class_id"])
 
     def receive_parameter_values_updated(self, db_map_data):
         """Reacts to parameter values added event."""
+        super().receive_parameter_values_updated(db_map_data)
         self.receive_db_map_data_updated(
             db_map_data, get_class_id=lambda x: x.get("object_class_id") or x.get("relationship_class_id")
         )
-        super().receive_parameter_values_updated(db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
         """Reacts to parameter definitions updated event."""
+        super().receive_parameter_definitions_updated(db_map_data)
         self.receive_db_map_data_updated(
             db_map_data, get_class_id=lambda x: x.get("object_class_id") or x.get("relationship_class_id")
         )
-        super().receive_parameter_definitions_updated(db_map_data)
 
     def receive_scenarios_updated(self, db_map_data):
+        super().receive_scenarios_updated(db_map_data)
         if self.pivot_table_model:
             self.pivot_table_model.receive_scenarios_updated(db_map_data)
-        super().receive_scenarios_updated(db_map_data)
 
     def receive_alternatives_removed(self, db_map_data):
         """Reacts to alternatives removed event."""
-        self.receive_alternatives_added_or_removed(db_map_data, action="remove")
         super().receive_alternatives_removed(db_map_data)
+        self.receive_alternatives_added_or_removed(db_map_data, action="remove")
 
     def receive_scenarios_removed(self, db_map_data):
         """Reacts to scenarios removed event."""
-        self.receive_scenarios_added_or_removed(db_map_data, action="remove")
         super().receive_scenarios_removed(db_map_data)
+        self.receive_scenarios_added_or_removed(db_map_data, action="remove")
 
     def receive_object_classes_removed(self, db_map_data):
         """Reacts to object classes removed event."""
-        self.receive_classes_removed(db_map_data)
         super().receive_object_classes_removed(db_map_data)
+        self.receive_classes_removed(db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
         """Reacts to relationship classes remove event."""
-        self.receive_classes_removed(db_map_data)
         super().receive_relationship_classes_removed(db_map_data)
+        self.receive_classes_removed(db_map_data)
 
     def receive_objects_removed(self, db_map_data):
         """Reacts to objects removed event."""
-        self.receive_objects_added_or_removed(db_map_data, action="remove")
         super().receive_objects_removed(db_map_data)
+        self.receive_objects_added_or_removed(db_map_data, action="remove")
 
     def receive_relationships_removed(self, db_map_data):
         """Reacts to relationships removed event."""
-        self.receive_relationships_added_or_removed(db_map_data, action="remove")
         super().receive_relationships_removed(db_map_data)
+        self.receive_relationships_added_or_removed(db_map_data, action="remove")
 
     def receive_parameter_definitions_removed(self, db_map_data):
         """Reacts to parameter definitions removed event."""
-        self.receive_parameter_definitions_added_or_removed(db_map_data, action="remove")
         super().receive_parameter_definitions_removed(db_map_data)
+        self.receive_parameter_definitions_added_or_removed(db_map_data, action="remove")
 
     def receive_parameter_values_removed(self, db_map_data):
         """Reacts to parameter values removed event."""
-        self.receive_parameter_values_added_or_removed(db_map_data, action="remove")
         super().receive_parameter_values_removed(db_map_data)
+        self.receive_parameter_values_added_or_removed(db_map_data, action="remove")
 
     def receive_session_rolled_back(self, db_maps):
         """Reacts to session rolled back event."""
-        self.clear_pivot_table()
         super().receive_session_rolled_back(db_maps)
+        self.clear_pivot_table()

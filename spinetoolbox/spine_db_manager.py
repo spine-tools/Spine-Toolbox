@@ -1936,21 +1936,7 @@ class SpineDBManager(QObject):
 
     def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
         """Exports given data into JSON file."""
-        indent = 4 * " "
-        json_data = "{{{0}{1}{0}}}".format(
-            "\n" if data_for_export else "",
-            ",\n".join(
-                [
-                    indent
-                    + json.dumps(key)
-                    + ": [{0}{1}{0}]".format(
-                        "\n" + indent if values else "",
-                        (",\n" + indent).join([indent + json.dumps(value) for value in values]),
-                    )
-                    for key, values in data_for_export.items()
-                ]
-            ),
-        )
+        json_data = json.dumps(data_for_export, indent=4)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
         caller.file_exported.emit(file_path)

@@ -111,6 +111,7 @@ class EntityTreeView(CopyTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
+        self.resizeColumnToContents(0)
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)
@@ -380,6 +381,10 @@ class ItemTreeView(CopyTreeView):
         super().__init__(parent=parent)
         self._spine_db_editor = None
         self._menu = QMenu(self)
+
+    def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
+        self.resizeColumnToContents(0)
 
     def connect_signals(self):
         """Connects signals."""

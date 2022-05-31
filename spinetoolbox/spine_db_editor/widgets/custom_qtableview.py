@@ -240,6 +240,10 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
 
+    def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
+        self.resizeColumnsToContents()
+
 
 class ObjectParameterTableMixin:
     def create_delegates(self):
