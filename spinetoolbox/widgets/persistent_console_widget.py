@@ -16,7 +16,7 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Qt, Slot, QTimer, Signal, QThreadPool, QRunnable
+from PySide2.QtCore import Qt, Slot, QTimer, Signal, QThreadPool, QRunnable, QMutex, QMutexLocker
 from PySide2.QtWidgets import QTextEdit
 from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor, QTextBlockFormat
 from spinetoolbox.helpers import CustomSyntaxHighlighter
@@ -46,6 +46,7 @@ class PersistentConsoleWidget(QTextEdit):
         cursor_width = self.fontMetrics().horizontalAdvance("x")
         self.setCursorWidth(cursor_width)
         self.document().setIndentWidth(cursor_width)
+        self.document().setMaximumBlockCount(2000)
         self.setTabStopDistance(4 * cursor_width)
         self._pool = QThreadPool()
         self._pool.setMaxThreadCount(1)
@@ -59,6 +60,7 @@ class PersistentConsoleWidget(QTextEdit):
         self._reset_prefix = True
         self._pending_command_count = 0
         self._text_buffer = []
+        self._text_buffer_mutex = QMutex()
         self._skipped = {}
         self._anchor = None
         self._flush_timer = QTimer()
@@ -213,6 +215,10 @@ class PersistentConsoleWidget(QTextEdit):
         Args:
             text (str)
         """
+        self._pool.start(_CustomRunnable(self._do_insert_text_before_prompt, text, with_prompt))
+
+    def _do_insert_text_before_prompt(self, text, with_prompt=False):
+        QMutexLocker(self._text_buffer_mutex)
         self._text_buffer.append((text, with_prompt))
 
     @Slot()
@@ -221,6 +227,7 @@ class PersistentConsoleWidget(QTextEdit):
         self._pool.start(_CustomRunnable(self._do_flush_text_buffer))
 
     def _do_flush_text_buffer(self):
+        QMutexLocker(self._text_buffer_mutex)
         self.blockSignals(True)
         k = 0
         cursor = self.textCursor()
@@ -452,12 +459,14 @@ class PersistentConsoleWidget(QTextEdit):
 
 
 class _CustomRunnable(QRunnable):
-    def __init__(self, function_to_run):
+    def __init__(self, function_to_run, *args, **kwargs):
         super().__init__(self)
         self._function_to_run = function_to_run
+        self._args = args
+        self._kwargs = kwargs
 
     def run(self):
-        self._function_to_run()
+        self._function_to_run(*self._args, **self._kwargs)
 
 
 # Translated from
