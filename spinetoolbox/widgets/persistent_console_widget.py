@@ -11,14 +11,13 @@
 
 import os
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
 from PySide2.QtCore import Qt, Slot, QTimer, Signal, QThreadPool, QRunnable, QMutex, QMutexLocker
 from PySide2.QtWidgets import QTextEdit
-from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor, QTextBlockFormat
+from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor, QTextBlockFormat, QTextOption
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
 
@@ -47,10 +46,11 @@ class PersistentConsoleWidget(QTextEdit):
         self.setCursorWidth(cursor_width)
         self.document().setIndentWidth(cursor_width)
         self.document().setMaximumBlockCount(2000)
+        self.setWordWrapMode(QTextOption.WrapAnywhere)
         self.setTabStopDistance(4 * cursor_width)
         self._pool = QThreadPool()
-        self._pool.setMaxThreadCount(1)
-        self._executor = ThreadPoolExecutor()
+        self._text_buffer_pool = QThreadPool()
+        self._text_buffer_pool.setMaxThreadCount(1)
         self._toolbox = toolbox
         self._key = key
         self._language = language
@@ -215,7 +215,7 @@ class PersistentConsoleWidget(QTextEdit):
         Args:
             text (str)
         """
-        self._pool.start(_CustomRunnable(self._do_insert_text_before_prompt, text, with_prompt))
+        self._text_buffer_pool.start(_CustomRunnable(self._do_insert_text_before_prompt, text, with_prompt))
 
     def _do_insert_text_before_prompt(self, text, with_prompt=False):
         QMutexLocker(self._text_buffer_mutex)
@@ -224,7 +224,7 @@ class PersistentConsoleWidget(QTextEdit):
     @Slot()
     def _flush_text_buffer(self):
         """Inserts all text from buffer."""
-        self._pool.start(_CustomRunnable(self._do_flush_text_buffer))
+        self._text_buffer_pool.start(_CustomRunnable(self._do_flush_text_buffer))
 
     def _do_flush_text_buffer(self):
         QMutexLocker(self._text_buffer_mutex)
@@ -349,7 +349,7 @@ class PersistentConsoleWidget(QTextEdit):
         log_stdin = bool(self._pending_command_count)
         self._make_prompt_block(prompt="")
         self._pending_command_count += 1
-        self._executor.submit(self._do_issue_command, engine_mngr, text, log_stdin)
+        self._pool.start(_CustomRunnable(self._do_issue_command, engine_mngr, text, log_stdin))
 
     def _do_issue_command(self, engine_mngr, text, log_stdin):
         for msg in engine_mngr.issue_persistent_command(self._key, text):
@@ -369,7 +369,7 @@ class PersistentConsoleWidget(QTextEdit):
 
     def _move_history(self, text, backwards):
         """Moves history."""
-        self._executor.submit(self._do_move_history, text, backwards)
+        self._pool.start(_CustomRunnable(self._do_move_history, text, backwards))
 
     def _do_move_history(self, text, backwards):
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
@@ -398,7 +398,7 @@ class PersistentConsoleWidget(QTextEdit):
         Args:
             text (str)
         """
-        self._executor.submit(self._do_autocomplete, text)
+        self._pool.start(_CustomRunnable(self._do_autocomplete, text))
 
     def _do_autocomplete(self, text):
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
@@ -427,7 +427,7 @@ class PersistentConsoleWidget(QTextEdit):
         self.clear()
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
-        self._executor.submit(self._do_restart_persistent, engine_mngr)
+        self._pool.start(_CustomRunnable(self._do_restart_persistent, engine_mngr))
 
     def _do_restart_persistent(self, engine_mngr):
         for msg in engine_mngr.restart_persistent(self._key):
@@ -443,7 +443,7 @@ class PersistentConsoleWidget(QTextEdit):
         """Interrupts underlying persistent process."""
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
-        self._executor.submit(engine_mngr.interrupt_persistent, self._key)
+        self._pool.start(_CustomRunnable(engine_mngr.interrupt_persistent, self._key))
 
     def _extend_menu(self, menu):
         """Adds two more actions: Restart, and Interrupt."""
