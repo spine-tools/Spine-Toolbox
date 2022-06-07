@@ -1,5 +1,4 @@
 -e git+https://github.com/Spine-project/Spine-Database-API.git@master#egg=spinedb_api
 -e git+https://github.com/Spine-project/spine-engine.git@master#egg=spine_engine
 -e git+https://github.com/Spine-project/spine-items.git@master#egg=spine_items
-protobuf<3.21.0  # https://developers.google.com/protocol-buffers/docs/news/2022-05-06#python-updates
 -e .
