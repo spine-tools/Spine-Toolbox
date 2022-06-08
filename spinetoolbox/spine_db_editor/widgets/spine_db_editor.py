@@ -1159,7 +1159,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [
             self.ui.dockWidget_object_tree,
             self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_alternative_scenario_tree,
         ]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
@@ -1182,6 +1182,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_relationship_parameter_value.hide()
         self.ui.dockWidget_relationship_parameter_definition.hide()
         self.ui.dockWidget_parameter_value_list.hide()
+        self.ui.metadata_dock_widget.hide()
+        self.ui.item_metadata_dock_widget.hide()
         docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
@@ -1235,9 +1237,13 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         ]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.6 * height, 0.2 * height, 0.2 * height], Qt.Vertical)
-        docks = [self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list]
-        height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.5 * height, 0.5 * height], Qt.Vertical)
+        docks = [
+            self.ui.dockWidget_object_tree,
+            self.ui.dockWidget_entity_graph,
+            self.ui.dockWidget_alternative_scenario_tree,
+        ]
+        width = sum(d.size().width() for d in docks)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 
