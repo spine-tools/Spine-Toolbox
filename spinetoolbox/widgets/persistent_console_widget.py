@@ -49,8 +49,7 @@ class PersistentConsoleWidget(QTextEdit):
         self.setWordWrapMode(QTextOption.WrapAnywhere)
         self.setTabStopDistance(4 * cursor_width)
         self._pool = QThreadPool()
-        self._text_buffer_pool = QThreadPool()
-        self._text_buffer_pool.setMaxThreadCount(1)
+        self._pool.setMaxThreadCount(1)
         self._toolbox = toolbox
         self._key = key
         self._language = language
@@ -63,8 +62,6 @@ class PersistentConsoleWidget(QTextEdit):
         self._text_buffer_mutex = QMutex()
         self._skipped = {}
         self._anchor = None
-        self._flush_timer = QTimer()
-        self._flush_timer.setInterval(self._FLUSH_INTERVAL)
         self._style = get_style_by_name("monokai")
         background_color = self._style.background_color
         foreground_color = self._style.styles[Token] or self._style.styles[Token.Text]
@@ -86,6 +83,8 @@ class PersistentConsoleWidget(QTextEdit):
         self.document().contentsChanged.connect(self._handle_contents_changed)
         self._history_item_available.connect(self._display_history_item)
         self._completions_available.connect(self._display_completions)
+        self._flush_timer = QTimer()
+        self._flush_timer.setInterval(self._FLUSH_INTERVAL)
         self._flush_timer.timeout.connect(self._flush_text_buffer)
         self._flush_timer.start()
 
@@ -98,7 +97,7 @@ class PersistentConsoleWidget(QTextEdit):
         return " & ".join(x.name for x in self.owners if x is not None)
 
     def mouseMoveEvent(self, ev):
-        super().mousePressEvent(ev)
+        super().mouseMoveEvent(ev)
         if self.anchorAt(ev.pos()):
             self.viewport().setCursor(Qt.PointingHandCursor)
         else:
@@ -130,6 +129,7 @@ class PersistentConsoleWidget(QTextEdit):
         scrollbar = self.verticalScrollBar()
         self._at_bottom = scrollbar.value() == scrollbar.maximum()
 
+    @Slot()
     def _handle_contents_changed(self):
         if self._at_bottom:
             scrollbar = self.verticalScrollBar()
@@ -215,18 +215,12 @@ class PersistentConsoleWidget(QTextEdit):
         Args:
             text (str)
         """
-        self._text_buffer_pool.start(_CustomRunnable(self._do_insert_text_before_prompt, text, with_prompt))
-
-    def _do_insert_text_before_prompt(self, text, with_prompt=False):
         QMutexLocker(self._text_buffer_mutex)
         self._text_buffer.append((text, with_prompt))
 
     @Slot()
     def _flush_text_buffer(self):
         """Inserts all text from buffer."""
-        self._text_buffer_pool.start(_CustomRunnable(self._do_flush_text_buffer))
-
-    def _do_flush_text_buffer(self):
         QMutexLocker(self._text_buffer_mutex)
         self.blockSignals(True)
         k = 0
