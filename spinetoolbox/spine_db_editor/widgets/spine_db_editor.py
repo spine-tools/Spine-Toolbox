@@ -1125,15 +1125,25 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_tool_feature_tree, Qt.Horizontal
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
         )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
-        self.splitDockWidget(
-            self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
-        )
+        # right-side
         self.splitDockWidget(self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Vertical)
-        self.splitDockWidget(self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget, Qt.Vertical)
+        self.tabify_and_raise(
+            [
+                self.ui.dockWidget_alternative_scenario_tree,
+                self.ui.dockWidget_tool_feature_tree,
+                self.ui.dockWidget_parameter_value_list,
+            ]
+        )
+        self.tabify_and_raise(
+            [
+                self.ui.metadata_dock_widget,
+                self.ui.item_metadata_dock_widget,
+            ]
+        )
+        # center
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -1153,15 +1163,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         ]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
-        docks = [
-            self.ui.dockWidget_tool_feature_tree,
-            self.ui.dockWidget_parameter_value_list,
-            self.ui.dockWidget_alternative_scenario_tree,
-            self.ui.metadata_dock_widget,
-            self.ui.item_metadata_dock_widget,
-        ]
-        height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.2 * height, 0.2 * height, 0.3 * height, 0.2 * height, 0.1 * height], Qt.Vertical)
         self.end_style_change()
 
     @Slot(QAction)
@@ -1196,30 +1197,44 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(
             self.ui.dockWidget_entity_graph, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
         )
+        # right-side
+        self.splitDockWidget(self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Vertical)
+        self.tabify_and_raise(
+            [
+                self.ui.dockWidget_alternative_scenario_tree,
+                self.ui.dockWidget_tool_feature_tree,
+                self.ui.dockWidget_parameter_value_list,
+            ]
+        )
+        self.tabify_and_raise(
+            [
+                self.ui.metadata_dock_widget,
+                self.ui.item_metadata_dock_widget,
+            ]
+        )
+        # left
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
+        )
         self.splitDockWidget(
             self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Vertical
         )
         self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
         self.tabify_and_raise(
-            [
-                self.ui.dockWidget_object_parameter_value,
-                self.ui.dockWidget_object_parameter_definition,
-                self.ui.dockWidget_relationship_parameter_value,
-                self.ui.dockWidget_relationship_parameter_definition,
-            ]
+            [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
+        )
+        self.tabify_and_raise(
+            [self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition]
         )
         docks = [
-            self.ui.dockWidget_object_tree,
             self.ui.dockWidget_entity_graph,
-            self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_relationship_parameter_value,
         ]
-        width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
-        docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
+        self.resizeDocks(docks, [0.6 * height, 0.2 * height, 0.2 * height], Qt.Vertical)
         docks = [self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.5 * height, 0.5 * height], Qt.Vertical)
