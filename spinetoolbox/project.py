@@ -30,6 +30,7 @@ from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
 from spine_engine.utils.helpers import shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
+from .server.util.file_packager import FilePackager
 from .metaobject import MetaObject
 from .helpers import (
     create_dir,
@@ -48,6 +49,7 @@ from .config import (
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
     FG_COLOR,
+    PROJECT_ZIP_FILENAME,
 )
 from .project_commands import SetProjectNameAndDescriptionCommand
 from .spine_engine_worker import SpineEngineWorker
@@ -898,13 +900,6 @@ class SpineToolboxProject(MetaObject):
             execution_permits (Sequence(dict))
             msg (str): Message depending on execution mode (project or selected)
         """
-        if self._settings.value("engineSettings/RemoteExecutionEnabled", defaultValue="false") == "true" and len(dags) > 1:
-            # Remote execution does not support multi-dag execution
-            self._logger.msg_warning.emit(
-                "Remote execution does not support multiple DAG execution. Please select just one "
-                "DAG to execute or execute a project with a single DAG."
-            )
-            return
         self.project_execution_about_to_start.emit()
         self._logger.msg.emit("")
         self._logger.msg.emit("-------------------------------------------------")
@@ -920,6 +915,10 @@ class SpineToolboxProject(MetaObject):
         settings = make_settings_dict_for_engine(self._settings)
         darker_fg_color = QColor(FG_COLOR).darker().name()
         darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
+        # If preparing for remote execution, archive the project into a zip-file
+        if self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
+            FilePackager.package(self.project_dir, self.project_dir, PROJECT_ZIP_FILENAME)
+            self._logger.msg.emit(f"Project zipped to {os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + '.zip'))}")
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
             worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
@@ -1001,6 +1000,10 @@ class SpineToolboxProject(MetaObject):
                 item.handle_execution_successful(direction, state)
             finished_worker.clean_up()
         self._engine_workers.clear()
+        # We could remove the transmitted project zip-file here if we want
+        # FilePackager.deleteFile(
+        #     os.path.abspath(
+        #         os.path.join(self._inputData['project_dir'], PROJECT_ZIP_FILENAME + ".zip")))
         self.project_execution_finished.emit()
 
     def execute_selected(self, names):

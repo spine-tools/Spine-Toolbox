@@ -20,10 +20,9 @@ import threading
 import time
 import json
 import ast
-import os
 from enum import Enum
-from spinetoolbox.server.util.file_packager import FilePackager
 from spinetoolbox.server.connectivity.zmq_client import ZMQClient, ZMQSecurityModelState, ZMQClientConnectionState
+from spinetoolbox.config import PROJECT_ZIP_FILENAME
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.exception import RemoteEngineFailed
 
@@ -226,9 +225,6 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
 class RemoteSpineEngineManager(SpineEngineManagerBase):
     """Responsible for remote project execution."""
-
-    ZipFileName = "project_package"  # ZIP-file name to be used
-
     def __init__(self):
         """Initializer."""
         super().__init__()
@@ -268,7 +264,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 self.zmq_client = ZMQClient(protocol, host, port, security, sec_folder)
             except ValueError as e:
                 raise RemoteEngineFailed(f"Initializing ZMQ client failed: {e}")
-            if self.zmq_client.getConnectionState() == ZMQClientConnectionState.CONNECTED:
+            if self.zmq_client.get_connection_state() == ZMQClientConnectionState.CONNECTED:
                 self._requestPending = True
                 self._inputData = engine_data
                 self._runner.start()
@@ -308,21 +304,11 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 start_time = round(time.time() * 1000.0)
                 self._state = RemoteSpineEngineManagerState.RUNNING  # Change state to RUNNING
                 json_txt = json.dumps(self._inputData)  # Transform dict to JSON string
-                # Make a zip file containing the project (or DAG) to be executed remotely
-                FilePackager.package(
-                    self._inputData['project_dir'],
-                    self._inputData['project_dir'],
-                    RemoteSpineEngineManager.ZipFileName,
-                )
                 # Send a request to remote server, and wait for a response
                 data_events = self.zmq_client.send(
-                    json_txt, self._inputData['project_dir'], RemoteSpineEngineManager.ZipFileName + ".zip"
+                    json_txt, self._inputData['project_dir'], PROJECT_ZIP_FILENAME + ".zip"
                 )
                 self.engine_event_getter_thread.server_output_msg_q.put(data_events)
-                # Delete the transmitted zip file
-                # FilePackager.deleteFile(
-                #     os.path.abspath(
-                #         os.path.join(self._inputData['project_dir'], RemoteSpineEngineManager.ZipFileName + ".zip")))
                 stop_time = round(time.time() * 1000.0)
                 print("RemoteSpineEngineManager.run() run time after execution %d ms" % (stop_time - start_time))
                 self._state = RemoteSpineEngineManagerState.REPLY_RECEIVED  # Change state to REPLY_RECEIVED
@@ -350,7 +336,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def issue_persistent_command(self, persistent_key, command):
         """See base class."""
-        # TODO: Implementing this needs a new ServerMessage type (with 'execute' and 'ping')
+        # TODO: Implementing this needs a new ServerMessage type (in addition to 'execute' and 'ping')
         raise NotImplementedError()
 
     def restart_persistent(self, persistent_key):

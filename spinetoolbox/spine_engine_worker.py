@@ -116,8 +116,8 @@ class SpineEngineWorker(QObject):
         """
         Args:
             engine_data (dict): engine data
-            dag (DirectedGraphHandler)
-            dag_identifier (str)
+            dag (DirectedGraphHandler):
+            dag_identifier (str):
             project_items (dict): mapping from project item name to :class:`ProjectItem`
             connections (dict): mapping from jump name to :class:`LoggingConnection` or :class:`LoggingJump`
             logger (LoggerInterface): a logger
