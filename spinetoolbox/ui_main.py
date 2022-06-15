@@ -198,6 +198,7 @@ class ToolboxUI(QMainWindow):
         self._filter_item_consoles = {}
         self._persistent_consoles = {}
         self._jupyter_consoles = {}
+        self._current_execution_keys = {}
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -1432,10 +1433,13 @@ class ToolboxUI(QMainWindow):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
-        filter_consoles = self._filter_item_consoles.get(self.active_project_item, dict())
-        self.ui.listView_console_executions.setVisible(bool(filter_consoles))
-        current_key = self.ui.listView_console_executions.currentIndex().data()
+        filter_consoles = self._filter_item_consoles.get(self.active_project_item)
+        if filter_consoles is None:
+            self.ui.listView_console_executions.hide()
+            return
+        self.ui.listView_console_executions.show()
         self.ui.listView_console_executions.model().reset_model(filter_consoles)
+        current_key = self._current_execution_keys.get(self.active_project_item)
         current = self.ui.listView_console_executions.model().find_index(current_key)
         self.ui.listView_console_executions.setCurrentIndex(current)
 
@@ -1476,6 +1480,7 @@ class ToolboxUI(QMainWindow):
         """Sets the console of the selected execution in Console."""
         if not current.data():
             return
+        self._current_execution_keys[self.active_project_item] = current.data()
         console = current.model().get_console(current.data())
         self._do_override_console(console)
 
