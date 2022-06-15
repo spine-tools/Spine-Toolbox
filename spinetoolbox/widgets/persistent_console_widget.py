@@ -15,7 +15,7 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Qt, Slot, QTimer, Signal, QThreadPool, QRunnable, QMutex, QMutexLocker
+from PySide2.QtCore import Qt, Slot, QTimer, Signal, QThreadPool, QRunnable
 from PySide2.QtWidgets import QTextEdit
 from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor, QTextBlockFormat, QTextOption
 from spinetoolbox.helpers import CustomSyntaxHighlighter
@@ -27,6 +27,7 @@ class PersistentConsoleWidget(QTextEdit):
 
     _history_item_available = Signal(str, str)
     _completions_available = Signal(str, str, list)
+    _text_available = Signal(str, bool)
     _FLUSH_INTERVAL = 200
     _MAX_LINES_PER_SECOND = 2000
     _MAX_LINES_PER_CYCLE = _MAX_LINES_PER_SECOND * 1000 / _FLUSH_INTERVAL
@@ -59,7 +60,6 @@ class PersistentConsoleWidget(QTextEdit):
         self._reset_prefix = True
         self._pending_command_count = 0
         self._text_buffer = []
-        self._text_buffer_mutex = QMutex()
         self._skipped = {}
         self._anchor = None
         self._style = get_style_by_name("monokai")
@@ -83,10 +83,11 @@ class PersistentConsoleWidget(QTextEdit):
         self.document().contentsChanged.connect(self._handle_contents_changed)
         self._history_item_available.connect(self._display_history_item)
         self._completions_available.connect(self._display_completions)
+        self._text_available.connect(self._do_insert_text_before_prompt)
         self._flush_timer = QTimer()
         self._flush_timer.setInterval(self._FLUSH_INTERVAL)
         self._flush_timer.timeout.connect(self._flush_text_buffer)
-        self._flush_timer.start()
+        self._flush_timer.setSingleShot(True)
 
     def name(self):
         """Returns console name for display purposes."""
@@ -215,17 +216,20 @@ class PersistentConsoleWidget(QTextEdit):
         Args:
             text (str)
         """
-        QMutexLocker(self._text_buffer_mutex)
+        self._text_available.emit(text, with_prompt)
+
+    @Slot(str, bool)
+    def _do_insert_text_before_prompt(self, text, with_prompt):
         self._text_buffer.append((text, with_prompt))
+        if not self._flush_timer.isActive():
+            self._flush_timer.start()
 
     @Slot()
     def _flush_text_buffer(self):
         """Inserts all text from buffer."""
-        QMutexLocker(self._text_buffer_mutex)
-        self.blockSignals(True)
-        k = 0
         cursor = self.textCursor()
         cursor.beginEditBlock()
+        k = 0
         while self._text_buffer and k < self._MAX_LINES_PER_CYCLE:
             cursor.setPosition(self._prompt_block.position() - 1)
             text, with_prompt = self._text_buffer.pop(0)
@@ -244,7 +248,6 @@ class PersistentConsoleWidget(QTextEdit):
             cursor.insertText(f"<--- {len(self._text_buffer)} more lines --->", char_format)
             self._text_buffer.clear()
         cursor.endEditBlock()
-        self.blockSignals(False)
 
     def _insert_text(self, cursor, text, with_prompt):
         cursor.insertBlock(QTextBlockFormat())
