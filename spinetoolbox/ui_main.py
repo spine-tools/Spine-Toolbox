@@ -1434,9 +1434,10 @@ class ToolboxUI(QMainWindow):
             return
         filter_consoles = self._filter_item_consoles.get(self.active_project_item, dict())
         self.ui.listView_console_executions.setVisible(bool(filter_consoles))
+        current_key = self.ui.listView_console_executions.currentIndex().data()
         self.ui.listView_console_executions.model().reset_model(filter_consoles)
-        current = self.ui.listView_console_executions.currentIndex()
-        self._select_console_execution(current, None)
+        current = self.ui.listView_console_executions.model().find_index(current_key)
+        self.ui.listView_console_executions.setCurrentIndex(current)
 
     def _restore_original_console(self):
         """Sets the Console back to the original."""
