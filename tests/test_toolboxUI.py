@@ -257,7 +257,7 @@ class TestToolboxUI(unittest.TestCase):
             # Make sure that the test uses LocalSpineEngineManager
             mock_qsettings_value.side_effect = qsettings_value_side_effect
             self.assertTrue(self.toolbox.close_project())
-            mock_qsettings_value.assert_called_once()
+            mock_qsettings_value.assert_called()
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.project.create_dir"
         ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
@@ -278,7 +278,7 @@ class TestToolboxUI(unittest.TestCase):
                 # Make sure that the test uses LocalSpineEngineManager
                 mock_qsettings_value.side_effect = qsettings_value_side_effect
                 self.assertTrue(self.toolbox.close_project())
-                mock_qsettings_value.assert_called_once()
+                mock_qsettings_value.assert_called()
         self.assertIsNone(self.toolbox.project())
 
     def test_selection_in_project_item_list_1(self):

@@ -216,7 +216,7 @@ class SpineEngineWorker(QObject):
             self.finished.emit()
             return
         except RemoteEngineFailed as error:
-            self._logger.msg_error.emit(error)
+            self._logger.msg_error.emit(f"{error}")
             self._engine_final_state = str(SpineEngineState.FAILED)
             self._all_items_failed.emit(list(self._project_items.values()))
             self.finished.emit()

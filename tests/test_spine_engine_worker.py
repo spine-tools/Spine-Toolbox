@@ -31,7 +31,7 @@ class TestSpineEngineWorker(unittest.TestCase):
 
     def test_empty_project_executes(self):
         logger = MagicMock()
-        worker = SpineEngineWorker("", {"items_module_name": "spine_items"}, MagicMock(), "test dag", {}, {}, logger)
+        worker = SpineEngineWorker("", {"items_module_name": "spine_items", "settings": {}}, MagicMock(), "test dag", {}, {}, logger)
         receiver = _Receiver(worker)
         try:
             worker.start()

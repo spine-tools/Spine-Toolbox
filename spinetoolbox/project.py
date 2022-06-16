@@ -24,13 +24,14 @@ import random
 from PySide2.QtCore import Signal
 from PySide2.QtGui import QColor
 import networkx as nx
-from spine_engine.exception import EngineInitFailed
+from spine_engine.exception import EngineInitFailed, RemoteEngineFailed
 from spine_engine.utils.helpers import create_timestamp
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
 from spine_engine.utils.helpers import shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from .server.util.file_packager import FilePackager
+from .server.zmq_client import ZMQClient, ClientSecurityModel
 from .metaobject import MetaObject
 from .helpers import (
     create_dir,
@@ -897,7 +898,7 @@ class SpineToolboxProject(MetaObject):
 
         Args:
             dags (Sequence(DiGraph))
-            execution_permits (Sequence(dict))
+            execution_permits_list (Sequence(dict))
             msg (str): Message depending on execution mode (project or selected)
         """
         self.project_execution_about_to_start.emit()
@@ -912,13 +913,12 @@ class SpineToolboxProject(MetaObject):
         if self._engine_workers:
             self._logger.msg_error.emit("Execution already in progress.")
             return
+        if not self.prepare_remote_execution():
+            self.project_execution_finished.emit()
+            return
         settings = make_settings_dict_for_engine(self._settings)
         darker_fg_color = QColor(FG_COLOR).darker().name()
         darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
-        # If preparing for remote execution, archive the project into a zip-file
-        if self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
-            FilePackager.package(self.project_dir, self.project_dir, PROJECT_ZIP_FILENAME)
-            self._logger.msg.emit(f"Project zipped to {os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + '.zip'))}")
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
             worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
@@ -1001,9 +1001,9 @@ class SpineToolboxProject(MetaObject):
             finished_worker.clean_up()
         self._engine_workers.clear()
         # We could remove the transmitted project zip-file here if we want
-        # FilePackager.deleteFile(
-        #     os.path.abspath(
-        #         os.path.join(self._inputData['project_dir'], PROJECT_ZIP_FILENAME + ".zip")))
+        # FilePackager.remove_file(
+        #     os.path.abspath(os.path.join(self._project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
+        # )
         self.project_execution_finished.emit()
 
     def execute_selected(self, names):
@@ -1308,6 +1308,49 @@ class SpineToolboxProject(MetaObject):
     @property
     def settings(self):
         return self._settings
+
+    def prepare_remote_execution(self):
+        if self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
+            # Check remote execution settings
+            host = self._settings.value("engineSettings/remoteHost", "")  # Host name
+            port = self._settings.value("engineSettings/remotePort", "")  # Host port
+            sec_model = self._settings.value("engineSettings/remoteSecurityModel", "")  # ZQM security model
+            security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
+            sec_folder = (
+                ""
+                if security == ClientSecurityModel.NONE
+                else self._settings.value("engineSettings/remoteSecurityFolder", "")
+            )
+            if not host:
+                self._logger.msg_error.emit("Spine Engine Server <b>host address</b> missing. "
+                                            "Please enter host in <b>Settings->Engine</b>.")
+                return False
+            elif not port:
+                self._logger.msg_error.emit("Spine Engine Server <b>port</b> missing. "
+                                            "Please select port in <b>Settings->Engine</b>.")
+                return False
+            self._logger.msg.emit(f"Establishing connection to Spine Engine Server in <b>{host}:{port}</b>")
+            try:
+                ZMQClient("tcp", host, port, sec_model, sec_folder, ping=True)  # Ping server
+            except RemoteEngineFailed as e:
+                self._logger.msg_error.emit(f"Server is not responding. {e}. "
+                                            f"Check settings in <b>Settings->Engine</b>.")
+                return False
+            # When preparing for remote execution, archive the project into a zip-file
+            dest_dir = os.path.join(self.project_dir, os.pardir)  # Parent dir of project_dir TODO: Find a better dst
+            try:
+                FilePackager.package(src_folder=self.project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
+            except Exception as e:
+                self._logger.msg_error.emit(f"{e}")
+                return False
+            project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + '.zip'))
+            if not os.path.isfile(project_zip_file):
+                self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
+                return False
+            file_size = os.path.getsize(project_zip_file)
+            self._logger.msg.emit(f"Connection established. Transmitting <b>{PROJECT_ZIP_FILENAME + '.zip'} "
+                                  f"[size:{file_size} B]</b> to server.")
+        return True
 
     def tear_down(self):
         """Cleans up project."""

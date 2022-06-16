@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A Zero-MQ client for exchanging messages between the toolbox client and the remote server.
+ZMQ client for exchanging messages between the toolbox client and the remote server.
 :author: P. Pääkkönen (VTT)
 :date:   02.09.2021
 """
@@ -18,22 +18,20 @@ A Zero-MQ client for exchanging messages between the toolbox client and the remo
 import os
 import zmq
 import zmq.auth
-import json
 import time
 import random
 from enum import unique, Enum
 from spine_engine.server.util.server_message import ServerMessage
 from spine_engine.server.util.server_message_parser import ServerMessageParser
 from spine_engine.server.util.event_data_converter import EventDataConverter
+from spine_engine.exception import RemoteEngineFailed
 
 
-@unique
-class ZMQSecurityModelState(Enum):
-    NONE = 0  # no security is used
-    STONEHOUSE = 1  # stonehouse-security model of Zero-MQ
+class ClientSecurityModel(Enum):
+    NONE = 0  # Nope
+    STONEHOUSE = 1  # ZMQ stonehouse security model
 
 
-# used, when connectivity is tested during initialisation
 @unique
 class ZMQClientConnectionState(Enum):
     CONNECTED = 0
@@ -41,29 +39,25 @@ class ZMQClientConnectionState(Enum):
 
 
 class ZMQClient:
-    def __init__(self, protocol, remoteHost, remotePort, secModel, secFolder):
+    def __init__(self, protocol, host, port, sec_model, sec_folder, ping=True):
         """
         Args:
             protocol (string): Zero-MQ protocol
-            remoteHost: location of the remote spine server
-            remotePort(int): port of the remote spine server
-            secModel: see: ZMQSecurityModelState
-            secFolder: folder, where security files have been stored.
+            host: location of the remote spine server
+            port(int): port of the remote spine server
+            sec_model: see: ClientSecurityModel
+            sec_folder: folder, where security files have been stored.
+            ping (bool): True checks connection before sending the request
         """
-        self.connectivity_testing = True
-        if secModel == ZMQSecurityModelState.NONE:
-            self._context = zmq.Context()
-            self._socket = self._context.socket(zmq.REQ)
-            self._socket.setsockopt(zmq.LINGER, 1)
-            ret = self._socket.connect(protocol + "://" + remoteHost + ":" + str(remotePort))
-        elif secModel == ZMQSecurityModelState.STONEHOUSE:
-            self._context = zmq.Context()
-            self._socket = self._context.socket(zmq.REQ)
-            self._socket.setsockopt(zmq.LINGER, 1)
+        self.ping = ping
+        self._context = zmq.Context()
+        self._socket = self._context.socket(zmq.REQ)
+        self._socket.setsockopt(zmq.LINGER, 1)
+        if sec_model == ClientSecurityModel.STONEHOUSE:
             # Security configs
             # implementation below based on https://github.com/zeromq/pyzmq/blob/main/examples/security/stonehouse.py
             # prepare folders
-            base_dir = secFolder
+            base_dir = sec_folder
             secret_keys_dir = os.path.join(base_dir, 'private_keys')
             keys_dir = os.path.join(base_dir, 'certificates')
             public_keys_dir = os.path.join(base_dir, 'public_keys')
@@ -78,20 +72,18 @@ class ZMQClient:
             server_public_file = os.path.join(public_keys_dir, "server.key")
             server_public, _ = zmq.auth.load_certificate(server_public_file)
             self._socket.curve_serverkey = server_public
-            ret = self._socket.connect(protocol + "://" + remoteHost + ":" + str(remotePort))
+        ret = self._socket.connect(protocol + "://" + host + ":" + str(port))
         # Ping server
-        if self.connectivity_testing:
-            connected = self._check_connectivity(1000)
-            if connected:
-                self._connection_state = ZMQClientConnectionState.CONNECTED
-            else:
-                self._connection_state = ZMQClientConnectionState.DISCONNECTED
-        else:
-            self._connection_state = ZMQClientConnectionState.CONNECTED
-        self._closed = False  # for tracking multiple closing calls
+        self._connection_state = ZMQClientConnectionState.DISCONNECTED
+        if self.ping:
+            try:
+                self._check_connectivity(1000)
+            except RemoteEngineFailed:
+                raise
+        self._connection_state = ZMQClientConnectionState.CONNECTED
 
     def get_connection_state(self):
-        """Returns ZMQ client connection state.
+        """Returns client connection state.
 
         Returns:
             int: ZMQClientConnectionState
@@ -102,12 +94,13 @@ class ZMQClient:
         """Sends the project and the execution request to the server, waits for the response and acts accordingly.
 
         Args:
-            text (str): Input for SpineEngine as text. Includes most of project.json, settings, etc.
+            text (str): Input for SpineEngine as JSON text. Includes most of project.json, settings, etc.
             file_path (string): Path to project zip-file
-            filename (string): Name of the binary file to be transferred
+            filename (string): Name of the binary file to be transmitted
 
         Returns:
-            a list of tuples containing events+data
+            list or str: List of tuples containing events+data, or an error message string if something went wrong
+            in initializing the execution.
         """
         zip_path = os.path.join(file_path, os.pardir, filename)  # Note: zip-file is in parent dir of file_path now
         if not os.path.exists(zip_path):
@@ -137,11 +130,10 @@ class ZMQClient:
 
     def close(self):
         """Closes ZMQ client socket, context and thread."""
-        if not self._closed:
+        if not self._socket.closed:
             self._socket.close()
+        if not self._context.closed:
             self._context.term()
-            print("ZMQClient(): Connection closed.")
-            self._closed = True
 
     def _check_connectivity(self, timeout):
         """Pings server, waits for the response, and acts accordingly.
@@ -150,7 +142,10 @@ class ZMQClient:
             timeout (int): Time to wait before giving up [ms]
 
         Returns:
-            bool: True if server is ready for action, False otherwise
+            void
+
+        Raises:
+            RemoteEngineFailed if the server is not responding.
         """
         start_time_ms = round(time.time() * 1000.0)
         random_id = random.randrange(10000000)
@@ -158,8 +153,7 @@ class ZMQClient:
         self._socket.send_multipart([ping_request.to_bytes()], flags=zmq.NOBLOCK)
         event = self._socket.poll(timeout=timeout)
         if event == 0:
-            print("Timeout expired. Pinging the server failed.")
-            return False
+            raise RemoteEngineFailed("Timeout expired. Pinging the server failed.")
         else:
             msg = self._socket.recv()
             msg_str = msg.decode("utf-8")
@@ -167,8 +161,8 @@ class ZMQClient:
             # Check that request ID matches the response ID
             response_id = int(response.getId())
             if not response_id == random_id:
-                print(f"Ping failed. Request ID '{random_id}' does not match response ID '{response_id}'")
-                return False
+                raise RemoteEngineFailed(f"Ping failed. Request Id '{random_id}' does not match "
+                                         f"reply Id '{response_id}'")
             stop_time_ms = round(time.time() * 1000.0)  # debugging
             print("Ping message received, RTT: %d ms" % (stop_time_ms - start_time_ms))
-            return True
+        return

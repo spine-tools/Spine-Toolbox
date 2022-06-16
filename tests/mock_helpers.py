@@ -68,7 +68,7 @@ def clean_up_toolbox(toolbox):
         if toolbox.project():
             toolbox.close_project(ask_confirmation=False)
             QApplication.processEvents()  # Makes sure Design view animations finish properly.
-            mock_qsettings_value.assert_called_once()  # The call in _shutdown_engine_kernels()
+            mock_qsettings_value.assert_called()  # The call in _shutdown_engine_kernels()
     toolbox.db_mngr.close_all_sessions()
     toolbox.db_mngr.clean_up()
     toolbox.db_mngr = None
@@ -113,7 +113,7 @@ def add_ds(project, item_factories, name, x=0.0, y=0.0):
     return project.get_item(name)
 
 
-def add_dc(project, item_factories, name, x=0, y=0):
+def add_dc(project, item_factories, name, x=0, y=0, file_refs=None):
     """Helper function to create a Data Connection to given project.
 
     Args:
@@ -122,11 +122,13 @@ def add_dc(project, item_factories, name, x=0, y=0):
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
+        file_refs (list): File references
 
     Returns:
         DataConnection: added project item
     """
-    item_dict = {name: {"type": "Data Connection", "description": "", "references": list(), "x": x, "y": y}}
+    frefs = list() if not file_refs else file_refs
+    item_dict = {name: {"type": "Data Connection", "description": "", "references": frefs, "x": x, "y": y}}
     project.restore_project_items(item_dict, item_factories, silent=True)
     return project.get_item(name)
 

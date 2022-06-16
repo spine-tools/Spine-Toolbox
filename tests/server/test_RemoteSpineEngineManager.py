@@ -10,399 +10,127 @@
 ######################################################################################################################
 
 """
-Tester for Remote Spine Engine Manager. 
-:authors: P. Pääkkönen (VTT)
-:date:   06.09.2021
+Tester for Remote Spine Engine Manager.
+:authors: P. Savolainen (VTT)
+:date:   16.6.2022
 """
 
-import sys
-import time
-import os
-import shutil
-from zipfile import ZipFile
-from pathlib import Path
-
-# sys.path.append('./../..')
-# sys.path.append('./../../spinetoolbox')
-# sys.path.append('./../../spinetoolbox/server')
-# sys.path.append('./../../spinetoolbox/server/connectivity')
-# sys.path.append('./../../spinetoolbox/server/util')
-
-# from LocalSpineEngineManager import LocalSpineEngineManager
-from spinetoolbox.spine_engine_worker import SpineEngineWorker
-from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager
+import unittest
+from unittest import mock
+from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager, RemoteEngineEventGetter
+from spinetoolbox.server.zmq_client import ZMQClientConnectionState
+from spine_engine.spine_engine import ItemExecutionFinishState
 
 
-class test_RemoteSpineEngineManager:
-    @staticmethod
-    def _dict_data(
-        items,
-        connections,
-        node_successors,
-        execution_permits,
-        specifications,
-        settings,
-        project_dir,
-        jumps,
-        items_module_name,
-    ):
-        """Returns a dict to be passed to the class.
-        Args:
-            items (list(dict)): See SpineEngine.__init()
-            connections (list of dict): See SpineEngine.__init()
-            node_successors (dict(str,list(str))): See SpineEngine.__init()
-            execution_permits (dict(str,bool)): See SpineEngine.__init()
-            specifications (dict(str,list(dict))): SpineEngine.__init()
-            settings (dict): SpineEngine.__init()
-            project_dir (str): SpineEngine.__init()
-            jumps (List of jump dicts): SpineEngine.__init()
-            items_module_name (str): SpineEngine.__init()
+class TestRemoteSpineEngineManager(unittest.TestCase):
 
-        Returns:
-            dict
-        """
-        item = dict()
-        item['items'] = items
-        item['connections'] = connections
-        item['jumps'] = jumps
-        item['node_successors'] = node_successors
-        item['execution_permits'] = execution_permits
-        item['items_module_name'] = items_module_name
-        item['specifications'] = specifications
-        item['settings'] = settings
-        item['project_dir'] = project_dir
-        return item
+    def test_remote_engine_manager_when_execution_succeeds(self):
+        """ZMQClient is mocked to test the logic of RemoteSpineEngine."""
+        remote_engine_mngr = RemoteSpineEngineManager()
+        appsettings = dict()
+        appsettings["engineSettings/remoteHost"] = "localhost"
+        appsettings["engineSettings/remotePort"] = "49152"
+        appsettings["engineSettings/remoteSecurityModel"] = ""
+        engine_data = {
+            "settings": appsettings,
+            "project_dir": "",
+        }
+        attrs = {"get_connection_state.return_value": ZMQClientConnectionState.CONNECTED,
+                 "send.return_value": [("dag_exec_finished", "COMPLETED")]}
+        # NOTE: This patch does not work without spec=True
+        with mock.patch("spinetoolbox.spine_engine_manager.ZMQClient", **attrs, spec=True) as mock_client:
+            remote_engine_mngr.run_engine(engine_data)
+            remote_engine_mngr.engine_event_getter_thread.join()  # Wait until events have been handled
+            remote_engine_mngr.close()
+            mock_client.assert_called()
+            self.assertFalse(remote_engine_mngr._runner.is_alive())
+            self.assertFalse(remote_engine_mngr.engine_event_getter_thread.is_alive())
 
-    @staticmethod
-    def run_DAG(protocol, host, port):
-        testSuccess = -1
-        connDict = {}
-        connDict["engineSettings/remoteHost"] = host
-        connDict["engineSettings/remotePort"] = port
-        connDict["engineSettings/remoteSecurityModel"] = ""
-        # print("run_DAG() using dict as input for connecting: ")
-        # print(connDict)
-        manager = RemoteSpineEngineManager(connDict)
-        # prepare data
-        dict_data = test_RemoteSpineEngineManager._dict_data(
-            items={
-                'helloworld': {
-                    'type': 'Tool',
-                    'description': '',
-                    'x': -91.6640625,
-                    'y': -5.609375,
-                    'specification': 'helloworld2',
-                    'execute_in_work': False,
-                    'cmd_line_args': [],
-                },
-                'Data Connection 1': {
-                    'type': 'Data Connection',
-                    'description': '',
-                    'x': 62.7109375,
-                    'y': 8.609375,
-                    'references': [{'type': 'path', 'relative': True, 'path': 'input2.txt'}],
-                },
-            },
-            connections=[{'from': ['Data Connection 1', 'left'], 'to': ['helloworld', 'right']}],
-            node_successors={'Data Connection 1': ['helloworld'], 'helloworld': []},
-            execution_permits={'Data Connection 1': True, 'helloworld': True},
-            project_dir='./helloworld',
-            specifications={
-                'Tool': [
-                    {
-                        'name': 'helloworld2',
-                        'tooltype': 'python',
-                        'includes': ['helloworld.py'],
-                        'description': '',
-                        'inputfiles': ['input2.txt'],
-                        'inputfiles_opt': [],
-                        'outputfiles': [],
-                        'cmdline_args': [],
-                        'execute_in_work': True,
-                        'includes_main_path': '../../..',
-                        'definition_file_path': './helloworld/.spinetoolbox/specifications/Tool/helloworld2.json',
-                    }
-                ]
-            },
-            settings={
-                'appSettings/previousProject': './helloworld',
-                'appSettings/recentProjectStorages': './',
-                'appSettings/recentProjects': 'helloworld<>./helloworld',
-                'appSettings/showExitPrompt': '2',
-                'appSettings/toolbarIconOrdering': 'Importer;;View;;Tool;;Data Connection;;Data Transformer;;Gimlet;;Exporter;;Data Store',
-                'appSettings/workDir': './Spine-Toolbox/work',
-            },
-            jumps=[],
-            items_module_name='spine_items',
-        )
-        # print("run_DAG(): sending request with data:")
-        # print(dict_data)
-        manager.run_engine(dict_data)
-        while True:
-            event, data = manager.get_engine_event()
-            if event != None and data != None:
-                # print("event type: %s, data type: %s"%(type(event),type(data)))
-                # print("Received event: %s"%event)
-                # print("Received data: %s"%data)
-                if event == 'dag_exec_finished' and data == 'COMPLETED':
-                    testSuccess = 0
-                    break
-            else:
-                time.sleep(0.1)
-        time.sleep(1)
-        manager.stop_engine()
-        return testSuccess
+    def test_remote_engine_manager_when_execution_fails(self):
+        """ZMQClient is mocked to test the logic of RemoteSpineEngine."""
+        remote_engine_mngr = RemoteSpineEngineManager()
+        appsettings = dict()
+        appsettings["engineSettings/remoteHost"] = "localhost"
+        appsettings["engineSettings/remotePort"] = "49152"
+        appsettings["engineSettings/remoteSecurityModel"] = ""
+        engine_data = {
+            "settings": appsettings,
+            "project_dir": "",
+        }
+        attrs = {"get_connection_state.return_value": ZMQClientConnectionState.CONNECTED,
+                 "send.return_value": [("dag_exec_finished", "FAILED")]}
+        # NOTE: This patch does not work without spec=True
+        with mock.patch("spinetoolbox.spine_engine_manager.ZMQClient", **attrs, spec=True) as mock_client:
+            remote_engine_mngr.run_engine(engine_data)
+            remote_engine_mngr.engine_event_getter_thread.join()  # Wait until events have been handled
+            remote_engine_mngr.close()
+            mock_client.assert_called()
+            self.assertFalse(remote_engine_mngr._runner.is_alive())
+            self.assertFalse(remote_engine_mngr.engine_event_getter_thread.is_alive())
 
-    # @staticmethod
-    # def run_DAG_empty_response(protocol,host,port):
-    #    manager=RemoteSpineEngineManager(protocol,host,port)
-    # prepare data
-    #    dict_data = test_RemoteSpineEngineManager._dict_data(items={'helloworld': {'type': 'Tool', 'description': '', 'x': -91.6640625,
-    #        'y': -5.609375, 'specification': 'helloworld2', 'execute_in_work': True, 'cmd_line_args': []},
-    #        'Data Connection 1': {'type': 'Data Connection', 'description': '', 'x': 62.7109375, 'y': 8.609375,
-    #         'references': [{'type': 'path', 'relative': True, 'path': 'input2.txt'}]}},
-    #        connections=[{'from': ['Data Connection 1', 'left'], 'to': ['helloworld', 'right']}],
-    #        node_successors={'Data Connection 1': ['helloworld'], 'helloworld': []},
-    #        execution_permits={'Data Connection 1': True, 'helloworld': True},
-    #        project_dir = '/home/ubuntu/sw/spine/helloworld',
-    #        specifications = {'Tool': [{'name': 'helloworld2', 'tooltype': 'python',
-    #        'includes_main_path': '../../..',
-    #        'definition_file_path':
-    #        '/home/ubuntu/sw/spine/helloworld/.spinetoolbox/specifications/Tool/helloworld2.json'}]},
-    #        settings = {'appSettings/previousProject': '/home/ubuntu/sw/spine/helloworld',
-    #        'appSettings/recentProjectStorages': '/home/ubuntu/sw/spine',
-    #        'appSettings/recentProjects': 'helloworld<>/home/ubuntu/sw/spine/helloworld',
-    #        'appSettings/showExitPrompt': '2',
-    #        'appSettings/toolbarIconOrdering':
-    #        'Importer;;View;;Tool;;Data Connection;;Data Transformer;;Gimlet;;Exporter;;Data Store',
-    #        'appSettings/workDir': '/home/ubuntu/sw/spine/Spine-Toolbox/work'})
-    #    print("run_DAG(): sending request with data:")
-    #    print(dict_data)
-    #    manager.run_engine(dict_data)
-    #    while True:
-    #        event,data=manager.get_engine_event()
-    #        if event!=None and data!=None:
-    #            #print("event type: %s, data type: %s"%(type(event),type(data)))
-    #            print("Received event: %s"%event)
-    #            print("Received data: %s"%data)
-    #            if event=='dag_exec_finished':
-    #                break
-    #        else:
-    #            time.sleep(0.1)
-    #    manager.stop_engine()
+    def test_remote_engine_event_getter(self):
+        # Parse dag_exec_finished event
+        ev_getter = RemoteEngineEventGetter()
+        ev_getter.server_output_msg_q.put([("dag_exec_finished", "COMPLETED")])
+        p = ev_getter.q.get()
+        self.assertEqual("dag_exec_finished", p[0])
+        self.assertEqual(p[1], "COMPLETED")
+        # Parse exec_started event
+        ev_getter = RemoteEngineEventGetter()
+        ev_getter.server_output_msg_q.put([('exec_started', "{'item_name': 'Data Connection 1', 'direction': 'FORWARD'}")])
+        p = ev_getter.q.get()
+        self.assertEqual("exec_started", p[0])
+        self.assertTrue(isinstance(p[1], dict))
+        self.assertTrue("item_name" and "direction" in p[1].keys())
+        # Parse event_msg event
+        ev_getter = RemoteEngineEventGetter()
+        ev_getter.server_output_msg_q.put([('event_msg', "{'item_name': 'Data Connection 1', 'filter_id': '', 'msg_type': 'msg', 'msg_text': '***Executing Data Connection <b>Data Connection 1</b>***'}")])
+        p = ev_getter.q.get()
+        self.assertEqual("event_msg", p[0])
+        self.assertTrue(isinstance(p[1], dict))
+        self.assertTrue("item_name" and "filter_id" and "msg_type" and "msg_text" in p[1].keys())
+        # Parse event_msg where special chars are escaped. They are escaped when msg_text is HTML
+        ev_getter = RemoteEngineEventGetter()
+        ev_getter.server_output_msg_q.put([('event_msg', '{\'item_name\': \'helloworld\', \'filter_id\': \'\', \'msg_type\': \'msg_warning\', \'msg_text\': "\\tNo output files defined for this Tool specification. <a style=\'color:#99CCFF;\' title=\'When you add output files to the Tool specification,\\n they will be archived into results directory. Also, output files are passed to\\n subsequent project items.\' href=\'#\'>Tip</a>"}')])
+        p = ev_getter.q.get()
+        self.assertEqual("event_msg", p[0])
+        self.assertTrue(isinstance(p[1], dict))
+        self.assertTrue("item_name" and "filter_id" and "msg_type" and "msg_text" in p[1].keys())
+        # Parse exec_finished event
+        ev_getter = RemoteEngineEventGetter()
+        ev_getter.server_output_msg_q.put([('exec_finished', "{'item_name': 'Data Connection 1', 'direction': 'FORWARD', 'state': 'RUNNING', 'item_state': <ItemExecutionFinishState.SUCCESS: 1>}")])
+        p = ev_getter.q.get()
+        self.assertEqual("exec_finished", p[0])
+        self.assertTrue(isinstance(p[1], dict))
+        self.assertTrue("item_name" and "direction" and "state" and "item_state" in p[1].keys())
+        self.assertTrue(isinstance(p[1]["item_state"], ItemExecutionFinishState))
+        # Parse persistent_execution_msg event
+        ev_getter = RemoteEngineEventGetter()
+        ev_getter.server_output_msg_q.put([('persistent_execution_msg', "{'item_name': 'helloworld', 'filter_id': '', 'type': 'persistent_started', 'key': ('C:\\\\Python38\\\\python.exe', 'helloworld'), 'language': 'python'}")])
+        p = ev_getter.q.get()
+        self.assertEqual("persistent_execution_msg", p[0])
+        self.assertTrue(isinstance(p[1], dict))
+        self.assertTrue("item_name" and "filter_id" and "type" and "key" and "language" in p[1].keys())
 
-    @staticmethod
-    def run_DAG_noreading(protocol, host, port):
-        testSuccess = -1
-        connDict = {}
-        connDict["engineSettings/remoteHost"] = host
-        connDict["engineSettings/remotePort"] = port
-        connDict["engineSettings/remoteSecurityModel"] = ""
-        manager = RemoteSpineEngineManager(connDict)
-        # prepare data
-        dict_data = test_RemoteSpineEngineManager._dict_data(
-            items={
-                'helloworld': {
-                    'type': 'Tool',
-                    'description': '',
-                    'x': -91.6640625,
-                    'y': -5.609375,
-                    'specification': 'helloworld2',
-                    'execute_in_work': False,
-                    'cmd_line_args': [],
-                },
-                'Data Connection 1': {
-                    'type': 'Data Connection',
-                    'description': '',
-                    'x': 62.7109375,
-                    'y': 8.609375,
-                    'references': [{'type': 'path', 'relative': True, 'path': 'input2.txt'}],
-                },
-            },
-            connections=[{'from': ['Data Connection 1', 'left'], 'to': ['helloworld', 'right']}],
-            node_successors={'Data Connection 1': ['helloworld'], 'helloworld': []},
-            execution_permits={'Data Connection 1': True, 'helloworld': True},
-            project_dir='./helloworld',
-            specifications={
-                'Tool': [
-                    {
-                        'name': 'helloworld2',
-                        'tooltype': 'python',
-                        'includes': ['helloworld.py'],
-                        'description': '',
-                        'inputfiles': ['input2.txt'],
-                        'inputfiles_opt': [],
-                        'outputfiles': [],
-                        'cmdline_args': [],
-                        'execute_in_work': True,
-                        'includes_main_path': '../../..',
-                        'definition_file_path': './helloworld/.spinetoolbox/specifications/Tool/helloworld2.json',
-                    }
-                ]
-            },
-            settings={
-                'appSettings/previousProject': './helloworld',
-                'appSettings/recentProjectStorages': './',
-                'appSettings/recentProjects': 'helloworld<>./helloworld',
-                'appSettings/showExitPrompt': '2',
-                'appSettings/toolbarIconOrdering': 'Importer;;View;;Tool;;Data Connection;;Data Transformer;;Gimlet;;Exporter;;Data Store',
-                'appSettings/workDir': './Spine-Toolbox/work',
-            },
-            jumps=[],
-            items_module_name='spine_items',
-        )
-
-        # print("run_DAG(): sending request with data:")
-        # print(dict_data)
-        ret1 = manager.run_engine(dict_data)
-        try:
-            ret2 = manager.run_engine(dict_data)
-        except:
-            #        if ret1==0 and ret2==-1:
-            print("run_DAG_noreading() exception as expected due to multiple requests, when already running a DAG")
-            testSuccess = 0
-        manager.stop_engine()
-        return testSuccess
-
-    @staticmethod
-    def run_DAG_loop(protocol, host, port):
-        testSuccess = -1
-        # connDict = {}
-        # connDict["engineSettings/remoteHost"] = host
-        # connDict["engineSettings/remotePort"] = port
-        # connDict["engineSettings/remoteSecurityModel"] = ""
-
-        # manager=RemoteSpineEngineManager(connDict)
-        # prepare data
-        dict_data = test_RemoteSpineEngineManager._dict_data(
-            items={
-                'helloworld': {
-                    'type': 'Tool',
-                    'description': '',
-                    'x': -91.6640625,
-                    'y': -5.609375,
-                    'specification': 'helloworld2',
-                    'execute_in_work': True,
-                    'cmd_line_args': [],
-                },
-                'Data Connection 1': {
-                    'type': 'Data Connection',
-                    'description': '',
-                    'x': 62.7109375,
-                    'y': 8.609375,
-                    'references': [{'type': 'path', 'relative': True, 'path': 'input2.txt'}],
-                },
-            },
-            connections=[{'from': ['Data Connection 1', 'left'], 'to': ['helloworld', 'right']}],
-            node_successors={'Data Connection 1': ['helloworld'], 'helloworld': []},
-            execution_permits={'Data Connection 1': True, 'helloworld': True},
-            project_dir='./helloworld',
-            specifications={
-                'Tool': [
-                    {
-                        'name': 'helloworld2',
-                        'tooltype': 'python',
-                        'includes': ['helloworld.py'],
-                        'description': '',
-                        'inputfiles': ['input2.txt'],
-                        'inputfiles_opt': [],
-                        'outputfiles': [],
-                        'cmdline_args': [],
-                        'execute_in_work': True,
-                        'includes_main_path': '../../..',
-                        'definition_file_path': './helloworld/.spinetoolbox/specifications/Tool/helloworld2.json',
-                    }
-                ]
-            },
-            settings={
-                'appSettings/previousProject': './helloworld',
-                'appSettings/recentProjectStorages': './',
-                'appSettings/recentProjects': 'helloworld<>./helloworld',
-                'appSettings/showExitPrompt': '2',
-                'appSettings/toolbarIconOrdering': 'Importer;;View;;Tool;;Data Connection;;Data Transformer;;Gimlet;;Exporter;;Data Store',
-                'appSettings/workDir': './Spine-Toolbox/work',
-            },
-            jumps=[],
-            items_module_name='spine_items',
-        )
-        # print("run_DAG(): sending request with data:")
-        # print(dict_data)
-        for x in range(0, 3):
-            manager = RemoteSpineEngineManager()
-            manager.run_engine(dict_data)
-            while True:
-                event, data = manager.get_engine_event()
-                if event != None and data != None:
-                    # print("event type: %s, data type: %s"%(type(event),type(data)))
-                    # print("Received event: %s"%event)
-                    # print("Received data: %s"%data)
-                    if event == 'dag_exec_finished' and data == 'COMPLETED':
-                        if x == 2:
-                            testSuccess = 0
-                        break
-                else:
-                    time.sleep(0.1)
-            time.sleep(1)
-            manager.stop_engine()
-        return testSuccess
-
-    @staticmethod
-    def invalid_config():
-        try:
-            manager = RemoteSpineEngineManager(None, "", 3433)
-        except:
-            print("exception raised as expected due to invalid input data")
-            return 0
-
-    @staticmethod
-    def invalid_config2():
-        try:
-            manager = RemoteSpineEngineManager("", "193.166.160.216", "", 3433)
-        except:
-            print("exception raised as expected due to invalid input data")
-            return 0
-
-    @staticmethod
-    def initialise_test_folder(zipFile, destFolder):
-        pathStr = os.path.join(str(Path(__file__).parent), destFolder)
-        folderExists = os.path.isdir(pathStr)
-        if folderExists == False:
-            os.mkdir(pathStr)
-        with ZipFile(zipFile, 'r') as zipObj:
-            print("initialise_test_folder() extracting ZIP-file to folder: %s" % pathStr)
-            zipObj.extractall(pathStr)
-            zipObj.close()
-
-    @staticmethod
-    def delete_test_folder(folder):
-        pathStr = os.path.join(str(Path(__file__).parent), folder)
-        shutil.rmtree(pathStr)
-        print("removed test folder: %s" % pathStr)
+    def test_add_quotes_to_state_str(self):
+        # Add quotes before < and after >
+        s1 = "{'item_name': 'Data Connection 1', 'direction': 'FORWARD', 'state': 'RUNNING', 'item_state': <ItemExecutionFinishState.SUCCESS: 1>}"
+        expected = "{'item_name': 'Data Connection 1', 'direction': 'FORWARD', 'state': 'RUNNING', 'item_state': '<ItemExecutionFinishState.SUCCESS: 1>'}"
+        ret = RemoteEngineEventGetter._add_quotes_to_state_str(s1)
+        self.assertEqual(expected, ret)
+        # No < or > in string so the output should be the same as original
+        s2 = "{'item_name': 'Data Connection 1', 'direction': 'FORWARD'}"
+        ret = RemoteEngineEventGetter._add_quotes_to_state_str(s2)
+        self.assertEqual(s2, ret)
+        # Even though there are < and >, the output should be the same as original
+        s3 = "{'item_name': 'Data Connection 1', 'filter_id': '', 'msg_type': 'msg', 'msg_text': '***Executing Data Connection <b>Data Connection 1</b>***'}"
+        ret = RemoteEngineEventGetter._add_quotes_to_state_str(s3)
+        self.assertEqual(s3, ret)
+        # This should stay as the same as original as well
+        s4 = '{\'item_name\': \'helloworld\', \'filter_id\': \'\', \'msg_type\': \'msg_warning\', \'msg_text\': "\\tNo output files defined for this Tool specification. <a style=\'color:#99CCFF;\' title=\'When you add output files to the Tool specification,\\n they will be archived into results directory. Also, output files are passed to\\n subsequent project items.\' href=\'#\'>Tip</a>"}'
+        ret = RemoteEngineEventGetter._add_quotes_to_state_str(s4)
+        self.assertEqual(s4, ret)
 
 
-if __name__ == '__main__':
-
-    args = sys.argv[1:]
-    print("test_RemoteSpineEngineManager(): arguments:%s" % args)
-
-    if len(args) < 2:
-        print("provide remote spine_server IP address and port")
-
-    else:
-        test_RemoteSpineEngineManager.initialise_test_folder("test_zipfile.zip", "helloworld")
-        # run tests
-        test1 = test_RemoteSpineEngineManager.invalid_config()
-        test2 = test_RemoteSpineEngineManager.invalid_config2()
-        test3 = test_RemoteSpineEngineManager.run_DAG_noreading("tcp", args[0], int(args[1]))
-        # test_RemoteSpineEngineManager.run_DAG_empty_response("tcp","193.166.160.216",5555)
-        time.sleep(1)
-        test4 = test_RemoteSpineEngineManager.run_DAG("tcp", args[0], int(args[1]))
-
-        test5 = test_RemoteSpineEngineManager.run_DAG_loop("tcp", args[0], int(args[1]))
-        test_RemoteSpineEngineManager.delete_test_folder("helloworld")
-
-        if test1 == 0 and test2 == 0 and test3 == 0 and test4 == 0 and test5 == 0:
-            print("tests OK")
-
-        else:
-            print("tests failed")
+if __name__ == "__main__":
+    unittest.main()

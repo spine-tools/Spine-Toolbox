@@ -11,47 +11,27 @@
 
 """
 Unit tests for FilePackager class.
-:author: P. Pääkkönen (VTT)
+:author: P. Pääkkönen (VTT), P. Savolainen (VTT)
 :date:   03.09.2021
 """
 
 import unittest
 import os
+from pathlib import Path
 from spinetoolbox.server.util.file_packager import FilePackager
 
 
 class TestFilePackager(unittest.TestCase):
 
-    def test_folder_packaging_relative_folder(self):
-        FilePackager.package('./testfolder', './', 'testing')
-        self.assertEqual(os.path.isfile('./testing.zip'), True)
-        os.remove('./testing.zip')
-
-    def test_source_folder_notexists(self):
-        with self.assertRaises(ValueError):
-            FilePackager.package('./testfolder2', './', 'testing')
-
-    def test_sourcefolder_invalid1(self):
-        with self.assertRaises(ValueError):
-            FilePackager.package(None, './', 'testing')
-
-    def test_dest_folder_invalid1(self):
-        with self.assertRaises(ValueError):
-            FilePackager.package('./testfolder', '', 'testing')
-
-    def test_dest_folder_invalid2(self):
-        with self.assertRaises(ValueError):
-            FilePackager.package('./testfolder', None, 'testing')
-
-    def test_nofilename(self):
-        with self.assertRaises(ValueError):
-            FilePackager.package('./testfolder', './', '')
-
-    def test_packaging_removing(self):
-        FilePackager.package('./testfolder', './', 'testing')
-        FilePackager.deleteFile('./testing.zip')
-        self.assertEqual(os.path.isfile('./testing.zip'), False)
+    def test_package_and_delete_file(self):
+        src = os.path.join(str(Path(__file__).parent), "projectforpackagingtests")
+        dst = os.path.join(src, os.pardir)
+        FilePackager.package(src, dst, "packager_test_zip")
+        zip_file = os.path.join(dst, "packager_test_zip.zip")
+        self.assertTrue(os.path.isfile(zip_file))
+        FilePackager.remove_file(zip_file)
+        self.assertFalse(os.path.isfile(zip_file))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

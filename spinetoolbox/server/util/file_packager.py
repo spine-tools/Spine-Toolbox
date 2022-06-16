@@ -21,43 +21,33 @@ import os
 class FilePackager:
 
     @staticmethod
-    def package(src_folder, dst_folder, zip_file_name):
-        """Converts a folder into a ZIP-file
+    def package(src_folder, dst_folder, fname):
+        """Converts a folder into a ZIP-file.
+
+        NOTE: Do not use the src_folder as the dst_folder. If the zip-file is
+        created to the same directory as root_dir, there will be a  corrupted
+        project_package.zip file INSIDE the actual project_package.zip file, which
+        makes unzipping the file fail.
 
         Args:
-            src_folder (string): Folder to be included to the ZIP-file
-            dst_folder (string): Destination folder of the ZIP-file to be created
-            zip_file_name (string): Name of the ZIP-file without extension (it's added by shutil.make_archive())
+            src_folder (str): Folder to be included to the ZIP-file
+            dst_folder (str): Destination folder for the ZIP-file
+            fname (str): Name of the ZIP-file without extension (it's added by shutil.make_archive())
         """
-        if not dst_folder or not zip_file_name or not src_folder:
-            raise ValueError("source folder, destination folder or file name were invalid")
-        # check if the source folder exists
-        if not os.path.isdir(src_folder):
-            raise ValueError(f"provided src_folder {src_folder} doesn't exist")
-        # Use parent dir of project directory as destination directory
-        # If zip-file is created to the same directory as root_dir,
-        # there's a corrupted project_package.zip inside the actual project_package.zip file, which
-        # makes unzipping the file fail.
-        # TODO: Find a better dst dir and handle what happens if file already exists. Or use a temp dir
-        dst_folder = os.path.join(dst_folder, os.pardir)
-        zip_path = os.path.join(dst_folder, zip_file_name)
-        shutil.make_archive(zip_path, "zip", src_folder)
-        if os.path.isfile(zip_path + ".zip"):  # Extension is added by make_archive
-            print(f"FilePackager.package() ZIP-file created: {zip_path + '.zip'}")
-        else:
-            print(f"FilePackager.package() Error in creating ZIP-file. src_folder:{src_folder}, dest_file:{zip_path}")
+        zip_path = os.path.join(dst_folder, fname)
+        try:
+            shutil.make_archive(zip_path, "zip", src_folder)
+        except OSError:
+            raise
 
     @staticmethod
-    def deleteFile(file):
-        """Deletes the file at the provided location (includes the folder).
+    def remove_file(file_path):
+        """Deletes the given file.
 
         Args:
-            file: File to be deleted. 
+            file_path (str): Absolute path to file to be deleted.
         """
-        # check input
-        if not file:
-            raise ValueError('invalid input to FilePackager.deleteFile()')
-        if not os.path.exists(file):
-            raise ValueError("provided file %s doesn't exist" % file)
-        os.remove(file)
-        print("FilePackager.deleteFile(): Removed file: %s" % file)
+        try:
+            os.remove(file_path)
+        except OSError:
+            raise
