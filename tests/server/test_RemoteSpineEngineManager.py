@@ -24,79 +24,78 @@ from spine_engine.spine_engine import ItemExecutionFinishState
 
 class TestRemoteSpineEngineManager(unittest.TestCase):
 
-    def test_remote_engine_manager_when_execution_succeeds(self):
-        """ZMQClient is mocked to test the logic of RemoteSpineEngine."""
-        remote_engine_mngr = RemoteSpineEngineManager()
-        appsettings = dict()
-        appsettings["engineSettings/remoteHost"] = "localhost"
-        appsettings["engineSettings/remotePort"] = "49152"
-        appsettings["engineSettings/remoteSecurityModel"] = ""
-        engine_data = {
-            "settings": appsettings,
-            "project_dir": "",
-        }
+    def test_remote_engine_manager_when_dag_execution_succeeds(self):
+        # Mock return values for ZMQClient methods
         attrs = {"get_connection_state.return_value": ZMQClientConnectionState.CONNECTED,
                  "send.return_value": [("dag_exec_finished", "COMPLETED")]}
-        # NOTE: This patch does not work without spec=True
-        with mock.patch("spinetoolbox.spine_engine_manager.ZMQClient", **attrs, spec=True) as mock_client:
-            remote_engine_mngr.run_engine(engine_data)
-            remote_engine_mngr.engine_event_getter_thread.join()  # Wait until events have been handled
-            remote_engine_mngr.close()
-            mock_client.assert_called()
-            self.assertFalse(remote_engine_mngr._runner.is_alive())
-            self.assertFalse(remote_engine_mngr.engine_event_getter_thread.is_alive())
+        self._run_remote_engine_manager(attrs, ("dag_exec_finished", "COMPLETED"))
 
-    def test_remote_engine_manager_when_execution_fails(self):
-        """ZMQClient is mocked to test the logic of RemoteSpineEngine."""
-        remote_engine_mngr = RemoteSpineEngineManager()
-        appsettings = dict()
-        appsettings["engineSettings/remoteHost"] = "localhost"
-        appsettings["engineSettings/remotePort"] = "49152"
-        appsettings["engineSettings/remoteSecurityModel"] = ""
-        engine_data = {
-            "settings": appsettings,
-            "project_dir": "",
-        }
+    def test_remote_engine_manager_when_dag_execution_fails(self):
         attrs = {"get_connection_state.return_value": ZMQClientConnectionState.CONNECTED,
                  "send.return_value": [("dag_exec_finished", "FAILED")]}
+        self._run_remote_engine_manager(attrs, ("dag_exec_finished", "FAILED"))
+
+    def test_remote_engine_manager_when_server_init_fails(self):
+        attrs = {"get_connection_state.return_value": ZMQClientConnectionState.CONNECTED,
+                 "send.return_value": "Server init failed"}
+        self._run_remote_engine_manager(attrs, ("remote_engine_failed", "Server init failed"))
+
+    def _run_remote_engine_manager(self, attribs, expected_thing_at_output_q):
+        remote_engine_mngr = RemoteSpineEngineManager()
+        engine_data = {
+            "settings": dict(),
+            "project_dir": "",
+        }
         # NOTE: This patch does not work without spec=True
-        with mock.patch("spinetoolbox.spine_engine_manager.ZMQClient", **attrs, spec=True) as mock_client:
+        with mock.patch("spinetoolbox.spine_engine_manager.ZMQClient", **attribs, spec=True) as mock_client:
             remote_engine_mngr.run_engine(engine_data)
-            remote_engine_mngr.engine_event_getter_thread.join()  # Wait until events have been handled
+            q_item = remote_engine_mngr.engine_event_getter_thread.q.get()
+            self.assertEqual(expected_thing_at_output_q, q_item)  # Check that item to SpineEngineWorker is as expected
             remote_engine_mngr.close()
             mock_client.assert_called()
             self.assertFalse(remote_engine_mngr._runner.is_alive())
             self.assertFalse(remote_engine_mngr.engine_event_getter_thread.is_alive())
 
-    def test_remote_engine_event_getter(self):
-        # Parse dag_exec_finished event
+    def test_remote_engine_event_getter_parse_server_init_failed(self):
+        ev_getter = RemoteEngineEventGetter()
+        ev_getter.server_output_msg_q.put("Server failed at initialization")
+        p = ev_getter.q.get()
+        self.assertEqual("remote_engine_failed", p[0])
+        self.assertEqual(p[1], "Server failed at initialization")
+
+    def test_remote_engine_event_getter_parse_dag_exec_finished(self):
         ev_getter = RemoteEngineEventGetter()
         ev_getter.server_output_msg_q.put([("dag_exec_finished", "COMPLETED")])
         p = ev_getter.q.get()
         self.assertEqual("dag_exec_finished", p[0])
         self.assertEqual(p[1], "COMPLETED")
-        # Parse exec_started event
+
+    def test_remote_engine_event_getter_parse_exec_started(self):
         ev_getter = RemoteEngineEventGetter()
         ev_getter.server_output_msg_q.put([('exec_started', "{'item_name': 'Data Connection 1', 'direction': 'FORWARD'}")])
         p = ev_getter.q.get()
         self.assertEqual("exec_started", p[0])
         self.assertTrue(isinstance(p[1], dict))
         self.assertTrue("item_name" and "direction" in p[1].keys())
-        # Parse event_msg event
+
+    def test_remote_engine_event_getter_parse_event_msg1(self):
         ev_getter = RemoteEngineEventGetter()
         ev_getter.server_output_msg_q.put([('event_msg', "{'item_name': 'Data Connection 1', 'filter_id': '', 'msg_type': 'msg', 'msg_text': '***Executing Data Connection <b>Data Connection 1</b>***'}")])
         p = ev_getter.q.get()
         self.assertEqual("event_msg", p[0])
         self.assertTrue(isinstance(p[1], dict))
         self.assertTrue("item_name" and "filter_id" and "msg_type" and "msg_text" in p[1].keys())
-        # Parse event_msg where special chars are escaped. They are escaped when msg_text is HTML
+
+    def test_remote_engine_event_getter_parse_event_msg2(self):
+        # Parses event_msg where special chars are escaped. They are escaped when msg_text is HTML
         ev_getter = RemoteEngineEventGetter()
         ev_getter.server_output_msg_q.put([('event_msg', '{\'item_name\': \'helloworld\', \'filter_id\': \'\', \'msg_type\': \'msg_warning\', \'msg_text\': "\\tNo output files defined for this Tool specification. <a style=\'color:#99CCFF;\' title=\'When you add output files to the Tool specification,\\n they will be archived into results directory. Also, output files are passed to\\n subsequent project items.\' href=\'#\'>Tip</a>"}')])
         p = ev_getter.q.get()
         self.assertEqual("event_msg", p[0])
         self.assertTrue(isinstance(p[1], dict))
         self.assertTrue("item_name" and "filter_id" and "msg_type" and "msg_text" in p[1].keys())
-        # Parse exec_finished event
+
+    def test_remote_engine_event_getter_parse_exec_finished(self):
         ev_getter = RemoteEngineEventGetter()
         ev_getter.server_output_msg_q.put([('exec_finished', "{'item_name': 'Data Connection 1', 'direction': 'FORWARD', 'state': 'RUNNING', 'item_state': <ItemExecutionFinishState.SUCCESS: 1>}")])
         p = ev_getter.q.get()
@@ -104,7 +103,8 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
         self.assertTrue(isinstance(p[1], dict))
         self.assertTrue("item_name" and "direction" and "state" and "item_state" in p[1].keys())
         self.assertTrue(isinstance(p[1]["item_state"], ItemExecutionFinishState))
-        # Parse persistent_execution_msg event
+
+    def test_remote_engine_event_getter_parse_persistent_execution_msg(self):
         ev_getter = RemoteEngineEventGetter()
         ev_getter.server_output_msg_q.put([('persistent_execution_msg', "{'item_name': 'helloworld', 'filter_id': '', 'type': 'persistent_started', 'key': ('C:\\\\Python38\\\\python.exe', 'helloworld'), 'language': 'python'}")])
         p = ev_getter.q.get()

@@ -90,35 +90,33 @@ class ZMQClient:
         """
         return self._connection_state
 
-    def send(self, text, file_path, filename):
+    def send(self, engine_data, file_path, filename):
         """Sends the project and the execution request to the server, waits for the response and acts accordingly.
 
         Args:
-            text (str): Input for SpineEngine as JSON text. Includes most of project.json, settings, etc.
+            engine_data (str): Input for SpineEngine as JSON str. Includes most of project.json, settings, etc.
             file_path (string): Path to project zip-file
             filename (string): Name of the binary file to be transmitted
 
         Returns:
             list or str: List of tuples containing events+data, or an error message string if something went wrong
-            in initializing the execution.
+            in initializing the execution at server.
         """
         zip_path = os.path.join(file_path, os.pardir, filename)  # Note: zip-file is in parent dir of file_path now
         if not os.path.exists(zip_path):
             raise ValueError(f"Zipped project file {filename} not found in {file_path}")
-        if not text:
-            raise ValueError("Invalid input text")
         print(f"Zip-file size:{os.path.getsize(zip_path)}")
         with open(zip_path, "rb") as f:
             file_data = f.read()  # Read file into bytes string
         # Create request content
         random_id = random.randrange(10000000)  # Request ID
         list_files = [filename]
-        msg = ServerMessage("execute", str(random_id), text, list_files)
+        msg = ServerMessage("execute", str(random_id), engine_data, list_files)
         print(f"ZMQClient(): msg to be sent: {msg.toJSON()} + {len(file_data)} of data in bytes (zip-file)")
         self._socket.send_multipart([msg.to_bytes(), file_data])  # Send request
         response = self._socket.recv()  # Blocks until a response is received
         response_str = response.decode("utf-8")  # Decode received bytes to get (JSON) string
-        response_msg = ServerMessageParser.parse(response_str)  # Parse (JSON) string into a ServerMessage
+        response_msg = ServerMessageParser.parse(response_str)  # Parse received JSON string into a ServerMessage
         data = response_msg.getData()  # Get events+data in a dictionary
         # If something went wrong, data is an error string instead of a dictionary
         if type(data) == str:

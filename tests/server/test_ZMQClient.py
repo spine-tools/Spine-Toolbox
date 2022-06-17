@@ -51,7 +51,7 @@ class TestZMQClient(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_zmq_client_execution(self):
-        """Executes a DC->Tool DAG on a server remote server."""
+        """Tests ZMQClient part when executing a DC->Tool DAG on a remote server."""
         engine_data = self.make_engine_data_for_test_zipfile_project()
         msg_data_json = json.dumps(engine_data)
         zip_fname = "test_zipfile.zip"
@@ -96,123 +96,6 @@ class TestZMQClient(unittest.TestCase):
             "project_dir": "./helloworld",
         }
         return engine_data
-
-    # @staticmethod
-    # def test_connection_closing_loop(remoteIP, port):
-    #     client = ZMQClient("tcp", remoteIP, int(port), ClientSecurityModel.NONE, "")
-    #
-    #     dict_data = test_ZMQClient._dict_data(
-    #         items={
-    #             'helloworld': {
-    #                 'type': 'Tool',
-    #                 'description': '',
-    #                 'x': -91.6640625,
-    #                 'y': -5.609375,
-    #                 'specification': 'helloworld2',
-    #                 'execute_in_work': False,
-    #                 'cmd_line_args': [],
-    #             },
-    #             'Data Connection 1': {
-    #                 'type': 'Data Connection',
-    #                 'description': '',
-    #                 'x': 62.7109375,
-    #                 'y': 8.609375,
-    #                 'references': [{'type': 'path', 'relative': True, 'path': 'input2.txt'}],
-    #             },
-    #         },
-    #         connections=[{'from': ['Data Connection 1', 'left'], 'to': ['helloworld', 'right']}],
-    #         node_successors={'Data Connection 1': ['helloworld'], 'helloworld': []},
-    #         execution_permits={'Data Connection 1': True, 'helloworld': True},
-    #         project_dir='./helloworld',
-    #         specifications={
-    #             'Tool': [
-    #                 {
-    #                     'name': 'helloworld2',
-    #                     'tooltype': 'python',
-    #                     'includes': ['helloworld.py'],
-    #                     'description': '',
-    #                     'inputfiles': ['input2.txt'],
-    #                     'inputfiles_opt': [],
-    #                     'outputfiles': [],
-    #                     'cmdline_args': [],
-    #                     'execute_in_work': True,
-    #                     'includes_main_path': '../../..',
-    #                     'definition_file_path': './helloworld/.spinetoolbox/specifications/Tool/helloworld2.json',
-    #                 }
-    #             ]
-    #         },
-    #         settings={
-    #             'appSettings/previousProject': './helloworld',
-    #             'appSettings/recentProjectStorages': './',
-    #             'appSettings/recentProjects': 'helloworld<>./helloworld',
-    #             'appSettings/showExitPrompt': '2',
-    #             'appSettings/toolbarIconOrdering': 'Importer;;View;;Tool;;Data Connection;;Data Transformer;;Gimlet;;Exporter;;Data Store',
-    #             'appSettings/workDir': './Spine-Toolbox/work',
-    #         },
-    #         jumps=[],
-    #         items_module_name='spine_items',
-    #     )
-    #     # print("test_connection_closing_loop(): sending request with data:")
-    #     # print(dict_data)
-    #     jsonTxt = json.dumps(dict_data)
-    #     jsonTxt = json.dumps(jsonTxt)
-    #     i = 0
-    #     while i < 10:
-    #         pathStr = str(os.path.realpath(Path(__file__).parent))
-    #         print("test_connection_closing_loop(): sending file at path: %s" % pathStr)
-    #         eventsData = client.send(jsonTxt, pathStr, "test_zipfile.zip")
-    #         print("test_connection_closing_loop(): event data item count received: %d" % len(eventsData))
-    #         # print(eventsData)
-    #         if eventsData[len(eventsData) - 1][1] != "COMPLETED":
-    #             return -1
-    #         print("test msg %d sent/received, data size received: %d" % (i, len(eventsData)))
-    #         i += 1
-    #     client.close()
-    #     return 0
-
-    # @staticmethod
-    # def test_invalid_file(remoteIP, port):
-    #     client = ZMQClient("tcp", remoteIP, int(port), ClientSecurityModel.NONE, "")
-    #     try:
-    #         eventsData = client.send("dsds", "./dd", "test_zi.zip")
-    #         return -1
-    #     except Exception as e:
-    #         print("print(Sending failed as expected due to invalid_file: %s" % e)
-    #         return 0
-    #
-    # @staticmethod
-    # def test_invalid_filename(remoteIP, port):
-    #     client = ZMQClient("tcp", remoteIP, int(port), ClientSecurityModel.NONE, "")
-    #     try:
-    #         eventsData = client.send("dsds", "./dd", "")
-    #         return -1
-    #     except Exception as e:
-    #         print("print(Sending failed as expected due to invalid_filename: %s" % e)
-    #         return 0
-    #
-    # @staticmethod
-    # def test_invalid_text(remoteIP, port):
-    #     client = ZMQClient("tcp", remoteIP, int(port), ClientSecurityModel.NONE, "")
-    #     try:
-    #         pathStr = str(os.path.realpath(Path(__file__).parent))
-    #         eventsData = client.send(None, pathStr, "test_zipfile.zip")
-    #         return -1
-    #     except Exception as e:
-    #         print("print(Sending failed as expected due to invalid_text: %s" % e)
-    #         return 0
-
-    # @staticmethod
-    # def test_invalid_remoteserverlocation():
-    # read JSON file content, and parse it
-    # f=open('msg_data1.txt')
-    # msgData = f.read()
-    # f.close()
-    # msgDataJson=json.dumps(msgData)
-
-    # try:
-    #    eventsData=client.send(msgDataJson,"./","test_zipfile.zip")
-    # except Exception as e:
-    #    print("print(Sending failed as expected due to: %s"%e)
 
 
 if __name__ == "__main__":

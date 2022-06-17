@@ -230,10 +230,8 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         super().__init__()
         self._runner = threading.Thread(name="RemoteSpineEngineManagerRunnerThread", target=self._run)
         self._requestPending = False
-        self._inputData = None
+        self._engine_data = None
         self._state = RemoteSpineEngineManagerState.IDLE
-        self._outputData = None
-        self._outputDataIteratorIndex = 0
         self.zmq_client = None
         self.engine_event_getter_thread = None
 
@@ -264,7 +262,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 raise RemoteEngineFailed(f"Initializing ZMQ client failed: {e}")
             if self.zmq_client.get_connection_state() == ZMQClientConnectionState.CONNECTED:
                 self._requestPending = True
-                self._inputData = engine_data
+                self._engine_data = engine_data
                 self._runner.start()
             else:
                 self._state = RemoteSpineEngineManagerState.CLOSED
@@ -295,15 +293,15 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             if self._requestPending and self._state == RemoteSpineEngineManagerState.IDLE:
                 start_time = round(time.time() * 1000.0)
                 self._state = RemoteSpineEngineManagerState.RUNNING
-                json_txt = json.dumps(self._inputData)  # Transform dictionary to JSON string
+                engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
                 # Send a request to remote server, and wait for a response
                 data_events = self.zmq_client.send(
-                    json_txt, self._inputData['project_dir'], PROJECT_ZIP_FILENAME + ".zip"
+                    engine_data_json, self._engine_data['project_dir'], PROJECT_ZIP_FILENAME + ".zip"
                 )
                 self.engine_event_getter_thread.server_output_msg_q.put(data_events)
+                self.engine_event_getter_thread.server_output_msg_q.join()  # Blocks until task_done()
                 stop_time = round(time.time() * 1000.0)
                 print("RemoteSpineEngineManager.run() run time after execution %d ms" % (stop_time - start_time))
-                self._state = RemoteSpineEngineManagerState.REPLY_RECEIVED  # Change state to REPLY_RECEIVED
                 self._requestPending = False
             else:
                 time.sleep(0.01)
@@ -375,51 +373,57 @@ class RemoteEngineEventGetter(threading.Thread):
 
     def run(self):
         """Former get_engine_event(). Gets next event from engine currently running.
-        Parses the event strings coming from server into dictionaries and passes them
-        onto another queue, which is then read by SpineEngineWorker.
+        Parses the output event strings from server into dictionaries and passes them
+        to a queue, which is processed by SpineEngineWorker.
         """
         output_data = self.server_output_msg_q.get()
         if isinstance(output_data, str):
             # Error happened at initialization before execution started on server
             self.q.put(("remote_engine_failed", output_data))
-            return
-        for event in output_data:  # output_data is a list of tuples (See tests for examples)
-            try:
-                # Handle execution state transformation, see returned data from SpineEngine._process_event()
-                dict_str = self._add_quotes_to_state_str(event[1])
-                data_dict = ast.literal_eval(dict_str)  # ast.literal_eval fails if input isn't a valid Python datatype
-                if "item_state" in data_dict.keys():
-                    state = self.transform_execution_state(data_dict["item_state"])
-                    data_dict["item_state"] = state
-                self.q.put((event[0], data_dict))
-            except ValueError:
-                # ast.literal_eval throws this if trying to turn a regular string like "COMPLETED" or "FAILED" to
-                # a dict. See returned data from SpineEngine._process_event()
-                self.q.put((event[0], event[1]))
+        else:
+            for event in output_data:  # output_data is a list of tuples (See tests for examples)
+                try:
+                    # Handle execution state transformation, see returned data from SpineEngine._process_event()
+                    dict_str = self._add_quotes_to_state_str(event[1])
+                    data_dict = ast.literal_eval(dict_str)  # ast.literal_eval fails if input isn't a valid Python datatype
+                    if "item_state" in data_dict.keys():
+                        data_dict["item_state"] = self.transform_execution_state(data_dict["item_state"])
+                    self.q.put((event[0], data_dict))
+                except ValueError:
+                    # ast.literal_eval throws this if trying to turn a regular string like "COMPLETED" or "FAILED" to
+                    # a dict. See returned data from SpineEngine._process_event()
+                    self.q.put((event[0], event[1]))
+        self.server_output_msg_q.task_done()
 
     @staticmethod
-    def transform_execution_state(state_str):
-        """Transforms string state into enum."""
-        if state_str == '<ItemExecutionFinishState.SUCCESS: 1>':
-            state = ItemExecutionFinishState.SUCCESS
-        elif state_str == '<ItemExecutionFinishState.FAILURE: 2>':
-            state = ItemExecutionFinishState.FAILURE
-        elif state_str == '<ItemExecutionFinishState.SKIPPED: 3>':
-            state = ItemExecutionFinishState.SKIPPED
-        elif state_str == '<ItemExecutionFinishState.EXCLUDED: 4>':
-            state = ItemExecutionFinishState.EXCLUDED
-        elif state_str == '<ItemExecutionFinishState.STOPPED: 5>':
-            state = ItemExecutionFinishState.STOPPED
-        elif state_str == '<ItemExecutionFinishState.NEVER_FINISHED: 6>':
-            state = ItemExecutionFinishState.NEVER_FINISHED
-        else:
-            state = None
-        return state
+    def transform_execution_state(state):
+        """Transforms state string into an ItemExecutionFinishState enum.
+
+        Args:
+            state (str): State as string
+
+        Returns:
+            ItemExecutionFinishState: Enum if given str is valid, None otherwise.
+        """
+        states = dict()
+        states["<ItemExecutionFinishState.SUCCESS: 1>"] = ItemExecutionFinishState.SUCCESS
+        states["<ItemExecutionFinishState.FAILURE: 1>"] = ItemExecutionFinishState.FAILURE
+        states["<ItemExecutionFinishState.SKIPPED: 1>"] = ItemExecutionFinishState.SKIPPED
+        states["<ItemExecutionFinishState.EXCLUDED: 1>"] = ItemExecutionFinishState.EXCLUDED
+        states["<ItemExecutionFinishState.STOPPED: 1>"] = ItemExecutionFinishState.STOPPED
+        states["<ItemExecutionFinishState.NEVER_FINISHED: 1>"] = ItemExecutionFinishState.NEVER_FINISHED
+        return states.get(state, None)
 
     @staticmethod
     def _add_quotes_to_state_str(s):
         """Makes string ready for ast.literal_eval() by adding quotes around item_state value.
-        If there's no match for partition, the original s is returned."""
+        The point of this method is to add quotes (') around item_state value. E.g.
+        'item_state': <ItemExecutionFinishState.SUCCESS: 1> becomes
+        'item_state': '<ItemExecutionFinishState.SUCCESS: 1>' because ast.literal_eval
+        fails with a SyntaxError if the string contains invalid Python data types.
+        Make sure that quotes (') are not added to other < > enclosed substrings, such as
+        <b> or </b>. If there's no match for what we are looking for, this method should
+         return the original string."""
         state = s.partition("'item_state': <")[2].partition(">")[0]
         new_s = s.replace("<" + state + ">", "\'<" + state + ">\'")
         return new_s
