@@ -20,6 +20,7 @@ from enum import Enum, unique
 import itertools
 import os
 import glob
+from html.parser import HTMLParser
 import json
 import logging
 import datetime
@@ -1517,3 +1518,23 @@ def separate_metadata_and_item_metadata(db_map_data):
             metadata_db_map_data[db_map] = metadata_items
         item_metadata_db_map_data[db_map] = entity_metadata_items
     return item_metadata_db_map_data, metadata_db_map_data
+
+
+class HTMLTagFilter(HTMLParser):
+    """HTML tag filter."""
+
+    def __init__(self):
+        super().__init__()
+        self._text = ""
+
+    def drain(self):
+        text = self._text
+        self._text = ""
+        return text
+
+    def handle_data(self, data):
+        self._text += data
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "br":
+            self._text += "\n"

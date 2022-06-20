@@ -1137,12 +1137,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
                 self.ui.dockWidget_parameter_value_list,
             ]
         )
-        self.tabify_and_raise(
-            [
-                self.ui.metadata_dock_widget,
-                self.ui.item_metadata_dock_widget,
-            ]
-        )
+        self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         # center
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
@@ -1208,12 +1203,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
                 self.ui.dockWidget_parameter_value_list,
             ]
         )
-        self.tabify_and_raise(
-            [
-                self.ui.metadata_dock_widget,
-                self.ui.item_metadata_dock_widget,
-            ]
-        )
+        self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         # left
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)

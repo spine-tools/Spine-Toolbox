@@ -18,7 +18,6 @@ Contains facilities to open and execute projects without GUI.
 from copy import deepcopy
 from enum import IntEnum, unique
 import json
-import logging
 import pathlib
 import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
@@ -38,6 +37,7 @@ from .helpers import (
     load_project_dict,
     load_local_project_data,
     merge_dicts,
+    HTMLTagFilter,
 )
 from .spine_engine_manager import make_engine_manager
 
@@ -72,36 +72,37 @@ class HeadlessLogger(QObject):
         self.msg_proc_error.connect(self._log_error)
         self.information_box.connect(self._show_information_box)
         self.error_box.connect(self._show_error_box)
+        self._tag_filter = HTMLTagFilter()
 
-    # pylint: disable=no-self-use
     @Slot(str)
     def _log_message(self, message):
-        """Writes an information message to Python's logging system."""
-        logging.info(message)
+        """Prints an information message."""
+        self._print(message, sys.stdout)
 
-    # pylint: disable=no-self-use
     @Slot(str)
     def _log_warning(self, message):
-        """Writes a warning message to Python's logging system."""
-        logging.warning(message)
+        """Prints a warning message."""
+        self._print(message, sys.stdout)
 
-    # pylint: disable=no-self-use
     @Slot(str)
     def _log_error(self, message):
-        """Writes an error message to Python's logging system."""
-        logging.error(message)
+        """Prints an error message."""
+        self._print(message, sys.stderr)
 
-    # pylint: disable=no-self-use
     @Slot(str, str)
     def _show_information_box(self, title, message):
-        """Writes an information message with a title to Python's logging system."""
-        logging.info(title + ": " + message)
+        """Prints an information message with a title."""
+        self._print(title + ": " + message, sys.stdout)
 
-    # pylint: disable=no-self-use
     @Slot(str, str)
     def _show_error_box(self, title, message):
-        """Writes an error message with a title to Python's logging system."""
-        logging.error(title + ": " + message)
+        """Prints an error message with a title."""
+        self._print(title + ": " + message, sys.stderr)
+
+    def _print(self, message, out_stream):
+        """Filters HTML tags from message before printing it to given file."""
+        self._tag_filter.feed(message)
+        print(self._tag_filter.drain(), file=out_stream)
 
 
 class ModifiableProject:
@@ -297,7 +298,7 @@ class ActionsWithProject(QObject):
             return Status.ERROR
         with open(script_path, encoding="utf-8") as script_file:
             script_code = script_file.read()
-        self._logger.msg.emit(f"Applying {script_path} to project.")
+        self._logger.msg.emit(f"Applying {script_path.name} to project.")
         project = ModifiableProject(self._project_dir, self._item_dicts, self._connection_dicts)
         exec(script_code, {"project": project})
         self._item_dicts = project.items_to_dict()
