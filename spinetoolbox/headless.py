@@ -371,6 +371,7 @@ class ActionsWithProject(QObject):
             "event_msg": self._handle_event_msg,
             "process_msg": self._handle_process_msg,
             "standard_execution_msg": self._handle_standard_execution_msg,
+            "persistent_execution_msg": self._handle_persistent_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
         }.get(event_type)
         if handler is None:
@@ -393,7 +394,7 @@ class ActionsWithProject(QObject):
         if data["direction"] == "BACKWARD":
             # Currently there are no interesting messages when executing backwards.
             return
-        self._node_messages[data["item_name"]] = list()
+        self._node_messages[data["item_name"]] = dict()
 
     def _handle_node_execution_finished(self, data):
         """Prints messages for finished nodes.
@@ -405,8 +406,11 @@ class ActionsWithProject(QObject):
         messages = self._node_messages.get(item_name)
         if messages is None:
             return
-        for message in messages:
-            self._logger.msg.emit(message)
+        for filter_id, message in messages.items():
+            if filter_id:
+                self._logger.msg.emit(f"--- Output from filter id '{filter_id}' START")
+            for line in message:
+                self._logger.msg.emit(line)
         del self._node_messages[item_name]
 
     def _handle_event_msg(self, data):
@@ -418,7 +422,7 @@ class ActionsWithProject(QObject):
         messages = self._node_messages.get(data["item_name"])
         if messages is None:
             return
-        messages.append(data["msg_text"])
+        messages.setdefault(data["filter_id"], []).append(data["msg_text"])
 
     def _handle_process_msg(self, data):
         """Stores process messages for later printing.
@@ -429,7 +433,7 @@ class ActionsWithProject(QObject):
         messages = self._node_messages.get(data["item_name"])
         if messages is None:
             return
-        messages.append(data["msg_text"])
+        messages.setdefault(data["filter_id"], []).append(data["msg_text"])
 
     def _handle_standard_execution_msg(self, data):
         """Handles standard execution messages.
@@ -440,13 +444,25 @@ class ActionsWithProject(QObject):
             data (dict): execution message data
         """
 
+    def _handle_persistent_execution_msg(self, data):
+        """Handles persistent execution messages.
+
+        Args:
+            data (dict): execution message data
+        """
+        if data["type"] == "stdout" or data["type"] == "stderr":
+            messages = self._node_messages.get(data["item_name"])
+            if messages is None:
+                return
+            messages.setdefault(data["filter_id"], []).append(data["data"])
+
     def _handle_kernel_execution_msg(self, data):
         """Handles kernel messages.
 
         Currently, these messages are ignored.
 
         Args:
-            data (dict): execution message data
+            data (dict): message data
         """
 
 
