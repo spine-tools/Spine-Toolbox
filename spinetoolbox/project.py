@@ -583,6 +583,11 @@ class SpineToolboxProject(MetaObject):
                 connection.source = new_name
             if connection.destination == previous_name:
                 connection.destination = new_name
+        for jump in self._jumps:
+            if jump.source == previous_name:
+                jump.source = new_name
+            if jump.destination == previous_name:
+                jump.destination = new_name
         new_resources_to_predecessors = item.resources_for_direct_predecessors()
         self.notify_resource_replacement_to_predecessors(item, resources_to_predecessors, new_resources_to_predecessors)
         new_resources_to_successors = item.resources_for_direct_successors()
