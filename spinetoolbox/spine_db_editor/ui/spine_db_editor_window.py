@@ -37,6 +37,8 @@ from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipP
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipParameterValueTableView
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import AlternativeScenarioTreeView
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ToolFeatureTreeView
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import MetadataTableView
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import ItemMetadataTableView
 
 from spinetoolbox import resources_icons_rc
 
@@ -478,6 +480,41 @@ class Ui_MainWindow(object):
 
         self.dockWidget_tool_feature_tree.setWidget(self.dockWidgetContents_13)
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_tool_feature_tree)
+        self.metadata_dock_widget = QDockWidget(MainWindow)
+        self.metadata_dock_widget.setObjectName(u"metadata_dock_widget")
+        self.metadata_dock_contents = QWidget()
+        self.metadata_dock_contents.setObjectName(u"metadata_dock_contents")
+        self.verticalLayout_11 = QVBoxLayout(self.metadata_dock_contents)
+        self.verticalLayout_11.setSpacing(0)
+        self.verticalLayout_11.setObjectName(u"verticalLayout_11")
+        self.verticalLayout_11.setContentsMargins(0, 0, 0, 0)
+        self.metadata_table_view = MetadataTableView(self.metadata_dock_contents)
+        self.metadata_table_view.setObjectName(u"metadata_table_view")
+        self.metadata_table_view.setSortingEnabled(True)
+        self.metadata_table_view.verticalHeader().setVisible(False)
+
+        self.verticalLayout_11.addWidget(self.metadata_table_view)
+
+        self.metadata_dock_widget.setWidget(self.metadata_dock_contents)
+        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.metadata_dock_widget)
+        self.item_metadata_dock_widget = QDockWidget(MainWindow)
+        self.item_metadata_dock_widget.setObjectName(u"item_metadata_dock_widget")
+        self.item_metadata_dock_contents = QWidget()
+        self.item_metadata_dock_contents.setObjectName(u"item_metadata_dock_contents")
+        self.verticalLayout_9 = QVBoxLayout(self.item_metadata_dock_contents)
+        self.verticalLayout_9.setSpacing(0)
+        self.verticalLayout_9.setObjectName(u"verticalLayout_9")
+        self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
+        self.item_metadata_table_view = ItemMetadataTableView(self.item_metadata_dock_contents)
+        self.item_metadata_table_view.setObjectName(u"item_metadata_table_view")
+        self.item_metadata_table_view.setEnabled(False)
+        self.item_metadata_table_view.setSortingEnabled(True)
+        self.item_metadata_table_view.verticalHeader().setVisible(False)
+
+        self.verticalLayout_9.addWidget(self.item_metadata_table_view)
+
+        self.item_metadata_dock_widget.setWidget(self.item_metadata_dock_contents)
+        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.item_metadata_dock_widget)
 
         self.retranslateUi(MainWindow)
 
@@ -591,5 +628,7 @@ class Ui_MainWindow(object):
         self.dockWidget_frozen_table.setWindowTitle(QCoreApplication.translate("MainWindow", u"Frozen table", None))
         self.dockWidget_exports.setWindowTitle(QCoreApplication.translate("MainWindow", u"Exports", None))
         self.dockWidget_tool_feature_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Tool/Feature tree", None))
+        self.metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Metadata", None))
+        self.item_metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Item metadata", None))
     # retranslateUi
 

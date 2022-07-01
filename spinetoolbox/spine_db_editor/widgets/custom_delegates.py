@@ -17,8 +17,8 @@ Custom item delegates.
 """
 
 from numbers import Number
-from PySide2.QtCore import QModelIndex, QPoint, Qt, Signal
-from PySide2.QtWidgets import QStyledItemDelegate
+from PySide2.QtCore import QModelIndex, QPoint, Qt, Signal, QSortFilterProxyModel, QRegExp
+from PySide2.QtWidgets import QStyledItemDelegate, QComboBox
 from PySide2.QtGui import QFontMetrics
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
@@ -26,6 +26,7 @@ from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckLi
 from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ...helpers import object_icon
+from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 
 # FIXME: only_visible=False ???
 
@@ -268,7 +269,7 @@ class DatabaseNameDelegate(ParameterDelegate):
 
 
 class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
-    """A delegate for the either the value or the default value."""
+    """A delegate for either the value or the default value."""
 
     parameter_value_editor_requested = Signal(QModelIndex)
 
@@ -822,3 +823,35 @@ class RemoveEntitiesDelegate(ManageItemsDelegate):
             editor = self._create_database_editor(parent, option, index)
             self.connect_editor_signals(editor, index)
             return editor
+
+
+class ItemMetadataDelegate(QStyledItemDelegate):
+    """A delegate for name and value columns in item metadata editor."""
+
+    def __init__(self, item_metadata_model, metadata_model, column, parent):
+        """
+        Args:
+            item_metadata_model (ItemMetadataModel): item metadata model
+            metadata_model (MetadataTableModel): metadata model
+            column (int): item metadata table column column
+            parent (QObject, optional): parent object
+        """
+        super().__init__(parent)
+        self._item_metadata_model = item_metadata_model
+        self._metadata_model = metadata_model
+        self._column = column
+
+    def createEditor(self, parent, option, index):
+        editor = QComboBox(parent)
+        editor.setEditable(True)
+        database_codename = self._item_metadata_model.index(index.row(), MetadataColumn.DB_MAP).data()
+        items = set()
+        if database_codename:
+            for i in range(self._metadata_model.rowCount() - 1):
+                if self._metadata_model.index(i, MetadataColumn.DB_MAP).data() == database_codename:
+                    items.add(self._metadata_model.index(i, self._column).data())
+        else:
+            for i in range(self._metadata_model.rowCount() - 1):
+                items.add(self._metadata_model.index(i, self._column).data())
+        editor.addItems(sorted(items))
+        return editor

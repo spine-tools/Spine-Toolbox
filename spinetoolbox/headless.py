@@ -15,9 +15,9 @@ Contains facilities to open and execute projects without GUI.
 :authors: A. Soininen (VTT)
 :date:   29.4.2020
 """
+from copy import deepcopy
 from enum import IntEnum, unique
 import json
-import logging
 import pathlib
 import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
@@ -37,6 +37,7 @@ from .helpers import (
     load_project_dict,
     load_local_project_data,
     merge_dicts,
+    HTMLTagFilter,
 )
 from .spine_engine_manager import make_engine_manager
 
@@ -71,36 +72,97 @@ class HeadlessLogger(QObject):
         self.msg_proc_error.connect(self._log_error)
         self.information_box.connect(self._show_information_box)
         self.error_box.connect(self._show_error_box)
+        self._tag_filter = HTMLTagFilter()
 
-    # pylint: disable=no-self-use
     @Slot(str)
     def _log_message(self, message):
-        """Writes an information message to Python's logging system."""
-        logging.info(message)
+        """Prints an information message."""
+        self._print(message, sys.stdout)
 
-    # pylint: disable=no-self-use
     @Slot(str)
     def _log_warning(self, message):
-        """Writes a warning message to Python's logging system."""
-        logging.warning(message)
+        """Prints a warning message."""
+        self._print(message, sys.stdout)
 
-    # pylint: disable=no-self-use
     @Slot(str)
     def _log_error(self, message):
-        """Writes an error message to Python's logging system."""
-        logging.error(message)
+        """Prints an error message."""
+        self._print(message, sys.stderr)
 
-    # pylint: disable=no-self-use
     @Slot(str, str)
     def _show_information_box(self, title, message):
-        """Writes an information message with a title to Python's logging system."""
-        logging.info(title + ": " + message)
+        """Prints an information message with a title."""
+        self._print(title + ": " + message, sys.stdout)
 
-    # pylint: disable=no-self-use
     @Slot(str, str)
     def _show_error_box(self, title, message):
-        """Writes an error message with a title to Python's logging system."""
-        logging.error(title + ": " + message)
+        """Prints an error message with a title."""
+        self._print(title + ": " + message, sys.stderr)
+
+    def _print(self, message, out_stream):
+        """Filters HTML tags from message before printing it to given file."""
+        self._tag_filter.feed(message)
+        print(self._tag_filter.drain(), file=out_stream)
+
+
+class ModifiableProject:
+    """A simple project that is available for modification script."""
+
+    def __init__(self, project_dir, items_dict, connection_dicts):
+        """
+        Args:
+            project_dir (Path): project directory
+            items_dict (dict): project item dictionaries
+            connection_dicts (list of dict): connection dictionaries
+        """
+        self._project_dir = project_dir
+        self._items = deepcopy(items_dict)
+        self._connections = [Connection.from_dict(d) for d in connection_dicts]
+
+    @property
+    def project_dir(self):
+        return self._project_dir
+
+    def find_connection(self, source_name, destination_name):
+        """Searches for a connection between given items.
+
+        Args:
+            source_name (str): source item's name
+            destination_name (str): destination item's name
+
+        Returns:
+            Connection: connection instance or None if there is no connection
+        """
+        return next(
+            (c for c in self._connections if c.source == source_name and c.destination == destination_name), None
+        )
+
+    def find_item(self, name):
+        """Searches for a project item.
+
+        Args:
+            name (str): item's name
+
+        Returns:
+            dict: item dict or None if no such item exists
+        """
+        return self._items.get(name)
+
+    def items_to_dict(self):
+        """Stores project items back to dictionaries.
+
+        Returns:
+            dict: item dictionaries
+        """
+        return self._items
+
+    def connections_to_dict(self):
+        """Stores connections back to dictionaries.
+
+        Returns:
+            list of dict: connection dictionaries
+        """
+        return [c.to_dict() for c in self._connections]
 
 
 class ActionsWithProject(QObject):
@@ -153,6 +215,11 @@ class ActionsWithProject(QObject):
             if status != Status.OK:
                 QCoreApplication.instance().exit(status)
                 return
+            if self._args.mod_script:
+                status = self._exec_mod_script()
+                if status != Status.OK:
+                    QCoreApplication.instance().exit(status)
+                    return
             if self._args.list_items:
                 dags = self._dags()
                 for dag_number, dag in enumerate(dags):
@@ -217,6 +284,25 @@ class ActionsWithProject(QObject):
         if version < LATEST_PROJECT_VERSION:
             self._logger.msg_error.emit("Unsupported project version. Open project in Toolbox GUI to upgrade it.")
             return Status.ERROR
+        return Status.OK
+
+    def _exec_mod_script(self):
+        """Executes project modification script given in command line arguments.
+
+        Returns:
+             Status: status code
+        """
+        script_path = pathlib.Path(self._args.mod_script)
+        if not script_path.exists() or not script_path.is_file():
+            self._logger.msg_error.emit("Modification script doesn't exist.")
+            return Status.ERROR
+        with open(script_path, encoding="utf-8") as script_file:
+            script_code = script_file.read()
+        self._logger.msg.emit(f"Applying {script_path.name} to project.")
+        project = ModifiableProject(self._project_dir, self._item_dicts, self._connection_dicts)
+        exec(script_code, {"project": project})
+        self._item_dicts = project.items_to_dict()
+        self._connection_dicts = project.connections_to_dict()
         return Status.OK
 
     def _execute_project(self):
@@ -289,6 +375,7 @@ class ActionsWithProject(QObject):
             "event_msg": self._handle_event_msg,
             "process_msg": self._handle_process_msg,
             "standard_execution_msg": self._handle_standard_execution_msg,
+            "persistent_execution_msg": self._handle_persistent_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
         }.get(event_type)
         if handler is None:
@@ -311,7 +398,7 @@ class ActionsWithProject(QObject):
         if data["direction"] == "BACKWARD":
             # Currently there are no interesting messages when executing backwards.
             return
-        self._node_messages[data["item_name"]] = list()
+        self._node_messages[data["item_name"]] = dict()
 
     def _handle_node_execution_finished(self, data):
         """Prints messages for finished nodes.
@@ -323,8 +410,11 @@ class ActionsWithProject(QObject):
         messages = self._node_messages.get(item_name)
         if messages is None:
             return
-        for message in messages:
-            self._logger.msg.emit(message)
+        for filter_id, message in messages.items():
+            if filter_id:
+                self._logger.msg.emit(f"--- Output from filter id '{filter_id}' START")
+            for line in message:
+                self._logger.msg.emit(line)
         del self._node_messages[item_name]
 
     def _handle_event_msg(self, data):
@@ -336,7 +426,7 @@ class ActionsWithProject(QObject):
         messages = self._node_messages.get(data["item_name"])
         if messages is None:
             return
-        messages.append(data["msg_text"])
+        messages.setdefault(data["filter_id"], []).append(data["msg_text"])
 
     def _handle_process_msg(self, data):
         """Stores process messages for later printing.
@@ -347,7 +437,7 @@ class ActionsWithProject(QObject):
         messages = self._node_messages.get(data["item_name"])
         if messages is None:
             return
-        messages.append(data["msg_text"])
+        messages.setdefault(data["filter_id"], []).append(data["msg_text"])
 
     def _handle_standard_execution_msg(self, data):
         """Handles standard execution messages.
@@ -358,13 +448,25 @@ class ActionsWithProject(QObject):
             data (dict): execution message data
         """
 
+    def _handle_persistent_execution_msg(self, data):
+        """Handles persistent execution messages.
+
+        Args:
+            data (dict): execution message data
+        """
+        if data["type"] == "stdout" or data["type"] == "stderr":
+            messages = self._node_messages.get(data["item_name"])
+            if messages is None:
+                return
+            messages.setdefault(data["filter_id"], []).append(data["data"])
+
     def _handle_kernel_execution_msg(self, data):
         """Handles kernel messages.
 
         Currently, these messages are ignored.
 
         Args:
-            data (dict): execution message data
+            data (dict): message data
         """
 
 

@@ -20,6 +20,7 @@ from enum import Enum, unique
 import itertools
 import os
 import glob
+from html.parser import HTMLParser
 import json
 import logging
 import datetime
@@ -405,18 +406,19 @@ def format_string_list(str_list):
 
 
 def rows_to_row_count_tuples(rows):
-    """Breaks a list of rows into a list of (row, count) tuples corresponding
-    to chunks of successive rows.
+    """Breaks a list of rows into a list of (row, count) tuples to corresponding
+    chunks of successive rows.
 
     Args:
-        rows (list): rows
+        rows (Iterable): rows
 
     Returns:
         list of tuple: row count tuples
     """
+    rows = set(rows)
     if not rows:
         return []
-    sorted_rows = sorted(set(rows))
+    sorted_rows = sorted(rows)
     break_points = [k + 1 for k in range(len(sorted_rows) - 1) if sorted_rows[k] + 1 != sorted_rows[k + 1]]
     break_points = [0] + break_points + [len(sorted_rows)]
     ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
@@ -514,7 +516,7 @@ class CharIconEngine(TransparentIconEngine):
     def paint(self, painter, rect, mode=None, state=None):
         painter.save()
         size = 0.875 * round(min(rect.width(), rect.height()))
-        self.font.setPixelSize(size)
+        self.font.setPixelSize(max(1, size))
         painter.setFont(self.font)
         if self.color:
             color = self.color
@@ -1393,7 +1395,7 @@ class FetchParent:
         Returns:
             str
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     # pylint: disable=no-self-use
     def filter_query(self, query, subquery, db_map):
@@ -1492,3 +1494,60 @@ def scrolling_to_bottom(widget, tolerance=1):
     finally:
         if at_bottom:
             scrollbar.setValue(scrollbar.maximum())
+
+
+def _is_metadata_item(item):
+    """Identifies a database metadata record.
+
+    Args:
+        item (dict): database item
+
+    Returns:
+        bool: True if item is metadata item, False otherwise
+    """
+    return "name" in item and "value" in item
+
+
+def separate_metadata_and_item_metadata(db_map_data):
+    """Separates normal metadata items from item metadata items.
+
+    Args:
+        db_map_data (dict): database records
+
+    Returns:
+        tuple: item metadata records and metadata records
+    """
+    metadata_db_map_data = {}
+    item_metadata_db_map_data = {}
+    for db_map, items in db_map_data.items():
+        metadata_items = []
+        entity_metadata_items = []
+        for item in items:
+            if _is_metadata_item(item):
+                metadata_items.append(item)
+            else:
+                entity_metadata_items.append(item)
+        if metadata_items:
+            metadata_db_map_data[db_map] = metadata_items
+        item_metadata_db_map_data[db_map] = entity_metadata_items
+    return item_metadata_db_map_data, metadata_db_map_data
+
+
+class HTMLTagFilter(HTMLParser):
+    """HTML tag filter."""
+
+    def __init__(self):
+        super().__init__()
+        self._text = ""
+
+    def drain(self):
+        text = self._text
+        self._text = ""
+        return text
+
+    def handle_data(self, data):
+        self._text += data
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "br":
+            self._text += "\n"

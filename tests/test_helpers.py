@@ -52,6 +52,7 @@ from spinetoolbox.helpers import (
     load_project_dict,
     load_local_project_data,
     merge_dicts,
+    HTMLTagFilter,
 )
 
 
@@ -327,6 +328,18 @@ class TestHelpers(unittest.TestCase):
         target = {"a": {"b": 1}}
         merge_dicts({"a": {"b": 2}}, target)
         self.assertEqual(target, {"a": {"b": 2}})
+
+
+class TestHTMLTagFilter(unittest.TestCase):
+    def test_simple_log_line(self):
+        tag_filter = HTMLTagFilter()
+        tag_filter.feed("Very <b>important</b> notification!")
+        self.assertEqual(tag_filter.drain(), "Very important notification!")
+
+    def test_replaces_br_by_newline(self):
+        tag_filter = HTMLTagFilter()
+        tag_filter.feed("First line<br>second line")
+        self.assertEqual(tag_filter.drain(), "First line\nsecond line")
 
 
 if __name__ == "__main__":

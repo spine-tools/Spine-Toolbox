@@ -43,7 +43,6 @@ class EntityTreeView(CopyTreeView):
         self._add_relationship_classes_action = None
         self._add_relationships_action = None
         self._manage_relationships_action = None
-        self._show_entity_metadata_action = None
         self._export_action = None
         self._edit_action = None
         self._remove_action = None
@@ -82,10 +81,6 @@ class EntityTreeView(CopyTreeView):
         self._menu.addSeparator()
         self._add_middle_actions()
         self._menu.addSeparator()
-        self._show_entity_metadata_action = self._menu.addAction(
-            QIcon(CharIconEngine("\uf4ad")), "View metadata", self.show_entity_metadata
-        )
-        self._menu.addSeparator()
         self._edit_action = self._menu.addAction(self._cube_pen_icon, "Edit...", self.edit_selected)
         self._remove_action = self._menu.addAction(self._cube_minus_icon, "Remove...", self.remove_selected)
         self._menu.addSeparator()
@@ -116,6 +111,7 @@ class EntityTreeView(CopyTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
+        self.resizeColumnToContents(0)
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)
@@ -194,17 +190,6 @@ class EntityTreeView(CopyTreeView):
     def manage_relationships(self):
         self._spine_db_editor.show_manage_relationships_form(self._context_item)
 
-    def show_entity_metadata(self):
-        """Shows entity's metadata."""
-        db_map_ids = {}
-        for index in set(self._selected_indexes.get("object", {})) | set(
-            self._selected_indexes.get("relationship", {})
-        ):
-            item = self.model().item_from_index(index)
-            for db_map, id_ in item.db_map_ids.items():
-                db_map_ids.setdefault(db_map, list()).append(id_)
-        self._spine_db_editor.show_db_map_entity_metadata(db_map_ids)
-
     def contextMenuEvent(self, event):
         """Shows context menu.
 
@@ -263,9 +248,8 @@ class EntityTreeView(CopyTreeView):
         item_has_children = item.has_children()
         self._fully_expand_action.setEnabled(item_has_children)
         self._fully_collapse_action.setEnabled(item_has_children)
-        self._add_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
+        self._add_relationships_action.setEnabled(item.item_type == "relationship_class")
         self._manage_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
-        self._show_entity_metadata_action.setEnabled(item.item_type in ("object", "relationship"))
         read_only = item.item_type in ("root", "members")
         self._export_action.setEnabled(not read_only)
         self._edit_action.setEnabled(not read_only)
@@ -397,6 +381,10 @@ class ItemTreeView(CopyTreeView):
         super().__init__(parent=parent)
         self._spine_db_editor = None
         self._menu = QMenu(self)
+
+    def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
+        self.resizeColumnToContents(0)
 
     def connect_signals(self):
         """Connects signals."""

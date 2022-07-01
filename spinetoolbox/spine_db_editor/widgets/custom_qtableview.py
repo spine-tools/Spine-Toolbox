@@ -27,12 +27,13 @@ from ..mvcmodels.pivot_table_models import (
     IndexExpansionPivotTableModel,
     ScenarioAlternativePivotTableModel,
 )
+from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
 from ...widgets.custom_qwidgets import TitleWidgetAction
 from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints, PivotTablePlottingHints
-from ...helpers import preferred_row_height
+from ...helpers import preferred_row_height, rows_to_row_count_tuples
 from .pivot_table_header_view import (
     PivotTableHeaderView,
     ParameterValuePivotHeaderView,
@@ -50,10 +51,11 @@ from .custom_delegates import (
     RelationshipClassNameDelegate,
     ObjectNameListDelegate,
     AlternativeNameDelegate,
+    ItemMetadataDelegate,
 )
 
 
-@Slot("QModelIndex", "QVariant")
+@Slot(QModelIndex, object)
 def _set_parameter_data(index, new_value):
     """Updates (object or relationship) parameter_definition or value with newly edited data."""
     index.model().setData(index, new_value)
@@ -61,7 +63,10 @@ def _set_parameter_data(index, new_value):
 
 class ParameterTableView(AutoFilterCopyPasteTableView):
     def __init__(self, parent):
-        """Initialize the view."""
+        """
+        Args:
+            parent (QObject): parent object
+        """
         super().__init__(parent=parent)
         self._menu = QMenu(self)
         self._spine_db_editor = None
@@ -72,7 +77,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
 
     @property
     def value_column_header(self):
-        """Either "default value" or "value". Used to identifiy the value column for advanced editting and plotting."""
+        """Either "default value" or "value". Used to identify the value column for advanced editing and plotting."""
         raise NotImplementedError()
 
     def connect_spine_db_editor(self, spine_db_editor):
@@ -235,6 +240,10 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
 
+    def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
+        self.resizeColumnsToContents()
+
 
 class ObjectParameterTableMixin:
     def create_delegates(self):
@@ -261,11 +270,6 @@ class ParameterDefinitionTableView(ParameterTableView):
 
 
 class ParameterValueTableView(ParameterTableView):
-    def __init__(self, parent):
-        """Initialize the view."""
-        super().__init__(parent=parent)
-        self._show_value_metadata_action = None
-
     @property
     def value_column_header(self):
         return "value"
@@ -280,19 +284,6 @@ class ParameterValueTableView(ParameterTableView):
         self._make_delegate("alternative_name", AlternativeNameDelegate)
         delegate = self._make_delegate("value", ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
-
-    def populate_context_menu(self):
-        """Creates a context menu for this view."""
-        super().populate_context_menu()
-        self._menu.addSeparator()
-        self._show_value_metadata_action = self._menu.addAction("View metadata", self.show_value_metadata)
-
-    def show_value_metadata(self):
-        db_map_ids = {}
-        for index in self.selectedIndexes():
-            db_map, id_ = self.model().db_map_id(index)
-            db_map_ids.setdefault(db_map, []).append(id_)
-        self._spine_db_editor.show_db_map_parameter_value_metadata(db_map_ids)
 
     def _update_pinned_values(self, _selected, _deselected):
         row_pinned_value_iter = ((index.row(), self._make_pinned_value(index)) for index in self.selectedIndexes())
@@ -849,3 +840,114 @@ class FrozenTableView(QTableView):
 
     def dropEvent(self, event):
         self.header_dropped.emit(event.source(), self)
+
+
+class MetadataTableViewBase(CopyPasteTableView):
+    """Base for metadata and item metadata table views."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget, optional): parent widget
+        """
+        super().__init__(parent)
+        self.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
+        self._menu = QMenu(self)
+
+    def connect_spine_db_editor(self, db_editor):
+        """Finishes view's initialization.
+
+        Args:
+             db_editor (SpineDBEditor): database editor instance
+        """
+        self._populate_context_menu(db_editor)
+        self._enable_delegates(db_editor)
+
+    def contextMenuEvent(self, event):
+        menu_position = event.globalPos()
+        self._menu.exec_(menu_position)
+
+    def _remove_selected(self):
+        """Removes selected rows from view's model."""
+        selected = self.selectionModel().selectedIndexes()
+        if len(selected) == 1:
+            self.model().removeRow(selected[0].row())
+            return
+        spans = rows_to_row_count_tuples(i.row() for i in selected)
+        for span in spans:
+            self.model().removeRows(span[0], span[1])
+
+    def _enable_delegates(self, db_editor):
+        """Creates delegates for this view
+
+        Args:
+            db_editor (SpineDBEditor): database editor
+        """
+
+    def _populate_context_menu(self, db_editor):
+        """Fills context menu with actions.
+
+        Args:
+            db_editor (SpineDBEditor): database editor
+        """
+        self._menu.addAction(db_editor.ui.actionCopy)
+        self._menu.addAction(db_editor.ui.actionPaste)
+        self._menu.addSeparator()
+        self._menu.addAction("Remove row(s)", self._remove_selected)
+
+    @Slot(QModelIndex, str)
+    def _set_model_data(self, index, value):
+        """Sets model data.
+
+        Args:
+            index (QModelIndex): model index to set
+            value (str): value
+        """
+        self.model().setData(index, value)
+
+
+class MetadataTableView(MetadataTableViewBase):
+    """Table view for metadata."""
+
+    def _enable_delegates(self, db_editor):
+        """See base class."""
+        delegate = DatabaseNameDelegate(self, db_editor.db_mngr)
+        self.setItemDelegateForColumn(MetadataColumn.DB_MAP, delegate)
+        delegate.data_committed.connect(self._set_model_data)
+
+
+class ItemMetadataTableView(MetadataTableViewBase):
+    """Table view for entity and parameter value metadata."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
+        super().__init__(parent)
+        self._item_metadata_model = None
+        self._metadata_model = None
+
+    def set_models(self, item_metadata_model, metadata_model):
+        """Sets models.
+
+        Args:
+            item_metadata_model (ItemMetadataModel): item metadata model
+            metadata_model (MetadataTableModel): metadata model
+        """
+        self._item_metadata_model = item_metadata_model
+        self._metadata_model = metadata_model
+
+    def _enable_delegates(self, db_editor):
+        """See base class"""
+        name_column_delegate = ItemMetadataDelegate(
+            self._item_metadata_model, self._metadata_model, MetadataColumn.NAME, self
+        )
+        self.setItemDelegateForColumn(MetadataColumn.NAME, name_column_delegate)
+        value_column_delegate = ItemMetadataDelegate(
+            self._item_metadata_model, self._metadata_model, MetadataColumn.VALUE, self
+        )
+        self.setItemDelegateForColumn(MetadataColumn.VALUE, value_column_delegate)
+        database_column_delegate = DatabaseNameDelegate(self, db_editor.db_mngr)
+        self.setItemDelegateForColumn(MetadataColumn.DB_MAP, database_column_delegate)
+        database_column_delegate.data_committed.connect(self._set_model_data)

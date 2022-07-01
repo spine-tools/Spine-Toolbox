@@ -23,7 +23,7 @@ import locale
 from contextlib import contextmanager
 from numbers import Number
 import re
-from PySide2.QtWidgets import QTableView, QApplication
+from PySide2.QtWidgets import QTableView, QApplication, QAction
 from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
 from spinedb_api import (
@@ -253,20 +253,12 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
             parent (QObject)
         """
         super().__init__(parent=parent)
+        self._show_filter_menu_action = QAction(self)
+        self._show_filter_menu_action.setShortcut(Qt.ALT + Qt.Key_Down)
+        self._show_filter_menu_action.setShortcutContext(Qt.WidgetShortcut)
+        self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
+        self.addAction(self._show_filter_menu_action)
         self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
-
-    def keyPressEvent(self, event):
-        """Shows the autofilter menu if the user presses Alt + Down.
-
-        Args:
-            event (QEvent)
-        """
-        if event.modifiers() == Qt.AltModifier and event.key() == Qt.Key_Down:
-            column = self.currentIndex().column()
-            self.show_auto_filter_menu(column)
-            event.accept()
-        else:
-            super().keyPressEvent(event)
 
     def setModel(self, model):
         """Disconnects the sectionPressed signal which seems to be connected by the super method.
@@ -278,13 +270,18 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         super().setModel(model)
         self.horizontalHeader().sectionPressed.disconnect()
 
+    @Slot(bool)
+    def _trigger_filter_menu(self, _):
+        """Shows current column's auto filter menu."""
+        self.show_auto_filter_menu(self.currentIndex().column())
+
     @Slot(int)
     def show_auto_filter_menu(self, logical_index):
         """Called when user clicks on a horizontal section header.
         Shows/hides the auto filter widget.
 
         Args:
-            logical_index (int)
+            logical_index (int): header section index
         """
         menu = self.model().get_auto_filter_menu(logical_index)
         if menu is None:

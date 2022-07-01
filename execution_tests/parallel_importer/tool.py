@@ -1,6 +1,7 @@
 import csv
 import sys
 from spinedb_api import DatabaseMapping, from_database
+
 url = sys.argv[1]
 db_map = DatabaseMapping(url)
 try:

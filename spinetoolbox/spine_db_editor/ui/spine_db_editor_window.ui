@@ -809,6 +809,83 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="metadata_dock_widget">
+   <property name="windowTitle">
+    <string>Metadata</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="metadata_dock_contents">
+    <layout class="QVBoxLayout" name="verticalLayout_11">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="MetadataTableView" name="metadata_table_view">
+       <property name="sortingEnabled">
+        <bool>true</bool>
+       </property>
+       <attribute name="verticalHeaderVisible">
+        <bool>false</bool>
+       </attribute>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="item_metadata_dock_widget">
+   <property name="windowTitle">
+    <string>Item metadata</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="item_metadata_dock_contents">
+    <layout class="QVBoxLayout" name="verticalLayout_9">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="ItemMetadataTableView" name="item_metadata_table_view">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="sortingEnabled">
+        <bool>true</bool>
+       </property>
+       <attribute name="verticalHeaderVisible">
+        <bool>false</bool>
+       </attribute>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionCommit">
    <property name="enabled">
     <bool>true</bool>
@@ -1140,6 +1217,16 @@
    <class>ToolFeatureTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MetadataTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ItemMetadataTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

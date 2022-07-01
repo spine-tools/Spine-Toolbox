@@ -32,7 +32,7 @@ def _align_text_in_item(item):
     rect = item.boundingRect()
     size = 0.875 * round(min(rect.width(), rect.height()))
     font = item.font()
-    font.setPixelSize(size)
+    font.setPixelSize(max(1, size))
     item.setFont(font)
 
 

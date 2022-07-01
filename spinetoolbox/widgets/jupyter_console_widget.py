@@ -29,7 +29,6 @@ from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 from spinetoolbox.widgets.kernel_editor import find_kernels
 from spinetoolbox.spine_engine_manager import make_engine_manager
-from spinetoolbox.helpers import make_settings_dict_for_engine
 
 # Set logging level for jupyter loggers
 traitlets_logger = logging.getLogger("traitlets")

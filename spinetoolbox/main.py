@@ -73,12 +73,21 @@ def main():
 
 
 def _make_argument_parser():
-    """Returns a command line argument parser configured for Toolbox use."""
+    """Returns a command line argument parser configured for Toolbox use.
+
+    Returns:
+        ArgumentParser: Toolbox' command line argument parser
+    """
     parser = ArgumentParser()
     version = f"Spine Toolbox {__version__}"
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("--list-items", help="list project items' names, do not open the GUI", action="store_true")
-    parser.add_argument("--execute-only", help="execute given project, do not open the GUI", action="store_true")
+    parser.add_argument(
+        "--mod-script", help="a Python script to augment the opened project (headless mode only)", metavar="SCRIPT"
+    )
+    parser.add_argument(
+        "--execute-only", help="headless mode: execute given project, do not open the GUI", action="store_true"
+    )
     parser.add_argument("project", help="project to open at startup", nargs="?", default="")
     parser.add_argument(
         "-s", "--select", action="append", help="select project item ITEM for execution", nargs="*", metavar="ITEM"

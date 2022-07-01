@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for the plotting module.
+Unit tests for :class:`ParameterValuePivotTableModel` module.
 
 :author: A. Soininen(VTT)
 :date:   10.7.2019
@@ -47,8 +47,7 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
                 ("class1", "object2", "parameter2", 7.0),
             ),
         }
-        with patch.object(SpineDBEditor, "_finalize_items_change"):
-            self._db_mngr.import_data({db_map: data})
+        self._db_mngr.import_data({db_map: data})
         object_class_index = self._editor.object_tree_model.index(0, 0)
         self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)
@@ -128,8 +127,7 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
                 ("class1", "object2", "parameter2", Map(["A", "B"], [-1.2, -2.2])),
             ),
         }
-        with patch.object(SpineDBEditor, "_finalize_items_change"):
-            self._db_mngr.import_data({db_map: data})
+        self._db_mngr.import_data({db_map: data})
         object_class_index = self._editor.object_tree_model.index(0, 0)
         self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)

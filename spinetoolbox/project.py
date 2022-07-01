@@ -122,7 +122,7 @@ class SpineToolboxProject(MetaObject):
         self._logger = logger
         self._settings = settings
         self._engine_workers = []
-        self._execution_stopped = True
+        self._execution_in_progress = False
         self.project_dir = None  # Full path to project directory
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
@@ -586,6 +586,11 @@ class SpineToolboxProject(MetaObject):
                 connection.source = new_name
             if connection.destination == previous_name:
                 connection.destination = new_name
+        for jump in self._jumps:
+            if jump.source == previous_name:
+                jump.source = new_name
+            if jump.destination == previous_name:
+                jump.destination = new_name
         new_resources_to_predecessors = item.resources_for_direct_predecessors()
         self.notify_resource_replacement_to_predecessors(item, resources_to_predecessors, new_resources_to_predecessors)
         new_resources_to_successors = item.resources_for_direct_successors()
@@ -906,7 +911,7 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("-------------------------------------------------")
         self._logger.msg.emit(f"<b>{msg}</b>")
         self._logger.msg.emit("-------------------------------------------------")
-        self._execution_stopped = False
+        self._execution_in_progress = True
         self._execute_dags(dags, execution_permits_list)
 
     def _execute_dags(self, dags, execution_permits_list):
@@ -985,7 +990,7 @@ class SpineToolboxProject(MetaObject):
             "COMPLETED": [self._logger.msg_success, "completed successfully"],
         }
         outcome = finished_outcomes.get(worker.engine_final_state())
-        #print("project._handle_engine_worker_finished() worker state: %s"%outcome)
+        # print("project._handle_engine_worker_finished() worker state: %s"%outcome)
         if outcome is not None:
             outcome[0].emit(f"<b>DAG {worker.dag_identifier} {outcome[1]}</b>")
         if any(worker.engine_final_state() not in finished_outcomes for worker in self._engine_workers):
@@ -1060,11 +1065,12 @@ class SpineToolboxProject(MetaObject):
 
     def stop(self):
         """Stops execution."""
-        if self._execution_stopped:
+        if not self._execution_in_progress:
             self._logger.msg.emit("No execution in progress")
             return
         self._logger.msg.emit("Stopping...")
-        self._execution_stopped = True
+        self._execution_in_progress = False
+        # Stop engines
         for worker in self._engine_workers:
             worker.stop_engine()
 
@@ -1354,6 +1360,8 @@ class SpineToolboxProject(MetaObject):
 
     def tear_down(self):
         """Cleans up project."""
+        if self._execution_in_progress:
+            self.stop()
         self.project_about_to_be_torn_down.emit()
         for item in self._project_items.values():
             item.tear_down()

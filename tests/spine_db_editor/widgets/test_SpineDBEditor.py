@@ -72,6 +72,7 @@ class TestSpineDBEditor(
     @staticmethod
     def _object_parameter_definition(*args):
         d = dict(zip(["id", "object_class_id", "object_class_name", "parameter_name"], args))
+        d.update({"default_value": None, "default_type": None})
         return d
 
     @staticmethod
@@ -89,6 +90,7 @@ class TestSpineDBEditor(
                 args,
             )
         )
+        d.update({"default_value": None, "default_type": None})
         return d
 
     @staticmethod

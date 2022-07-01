@@ -138,12 +138,11 @@ class SpineEngineManagerBase:
         """
         raise NotImplementedError()
 
-    def get_persistent_history_item(self, persistent_key, index):
+    def get_persistent_history_item(self, persistent_key, text, prefix, backwards):
         """Returns an item from persistent history.
 
         Args:
             persistent_key (tuple): persistent identifier
-            index (int): index of the history item, most recent first
 
         Returns:
             str: history item or empty string if none
@@ -216,11 +215,11 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
         return get_persistent_completions(persistent_key, text)
 
-    def get_persistent_history_item(self, persistent_key, index):
+    def get_persistent_history_item(self, persistent_key, text, prefix, backwards):
         # pylint: disable=import-outside-toplevel
         from spine_engine.execution_managers.persistent_execution_manager import get_persistent_history_item
 
-        return get_persistent_history_item(persistent_key, index)
+        return get_persistent_history_item(persistent_key, text, prefix, backwards)
 
 
 class RemoteSpineEngineManager(SpineEngineManagerBase):

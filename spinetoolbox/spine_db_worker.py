@@ -89,7 +89,6 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._parents = {}
         self._queries = {}
         self._query_has_elements_by_key = {}
         self._query_keys = {}
@@ -156,6 +155,7 @@ class SpineDBWorker(QObject):
             key = self._query_keys.pop(query)
             self._query_has_elements_by_key.pop(key, None)
             self._fetched_parents.discard(parent)
+            self._fetched_item_types.discard(parent.fetch_item_type)
             parent.fetch_status_change()
 
     def can_fetch_more(self, parent):
@@ -304,28 +304,53 @@ class SpineDBWorker(QObject):
         if not self._db_map.connection.closed:
             self._db_map.connection.close()
 
-    def get_metadata_per_entity(self, entity_ids):
-        future = self._executor.submit(self._get_metadata_per_entity, entity_ids)
+    def get_entity_metadata(self, entity_id):
+        """Queries metadata records for a single entity synchronously.
+
+        Args:
+            entity_id (int): entity id
+
+        Returns:
+            list of namedtuple: entity metadata records
+        """
+        future = self._executor.submit(self._get_entity_metadata, entity_id)
         return future.result()
 
-    def _get_metadata_per_entity(self, entity_ids):
-        d = {}
+    def _get_entity_metadata(self, entity_id):
+        """Queries metadata records for a single entity.
+
+        Args:
+            entity_id (int): entity id
+
+        Returns:
+            list of namedtuple: entity metadata records
+        """
         sq = self._db_map.ext_entity_metadata_sq
-        for x in self._db_map.query(sq).filter(self._db_map.in_(sq.c.entity_id, entity_ids)):
-            d.setdefault(x.entity_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        return d
+        return self._db_map.query(sq).filter(sq.c.entity_id == entity_id).all()
 
-    def get_metadata_per_parameter_value(self, parameter_value_ids):
-        future = self._executor.submit(self._get_metadata_per_parameter_value, parameter_value_ids)
+    def get_parameter_value_metadata(self, parameter_value_id):
+        """Queries metadata records for a single parameter value synchronously.
+
+        Args:
+            parameter_value_id (int): parameter value id
+
+        Returns:
+            list of namedtuple: parameter value metadata records
+        """
+        future = self._executor.submit(self._get_parameter_value_metadata, parameter_value_id)
         return future.result()
 
-    def _get_metadata_per_parameter_value(self, parameter_value_ids):
-        d = {}
+    def _get_parameter_value_metadata(self, parameter_value_id):
+        """Queries metadata records for a single parameter value.
+
+        Args:
+            parameter_value_id (int): parameter value id
+
+        Returns:
+            list of namedtuple: parameter value metadata records
+        """
         sq = self._db_map.ext_parameter_value_metadata_sq
-        for x in self._db_map.query(sq).filter(self._db_map.in_(sq.c.parameter_value_id, parameter_value_ids)):
-            param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
-            d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        return d
+        return self._db_map.query(sq).filter(sq.c.parameter_value_id == parameter_value_id).all()
 
     def add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
         """Adds or updates items in db.

@@ -42,5 +42,11 @@ class FilterExecutionModel(QAbstractListModel):
             return list(self._filter_consoles.keys())[index.row()]
         return None
 
+    def find_index(self, console_key):
+        for row, key in enumerate(self._filter_consoles.keys()):
+            if key == console_key:
+                return self.index(row, 0)
+        return QModelIndex()
+
     def get_console(self, filter_id):
         return self._filter_consoles.get(filter_id)

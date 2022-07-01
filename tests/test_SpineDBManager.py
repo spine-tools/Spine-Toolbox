@@ -15,12 +15,14 @@ Unit tests for the spine_db_manager module.
 :author: A. Soininen (VTT)
 :date:   12.7.2019
 """
-
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import (
+    DatabaseMapping,
     to_database,
     DateTime,
     Duration,
@@ -28,8 +30,10 @@ from spinedb_api import (
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
 )
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api import import_functions
+from spinetoolbox.spine_db_manager import SpineDBManager
+from spinetoolbox.helpers import ItemTypeFetchParent, signal_waiter
 
 
 class TestParameterValueFormatting(unittest.TestCase):
@@ -47,6 +51,8 @@ class TestParameterValueFormatting(unittest.TestCase):
     def tearDown(self):
         self.db_mngr.close_all_sessions()
         self.db_mngr.clean_up()
+        self.db_mngr.deleteLater()
+        QApplication.processEvents()
 
     def get_value(self, role):
         mock_db_map = Mock()
@@ -168,6 +174,68 @@ class TestParameterValueFormatting(unittest.TestCase):
         self.db_mngr.get_item.return_value = {"value": value, "type": None}
         formatted = self.get_value(Qt.ToolTipRole)
         self.assertTrue(formatted.startswith('Could not decode the value'))
+
+
+class TestAddOrUpdateItems(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        self._temp_dir = TemporaryDirectory()
+        db_path = Path(self._temp_dir.name, "db.sqlite")
+        self._db_url = "sqlite:///" + str(db_path)
+        self._db_mngr = SpineDBManager(None, None)
+        self._logger = MagicMock()
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
+        # Database connection may still be open. Retry cleanup until it succeeds.
+        running = True
+        while running:
+            QApplication.processEvents()
+            try:
+                self._temp_dir.cleanup()
+            except NotADirectoryError:
+                pass
+            else:
+                running = False
+
+    def test_add_metadata(self):
+        db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
+        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
+        with signal_waiter(self._db_mngr.metadata_added) as waiter:
+            self._db_mngr.add_or_update_items(db_map_data, "add_metadata", "metadata", "metadata_added")
+            waiter.wait()
+            self.assertEqual(
+                waiter.args,
+                ({db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": None}]},),
+            )
+
+    def test_add_object_metadata(self):
+        db_map = DatabaseMapping(self._db_url, create=True)
+        import_functions.import_object_classes(db_map, ("my_class",))
+        import_functions.import_objects(db_map, (("my_class", "my_object"),))
+        import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
+        db_map.commit_session("Add test data.")
+        db_map.connection.close()
+        db_map = self._db_mngr.get_db_map(self._db_url, self._logger)
+        with signal_waiter(self._db_mngr.object_classes_added) as waiter:
+            self._db_mngr.fetch_more(db_map, ItemTypeFetchParent("object_class"))
+            waiter.wait()
+        db_map = self._db_mngr.get_db_map(self._db_url, self._logger)
+        with signal_waiter(self._db_mngr.objects_added) as waiter:
+            self._db_mngr.fetch_more(db_map, ItemTypeFetchParent("object"))
+            waiter.wait()
+        db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
+        with signal_waiter(self._db_mngr.entity_metadata_added) as waiter:
+            self._db_mngr.add_or_update_items(
+                db_map_data, "add_entity_metadata", "entity_metadata", "entity_metadata_added"
+            )
+            waiter.wait()
+            self.assertEqual(waiter.args, ({db_map: [{"id": 1, "entity_id": 1, "metadata_id": 1, "commit_id": None}]},))
 
 
 if __name__ == '__main__':

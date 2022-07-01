@@ -57,19 +57,12 @@ class ParameterViewMixin:
         )
         for view, model in zip(views, self._parameter_models):
             view.setModel(model)
-            view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
             view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+            view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+            view.horizontalHeader().setStretchLastSection(True)
             view.horizontalHeader().setSectionsMovable(True)
             view.connect_spine_db_editor(self)
-        # Header state keys
-        self._table_header_state_key_by_view = {
-            self.ui.tableView_object_parameter_definition: "objParDefHeaderState",
-            self.ui.tableView_object_parameter_value: "objParValHeaderState",
-            self.ui.tableView_relationship_parameter_definition: "relParDefHeaderState",
-            self.ui.tableView_relationship_parameter_value: "relParValHeaderState",
-        }
-        self._orig_table_header_state_key_by_view = self._table_header_state_key_by_view.copy()
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -188,7 +181,7 @@ class ParameterViewMixin:
         active_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in active_obj_inds}
         self._filter_class_ids = self._db_map_ids(active_obj_cls_inds | active_rel_cls_inds)
         self._filter_entity_ids = self._db_map_class_ids(active_obj_inds | active_rel_inds)
-        # Cascade (note that we carefuly select where to cascade from, to avoid 'circularity')
+        # Cascade (note that we carefully select where to cascade from, to avoid 'circularity')
         obj_cls_ids = self._db_map_ids(obj_cls_inds | {ind.parent() for ind in obj_inds})
         obj_ids = self._db_map_ids(obj_inds | {ind.parent() for ind in rel_cls_inds})
         cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(obj_cls_ids, only_visible=False)
@@ -217,94 +210,47 @@ class ParameterViewMixin:
         self._filter_alternative_ids = {db_map: alt_ids.copy() for db_map, alt_ids in selected_db_map_alt_ids.items()}
         self._reset_filters()
 
-    def _finalize_items_change(self, item_type):
-        super()._finalize_items_change(item_type)
-        self._restore_table_view(item_type)
-
-    def _restore_table_view(self, item_type):
-        """Restores view state from previous session."""
-        views = {
-            "parameter_value": (
-                self.ui.tableView_relationship_parameter_value,
-                self.ui.tableView_object_parameter_value,
-            ),
-            "parameter_definition": (
-                self.ui.tableView_relationship_parameter_definition,
-                self.ui.tableView_object_parameter_definition,
-            ),
-        }.get(item_type, ())
-        for view in views:
-            state_key = self._table_header_state_key_by_view.get(view)
-            if state_key is None:
-                continue
-            self.qsettings.beginGroup(self.settings_group)
-            self.qsettings.beginGroup(self.settings_subgroup)
-            state = self.qsettings.value(state_key)
-            self.qsettings.endGroup()
-            self.qsettings.endGroup()
-            if not state:
-                view.resizeColumnsToContents()
-                continue
-            del self._table_header_state_key_by_view[view]
-            header = view.horizontalHeader()
-            curr_state = header.saveState()
-            header.restoreState(state)
-            if header.count() != header.model().columnCount():
-                # This can happen when switching to a version where the model has a different header
-                header.restoreState(curr_state)
-
-    def save_window_state(self):
-        """Saves window state parameters (size, position, state) via QSettings."""
-        super().save_window_state()
-        self.qsettings.beginGroup(self.settings_group)
-        self.qsettings.beginGroup(self.settings_subgroup)
-        for view, state_key in self._orig_table_header_state_key_by_view.items():
-            h = view.horizontalHeader()
-            self.qsettings.setValue(state_key, h.saveState())
-        self.qsettings.endGroup()
-        self.qsettings.endGroup()
-
     def receive_alternatives_updated(self, db_map_data):
+        super().receive_alternatives_updated(db_map_data)
         self.object_parameter_value_model.receive_alternatives_updated(db_map_data)
         self.relationship_parameter_value_model.receive_alternatives_updated(db_map_data)
-        super().receive_alternatives_updated(db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
+        super().receive_parameter_definitions_added(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
         self.relationship_parameter_definition_model.receive_parameter_data_added(db_map_data)
-        super().receive_parameter_definitions_added(db_map_data)
 
     def receive_parameter_values_added(self, db_map_data):
+        super().receive_parameter_values_added(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_added(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_added(db_map_data)
-        super().receive_parameter_values_added(db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
+        super().receive_parameter_definitions_updated(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_updated(db_map_data)
         self.relationship_parameter_definition_model.receive_parameter_data_updated(db_map_data)
-        super().receive_parameter_definitions_updated(db_map_data)
 
     def receive_parameter_values_updated(self, db_map_data):
+        super().receive_parameter_values_updated(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_updated(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_updated(db_map_data)
-        super().receive_parameter_values_updated(db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
+        super().receive_object_classes_removed(db_map_data)
         self.object_parameter_definition_model.receive_entity_classes_removed(db_map_data)
         self.object_parameter_value_model.receive_entity_classes_removed(db_map_data)
-        super().receive_object_classes_removed(db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
+        super().receive_relationship_classes_removed(db_map_data)
         self.relationship_parameter_definition_model.receive_entity_classes_removed(db_map_data)
         self.relationship_parameter_value_model.receive_entity_classes_removed(db_map_data)
-        super().receive_relationship_classes_removed(db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
+        super().receive_parameter_definitions_removed(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_removed(db_map_data)
         self.relationship_parameter_definition_model.receive_parameter_data_removed(db_map_data)
-        super().receive_parameter_definitions_removed(db_map_data)
 
     def receive_parameter_values_removed(self, db_map_data):
+        super().receive_parameter_values_removed(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_removed(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_removed(db_map_data)
-        super().receive_parameter_values_removed(db_map_data)

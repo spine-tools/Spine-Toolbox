@@ -53,7 +53,7 @@ from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, signal_waiter, busy_effect
+from .helpers import get_upgrade_db_promt_text, signal_waiter, busy_effect, separate_metadata_and_item_metadata
 
 
 @busy_effect
@@ -85,6 +85,9 @@ class SpineDBManager(QObject):
     tools_added = Signal(object)
     tool_features_added = Signal(object)
     tool_feature_methods_added = Signal(object)
+    metadata_added = Signal(object)
+    entity_metadata_added = Signal(object)
+    parameter_value_metadata_added = Signal(object)
     # Removed
     scenarios_removed = Signal(object)
     alternatives_removed = Signal(object)
@@ -101,6 +104,9 @@ class SpineDBManager(QObject):
     tools_removed = Signal(object)
     tool_features_removed = Signal(object)
     tool_feature_methods_removed = Signal(object)
+    metadata_removed = Signal(object)
+    entity_metadata_removed = Signal(object)
+    parameter_value_metadata_removed = Signal(object)
     items_removed = Signal(object)
     # Updated
     scenarios_updated = Signal(object)
@@ -117,6 +123,9 @@ class SpineDBManager(QObject):
     tools_updated = Signal(object)
     tool_features_updated = Signal(object)
     tool_feature_methods_updated = Signal(object)
+    metadata_updated = Signal(object)
+    entity_metadata_updated = Signal(object)
+    parameter_value_metadata_updated = Signal(object)
     # Uncached
     items_removed_from_cache = Signal(object)
     # Internal
@@ -164,6 +173,9 @@ class SpineDBManager(QObject):
             "tool": self.tools_added,
             "tool_feature": self.tool_features_added,
             "tool_feature_method": self.tool_feature_methods_added,
+            "metadata": self.metadata_added,
+            "entity_metadata": self.entity_metadata_added,
+            "parameter_value_metadata": self.parameter_value_metadata_added,
         }
         self.updated_signals = {
             "object_class": self.object_classes_updated,
@@ -181,6 +193,9 @@ class SpineDBManager(QObject):
             "tool": self.tools_updated,
             "tool_feature": self.tool_features_updated,
             "tool_feature_method": self.tool_feature_methods_updated,
+            "metadata": self.metadata_updated,
+            "entity_metadata": self.entity_metadata_updated,
+            "parameter_value_metadata": self.parameter_value_metadata_updated,
         }
         self.removed_signals = {
             "parameter_value": self.parameter_values_removed,
@@ -199,6 +214,9 @@ class SpineDBManager(QObject):
             "list_value": self.list_values_removed,
             "relationship_class": self.relationship_classes_removed,
             "object_class": self.object_classes_removed,
+            "metadata": self.metadata_removed,
+            "entity_metadata": self.entity_metadata_removed,
+            "parameter_value_metadata": self.parameter_value_metadata_removed,
         }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
         self.connect_signals()
 
@@ -293,9 +311,16 @@ class SpineDBManager(QObject):
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
-        for db_map, items in db_map_data.items():
-            for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
+        if item_type != "entity_metadata" and item_type != "parameter_value_metadata":
+            for db_map, items in db_map_data.items():
+                for item in items:
+                    self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
+        else:
+            item_metadata_items, metadata_items = separate_metadata_and_item_metadata(db_map_data)
+            self.cache_items("metadata", metadata_items)
+            for db_map, items in item_metadata_items.items():
+                for item in items:
+                    self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
 
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
@@ -1021,6 +1046,15 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object"))
 
+    def add_object_metadata(self, db_map_data):
+        """Adds object metadata to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object_metadata"))
+
     def add_relationship_classes(self, db_map_data):
         """Adds relationship classes to db.
 
@@ -1128,6 +1162,33 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool_feature_method"))
+
+    def add_metadata(self, db_map_data):
+        """Adds metadata to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "metadata"))
+
+    def add_entity_metadata(self, db_map_data):
+        """Adds entity metadata to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "entity_metadata"))
+
+    def add_parameter_value_metadata(self, db_map_data):
+        """Adds parameter value metadata to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_value_metadata"))
 
     def update_alternatives(self, db_map_data):
         """Updates alternatives in db.
@@ -1278,6 +1339,33 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool_feature_method"))
+
+    def update_metadata(self, db_map_data):
+        """Updates metadata in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "metadata"))
+
+    def update_entity_metadata(self, db_map_data):
+        """Updates entity metadata in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "entity_metadata"))
+
+    def update_parameter_value_metadata(self, db_map_data):
+        """Updates parameter value metadata in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_value_metadata"))
 
     def set_scenario_alternatives(self, db_map_data):
         """Sets scenario alternatives in db.
@@ -1602,6 +1690,8 @@ class SpineDBManager(QObject):
                 value_index_list = [x["index"] for x in sorted_list_values]
                 value_id_list = [x["id"] for x in sorted_list_values]
                 value_list = self.get_item(db_map, "parameter_value_list", list_id, only_visible=False)
+                if not value_list:
+                    continue
                 value_list["value_index_list"] = ",".join(str(id_) for id_ in value_index_list)
                 value_list["value_id_list"] = ",".join(str(id_) for id_ in value_id_list)
                 db_map_value_list_data.setdefault(db_map, []).append(value_list)
@@ -1846,21 +1936,7 @@ class SpineDBManager(QObject):
 
     def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
         """Exports given data into JSON file."""
-        indent = 4 * " "
-        json_data = "{{{0}{1}{0}}}".format(
-            "\n" if data_for_export else "",
-            ",\n".join(
-                [
-                    indent
-                    + json.dumps(key)
-                    + ": [{0}{1}{0}]".format(
-                        "\n" + indent if values else "",
-                        (",\n" + indent).join([indent + json.dumps(value) for value in values]),
-                    )
-                    for key, values in data_for_export.items()
-                ]
-            ),
-        )
+        json_data = json.dumps(data_for_export, indent=4)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
         caller.file_exported.emit(file_path)
@@ -1889,11 +1965,29 @@ class SpineDBManager(QObject):
         finally:
             db_map.connection.close()
 
-    def get_metadata_per_entity(self, db_map, entity_ids):
-        return self._get_worker(db_map).get_metadata_per_entity(entity_ids)
+    def get_entity_metadata(self, db_map, entity_id):
+        """Returns metadata records for given entity.
 
-    def get_metadata_per_parameter_value(self, db_map, parameter_value_ids):
-        return self._get_worker(db_map).get_metadata_per_parameter_value(parameter_value_ids)
+        Args:
+            db_map (DiffDatabaseMapping): database mapping
+            entity_id (int): entity id
+
+        Returns:
+            list of namedtuple: entity metadata records
+        """
+        return self._get_worker(db_map).get_entity_metadata(entity_id)
+
+    def get_parameter_value_metadata(self, db_map, parameter_value_id):
+        """Returns metadata records for given parameter value.
+
+        Args:
+            db_map (DiffDatabaseMapping): database mapping
+            parameter_value_id (int): parameter value id
+
+        Returns:
+            list of namedtuple: parameter value metadata records
+        """
+        return self._get_worker(db_map).get_parameter_value_metadata(parameter_value_id)
 
     def get_items_for_commit(self, db_map, commit_id):
         worker = self._get_worker(db_map)

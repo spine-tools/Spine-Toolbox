@@ -21,6 +21,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEven
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..project_item_icon import ProjectItemIcon
+from ..ui.resources.cat import Cat
 from ..link import JumpLink, JumpLinkDrawer, Link, ConnectionLinkDrawer
 from ..helpers import LinkType
 from .project_item_drag import ProjectItemDragMixin
@@ -74,6 +75,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self._timer.setInterval(5)
         self._timer.timeout.connect(self._handle_timeout)
         self._timer.start()
+        self._cat = Cat(self)
         self.connect_signals()
 
     @Slot()

@@ -49,27 +49,24 @@ class TreeViewMixin:
         self.tool_feature_model = ToolFeatureModel(self, self.db_mngr)
         self.alternative_scenario_model = AlternativeScenarioModel(self, self.db_mngr)
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr)
-        # Set models
-        self.ui.treeView_object.setModel(self.object_tree_model)
-        self.ui.treeView_relationship.setModel(self.relationship_tree_model)
-        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
-        self.ui.treeView_alternative_scenario.setModel(self.alternative_scenario_model)
-        self.ui.treeView_tool_feature.setModel(self.tool_feature_model)
-        # Connect DS form to view
-        self.ui.treeView_object.connect_spine_db_editor(self)
-        self.ui.treeView_relationship.connect_spine_db_editor(self)
-        self.ui.treeView_parameter_value_list.connect_spine_db_editor(self)
-        self.ui.treeView_alternative_scenario.connect_spine_db_editor(self)
-        self.ui.treeView_tool_feature.connect_spine_db_editor(self)
-        # Header state keys
-        self._tree_header_state_key_by_view = {
-            self.ui.treeView_alternative_scenario: "altScenTreeHeaderState",
-            self.ui.treeView_tool_feature: "toolFeatTreeHeaderState",
-            self.ui.treeView_parameter_value_list: "parValLstTreeHeaderState",
-            self.ui.treeView_object: "objTreeHeaderState",
-            self.ui.treeView_relationship: "relTreeHeaderState",
-        }
-        self._orig_tree_header_state_key_by_view = self._tree_header_state_key_by_view.copy()
+        models = (
+            self.object_tree_model,
+            self.relationship_tree_model,
+            self.tool_feature_model,
+            self.alternative_scenario_model,
+            self.parameter_value_list_model,
+        )
+        views = (
+            self.ui.treeView_object,
+            self.ui.treeView_relationship,
+            self.ui.treeView_tool_feature,
+            self.ui.treeView_alternative_scenario,
+            self.ui.treeView_parameter_value_list,
+        )
+        for view, model in zip(views, models):
+            view.setModel(model)
+            view.connect_spine_db_editor(self)
+            view.header().setResizeContentsPrecision(self.visible_rows)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -220,206 +217,160 @@ class TreeViewMixin:
         dialog = RemoveEntitiesDialog(self, self.db_mngr, selected)
         dialog.show()
 
-    def _finalize_items_change(self, item_type):
-        super()._finalize_items_change(item_type)
-        self._restore_tree_view(item_type)
-
     def receive_alternatives_added(self, db_map_data):
-        self.alternative_scenario_model.add_alternatives(db_map_data)
         super().receive_alternatives_added(db_map_data)
+        self.alternative_scenario_model.add_alternatives(db_map_data)
 
     def receive_scenarios_added(self, db_map_data):
-        self.alternative_scenario_model.add_scenarios(db_map_data)
         super().receive_scenarios_added(db_map_data)
+        self.alternative_scenario_model.add_scenarios(db_map_data)
 
     def receive_object_classes_added(self, db_map_data):
-        self.object_tree_model.add_object_classes(db_map_data)
         super().receive_object_classes_added(db_map_data)
+        self.object_tree_model.add_object_classes(db_map_data)
 
     def receive_objects_added(self, db_map_data):
-        self.object_tree_model.add_objects(db_map_data)
         super().receive_objects_added(db_map_data)
+        self.object_tree_model.add_objects(db_map_data)
 
     def receive_relationship_classes_added(self, db_map_data):
+        super().receive_relationship_classes_added(db_map_data)
         self.object_tree_model.add_relationship_classes(db_map_data)
         self.relationship_tree_model.add_relationship_classes(db_map_data)
-        super().receive_relationship_classes_added(db_map_data)
 
     def receive_relationships_added(self, db_map_data):
+        super().receive_relationships_added(db_map_data)
         self.object_tree_model.add_relationships(db_map_data)
         self.relationship_tree_model.add_relationships(db_map_data)
-        super().receive_relationships_added(db_map_data)
 
     def receive_entity_groups_added(self, db_map_data):
-        self.object_tree_model.add_entity_groups(db_map_data)
         super().receive_entity_groups_added(db_map_data)
+        self.object_tree_model.add_entity_groups(db_map_data)
 
     def receive_parameter_value_lists_added(self, db_map_data):
-        self.parameter_value_list_model.add_parameter_value_lists(db_map_data)
         super().receive_parameter_value_lists_added(db_map_data)
+        self.parameter_value_list_model.add_parameter_value_lists(db_map_data)
 
     def receive_list_values_added(self, db_map_data):
-        self.parameter_value_list_model.add_list_values(db_map_data)
         super().receive_list_values_added(db_map_data)
+        self.parameter_value_list_model.add_list_values(db_map_data)
 
     def receive_features_added(self, db_map_data):
-        self.tool_feature_model.add_features(db_map_data)
         super().receive_features_added(db_map_data)
+        self.tool_feature_model.add_features(db_map_data)
 
     def receive_tools_added(self, db_map_data):
-        self.tool_feature_model.add_tools(db_map_data)
         super().receive_tools_added(db_map_data)
+        self.tool_feature_model.add_tools(db_map_data)
 
     def receive_tool_features_added(self, db_map_data):
-        self.tool_feature_model.add_tool_features(db_map_data)
         super().receive_tool_features_added(db_map_data)
+        self.tool_feature_model.add_tool_features(db_map_data)
 
     def receive_tool_feature_methods_added(self, db_map_data):
-        self.tool_feature_model.add_tool_feature_methods(db_map_data)
         super().receive_tool_feature_methods_added(db_map_data)
+        self.tool_feature_model.add_tool_feature_methods(db_map_data)
 
     def receive_alternatives_updated(self, db_map_data):
-        self.alternative_scenario_model.update_alternatives(db_map_data)
         super().receive_alternatives_updated(db_map_data)
+        self.alternative_scenario_model.update_alternatives(db_map_data)
 
     def receive_scenarios_updated(self, db_map_data):
-        self.alternative_scenario_model.update_scenarios(db_map_data)
         super().receive_scenarios_updated(db_map_data)
+        self.alternative_scenario_model.update_scenarios(db_map_data)
 
     def receive_object_classes_updated(self, db_map_data):
-        self.object_tree_model.update_object_classes(db_map_data)
         super().receive_object_classes_updated(db_map_data)
+        self.object_tree_model.update_object_classes(db_map_data)
 
     def receive_objects_updated(self, db_map_data):
-        self.object_tree_model.update_objects(db_map_data)
         super().receive_objects_updated(db_map_data)
+        self.object_tree_model.update_objects(db_map_data)
 
     def receive_relationship_classes_updated(self, db_map_data):
+        super().receive_relationship_classes_updated(db_map_data)
         self.object_tree_model.update_relationship_classes(db_map_data)
         self.relationship_tree_model.update_relationship_classes(db_map_data)
-        super().receive_relationship_classes_updated(db_map_data)
 
     def receive_relationships_updated(self, db_map_data):
+        super().receive_relationships_updated(db_map_data)
         self.object_tree_model.update_relationships(db_map_data)
         self.relationship_tree_model.update_relationships(db_map_data)
-        super().receive_relationships_updated(db_map_data)
 
     def receive_parameter_value_lists_updated(self, db_map_data):
-        self.parameter_value_list_model.update_parameter_value_lists(db_map_data)
         super().receive_parameter_value_lists_updated(db_map_data)
+        self.parameter_value_list_model.update_parameter_value_lists(db_map_data)
 
     def receive_list_values_updated(self, db_map_data):
-        self.parameter_value_list_model.update_list_values(db_map_data)
         super().receive_list_values_updated(db_map_data)
+        self.parameter_value_list_model.update_list_values(db_map_data)
 
     def receive_features_updated(self, db_map_data):
-        self.tool_feature_model.update_features(db_map_data)
         super().receive_features_updated(db_map_data)
+        self.tool_feature_model.update_features(db_map_data)
 
     def receive_tools_updated(self, db_map_data):
-        self.tool_feature_model.update_tools(db_map_data)
         super().receive_tools_updated(db_map_data)
+        self.tool_feature_model.update_tools(db_map_data)
 
     def receive_tool_features_updated(self, db_map_data):
-        self.tool_feature_model.update_tool_features(db_map_data)
         super().receive_tool_features_updated(db_map_data)
+        self.tool_feature_model.update_tool_features(db_map_data)
 
     def receive_tool_feature_methods_updated(self, db_map_data):
-        self.tool_feature_model.update_tool_feature_methods(db_map_data)
         super().receive_tool_feature_methods_updated(db_map_data)
+        self.tool_feature_model.update_tool_feature_methods(db_map_data)
 
     def receive_alternatives_removed(self, db_map_data):
-        self.alternative_scenario_model.remove_alternatives(db_map_data)
         super().receive_alternatives_removed(db_map_data)
+        self.alternative_scenario_model.remove_alternatives(db_map_data)
 
     def receive_scenarios_removed(self, db_map_data):
-        self.alternative_scenario_model.remove_scenarios(db_map_data)
         super().receive_scenarios_removed(db_map_data)
+        self.alternative_scenario_model.remove_scenarios(db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
-        self.object_tree_model.remove_object_classes(db_map_data)
         super().receive_object_classes_removed(db_map_data)
+        self.object_tree_model.remove_object_classes(db_map_data)
 
     def receive_objects_removed(self, db_map_data):
-        self.object_tree_model.remove_objects(db_map_data)
         super().receive_objects_removed(db_map_data)
+        self.object_tree_model.remove_objects(db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
+        super().receive_relationship_classes_removed(db_map_data)
         self.object_tree_model.remove_relationship_classes(db_map_data)
         self.relationship_tree_model.remove_relationship_classes(db_map_data)
-        super().receive_relationship_classes_removed(db_map_data)
 
     def receive_relationships_removed(self, db_map_data):
+        super().receive_relationships_removed(db_map_data)
         self.object_tree_model.remove_relationships(db_map_data)
         self.relationship_tree_model.remove_relationships(db_map_data)
-        super().receive_relationships_removed(db_map_data)
 
     def receive_entity_groups_removed(self, db_map_data):
-        self.object_tree_model.remove_entity_groups(db_map_data)
         super().receive_entity_groups_removed(db_map_data)
+        self.object_tree_model.remove_entity_groups(db_map_data)
 
     def receive_parameter_value_lists_removed(self, db_map_data):
-        self.parameter_value_list_model.remove_parameter_value_lists(db_map_data)
         super().receive_parameter_value_lists_removed(db_map_data)
+        self.parameter_value_list_model.remove_parameter_value_lists(db_map_data)
 
     def receive_list_values_removed(self, db_map_data):
-        self.parameter_value_list_model.remove_list_values(db_map_data)
         super().receive_list_values_removed(db_map_data)
+        self.parameter_value_list_model.remove_list_values(db_map_data)
 
     def receive_features_removed(self, db_map_data):
-        self.tool_feature_model.remove_features(db_map_data)
         super().receive_features_removed(db_map_data)
+        self.tool_feature_model.remove_features(db_map_data)
 
     def receive_tools_removed(self, db_map_data):
-        self.tool_feature_model.remove_tools(db_map_data)
         super().receive_tools_removed(db_map_data)
+        self.tool_feature_model.remove_tools(db_map_data)
 
     def receive_tool_features_removed(self, db_map_data):
-        self.tool_feature_model.remove_tool_features(db_map_data)
         super().receive_tool_features_removed(db_map_data)
+        self.tool_feature_model.remove_tool_features(db_map_data)
 
     def receive_tool_feature_methods_removed(self, db_map_data):
-        self.tool_feature_model.remove_tool_feature_methods(db_map_data)
         super().receive_tool_feature_methods_removed(db_map_data)
-
-    def _restore_tree_view(self, item_type):
-        """Restores view state from previous session."""
-        view = {
-            "alternative": self.ui.treeView_alternative_scenario,
-            "scenario": self.ui.treeView_alternative_scenario,
-            "tool": self.ui.treeView_tool_feature,
-            "feature": self.ui.treeView_tool_feature,
-            "object_class": self.ui.treeView_object,
-            "relationship_class": self.ui.treeView_relationship,
-        }.get(item_type)
-        if view is None:
-            return
-        state_key = self._tree_header_state_key_by_view.get(view)
-        if state_key is None:
-            return
-        self.qsettings.beginGroup(self.settings_group)
-        self.qsettings.beginGroup(self.settings_subgroup)
-        state = self.qsettings.value(state_key)
-        self.qsettings.endGroup()
-        self.qsettings.endGroup()
-        if not state:
-            view.resizeColumnToContents(0)
-            return
-        del self._tree_header_state_key_by_view[view]
-        header = view.header()
-        curr_state = header.saveState()
-        header.restoreState(state)
-        if header.count() != header.model().columnCount():
-            # This can happen when switching to a version where the model has a different header
-            header.restoreState(curr_state)
-
-    def save_window_state(self):
-        """Saves window state parameters (size, position, state) via QSettings."""
-        super().save_window_state()
-        self.qsettings.beginGroup(self.settings_group)
-        self.qsettings.beginGroup(self.settings_subgroup)
-        for view, state_key in self._orig_tree_header_state_key_by_view.items():
-            h = view.header()
-            self.qsettings.setValue(state_key, h.saveState())
-        self.qsettings.endGroup()
-        self.qsettings.endGroup()
+        self.tool_feature_model.remove_tool_feature_methods(db_map_data)

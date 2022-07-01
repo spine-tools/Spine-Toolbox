@@ -39,12 +39,14 @@ from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xls
 from spinedb_api.helpers import vacuum
 from .custom_menus import MainMenu
 from .commit_viewer import CommitViewer
+from .item_metadata_editor import ItemMetadataEditor
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .url_toolbar import UrlToolBar
+from .metadata_editor import MetadataEditor
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
@@ -609,34 +611,6 @@ class SpineDBEditorBase(QMainWindow):
             return
         self.db_mngr.export_data(self, db_map_ids_for_export, file_path, file_filter)
 
-    @staticmethod
-    def _parse_db_map_metadata(db_map_metadata):
-        s = "<ul>"
-        for db_map_name, element_metadata in db_map_metadata.items():
-            s += f"<li>{db_map_name}<ul>"
-            for element_name, metadata in element_metadata.items():
-                s += f"<li>{element_name}<ul>"
-                for name, value in metadata.items():
-                    s += f"<li>{name}: {value}</li>"
-                s += "</ul>"
-            s += "</ul>"
-        s += "</ul>"
-        return s
-
-    def show_db_map_entity_metadata(self, db_map_ids):
-        metadata = {
-            db_map.codename: self.db_mngr.get_metadata_per_entity(db_map, entity_ids)
-            for db_map, entity_ids in db_map_ids.items()
-        }
-        QMessageBox.information(self, "Entity metadata", self._parse_db_map_metadata(metadata))
-
-    def show_db_map_parameter_value_metadata(self, db_map_ids):
-        metadata = {
-            db_map.codename: self.db_mngr.get_metadata_per_parameter_value(db_map, param_val_ids)
-            for db_map, param_val_ids in db_map_ids.items()
-        }
-        QMessageBox.information(self, "Parameter value metadata", self._parse_db_map_metadata(metadata))
-
     @Slot(bool)
     def refresh_session(self, checked=False):
         self.db_mngr.refresh_session(*self.db_maps)
@@ -714,10 +688,6 @@ class SpineDBEditorBase(QMainWindow):
             msgs.append(msg)
         self.msg_error.emit(format_string_list(msgs))
 
-    def _finalize_items_change(self, _item_type):
-        """Do stuff after items changes are reflected in the UI."""
-        self._update_export_enabled()
-
     def _update_export_enabled(self):
         """Update export enabled."""
         # TODO: check if db_mngr has any cache or something like that
@@ -727,7 +697,7 @@ class SpineDBEditorBase(QMainWindow):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self._changelog.append(msg)
-        self._finalize_items_change(item_type)
+        self._update_export_enabled()
 
     def receive_scenarios_added(self, db_map_data):
         self._receive_items_changed("added", "scenario", db_map_data)
@@ -774,6 +744,15 @@ class SpineDBEditorBase(QMainWindow):
     def receive_tool_feature_methods_added(self, db_map_data):
         self._receive_items_changed("added", "tool_feature_method", db_map_data)
 
+    def receive_metadata_added(self, db_map_data):
+        self._receive_items_changed("added", "metadata", db_map_data)
+
+    def receive_entity_metadata_added(self, db_map_data):
+        self._receive_items_changed("added", "entity_metadata", db_map_data)
+
+    def receive_parameter_value_metadata_added(self, db_map_data):
+        self._receive_items_changed("added", "parameter_value_metadata", db_map_data)
+
     def receive_scenarios_updated(self, db_map_data):
         self._receive_items_changed("updated", "scenario", db_map_data)
 
@@ -815,6 +794,15 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_tool_feature_methods_updated(self, db_map_data):
         self._receive_items_changed("updated", "tool_feature_method", db_map_data)
+
+    def receive_metadata_updated(self, db_map_data):
+        self._receive_items_changed("updated", "metadata", db_map_data)
+
+    def receive_entity_metadata_updated(self, db_map_data):
+        self._receive_items_changed("updated", "entity_metadata", db_map_data)
+
+    def receive_parameter_value_metadata_updated(self, db_map_data):
+        self._receive_items_changed("updated", "parameter_value_metadata", db_map_data)
 
     def receive_scenarios_removed(self, db_map_data):
         self._receive_items_changed("removed", "scenarios", db_map_data)
@@ -860,6 +848,15 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_tool_feature_methods_removed(self, db_map_data):
         self._receive_items_changed("removed", "tool_feature_method", db_map_data)
+
+    def receive_metadata_removed(self, db_map_data):
+        self._receive_items_changed("removed", "metadata", db_map_data)
+
+    def receive_entity_metadata_removed(self, db_map_data):
+        self._receive_items_changed("removed", "entity_metadata", db_map_data)
+
+    def receive_parameter_value_metadata_removed(self, db_map_data):
+        self._receive_items_changed("removed", "parameter_value_metadata", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -1022,6 +1019,10 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         """
         super().__init__(db_mngr)
         self._original_size = None
+        self._metadata_editor = MetadataEditor(self.ui.metadata_table_view, self, db_mngr)
+        self._item_metadata_editor = ItemMetadataEditor(
+            self.ui.item_metadata_table_view, self, self._metadata_editor, db_mngr
+        )
         self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
         self._timer_refresh_tab_order = QTimer(self)  # Used to limit refresh
         self._timer_refresh_tab_order.setSingleShot(True)
@@ -1041,11 +1042,18 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
 
     def connect_signals(self):
         super().connect_signals()
+        self._metadata_editor.connect_signals(self.ui)
+        self._item_metadata_editor.connect_signals(self.ui)
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
         self.pivot_action_group.triggered.connect(self.apply_pivot_style)
         for dock in self._dock_views:
             dock.visibilityChanged.connect(self._restart_timer_refresh_tab_order)
+
+    def init_models(self):
+        super().init_models()
+        self._metadata_editor.init_models(self.db_maps)
+        self._item_metadata_editor.init_models(self.db_maps)
 
     @Slot(bool)
     def _restart_timer_refresh_tab_order(self, _visible=False):
@@ -1117,13 +1125,20 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_tool_feature_tree, Qt.Horizontal
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
         )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
-        self.splitDockWidget(
-            self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
+        # right-side
+        self.splitDockWidget(self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Vertical)
+        self.tabify_and_raise(
+            [
+                self.ui.dockWidget_alternative_scenario_tree,
+                self.ui.dockWidget_tool_feature_tree,
+                self.ui.dockWidget_parameter_value_list,
+            ]
         )
+        self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
+        # center
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -1139,17 +1154,10 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [
             self.ui.dockWidget_object_tree,
             self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_alternative_scenario_tree,
         ]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
-        docks = [
-            self.ui.dockWidget_tool_feature_tree,
-            self.ui.dockWidget_parameter_value_list,
-            self.ui.dockWidget_alternative_scenario_tree,
-        ]
-        height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.4 * height], Qt.Vertical)
         self.end_style_change()
 
     @Slot(QAction)
@@ -1169,6 +1177,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_relationship_parameter_value.hide()
         self.ui.dockWidget_relationship_parameter_definition.hide()
         self.ui.dockWidget_parameter_value_list.hide()
+        self.ui.metadata_dock_widget.hide()
+        self.ui.item_metadata_dock_widget.hide()
         docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
@@ -1184,35 +1194,91 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(
             self.ui.dockWidget_entity_graph, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
         )
+        # right-side
+        self.splitDockWidget(self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Vertical)
+        self.tabify_and_raise(
+            [
+                self.ui.dockWidget_alternative_scenario_tree,
+                self.ui.dockWidget_tool_feature_tree,
+                self.ui.dockWidget_parameter_value_list,
+            ]
+        )
+        self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
+        # left
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
+        )
         self.splitDockWidget(
             self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Vertical
         )
         self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
         self.tabify_and_raise(
-            [
-                self.ui.dockWidget_object_parameter_value,
-                self.ui.dockWidget_object_parameter_definition,
-                self.ui.dockWidget_relationship_parameter_value,
-                self.ui.dockWidget_relationship_parameter_definition,
-            ]
+            [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
         )
+        self.tabify_and_raise(
+            [self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition]
+        )
+        docks = [
+            self.ui.dockWidget_entity_graph,
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_relationship_parameter_value,
+        ]
+        height = sum(d.size().height() for d in docks)
+        self.resizeDocks(docks, [0.6 * height, 0.2 * height, 0.2 * height], Qt.Vertical)
         docks = [
             self.ui.dockWidget_object_tree,
             self.ui.dockWidget_entity_graph,
-            self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_alternative_scenario_tree,
         ]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
-        docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
-        height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
-        docks = [self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list]
-        height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.5 * height, 0.5 * height], Qt.Vertical)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
+
+    def receive_metadata_added(self, db_map_data):
+        super().receive_metadata_added(db_map_data)
+        self._metadata_editor.add_metadata(db_map_data)
+
+    def receive_entity_metadata_added(self, db_map_data):
+        super().receive_entity_metadata_added(db_map_data)
+        self._item_metadata_editor.add_item_metadata(db_map_data)
+
+    def receive_parameter_value_metadata_added(self, db_map_data):
+        super().receive_parameter_value_metadata_added(db_map_data)
+        self._item_metadata_editor.add_item_metadata(db_map_data)
+
+    def receive_metadata_updated(self, db_map_data):
+        super().receive_metadata_updated(db_map_data)
+        self._metadata_editor.update_metadata(db_map_data)
+        self._item_metadata_editor.update_metadata(db_map_data)
+
+    def receive_entity_metadata_updated(self, db_map_data):
+        super().receive_entity_metadata_updated(db_map_data)
+        self._item_metadata_editor.update_item_metadata(db_map_data)
+
+    def receive_parameter_value_metadata_updated(self, db_map_data):
+        super().receive_parameter_value_metadata_updated(db_map_data)
+        self._item_metadata_editor.update_item_metadata(db_map_data)
+
+    def receive_metadata_removed(self, db_map_data):
+        super().receive_metadata_removed(db_map_data)
+        self._metadata_editor.remove_metadata(db_map_data)
+        self._item_metadata_editor.remove_metadata(db_map_data)
+
+    def receive_entity_metadata_removed(self, db_map_data):
+        super().receive_entity_metadata_removed(db_map_data)
+        self._item_metadata_editor.remove_item_metadata(db_map_data)
+
+    def receive_parameter_value_metadata_removed(self, db_map_data):
+        super().receive_parameter_value_metadata_removed(db_map_data)
+        self._item_metadata_editor.remove_item_metadata(db_map_data)
+
+    def receive_session_rolled_back(self, db_maps):
+        super().receive_session_rolled_back(db_maps)
+        self._metadata_editor.roll_back(db_maps)
+        self._item_metadata_editor.roll_back(db_maps)
 
     @staticmethod
     def _get_base_dir():

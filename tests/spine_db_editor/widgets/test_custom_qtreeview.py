@@ -1233,6 +1233,8 @@ class TestToolFeatureTreeViewWithExistingData(_Base):
         model.fetchMore(list_name_index2)
         while model.rowCount(list_name_index2) != 2:
             QApplication.processEvents()
+        with signal_waiter(self._db_mngr.parameter_value_lists_updated) as waiter:
+            waiter.wait()
 
     def tearDown(self):
         self._common_tear_down()

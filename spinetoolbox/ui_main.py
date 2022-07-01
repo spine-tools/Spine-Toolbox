@@ -127,9 +127,6 @@ class ToolboxUI(QMainWindow):
     # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
     jupyter_console_requested = Signal(object, str, str, str)
     persistent_console_requested = Signal(object, str, tuple, str)
-    persistent_stdin_available = Signal(object, str, str)
-    persistent_stdout_available = Signal(object, str, str)
-    persistent_stderr_available = Signal(object, str, str)
 
     def __init__(self):
         """Initializes application and main window."""
@@ -202,6 +199,7 @@ class ToolboxUI(QMainWindow):
         self._filter_item_consoles = {}
         self._persistent_consoles = {}
         self._jupyter_consoles = {}
+        self._current_execution_keys = {}
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -325,10 +323,7 @@ class ToolboxUI(QMainWindow):
         self._button_item_dir.clicked.connect(self._open_active_item_dir)
         # Consoles
         self.jupyter_console_requested.connect(self._setup_jupyter_console)
-        self.persistent_console_requested.connect(self._setup_persistent_console)
-        self.persistent_stdin_available.connect(self._add_persistent_stdin)
-        self.persistent_stdout_available.connect(self._add_persistent_stdout)
-        self.persistent_stderr_available.connect(self._add_persistent_stderr)
+        self.persistent_console_requested.connect(self._setup_persistent_console, Qt.BlockingQueuedConnection)
 
     @Slot(bool)
     def _open_active_item_dir(self, _checked=False):
@@ -1439,11 +1434,15 @@ class ToolboxUI(QMainWindow):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
-        filter_consoles = self._filter_item_consoles.get(self.active_project_item, dict())
-        self.ui.listView_console_executions.setVisible(bool(filter_consoles))
+        filter_consoles = self._filter_item_consoles.get(self.active_project_item)
+        if filter_consoles is None:
+            self.ui.listView_console_executions.hide()
+            return
+        self.ui.listView_console_executions.show()
         self.ui.listView_console_executions.model().reset_model(filter_consoles)
-        current = self.ui.listView_console_executions.currentIndex()
-        self._select_console_execution(current, None)
+        current_key = self._current_execution_keys.get(self.active_project_item)
+        current = self.ui.listView_console_executions.model().find_index(current_key)
+        self.ui.listView_console_executions.setCurrentIndex(current)
 
     def _restore_original_console(self):
         """Sets the Console back to the original."""
@@ -1482,6 +1481,7 @@ class ToolboxUI(QMainWindow):
         """Sets the console of the selected execution in Console."""
         if not current.data():
             return
+        self._current_execution_keys[self.active_project_item] = current.data()
         console = current.model().get_console(current.data())
         self._do_override_console(console)
 
@@ -2315,16 +2315,13 @@ class ToolboxUI(QMainWindow):
             d[filter_id] = self._make_persistent_console(item, key, language)
         self.override_console_and_execution_list()
 
-    @Slot(object, str, str)
-    def _add_persistent_stdin(self, item, filter_id, data):
+    def add_persistent_stdin(self, item, filter_id, data):
         self._get_console(item, filter_id).add_stdin(data)
 
-    @Slot(object, str, str)
-    def _add_persistent_stdout(self, item, filter_id, data):
+    def add_persistent_stdout(self, item, filter_id, data):
         self._get_console(item, filter_id).add_stdout(data)
 
-    @Slot(object, str, str)
-    def _add_persistent_stderr(self, item, filter_id, data):
+    def add_persistent_stderr(self, item, filter_id, data):
         self._get_console(item, filter_id).add_stderr(data)
 
     def _get_console(self, item, filter_id):

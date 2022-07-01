@@ -23,7 +23,7 @@ from PySide2.QtGui import QCursor, QPainter, QIcon
 from PySide2.QtPrintSupport import QPrinter
 from ...helpers import CharIconEngine
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
-from ...widgets.custom_qwidgets import ToolBarWidgetAction
+from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
 from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, CrossHairsArcItem, make_figure_graphics_item
 from .select_position_parameters_dialog import SelectPositionParametersDialog
 from .graph_layout_generator import make_heat_map
@@ -56,8 +56,13 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.cross_hairs_items = []
         self.auto_expand_objects = None
         self.merge_dbs = None
+        self.max_relationship_dimension = None
+        self.disable_max_relationship_dimension = None
         self._auto_expand_objects_action = None
         self._merge_dbs_action = None
+        self._max_rel_dim_action = None
+        self._disable_max_rel_dim_action = None
+        self._max_rel_dim_spin_box = None
         self._add_objects_action = None
         self._select_pos_param_action = None
         self._save_pos_action = None
@@ -112,6 +117,12 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def populate_context_menu(self):
         self.auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
         self.merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
+        self.max_relationship_dimension = int(
+            self._qsettings.value("appSettings/maxRelationshipDimension", defaultValue="2")
+        )
+        self.disable_max_relationship_dimension = (
+            self._qsettings.value("appSettings/disableMaxRelationshipDimension", defaultValue="true") == "true"
+        )
         self._auto_expand_objects_action = self._menu.addAction("Auto-expand objects")
         self._auto_expand_objects_action.setCheckable(True)
         self._auto_expand_objects_action.setChecked(self.auto_expand_objects)
@@ -120,6 +131,20 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._merge_dbs_action.setCheckable(True)
         self._merge_dbs_action.setChecked(self.merge_dbs)
         self._merge_dbs_action.triggered.connect(self._set_merge_dbs)
+        self._max_rel_dim_action = ToolBarWidgetAction("Max relationship dimension", self._menu, compact=True)
+        self._max_rel_dim_spin_box = HorizontalSpinBox(self)
+        self._max_rel_dim_spin_box.setMinimum(2)
+        self._max_rel_dim_spin_box.setValue(self.max_relationship_dimension)
+        self._max_rel_dim_spin_box.valueChanged.connect(self._set_max_relationship_dimension)
+        self._max_rel_dim_action.tool_bar.addWidget(self._max_rel_dim_spin_box)
+        self._max_rel_dim_action.tool_bar.addSeparator()
+        self._disable_max_rel_dim_action = self._max_rel_dim_action.tool_bar.addAction("\u221E")
+        self._disable_max_rel_dim_action.setCheckable(True)
+        self._disable_max_rel_dim_action.toggled.connect(self._set_disable_max_relationship_dimension)
+        self._disable_max_rel_dim_action.toggled.connect(self._max_rel_dim_spin_box.setDisabled)
+        self._disable_max_rel_dim_action.setToolTip("No limit")
+        self._disable_max_rel_dim_action.setChecked(self.disable_max_relationship_dimension)
+        self._menu.addAction(self._max_rel_dim_action)
         self._menu.addSeparator()
         self._add_objects_action = self._menu.addAction("Add objects", self.add_objects_at_position)
         self._menu.addSeparator()
@@ -256,6 +281,34 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def set_merge_dbs(self, checked):
         self._merge_dbs_action.setChecked(checked)
         self._set_merge_dbs(save_setting=False)
+
+    @Slot(bool)
+    def _set_disable_max_relationship_dimension(self, _checked=False, save_setting=True):
+        checked = self._disable_max_rel_dim_action.isChecked()
+        if checked == self.disable_max_relationship_dimension:
+            return
+        if save_setting:
+            self._qsettings.setValue("appSettings/disableMaxRelationshipDimension", "true" if checked else "false")
+        self.disable_max_relationship_dimension = checked
+        self._spine_db_editor.build_graph()
+
+    def set_disable_max_relationship_dimension(self, checked):
+        self._disable_max_rel_dim_action.setChecked(checked)
+        self._set_disable_max_relationship_dimension(save_setting=False)
+
+    @Slot(int)
+    def _set_max_relationship_dimension(self, _value=None, save_setting=True):
+        value = self._max_rel_dim_spin_box.value()
+        if value == self.max_relationship_dimension:
+            return
+        if save_setting:
+            self._qsettings.setValue("appSettings/maxRelationshipDimension", str(value))
+        self.max_relationship_dimension = value
+        self._spine_db_editor.build_graph()
+
+    def set_max_relationship_dimension(self, value):
+        self._update_max_relationship_dimension_label(value)
+        self._set_max_relationship_dimension(save_setting=False)
 
     @Slot(bool)
     def add_objects_at_position(self, checked=False):
