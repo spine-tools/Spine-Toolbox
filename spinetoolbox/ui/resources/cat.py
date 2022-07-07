@@ -51,6 +51,7 @@ class Cat(QGraphicsSvgItem):
 
     def __init__(self, scene):
         super().__init__(None)
+        self.setParent(scene)
         self.setScale(0.4)
         self.setZValue(-1e6)
         self._scene = scene
