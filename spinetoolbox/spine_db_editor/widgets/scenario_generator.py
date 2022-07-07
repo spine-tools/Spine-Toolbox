@@ -63,7 +63,11 @@ class ScenarioGenerator(QWidget):
         self._ui.button_box.accepted.connect(self._ui.accept_action.trigger)
         self._ui.button_box.rejected.connect(self._ui.reject_action.trigger)
         self._ui.operation_combo_box.addItems(self._TYPE_LABELS)
-        self._ui.alternative_list.addItems([item["name"] for item in alternatives])
+        alternative_names = [item["name"] for item in alternatives]
+        self._ui.base_alternative_combo_box.addItems(sorted(alternative_names))
+        self._ui.use_base_alternative_check_box.stateChanged.connect(self._enable_base_alternative)
+        self._ui.base_alternative_combo_box.setCurrentText(_find_base_alternative(alternative_names))
+        self._ui.alternative_list.addItems(alternative_names)
 
     @Slot()
     def accept(self):
@@ -82,6 +86,10 @@ class ScenarioGenerator(QWidget):
         scenario_alternatives = {self._TYPE_LABELS[0]: all_combinations, self._TYPE_LABELS[1]: unique_alternatives}[
             operation_label
         ](alternatives)
+        if self._ui.use_base_alternative_check_box.checkState() == Qt.Checked:
+            self._insert_base_alternative(scenario_alternatives)
+            if operation_label == self._TYPE_LABELS[0]:
+                _ensure_unique(scenario_alternatives)
         generated_scenario_names = [scenario_prefix + str(count) for count in range(1, len(scenario_alternatives) + 1)]
         scenario_items = self._db_editor.scenario_items(self._db_map)
         existing_scenario_names = {item.name for item in scenario_items}
@@ -155,3 +163,72 @@ class ScenarioGenerator(QWidget):
         if clicked_button is keep_button:
             return _ScenarioNameResolution.LEAVE_AS_IS
         return _ScenarioNameResolution.OVERWRITE
+
+    @Slot(int)
+    def _enable_base_alternative(self, check_box_state):
+        """Enables and disables base alternative combo box.
+
+        Args:
+            check_box_state (int): state of 'Use base alternative' check box
+        """
+        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.Checked)
+
+    def _insert_base_alternative(self, scenario_alternatives):
+        """Prepends base alternative to scenario alternatives if it has been enabled.
+
+        If base alternative is already in scenario alternatives, make sure it comes first.
+
+        Args:
+            scenario_alternatives (list of list): scenario alternatives
+        """
+        base_name = self._ui.base_alternative_combo_box.currentText()
+        if not base_name:
+            return
+        base = next(iter(a for a in self._alternatives if a["name"] == base_name))
+        for alternatives in scenario_alternatives:
+            try:
+                existing_index = [a["name"] for a in alternatives].index(base_name)
+            except ValueError:
+                alternatives.insert(0, base)
+            else:
+                if existing_index != 0:
+                    alternatives.insert(0, alternatives.pop(existing_index))
+
+
+def _ensure_unique(scenario_alternatives):
+    """Removes duplicate scenario alternatives.
+
+    Args:
+        scenario_alternatives (list of list): scenario alternatives
+    """
+    duplicate_indexes = set()
+    for i, alternatives in enumerate(scenario_alternatives):
+        if i in duplicate_indexes:
+            continue
+        names = [a["name"] for a in alternatives]
+        for j, other in enumerate(scenario_alternatives[i + 1 :]):
+            if names == [a["name"] for a in other]:
+                duplicate_indexes.add(i + 1 + j)
+    for remove_index in reversed(sorted(duplicate_indexes)):
+        scenario_alternatives.pop(remove_index)
+
+
+def _find_base_alternative(names):
+    """Returns the name of a 'base' alternative or empty string if not found.
+
+    Basically, checks if "Base" is in names, otherwise searches for the first case-insensitive version of "base".
+
+    Args:
+        names (list of str): alternative names
+
+    Returns:
+        str: base alternative name
+    """
+    if "Base" in names:
+        return "Base"
+    try:
+        base_index = [n.lower() for n in names].index("base")
+    except ValueError:
+        return names[0] if names else ""
+    else:
+        return names[base_index]

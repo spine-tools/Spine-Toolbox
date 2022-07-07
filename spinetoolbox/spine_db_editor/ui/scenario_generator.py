@@ -59,6 +59,17 @@ class Ui_Form(object):
 
         self.formLayout.setWidget(1, QFormLayout.FieldRole, self.operation_combo_box)
 
+        self.use_base_alternative_check_box = QCheckBox(Form)
+        self.use_base_alternative_check_box.setObjectName(u"use_base_alternative_check_box")
+        self.use_base_alternative_check_box.setChecked(True)
+
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.use_base_alternative_check_box)
+
+        self.base_alternative_combo_box = QComboBox(Form)
+        self.base_alternative_combo_box.setObjectName(u"base_alternative_combo_box")
+
+        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.base_alternative_combo_box)
+
 
         self.verticalLayout.addLayout(self.formLayout)
 
@@ -109,6 +120,10 @@ class Ui_Form(object):
 #endif // QT_CONFIG(tooltip)
         self.scenario_prefix_edit.setPlaceholderText(QCoreApplication.translate("Form", u"Enter scenario name prefix here...", None))
         self.operation_label.setText(QCoreApplication.translate("Form", u"Operation:", None))
+#if QT_CONFIG(tooltip)
+        self.use_base_alternative_check_box.setToolTip(QCoreApplication.translate("Form", u"When checked, selected base alternative is added to all scenarios.", None))
+#endif // QT_CONFIG(tooltip)
+        self.use_base_alternative_check_box.setText(QCoreApplication.translate("Form", u"Use base alternative:", None))
         self.groupBox.setTitle(QCoreApplication.translate("Form", u"Alternatives by rank", None))
 #if QT_CONFIG(tooltip)
         self.alternative_list.setToolTip(QCoreApplication.translate("Form", u"Alternatives at bottom have priority. Drag and drop to reorder the list.", None))

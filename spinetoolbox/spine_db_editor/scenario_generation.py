@@ -25,7 +25,7 @@ def all_combinations(alternatives):
         alternatives (Iterable of Any): alternatives
 
     Returns:
-        list of tuple: tuples containing alternatives for each scenario
+        list of list: lists containing alternatives for each scenario
     """
     count = len(alternatives)
     proto_selection = count * [False]
@@ -37,7 +37,7 @@ def all_combinations(alternatives):
         else:
             selections = (proto_selection,)
         for selection in selections:
-            scenarios.append(tuple(compress(alternatives, selection)))
+            scenarios.append(list(compress(alternatives, selection)))
     return scenarios
 
 
@@ -48,6 +48,6 @@ def unique_alternatives(alternatives):
         alternatives (Iterable of Any): alternatives
 
     Returns:
-        list of tuple: tuples containing alternatives for each scenario
+        list of list: tuples containing alternatives for each scenario
     """
-    return [(alternative,) for alternative in alternatives]
+    return [[alternative] for alternative in alternatives]
