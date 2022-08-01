@@ -26,11 +26,11 @@ from PySide2.QtWidgets import QApplication
 
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
-from spine_engine.project_item.connection import Connection
 from spine_engine.utils.helpers import shorten
 from spinetoolbox.helpers import SignalWaiter
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
+from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.config import PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.project import node_successors
 from tests.mock_helpers import (
@@ -207,7 +207,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_view(project, self.toolbox.item_factories, view1_name)
         view2_name = "View 2"
         add_view(project, self.toolbox.item_factories, view2_name)
-        project.add_connection(Connection(view1_name, "top", view2_name, "bottom"))
+        project.add_connection(LoggingConnection(view1_name, "top", view2_name, "bottom", toolbox=self.toolbox))
         view = self.toolbox.project_item_model.get_item(view1_name)
         self.assertEqual(view1_name, view.name)
         view = self.toolbox.project_item_model.get_item(view2_name)
@@ -226,7 +226,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_view(project, self.toolbox.item_factories, view1_name)
         view2_name = "View 2"
         add_view(project, self.toolbox.item_factories, view2_name)
-        project.add_connection(Connection(view1_name, "top", view2_name, "bottom"))
+        project.add_connection(LoggingConnection(view1_name, "top", view2_name, "bottom", toolbox=self.toolbox))
         view = self.toolbox.project_item_model.get_item(view1_name)
         self.assertEqual(view1_name, view.name)
         view = self.toolbox.project_item_model.get_item(view2_name)
@@ -311,8 +311,12 @@ class TestSpineToolboxProject(unittest.TestCase):
         data_connection_executable = self._make_mock_executable(data_connection)
         view = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
         view_executable = self._make_mock_executable(view)
-        self.toolbox.project().add_connection(Connection(data_store.name, "right", data_connection.name, "left"))
-        self.toolbox.project().add_connection(Connection(data_connection.name, "bottom", view.name, "top"))
+        self.toolbox.project().add_connection(
+            LoggingConnection(data_store.name, "right", data_connection.name, "left", toolbox=self.toolbox)
+        )
+        self.toolbox.project().add_connection(
+            LoggingConnection(data_connection.name, "bottom", view.name, "top", toolbox=self.toolbox)
+        )
         with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
                 data_store.name: data_store_executable,
@@ -331,11 +335,14 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_view(project, self.toolbox.item_factories, source_name)
         add_view(project, self.toolbox.item_factories, destination_name)
         source_item = project.get_item("source")
-        project.add_connection(Connection(source_name, "left", destination_name, "right"))
+        project.add_connection(LoggingConnection(source_name, "left", destination_name, "right", toolbox=self.toolbox))
         project.rename_item("source", "renamed source", "")
         self.assertTrue(bool(project.get_item("renamed source")))
         self.assertEqual(source_item.name, "renamed source")
-        self.assertEqual(project.connections, [Connection("renamed source", "left", destination_name, "right")])
+        self.assertEqual(
+            project.connections,
+            [LoggingConnection("renamed source", "left", destination_name, "right", toolbox=self.toolbox)],
+        )
         dags = project.dags()
         self.assertEqual(len(dags), 1)
         self.assertEqual(node_successors(dags[0]), {"destination": [], "renamed source": ["destination"]})
@@ -356,14 +363,23 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_dc(project, self.toolbox.item_factories, dc2_name)
         dc3_name = "My third and last DC"
         add_dc(project, self.toolbox.item_factories, dc3_name)
-        project.add_connection(Connection(dc1_name, "bottom", dc2_name, "top"))
-        project.add_connection(Connection(dc2_name, "top", dc3_name, "bottom"))
-        self.assertEqual(project.connections_for_item(dc1_name), [Connection(dc1_name, "bottom", dc2_name, "top")])
+        project.add_connection(LoggingConnection(dc1_name, "bottom", dc2_name, "top", toolbox=self.toolbox))
+        project.add_connection(LoggingConnection(dc2_name, "top", dc3_name, "bottom", toolbox=self.toolbox))
+        self.assertEqual(
+            project.connections_for_item(dc1_name),
+            [LoggingConnection(dc1_name, "bottom", dc2_name, "top", toolbox=self.toolbox)],
+        )
         self.assertEqual(
             project.connections_for_item(dc2_name),
-            [Connection(dc1_name, "bottom", dc2_name, "top"), Connection(dc2_name, "top", dc3_name, "bottom")],
+            [
+                LoggingConnection(dc1_name, "bottom", dc2_name, "top", toolbox=self.toolbox),
+                LoggingConnection(dc2_name, "top", dc3_name, "bottom", toolbox=self.toolbox),
+            ],
         )
-        self.assertEqual(project.connections_for_item(dc3_name), [Connection(dc2_name, "top", dc3_name, "bottom")])
+        self.assertEqual(
+            project.connections_for_item(dc3_name),
+            [LoggingConnection(dc2_name, "top", dc3_name, "bottom", toolbox=self.toolbox)],
+        )
 
     def test_add_connection_updates_dag_handler(self):
         project = self.toolbox.project()
@@ -371,7 +387,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_dc(project, self.toolbox.item_factories, dc_name)
         importer_name = "Importer"
         add_importer(project, self.toolbox.item_factories, importer_name)
-        project.add_connection(Connection(dc_name, "right", importer_name, "left"))
+        project.add_connection(LoggingConnection(dc_name, "right", importer_name, "left", toolbox=self.toolbox))
         self.assertEqual(len(project.connections), 1)
         dag = project.dag_with_node(dc_name)
         self.assertEqual(node_successors(dag), {dc_name: [importer_name], importer_name: []})
@@ -388,7 +404,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         dc.add_data_files([data_file])
         tool = project.get_item(tool_name)
         self.assertEqual(tool._input_file_model.rowCount(), 0)
-        project.add_connection(Connection(dc_name, "left", tool_name, "right"))
+        project.add_connection(LoggingConnection(dc_name, "left", tool_name, "right", toolbox=self.toolbox))
         self.assertEqual(tool._input_file_model.rowCount(), 1)
 
     def test_modifying_connected_item_updates_resources(self):
@@ -398,7 +414,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         tool_name = "Tool"
         add_tool(project, self.toolbox.item_factories, tool_name)
         tool = project.get_item(tool_name)
-        project.add_connection(Connection(dc_name, "left", tool_name, "right"))
+        project.add_connection(LoggingConnection(dc_name, "left", tool_name, "right", toolbox=self.toolbox))
         self.assertEqual(tool._input_file_model.rowCount(), 0)
         dc = project.get_item(dc_name)
         data_file = Path(self._temp_dir.name, "a.txt")
@@ -425,8 +441,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         b.touch()
         dc1.add_data_files([a])
         dc2.add_data_files([b])
-        project.add_connection(Connection("dc1", "right", "t", "left"))
-        project.add_connection(Connection("dc2", "right", "t", "left"))
+        project.add_connection(LoggingConnection("dc1", "right", "t", "left", toolbox=self.toolbox))
+        project.add_connection(LoggingConnection("dc2", "right", "t", "left", toolbox=self.toolbox))
         self.assertEqual(t._input_file_model.rowCount(), 2)  # There should 2 files in Available resources
         connection = project.find_connection("dc2", "t")
         project.remove_connection(connection)
@@ -438,11 +454,17 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_dc(project, self.toolbox.item_factories, dc1_name)
         dc2_name = "DC 2"
         add_dc(project, self.toolbox.item_factories, dc2_name)
-        conn = Connection(dc1_name, "left", dc2_name, "right")
+        conn = LoggingConnection(dc1_name, "left", dc2_name, "right", toolbox=self.toolbox)
         project.add_connection(conn)
         project.update_connection(conn, "top", "bottom")
-        self.assertEqual(project.connections_for_item(dc1_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
-        self.assertEqual(project.connections_for_item(dc2_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
+        self.assertEqual(
+            project.connections_for_item(dc1_name),
+            [LoggingConnection(dc1_name, "top", dc2_name, "bottom", toolbox=self.toolbox)],
+        )
+        self.assertEqual(
+            project.connections_for_item(dc2_name),
+            [LoggingConnection(dc1_name, "top", dc2_name, "bottom", toolbox=self.toolbox)],
+        )
         dag = project.dag_with_node(dc1_name)
         self.assertEqual(node_successors(dag), {dc1_name: [dc2_name], dc2_name: []})
 
