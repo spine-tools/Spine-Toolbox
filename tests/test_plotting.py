@@ -38,6 +38,7 @@ from spinetoolbox.widgets.plot_widget import PlotWidget
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 
 
+@unittest.skip
 class TestPlotting(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
