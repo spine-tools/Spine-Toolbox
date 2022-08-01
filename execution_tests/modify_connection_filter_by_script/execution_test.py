@@ -53,9 +53,9 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
                 "-m",
                 "spinetoolbox",
                 "--mod-script",
-                self._mod_script_path,
+                str(self._mod_script_path),
                 "--execute-only",
-                self._root_path,
+                str(self._root_path),
             )
         )
         self.assertEqual(completed.returncode, 0)
