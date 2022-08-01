@@ -29,7 +29,7 @@ class SpineDBSignaller(QObject):
         Args:
             db_mngr (SpineDBManager)
         """
-        super().__init__()
+        super().__init__(db_mngr)
         self.db_mngr = db_mngr
         self.listeners = dict()
         self._deferred_notifications = dict()

@@ -89,7 +89,7 @@ class SpineDBEditorBase(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.takeCentralWidget()
+        self.takeCentralWidget().deleteLater()
         self.url_toolbar = UrlToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
         toolbox = self.db_mngr.parent()

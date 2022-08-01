@@ -241,7 +241,7 @@ class ActionsWithProject(QObject):
         Returns:
             Status: status code
         """
-        self._app_settings = QSettings("SpineProject", "Spine Toolbox")
+        self._app_settings = QSettings("SpineProject", "Spine Toolbox", self)
         spec_factories = load_item_specification_factories("spine_items")
         self._plugin_specifications = dict()
         for plugin_dir in plugins_dirs(self._app_settings):

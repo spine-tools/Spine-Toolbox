@@ -331,6 +331,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         settings.setValue("appSettings/juliaProjectPath", julia_project_path)
         settings.setValue("appSettings/juliaKernel", julia_kernel)
         julia_env = get_julia_env(settings)
+        settings.deleteLater()
         if julia_env is None:
             julia_exe = julia_project = ""
         else:
