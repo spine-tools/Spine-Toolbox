@@ -32,7 +32,7 @@ from .graph_layout_generator import make_heat_map
 class EntityQGraphicsView(CustomQGraphicsView):
     """QGraphicsView for the Entity Graph View."""
 
-    graph_selection_changed = Signal(object)
+    graph_selection_changed = Signal(dict)
 
     def __init__(self, parent):
         """

@@ -295,7 +295,7 @@ class _DBListWidget(QTreeWidget):
 
 
 class _UrlFilterDialog(QDialog):
-    filter_accepted = Signal(object)
+    filter_accepted = Signal(dict)
 
     def __init__(self, db_mngr, db_maps, parent=None):
         super().__init__(parent=parent, f=Qt.Popup)
