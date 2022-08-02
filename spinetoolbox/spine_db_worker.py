@@ -178,12 +178,12 @@ class SpineDBWorker(QObject):
             query = self._get_query(parent)
             if not self._query_has_elements(query):
                 self._fetched_parents.add(parent)
-                QCoreApplication.postEvent(self, _FetchStatusChangeEvent(parent))
+                QCoreApplication.sendEvent(self, _FetchStatusChangeEvent(parent))
         finally:
             lock.unlock()
 
     def _get_query(self, parent):
-        """Creates a query for parent. Stores both the query and whether or not it has elements."""
+        """Creates a query for parent. Stores both the query and whether it has elements."""
         if parent not in self._queries:
             query = self._make_query_for_parent(parent)
             key = self._make_query_key(query)
@@ -218,7 +218,7 @@ class SpineDBWorker(QObject):
             query = self._get_query(parent)
             iterator = self._get_iterator(parent, query)
             chunk = next(iterator, [])
-            QCoreApplication.postEvent(self, _FetchEvent(parent, chunk))
+            QCoreApplication.sendEvent(self, _FetchEvent(parent, chunk))
         finally:
             lock.unlock()
 
