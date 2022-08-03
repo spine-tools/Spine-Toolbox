@@ -44,18 +44,18 @@ from spinetoolbox.helpers import unique_name
 class KernelEditorBase(QDialog):
     """Base class for kernel editors."""
 
-    def __init__(self, parent, python_or_julia):
+    def __init__(self, parent, python_or_julia, app_settings):
         """
         Args:
-            parent (QSettingsWidget): Toolbox settings widget
+            parent (QWidget): parent widget
             python_or_julia (str): kernel type; valid values: "julia", "python"
+            app_settings (QSettings): Toolbox settings
         """
         super().__init__(parent=parent)  # Inherits stylesheet from SettingsWindow
         self.setWindowFlags(Qt.Window)
         self.setup_dialog_style()
         # Class attributes
-        self._parent = parent
-        self._app_settings = self._parent.qsettings
+        self._app_settings = app_settings
         self._logger = LoggerInterface(self)
         self._install_kernel_process = None
         self._install_package_process = None
@@ -541,19 +541,20 @@ class KernelEditorBase(QDialog):
 class KernelEditor(KernelEditorBase):
     """Class for a Python and Julia kernel editor."""
 
-    def __init__(self, parent, python, julia, python_or_julia, current_kernel):
+    def __init__(self, parent, python, julia, python_or_julia, current_kernel, app_settings):
         """
 
         Args:
-            parent (QWidget): Parent widget (Settings widget)
+            parent (QWidget): Parent widget
             python (str): Python interpreter, may be empty string
             julia (str): Julia executable, may be empty string
             python_or_julia (str): Setup KernelEditor according to selected mode
             current_kernel (str): Current selected Python or Julia kernel name
+            app_settings (QSettings): Toolbox settings
         """
         from ..ui import kernel_editor_dialog  # pylint: disable=import-outside-toplevel
 
-        super().__init__(parent, python_or_julia)
+        super().__init__(parent, python_or_julia, app_settings)
         self.ui = kernel_editor_dialog.Ui_Dialog()
         self.ui.setupUi(self)
         self.kernel_list_model = QStandardItemModel()
@@ -1081,8 +1082,8 @@ class KernelEditor(KernelEditorBase):
 
 
 class MiniKernelEditorBase(KernelEditorBase):
-    def __init__(self, parent, python_or_julia):
-        super().__init__(parent, python_or_julia)
+    def __init__(self, parent, python_or_julia, app_settings):
+        super().__init__(parent, python_or_julia, app_settings)
         from ..ui import mini_kernel_editor_dialog  # pylint: disable=import-outside-toplevel
 
         self.ui = mini_kernel_editor_dialog.Ui_Dialog()
@@ -1122,8 +1123,8 @@ class MiniPythonKernelEditor(MiniKernelEditorBase):
     The python exe is passed in the constructor, then calling ``make_kernel`` starts the process.
     """
 
-    def __init__(self, parent, python_exe):
-        super().__init__(parent, "python")
+    def __init__(self, parent, python_exe, app_settings):
+        super().__init__(parent, "python", app_settings)
         self.ui.label_message.setText("Finalizing Python configuration... ")
         self.ui.stackedWidget.setCurrentIndex(0)
         self.setWindowTitle("Python Kernel Specification Creator")
@@ -1157,8 +1158,8 @@ class MiniJuliaKernelEditor(MiniKernelEditorBase):
     The julia exe and project are passed in the constructor, then calling ``make_kernel`` starts the process.
     """
 
-    def __init__(self, parent, julia_exe, julia_project):
-        super().__init__(parent, "julia")
+    def __init__(self, parent, julia_exe, julia_project, app_settings):
+        super().__init__(parent, "julia", app_settings)
         self.ui.label_message.setText("Finalizing Julia configuration... ")
         self.ui.stackedWidget.setCurrentIndex(1)
         self.setWindowTitle("Julia Kernel Specification Creator")

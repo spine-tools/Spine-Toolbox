@@ -68,7 +68,7 @@ class TestKernelEditorBase(unittest.TestCase):
                 KernelEditorBase, "_python_kernel_display_name", return_value="Test kernel"
             ):
                 mock_message_box.exec_.return_value = QMessageBox.Ok
-                editor = KernelEditorBase(self._settings_widget, "python")
+                editor = KernelEditorBase(self._settings_widget, "python", self._settings_widget.qsettings)
                 self.assertTrue(editor.make_python_kernel())
                 while editor._install_package_process is not None:
                     QApplication.processEvents()
@@ -96,7 +96,7 @@ class TestKernelEditorBase(unittest.TestCase):
             KernelEditorBase, "_julia_project", return_value="@."
         ):
             mock_message_box.exec_.return_value = QMessageBox.Ok
-            editor = KernelEditorBase(self._settings_widget, "julia")
+            editor = KernelEditorBase(self._settings_widget, "julia", self._settings_widget.qsettings)
             julia_project_dir = editor._julia_project()
             ijulia_installation_status = editor.is_ijulia_installed(julia_exec, julia_project_dir)
             if ijulia_installation_status == 0:
@@ -148,9 +148,13 @@ class TestKernelEditor(unittest.TestCase):
     def test_make_kernel_editor(self):
         sw = SettingsWidget(self.toolbox)
         # Make Python Kernel Editor
-        ke = KernelEditor(sw, python="", julia="", python_or_julia="python", current_kernel="")
+        ke = KernelEditor(
+            sw, python="", julia="", python_or_julia="python", current_kernel="", app_settings=sw.qsettings
+        )
         self.assertIsInstance(ke, KernelEditor)
         self.assertEqual(ke.windowTitle(), "Python Kernel Specification Editor")
         # Make Julia Kernel Editor
-        ke = KernelEditor(sw, python="", julia="", python_or_julia="julia", current_kernel="")
+        ke = KernelEditor(
+            sw, python="", julia="", python_or_julia="julia", current_kernel="", app_settings=sw.qsettings
+        )
         self.assertEqual(ke.windowTitle(), "Julia Kernel Specification Editor")
