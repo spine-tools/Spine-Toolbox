@@ -374,7 +374,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         p = self.ui.lineEdit_python_path.text()  # This may be an empty string
         j = self.ui.lineEdit_julia_path.text()
         current_kernel = self.ui.comboBox_python_kernel.currentText()
-        self._kernel_editor = KernelEditor(self, p, j, "python", current_kernel, self.qsettings)
+        self._kernel_editor = KernelEditor(self, p, j, "python", current_kernel)
         self._kernel_editor.finished.connect(self.python_kernel_editor_closed)
         self._kernel_editor.open()
 
@@ -408,7 +408,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         p = self.ui.lineEdit_python_path.text()  # This may be an empty string
         j = self.ui.lineEdit_julia_path.text()
         current_kernel = self.ui.comboBox_julia_kernel.currentText()
-        self._kernel_editor = KernelEditor(self, p, j, "julia", current_kernel, self.qsettings)
+        self._kernel_editor = KernelEditor(self, p, j, "julia", current_kernel)
         self._kernel_editor.finished.connect(self.julia_kernel_editor_closed)
         self._kernel_editor.open()
 
@@ -706,7 +706,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if use_julia_jupyter_console == "2" and not julia_kernel:
             julia_kernel = _get_julia_kernel_name_by_env(julia_exe, julia_project)
             if not julia_kernel:
-                MiniJuliaKernelEditor(self, julia_exe, julia_project, self.qsettings).make_kernel()
+                MiniJuliaKernelEditor(self, julia_exe, julia_project).make_kernel()
                 julia_kernel = _get_julia_kernel_name_by_env(julia_exe, julia_project)
         self._qsettings.setValue("appSettings/useJuliaKernel", use_julia_jupyter_console)
         # Check julia_path is a file, it exists, and file name starts with 'julia'
@@ -728,7 +728,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if use_python_jupyter_console == "2" and not python_kernel:
             python_kernel = _get_python_kernel_name_by_exe(python_exe)
             if not python_kernel:
-                MiniPythonKernelEditor(self, python_exe, self.qsettings).make_kernel()
+                MiniPythonKernelEditor(self, python_exe).make_kernel()
                 python_kernel = _get_python_kernel_name_by_exe(python_exe)
         self._qsettings.setValue("appSettings/usePythonKernel", use_python_jupyter_console)
         # Check python_path is a file, it exists, and file name starts with 'python'
