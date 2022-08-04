@@ -10,6 +10,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   duplicates the functionality of Gimlet project items and makes them obsolete.
 
 ### Changed
+- Tool's Python kernel specs are now project item specific rather than specification specific.
+  Consequently, the interface for editing the specs has been moved from Tool specification editor
+  to Tool properties tab in the main Toolbox window.
+  Further, the kernel spec settings are now saved in `<project root>/.spinetoolbox/local/project_local_data.json`
+  making it easier to share project over Git or similar.
+- Tool's shell (while in 'executable' model) is now project item specific rather than specification specific.
+  Consequently, the interface for changing the shell has been moved from Tool specification editor
+  to Tool properties tab in the main Toolbox window.
+  Further, the shell is now saved in `<project root>/.spinetoolbox/local/project_local_data.json`
+  making it easier to share project over Git or similar.
 
 ### Deprecated
 - Gimlet project items are deprecated and will be removed in the future.
