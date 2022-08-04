@@ -55,22 +55,13 @@ class SetItemSpecificationCommand(SpineToolboxCommand):
         self.item = item
         self.spec = spec
         self.old_spec = old_spec
-        self.setText(self.make_text(item.name))
+        self.setText(f"set specification of {item.name}")
 
     def redo(self):
         self.item.do_set_specification(self.spec)
 
     def undo(self):
         self.item.do_set_specification(self.old_spec)
-
-    @staticmethod
-    def make_text(item_name):
-        """Return action text for this command.
-
-        Args:
-            item_name (str): project item name
-        """
-        return f"set specification of {item_name}"
 
 
 class MoveIconCommand(SpineToolboxCommand):
