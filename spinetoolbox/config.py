@@ -55,6 +55,7 @@ JUPYTER_KERNEL_TIME_TO_DEAD = 8.0
 PROJECT_FILENAME = "project.json"
 PROJECT_LOCAL_DATA_DIR_NAME = "local"
 PROJECT_LOCAL_DATA_FILENAME = "project_local_data.json"
+SPECIFICATION_LOCAL_DATA_FILENAME = "specification_local_data.json"
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{background-color: #EBEBE0; border-width: 1px; border-color: gray; border-style: groove;}"

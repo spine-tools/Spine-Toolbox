@@ -25,7 +25,13 @@ import shutil
 from PySide2.QtCore import Qt, Signal, Slot, QObject, QThread
 from spine_engine.utils.serialization import serialize_path, deserialize_path, deserialize_remote_path
 from .config import PLUGINS_PATH, PLUGIN_REGISTRY_URL
-from .helpers import load_plugin_dict, load_plugin_specifications, plugins_dirs
+from .helpers import (
+    load_plugin_dict,
+    load_plugin_specifications,
+    plugins_dirs,
+    load_specification_local_data,
+    load_specification_from_file,
+)
 from .widgets.toolbars import PluginToolBar
 from .widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDialog
 
@@ -78,7 +84,7 @@ class PluginManager:
     def __init__(self, toolbox):
         """
         Args:
-            toolbox (ToolboxUI)
+            toolbox (ToolboxUI): Toolbox instance.
         """
         self._toolbox = toolbox
         self._plugin_toolbars = {}
@@ -98,21 +104,44 @@ class PluginManager:
 
     def load_installed_plugins(self):
         """Loads installed plugins and adds their specifications to toolbars."""
+        project = self._toolbox.project()
+        local_data = load_specification_local_data(project.config_dir) if project else {}
         for plugin_dir in plugins_dirs(self._toolbox.qsettings()):
-            self.load_individual_plugin(plugin_dir)
+            self.load_individual_plugin(plugin_dir, local_data)
         self._toolbox.refresh_toolbars()
 
-    def load_individual_plugin(self, plugin_dir):
+    def reload_plugins_with_local_data(self):
+        """Reloads plugins that have project specific local data."""
+        project = self._toolbox.project()
+        local_data = load_specification_local_data(project.config_dir) if project else {}
+        specification_factories = self._toolbox.item_specification_factories()
+        app_settings = self._toolbox.qsettings()
+        for plugin_name, specifications in self._plugin_specs.items():
+            for specification in specifications:
+                if not specification.may_have_local_data():
+                    continue
+                reloaded = load_specification_from_file(
+                    specification.definition_file_path, local_data, specification_factories, app_settings, self._toolbox
+                )
+                reloaded.plugin = plugin_name
+                project.replace_specification(reloaded.name, reloaded, save_to_disk=False)
+
+    def load_individual_plugin(self, plugin_dir, specification_local_data):
         """Loads plugin from directory.
 
         Args:
             plugin_dir (str): path of plugin dir with "plugin.json" in it.
+            specification_local_data (dict): specification local data
         """
         plugin_dict = load_plugin_dict(plugin_dir, self._toolbox)
         if plugin_dict is None:
             return
         plugin_specs = load_plugin_specifications(
-            plugin_dict, self._toolbox.item_specification_factories(), self._toolbox.qsettings(), self._toolbox
+            plugin_dict,
+            specification_local_data,
+            self._toolbox.item_specification_factories(),
+            self._toolbox.qsettings(),
+            self._toolbox,
         )
         if plugin_specs is None:
             return
@@ -178,7 +207,8 @@ class PluginManager:
         worker.start(_download_plugin, plugin, plugin_local_dir)
 
     def _load_installed_plugin(self, plugin_local_dir):
-        self.load_individual_plugin(plugin_local_dir)
+        local_data = load_specification_local_data(self._toolbox.project().config_dir)
+        self.load_individual_plugin(plugin_local_dir, local_data)
         self._toolbox.refresh_toolbars()
 
     @Slot(bool)

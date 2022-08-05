@@ -284,7 +284,7 @@ class TestHelpers(unittest.TestCase):
         specification_factories = load_item_specification_factories("spine_items")
         logger = MagicMock()
         app_settings = QSettings("SpineProject", "Spine Toolbox")
-        tool_spec = load_specification_from_file(str(spec_path), specification_factories, app_settings, logger)
+        tool_spec = load_specification_from_file(str(spec_path), {}, specification_factories, app_settings, logger)
         self.assertIsNotNone(tool_spec)
         self.assertEqual(tool_spec.name, "Python Tool Specification")
         app_settings.deleteLater()
