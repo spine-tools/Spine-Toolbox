@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   duplicates the functionality of Gimlet project items and makes them obsolete.
 
 ### Changed
+- The console settings of Python tools as well as the command and shell settings of executable tools
+  are now treated as project-specific data
+  and stored in ``<project root>/.spinetoolbox/local/specification_local_data.json``.
+  This should make it easier to share projects over e.g. Git.
 
 ### Deprecated
 - Gimlet project items are deprecated and will be removed in the future.
