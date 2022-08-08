@@ -1,0 +1,91 @@
+{
+    "project": {
+        "version": 7,
+        "name": "Import file packs",
+        "description": "",
+        "specifications": {
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/create_file_pack.json"
+                }
+            ],
+            "Importer": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Importer/import_dat_files.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Import to Data Store",
+                "from": [
+                    "Import",
+                    "right"
+                ],
+                "to": [
+                    "Data Store",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Create file pack to Import",
+                "from": [
+                    "Create file pack",
+                    "right"
+                ],
+                "to": [
+                    "Import",
+                    "left"
+                ]
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Create file pack": {
+            "type": "Tool",
+            "description": "",
+            "x": -187.28009298776516,
+            "y": 41.07876660531373,
+            "specification": "create file pack",
+            "execute_in_work": true,
+            "cmd_line_args": []
+        },
+        "Import": {
+            "type": "Importer",
+            "description": "",
+            "x": -37.039621200557015,
+            "y": 39.06150554303174,
+            "specification": "import dat files",
+            "cancel_on_error": false,
+            "purge_before_writing": false,
+            "on_conflict": "merge",
+            "file_selection": [
+                [
+                    "*.dat",
+                    true
+                ]
+            ]
+        },
+        "Data Store": {
+            "type": "Data Store",
+            "description": "",
+            "x": 123.20856013478486,
+            "y": 39.05688226283901,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/data_store/db.sqlite"
+                }
+            }
+        }
+    }
+}

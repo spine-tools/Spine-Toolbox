@@ -1,0 +1,4 @@
+*.dat
+.spinetoolbox/local/
+.spinetoolbox/items/create_file_pack/
+*.bak
