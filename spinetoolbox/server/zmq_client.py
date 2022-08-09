@@ -102,7 +102,8 @@ class ZMQClient:
             list or str: List of tuples containing events+data, or an error message string if something went wrong
             in initializing the execution at server.
         """
-        zip_path = os.path.join(file_path, os.pardir, filename)  # Note: zip-file is in parent dir of file_path now
+        zip_path = os.path.join(file_path, filename)
+        print(f"zip_path in send():{zip_path}")
         if not os.path.exists(zip_path):
             raise ValueError(f"Zipped project file {filename} not found in {file_path}")
         print(f"Zip-file size:{os.path.getsize(zip_path)}")

@@ -55,7 +55,8 @@ class TestZMQClient(unittest.TestCase):
         engine_data = self.make_engine_data_for_test_zipfile_project()
         msg_data_json = json.dumps(engine_data)
         zip_fname = "test_zipfile.zip"
-        zip_fpath = os.path.join(str(Path(__file__).parent), zip_fname)
+        zip_fpath = os.path.join(str(Path(__file__).parent))
+        print(f"zip_fpath:{zip_fpath}")
         client = ZMQClient("tcp", self.host, self.port, ClientSecurityModel.NONE, "")
         data_events = client.send(msg_data_json, zip_fpath, zip_fname)
         # for e in data_events:
