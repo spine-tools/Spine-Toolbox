@@ -38,6 +38,7 @@ from .helpers import (
     load_local_project_data,
     merge_dicts,
     HTMLTagFilter,
+    load_specification_local_data,
 )
 from .spine_engine_manager import make_engine_manager
 
@@ -241,25 +242,29 @@ class ActionsWithProject(QObject):
         Returns:
             Status: status code
         """
-        self._app_settings = QSettings("SpineProject", "Spine Toolbox")
+        self._app_settings = QSettings("SpineProject", "Spine Toolbox", self)
         spec_factories = load_item_specification_factories("spine_items")
         self._plugin_specifications = dict()
+        self._project_dir = pathlib.Path(self._args.project).resolve()
+        config_dir = self._project_dir / ".spinetoolbox"
+        specification_local_data = load_specification_local_data(config_dir)
         for plugin_dir in plugins_dirs(self._app_settings):
             plugin_dict = load_plugin_dict(plugin_dir, self._logger)
             if plugin_dict is None:
                 continue
-            specs = load_plugin_specifications(plugin_dict, spec_factories, self._app_settings, self._logger)
+            specs = load_plugin_specifications(
+                plugin_dict, specification_local_data, spec_factories, self._app_settings, self._logger
+            )
             if specs is None:
                 continue
             for spec_list in specs.values():
                 for spec in spec_list:
                     self._plugin_specifications.setdefault(spec.item_type, []).append(spec)
-        self._project_dir = pathlib.Path(self._args.project).resolve()
-        project_dict = load_project_dict(str(self._project_dir / ".spinetoolbox"), self._logger)
+        project_dict = load_project_dict(str(config_dir), self._logger)
         version_status = self._check_project_version(project_dict)
         if version_status != Status.OK:
             return version_status
-        local_data_dict = load_local_project_data(self._project_dir / ".spinetoolbox", self._logger)
+        local_data_dict = load_local_project_data(config_dir, self._logger)
         merge_dicts(local_data_dict, project_dict)
         self._item_dicts, self._specification_dicts, self._connection_dicts, self._jump_dicts = open_project(
             project_dict, self._project_dir, self._logger

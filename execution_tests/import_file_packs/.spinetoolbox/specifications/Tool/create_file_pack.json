@@ -1,0 +1,16 @@
+{
+    "name": "create file pack",
+    "tooltype": "python",
+    "includes": [
+        "create_data_files.py"
+    ],
+    "description": "Creates two .dat files with CSV contents",
+    "inputfiles": [],
+    "inputfiles_opt": [],
+    "outputfiles": [
+        "*.dat"
+    ],
+    "cmdline_args": [],
+    "execute_in_work": true,
+    "includes_main_path": "../../.."
+}

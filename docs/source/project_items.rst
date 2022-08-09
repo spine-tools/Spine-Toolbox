@@ -21,6 +21,8 @@
    :width: 16
 .. |importer| image:: ../../spinetoolbox/ui/resources/project_item_icons/database-import.svg
    :width: 16
+.. |merger| image:: ../../spinetoolbox/ui/resources/project_item_icons/blender.svg
+   :width: 16
 .. |tool| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
    :width: 16
 .. |view| image:: ../../spinetoolbox/ui/resources/project_item_icons/binoculars.svg
@@ -68,6 +70,14 @@ available by double-clicking a Data store on the Design view,
 from the item's properties,
 or from a right-click context menu.
 
+Merger |merger|
+===============
+
+A Merger item transfers data between Data Stores.
+When connected to a single source database,
+it simply copies data from the source to all output Data Stores.
+Data from more than one source gets merged to outputs.
+
 Data Connection |data_connection|
 =================================
 
@@ -80,14 +90,16 @@ Tool |tool|
 ===========
 
 Tool is the heart of a DAG. It is usually the actual model to be executed in Spine Toolbox
-but can be an arbitrary script or executable as well.
+but can be an arbitrary script, executable or system command as well.
 A tool is specified by its :ref:`specification <Tool specification editor>`.
 
 Gimlet |gimlet|
 ===============
 
-While being able to run most scripts and copyable executables, Tool cannot handle system commands
-or executables meant to run from system's *path*. This is a job for Gimlet.
+.. note::
+   Gimlet is pending for removal and its use in new projects is discouraged.
+   Use Tool instead.
+
 A Gimlet can execute an arbitrary system command with given command line arguments,
 input files and work directory.
 

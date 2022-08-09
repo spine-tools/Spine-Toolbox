@@ -157,7 +157,7 @@ class MassRemoveItemsDialog(MassSelectItemsDialog):
 class MassExportItemsDialog(MassSelectItemsDialog):
     """A dialog to let users chose items for JSON export."""
 
-    data_submitted = Signal(object)
+    data_submitted = Signal(dict)
 
     def __init__(self, parent, db_mngr, *db_maps):
         """

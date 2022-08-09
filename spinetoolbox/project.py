@@ -25,7 +25,7 @@ from PySide2.QtCore import Signal
 from PySide2.QtGui import QColor
 import networkx as nx
 from spine_engine.exception import EngineInitFailed, RemoteEngineFailed
-from spine_engine.utils.helpers import create_timestamp
+from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
 from spine_engine.utils.helpers import shorten
@@ -41,6 +41,7 @@ from .helpers import (
     load_project_dict,
     load_local_project_data,
     merge_dicts,
+    load_specification_local_data,
 )
 from .project_upgrader import ProjectUpgrader
 from .config import (
@@ -50,6 +51,7 @@ from .config import (
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
     FG_COLOR,
+    SPECIFICATION_LOCAL_DATA_FILENAME,
     PROJECT_ZIP_FILENAME,
 )
 from .project_commands import SetProjectNameAndDescriptionCommand
@@ -190,20 +192,10 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit(msg)
 
     def save(self):
-        """Collects project information and objects into a dictionary and writes it to a JSON file.
-
-        Returns:
-            bool: True or False depending on success
-        """
-        serialized_spec_paths = dict()
-        for spec in self._specifications.values():
-            if spec.plugin is not None:
-                continue
-            if not spec.save():
-                self._logger.msg_error.emit(f"Failed to save specification <b>{spec.name}</b>.")
-                return False
-            serialized_path = serialize_path(spec.definition_file_path, self.project_dir)
-            serialized_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
+        """Collects project information and objects into a dictionary and writes it to a JSON file."""
+        local_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
+        local_path.mkdir(parents=True, exist_ok=True)
+        serialized_spec_paths = self._save_all_specifications(local_path)
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
             "name": self.name,
@@ -217,11 +209,39 @@ class SpineToolboxProject(MetaObject):
         saved_dict = dict(project=project_dict, items=items_dict)
         with open(self.config_file, "w") as fp:
             self._dump(saved_dict, fp)
-        local_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
-        local_path.mkdir(parents=True, exist_ok=True)
         with (local_path / PROJECT_LOCAL_DATA_FILENAME).open("w") as fp:
             self._dump(dict(items=local_items_data), fp)
-        return True
+
+    def _save_all_specifications(self, local_path):
+        """Writes all specifications except plugins to disk.
+
+        Local specification data is also written to disk, including local data from plugins.
+
+        Args:
+            local_path (Path):
+
+        Returns:
+            dict: specification local data that is supposed to be stored in a project specific place
+        """
+        serialized_spec_paths = dict()
+        specifications_local_data = {}
+        for spec in self._specifications.values():
+            if spec.plugin is not None:
+                local_data = spec.local_data()
+            else:
+                try:
+                    local_data = spec.save()
+                except ValueError:
+                    self._logger.msg_error.emit(f"Failed to save specification <b>{spec.name}</b>.")
+                    continue
+                serialized_path = serialize_path(spec.definition_file_path, self.project_dir)
+                serialized_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
+            if local_data:
+                specifications_local_data.setdefault(spec.item_type, {}).setdefault(spec.name, {}).update(local_data)
+        if specifications_local_data:
+            with (local_path / SPECIFICATION_LOCAL_DATA_FILENAME).open("w") as fp:
+                self._dump(specifications_local_data, fp)
+        return serialized_spec_paths
 
     def _pop_local_data_from_items_dict(self, items_dict):
         """Pops local data from project items dict.
@@ -237,30 +257,19 @@ class SpineToolboxProject(MetaObject):
             local_entries = self._project_items[name].item_dict_local_entries()
             if not local_entries:
                 continue
-            for prefix in local_entries:
-                # Pop value from item_dict
-                d = item_dict
-                for part in prefix[:-1]:
-                    d = d.get(part, {})
-                value = d.pop(prefix[-1], None)
-                if value is None:
-                    continue
-                # Put value in local_data_dict
-                d = local_data_dict.setdefault(name, {})
-                for part in prefix[:-1]:
-                    d = d.setdefault(part, {})
-                d[prefix[-1]] = value
+            popped = gather_leaf_data(item_dict, local_entries, pop=True)
+            local_data_dict.setdefault(name, {}).update(popped)
         return local_data_dict
 
     @staticmethod
-    def _dump(project_dict, out_stream):
-        """Dumps project dict into output stream.
+    def _dump(target_dict, out_stream):
+        """Dumps given dict into output stream.
 
         Args:
-            project_dict (dict): project dictionary
+            target_dict (dict): dictionary to dump
             out_stream (IOBase): output stream
         """
-        json.dump(project_dict, out_stream, indent=4)
+        json.dump(target_dict, out_stream, indent=4)
 
     def load(self, spec_factories, item_factories):
         """Loads project from its project directory.
@@ -292,8 +301,11 @@ class SpineToolboxProject(MetaObject):
             deserialize_path(path, self.project_dir) for paths in spec_paths_per_type.values() for path in paths
         ]
         self._logger.msg.emit("Loading specifications...")
+        specification_local_data = load_specification_local_data(self.config_dir)
         for path in deserialized_paths:
-            spec = load_specification_from_file(path, spec_factories, self._settings, self._logger)
+            spec = load_specification_from_file(
+                path, specification_local_data, spec_factories, self._settings, self._logger
+            )
             if spec is not None:
                 self.add_specification(spec, save_to_disk=False)
         items_dict = project_info["items"]
@@ -429,14 +441,15 @@ class SpineToolboxProject(MetaObject):
             )
             item.do_set_specification(None)
 
-    def replace_specification(self, name, specification):
+    def replace_specification(self, name, specification, save_to_disk=True):
         """Replaces an existing specification.
 
-        Saves the given spec to disk and refreshes the spec in all items that use it.
+        Refreshes the spec in all items that use it.
 
         Args:
             name (str): name of the specification to replace
             specification (ProjectItemSpecification): a specification
+            save_to_disk (bool): If True, saves the given specification to disk
 
         Returns:
             bool: True if operation was successful, False otherwise
@@ -444,7 +457,7 @@ class SpineToolboxProject(MetaObject):
         if name != specification.name and self.is_specification_name_reserved(specification.name):
             self._logger.msg_error.emit(f"Specification name {specification.name} already in use.")
             return False
-        if not self.save_specification_file(specification):
+        if save_to_disk and not self.save_specification_file(specification):
             return False
         id_ = self.specification_name_to_id(name)
         self._specifications[id_] = specification
@@ -479,27 +492,50 @@ class SpineToolboxProject(MetaObject):
             bool: True if operation was successful, False otherwise
         """
         if not specification.definition_file_path:
-            # Determine a candidate definition file path *inside* the project folder, for relocatability...
-            specs_dir = self.specs_dir
-            specs_type_dir = os.path.join(specs_dir, specification.item_type)
-            try:
-                create_dir(specs_type_dir)
-            except OSError:
-                self._logger.msg_error.emit(f"Creating directory {specs_type_dir} failed")
-                specs_type_dir = specs_dir
-            candidate_path = os.path.join(specs_type_dir, shorten(specification.name) + ".json")
-            if os.path.exists(candidate_path):
-                # Confirm overwriting existing file.
-                candidate_path = self._toolbox.prompt_save_location(
-                    f"Save {specification.item_type} specification", candidate_path, "JSON (*.json)"
-                )
-                if candidate_path is None:
-                    return False
+            candidate_path = self._default_specification_file_path(specification)
+            if candidate_path is None:
+                return False
             specification.definition_file_path = candidate_path
-        if not specification.save():
-            return False
+        local_data = specification.save()
+        if local_data:
+            local_data_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, SPECIFICATION_LOCAL_DATA_FILENAME)
+            if local_data_path.exists():
+                with open(local_data_path) as local_data_file:
+                    specification_local_data = json.load(local_data_file)
+                specification_local_data.setdefault(specification.item_type, {})[specification.name] = local_data
+            else:
+                specification_local_data = {specification.item_type: {specification.name: local_data}}
+            local_data_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(local_data_path, "w") as local_data_file:
+                self._dump(specification_local_data, local_data_file)
         self.specification_saved.emit(specification.name, specification.definition_file_path)
         return True
+
+    def _default_specification_file_path(self, specification):
+        """Determines a path inside project directory to save a specification.
+
+        Args:
+            specification (ProjectItemSpecification): specification
+
+        Returns:
+            str: valid path or None if operation failed
+        """
+        specs_dir = self.specs_dir
+        specs_type_dir = os.path.join(specs_dir, specification.item_type)
+        try:
+            create_dir(specs_type_dir)
+        except OSError:
+            self._logger.msg_error.emit(f"Creating directory {specs_type_dir} failed")
+            specs_type_dir = specs_dir
+        candidate_path = os.path.join(specs_type_dir, shorten(specification.name) + ".json")
+        if os.path.exists(candidate_path):
+            # Confirm overwriting existing file.
+            candidate_path = self._toolbox.prompt_save_location(
+                f"Save {specification.item_type} specification", candidate_path, "JSON (*.json)"
+            )
+            if candidate_path is None:
+                return None
+        return candidate_path
 
     def add_item(self, item, silent=True):
         """Adds a project to item project.
@@ -904,7 +940,11 @@ class SpineToolboxProject(MetaObject):
         Args:
             dags (Sequence(DiGraph))
             execution_permits_list (Sequence(dict))
+<<<<<<< HEAD
             msg (str): Message depending on execution mode (project or selected)
+=======
+            msg (str): message to log before execution
+>>>>>>> master
         """
         self.project_execution_about_to_start.emit()
         self._logger.msg.emit("")
@@ -1046,7 +1086,7 @@ class SpineToolboxProject(MetaObject):
         """Validates dags and logs error messages.
 
         Args:
-            dags (list): dags to validate
+            dags (Iterable): dags to validate
 
         Returns:
             list: validated dag

@@ -57,6 +57,7 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         properties_widget = self._find_widget()
         self._set_link(properties_widget)
         self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(23)")
+        QApplication.processEvents()
         properties_widget.unset_link()
         self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(23)")
 

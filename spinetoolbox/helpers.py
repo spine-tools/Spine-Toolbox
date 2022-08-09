@@ -61,6 +61,7 @@ from .config import (
     PROJECT_FILENAME,
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
+    SPECIFICATION_LOCAL_DATA_FILENAME,
 )
 
 if os.name == "nt":
@@ -1083,11 +1084,12 @@ def parse_specification_file(spec_path, logger):
         return None
 
 
-def load_specification_from_file(spec_path, spec_factories, app_settings, logger):
+def load_specification_from_file(spec_path, local_data_dict, spec_factories, app_settings, logger):
     """Returns an Item specification from a definition file.
 
     Args:
         spec_path (str): Path of the specification definition file
+        local_data_dict (dict): specifications local data dict
         spec_factories (dict): Dictionary mapping specification type to ProjectItemSpecificationFactory
         app_settings (QSettings): Toolbox settings
         logger (LoggerInterface): a logger
@@ -1099,17 +1101,18 @@ def load_specification_from_file(spec_path, spec_factories, app_settings, logger
     if spec_dict is None:
         return None
     spec_dict["definition_file_path"] = spec_path
-    spec = specification_from_dict(spec_dict, spec_factories, app_settings, logger)
+    spec = specification_from_dict(spec_dict, local_data_dict, spec_factories, app_settings, logger)
     if spec is not None:
         spec.definition_file_path = spec_path
     return spec
 
 
-def specification_from_dict(spec_dict, spec_factories, app_settings, logger):
+def specification_from_dict(spec_dict, local_data_dict, spec_factories, app_settings, logger):
     """Returns item specification from a dictionary.
 
     Args:
         spec_dict (dict): Dictionary with the specification
+        local_data_dict (dict): specifications local data
         spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
         app_settings (QSettings): Toolbox settings
         logger (LoggerInterface): a logger
@@ -1119,6 +1122,9 @@ def specification_from_dict(spec_dict, spec_factories, app_settings, logger):
     """
     # NOTE: If the spec doesn't have the "item_type" key, we can assume it's a tool spec
     item_type = spec_dict.get("item_type", "Tool")
+    local_data = local_data_dict.get(item_type, {}).get(spec_dict["name"])
+    if local_data is not None:
+        merge_dicts(local_data, spec_dict)
     spec_factory = spec_factories.get(item_type)
     if spec_factory is None:
         return None
@@ -1174,11 +1180,12 @@ def load_plugin_dict(plugin_dir, logger):
     return plugin_dict
 
 
-def load_plugin_specifications(plugin_dict, spec_factories, app_settings, logger):
+def load_plugin_specifications(plugin_dict, local_data_dict, spec_factories, app_settings, logger):
     """Loads plugin's specifications.
 
     Args:
         plugin_dict (dict): plugin dict
+        local_data_dict (dict): specifications local data dictionary
         spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
         app_settings (QSettings): Toolbox settings
         logger (LoggerInterface): a logger
@@ -1196,12 +1203,28 @@ def load_plugin_specifications(plugin_dict, spec_factories, app_settings, logger
     deserialized_paths = [deserialize_path(path, plugin_dir) for paths in specifications.values() for path in paths]
     plugin_specs = []
     for path in deserialized_paths:
-        spec = load_specification_from_file(path, spec_factories, app_settings, logger)
+        spec = load_specification_from_file(path, local_data_dict, spec_factories, app_settings, logger)
         if not spec:
             continue
         spec.plugin = name
         plugin_specs.append(spec)
     return {name: plugin_specs}
+
+
+def load_specification_local_data(config_dir):
+    """Loads specifications' project-specific data.
+
+    Args:
+        config_dir (str or Path): project config dir
+
+    Returns:
+        dict: specifications local data
+    """
+    local_data_path = pathlib.Path(config_dir, PROJECT_LOCAL_DATA_DIR_NAME, SPECIFICATION_LOCAL_DATA_FILENAME)
+    if not local_data_path.exists():
+        return {}
+    with open(local_data_path) as data_file:
+        return json.load(data_file)
 
 
 DB_ITEM_SEPARATOR = " \u01C0 "
@@ -1471,7 +1494,12 @@ def load_local_project_data(project_config_dir, logger):
 
 
 def merge_dicts(source, target):
-    """Merges two dictionaries that may contain nested dictionaries recursively."""
+    """Merges two dictionaries that may contain nested dictionaries recursively.
+
+    Args:
+        source (dict): dictionary that will be merged to ``target``
+        target (dict): target dictionary
+    """
     for key, value in source.items():
         target_entry = target.get(key)
         if isinstance(value, dict) and target_entry is not None:

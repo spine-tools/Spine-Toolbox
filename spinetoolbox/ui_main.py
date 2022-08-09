@@ -94,7 +94,7 @@ from .helpers import (
     format_log_message,
     color_from_index,
     load_specification_from_file,
-    make_settings_dict_for_engine,
+    load_specification_local_data,
 )
 from .project_commands import (
     AddSpecificationCommand,
@@ -516,6 +516,7 @@ class ToolboxUI(QMainWindow):
         # Update recentProjectStorages
         OpenProjectDialog.update_recents(os.path.abspath(os.path.join(location, os.path.pardir)), self.qsettings())
         self.save_project()
+        self._plugin_manager.reload_plugins_with_local_data()
         self.msg.emit(f"New project <b>{self._project.name}</b> is now open")
 
     @Slot()
@@ -576,6 +577,7 @@ class ToolboxUI(QMainWindow):
         if not success:
             self.remove_path_from_recent_projects(self._project.project_dir)
             return False
+        self._plugin_manager.reload_plugins_with_local_data()
         self.ui.treeView_project.expandAll()
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
@@ -635,9 +637,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        if not self._project.save():
-            self.msg_error.emit("Project saving failed")
-            return
+        self._project.save()
         self.msg.emit(f"Project <b>{self._project.name}</b> saved")
         self.undo_stack.setClean()
 
@@ -1022,8 +1022,9 @@ class ToolboxUI(QMainWindow):
             return
         def_file = os.path.abspath(answer[0])
         # Load specification
+        local_data = load_specification_local_data(self._project.config_dir)
         specification = load_specification_from_file(
-            def_file, self._item_specification_factories, self._qsettings, self
+            def_file, local_data, self._item_specification_factories, self._qsettings, self
         )
         if not specification:
             return

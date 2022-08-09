@@ -143,16 +143,8 @@ class TestSpineDBEditor(
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
-        try:
-            cls.app = QApplication().processEvents()
-        except RuntimeError:
-            pass
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
+        if not QApplication.instance():
+            QApplication()
         cls.create_mock_dataset()
 
     @classmethod
@@ -329,6 +321,8 @@ class TestSpineDBEditor(
             self.spine_db_editor.close()
             mock_save_w_s.assert_called_once()
         self.db_mngr.close_all_sessions()
+        while not self.mock_db_map.connection.closed:
+            QApplication.processEvents()
         self.db_mngr.clean_up()
         self.spine_db_editor.deleteLater()
         self.spine_db_editor = None

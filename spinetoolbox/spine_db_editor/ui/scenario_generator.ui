@@ -55,6 +55,22 @@
      <item row="1" column="1">
       <widget class="QComboBox" name="operation_combo_box"/>
      </item>
+     <item row="2" column="0">
+      <widget class="QCheckBox" name="use_base_alternative_check_box">
+       <property name="toolTip">
+        <string>When checked, selected base alternative is added to all scenarios.</string>
+       </property>
+       <property name="text">
+        <string>Use base alternative:</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QComboBox" name="base_alternative_combo_box"/>
+     </item>
     </layout>
    </item>
    <item>

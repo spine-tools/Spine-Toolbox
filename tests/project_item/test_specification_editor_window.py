@@ -106,6 +106,7 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             mock_settings_group.return_value = "settings group"
             specification = ProjectItemSpecification("spec name", "spec description")
             mock_make_specification.return_value = specification
+            mock_save.return_value = {}
             window = SpecificationEditorWindowBase(self._toolbox)
             window._spec_toolbar._line_edit_name.setText("spec name")
             window._spec_toolbar._line_edit_name.editingFinished.emit()
@@ -120,10 +121,11 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             SpecificationEditorWindowBase, "_make_new_specification"
         ) as mock_make_specification, patch.object(
             ProjectItemSpecification, "save"
-        ):
+        ) as mock_save:
             mock_settings_group.return_value = "settings group"
             specification = ProjectItemSpecification("spec name", "spec description", "Mock")
             mock_make_specification.return_value = specification
+            mock_save.return_value = {}
             project_item = _MockProjectItem("item name", "item description", 0.0, 0.0, self._toolbox.project())
             project_item._toolbox = self._toolbox
             window = SpecificationEditorWindowBase(self._toolbox, item=project_item)
@@ -141,7 +143,7 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             SpecificationEditorWindowBase, "_make_new_specification"
         ) as mock_make_specification, patch.object(
             ProjectItemSpecification, "save"
-        ), patch.object(
+        ) as mock_save, patch.object(
             ProjectItemFactory, "make_icon"
         ) as mock_make_icon:
             mock_settings_group.return_value = "settings group"
@@ -159,6 +161,7 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             mock_make_specification.side_effect = lambda name: ProjectItemSpecification(
                 name, window._spec_toolbar.description(), "Mock"
             )
+            mock_save.return_value = {}
             window._spec_toolbar._line_edit_name.setText("new spec name")
             window._spec_toolbar._line_edit_name.editingFinished.emit()
             window._spec_toolbar.save_action.trigger()
