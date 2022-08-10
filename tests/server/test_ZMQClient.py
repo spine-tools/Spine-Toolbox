@@ -55,14 +55,14 @@ class TestZMQClient(unittest.TestCase):
         engine_data = self.make_engine_data_for_test_zipfile_project()
         msg_data_json = json.dumps(engine_data)
         zip_fname = "test_zipfile.zip"
-        zip_fpath = os.path.join(str(Path(__file__).parent))
-        print(f"zip_fpath:{zip_fpath}")
+        zip_fpath = os.path.join(str(Path(__file__).parent), zip_fname)
         client = ZMQClient("tcp", self.host, self.port, ClientSecurityModel.NONE, "")
-        data_events = client.send(msg_data_json, zip_fpath, zip_fname)
+        data_events = client.send(msg_data_json, zip_fpath)
         # for e in data_events:
         #     print(e)
         self.assertEqual("dag_exec_finished", data_events[-1][0])
         self.assertEqual("COMPLETED", data_events[-1][1])
+        client.close()
 
     def make_engine_data_for_test_zipfile_project(self):
         """Returns an engine data dictionary for SpineEngine() for the project in file test_zipfile.zip.

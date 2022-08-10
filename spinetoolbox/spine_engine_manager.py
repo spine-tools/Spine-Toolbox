@@ -15,6 +15,7 @@ Contains SpineEngineManagerBase.
 :authors: M. Marin (KTH), P. Pääkkönen (VTT), P. Savolainen (VTT)
 :date:   14.10.2020
 """
+import os
 import queue
 import threading
 import time
@@ -285,7 +286,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def _run(self):
         """Sends the project zip file and settings to the server for
-        execution and waits for the response. Parses the response
+        execution and waits for a response. Parses the response
         message(s) and puts them into a queue for further processing.
         """
         while self._state != RemoteSpineEngineManagerState.CLOSED:
@@ -293,10 +294,13 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 start_time = round(time.time() * 1000.0)
                 self._state = RemoteSpineEngineManagerState.RUNNING
                 engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
-                # Send a request to remote server, and wait for a response
-                data_events = self.zmq_client.send(
-                    engine_data_json, self._engine_data['project_dir'], PROJECT_ZIP_FILENAME + ".zip"
+                zip_fpath = os.path.abspath(
+                    os.path.join(
+                        self._engine_data["project_dir"], os.pardir, PROJECT_ZIP_FILENAME + ".zip"
+                    )
                 )
+                # Send a request to remote server, and wait for a response
+                data_events = self.zmq_client.send(engine_data_json, zip_fpath)
                 self.engine_event_getter_thread.server_output_msg_q.put(data_events)
                 self.engine_event_getter_thread.server_output_msg_q.join()  # Blocks until task_done()
                 stop_time = round(time.time() * 1000.0)
@@ -384,7 +388,7 @@ class RemoteEngineEventGetter(threading.Thread):
                 try:
                     # Handle execution state transformation, see returned data from SpineEngine._process_event()
                     dict_str = self._add_quotes_to_state_str(event[1])
-                    data_dict = ast.literal_eval(dict_str)  # ast.literal_eval fails if input isn't a valid Python datatype
+                    data_dict = ast.literal_eval(dict_str)  # ast.literal_eval fails if input isn't a Python datatype
                     if "item_state" in data_dict.keys():
                         data_dict["item_state"] = self.transform_execution_state(data_dict["item_state"])
                     self.q.put((event[0], data_dict))

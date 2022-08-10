@@ -90,27 +90,22 @@ class ZMQClient:
         """
         return self._connection_state
 
-    def send(self, engine_data, file_path, filename):
+    def send(self, engine_data, fpath):
         """Sends the project and the execution request to the server, waits for the response and acts accordingly.
 
         Args:
             engine_data (str): Input for SpineEngine as JSON str. Includes most of project.json, settings, etc.
-            file_path (string): Path to project zip-file
-            filename (string): Name of the binary file to be transmitted
+            fpath (string): Absolute path to project zip-file
 
         Returns:
             list or str: List of tuples containing events+data, or an error message string if something went wrong
             in initializing the execution at server.
         """
-        zip_path = os.path.join(file_path, filename)
-        print(f"zip_path in send():{zip_path}")
-        if not os.path.exists(zip_path):
-            raise ValueError(f"Zipped project file {filename} not found in {file_path}")
-        print(f"Zip-file size:{os.path.getsize(zip_path)}")
-        with open(zip_path, "rb") as f:
+        with open(fpath, "rb") as f:
             file_data = f.read()  # Read file into bytes string
         # Create request content
         random_id = random.randrange(10000000)  # Request ID
+        _, filename = os.path.split(fpath)
         list_files = [filename]
         msg = ServerMessage("execute", str(random_id), engine_data, list_files)
         print(f"ZMQClient(): msg to be sent: {msg.toJSON()} + {len(file_data)} of data in bytes (zip-file)")

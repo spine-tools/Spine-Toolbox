@@ -1389,7 +1389,7 @@ class SpineToolboxProject(MetaObject):
             except Exception as e:
                 self._logger.msg_error.emit(f"{e}")
                 return False
-            project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + '.zip'))
+            project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
             if not os.path.isfile(project_zip_file):
                 self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
                 return False
