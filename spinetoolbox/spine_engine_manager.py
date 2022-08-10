@@ -22,7 +22,7 @@ import time
 import json
 import ast
 from enum import Enum
-from spinetoolbox.server.zmq_client import ZMQClient, ClientSecurityModel, ZMQClientConnectionState
+from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel, EngineClientConnectionState
 from spinetoolbox.config import PROJECT_ZIP_FILENAME
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.exception import RemoteEngineFailed
@@ -232,7 +232,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         self._requestPending = False
         self._engine_data = None
         self._state = RemoteSpineEngineManagerState.IDLE
-        self.zmq_client = None
+        self.engine_client = None
         self.engine_event_getter_thread = None
 
     def run_engine(self, engine_data):
@@ -257,10 +257,10 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             )
             self.engine_event_getter_thread = RemoteEngineEventGetter()
             try:
-                self.zmq_client = ZMQClient(protocol, host, port, security, sec_folder)
+                self.engine_client = EngineClient(protocol, host, port, security, sec_folder)
             except Exception as e:
                 raise RemoteEngineFailed(f"Initializing ZMQ client failed: {e}")
-            if self.zmq_client.get_connection_state() == ZMQClientConnectionState.CONNECTED:
+            if self.engine_client.get_connection_state() == EngineClientConnectionState.CONNECTED:
                 self._requestPending = True
                 self._engine_data = engine_data
                 self._runner.start()
@@ -273,10 +273,10 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                                      f"self._requestPending:{self._requestPending}")
 
     def stop_engine(self):
-        """Stops ZMQClient and _runner threads."""
+        """Stops EngineClient and _runner threads."""
         self._state = RemoteSpineEngineManagerState.CLOSED
-        if self.zmq_client is not None:
-            self.zmq_client.close()
+        if self.engine_client is not None:
+            self.engine_client.close()
         if self._runner.is_alive():
             self._runner.join()
 
@@ -300,7 +300,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                     )
                 )
                 # Send a request to remote server, and wait for a response
-                data_events = self.zmq_client.send(engine_data_json, zip_fpath)
+                data_events = self.engine_client.send(engine_data_json, zip_fpath)
                 self.engine_event_getter_thread.server_output_msg_q.put(data_events)
                 self.engine_event_getter_thread.server_output_msg_q.join()  # Blocks until task_done()
                 stop_time = round(time.time() * 1000.0)

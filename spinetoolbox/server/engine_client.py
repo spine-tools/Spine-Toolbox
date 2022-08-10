@@ -10,8 +10,8 @@
 ######################################################################################################################
 
 """
-ZMQ client for exchanging messages between the toolbox client and the remote server.
-:author: P. Pääkkönen (VTT)
+Client for exchanging messages between the toolbox and the remote Spine Engine server.
+:author: P. Pääkkönen (VTT), P. Savolainen (VTT)
 :date:   02.09.2021
 """
 
@@ -33,12 +33,12 @@ class ClientSecurityModel(Enum):
 
 
 @unique
-class ZMQClientConnectionState(Enum):
+class EngineClientConnectionState(Enum):
     CONNECTED = 0
     DISCONNECTED = 1
 
 
-class ZMQClient:
+class EngineClient:
     def __init__(self, protocol, host, port, sec_model, sec_folder, ping=True):
         """
         Args:
@@ -74,19 +74,19 @@ class ZMQClient:
             self._socket.curve_serverkey = server_public
         ret = self._socket.connect(protocol + "://" + host + ":" + str(port))
         # Ping server
-        self._connection_state = ZMQClientConnectionState.DISCONNECTED
+        self._connection_state = EngineClientConnectionState.DISCONNECTED
         if self.ping:
             try:
                 self._check_connectivity(1000)
             except RemoteEngineFailed:
                 raise
-        self._connection_state = ZMQClientConnectionState.CONNECTED
+        self._connection_state = EngineClientConnectionState.CONNECTED
 
     def get_connection_state(self):
         """Returns client connection state.
 
         Returns:
-            int: ZMQClientConnectionState
+            int: EngineClientConnectionState
         """
         return self._connection_state
 
@@ -108,7 +108,7 @@ class ZMQClient:
         _, filename = os.path.split(fpath)
         list_files = [filename]
         msg = ServerMessage("execute", str(random_id), engine_data, list_files)
-        print(f"ZMQClient(): msg to be sent: {msg.toJSON()} + {len(file_data)} of data in bytes (zip-file)")
+        print(f"EngineClient(): msg to be sent: {msg.toJSON()} + {len(file_data)} of data in bytes (zip-file)")
         self._socket.send_multipart([msg.to_bytes(), file_data])  # Send request
         response = self._socket.recv()  # Blocks until a response is received
         response_str = response.decode("utf-8")  # Decode received bytes to get (JSON) string

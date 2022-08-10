@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Tester for Remote Spine Engine Manager.
+Tests for Remote Spine Engine Manager.
 :authors: P. Savolainen (VTT)
 :date:   16.6.2022
 """
@@ -18,25 +18,25 @@ Tester for Remote Spine Engine Manager.
 import unittest
 from unittest import mock
 from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager, RemoteEngineEventGetter
-from spinetoolbox.server.zmq_client import ZMQClientConnectionState
+from spinetoolbox.server.engine_client import EngineClientConnectionState
 from spine_engine.spine_engine import ItemExecutionFinishState
 
 
 class TestRemoteSpineEngineManager(unittest.TestCase):
 
     def test_remote_engine_manager_when_dag_execution_succeeds(self):
-        # Mock return values for ZMQClient methods
-        attrs = {"get_connection_state.return_value": ZMQClientConnectionState.CONNECTED,
+        # Mock return values for EngineClient methods
+        attrs = {"get_connection_state.return_value": EngineClientConnectionState.CONNECTED,
                  "send.return_value": [("dag_exec_finished", "COMPLETED")]}
         self._run_remote_engine_manager(attrs, ("dag_exec_finished", "COMPLETED"))
 
     def test_remote_engine_manager_when_dag_execution_fails(self):
-        attrs = {"get_connection_state.return_value": ZMQClientConnectionState.CONNECTED,
+        attrs = {"get_connection_state.return_value": EngineClientConnectionState.CONNECTED,
                  "send.return_value": [("dag_exec_finished", "FAILED")]}
         self._run_remote_engine_manager(attrs, ("dag_exec_finished", "FAILED"))
 
     def test_remote_engine_manager_when_server_init_fails(self):
-        attrs = {"get_connection_state.return_value": ZMQClientConnectionState.CONNECTED,
+        attrs = {"get_connection_state.return_value": EngineClientConnectionState.CONNECTED,
                  "send.return_value": "Server init failed"}
         self._run_remote_engine_manager(attrs, ("remote_engine_failed", "Server init failed"))
 
@@ -47,7 +47,7 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
             "project_dir": "",
         }
         # NOTE: This patch does not work without spec=True
-        with mock.patch("spinetoolbox.spine_engine_manager.ZMQClient", **attribs, spec=True) as mock_client:
+        with mock.patch("spinetoolbox.spine_engine_manager.EngineClient", **attribs, spec=True) as mock_client:
             remote_engine_mngr.run_engine(engine_data)
             q_item = remote_engine_mngr.engine_event_getter_thread.q.get()
             self.assertEqual(expected_thing_at_output_q, q_item)  # Check that item to SpineEngineWorker is as expected

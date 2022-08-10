@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains tests for ZMQClient class.
+Contains tests for the EngineClient class.
 :author: P. Savolainen (VTT)
 :date:   15.6.2022
 """
@@ -23,13 +23,13 @@ from unittest import mock
 from tempfile import TemporaryDirectory
 from pathlib import Path
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.server.zmq_client import ZMQClient, ClientSecurityModel
+from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
 from spine_items.tool.tool_specifications import PythonTool
 from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, add_dc, add_tool
 
 
-class TestZMQClient(unittest.TestCase):
+class TestEngineClient(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Runs once before any tests in this class."""
@@ -50,13 +50,13 @@ class TestZMQClient(unittest.TestCase):
         clean_up_toolbox(self.toolbox)
         self._temp_dir.cleanup()
 
-    def test_zmq_client_execution(self):
-        """Tests ZMQClient part when executing a DC->Tool DAG on a remote server."""
+    def test_engine_client_execution(self):
+        """Tests EngineClient part when executing a DC->Tool DAG on a remote server."""
         engine_data = self.make_engine_data_for_test_zipfile_project()
         msg_data_json = json.dumps(engine_data)
         zip_fname = "test_zipfile.zip"
         zip_fpath = os.path.join(str(Path(__file__).parent), zip_fname)
-        client = ZMQClient("tcp", self.host, self.port, ClientSecurityModel.NONE, "")
+        client = EngineClient("tcp", self.host, self.port, ClientSecurityModel.NONE, "")
         data_events = client.send(msg_data_json, zip_fpath)
         # for e in data_events:
         #     print(e)

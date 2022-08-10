@@ -31,7 +31,7 @@ from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
 from spine_engine.utils.helpers import shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from .server.util.file_packager import FilePackager
-from .server.zmq_client import ZMQClient, ClientSecurityModel
+from .server.engine_client import EngineClient, ClientSecurityModel
 from .metaobject import MetaObject
 from .helpers import (
     create_dir,
@@ -1377,7 +1377,7 @@ class SpineToolboxProject(MetaObject):
                 return False
             self._logger.msg.emit(f"Establishing connection to Spine Engine Server in <b>{host}:{port}</b>")
             try:
-                ZMQClient("tcp", host, port, sec_model, sec_folder, ping=True)  # Ping server
+                EngineClient("tcp", host, port, sec_model, sec_folder, ping=True)  # Ping server
             except RemoteEngineFailed as e:
                 self._logger.msg_error.emit(f"Server is not responding. {e}. "
                                             f"Check settings in <b>Settings->Engine</b>.")
