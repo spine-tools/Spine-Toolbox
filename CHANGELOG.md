@@ -14,6 +14,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   are now treated as project-specific data
   and stored in ``<project root>/.spinetoolbox/local/specification_local_data.json``.
   This should make it easier to share projects over e.g. Git.
+- Scenario and tool filters are now ON by default.
+  If new scenario or tool is added to a database it will be automatically selected in outgoing connections.
+  NOTE: In existing projects, if a connection did not have any scenarios/tools selected,
+  they will all be selected when opening a project for the first time after this change.
+  If this is not desired, the scenarios/tools need to be deselected manually
+  before saving the project on disk.
 
 ### Deprecated
 - Gimlet project items are deprecated and will be removed in the future.

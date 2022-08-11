@@ -712,7 +712,7 @@ class SpineToolboxProject(MetaObject):
         """Removes a connection from the project.
 
         Args:
-            connection (Connection): connection to remove
+            connection (LoggingConnection): connection to remove
         """
         self.connection_about_to_be_removed.emit(connection)
         self._connections.remove(connection)
@@ -728,6 +728,7 @@ class SpineToolboxProject(MetaObject):
         for dag in valid_dags:
             self._update_ranks(dag)
         self._update_jump_icons()
+        connection.tear_down()
 
     def update_connection(self, connection, source_position, destination_position):
         """Updates existing connection between items.
@@ -1347,6 +1348,8 @@ class SpineToolboxProject(MetaObject):
         self.project_about_to_be_torn_down.emit()
         for item in self._project_items.values():
             item.tear_down()
+        for connection in self._connections:
+            connection.tear_down()
         self.deleteLater()
 
 

@@ -17,6 +17,8 @@ Contains ResourceFilterModel.
 """
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QStandardItemModel, QStandardItem
+
+from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from ..project_commands import SetFiltersOnlineCommand
@@ -28,7 +30,6 @@ class ResourceFilterModel(QStandardItemModel):
     _SELECT_ALL = "Select all"
     _FILTER_TYPES = {"Scenario filter": SCENARIO_FILTER_TYPE, "Tool filter": TOOL_FILTER_TYPE}
     _FILTER_TYPE_TO_TEXT = dict(zip(_FILTER_TYPES.values(), _FILTER_TYPES.keys()))
-    _ID_ROLE = Qt.UserRole + 1
 
     def __init__(self, connection, undo_stack, logger):
         """
@@ -49,23 +50,22 @@ class ResourceFilterModel(QStandardItemModel):
     def build_tree(self):
         """Rebuilds model's contents."""
 
-        def append_filter_items(parent_item, filters, filter_type):
-            for id_, is_on in filters[filter_type].items():
-                filter_item = QStandardItem(self.connection.id_to_name(id_, filter_type))
-                filter_item.setData(id_, self._ID_ROLE)
-                filter_item.setData(Qt.Checked if is_on else Qt.Unchecked, Qt.CheckStateRole)
+        def append_filter_items(parent_item, filters, filter_type, disabled):
+            for name in filters[filter_type]:
+                filter_item = QStandardItem(name)
+                filter_item.setData(Qt.Checked if name not in disabled else Qt.Unchecked, Qt.CheckStateRole)
                 filter_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 parent_item.appendRow(filter_item)
 
         self.clear()
         self.setHorizontalHeaderItem(0, QStandardItem("DB resource filters"))
-        self.connection.fetch_database_items()
-        for resource_label, filters_by_type in self.connection.resource_filters.items():
+        filters = self.fetch_filters()
+        for resource_label, filters_by_type in filters.items():
             root_item = QStandardItem(resource_label)
             root_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             self.appendRow(root_item)
-            for name, type_ in self._FILTER_TYPES.items():
-                filter_parent = QStandardItem(name)
+            for type_label, type_ in self._FILTER_TYPES.items():
+                filter_parent = QStandardItem(type_label)
                 if not filters_by_type.get(type_):
                     no_filters_item = QStandardItem("None available")
                     no_filters_item.setFlags(Qt.ItemIsSelectable)
@@ -78,8 +78,30 @@ class ResourceFilterModel(QStandardItemModel):
                 select_all_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 filter_parent.appendRow(select_all_item)
                 root_item.appendRow(filter_parent)
-                append_filter_items(filter_parent, filters_by_type, type_)
+                disabled_names = self._connection.disabled_filter_names(resource_label, type_)
+                append_filter_items(filter_parent, filters_by_type, type_, disabled_names)
                 self._set_all_selected_item(resource_label, filter_parent)
+
+    def fetch_filters(self):
+        filters = {}
+        for resource in self._connection.database_resources:
+            url = resource.url
+            if not url:
+                continue
+            try:
+                db_map = DatabaseMapping(url)
+            except (SpineDBAPIError, SpineDBVersionError):
+                continue
+            try:
+                scenario_names = sorted([row.name for row in db_map.query(db_map.scenario_sq)])
+                if scenario_names:
+                    filters.setdefault(resource.label, {})[SCENARIO_FILTER_TYPE] = scenario_names
+                tool_names = sorted([row.name for row in db_map.query(db_map.tool_sq)])
+                if tool_names:
+                    filters.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = tool_names
+            finally:
+                db_map.connection.close()
+        return filters
 
     def setData(self, index, value, role=Qt.EditRole):
         if role != Qt.CheckStateRole:
@@ -102,11 +124,10 @@ class ResourceFilterModel(QStandardItemModel):
         root_item = resource_type_item.parent()
         resource_label = root_item.text()
         if item.text() == self._SELECT_ALL:
-            ids = self.connection.resource_filters.get(resource_label, {}).get(filter_type, {}).keys()
-            activated = {id_: is_on for id_ in ids}
+            activated = {resource_type_item.child(row).text(): is_on for row in range(1, resource_type_item.rowCount())}
             cmd = SetFiltersOnlineCommand(self, resource_label, filter_type, activated)
         else:
-            cmd = SetFiltersOnlineCommand(self, resource_label, filter_type, {item.data(self._ID_ROLE): is_on})
+            cmd = SetFiltersOnlineCommand(self, resource_label, filter_type, {item.text(): is_on})
         self._undo_stack.push(cmd)
 
     def set_online(self, resource, filter_type, online):
@@ -118,11 +139,10 @@ class ResourceFilterModel(QStandardItemModel):
             online (dict): mapping from scenario/tool id to online flag
         """
         self.connection.set_online(resource, filter_type, online)
-        self.connection.link.update_icons()
         filter_type_item = self._find_filter_type_item(resource, filter_type)
         for row in range(filter_type_item.rowCount()):
             filter_item = filter_type_item.child(row)
-            is_on = online.get(filter_item.data(self._ID_ROLE), None)
+            is_on = online.get(filter_item.text(), None)
             if is_on is not None:
                 checked = Qt.Checked if is_on else Qt.Unchecked
                 if filter_item.data(Qt.CheckStateRole) != checked:
@@ -157,9 +177,13 @@ class ResourceFilterModel(QStandardItemModel):
             filter_type_item (QStandardItem): filter type item
             emit_data_changed (bool): if True, emit dataChanged signal if the state was updated
         """
-        all_online = all(
-            self.connection.resource_filters[resource][self._FILTER_TYPES[filter_type_item.text()]].values()
-        )
+        disabled_filters = self._connection.disabled_filter_names(resource, self._FILTER_TYPES[filter_type_item.text()])
+        all_online = True
+        if disabled_filters:
+            for row in range(1, filter_type_item.rowCount()):
+                if filter_type_item.child(row).text() in disabled_filters:
+                    all_online = False
+                    break
         all_selected_item = filter_type_item.child(0)
         all_selected = all_selected_item.data(Qt.CheckStateRole) == Qt.Checked
         if all_selected != all_online:
