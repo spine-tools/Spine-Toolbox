@@ -188,9 +188,9 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             filter_type (str): filter type
 
         Returns:
-            list of str: names of disabled filters
+            set of str: names of disabled filters
         """
-        return self._disabled_filter_names.get(resource_label, {}).get(filter_type, [])
+        return self._disabled_filter_names.get(resource_label, {}).get(filter_type, set())
 
     def set_online(self, resource, filter_type, online):
         """Sets the given filters online or offline.
@@ -202,10 +202,8 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         """
         enableds = {filter_name for filter_name, is_on in online.items() if is_on}
         disableds = {filter_name for filter_name, is_on in online.items() if not is_on}
-        current_disableds = set(self._disabled_filter_names.get(resource, {}).get(filter_type, []))
-        self._disabled_filter_names.setdefault(resource, {})[filter_type] = sorted(
-            list(disableds | (current_disableds - enableds))
-        )
+        current_disableds = self._disabled_filter_names.get(resource, {}).get(filter_type, set())
+        self._disabled_filter_names.setdefault(resource, {})[filter_type] = disableds | (current_disableds - enableds)
 
     def refresh_resource_filter_model(self):
         """Makes resource filter mode fetch filter data from database."""
@@ -232,6 +230,55 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         project.notify_resource_changes_to_successors(item)
         if self is self._toolbox.active_link_item:
             self._toolbox.link_properties_widgets[LoggingConnection].load_connection_options()
+
+    def _mask_unavailable_disabled_filters(self):
+        """Cross-checks disabled filters with source databases.
+
+        Returns:
+            dict: disabled filter names containing only names that exist in source databases
+        """
+        available_disabled_filter_names = {}
+        for resource in self._resources:
+            url = resource.url
+            if not url:
+                continue
+            try:
+                db_map = DatabaseMapping(url)
+            except (SpineDBAPIError, SpineDBVersionError):
+                continue
+            try:
+                disabled_scenarios = set(
+                    self._disabled_filter_names.get(resource.label, {}).get(SCENARIO_FILTER_TYPE, set())
+                )
+                available_scenarios = {row.name for row in db_map.query(db_map.scenario_sq)}
+                available_disabled_scenarios = disabled_scenarios & available_scenarios
+                if available_disabled_scenarios:
+                    available_disabled_filter_names.setdefault(resource.label, {})[
+                        SCENARIO_FILTER_TYPE
+                    ] = available_disabled_scenarios
+                disabled_tools = set(self._disabled_filter_names.get(resource.label, {}).get(TOOL_FILTER_TYPE, set()))
+                available_tools = {row.name for row in db_map.query(db_map.tool_sq)}
+                available_disabled_tools = disabled_tools & available_tools
+                if available_disabled_tools:
+                    available_disabled_filter_names.setdefault(resource.label, {})[
+                        TOOL_FILTER_TYPE
+                    ] = available_disabled_tools
+            finally:
+                db_map.connection.close()
+        return available_disabled_filter_names
+
+    def to_dict(self):
+        """See base class."""
+        has_disabled_filters = self._has_disabled_filters()
+        original = None
+        if has_disabled_filters:
+            # Temporarily remove unavailable filters to keep project.json clean.
+            original = self._disabled_filter_names
+            self._disabled_filter_names = self._mask_unavailable_disabled_filters()
+        d = super().to_dict()
+        if has_disabled_filters:
+            self._disabled_filter_names = original
+        return d
 
     def tear_down(self):
         """Releases system resources held by the connection."""

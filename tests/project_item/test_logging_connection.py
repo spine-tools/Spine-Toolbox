@@ -41,7 +41,7 @@ class TestLoggingConnection(unittest.TestCase):
             "source", "bottom", "destination", "top", toolbox=toolbox, disabled_filter_names=disabled_filters
         )
         connection.set_online("label", "scenario_filter", {"Base": True})
-        self.assertEqual(connection.disabled_filter_names("label", "scenario_filter"), [])
+        self.assertEqual(connection.disabled_filter_names("label", "scenario_filter"), set())
 
 
 if __name__ == '__main__':

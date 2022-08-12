@@ -196,7 +196,7 @@ class TestLink(unittest.TestCase):
         self.assertEqual(scenario_item.index().data(), "scenario")
         scenario_index = filter_model.indexFromItem(scenario_item)
         filter_model.setData(scenario_index, Qt.Checked, role=Qt.CheckStateRole)
-        self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), [])
+        self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), set())
 
     def test_tool_filter_gets_added_to_filter_model(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
@@ -224,7 +224,7 @@ class TestLink(unittest.TestCase):
         self.assertEqual(tool_item.index().data(), "tool")
         tool_index = filter_model.indexFromItem(tool_item)
         filter_model.setData(tool_index, Qt.Checked, role=Qt.CheckStateRole)
-        self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), [])
+        self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), set())
 
     def test_toggle_scenario_filter(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
@@ -236,7 +236,7 @@ class TestLink(unittest.TestCase):
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {1: True})
-        self.assertEqual(self._link.connection.disabled_filter_names(url, "scenario_filter"), [])
+        self.assertEqual(self._link.connection.disabled_filter_names(url, "scenario_filter"), set())
 
     def test_toggle_tool_filter(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
@@ -248,7 +248,7 @@ class TestLink(unittest.TestCase):
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "tool_filter", {1: True})
-        self.assertEqual(self._link.connection.disabled_filter_names(url, "tool_filter"), [])
+        self.assertEqual(self._link.connection.disabled_filter_names(url, "tool_filter"), set())
 
 
 if __name__ == "__main__":
