@@ -1,0 +1,16 @@
+{
+    "name": "Data writer",
+    "tooltype": "python",
+    "includes": [
+        "tool.py"
+    ],
+    "description": "",
+    "inputfiles": [],
+    "inputfiles_opt": [],
+    "outputfiles": [
+        "data.csv"
+    ],
+    "cmdline_args": [],
+    "execute_in_work": true,
+    "includes_main_path": "../../.."
+}
