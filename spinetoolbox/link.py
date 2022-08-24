@@ -450,20 +450,19 @@ class Link(JumpOrLink):
             toolbox (ToolboxUI): main UI class instance
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
-            connection (spine_engine.project_item.connection.Connection): connection this link represents
+            connection (LoggingConnection): connection this link represents
         """
         super().__init__(toolbox, src_connector, dst_connector)
         self._connection = connection
         self.parallel_link = None
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
-        self.update_icons()
 
     def update_icons(self):
         while self._icons:
             self._icons.pop(0).wipe_out()
         if self._connection.use_datapackage:
             self._icons.append(_SvgIcon(0, 0, self._icon_extent, self._icon_extent, self, self._DATAPACKAGE))
-        if self._connection.has_filters():
+        if self._connection.may_have_filters():
             self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._FILTERS))
         if self._connection.use_memory_db:
             self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._MEMORY))

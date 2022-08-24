@@ -1,0 +1,200 @@
+{
+    "project": {
+        "version": 7,
+        "name": "loop_condition_with_cmd_line_args",
+        "description": "",
+        "specifications": {
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/data_writer.json"
+                }
+            ],
+            "Importer": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Importer/import_data.json"
+                },
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Importer/counter_data_importer.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Write data to Import",
+                "from": [
+                    "Write data",
+                    "right"
+                ],
+                "to": [
+                    "Import",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Import to Store",
+                "from": [
+                    "Import",
+                    "right"
+                ],
+                "to": [
+                    "Store",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Loop counter store to Write data",
+                "from": [
+                    "Loop counter store",
+                    "right"
+                ],
+                "to": [
+                    "Write data",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Initial counter data to Initialize counter",
+                "from": [
+                    "Initial counter data",
+                    "right"
+                ],
+                "to": [
+                    "Initialize counter",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Initialize counter to Loop counter store",
+                "from": [
+                    "Initialize counter",
+                    "right"
+                ],
+                "to": [
+                    "Loop counter store",
+                    "left"
+                ]
+            }
+        ],
+        "jumps": [
+            {
+                "name": "from Store to Loop counter store",
+                "from": [
+                    "Store",
+                    "bottom"
+                ],
+                "to": [
+                    "Loop counter store",
+                    "bottom"
+                ],
+                "condition": {
+                    "type": "python-script",
+                    "script": "import sys\nfrom spinedb_api import DatabaseMapping, from_database, import_object_parameter_values\nin_url = sys.argv[1]\nin_db_map = DatabaseMapping(in_url)\nsq = in_db_map.object_parameter_value_sq\nday_count_row = in_db_map.query(sq).filter(sq.c.object_class_name==\"Timeline\", sq.c.object_name==\"days_of_our_lives\", sq.c.parameter_name==\"cumulative_count\").first()\nday_count = from_database(day_count_row.value, day_count_row.type)\ncounter = day_count.values[-1]\nin_db_map.connection.close()\nif counter >= 30:\n    exit(1)\nout_url = sys.argv[2]\nout_db_map = DatabaseMapping(out_url)\nimport_object_parameter_values(out_db_map, ((\"Counter\", \"loop_counter\", \"count\", counter),))\nout_db_map.commit_session(\"Increment counter.\")\nout_db_map.connection.close()\nexit(0)"
+                },
+                "cmd_line_args": [
+                    {
+                        "type": "resource",
+                        "arg": "db_url@Store"
+                    },
+                    {
+                        "type": "resource",
+                        "arg": "db_url@Loop counter store"
+                    }
+                ]
+            }
+        ]
+    },
+    "items": {
+        "Write data": {
+            "type": "Tool",
+            "description": "",
+            "x": 108.1966332378224,
+            "y": -4.0072827125119375,
+            "specification": "Data writer",
+            "execute_in_work": true,
+            "cmd_line_args": [
+                {
+                    "type": "resource",
+                    "arg": "db_url@Loop counter store"
+                }
+            ]
+        },
+        "Import": {
+            "type": "Importer",
+            "description": "",
+            "x": 248.45152817574026,
+            "y": -4.007282712511945,
+            "specification": "Import data",
+            "cancel_on_error": false,
+            "purge_before_writing": false,
+            "on_conflict": "merge",
+            "file_selection": [
+                [
+                    "data.csv",
+                    true
+                ]
+            ]
+        },
+        "Store": {
+            "type": "Data Store",
+            "description": "",
+            "x": 380.6918576886342,
+            "y": -4.007282712511945,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/store/Store.sqlite"
+                }
+            }
+        },
+        "Loop counter store": {
+            "type": "Data Store",
+            "description": "",
+            "x": -23.041875596943697,
+            "y": -4.007282712511945,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/loop_counter_store/counter.sqlite"
+                }
+            }
+        },
+        "Initialize counter": {
+            "type": "Importer",
+            "description": "",
+            "x": -156.28402578796562,
+            "y": -4.007282712511941,
+            "specification": "Counter data importer",
+            "cancel_on_error": false,
+            "purge_before_writing": false,
+            "on_conflict": "merge",
+            "file_selection": [
+                [
+                    "<Initial counter data>/counter_init.dat",
+                    true
+                ]
+            ]
+        },
+        "Initial counter data": {
+            "type": "Data Connection",
+            "description": "",
+            "x": -284.5170725883476,
+            "y": -4.007282712511941,
+            "file_references": [],
+            "db_references": []
+        }
+    }
+}

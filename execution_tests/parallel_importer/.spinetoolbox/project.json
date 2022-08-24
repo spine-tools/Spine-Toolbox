@@ -29,15 +29,7 @@
                 "to": [
                     "Write output",
                     "left"
-                ],
-                "resource_filters": {
-                    "db_url@Source": {
-                        "scenario_filter": [
-                            1,
-                            2
-                        ]
-                    }
-                }
+                ]
             },
             {
                 "name": "from Write output to Import",

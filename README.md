@@ -56,12 +56,14 @@ updated with new releases.
 
         python -m pip install --user pipx
         python -m pipx ensurepath
-        
-5. Install the latest Spine Toolbox release by running
+
+5. Restart the terminal or re-login for the changes of the latest command to take effect.
+
+6. Choose which Toolbox version to install. Latest *release* version is installed using
 
         python -m pipx install spinetoolbox
 
-   or get the latest development version using
+   or get the latest *development* version using
 
         python -m pipx install git+https://github.com/Spine-project/spinetoolbox-dev
 

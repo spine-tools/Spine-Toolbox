@@ -119,7 +119,7 @@ class TreeModelBase(MinimalTreeModel):
         Args:
             parent_item (TreeItem)
             db_items (list of dict): database items
-            make_child (function): A function that receives an integer id and returns a TreeItem
+            make_child (Callable): A function that receives an integer id and returns a TreeItem
         """
         ids_committed = []
         ids_uncommitted = []

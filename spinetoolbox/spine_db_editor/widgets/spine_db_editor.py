@@ -113,6 +113,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRedo.setShortcuts(QKeySequence.Redo)
         self.update_commit_enabled()
         self.setContextMenuPolicy(Qt.NoContextMenu)
+        self._torn_down = False
 
     @property
     def toolbox(self):
@@ -895,6 +896,7 @@ class SpineDBEditorBase(QMainWindow):
                 commit_msg = self._get_commit_msg(db_names)
                 if not commit_msg:
                     return False
+        self._torn_down = True
         self.db_mngr.unregister_listener(self, commit_dirty, commit_msg, *self.db_maps)
         self.save_window_state()
         return True
@@ -1057,11 +1059,15 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
 
     @Slot(bool)
     def _restart_timer_refresh_tab_order(self, _visible=False):
+        if self._torn_down:
+            return
         self._timer_refresh_tab_order.timeout.connect(self._refresh_tab_order, Qt.UniqueConnection)
         self._timer_refresh_tab_order.start(100)
 
     @Slot()
     def _refresh_tab_order(self):
+        if self._torn_down:
+            return
         self._timer_refresh_tab_order.timeout.disconnect(self._refresh_tab_order)
         visible_docks = []
         for dock, view in self._dock_views.items():

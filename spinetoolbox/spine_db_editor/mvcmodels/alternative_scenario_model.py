@@ -118,6 +118,11 @@ class AlternativeScenarioModel(TreeModelBase):
 
     def dropMimeData(self, data, drop_action, row, column, parent):
         scen_alt_root_item = self.item_from_index(parent)
+        if not hasattr(scen_alt_root_item, "alternative_id_list"):
+            # In some rare cases, it is possible that the drop was accepted
+            # on a wrong tree item (bug in Qt or canDropMimeData()?).
+            # In those cases the type of scen_alt_root_item is StandardTreeItem or ScenarioRootItem.
+            return False
         alternative_id_list = scen_alt_root_item.alternative_id_list
         if row == -1:
             row = len(alternative_id_list)

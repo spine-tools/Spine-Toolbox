@@ -1,5 +1,5 @@
 {
-    "name": "Test tool",
+    "name": "Data writer",
     "tooltype": "python",
     "includes": [
         "tool.py"
@@ -8,7 +8,7 @@
     "inputfiles": [],
     "inputfiles_opt": [],
     "outputfiles": [
-        "out.csv"
+        "data.csv"
     ],
     "cmdline_args": [],
     "execute_in_work": true,

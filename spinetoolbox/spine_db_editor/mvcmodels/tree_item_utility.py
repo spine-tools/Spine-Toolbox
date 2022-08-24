@@ -109,7 +109,7 @@ class BoldTextMixin:
 
 
 class EmptyChildMixin:
-    """Guarantess there's always an empty child."""
+    """Guarantees there's always an empty child."""
 
     @property
     def non_empty_children(self):

@@ -23,13 +23,12 @@ from PySide2.QtCore import QEvent, QPoint, Qt
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
 from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
-from spine_engine.project_item.connection import Connection
 from spine_engine.project_item.project_item_resource import database_resource
 from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
 from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
-from .mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project
+from tests.mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestProjectItemIcon(unittest.TestCase):
@@ -73,7 +72,7 @@ class TestProjectItemIcon(unittest.TestCase):
     def test_outgoing_and_incoming_links(self):
         source_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
         target_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
-        connection = Connection("source item", "bottom", "destination item", "bottom")
+        connection = LoggingConnection("source item", "bottom", "destination item", "bottom", toolbox=self._toolbox)
         link = Link(self._toolbox, source_icon.conn_button("bottom"), target_icon.conn_button("bottom"), connection)
         link.src_connector.links.append(link)
         link.dst_connector.links.append(link)
@@ -177,13 +176,13 @@ class TestLink(unittest.TestCase):
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.connection.receive_resources_from_source([database_resource("provider", url)])
+        self._link.connection.receive_resources_from_source([database_resource("provider", url, "my_database")])
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
         self.assertEqual(filter_model.columnCount(), 1)
         index = filter_model.index(0, 0)
-        self.assertEqual(index.data(), url)
+        self.assertEqual(index.data(), "my_database")
         root_item = filter_model.itemFromIndex(index)
         self.assertEqual(root_item.rowCount(), 2)
         self.assertEqual(root_item.columnCount(), 1)
@@ -197,7 +196,7 @@ class TestLink(unittest.TestCase):
         self.assertEqual(scenario_item.index().data(), "scenario")
         scenario_index = filter_model.indexFromItem(scenario_item)
         filter_model.setData(scenario_index, Qt.Checked, role=Qt.CheckStateRole)
-        self.assertTrue(self._link.connection.has_filters())
+        self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), set())
 
     def test_tool_filter_gets_added_to_filter_model(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
@@ -205,13 +204,13 @@ class TestLink(unittest.TestCase):
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.connection.receive_resources_from_source([database_resource("provider", url)])
+        self._link.connection.receive_resources_from_source([database_resource("provider", url, "my_database")])
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
         self.assertEqual(filter_model.columnCount(), 1)
         index = filter_model.index(0, 0)
-        self.assertEqual(index.data(), url)
+        self.assertEqual(index.data(), "my_database")
         root_item = filter_model.itemFromIndex(index)
         self.assertEqual(root_item.rowCount(), 2)
         self.assertEqual(root_item.columnCount(), 1)
@@ -225,7 +224,7 @@ class TestLink(unittest.TestCase):
         self.assertEqual(tool_item.index().data(), "tool")
         tool_index = filter_model.indexFromItem(tool_item)
         filter_model.setData(tool_index, Qt.Checked, role=Qt.CheckStateRole)
-        self.assertTrue(self._link.connection.has_filters())
+        self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), set())
 
     def test_toggle_scenario_filter(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
@@ -237,7 +236,7 @@ class TestLink(unittest.TestCase):
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {1: True})
-        self.assertEqual(self._link.connection.resource_filters, {url: {"scenario_filter": {1: True}}})
+        self.assertEqual(self._link.connection.disabled_filter_names(url, "scenario_filter"), set())
 
     def test_toggle_tool_filter(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
@@ -249,7 +248,7 @@ class TestLink(unittest.TestCase):
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "tool_filter", {1: True})
-        self.assertEqual(self._link.connection.resource_filters, {url: {"tool_filter": {1: True}}})
+        self.assertEqual(self._link.connection.disabled_filter_names(url, "tool_filter"), set())
 
 
 if __name__ == "__main__":

@@ -24,10 +24,10 @@ from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal,
 import networkx as nx
 
 from spine_engine import SpineEngineState
-from spine_engine.project_item.connection import Connection
 from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import deserialize_path
+from .project_item.logging_connection import HeadlessConnection
 from .config import LATEST_PROJECT_VERSION
 from .helpers import (
     make_settings_dict_for_engine,
@@ -118,7 +118,7 @@ class ModifiableProject:
         """
         self._project_dir = project_dir
         self._items = deepcopy(items_dict)
-        self._connections = [Connection.from_dict(d) for d in connection_dicts]
+        self._connections = [HeadlessConnection.from_dict(d) for d in connection_dicts]
 
     @property
     def project_dir(self):
@@ -200,7 +200,7 @@ class ActionsWithProject(QObject):
     def _dags(self):
         graph = nx.DiGraph()
         graph.add_nodes_from(self._item_dicts)
-        connections = map(Connection.from_dict, self._connection_dicts)
+        connections = map(HeadlessConnection.from_dict, self._connection_dicts)
         graph.add_edges_from(((x.source, x.destination) for x in connections))
         return [graph.subgraph(nodes) for nodes in nx.weakly_connected_components(graph)]
 

@@ -7,6 +7,6 @@ db_map = DatabaseMapping(db_url)
 try:
     scenario_ids = {r.name: r.id for r in db_map.query(db_map.scenario_sq).all()}
     connection = project.find_connection("Data", "Export values")
-    connection.resource_filters.setdefault("db_url@Data", {})[SCENARIO_FILTER_TYPE] = {scenario_ids["scenario"]: True}
+    connection.set_filter_enabled("db_url@Data", SCENARIO_FILTER_TYPE, "scenario", True)
 finally:
     db_map.connection.close()
