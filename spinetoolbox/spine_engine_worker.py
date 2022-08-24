@@ -229,7 +229,7 @@ class SpineEngineWorker(QObject):
                     self._engine_final_state = data
                     break
             else:
-                event_type, data = self._engine_mngr.engine_event_getter_thread.q.get()
+                event_type, data = self._engine_mngr.q.get()
                 self._process_event(event_type, data)
                 if event_type == "dag_exec_finished":
                     self._engine_final_state = data

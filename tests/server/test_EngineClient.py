@@ -25,6 +25,7 @@ from pathlib import Path
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
+from spine_engine.server.util.event_data_converter import EventDataConverter
 from spine_items.tool.tool_specifications import PythonTool
 from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, add_dc, add_tool
 
@@ -57,11 +58,17 @@ class TestEngineClient(unittest.TestCase):
         zip_fname = "test_zipfile.zip"
         zip_fpath = os.path.join(str(Path(__file__).parent), zip_fname)
         client = EngineClient("tcp", self.host, self.port, ClientSecurityModel.NONE, "")
-        data_events = client.send(msg_data_json, zip_fpath)
-        # for e in data_events:
-        #     print(e)
-        self.assertEqual("dag_exec_finished", data_events[-1][0])
-        self.assertEqual("COMPLETED", data_events[-1][1])
+        start_event = client.send(msg_data_json, zip_fpath)
+        self.assertEqual("remote_execution_started", start_event[0])
+        client.connect_sub_socket(start_event[1])
+        while True:
+            rcv = client.sub_socket.recv_multipart()
+            event = json.loads(rcv[1])
+            event = EventDataConverter.deconvert_single(event, True)
+            if event[0] == "dag_exec_finished":
+                if event[1] != "COMPLETED":
+                    self.fail()
+                break
         client.close()
 
     def make_engine_data_for_test_zipfile_project(self):

@@ -26,6 +26,9 @@ from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel,
 from spinetoolbox.config import PROJECT_ZIP_FILENAME
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.exception import RemoteEngineFailed
+from spine_engine.server.util.server_message import ServerMessage
+from spine_engine.server.util.server_message_parser import ServerMessageParser
+from spine_engine.server.util.event_data_converter import EventDataConverter
 
 
 class RemoteSpineEngineManagerState(Enum):
@@ -229,11 +232,9 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         """Initializer."""
         super().__init__()
         self._runner = threading.Thread(name="RemoteSpineEngineManagerRunnerThread", target=self._run)
-        self._requestPending = False
         self._engine_data = None
-        self._state = RemoteSpineEngineManagerState.IDLE
         self.engine_client = None
-        self.engine_event_getter_thread = None
+        self.q = queue.Queue()  # Queue for sending data forward to SpineEngineWorker
 
     def run_engine(self, engine_data):
         """Establishes a connection to server using a ZMQ client. Starts a thread, where
@@ -243,38 +244,30 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         Args:
             engine_data (dict): The engine data.
         """
-        if self._state == RemoteSpineEngineManagerState.IDLE and not self._requestPending:
-            app_settings = engine_data["settings"]
-            protocol = "tcp"  # Zero-MQ protocol. Hardcoded to tcp for now.
-            host = app_settings.get("engineSettings/remoteHost", "")  # Host name
-            port = app_settings.get("engineSettings/remotePort", "49152")  # Host port
-            sec_model = app_settings.get("engineSettings/remoteSecurityModel", "")  # ZQM security model
-            security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
-            sec_folder = (
-                ""
-                if security == ClientSecurityModel.NONE
-                else app_settings.get("engineSettings/remoteSecurityFolder", "")
-            )
-            self.engine_event_getter_thread = RemoteEngineEventGetter()
-            try:
-                self.engine_client = EngineClient(protocol, host, port, security, sec_folder)
-            except Exception as e:
-                raise RemoteEngineFailed(f"Initializing ZMQ client failed: {e}")
-            if self.engine_client.get_connection_state() == EngineClientConnectionState.CONNECTED:
-                self._requestPending = True
-                self._engine_data = engine_data
-                self._runner.start()
-            else:
-                self._state = RemoteSpineEngineManagerState.CLOSED
-                raise RemoteEngineFailed("Connecting to server failed. Check Remote "
-                                         "Execution settings in File->Settings->Engine.")
+        app_settings = engine_data["settings"]
+        protocol = "tcp"  # Zero-MQ protocol. Hardcoded to tcp for now.
+        host = app_settings.get("engineSettings/remoteHost", "")  # Host name
+        port = app_settings.get("engineSettings/remotePort", "49152")  # Host port
+        sec_model = app_settings.get("engineSettings/remoteSecurityModel", "")  # ZQM security model
+        security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
+        sec_folder = (
+            ""
+            if security == ClientSecurityModel.NONE
+            else app_settings.get("engineSettings/remoteSecurityFolder", "")
+        )
+        try:
+            self.engine_client = EngineClient(protocol, host, port, security, sec_folder)
+        except Exception as e:
+            raise RemoteEngineFailed(f"Initializing ZMQ client failed: {e}")
+        if self.engine_client.get_connection_state() == EngineClientConnectionState.CONNECTED:
+            self._engine_data = engine_data
+            self._runner.start()
         else:
-            raise RemoteEngineFailed(f"Remote execution failed. state:{self._state}. "
-                                     f"self._requestPending:{self._requestPending}")
+            raise RemoteEngineFailed("Connecting to server failed. Check Remote "
+                                     "Execution settings in File->Settings->Engine.")
 
     def stop_engine(self):
         """Stops EngineClient and _runner threads."""
-        self._state = RemoteSpineEngineManagerState.CLOSED
         if self.engine_client is not None:
             self.engine_client.close()
         if self._runner.is_alive():
@@ -289,25 +282,72 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         execution and waits for a response. Parses the response
         message(s) and puts them into a queue for further processing.
         """
-        while self._state != RemoteSpineEngineManagerState.CLOSED:
-            if self._requestPending and self._state == RemoteSpineEngineManagerState.IDLE:
-                start_time = round(time.time() * 1000.0)
-                self._state = RemoteSpineEngineManagerState.RUNNING
-                engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
-                zip_fpath = os.path.abspath(
-                    os.path.join(
-                        self._engine_data["project_dir"], os.pardir, PROJECT_ZIP_FILENAME + ".zip"
-                    )
-                )
-                # Send a request to remote server, and wait for a response
-                data_events = self.engine_client.send(engine_data_json, zip_fpath)
-                self.engine_event_getter_thread.server_output_msg_q.put(data_events)
-                self.engine_event_getter_thread.server_output_msg_q.join()  # Blocks until task_done()
-                stop_time = round(time.time() * 1000.0)
-                print("RemoteSpineEngineManager.run() run time after execution %d ms" % (stop_time - start_time))
-                self._requestPending = False
-            else:
-                time.sleep(0.01)
+        start_time = round(time.time() * 1000.0)
+        engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
+        zip_fpath = os.path.abspath(
+            os.path.join(self._engine_data["project_dir"], os.pardir, PROJECT_ZIP_FILENAME + ".zip")
+        )
+        # Send an execute request to remote server, and wait for an execution started response
+        start_event = self.engine_client.send(engine_data_json, zip_fpath)
+        if start_event[0] != "remote_execution_started":
+            print(f"Unknown remote engine start response: {start_event}")
+            print(f"Execution failed to start: {start_event}")
+            self.q.put(start_event)
+            return
+        self.engine_client.connect_sub_socket(start_event[1])
+        while True:
+            # Receive events from a SUB socket
+            rcv = self.engine_client.sub_socket.recv_multipart()
+            event = json.loads(rcv[1])
+            event = EventDataConverter.deconvert_single(event, True)
+            try:
+                # Handle execution state transformation, see returned data from SpineEngine._process_event()
+                data_str = self._add_quotes_to_state_str(event[1])
+                data_dict = ast.literal_eval(data_str)  # ast.literal_eval fails if input isn't a Python datatype
+                if "item_state" in data_dict.keys():
+                    data_dict["item_state"] = self.transform_execution_state(data_dict["item_state"])
+                self.q.put((event[0], data_dict))
+            except ValueError:
+                # ast.literal_eval throws this if trying to turn a regular string like "COMPLETED" or "FAILED" to
+                # a dict. See returned data from SpineEngine._process_event()
+                self.q.put((event[0], event[1]))
+            if event[0] == "dag_exec_finished":
+                break
+        stop_time = round(time.time() * 1000.0)
+        print("RemoteSpineEngineManager.run() run time after execution %d ms" % (stop_time - start_time))
+
+    @staticmethod
+    def transform_execution_state(state):
+        """Transforms state string into an ItemExecutionFinishState enum.
+
+        Args:
+            state (str): State as string
+
+        Returns:
+            ItemExecutionFinishState: Enum if given str is valid, None otherwise.
+        """
+        states = dict()
+        states["<ItemExecutionFinishState.SUCCESS: 1>"] = ItemExecutionFinishState.SUCCESS
+        states["<ItemExecutionFinishState.FAILURE: 1>"] = ItemExecutionFinishState.FAILURE
+        states["<ItemExecutionFinishState.SKIPPED: 1>"] = ItemExecutionFinishState.SKIPPED
+        states["<ItemExecutionFinishState.EXCLUDED: 1>"] = ItemExecutionFinishState.EXCLUDED
+        states["<ItemExecutionFinishState.STOPPED: 1>"] = ItemExecutionFinishState.STOPPED
+        states["<ItemExecutionFinishState.NEVER_FINISHED: 1>"] = ItemExecutionFinishState.NEVER_FINISHED
+        return states.get(state, None)
+
+    @staticmethod
+    def _add_quotes_to_state_str(s):
+        """Makes string ready for ast.literal_eval() by adding quotes around item_state value.
+        The point of this method is to add quotes (') around item_state value. E.g.
+        'item_state': <ItemExecutionFinishState.SUCCESS: 1> becomes
+        'item_state': '<ItemExecutionFinishState.SUCCESS: 1>' because ast.literal_eval
+        fails with a SyntaxError if the string contains invalid Python data types.
+        Make sure that quotes (') are not added to other < > enclosed substrings, such as
+        <b> or </b>. If there's no match for what we are looking for, this method returns
+        the original string."""
+        state = s.partition("'item_state': <")[2].partition(">")[0]
+        new_s = s.replace("<" + state + ">", "\'<" + state + ">\'")
+        return new_s
 
     def answer_prompt(self, item_name, accepted):
         """See base class."""
@@ -327,7 +367,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def issue_persistent_command(self, persistent_key, command):
         """See base class."""
-        # TODO: Implementing this needs a new ServerMessage type (in addition to 'execute' and 'ping')
+        # TODO: Implementing this needs a new ServerMessage type
         raise NotImplementedError()
 
     def restart_persistent(self, persistent_key):
@@ -365,71 +405,6 @@ def make_engine_manager(remote_execution_enabled=False):
     if remote_execution_enabled:
         return RemoteSpineEngineManager()
     return LocalSpineEngineManager()
-
-
-class RemoteEngineEventGetter(threading.Thread):
-    def __init__(self):
-        super().__init__(name="RemoteEngineEventGetterThread")
-        self.server_output_msg_q = queue.Queue()  # Queue for messages from remote server
-        self.q = queue.Queue()  # Queue for sending data forward to SpineEngineWorker
-        self.start()
-
-    def run(self):
-        """Former get_engine_event(). Gets next event from engine currently running.
-        Parses the output event strings from server into dictionaries and passes them
-        to a queue, which is processed by SpineEngineWorker.
-        """
-        output_data = self.server_output_msg_q.get()
-        if isinstance(output_data, str):
-            # Error happened at initialization before execution started on server
-            self.q.put(("remote_engine_failed", output_data))
-        else:
-            for event in output_data:  # output_data is a list of tuples (See tests for examples)
-                try:
-                    # Handle execution state transformation, see returned data from SpineEngine._process_event()
-                    dict_str = self._add_quotes_to_state_str(event[1])
-                    data_dict = ast.literal_eval(dict_str)  # ast.literal_eval fails if input isn't a Python datatype
-                    if "item_state" in data_dict.keys():
-                        data_dict["item_state"] = self.transform_execution_state(data_dict["item_state"])
-                    self.q.put((event[0], data_dict))
-                except ValueError:
-                    # ast.literal_eval throws this if trying to turn a regular string like "COMPLETED" or "FAILED" to
-                    # a dict. See returned data from SpineEngine._process_event()
-                    self.q.put((event[0], event[1]))
-        self.server_output_msg_q.task_done()
-
-    @staticmethod
-    def transform_execution_state(state):
-        """Transforms state string into an ItemExecutionFinishState enum.
-
-        Args:
-            state (str): State as string
-
-        Returns:
-            ItemExecutionFinishState: Enum if given str is valid, None otherwise.
-        """
-        states = dict()
-        states["<ItemExecutionFinishState.SUCCESS: 1>"] = ItemExecutionFinishState.SUCCESS
-        states["<ItemExecutionFinishState.FAILURE: 1>"] = ItemExecutionFinishState.FAILURE
-        states["<ItemExecutionFinishState.SKIPPED: 1>"] = ItemExecutionFinishState.SKIPPED
-        states["<ItemExecutionFinishState.EXCLUDED: 1>"] = ItemExecutionFinishState.EXCLUDED
-        states["<ItemExecutionFinishState.STOPPED: 1>"] = ItemExecutionFinishState.STOPPED
-        states["<ItemExecutionFinishState.NEVER_FINISHED: 1>"] = ItemExecutionFinishState.NEVER_FINISHED
-        return states.get(state, None)
-
-    @staticmethod
-    def _add_quotes_to_state_str(s):
-        """Makes string ready for ast.literal_eval() by adding quotes around item_state value.
-        The point of this method is to add quotes (') around item_state value. E.g.
-        'item_state': <ItemExecutionFinishState.SUCCESS: 1> becomes
-        'item_state': '<ItemExecutionFinishState.SUCCESS: 1>' because ast.literal_eval
-        fails with a SyntaxError if the string contains invalid Python data types.
-        Make sure that quotes (') are not added to other < > enclosed substrings, such as
-        <b> or </b>. If there's no match for what we are looking for, this method should
-         return the original string."""
-        state = s.partition("'item_state': <")[2].partition(">")[0]
-        new_s = s.replace("<" + state + ">", "\'<" + state + ">\'")
-        return new_s
 
 
 # TODO: This class is in master as the RemoteSpineEngineManager stub. See if _send() can be used.
