@@ -97,7 +97,7 @@ class CodeTextEdit(QPlainTextEdit):
         self._line_number_area.setGeometry(QRect(rect.left(), rect.top(), self.line_number_area_width(), rect.height()))
 
     def line_number_area_paint_event(self, ev):
-        foreground_color = QColor(self._style.styles[Token.Text]).darker()
+        foreground_color = QColor(self._highlighter.formats[Token.Text].foreground().color()).darker(120)
         painter = QPainter(self._line_number_area)
         painter.setFont(self.font())
         block = self.firstVisibleBlock()
