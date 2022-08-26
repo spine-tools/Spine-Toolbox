@@ -21,24 +21,11 @@ import threading
 import time
 import json
 import ast
-from enum import Enum
-from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel, EngineClientConnectionState
+from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
 from spinetoolbox.config import PROJECT_ZIP_FILENAME
 from spine_engine.spine_engine import ItemExecutionFinishState
-from spine_engine.exception import RemoteEngineFailed
-from spine_engine.server.util.server_message import ServerMessage
-from spine_engine.server.util.server_message_parser import ServerMessageParser
+from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.server.util.event_data_converter import EventDataConverter
-
-
-class RemoteSpineEngineManagerState(Enum):
-    IDLE = 1  # no requests pending and events+data of an earlier request has been extracted with get_event()
-    RUNNING = 2  # request is being processed with the remote server
-    REPLY_RECEIVED = 3  # a reply has been received from the remote server
-    CLOSED = 4  # the manager has been closed
-
-    def __str__(self):
-        return str(self.name)
 
 
 class SpineEngineManagerBase:
@@ -51,7 +38,7 @@ class SpineEngineManagerBase:
         raise NotImplementedError()
 
     def get_engine_event(self):
-        """Gets next event from engine currently running.
+        """Gets next event from a running engine.
 
         Returns:
             tuple(str,dict): two element tuple: event type identifier string, and event data dictionary
@@ -59,7 +46,7 @@ class SpineEngineManagerBase:
         raise NotImplementedError()
 
     def stop_engine(self):
-        """Stops engine currently running."""
+        """Stops a running engine."""
         raise NotImplementedError()
 
     def answer_prompt(self, item_name, accepted):
@@ -100,7 +87,7 @@ class SpineEngineManagerBase:
         raise NotImplementedError()
 
     def is_persistent_command_complete(self, persistent_key, command):
-        """Checkes whether a command is complete.
+        """Checks whether a command is complete.
 
         Args:
             key (tuple): persistent identifier
@@ -112,7 +99,7 @@ class SpineEngineManagerBase:
         raise NotImplementedError()
 
     def restart_persistent(self, persistent_key):
-        """Restart a persistent process.
+        """Restarts a persistent process.
 
         Args:
             persistent_key (tuple): persistent identifier
@@ -237,9 +224,8 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         self.q = queue.Queue()  # Queue for sending data forward to SpineEngineWorker
 
     def run_engine(self, engine_data):
-        """Establishes a connection to server using a ZMQ client. Starts a thread, where
-        the current DAG is packaged into a zip file and then sent to the server for
-        execution.
+        """Establishes a connection to server. Starts a thread, where the current
+        project is packaged into a zip file and then sent to the server for execution.
 
         Args:
             engine_data (dict): The engine data.
@@ -257,17 +243,20 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         )
         try:
             self.engine_client = EngineClient(protocol, host, port, security, sec_folder)
-        except Exception as e:
-            raise RemoteEngineFailed(f"Initializing ZMQ client failed: {e}")
-        if self.engine_client.get_connection_state() == EngineClientConnectionState.CONNECTED:
-            self._engine_data = engine_data
-            self._runner.start()
-        else:
-            raise RemoteEngineFailed("Connecting to server failed. Check Remote "
-                                     "Execution settings in File->Settings->Engine.")
+        except RemoteEngineInitFailed:
+            raise
+        except Exception:
+            raise
+        self._engine_data = engine_data
+        self._runner.start()
+
+    def get_engine_event(self):
+        """Returns the next engine execution event."""
+        return self.q.get()
 
     def stop_engine(self):
         """Stops EngineClient and _runner threads."""
+        # TODO: This stops the client, but we need to stop the execution on server as well
         if self.engine_client is not None:
             self.engine_client.close()
         if self._runner.is_alive():
@@ -288,16 +277,17 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             os.path.join(self._engine_data["project_dir"], os.pardir, PROJECT_ZIP_FILENAME + ".zip")
         )
         # Send an execute request to remote server, and wait for an execution started response
-        start_event = self.engine_client.send(engine_data_json, zip_fpath)
-        if start_event[0] != "remote_execution_started":
-            print(f"Unknown remote engine start response: {start_event}")
-            print(f"Execution failed to start: {start_event}")
-            self.q.put(start_event)
-            return
-        self.engine_client.connect_sub_socket(start_event[1])
+        first_event = self.engine_client.send(engine_data_json, zip_fpath)
+        if first_event[0] == "remote_execution_init_failed" or first_event[0] == "server_init_failed":
+            # Execution on server did not start because something went wrong in the initialization
+            raise EngineInitFailed(f"Initializing remote execution failed: {first_event[1]}")
+        elif first_event[0] != "remote_execution_started":
+            print(f"Unknown event received: event_type:{first_event[0]} data:{first_event[1]}")
+            raise EngineInitFailed(f"Unhandled server error: {first_event[1]}")
+        # Prepare subscribe socket and receive events until dag_exec_finished event is received
+        self.engine_client.connect_sub_socket(first_event[1])
         while True:
-            # Receive events from a SUB socket
-            rcv = self.engine_client.sub_socket.recv_multipart()
+            rcv = self.engine_client.sub_socket.recv_multipart()  # Get next execution event
             event = json.loads(rcv[1])
             event = EventDataConverter.deconvert_single(event, True)
             try:
@@ -310,7 +300,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             except ValueError:
                 # ast.literal_eval throws this if trying to turn a regular string like "COMPLETED" or "FAILED" to
                 # a dict. See returned data from SpineEngine._process_event()
-                self.q.put((event[0], event[1]))
+                self.q.put(event)
             if event[0] == "dag_exec_finished":
                 break
         stop_time = round(time.time() * 1000.0)

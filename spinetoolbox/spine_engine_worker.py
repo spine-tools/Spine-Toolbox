@@ -14,11 +14,10 @@ Contains SpineEngineWorker.
 :authors: M. Marin (KTH)
 :date:   14.10.2020
 """
-import time
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from PySide2.QtWidgets import QMessageBox
-from spine_engine.exception import EngineInitFailed, RemoteEngineFailed
+from spine_engine.exception import EngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from .spine_engine_manager import make_engine_manager, LocalSpineEngineManager
 from .helpers import get_upgrade_db_promt_text
@@ -215,30 +214,18 @@ class SpineEngineWorker(QObject):
             self._all_items_failed.emit(list(self._project_items.values()))
             self.finished.emit()
             return
-        except RemoteEngineFailed as error:
-            self._logger.msg_error.emit(f"{error}")
-            self._engine_final_state = str(SpineEngineState.FAILED)
-            self._all_items_failed.emit(list(self._project_items.values()))
-            self.finished.emit()
-            return
         while True:
-            if isinstance(self._engine_mngr, LocalSpineEngineManager):
-                event_type, data = self._engine_mngr.get_engine_event()
-                self._process_event(event_type, data)
-                if event_type == "dag_exec_finished":
-                    self._engine_final_state = data
-                    break
-            else:
-                event_type, data = self._engine_mngr.q.get()
-                self._process_event(event_type, data)
-                if event_type == "dag_exec_finished":
-                    self._engine_final_state = data
-                    break
-                elif event_type == "remote_engine_failed":
-                    self._logger.msg_error.emit(f"{data}")
-                    self._engine_final_state = str(SpineEngineState.FAILED)
-                    self._all_items_failed.emit(list(self._project_items.values()))
-                    break
+            event_type, data = self._engine_mngr.get_engine_event()
+            print(f"event_type:{event_type}, data:{data}")
+            self._process_event(event_type, data)
+            if event_type == "dag_exec_finished":
+                self._engine_final_state = data
+                break
+            elif event_type == "remote_execution_init_failed":
+                self._logger.msg_error.emit(f"{data}")
+                self._engine_final_state = str(SpineEngineState.FAILED)
+                self._all_items_failed.emit(list(self._project_items.values()))
+                break
         self.finished.emit()
 
     def _process_event(self, event_type, data):
@@ -253,12 +240,6 @@ class SpineEngineWorker(QObject):
             "prompt": self._handle_prompt,
             "flash": self._handle_flash,
         }.get(event_type)
-
-        #debugs
-        #if event_type=='exec_finished':
-        #    print("spine_engine_worker._process_event(): exec_finished data %s and type %s"%(data,type(data)))
-        #    print("spine_engine_worker._process_event(): item_state type: %s"%type(data['item_state']))
-
         if handler is None:
             return
         handler(data)

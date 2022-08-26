@@ -20,23 +20,15 @@ import zmq
 import zmq.auth
 import time
 import random
-import json
-from enum import unique, Enum
+from enum import Enum
 from spine_engine.server.util.server_message import ServerMessage
 from spine_engine.server.util.server_message_parser import ServerMessageParser
-from spine_engine.server.util.event_data_converter import EventDataConverter
-from spine_engine.exception import RemoteEngineFailed
+from spine_engine.exception import RemoteEngineInitFailed
 
 
 class ClientSecurityModel(Enum):
     NONE = 0  # Nope
     STONEHOUSE = 1  # ZMQ stonehouse security model
-
-
-@unique
-class EngineClientConnectionState(Enum):
-    CONNECTED = 0
-    DISCONNECTED = 1
 
 
 class EngineClient:
@@ -77,23 +69,12 @@ class EngineClient:
             server_public_file = os.path.join(public_keys_dir, "server.key")
             server_public, _ = zmq.auth.load_certificate(server_public_file)
             self._socket.curve_serverkey = server_public
-        ret = self._socket.connect(protocol + "://" + host + ":" + str(port))
-        # Ping server
-        self._connection_state = EngineClientConnectionState.DISCONNECTED
+        self._socket.connect(protocol + "://" + host + ":" + str(port))
         if self.ping:
             try:
-                self._check_connectivity(1000)
-            except RemoteEngineFailed:
+                self._check_connectivity(1000)  # Ping server
+            except RemoteEngineInitFailed:
                 raise
-        self._connection_state = EngineClientConnectionState.CONNECTED
-
-    def get_connection_state(self):
-        """Returns client connection state.
-
-        Returns:
-            int: EngineClientConnectionState
-        """
-        return self._connection_state
 
     def send(self, engine_data, fpath):
         """Sends the project and the execution request to the server, waits for the response and acts accordingly.
@@ -103,8 +84,8 @@ class EngineClient:
             fpath (str): Absolute path to project zip-file
 
         Returns:
-            list or str: List of tuples containing events+data, or an error message string if something went wrong
-            in initializing the execution at server.
+            tuple: Response tuple (event_type: data). Event_type is "server_init_failed",
+            "remote_execution_init_failed" or "remote_execution_started.
         """
         with open(fpath, "rb") as f:
             file_data = f.read()  # Read file into bytes string
@@ -118,7 +99,7 @@ class EngineClient:
         response = self._socket.recv()  # Blocks until a response is received
         response_str = response.decode("utf-8")  # Decode received bytes to get (JSON) string
         response_msg = ServerMessageParser.parse(response_str)  # Parse received JSON string into a ServerMessage
-        data = response_msg.getData()  # Get queue Id for querying events
+        data = response_msg.getData()
         return data
 
     def connect_sub_socket(self, publish_port):
@@ -131,7 +112,7 @@ class EngineClient:
         self.sub_socket.setsockopt(zmq.SUBSCRIBE, b"EVENTS")
 
     def close(self):
-        """Closes ZMQ client socket, context and thread."""
+        """Closes client socket, context and thread."""
         if not self._socket.closed:
             self._socket.close()
             self.sub_socket.close()
@@ -148,7 +129,7 @@ class EngineClient:
             void
 
         Raises:
-            RemoteEngineFailed if the server is not responding.
+            RemoteEngineInitFailed if the server is not responding.
         """
         start_time_ms = round(time.time() * 1000.0)
         random_id = random.randrange(10000000)
@@ -156,7 +137,7 @@ class EngineClient:
         self._socket.send_multipart([ping_request.to_bytes()], flags=zmq.NOBLOCK)
         event = self._socket.poll(timeout=timeout)
         if event == 0:
-            raise RemoteEngineFailed("Timeout expired. Pinging the server failed.")
+            raise RemoteEngineInitFailed("Timeout expired. Pinging the server failed.")
         else:
             msg = self._socket.recv()
             msg_str = msg.decode("utf-8")
@@ -164,7 +145,7 @@ class EngineClient:
             # Check that request ID matches the response ID
             response_id = int(response.getId())
             if not response_id == random_id:
-                raise RemoteEngineFailed(f"Ping failed. Request Id '{random_id}' does not match "
+                raise RemoteEngineInitFailed(f"Ping failed. Request Id '{random_id}' does not match "
                                          f"reply Id '{response_id}'")
             stop_time_ms = round(time.time() * 1000.0)  # debugging
             print("Ping message received, RTT: %d ms" % (stop_time_ms - start_time_ms))

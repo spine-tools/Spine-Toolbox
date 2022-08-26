@@ -24,7 +24,7 @@ import random
 from PySide2.QtCore import Signal
 from PySide2.QtGui import QColor
 import networkx as nx
-from spine_engine.exception import EngineInitFailed, RemoteEngineFailed
+from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
@@ -1376,10 +1376,10 @@ class SpineToolboxProject(MetaObject):
                 self._logger.msg_error.emit("Spine Engine Server <b>port</b> missing. "
                                             "Please select port in <b>Settings->Engine</b>.")
                 return False
-            self._logger.msg.emit(f"Establishing connection to Spine Engine Server in <b>{host}:{port}</b>")
+            self._logger.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
             try:
-                EngineClient("tcp", host, port, sec_model, sec_folder, ping=True)  # Ping server
-            except RemoteEngineFailed as e:
+                EngineClient("tcp", host, port, sec_model, sec_folder, ping=True)
+            except RemoteEngineInitFailed as e:
                 self._logger.msg_error.emit(f"Server is not responding. {e}. "
                                             f"Check settings in <b>Settings->Engine</b>.")
                 return False
