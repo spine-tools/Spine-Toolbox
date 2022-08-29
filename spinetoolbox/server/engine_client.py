@@ -20,6 +20,7 @@ import zmq
 import zmq.auth
 import time
 import random
+import json
 from enum import Enum
 from spine_engine.server.util.server_message import ServerMessage
 from spine_engine.server.util.server_message_parser import ServerMessageParser
@@ -76,26 +77,19 @@ class EngineClient:
             except RemoteEngineInitFailed:
                 raise
 
-    def send(self, engine_data, fpath):
+    def start_execute(self, engine_data, job_id):
         """Sends the project and the execution request to the server, waits for the response and acts accordingly.
 
         Args:
             engine_data (str): Input for SpineEngine as JSON str. Includes most of project.json, settings, etc.
-            fpath (str): Absolute path to project zip-file
+            job_id (str): Job Id on server
 
         Returns:
             tuple: Response tuple (event_type: data). Event_type is "server_init_failed",
             "remote_execution_init_failed" or "remote_execution_started.
         """
-        with open(fpath, "rb") as f:
-            file_data = f.read()  # Read file into bytes string
-        # Create request content
-        random_id = random.randrange(10000000)  # Request ID
-        _, filename = os.path.split(fpath)
-        list_files = [filename]
-        msg = ServerMessage("execute", str(random_id), engine_data, list_files)
-        print(f"EngineClient(): msg to be sent: {msg.toJSON()} + {len(file_data)} of data in bytes (zip-file)")
-        self._socket.send_multipart([msg.to_bytes(), file_data])  # Send request
+        msg = ServerMessage("execute", job_id, engine_data, None)
+        self._socket.send_multipart([msg.to_bytes()])  # Send execute request
         response = self._socket.recv()  # Blocks until a response is received
         response_str = response.decode("utf-8")  # Decode received bytes to get (JSON) string
         response_msg = ServerMessageParser.parse(response_str)  # Parse received JSON string into a ServerMessage
@@ -145,8 +139,30 @@ class EngineClient:
             # Check that request ID matches the response ID
             response_id = int(response.getId())
             if not response_id == random_id:
-                raise RemoteEngineInitFailed(f"Ping failed. Request Id '{random_id}' does not match "
-                                         f"reply Id '{response_id}'")
+                raise RemoteEngineInitFailed(f"Ping failed. Request Id '{random_id}' does not "
+                                             f"match reply Id '{response_id}'")
             stop_time_ms = round(time.time() * 1000.0)  # debugging
             print("Ping message received, RTT: %d ms" % (stop_time_ms - start_time_ms))
         return
+
+    def send_project_file(self, project_dir, fpath):
+        """Sends the zipped project file to server. Project zip file must be ready and the server available
+        before calling this method.
+
+        Args:
+            project_dir (str): Absolute path to project directory
+            fpath (str): Absolute path to zipped project file.
+
+        Returns:
+            str: Server project execution job Id
+        """
+        with open(fpath, "rb") as f:
+            file_data = f.read()  # Read file into bytes string
+        _, zip_filename = os.path.split(fpath)
+        project_dir = project_dir.replace(os.sep, "/")
+        req = ServerMessage("prepare_execution", "1", json.dumps(project_dir), [zip_filename])
+        self._socket.send_multipart([req.to_bytes(), file_data])
+        response = self._socket.recv()
+        response_server_message = ServerMessageParser.parse(response.decode("utf-8"))
+        print(f"Got response to cmd:{response_server_message.getCommand()}: id:{response_server_message.getId()}")
+        return response_server_message.getId()

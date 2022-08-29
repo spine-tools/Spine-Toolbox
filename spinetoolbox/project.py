@@ -941,11 +941,7 @@ class SpineToolboxProject(MetaObject):
         Args:
             dags (Sequence(DiGraph))
             execution_permits_list (Sequence(dict))
-<<<<<<< HEAD
-            msg (str): Message depending on execution mode (project or selected)
-=======
             msg (str): message to log before execution
->>>>>>> master
         """
         self.project_execution_about_to_start.emit()
         self._logger.msg.emit("")
@@ -959,7 +955,8 @@ class SpineToolboxProject(MetaObject):
         if self._engine_workers:
             self._logger.msg_error.emit("Execution already in progress.")
             return
-        if not self.prepare_remote_execution():
+        job_id = self.prepare_remote_execution()
+        if not job_id:
             self.project_execution_finished.emit()
             return
         settings = make_settings_dict_for_engine(self._settings)
@@ -967,7 +964,7 @@ class SpineToolboxProject(MetaObject):
         darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
-            worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
+            worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings, job_id)
             if worker is None:
                 continue
             self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
@@ -983,7 +980,7 @@ class SpineToolboxProject(MetaObject):
         for worker in self._engine_workers:
             worker.start()
 
-    def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
+    def create_engine_worker(self, dag, execution_permits, dag_identifier, settings, job_id):
         """Creates and returns a SpineEngineWorker to execute given *validated* dag.
 
         Args:
@@ -991,6 +988,7 @@ class SpineToolboxProject(MetaObject):
             execution_permits (dict): mapping item names to a boolean indicating whether to execute it or skip it
             dag_identifier (str): A string identifying the dag, for logging
             settings (dict): project and app settings to send to the spine engine.
+            job_id (str): Job Id for remote execution
 
         Returns:
             SpineEngineWorker
@@ -1021,7 +1019,7 @@ class SpineToolboxProject(MetaObject):
             "project_dir": self.project_dir.replace(os.sep, "/"),
         }
         server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
-        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items, connections, self._logger)
+        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items, connections, self._logger, job_id)
         return worker
 
     def _handle_engine_worker_finished(self, worker):
@@ -1378,7 +1376,7 @@ class SpineToolboxProject(MetaObject):
                 return False
             self._logger.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
             try:
-                EngineClient("tcp", host, port, sec_model, sec_folder, ping=True)
+                engine_client = EngineClient("tcp", host, port, sec_model, sec_folder, ping=True)
             except RemoteEngineInitFailed as e:
                 self._logger.msg_error.emit(f"Server is not responding. {e}. "
                                             f"Check settings in <b>Settings->Engine</b>.")
@@ -1397,7 +1395,12 @@ class SpineToolboxProject(MetaObject):
             file_size = os.path.getsize(project_zip_file)
             self._logger.msg.emit(f"Connection established. Transmitting <b>{PROJECT_ZIP_FILENAME + '.zip'} "
                                   f"[size:{file_size} B]</b> to server.")
-        return True
+            job_id = engine_client.send_project_file(self.project_dir, project_zip_file)
+            self._logger.msg.emit(f"Project is ready for execution at server. job_id:{job_id}")
+            engine_client.close()
+        else:
+            return 1  # Something that isn't None or False
+        return job_id
 
     def tear_down(self):
         """Cleans up project."""

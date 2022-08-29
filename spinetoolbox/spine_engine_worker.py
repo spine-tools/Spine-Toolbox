@@ -111,7 +111,7 @@ class SpineEngineWorker(QObject):
     _flash_arrived = Signal(object)
     _all_items_failed = Signal(list)
 
-    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, connections, logger):
+    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, connections, logger, job_id):
         """
         Args:
             engine_data (dict): engine data
@@ -120,11 +120,12 @@ class SpineEngineWorker(QObject):
             project_items (dict): mapping from project item name to :class:`ProjectItem`
             connections (dict): mapping from jump name to :class:`LoggingConnection` or :class:`LoggingJump`
             logger (LoggerInterface): a logger
+            job_id: Execution job Id on server
         """
         super().__init__()
         self._engine_data = engine_data
         exec_remotely = engine_data["settings"].get("engineSettings/remoteExecutionEnabled", "false") == "true"
-        self._engine_mngr = make_engine_manager(exec_remotely)
+        self._engine_mngr = make_engine_manager(exec_remotely, job_id)
         self.dag = dag
         self.dag_identifier = dag_identifier
         self._engine_final_state = "UNKNOWN"
@@ -216,7 +217,6 @@ class SpineEngineWorker(QObject):
             return
         while True:
             event_type, data = self._engine_mngr.get_engine_event()
-            print(f"event_type:{event_type}, data:{data}")
             self._process_event(event_type, data)
             if event_type == "dag_exec_finished":
                 self._engine_final_state = data

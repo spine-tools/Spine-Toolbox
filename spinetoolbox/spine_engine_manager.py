@@ -215,12 +215,13 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
 class RemoteSpineEngineManager(SpineEngineManagerBase):
     """Responsible for remote project execution."""
-    def __init__(self):
+    def __init__(self, job_id=""):
         """Initializer."""
         super().__init__()
         self._runner = threading.Thread(name="RemoteSpineEngineManagerRunnerThread", target=self._run)
         self._engine_data = None
         self.engine_client = None
+        self.job_id = job_id  # id of dag to start
         self.q = queue.Queue()  # Queue for sending data forward to SpineEngineWorker
 
     def run_engine(self, engine_data):
@@ -273,17 +274,15 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         """
         start_time = round(time.time() * 1000.0)
         engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
-        zip_fpath = os.path.abspath(
-            os.path.join(self._engine_data["project_dir"], os.pardir, PROJECT_ZIP_FILENAME + ".zip")
-        )
         # Send an execute request to remote server, and wait for an execution started response
-        first_event = self.engine_client.send(engine_data_json, zip_fpath)
+        first_event = self.engine_client.start_execute(engine_data_json, self.job_id)
+        print(f"first_event:{first_event}")
         if first_event[0] == "remote_execution_init_failed" or first_event[0] == "server_init_failed":
             # Execution on server did not start because something went wrong in the initialization
-            raise EngineInitFailed(f"Initializing remote execution failed: {first_event[1]}")
+            raise EngineInitFailed(f"Initializing remote execution failed: {first_event[1]}")  # TODO: Does not work. This is not caught in SpineEngineWorker
         elif first_event[0] != "remote_execution_started":
             print(f"Unknown event received: event_type:{first_event[0]} data:{first_event[1]}")
-            raise EngineInitFailed(f"Unhandled server error: {first_event[1]}")
+            raise EngineInitFailed(f"Unhandled server error: {first_event[1]}")  # TODO: Does not work. This is not caught in SpineEngineWorker
         # Prepare subscribe socket and receive events until dag_exec_finished event is received
         self.engine_client.connect_sub_socket(first_event[1])
         while True:
@@ -385,15 +384,16 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         raise NotImplementedError()
 
 
-def make_engine_manager(remote_execution_enabled=False):
+def make_engine_manager(remote_execution_enabled=False, job_id=""):
     """Returns either a Local or a remote Spine Engine Manager based on settings.
 
     Args:
         remote_execution_enabled (bool): True returns a local Spine Engine Manager instance,
         False returns a remote Spine Engine Manager instance
+        job_id (str): Server execution job Id
     """
     if remote_execution_enabled:
-        return RemoteSpineEngineManager()
+        return RemoteSpineEngineManager(job_id)
     return LocalSpineEngineManager()
 
 
