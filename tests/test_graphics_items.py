@@ -176,7 +176,9 @@ class TestLink(unittest.TestCase):
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.connection.receive_resources_from_source([database_resource("provider", url, "my_database")])
+        self._link.connection.receive_resources_from_source(
+            [database_resource("provider", url, "my_database", filterable=True)]
+        )
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
@@ -204,7 +206,9 @@ class TestLink(unittest.TestCase):
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.connection.receive_resources_from_source([database_resource("provider", url, "my_database")])
+        self._link.connection.receive_resources_from_source(
+            [database_resource("provider", url, "my_database", filterable=True)]
+        )
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
@@ -232,7 +236,7 @@ class TestLink(unittest.TestCase):
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.connection.receive_resources_from_source([database_resource("provider", url)])
+        self._link.connection.receive_resources_from_source([database_resource("provider", url, filterable=True)])
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {1: True})
@@ -244,7 +248,7 @@ class TestLink(unittest.TestCase):
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.connection.receive_resources_from_source([database_resource("provider", url)])
+        self._link.connection.receive_resources_from_source([database_resource("provider", url, filterable=True)])
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "tool_filter", {1: True})
