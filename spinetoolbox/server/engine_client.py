@@ -78,17 +78,19 @@ class EngineClient:
                 raise
 
     def start_execute(self, engine_data, job_id):
-        """Sends the project and the execution request to the server, waits for the response and acts accordingly.
+        """Sends the start execution request along with job Id and engine (dag) data to the server.
+        Response message data contains the publish socket port if execution starts successfully.
 
         Args:
             engine_data (str): Input for SpineEngine as JSON str. Includes most of project.json, settings, etc.
-            job_id (str): Job Id on server
+            job_id (str): Project execution job Id on server
 
         Returns:
             tuple: Response tuple (event_type: data). Event_type is "server_init_failed",
-            "remote_execution_init_failed" or "remote_execution_started.
+            "remote_execution_init_failed" or "remote_execution_started. data is an error
+            message or the publish socket port
         """
-        msg = ServerMessage("execute", job_id, engine_data, None)
+        msg = ServerMessage("start_execution", job_id, engine_data, None)
         self._socket.send_multipart([msg.to_bytes()])  # Send execute request
         response = self._socket.recv()  # Blocks until a response is received
         response_str = response.decode("utf-8")  # Decode received bytes to get (JSON) string
@@ -97,10 +99,10 @@ class EngineClient:
         return data
 
     def connect_sub_socket(self, publish_port):
-        """Connects and sets up a subscribe socket for receiving remote engine execution events.
+        """Connects and sets up a subscribe socket for receiving engine execution events from server.
 
         Args:
-            publish_port (str): Port of the event publish socket on server
+            publish_port (str): Port of the event publisher socket on server
         """
         self.sub_socket.connect(self.protocol + "://" + self.host + ":" + publish_port)
         self.sub_socket.setsockopt(zmq.SUBSCRIBE, b"EVENTS")
@@ -145,22 +147,21 @@ class EngineClient:
             print("Ping message received, RTT: %d ms" % (stop_time_ms - start_time_ms))
         return
 
-    def send_project_file(self, project_dir, fpath):
+    def send_project_file(self, project_dir_name, fpath):
         """Sends the zipped project file to server. Project zip file must be ready and the server available
         before calling this method.
 
         Args:
-            project_dir (str): Absolute path to project directory
+            project_dir_name (str): Project directory name
             fpath (str): Absolute path to zipped project file.
 
         Returns:
-            str: Server project execution job Id
+            str: Project execution job Id
         """
         with open(fpath, "rb") as f:
             file_data = f.read()  # Read file into bytes string
         _, zip_filename = os.path.split(fpath)
-        project_dir = project_dir.replace(os.sep, "/")
-        req = ServerMessage("prepare_execution", "1", json.dumps(project_dir), [zip_filename])
+        req = ServerMessage("prepare_execution", "1", json.dumps(project_dir_name), [zip_filename])
         self._socket.send_multipart([req.to_bytes(), file_data])
         response = self._socket.recv()
         response_server_message = ServerMessageParser.parse(response.decode("utf-8"))

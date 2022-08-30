@@ -120,7 +120,7 @@ class SpineEngineWorker(QObject):
             project_items (dict): mapping from project item name to :class:`ProjectItem`
             connections (dict): mapping from jump name to :class:`LoggingConnection` or :class:`LoggingJump`
             logger (LoggerInterface): a logger
-            job_id: Execution job Id on server
+            job_id: Job Id for remote execution
         """
         super().__init__()
         self._engine_data = engine_data
@@ -221,7 +221,7 @@ class SpineEngineWorker(QObject):
             if event_type == "dag_exec_finished":
                 self._engine_final_state = data
                 break
-            elif event_type == "remote_execution_init_failed":
+            elif event_type == "remote_execution_init_failed" or event_type == "server_init_failed":
                 self._logger.msg_error.emit(f"{data}")
                 self._engine_final_state = str(SpineEngineState.FAILED)
                 self._all_items_failed.emit(list(self._project_items.values()))
@@ -241,6 +241,7 @@ class SpineEngineWorker(QObject):
             "flash": self._handle_flash,
         }.get(event_type)
         if handler is None:
+            print(f"No handler for event_type:{event_type} data:{data}")
             return
         handler(data)
 

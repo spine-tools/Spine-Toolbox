@@ -243,7 +243,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             else app_settings.get("engineSettings/remoteSecurityFolder", "")
         )
         try:
-            self.engine_client = EngineClient(protocol, host, port, security, sec_folder)
+            self.engine_client = EngineClient(protocol, host, port, security, sec_folder, ping=False)
         except RemoteEngineInitFailed:
             raise
         except Exception:
@@ -268,23 +268,26 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         self.stop_engine()
 
     def _run(self):
-        """Sends the project zip file and settings to the server for
-        execution and waits for a response. Parses the response
-        message(s) and puts them into a queue for further processing.
+        """Sends a start execution request to server with the job Id.
+        Sets up a subscribe socket according to the publish port received from server.
+        Passes received events to SpineEngineWorker for processing.
         """
         start_time = round(time.time() * 1000.0)
         engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
-        # Send an execute request to remote server, and wait for an execution started response
-        first_event = self.engine_client.start_execute(engine_data_json, self.job_id)
-        print(f"first_event:{first_event}")
-        if first_event[0] == "remote_execution_init_failed" or first_event[0] == "server_init_failed":
-            # Execution on server did not start because something went wrong in the initialization
-            raise EngineInitFailed(f"Initializing remote execution failed: {first_event[1]}")  # TODO: Does not work. This is not caught in SpineEngineWorker
-        elif first_event[0] != "remote_execution_started":
-            print(f"Unknown event received: event_type:{first_event[0]} data:{first_event[1]}")
-            raise EngineInitFailed(f"Unhandled server error: {first_event[1]}")  # TODO: Does not work. This is not caught in SpineEngineWorker
+        # Send request to server, and wait for an execution started response containing the publish port
+        start_event = self.engine_client.start_execute(engine_data_json, self.job_id)
+        print(f"start_event:{start_event}")
+        if start_event[0] == "remote_execution_init_failed" or start_event[0] == "server_init_failed":
+            # Execution on did not start because something went wrong in the initialization
+            print(f"Remote execution init failed: event_type:{start_event[0]} data:{start_event[1]}. Aborting.")
+            self.q.put(start_event)
+            return
+        elif start_event[0] != "remote_execution_started":
+            print(f"Unhandled event received: event_type:{start_event[0]} data:{start_event[1]}. Aborting.")
+            self.q.put(start_event)
+            return
         # Prepare subscribe socket and receive events until dag_exec_finished event is received
-        self.engine_client.connect_sub_socket(first_event[1])
+        self.engine_client.connect_sub_socket(start_event[1])
         while True:
             rcv = self.engine_client.sub_socket.recv_multipart()  # Get next execution event
             event = json.loads(rcv[1])

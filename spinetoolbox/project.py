@@ -1355,51 +1355,57 @@ class SpineToolboxProject(MetaObject):
         return self._settings
 
     def prepare_remote_execution(self):
-        if self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
-            # Check remote execution settings
-            host = self._settings.value("engineSettings/remoteHost", "")  # Host name
-            port = self._settings.value("engineSettings/remotePort", "")  # Host port
-            sec_model = self._settings.value("engineSettings/remoteSecurityModel", "")  # ZQM security model
-            security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
-            sec_folder = (
-                ""
-                if security == ClientSecurityModel.NONE
-                else self._settings.value("engineSettings/remoteSecurityFolder", "")
-            )
-            if not host:
-                self._logger.msg_error.emit("Spine Engine Server <b>host address</b> missing. "
-                                            "Please enter host in <b>Settings->Engine</b>.")
-                return False
-            elif not port:
-                self._logger.msg_error.emit("Spine Engine Server <b>port</b> missing. "
-                                            "Please select port in <b>Settings->Engine</b>.")
-                return False
-            self._logger.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
-            try:
-                engine_client = EngineClient("tcp", host, port, sec_model, sec_folder, ping=True)
-            except RemoteEngineInitFailed as e:
-                self._logger.msg_error.emit(f"Server is not responding. {e}. "
-                                            f"Check settings in <b>Settings->Engine</b>.")
-                return False
-            # When preparing for remote execution, archive the project into a zip-file
-            dest_dir = os.path.join(self.project_dir, os.pardir)  # Parent dir of project_dir TODO: Find a better dst
-            try:
-                FilePackager.package(src_folder=self.project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
-            except Exception as e:
-                self._logger.msg_error.emit(f"{e}")
-                return False
-            project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
-            if not os.path.isfile(project_zip_file):
-                self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
-                return False
-            file_size = os.path.getsize(project_zip_file)
-            self._logger.msg.emit(f"Connection established. Transmitting <b>{PROJECT_ZIP_FILENAME + '.zip'} "
-                                  f"[size:{file_size} B]</b> to server.")
-            job_id = engine_client.send_project_file(self.project_dir, project_zip_file)
-            self._logger.msg.emit(f"Project is ready for execution at server. job_id:{job_id}")
-            engine_client.close()
-        else:
-            return 1  # Something that isn't None or False
+        """Pings the server and sends the project as a zip-file to server.
+
+        Returns:
+            str: Job Id if server is ready for remote execution, empty string if something went wrong or "1" if
+            local execution is enabled.
+        """
+        if not self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
+            return "1"  # Something that isn't False
+        # Check remote execution settings
+        host = self._settings.value("engineSettings/remoteHost", "")  # Host name
+        port = self._settings.value("engineSettings/remotePort", "")  # Host port
+        sec_model = self._settings.value("engineSettings/remoteSecurityModel", "")  # ZQM security model
+        security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
+        sec_folder = (
+            ""
+            if security == ClientSecurityModel.NONE
+            else self._settings.value("engineSettings/remoteSecurityFolder", "")
+        )
+        if not host:
+            self._logger.msg_error.emit("Spine Engine Server <b>host address</b> missing. "
+                                        "Please enter host in <b>File->Settings->Engine</b>.")
+            return ""
+        elif not port:
+            self._logger.msg_error.emit("Spine Engine Server <b>port</b> missing. "
+                                        "Please select port in <b>File->Settings->Engine</b>.")
+            return ""
+        self._logger.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
+        try:
+            engine_client = EngineClient("tcp", host, port, sec_model, sec_folder, ping=True)
+        except RemoteEngineInitFailed as e:
+            self._logger.msg_error.emit(f"Server is not responding. {e}. "
+                                        f"Check settings in <b>File->Settings->Engine</b>.")
+            return ""
+        # When preparing for remote execution, archive the project into a zip-file
+        dest_dir = os.path.join(self.project_dir, os.pardir)  # Parent dir of project_dir TODO: Find a better dst
+        try:
+            FilePackager.package(src_folder=self.project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
+        except Exception as e:
+            self._logger.msg_error.emit(f"{e}")
+            return ""
+        project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
+        if not os.path.isfile(project_zip_file):
+            self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
+            return ""
+        file_size = os.path.getsize(project_zip_file)
+        self._logger.msg.emit(f"Connection established. Transmitting <b>{PROJECT_ZIP_FILENAME + '.zip'} "
+                              f"[size:{file_size} B]</b> to server.")
+        _, project_dir_name = os.path.split(self.project_dir)
+        job_id = engine_client.send_project_file(project_dir_name, project_zip_file)
+        self._logger.msg.emit(f"Project is ready for execution at server. job_id:{job_id}")
+        engine_client.close()
         return job_id
 
     def tear_down(self):
