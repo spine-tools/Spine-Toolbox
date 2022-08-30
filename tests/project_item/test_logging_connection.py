@@ -26,10 +26,10 @@ class TestLoggingConnection(unittest.TestCase):
             "source", "bottom", "destination", "top", toolbox=toolbox, disabled_filter_names=disabled_filters
         )
         connection.link = MagicMock()
-        original = database_resource("source", "sqlite:///db.sqlite", label="database")
+        original = database_resource("source", "sqlite:///db.sqlite", label="database", filterable=True)
         connection.receive_resources_from_source([original])
         self.assertEqual(connection.database_resources, {original})
-        modified = database_resource("source", "sqlite:///db2.sqlite", label="new database")
+        modified = database_resource("source", "sqlite:///db2.sqlite", label="new database", filterable=True)
         connection.replace_resources_from_source([original], [modified])
         self.assertEqual(connection.database_resources, {modified})
         self.assertEqual(connection._disabled_filter_names, {"new database": {"scenario_filter": {"Base"}}})

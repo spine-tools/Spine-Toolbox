@@ -1271,6 +1271,10 @@ class CustomSyntaxHighlighter(QSyntaxHighlighter):
         self.lexer = None
         self._formats = {}
 
+    @property
+    def formats(self):
+        return self._formats
+
     def set_style(self, style):
         self._formats.clear()
         for ttype, tstyle in style:
