@@ -278,7 +278,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         start_event = self.engine_client.start_execute(engine_data_json, self.job_id)
         print(f"start_event:{start_event}")
         if start_event[0] == "remote_execution_init_failed" or start_event[0] == "server_init_failed":
-            # Execution on did not start because something went wrong in the initialization
+            # Execution on server did not start because something went wrong in the initialization
             print(f"Remote execution init failed: event_type:{start_event[0]} data:{start_event[1]}. Aborting.")
             self.q.put(start_event)
             return
@@ -289,27 +289,52 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         # Prepare subscribe socket and receive events until dag_exec_finished event is received
         self.engine_client.connect_sub_socket(start_event[1])
         while True:
-            rcv = self.engine_client.sub_socket.recv_multipart()  # Get next execution event
-            event = json.loads(rcv[1])
-            event = EventDataConverter.deconvert_single(event, True)
-            try:
-                # Handle execution state transformation, see returned data from SpineEngine._process_event()
-                data_str = self._add_quotes_to_state_str(event[1])
-                data_dict = ast.literal_eval(data_str)  # ast.literal_eval fails if input isn't a Python datatype
-                if "item_state" in data_dict.keys():
-                    data_dict["item_state"] = self.transform_execution_state(data_dict["item_state"])
-                self.q.put((event[0], data_dict))
-            except ValueError:
-                # ast.literal_eval throws this if trying to turn a regular string like "COMPLETED" or "FAILED" to
-                # a dict. See returned data from SpineEngine._process_event()
-                self.q.put(event)
+            rcv = self.engine_client.rcv_next_event()  # Wait for the next execution event
+            event_dict = json.loads(rcv[1].decode("utf-8"))
+            event = EventDataConverter.deconvert_single(event_dict)
+            print(f"{event[0]}: {event[1]}")
             if event[0] == "dag_exec_finished":
+                self.q.put(event)
                 break
+            event = self.fix_event_data(event)
+            self.q.put(event)
+            # try:
+            #     # Handle execution state transformation, see returned data from SpineEngine._process_event()
+            #     # data_str = self._add_quotes_to_state_str(event[1])
+            #     # data_dict = ast.literal_eval(data_str)  # ast.literal_eval fails if input isn't a Python datatype
+            #     if "item_state" in data_dict.keys():
+            #         data_dict["item_state"] = self.transform_execution_state(data_dict["item_state"])
+            #     self.q.put((event[0], data_dict))
+            # except ValueError:
+            #     # ast.literal_eval throws this if trying to turn a regular string like "COMPLETED" or "FAILED" to
+            #     # a dict. See returned data from SpineEngine._process_event()
+            #     self.q.put(event)
+            # if event[0] == "dag_exec_finished":
+            #     break
         stop_time = round(time.time() * 1000.0)
         print("RemoteSpineEngineManager.run() run time after execution %d ms" % (stop_time - start_time))
 
+    def fix_event_data(self, event):
+        """Converts data back to what was sent.
+
+        Returns:
+            tuple: Fixed event_type: data tuple
+        """
+        # Convert item_state str back to ItemExecutionFinishState. This was converted to str on server because
+        # it is not JSON serializable
+        if type(event[1]) == str:
+            return event
+        if "item_state" in event[1].keys():
+            event[1]["item_state"] = self.convert_execution_finish_state(event[1]["item_state"])
+        # Fix persistent console key. It was converted from tuple to a list by JSON.dumps but we need it as
+        # a tuple because it will be used as dictionary key and lists cannot be used as keys
+        if event[0] == "persistent_execution_msg" and "key" in event[1].keys():
+            if type(event[1]["key"]) == list:
+                event[1]["key"] = tuple(event[1]["key"])
+        return event
+
     @staticmethod
-    def transform_execution_state(state):
+    def convert_execution_finish_state(state):
         """Transforms state string into an ItemExecutionFinishState enum.
 
         Args:
@@ -319,12 +344,12 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             ItemExecutionFinishState: Enum if given str is valid, None otherwise.
         """
         states = dict()
-        states["<ItemExecutionFinishState.SUCCESS: 1>"] = ItemExecutionFinishState.SUCCESS
-        states["<ItemExecutionFinishState.FAILURE: 1>"] = ItemExecutionFinishState.FAILURE
-        states["<ItemExecutionFinishState.SKIPPED: 1>"] = ItemExecutionFinishState.SKIPPED
-        states["<ItemExecutionFinishState.EXCLUDED: 1>"] = ItemExecutionFinishState.EXCLUDED
-        states["<ItemExecutionFinishState.STOPPED: 1>"] = ItemExecutionFinishState.STOPPED
-        states["<ItemExecutionFinishState.NEVER_FINISHED: 1>"] = ItemExecutionFinishState.NEVER_FINISHED
+        states["SUCCESS"] = ItemExecutionFinishState.SUCCESS
+        states["FAILURE"] = ItemExecutionFinishState.FAILURE
+        states["SKIPPED"] = ItemExecutionFinishState.SKIPPED
+        states["EXCLUDED"] = ItemExecutionFinishState.EXCLUDED
+        states["STOPPED"] = ItemExecutionFinishState.STOPPED
+        states["NEVER_FINISHED"] = ItemExecutionFinishState.NEVER_FINISHED
         return states.get(state, None)
 
     @staticmethod

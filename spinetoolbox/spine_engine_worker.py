@@ -241,7 +241,8 @@ class SpineEngineWorker(QObject):
             "flash": self._handle_flash,
         }.get(event_type)
         if handler is None:
-            print(f"No handler for event_type:{event_type} data:{data}")
+            if event_type != "dag_exec_finished":
+                print(f"No handler for event_type:{event_type} data:{data}")
             return
         handler(data)
 

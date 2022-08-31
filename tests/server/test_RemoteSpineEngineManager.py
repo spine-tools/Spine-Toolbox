@@ -22,11 +22,39 @@ from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager
 
 class TestRemoteSpineEngineManager(unittest.TestCase):
 
-    @unittest.skip("FixMe")
+    def yield_event1(self):
+        event_list = [(b'EVENTS', b'{"event_type": "exec_started", "data": "eydpdGVtX25hbWUnOiAnVDInLCAnZGlyZWN0aW9uJzogJ0JBQ0tXQVJEJ30="}'),
+                      (b'EVENTS', b'{"event_type": "dag_exec_finished", "data": "Q09NUExFVEVE"}')]
+        for event in event_list:
+            yield event
+
+    def yield_event2(self):
+        """Test Data Store prompt event_type."""
+        event_list = [(b'EVENTS', b'{"event_type": "prompt", "data": "eydpdGVtX25hbWUnOiAnRFMxJywgJ3R5cGUnOiAndXBncmFkZV9kYicsICd1cmwnOiBzcWxpdGU6Ly8vL2hvbWUvcGVra2EvZ2l0L1NQSU5FRU5HSU5FL3NwaW5lX2VuZ2luZS9zZXJ2ZXIvcmVjZWl2ZWRfcHJvamVjdHMvU2ltcGxlIEltcG9ydGVyX182ZmEwYjI5OTNhMzc0MWU1YjE2ZjJiZDlkMzU4YTlhOS8uc3BpbmV0b29sYm94L2l0ZW1zL2RzMS9EUzEuc3FsaXRlLCAnY3VycmVudCc6ICc5ODlmY2NmODA0NDEnLCAnZXhwZWN0ZWQnOiAnMWU0OTk3MTA1Mjg4J30="}'),
+                      (b'EVENTS', b'{"event_type": "dag_exec_finished", "data": "Q09NUExFVEVE"}')]
+        for event in event_list:
+            yield event
+
+        # prompt: {'item_name': 'DS1', 'type': 'upgrade_db',
+        #          'url': sqlite: // // home / pekka / git / SPINEENGINE / spine_engine / server / received_projects / Simple
+        # Importer__6fa0b2993a3741e5b16f2bd9d358a9a9 /.spinetoolbox / items / ds1 / DS1.sqlite, 'current': '989fccf80441', 'expected': '1e4997105288'}
+
     def test_remote_engine_manager_when_dag_execution_succeeds(self):
         # Mock return values for EngineClient methods
-        attrs = {"send.return_value": ("dag_exec_finished", "COMPLETED")}
-        self._run_remote_engine_manager(attrs, ("dag_exec_finished", "COMPLETED"))
+        event_yielder = self.yield_event1()
+        attrs = {"start_execute.return_value": ("remote_execution_started", "12345"),
+                 "connect_sub_socket.return_value": True,
+                 "rcv_next_event.side_effect": event_yielder
+                 }
+        self._run_remote_engine_manager(attrs, ('exec_started', {'item_name': 'T2', 'direction': 'BACKWARD'}))
+
+    def test_remote_engine_manager_ds_prompt_event_type_received(self):
+        event_yielder = self.yield_event2()
+        attrs = {"start_execute.return_value": ("remote_execution_started", "12345"),
+                 "connect_sub_socket.return_value": True,
+                 "rcv_next_event.side_effect": event_yielder
+                 }
+        self._run_remote_engine_manager(attrs, ('exec_started', {'item_name': 'T2', 'direction': 'BACKWARD'}))
 
     @unittest.skip("FixMe")
     def test_remote_engine_manager_when_dag_execution_fails(self):

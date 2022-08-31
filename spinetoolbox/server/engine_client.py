@@ -23,7 +23,6 @@ import random
 import json
 from enum import Enum
 from spine_engine.server.util.server_message import ServerMessage
-from spine_engine.server.util.server_message_parser import ServerMessageParser
 from spine_engine.exception import RemoteEngineInitFailed
 
 
@@ -94,7 +93,7 @@ class EngineClient:
         self._socket.send_multipart([msg.to_bytes()])  # Send execute request
         response = self._socket.recv()  # Blocks until a response is received
         response_str = response.decode("utf-8")  # Decode received bytes to get (JSON) string
-        response_msg = ServerMessageParser.parse(response_str)  # Parse received JSON string into a ServerMessage
+        response_msg = ServerMessage.parse(response_str)  # Parse received JSON string into a ServerMessage
         data = response_msg.getData()
         return data
 
@@ -106,6 +105,10 @@ class EngineClient:
         """
         self.sub_socket.connect(self.protocol + "://" + self.host + ":" + publish_port)
         self.sub_socket.setsockopt(zmq.SUBSCRIBE, b"EVENTS")
+
+    def rcv_next_event(self):
+        """Waits until the subscribe socket receives a new event from server."""
+        return self.sub_socket.recv_multipart()
 
     def close(self):
         """Closes client socket, context and thread."""
@@ -137,7 +140,7 @@ class EngineClient:
         else:
             msg = self._socket.recv()
             msg_str = msg.decode("utf-8")
-            response = ServerMessageParser.parse(msg_str)
+            response = ServerMessage.parse(msg_str)
             # Check that request ID matches the response ID
             response_id = int(response.getId())
             if not response_id == random_id:
@@ -164,6 +167,6 @@ class EngineClient:
         req = ServerMessage("prepare_execution", "1", json.dumps(project_dir_name), [zip_filename])
         self._socket.send_multipart([req.to_bytes(), file_data])
         response = self._socket.recv()
-        response_server_message = ServerMessageParser.parse(response.decode("utf-8"))
+        response_server_message = ServerMessage.parse(response.decode("utf-8"))
         print(f"Got response to cmd:{response_server_message.getCommand()}: id:{response_server_message.getId()}")
         return response_server_message.getId()
