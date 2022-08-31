@@ -327,6 +327,7 @@ class ActionsWithProject(QObject):
         if not settings.get("engineSettings/remoteExecutionEnabled", "false") == "false":
             settings["engineSettings/remoteExecutionEnabled"] = "false"
         selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
+        deselected = {name for name_list in self._args.deselect for name in name_list} if self._args.deselect else None
         for dag in dags:
             item_names_in_dag = set(dag.nodes)
             if not nx.is_directed_acyclic_graph(dag):
@@ -335,11 +336,11 @@ class ActionsWithProject(QObject):
             item_dicts_in_dag = {
                 name: item_dict for name, item_dict in self._item_dicts.items() if name in item_names_in_dag
             }
-            if selected is not None:
-                execution_permits = {item_name: item_name in selected for item_name in dag.nodes}
-                selected = selected - item_names_in_dag
-            else:
-                execution_permits = {item_name: True for item_name in item_names_in_dag}
+            execution_permits = {
+                item_name: (selected is None or item_name in selected)
+                and (deselected is None or item_name not in deselected)
+                for item_name in item_names_in_dag
+            }
             if all(not permitted for permitted in execution_permits.values()):
                 continue
             engine_data = {
@@ -367,9 +368,15 @@ class ActionsWithProject(QObject):
                     if data == str(SpineEngineState.FAILED):
                         return Status.ERROR
                     break
-        if selected:
+        selected_invalid = selected - item_names_in_dag if selected is not None else None
+        deselected_invalid = deselected - item_names_in_dag if deselected is not None else None
+        if selected_invalid:
             self._logger.msg_warning.emit(
-                f"The following selected items didn't exist in the project: {', '.join(selected)}"
+                f"The following selected items don't exist in the project: {', '.join(selected_invalid)}"
+            )
+        if deselected_invalid:
+            self._logger.msg_warning.emit(
+                f"The following deselected items don't exist in the project: {', '.join(deselected_invalid)}"
             )
         return Status.OK
 

@@ -162,23 +162,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         Returns:
             bool: True if it is possible for the connection to have filters, False otherwise
         """
-        for resource in self._resources:
-            url = resource.url
-            if not url:
-                continue
-            try:
-                db_map = DatabaseMapping(url)
-            except (SpineDBAPIError, SpineDBVersionError):
-                continue
-            try:
-                if (
-                    db_map.query(db_map.scenario_sq).first() is not None
-                    or db_map.query(db_map.tool_sq).first() is not None
-                ):
-                    return True
-            finally:
-                db_map.connection.close()
-        return False
+        return bool(self._resources)
 
     def disabled_filter_names(self, resource_label, filter_type):
         """Returns disabled filter names for given resource and filter type.

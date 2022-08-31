@@ -44,6 +44,8 @@ class CodeTextEdit(QPlainTextEdit):
         )
         self.blockCountChanged.connect(self._update_line_number_area_width)
         self.updateRequest.connect(self._update_line_number_area)
+        self._cursor_block = None
+        self.cursorPositionChanged.connect(self._update_line_number_area_cursor_position)
         self._update_line_number_area_width()
 
     def insertFromMimeData(self, source):
@@ -84,12 +86,27 @@ class CodeTextEdit(QPlainTextEdit):
 
     @Slot(QRect, int)
     def _update_line_number_area(self, rect, dy):
-        if dy:
+        if dy != 0:
             self._line_number_area.scroll(0, dy)
-        else:
-            self._line_number_area.update(0, rect.y(), self._line_number_area.width(), rect.height())
         if rect.contains(self.viewport().rect()):
             self._update_line_number_area_width()
+            self._line_number_area.update(0, rect.y(), self._line_number_area.width(), rect.height())
+
+    @Slot()
+    def _update_line_number_area_cursor_position(self):
+        if self._cursor_block is None:
+            self._cursor_block = self.textCursor().block()
+        elif self._cursor_block.blockNumber() == self.textCursor().blockNumber():
+            return
+        new_cursor_block = self.textCursor().block()
+        old_top = round(self.blockBoundingGeometry(self._cursor_block).translated(self.contentOffset()).top())
+        new_top = round(self.blockBoundingGeometry(new_cursor_block).translated(self.contentOffset()).top())
+        old_bottom = old_top + round(self.blockBoundingRect(self._cursor_block).height())
+        new_bottom = new_top + round(self.blockBoundingRect(new_cursor_block).height())
+        top = min(old_top, new_top)
+        bottom = max(old_bottom, new_bottom)
+        self._line_number_area.update(0, top, self._line_number_area.width(), bottom - top)
+        self._cursor_block = new_cursor_block
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -97,29 +114,21 @@ class CodeTextEdit(QPlainTextEdit):
         self._line_number_area.setGeometry(QRect(rect.left(), rect.top(), self.line_number_area_width(), rect.height()))
 
     def line_number_area_paint_event(self, ev):
-        foreground_color = QColor(self._style.styles[Token.Text]).darker()
+        foreground_color = QColor(self._highlighter.formats[Token.Text].foreground().color()).darker(120)
         painter = QPainter(self._line_number_area)
         painter.setFont(self.font())
+        painter.setPen(foreground_color)
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
         top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
         bottom = top + round(self.blockBoundingRect(block).height())
+        width = self._line_number_area.width()
         while block.isValid() and top <= ev.rect().bottom():
             if block.isVisible() and bottom >= ev.rect().top():
-                if block == self.textCursor().block():
-                    painter.fillRect(
-                        0, top, self._line_number_area.width(), self.fontMetrics().height(), foreground_color.darker()
-                    )
+                if block_number == self.textCursor().blockNumber():
+                    painter.fillRect(0, top, width, bottom - top, foreground_color.darker())
                 number = str(block_number + 1)
-                painter.setPen(foreground_color)
-                painter.drawText(
-                    0,
-                    top,
-                    self._line_number_area.width() - self._right_margin,
-                    self.fontMetrics().height(),
-                    Qt.AlignRight,
-                    number,
-                )
+                painter.drawText(0, top, width - self._right_margin, bottom - top, Qt.AlignRight, number)
             block = block.next()
             top = bottom
             bottom = top + round(self.blockBoundingRect(block).height())

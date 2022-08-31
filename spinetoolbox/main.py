@@ -92,6 +92,14 @@ def _make_argument_parser():
     parser.add_argument(
         "-s", "--select", action="append", help="select project item ITEM for execution", nargs="*", metavar="ITEM"
     )
+    parser.add_argument(
+        "-d",
+        "--deselect",
+        action="append",
+        help="deselect project item ITEM for execution (takes precendence over --select)",
+        nargs="*",
+        metavar="ITEM",
+    )
     return parser
 
 
