@@ -292,7 +292,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             rcv = self.engine_client.rcv_next_event()  # Wait for the next execution event
             event_dict = json.loads(rcv[1].decode("utf-8"))
             event = EventDataConverter.deconvert_single(event_dict)
-            print(f"{event[0]}: {event[1]}")
+            # print(f"{event[0]}: {event[1]}")
             if event[0] == "dag_exec_finished":
                 self.q.put(event)
                 break

@@ -120,11 +120,18 @@
     <addaction name="actionStartPythonConsole"/>
     <addaction name="actionStartJuliaConsole"/>
    </widget>
+   <widget class="QMenu" name="menuServer">
+    <property name="title">
+     <string>Server</string>
+    </property>
+    <addaction name="actionRetrieve_project"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuPlugins"/>
    <addaction name="menuConsoles"/>
+   <addaction name="menuServer"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -960,6 +967,11 @@
    </property>
    <property name="toolTip">
     <string>Change link's destination.</string>
+   </property>
+  </action>
+  <action name="actionRetrieve_project">
+   <property name="text">
+    <string>Retrieve project</string>
    </property>
   </action>
  </widget>

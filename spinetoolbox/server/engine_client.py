@@ -74,6 +74,7 @@ class EngineClient:
             try:
                 self._check_connectivity(1000)  # Ping server
             except RemoteEngineInitFailed:
+                self.close()
                 raise
 
     def start_execute(self, engine_data, job_id):
@@ -147,7 +148,6 @@ class EngineClient:
                 raise RemoteEngineInitFailed(f"Ping failed. Request Id '{random_id}' does not "
                                              f"match reply Id '{response_id}'")
             stop_time_ms = round(time.time() * 1000.0)  # debugging
-            print("Ping message received, RTT: %d ms" % (stop_time_ms - start_time_ms))
         return
 
     def send_project_file(self, project_dir_name, fpath):
@@ -168,5 +168,19 @@ class EngineClient:
         self._socket.send_multipart([req.to_bytes(), file_data])
         response = self._socket.recv()
         response_server_message = ServerMessage.parse(response.decode("utf-8"))
-        print(f"Got response to cmd:{response_server_message.getCommand()}: id:{response_server_message.getId()}")
         return response_server_message.getId()
+
+    def retrieve_project(self, job_id):
+        """Retrieves a zipped project file from server.
+
+        Args:
+            job_id (str): Job Id for finding the project directory on server
+            fpath (str): Absolute path to zipped project file.
+
+        Returns:
+            bytes: Zipped project file
+        """
+        req = ServerMessage("retrieve_project", job_id, "", [])
+        self._socket.send_multipart([req.to_bytes()])
+        response = self._socket.recv_multipart()
+        return response[-1]
