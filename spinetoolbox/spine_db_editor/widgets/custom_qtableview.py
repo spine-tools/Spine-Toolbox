@@ -155,6 +155,8 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction("Filter by", self.filter_by_selection)
         self._menu.addAction("Filter excluding", self.filter_excluding_selection)
         self._menu.addSeparator()
+        self._menu.addAction("Clear all filters", self._spine_db_editor.clear_all_filters)
+        self._menu.addSeparator()
         self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
         # Shortcuts
         remove_rows_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))

@@ -135,6 +135,16 @@ class ParameterViewMixin:
             model.empty_model.set_default_row(**default_data)
             model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
 
+    def clear_all_filters(self):
+        for model in self._parameter_models:
+            model.clear_auto_filter()
+        for model in self._parameter_value_models:
+            model.clear_auto_filter()
+        self._filter_class_ids = {}
+        self._filter_entity_ids = {}
+        self._filter_alternative_ids = {}
+        self._reset_filters()
+
     def _reset_filters(self):
         """Resets filters."""
         for model in self._parameter_models:

@@ -271,6 +271,10 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             self._filter_class_ids = class_ids
             self._invalidate_filter()
 
+    def clear_auto_filter(self):
+        self._auto_filter = {}
+        self._invalidate_filter()
+
     @Slot(str, dict)
     def set_auto_filter(self, field, values):
         """Updates and applies the auto filter.
