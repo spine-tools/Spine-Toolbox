@@ -112,21 +112,25 @@ version of pip.
 3. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
    or `source .venv/bin/activate` (bash, zsh) or `conda activate spinetoolbox`. 
 
-4. Make sure that the terminal prompt indicates the active environment 
-   and install Spine Toolbox along with its dependencies with
+4. Make sure that the terminal prompt indicates the active environment
+   and get the latest version of `pip` (pip is a package manager for Python)
 
-        pip install -r requirements.txt
+        python -m pip install --upgrade pip
+
+5. Install Spine Toolbox along with its dependencies with
+
+        python -m pip install -r requirements.txt
     
-5. (Optional) Install additional development packages with
+6. (Optional) Install additional development packages with
 
-        pip install -r dev-requirements.txt
+        python -m pip install -r dev-requirements.txt
 
 You can now launch Spine Toolbox by calling `spinetoolbox` when the environment 
 is active. 
 
 **To upgrade**, pull or copy the latest changes from the repository and run
 
-    pip install -U -r requirements.txt
+    python -m pip install -U -r requirements.txt
 
 
 ### About requirements
@@ -204,7 +208,7 @@ Below are the bare minimum things you need to know.
 
 1. Install the developer requirements:
 
-        pip install -r dev-requirements.txt
+        python -m pip install -r dev-requirements.txt
 
 2. Optionally, run `pre-commit install` in project's root directory. This sets up some git hooks.
 
