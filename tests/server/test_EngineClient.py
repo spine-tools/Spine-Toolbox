@@ -63,8 +63,7 @@ class TestEngineClient(unittest.TestCase):
         client.connect_sub_socket(start_event[1])
         while True:
             rcv = client.sub_socket.recv_multipart()
-            event = json.loads(rcv[1])
-            event = EventDataConverter.deconvert_single(event, True)
+            event = EventDataConverter.deconvert(rcv[1])
             if event[0] == "dag_exec_finished":
                 if event[1] != "COMPLETED":
                     self.fail()
