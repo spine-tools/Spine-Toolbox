@@ -369,6 +369,7 @@ class PivotTableView(CopyPasteTableView):
         _REMOVE_PARAMETER = "Remove parameter definitions"
         _REMOVE_ALTERNATIVE = "Remove alternatives"
         _REMOVE_SCENARIO = "Remove scenarios"
+        _DUPLICATE_SCENARIO = "Duplicate scenario"
 
         def __init__(self, view, db_editor, horizontal_header, vertical_header):
             """
@@ -402,9 +403,8 @@ class PivotTableView(CopyPasteTableView):
         def _refresh_selected_indexes(self):
             """Caches selected index lists."""
             self._clear_selection_lists()
-            source_model = self._view.source_model
             for index in map(self._view.model().mapToSource, self._view.selectedIndexes()):
-                self._to_selection_lists(index, source_model)
+                self._to_selection_lists(index)
 
         def remove_alternatives(self):
             """Removes selected alternatives from the database."""
@@ -422,16 +422,15 @@ class PivotTableView(CopyPasteTableView):
             self._update_actions_availability()
             self._menu.exec_(position)
 
-        def _to_selection_lists(self, index, source_model):
+        def _to_selection_lists(self, index):
             """Caches given index to corresponding selected index list.
 
             Args:
                 index (QModelIndex): index to cache
-                source_model (PivotTableModelBase): underlying model
             """
-            if source_model.index_in_headers(index):
-                top_left_id = source_model.top_left_id(index)
-                header_type = source_model.top_left_headers[top_left_id].header_type
+            if self._view.source_model.index_in_headers(index):
+                top_left_id = self._view.source_model.top_left_id(index)
+                header_type = self._view.source_model.top_left_headers[top_left_id].header_type
                 try:
                     self._header_selection_lists[header_type].append(index)
                 except KeyError:
@@ -626,12 +625,12 @@ class PivotTableView(CopyPasteTableView):
             _prepare_plot_in_window_menu(self._plot_in_window_menu)
             super().show_context_menu(position)
 
-        def _to_selection_lists(self, index, source_model):
+        def _to_selection_lists(self, index):
             """See base class."""
-            if source_model.index_in_data(index):
+            if self._view.source_model.index_in_data(index):
                 self._selected_value_indexes.append(index)
             else:
-                super()._to_selection_lists(index, source_model)
+                super()._to_selection_lists(index)
 
         def _update_actions_availability(self):
             """See base class."""
@@ -689,6 +688,7 @@ class PivotTableView(CopyPasteTableView):
             self._toggle_alternatives_checked = QAction("Check/uncheck selected")
             self._toggle_alternatives_checked.triggered.connect(self._toggle_checked_state)
             self._remove_scenarios_action = None
+            self._duplicate_scenario_action = None
             horizontal_header = ScenarioAlternativePivotHeaderView(Qt.Horizontal, "columns", view)
             horizontal_header.context_menu_requested.connect(self.show_context_menu)
             vertical_header = ScenarioAlternativePivotHeaderView(Qt.Vertical, "rows", view)
@@ -698,8 +698,8 @@ class PivotTableView(CopyPasteTableView):
 
         def _clear_selection_lists(self):
             """See base class."""
-            self._selected_scenario_indexes = list()
-            self._selected_scenario_alternative_indexes = list()
+            self._selected_scenario_indexes.clear()
+            self._selected_scenario_alternative_indexes.clear()
             super()._clear_selection_lists()
 
         def populate_context_menu(self):
@@ -715,6 +715,7 @@ class PivotTableView(CopyPasteTableView):
             self._menu.addSeparator()
             self._remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
             self._remove_scenarios_action = self._menu.addAction(self._REMOVE_SCENARIO, self.remove_scenarios)
+            self._duplicate_scenario_action = self._menu.addAction(self._DUPLICATE_SCENARIO, self.duplicate_scenario)
             self._menu.aboutToShow.connect(self._db_editor.refresh_copy_paste_actions)
 
         def remove_scenarios(self):
@@ -726,18 +727,25 @@ class PivotTableView(CopyPasteTableView):
                 db_map_typed_data.setdefault(db_map, {}).setdefault("scenario", set()).add(id_)
             self._db_editor.db_mngr.remove_items(db_map_typed_data)
 
-        def _to_selection_lists(self, index, source_model):
+        def duplicate_scenario(self):
+            """Duplicates current scenario in the database."""
+            index = self._selected_scenario_indexes[0]
+            db_map, scen_id = self._view.source_model._header_id(index)
+            self._db_editor.duplicate_scenario(db_map, scen_id)
+
+        def _to_selection_lists(self, index):
             """See base class."""
-            if source_model.index_in_data(index):
+            if self._view.source_model.index_in_data(index):
                 self._selected_scenario_alternative_indexes.append(index)
             else:
-                super()._to_selection_lists(index, source_model)
+                super()._to_selection_lists(index)
 
         def _update_actions_availability(self):
             """See base class."""
             self._generate_scenarios_action.setEnabled(bool(self._selected_alternative_indexes))
             self._remove_alternatives_action.setEnabled(bool(self._selected_alternative_indexes))
             self._remove_scenarios_action.setEnabled(bool(self._selected_scenario_indexes))
+            self._duplicate_scenario_action.setEnabled(len(self._selected_scenario_indexes) == 1)
 
         def _open_scenario_generator(self):
             """Opens the scenario generator dialog."""

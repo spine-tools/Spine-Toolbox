@@ -574,7 +574,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def duplicate_object(self, object_item):
         """
-        Duplicates the object at the given object tree model index.
+        Duplicates an object.
 
         Args:
             object_item (ObjectTreeItem of ObjectItem)
@@ -588,7 +588,25 @@ class SpineDBEditorBase(QMainWindow):
         parcel = SpineDBParcel(self.db_mngr)
         db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
         parcel.inner_push_object_ids(db_map_obj_ids)
-        self.db_mngr.duplicate_object(object_item.db_maps, parcel.data, orig_name, dup_name)
+        self.db_mngr.duplicate_object(parcel.data, orig_name, dup_name, object_item.db_maps)
+
+    def duplicate_scenario(self, db_map, scen_id):
+        """
+        Duplicates a scenario.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            scen_id (int)
+        """
+        orig_name = self.db_mngr.get_item(db_map, "scenario", scen_id)["name"]
+        dup_name, ok = QInputDialog.getText(
+            self, "Duplicate object", "Enter a name for the duplicate object:", text=orig_name + "_copy"
+        )
+        if not ok:
+            return
+        parcel = SpineDBParcel(self.db_mngr)
+        parcel.full_push_scenario_ids({db_map: {scen_id}})
+        self.db_mngr.duplicate_scenario(parcel.data, dup_name, db_map)
 
     @Slot(object)
     def export_data(self, db_map_ids_for_export):

@@ -1669,6 +1669,15 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
+    def find_cascading_scenario_alternatives_by_scenario(self, db_map_ids, only_visible=True):
+        """Finds and returns cascading scenario alternatives for the given scenario ids."""
+        db_map_cascading_data = dict()
+        for db_map, ids in db_map_ids.items():
+            for item in self.get_items(db_map, "scenario_alternative", only_visible=only_visible):
+                if item["scenario_id"] in ids:
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
+        return db_map_cascading_data
+
     def _refresh_parameter_value_lists(self, db_map_data):
         """Refreshes cached parameter value lists when updating list values.
 
@@ -1865,7 +1874,19 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_parameter_definitions_by_list_value(self.db_map_ids(db_map_data))
         self.parameter_definitions_updated.emit(db_map_cascading_data)
 
-    def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
+    def duplicate_scenario(self, scen_data, dup_name, db_map):
+        data = self._get_data_for_export(scen_data)
+        data = {
+            "scenarios": [(dup_name, active, description) for (_, active, description) in data.get("scenarios", [])],
+            "alternatives": data.get("alternatives", []),
+            "scenario_alternatives": [
+                (dup_name, alt_name, before_alt_name)
+                for (_, alt_name, before_alt_name) in data.get("scenario_alternatives", [])
+            ],
+        }
+        self.import_data({db_map: data}, command_text="Duplicate scenario")
+
+    def duplicate_object(self, object_data, orig_name, dup_name, db_maps):
         _replace_name = lambda name_list: [name if name != orig_name else dup_name for name in name_list]
         data = self._get_data_for_export(object_data)
         data = {
