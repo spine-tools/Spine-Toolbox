@@ -247,9 +247,7 @@ def pyside2_version_check():
     qt_version is the Qt version used to compile PySide2 as string. E.g. "5.14.2"
     qt_version_info is a tuple with each version component of Qt used to compile PySide2. E.g. (5, 14, 2)
     """
-    if not (qt_version_info[0] == 5 and qt_version_info[1] == 14) and not (
-        qt_version_info[0] == 5 and qt_version_info[1] == 15
-    ):
+    if not (qt_version_info[0] == 5 and qt_version_info[1] in (14, 15)):
         print(
             f"""Sorry for the inconvenience but,
 
