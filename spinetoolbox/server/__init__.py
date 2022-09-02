@@ -10,6 +10,8 @@
 ######################################################################################################################
 
 """
-:authors: P. Pääkkönen (VTT)
+Package for handling the client part of executing projects on Spine Engine Server.
+
+:authors: P. Pääkkönen (VTT), P. Savolainen (VTT)
 :date:    02.09.2021
 """

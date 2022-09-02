@@ -1596,8 +1596,9 @@ class ToolboxUI(QMainWindow):
     @Slot()
     def retrieve_project(self):
         """Retrieves project from server."""
+        msg = "Retrieve project by Job Id"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, "Retrieve project by Job Id", "Enter job Id", flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(self, msg, "Job Id?:", flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         job_id = answer[0]
         if not job_id:  # Cancel button clicked
             return
@@ -1618,11 +1619,11 @@ class ToolboxUI(QMainWindow):
         )
         if not host:
             self.msg_error.emit("Spine Engine Server <b>host address</b> missing. "
-                                        "Please enter host in <b>File->Settings->Engine</b>.")
+                                "Please enter host in <b>File->Settings->Engine</b>.")
             return
         elif not port:
             self.msg_error.emit("Spine Engine Server <b>port</b> missing. "
-                                        "Please select port in <b>File->Settings->Engine</b>.")
+                                "Please select port in <b>File->Settings->Engine</b>.")
             return
         self.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
         try:
