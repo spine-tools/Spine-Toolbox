@@ -356,6 +356,7 @@ class PivotTableView(CopyPasteTableView):
         super().__init__(parent)
         self.setHorizontalScrollMode(QTableView.ScrollPerPixel)
         self.setVerticalScrollMode(QTableView.ScrollPerPixel)
+        # NOTE: order of creation of header tables is important for them to stack properly
         self._left_header_table = CopyPasteTableView(self)
         self._top_header_table = CopyPasteTableView(self)
         self._top_left_header_table = CopyPasteTableView(self)
@@ -868,7 +869,7 @@ class PivotTableView(CopyPasteTableView):
             model.fetchMore(QModelIndex())
 
     def _init_header_tables(self):
-        # NOTE: order is important for calls to stackUnder
+        # NOTE: order of the iteration below is important for calls to stackUnder
         for header_table in (self._top_left_header_table, self._top_header_table, self._left_header_table):
             header_table.setFocusPolicy(Qt.NoFocus)
             header_table.setStyleSheet(self.styleSheet())
@@ -901,17 +902,15 @@ class PivotTableView(CopyPasteTableView):
 
     @Slot(int, int, int)
     def _update_section_width(self, logical_index, _old_size, new_size):
-        if logical_index < self.source_model.headerColumnCount():
-            for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
-                header_table.setColumnWidth(logical_index, new_size)
-                header_table.setColumnWidth(logical_index, new_size)
-                self._update_header_tables_geometry()
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.setColumnWidth(logical_index, new_size)
+        self._update_header_tables_geometry()
 
     @Slot(int, int, int)
     def _update_section_height(self, logical_index, _old_size, new_size):
-        if logical_index < self.source_model.headerRowCount():
-            for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
-                header_table.setRowHeight(logical_index, new_size)
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.setRowHeight(logical_index, new_size)
+        self._update_header_tables_geometry()
 
     def _update_header_tables_geometry(self):
         if not self.source_model:
@@ -920,11 +919,11 @@ class PivotTableView(CopyPasteTableView):
         y = self.horizontalHeader().height() + self.frameWidth()
         header_w = sum(self.columnWidth(j) for j in range(0, self.source_model.headerColumnCount()))
         header_h = sum(self.rowHeight(i) for i in range(0, self.source_model.headerRowCount()))
-        total_w = self.viewport().width() + self.verticalHeader().width()
-        total_h = self.viewport().height() + self.horizontalHeader().height()
-        self._top_left_header_table.setGeometry(x, y, header_w, header_h)
-        self._top_header_table.setGeometry(x, y, total_w, header_h)
+        total_w = self.viewport().width()
+        total_h = self.viewport().height()
         self._left_header_table.setGeometry(x, y, header_w, total_h)
+        self._top_header_table.setGeometry(x, y, total_w, header_h)
+        self._top_left_header_table.setGeometry(x, y, header_w, header_h)
 
 
 class FrozenTableView(QTableView):
