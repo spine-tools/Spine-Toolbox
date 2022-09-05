@@ -17,7 +17,7 @@ Custom QTableView classes that support copy-paste and the like.
 """
 
 from PySide2.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint
-from PySide2.QtWidgets import QAction, QTableView, QMenu
+from PySide2.QtWidgets import QAction, QTableView, QHeaderView, QMenu
 from PySide2.QtGui import QKeySequence
 
 from .scenario_generator import ScenarioGenerator
@@ -354,12 +354,25 @@ class PivotTableView(CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
+        self.setHorizontalScrollMode(QTableView.ScrollPerPixel)
+        self.setVerticalScrollMode(QTableView.ScrollPerPixel)
+        self._left_header_table = CopyPasteTableView(self)
+        self._top_header_table = CopyPasteTableView(self)
+        self._top_left_header_table = CopyPasteTableView(self)
+        self._left_header_table.setObjectName("left")
+        self._top_header_table.setObjectName("top")
+        self._top_left_header_table.setObjectName("top-left")
         self._spine_db_editor = None
         self._context = None
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
         self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
+        self._left_header_table.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
+        self.verticalScrollBar().valueChanged.connect(self._left_header_table.verticalScrollBar().setValue)
+        self._top_header_table.horizontalScrollBar().valueChanged.connect(self.horizontalScrollBar().setValue)
+        self.horizontalScrollBar().valueChanged.connect(self._top_header_table.horizontalScrollBar().setValue)
+        self._init_header_tables()
 
     class _ContextBase:
         """Base class for pivot table view's contexts."""
@@ -821,8 +834,31 @@ class PivotTableView(CopyPasteTableView):
         old_model = self.model()
         if old_model:
             old_model.model_data_changed.disconnect(self._fetch_more_timer.start)
+            old_model.modelReset.disconnect(self._update_header_tables)
         super().setModel(model)
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.setModel(model)
         model.model_data_changed.connect(self._fetch_more_timer.start)
+        model.modelReset.connect(self._update_header_tables)
+
+    def setIndexWidget(self, proxy_index, widget):
+        self._top_left_header_table.setIndexWidget(proxy_index, widget)
+
+    def setHorizontalHeader(self, horizontal_header):
+        super().setHorizontalHeader(horizontal_header)
+        horizontal_header.sectionResized.connect(self._update_section_width)
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.horizontalHeader().setResizeContentsPrecision(horizontal_header.resizeContentsPrecision())
+
+    def setVerticalHeader(self, vertical_header):
+        super().setVerticalHeader(vertical_header)
+        vertical_header.sectionResized.connect(self._update_section_height)
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.verticalHeader().setDefaultSectionSize(vertical_header.defaultSectionSize())
+
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        self._update_header_tables_geometry()
 
     def _fetch_more_visible(self):
         model = self.model()
@@ -830,6 +866,65 @@ class PivotTableView(CopyPasteTableView):
         scrollbar_at_max = scrollbar.value() == scrollbar.maximum()
         if scrollbar_at_max and model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
+
+    def _init_header_tables(self):
+        # NOTE: order is important for calls to stackUnder
+        for header_table in (self._top_left_header_table, self._top_header_table, self._left_header_table):
+            header_table.setFocusPolicy(Qt.NoFocus)
+            header_table.setStyleSheet(self.styleSheet())
+            header_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            header_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            header_table.show()
+            header_table.verticalHeader().hide()
+            header_table.horizontalHeader().hide()
+            header_table.setHorizontalScrollMode(QTableView.ScrollPerPixel)
+            header_table.setVerticalScrollMode(QTableView.ScrollPerPixel)
+            header_table.setStyleSheet("QTableView { border: none;}")
+            self.viewport().stackUnder(header_table)
+
+    def _update_header_tables(self):
+        # Top
+        for header_table in (self._top_header_table, self._top_left_header_table):
+            for i in range(0, self.source_model.headerRowCount()):
+                header_table.setRowHeight(i, self.rowHeight(i))
+                header_table.setRowHidden(i, False)
+            for i in range(self.source_model.headerRowCount(), self.source_model.rowCount() - 1):
+                header_table.setRowHidden(i, True)
+        # Left
+        for header_table in (self._left_header_table, self._top_left_header_table):
+            for j in range(0, self.source_model.headerColumnCount()):
+                header_table.setColumnWidth(j, self.columnWidth(j))
+                header_table.setColumnHidden(j, False)
+            for j in range(self.source_model.headerColumnCount(), self.source_model.columnCount() - 1):
+                header_table.setColumnHidden(j, True)
+        self._update_header_tables_geometry()
+
+    @Slot(int, int, int)
+    def _update_section_width(self, logical_index, _old_size, new_size):
+        if logical_index < self.source_model.headerColumnCount():
+            for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+                header_table.setColumnWidth(logical_index, new_size)
+                header_table.setColumnWidth(logical_index, new_size)
+                self._update_header_tables_geometry()
+
+    @Slot(int, int, int)
+    def _update_section_height(self, logical_index, _old_size, new_size):
+        if logical_index < self.source_model.headerRowCount():
+            for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+                header_table.setRowHeight(logical_index, new_size)
+
+    def _update_header_tables_geometry(self):
+        if not self.source_model:
+            return
+        x = self.verticalHeader().width() + self.frameWidth()
+        y = self.horizontalHeader().height() + self.frameWidth()
+        header_w = sum(self.columnWidth(j) for j in range(0, self.source_model.headerColumnCount()))
+        header_h = sum(self.rowHeight(i) for i in range(0, self.source_model.headerRowCount()))
+        total_w = self.viewport().width() + self.verticalHeader().width()
+        total_h = self.viewport().height() + self.horizontalHeader().height()
+        self._top_left_header_table.setGeometry(x, y, header_w, header_h)
+        self._top_header_table.setGeometry(x, y, total_w, header_h)
+        self._left_header_table.setGeometry(x, y, header_w, total_h)
 
 
 class FrozenTableView(QTableView):
