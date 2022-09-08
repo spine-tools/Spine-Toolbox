@@ -16,139 +16,92 @@ Classes for custom QDialogs to add edit and remove database items.
 :date:   13.5.2018
 """
 
-from PySide2.QtWidgets import (
-    QWidget,
-    QDialog,
-    QGridLayout,
-    QVBoxLayout,
-    QHBoxLayout,
-    QDialogButtonBox,
-    QGroupBox,
-    QCheckBox,
-    QPushButton,
-)
+from PySide2.QtWidgets import QDialog, QDialogButtonBox, QCheckBox
 from PySide2.QtCore import Slot, Qt, Signal
+from spinetoolbox.widgets.select_database_items import add_check_boxes, SelectDatabaseItems
 
 
 class MassSelectItemsDialog(QDialog):
     """A dialog to query a selection of dbs and items from the user."""
 
-    _MARGIN = 3
-    _ITEM_TYPES = (
-        "object_class",
-        "relationship_class",
-        "parameter_value_list",
-        "parameter_definition",
-        "object",
-        "relationship",
-        "entity_group",
-        "parameter_value",
-        "alternative",
-        "scenario",
-        "scenario_alternative",
-        "feature",
-        "tool",
-        "tool_feature",
-        "tool_feature_method",
-        "metadata",
-        "entity_metadata",
-        "parameter_value_metadata",
-    )
-    _COLUMN_COUNT = 3
+    state_storing_requested = Signal(dict)
 
-    def __init__(self, parent, db_mngr, *db_maps):
+    def __init__(self, parent, db_mngr, *db_maps, stored_state=None):
         """
         Args:
-            parent (SpineDBEditor)
-            db_mngr (SpineDBManager)
-            db_maps (DiffDatabaseMapping): the dbs to select items from
+            parent (SpineDBEditor): parent widget
+            db_mngr (SpineDBManager): database manager
+            *db_maps: the dbs to select items from
+            stored_state (dict, Optional): widget's previous state
         """
+        from ..ui.select_database_items_dialog import Ui_Dialog  # pylint: disable=import-outside-toplevel
+
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        top_widget = QWidget()
-        top_layout = QVBoxLayout(top_widget)
-        db_maps_group_box = QGroupBox("Databases", top_widget)
-        items_group_box = QGroupBox("Items", top_widget)
-        top_layout.addWidget(db_maps_group_box)
-        top_layout.addWidget(items_group_box)
-        button_box = QDialogButtonBox(self)
-        button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout = QVBoxLayout(self)
-        layout.addWidget(top_widget)
-        layout.addWidget(button_box)
-        self._ok_button = button_box.button(QDialogButtonBox.Ok)
-        self.db_map_check_boxes = {db_map: QCheckBox(db_map.codename, db_maps_group_box) for db_map in self.db_maps}
-        self.item_check_boxes = {item_type: QCheckBox(item_type, items_group_box) for item_type in self._ITEM_TYPES}
-        self._add_check_boxes(db_maps_group_box, self.db_map_check_boxes)
-        self._add_check_boxes(items_group_box, self.item_check_boxes)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-
-    def _add_check_boxes(self, group_box, check_boxes):
-        check_boxes = list(check_boxes.values())
-        layout = QVBoxLayout(group_box)
-        buttons = QWidget()
-        grid = QWidget()
-        layout.addWidget(grid)
-        layout.addWidget(buttons)
-        layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
-        buttons_layout = QHBoxLayout(buttons)
-        select_all = QPushButton("Select all")
-        deselect_all = QPushButton("Deselect all")
-        select_all.clicked.connect(lambda _=False, boxes=check_boxes: _batch_set_check_state(boxes, True))
-        deselect_all.clicked.connect(lambda _=False, boxes=check_boxes: _batch_set_check_state(boxes, False))
-        buttons_layout.addWidget(select_all)
-        buttons_layout.addWidget(deselect_all)
-        buttons_layout.addStretch()
-        buttons_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
-        grid_layout = QGridLayout(grid)
-        grid_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
-        for k, check_box in enumerate(check_boxes):
-            check_box.stateChanged.connect(self._handle_check_box_state_changed)
-            row = k // self._COLUMN_COUNT
-            column = k % self._COLUMN_COUNT
-            check_box.setChecked(True)
-            grid_layout.addWidget(check_box, row, column)
+        self._database_checked_states = (
+            stored_state["databases"]
+            if stored_state is not None
+            else {db_map.codename: True for db_map in self.db_maps}
+        )
+        self._ui = Ui_Dialog()
+        self._ui.setupUi(self)
+        item_state = stored_state["items"] if stored_state is not None else None
+        self._item_check_boxes_widget = SelectDatabaseItems(item_state, self)
+        self._item_check_boxes_widget.checked_state_changed.connect(self._handle_check_box_state_changed)
+        self._ui.root_layout.insertWidget(1, self._item_check_boxes_widget)
+        self._ok_button = self._ui.button_box.button(QDialogButtonBox.Ok)
+        self._db_map_check_boxes = {db_map: QCheckBox(db_map.codename, self) for db_map in self.db_maps}
+        check_boxes = {box.text(): box for box in self._db_map_check_boxes.values()}
+        add_check_boxes(
+            check_boxes,
+            self._database_checked_states,
+            self._ui.select_all_button,
+            self._ui.deselect_all_button,
+            self._handle_check_box_state_changed,
+            self._ui.databases_grid_layout,
+        )
 
     @Slot(int)
     def _handle_check_box_state_changed(self, _checked):
         self._ok_button.setEnabled(
-            any(x.isChecked() for x in self.db_map_check_boxes.values())
-            and any(x.isChecked() for x in self.item_check_boxes.values())
+            any(x.isChecked() for x in self._db_map_check_boxes.values())
+            and self._item_check_boxes_widget.any_checked()
         )
 
-
-def _batch_set_check_state(check_boxes, checked):
-    for check_box in check_boxes:
-        check_box.setChecked(checked)
+    def accept(self):
+        super().accept()
+        state = {"databases": self._database_checked_states, "items": self._item_check_boxes_widget.checked_states()}
+        self.state_storing_requested.emit(state)
 
 
 class MassRemoveItemsDialog(MassSelectItemsDialog):
     """A dialog to query user's preferences for mass removing db items."""
 
-    def __init__(self, parent, db_mngr, *db_maps):
+    def __init__(self, parent, db_mngr, *db_maps, stored_state=None):
         """Initialize class.
 
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (DiffDatabaseMapping): the dbs to select items from
+            stored_state (dict, Optional): widget's previous state
         """
-        super().__init__(parent, db_mngr, *db_maps)
+        super().__init__(parent, db_mngr, *db_maps, stored_state=stored_state)
         self.setWindowTitle("Purge items")
 
     def accept(self):
         super().accept()
+        item_checked_states = self._item_check_boxes_widget.checked_states()
         db_map_typed_data = {
             db_map: {
                 item_type: {x["id"] for x in self.db_mngr.get_items(db_map, item_type, only_visible=False)}
-                for item_type, check_box in self.item_check_boxes.items()
-                if check_box.isChecked()
+                for item_type, checked in item_checked_states.items()
+                if checked
             }
-            for db_map, check_box in self.db_map_check_boxes.items()
+            for db_map, check_box in self._db_map_check_boxes.items()
             if check_box.isChecked()
         }
         self.db_mngr.remove_items(db_map_typed_data)
@@ -159,21 +112,22 @@ class MassExportItemsDialog(MassSelectItemsDialog):
 
     data_submitted = Signal(dict)
 
-    def __init__(self, parent, db_mngr, *db_maps):
+    def __init__(self, parent, db_mngr, *db_maps, stored_state=None):
         """
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (DiffDatabaseMapping): the dbs to select items from
+            stored_state (dict, Optional): widget's previous state
         """
-        super().__init__(parent, db_mngr, *db_maps)
+        super().__init__(parent, db_mngr, *db_maps, stored_state=stored_state)
         self.setWindowTitle("Export items")
 
     def accept(self):
         super().accept()
+        item_checked_states = self._item_check_boxes_widget.checked_states()
+        checked_items = [item_type for item_type, checked in item_checked_states.items() if checked]
         db_map_items_for_export = {
-            db_map: [item_type for item_type, check_box in self.item_check_boxes.items() if check_box.isChecked()]
-            for db_map, check_box in self.db_map_check_boxes.items()
-            if check_box.isChecked()
+            db_map: checked_items for db_map, check_box in self._db_map_check_boxes.items() if check_box.isChecked()
         }
         self.data_submitted.emit(db_map_items_for_export)

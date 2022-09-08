@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
     QDialog,
     QInputDialog,
 )
-from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer, SIGNAL
+from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
@@ -114,6 +114,10 @@ class SpineDBEditorBase(QMainWindow):
         self.update_commit_enabled()
         self.setContextMenuPolicy(Qt.NoContextMenu)
         self._torn_down = False
+        self._purge_items_dialog = None
+        self._purge_items_dialog_state = None
+        self._export_items_dialog = None
+        self._export_items_dialog_state = None
 
     @property
     def toolbox(self):
@@ -494,9 +498,29 @@ class SpineDBEditorBase(QMainWindow):
     @Slot(bool)
     def show_mass_export_items_dialog(self, checked=False):
         """Shows dialog for user to select dbs and items for export."""
-        dialog = MassExportItemsDialog(self, self.db_mngr, *self.db_maps)
-        dialog.data_submitted.connect(self.mass_export_items)
-        dialog.show()
+        if self._export_items_dialog is not None:
+            self._export_items_dialog.raise_()
+            return
+        self._export_items_dialog = MassExportItemsDialog(
+            self, self.db_mngr, *self.db_maps, stored_state=self._export_items_dialog_state
+        )
+        self._export_items_dialog.state_storing_requested.connect(self._store_export_settings)
+        self._export_items_dialog.data_submitted.connect(self.mass_export_items)
+        self._export_items_dialog.finished(self._clean_up_export_items_dialog)
+        self._export_items_dialog.show()
+
+    @Slot(dict)
+    def _store_export_settings(self, state):
+        """Stores export items dialog settings."""
+        self._export_items_dialog_state = state
+
+    @Slot(int)
+    def _clean_up_export_items_dialog(self, _):
+        """Cleans up export items dialog."""
+        self._export_items_dialog.data_submitted.disconnect(self.mass_export_items)
+        self._export_items_dialog.state_storing_requested.disconnect(self._store_export_settings)
+        self._export_items_dialog.finished.disconnect(self._clean_up_purge_items_dialog)
+        self._export_items_dialog = None
 
     @Slot(bool)
     def export_session(self, checked=False):
@@ -648,7 +672,7 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def rollback_session(self, checked=False):
-        """Rolls back dirty datbase maps."""
+        """Rolls back dirty database maps."""
         dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
         if not dirty_db_maps:
             return
@@ -688,8 +712,32 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def show_mass_remove_items_form(self, checked=False):
-        dialog = MassRemoveItemsDialog(self, self.db_mngr, *self.db_maps)
-        dialog.show()
+        """Opens the purge items dialog."""
+        if self._purge_items_dialog is not None:
+            self._purge_items_dialog.raise_()
+            return
+        self._purge_items_dialog = MassRemoveItemsDialog(
+            self, self.db_mngr, *self.db_maps, stored_state=self._purge_items_dialog_state
+        )
+        self._purge_items_dialog.state_storing_requested.connect(self._store_purge_settings)
+        self._purge_items_dialog.finished.connect(self._clean_up_purge_items_dialog)
+        self._purge_items_dialog.show()
+
+    @Slot(dict)
+    def _store_purge_settings(self, state):
+        """Stores Purge items dialog state.
+
+        Args:
+            state (dict): dialog state
+        """
+        self._purge_items_dialog_state = state
+
+    @Slot(int)
+    def _clean_up_purge_items_dialog(self, _):
+        """Removes references to purge items dialog."""
+        self._purge_items_dialog.state_storing_requested.disconnect(self._store_purge_settings)
+        self._purge_items_dialog.finished.disconnect(self._clean_up_purge_items_dialog)
+        self._purge_items_dialog = None
 
     @busy_effect
     @Slot(QModelIndex)
