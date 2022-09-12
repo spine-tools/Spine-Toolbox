@@ -43,7 +43,7 @@ This works best for users that want to just use Spine Toolbox but also keep it
 updated with new releases.
 
 1. If you don't yet have Python 3.7 or 3.8, install the latest Python 3.8 release
-   from [Python.org](https://www.python.org/downloads/).
+   from [Python.org](https://www.python.org/downloads/release/python-3810/).
 
 2. Open a terminal (e.g., Command Prompt on Windows).
 
