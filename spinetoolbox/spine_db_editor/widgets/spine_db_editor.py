@@ -506,7 +506,7 @@ class SpineDBEditorBase(QMainWindow):
         )
         self._export_items_dialog.state_storing_requested.connect(self._store_export_settings)
         self._export_items_dialog.data_submitted.connect(self.mass_export_items)
-        self._export_items_dialog.finished(self._clean_up_export_items_dialog)
+        self._export_items_dialog.destroyed.connect(self._clean_up_export_items_dialog)
         self._export_items_dialog.show()
 
     @Slot(dict)
@@ -514,12 +514,9 @@ class SpineDBEditorBase(QMainWindow):
         """Stores export items dialog settings."""
         self._export_items_dialog_state = state
 
-    @Slot(int)
-    def _clean_up_export_items_dialog(self, _):
+    @Slot()
+    def _clean_up_export_items_dialog(self):
         """Cleans up export items dialog."""
-        self._export_items_dialog.data_submitted.disconnect(self.mass_export_items)
-        self._export_items_dialog.state_storing_requested.disconnect(self._store_export_settings)
-        self._export_items_dialog.finished.disconnect(self._clean_up_purge_items_dialog)
         self._export_items_dialog = None
 
     @Slot(bool)
@@ -720,7 +717,7 @@ class SpineDBEditorBase(QMainWindow):
             self, self.db_mngr, *self.db_maps, stored_state=self._purge_items_dialog_state
         )
         self._purge_items_dialog.state_storing_requested.connect(self._store_purge_settings)
-        self._purge_items_dialog.finished.connect(self._clean_up_purge_items_dialog)
+        self._purge_items_dialog.destroyed.connect(self._clean_up_purge_items_dialog)
         self._purge_items_dialog.show()
 
     @Slot(dict)
@@ -732,11 +729,9 @@ class SpineDBEditorBase(QMainWindow):
         """
         self._purge_items_dialog_state = state
 
-    @Slot(int)
-    def _clean_up_purge_items_dialog(self, _):
+    @Slot()
+    def _clean_up_purge_items_dialog(self):
         """Removes references to purge items dialog."""
-        self._purge_items_dialog.state_storing_requested.disconnect(self._store_purge_settings)
-        self._purge_items_dialog.finished.disconnect(self._clean_up_purge_items_dialog)
         self._purge_items_dialog = None
 
     @busy_effect

@@ -76,7 +76,9 @@ class SelectDatabaseItems(QWidget):
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self._ui.select_data_items_button.clicked.connect(self._select_data_items)
-        checked_states = checked_states if checked_states is not None else {item: False for item in DatabaseMappingBase.ITEM_TYPES}
+        checked_states = (
+            checked_states if checked_states is not None else {item: False for item in DatabaseMappingBase.ITEM_TYPES}
+        )
         self._item_check_boxes = {item_type: QCheckBox(item_type, self) for item_type in DatabaseMappingBase.ITEM_TYPES}
         add_check_boxes(
             self._item_check_boxes,
