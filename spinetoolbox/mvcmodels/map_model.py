@@ -119,7 +119,7 @@ class MapModel(QAbstractTableModel):
     def columnCount(self, index=QModelIndex()):
         """Returns the number of columns in this model."""
         if not self._rows:
-            return 1
+            return len(self._index_names) + 2
         return len(self._rows[0]) + 1
 
     def convert_leaf_maps(self):
@@ -201,10 +201,9 @@ class MapModel(QAbstractTableModel):
         Return:
             bool: True if insertion was successful, False otherwise
         """
-        if not self._rows:
-            return False
         self.beginInsertColumns(parent, column, column + count - 1)
-        self._rows = [row[:column] + count * [empty] + row[column:] for row in self._rows]
+        if self._rows:
+            self._rows = [row[:column] + count * [empty] + row[column:] for row in self._rows]
         self._index_names = self._index_names[:column] + count * [Map.DEFAULT_INDEX_NAME] + self._index_names[column:]
         self.endInsertColumns()
         return True
@@ -229,7 +228,7 @@ class MapModel(QAbstractTableModel):
             else:
                 row_before = len(self._rows[0]) * [empty]
         else:
-            row_before = [empty, empty]
+            row_before = (len(self._index_names) + 1) * [empty]
         inserted = list()
         for _ in range(count):
             inserted.append([deepcopy(x) if x is not empty else x for x in row_before])
@@ -248,7 +247,7 @@ class MapModel(QAbstractTableModel):
         Returns:
             bool: True if the cell is in the expanse, False otherwise
         """
-        if row == len(self._rows):
+        if not self._rows or row == len(self._rows):
             return True
         return column == len(self._rows[0])
 
@@ -276,7 +275,7 @@ class MapModel(QAbstractTableModel):
         Returns:
             bool: True if row is the expanse row, False otherwise
         """
-        return row == len(self._rows)
+        return not self._rows or row == len(self._rows)
 
     def removeColumns(self, column, count, parent=QModelIndex()):
         """

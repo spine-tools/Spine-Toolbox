@@ -15,6 +15,8 @@ Context menus for parameter value editor widgets.
 :author: A. Soininen (VTT)
 :date:   5.7.2019
 """
+from operator import itemgetter
+
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QInputDialog, QMenu, QAction
 from spinetoolbox.plotting import plot_selection, PlottingError, MapTablePlottingHints
@@ -329,7 +331,9 @@ def _merge_intervals(intervals):
     Returns:
         list of list: merged intervals in the form [first, last]
     """
-    intervals.sort(key=lambda i: i[0])
+    if not intervals:
+        return []
+    intervals.sort(key=itemgetter(0))
     merged_intervals = [intervals.pop(0)]
     while intervals:
         interval = intervals.pop(0)
