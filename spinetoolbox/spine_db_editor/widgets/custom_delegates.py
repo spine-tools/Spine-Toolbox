@@ -17,11 +17,12 @@ Custom item delegates.
 """
 
 from numbers import Number
-from PySide2.QtCore import QModelIndex, QPoint, Qt, Signal, QSortFilterProxyModel, QRegExp
+from PySide2.QtCore import QModelIndex, QPoint, Qt, Signal
 from PySide2.QtWidgets import QStyledItemDelegate, QComboBox
 from PySide2.QtGui import QFontMetrics
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
+from ..mvcmodels.single_parameter_models import SingleParameterModel
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
@@ -250,9 +251,8 @@ class ParameterDelegate(QStyledItemDelegate):
         """Returns the db_map for the database at given index or None if not set yet."""
         model = index.model()
         header = model.horizontal_header_labels()
-        database = index.sibling(index.row(), header.index("database")).data()
-        db_map = next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
-        if not db_map:
+        db_map = index.sibling(index.row(), header.index("database")).data(SingleParameterModel.DB_MAP_ROLE)
+        if db_map is None:
             self.parent().msg_error.emit("Please select database first.")
         return db_map
 

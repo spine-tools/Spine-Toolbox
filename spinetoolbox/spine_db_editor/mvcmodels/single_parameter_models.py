@@ -61,6 +61,8 @@ class SingleParameterModel(HalfSortedTableModel):
     to filter entities within the class.
     """
 
+    DB_MAP_ROLE = Qt.UserRole + 1
+
     def __init__(self, header, db_mngr, db_map, entity_class_id, committed, lazy=False):
         """Init class.
 
@@ -230,10 +232,10 @@ class SingleParameterModel(HalfSortedTableModel):
             if role == Qt.DisplayRole and data and field in self.group_fields:
                 data = data.replace(",", DB_ITEM_SEPARATOR)
             return data
-        # Decoration role
-
         if role == Qt.DecorationRole and field == self.entity_class_name_field:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
+        if role == self.DB_MAP_ROLE:
+            return self.db_map
         return super().data(index, role)
 
     def batch_set_data(self, indexes, data):
