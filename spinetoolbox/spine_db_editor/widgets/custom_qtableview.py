@@ -303,6 +303,8 @@ class ParameterValueTableView(ParameterTableView):
         if db_map is None:
             return None
         db_item = self.model().db_item(index)
+        if db_item is None:
+            return None
         return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
 
 

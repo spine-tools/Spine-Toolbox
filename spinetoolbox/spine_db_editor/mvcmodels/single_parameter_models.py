@@ -29,7 +29,7 @@ from ..mvcmodels.parameter_mixins import (
     FillInEntityIdsMixin,
     ImposeEntityClassIdMixin,
 )
-from ...mvcmodels.shared import PARSED_ROLE
+from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from .colors import FIXED_FIELD_COLOR
 
 
@@ -60,8 +60,6 @@ class SingleParameterModel(HalfSortedTableModel):
     Provides methods to associate the model to an entity_class as well as
     to filter entities within the class.
     """
-
-    DB_MAP_ROLE = Qt.UserRole + 1
 
     def __init__(self, header, db_mngr, db_map, entity_class_id, committed, lazy=False):
         """Init class.
@@ -234,7 +232,7 @@ class SingleParameterModel(HalfSortedTableModel):
             return data
         if role == Qt.DecorationRole and field == self.entity_class_name_field:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
-        if role == self.DB_MAP_ROLE:
+        if role == DB_MAP_ROLE:
             return self.db_map
         return super().data(index, role)
 

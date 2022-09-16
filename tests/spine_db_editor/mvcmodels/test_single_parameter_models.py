@@ -14,6 +14,7 @@ from unittest.mock import MagicMock
 from PySide2.QtWidgets import QApplication
 
 from spinedb_api import to_database
+from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.mvcmodels.single_parameter_models import (
@@ -103,7 +104,7 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
             SingleObjectParameterValueModel(OBJECT_PARAMETER_VALUE_HEADER, self._db_mngr, self._db_map, 1, True, False)
         ) as model:
             model.add_rows([1])
-            self.assertEqual(model.index(0, 0).data(SingleParameterModel.DB_MAP_ROLE), self._db_map)
+            self.assertEqual(model.index(0, 0).data(DB_MAP_ROLE), self._db_map)
 
 
 if __name__ == '__main__':

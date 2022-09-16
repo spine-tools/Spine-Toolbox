@@ -27,7 +27,7 @@ from .parameter_mixins import (
     FillInEntityClassIdMixin,
     FillInValueListIdMixin,
 )
-from ...mvcmodels.shared import PARSED_ROLE
+from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from ...helpers import rows_to_row_count_tuples
 
 
@@ -87,6 +87,8 @@ class EmptyParameterModel(EmptyRowModel):
         return None
 
     def data(self, index, role=Qt.DisplayRole):
+        if role == DB_MAP_ROLE:
+            return self.db_map
         if self.header[index.column()] == self.value_field and role in (
             Qt.DisplayRole,
             Qt.ToolTipRole,
