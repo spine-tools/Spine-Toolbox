@@ -95,16 +95,12 @@ class MassRemoveItemsDialog(MassSelectItemsDialog):
     def accept(self):
         super().accept()
         item_checked_states = self._item_check_boxes_widget.checked_states()
-        db_map_typed_data = {
-            db_map: {
-                item_type: {x["id"] for x in self.db_mngr.get_items(db_map, item_type, only_visible=False)}
-                for item_type, checked in item_checked_states.items()
-                if checked
-            }
+        db_map_purge_data = {
+            db_map: {item_type for item_type, checked in item_checked_states.items() if checked}
             for db_map, check_box in self._db_map_check_boxes.items()
             if check_box.isChecked()
         }
-        self.db_mngr.remove_items(db_map_typed_data)
+        self.db_mngr.purge_items(db_map_purge_data)
 
 
 class MassExportItemsDialog(MassSelectItemsDialog):

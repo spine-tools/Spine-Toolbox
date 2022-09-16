@@ -1394,7 +1394,23 @@ class SpineDBManager(QObject):
                 macro.setObsolete(True)
                 self.undo_stack[db_map].undo()
 
+    def purge_items(self, db_map_purgable_items):
+        """Purges selected items from given database.
+
+        Args:
+            db_map_purgable_items (dict): mapping from database map to list of purgable item types
+        """
+        db_map_typed_data = {
+            db_map: {
+                item_type: {x["id"] for x in self.get_items(db_map, item_type, only_visible=False)}
+                for item_type in item_types
+            }
+            for db_map, item_types in db_map_purgable_items.items()
+        }
+        self.remove_items(db_map_typed_data)
+
     def remove_items(self, db_map_typed_ids):
+        """Pushes a command to remove items to undo stack."""
         for db_map, ids_per_type in db_map_typed_ids.items():
             self.undo_stack[db_map].push(RemoveItemsCommand(self, db_map, ids_per_type))
 
