@@ -346,6 +346,10 @@ Examining the results
 #. Select `report__unit__node__direction__stochastic_scenario` under **Relationship tree**, and
    the first cell under **alternative** in the *Frozen table*.
 
+#. Under alternative in the Frozen table, you can choose results from different runs. Pick 
+   the run you want to view. If the workflow has been run several times, the most recent run will 
+   usually be found at the bottom.
+
 #. The *Pivot table* will be populated with results from the SpineOpt run. It will look something like the image below.
 
 .. image:: img/simple_system_results_pivot_table.png

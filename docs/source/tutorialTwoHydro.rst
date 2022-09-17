@@ -398,8 +398,9 @@ To model the value of stored water we need to make some additions and modificati
 
    #. To establish the topology of the new units and nodes (see :ref:`adding unit relationships <unit_relationships>`):
       
-      * add a `unit__from_node` relationship, between the `value_stored_water` unit from the `stored_water` node,
-
+      * add one `unit__from_node`` relationship, between the `value_stored_water` unit from the `stored_water` node,  
+      another one between the `Språnget_stored_water` unit from the `Språnget_upper` node and one for `Faller_stored_water` from `Fallet_upper`.
+      
       * add one `unit__node__node` relationship between the `Språnget_stored_water` unit with the `stored_water` and `Språnget_upper` nodes and another one for `Fallet_stored_water` unit with the `stored_water` and `Fallet_upper` nodes,
 
       * add a `unit__to_node` relationship between the `Fallet_stored_water` and the `stored_water` node and another one between the `Språnget_stored_water` unit and the `stored_water` node.
@@ -409,6 +410,8 @@ To model the value of stored water we need to make some additions and modificati
       * Extend the planning horizon of the model by one hour, i.e., change the `model_end` parameter value to `2021-01-02T01:00:00` (right-click on the value cell, click edit and paste the new datetime in the popup window).
 
       * Remove the `fix_node_state` parameter values for the end of the optimization horizon as you seen in the following figure: double click on the `value` cell of the `Språnget_upper` and `Fallet_upper` nodes, select the third data row, right-click, select `Remove rows`, and click OK.
+
+      * Add an electricity price for the extra hour. Enter the parameter `vom_cost` on the `unit__from_node` relationship between the `electricity_node` and the `electricity_load` and set 0 as the price of electricity for the last hour `2021-01-02T00:00:00`. The price is set to zero to ensure no electricity is sold during this hour.
 
       .. figure:: img/two_hydro_fix_node_state.png
          :width: 600px

@@ -509,8 +509,8 @@ Importing the model
 
   #. Select the *Data Connection item* in the *Design View* to show the *Data
      Connection properties* window (on the right side of the window usually).
-  #. In *Data Connection Properties*, click on the plus icon and select the
-     previously downloaded Excel file.
+  #. In *Data Connection Properties*, click on , click on the icon furthest to the left **Add file references** 
+     and select the previously downloaded Excel file.
   #. Next, double click on the *Import model* in the *Design view*. A window called *Select
      connector* for *Import Model* will pop-up, select Excel and klick **OK**. Next, still in
      the *Importer specification editor*, click on the main menu icon in the top right (or Press **Alt + F** to automatically display it) 
