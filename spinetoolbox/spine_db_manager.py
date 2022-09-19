@@ -286,9 +286,10 @@ class SpineDBManager(QObject):
         if db_map.connection.closed:
             return False
         try:
-            return self._get_worker(db_map).can_fetch_more(parent)
+            worker = self._get_worker(db_map)
         except KeyError:
             return False
+        return worker.can_fetch_more(parent)
 
     def fetch_more(self, db_map, parent):
         """Fetches more items of given type from given db.
@@ -299,7 +300,11 @@ class SpineDBManager(QObject):
         """
         if db_map.connection.closed:
             return
-        self._get_worker(db_map).fetch_more(parent)
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            return
+        worker.fetch_more(parent)
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
@@ -337,7 +342,10 @@ class SpineDBManager(QObject):
                 items = [item for item in (self._pop_item(db_map, item_type, id_) for id_ in ids) if item]
                 if items:
                     db_map_data[db_map] = items
-                    worker = self._get_worker(db_map)
+                    try:
+                        worker = self._get_worker(db_map)
+                    except KeyError:
+                        continue
                     worker.reset_queries(item_type)
             if db_map_data:
                 typed_db_map_data[item_type] = db_map_data
@@ -347,7 +355,10 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def get_db_map_cache(self, db_map, item_types=None, only_descendants=False, include_ancestors=False):
-        worker = self._get_worker(db_map)
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            return {}
         worker.fetch_all(item_types=item_types, only_descendants=only_descendants, include_ancestors=include_ancestors)
         return self._cache.setdefault(db_map, {})
 
@@ -623,7 +634,11 @@ class SpineDBManager(QObject):
             cookie (object, optional): a free form identifier which will be forwarded to ``session_committed`` signal
         """
         for db_map in dirty_db_maps:
-            self._get_worker(db_map).commit_session(commit_msg, cookie)
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            worker.commit_session(commit_msg, cookie)
 
     def rollback_session(self, *dirty_db_maps):
         """
@@ -633,14 +648,22 @@ class SpineDBManager(QObject):
             *dirty_db_maps: dirty database maps to commit
         """
         for db_map in dirty_db_maps:
-            self._get_worker(db_map).rollback_session()
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            worker.rollback_session()
         self._restart_fetching(dirty_db_maps)
 
     def _restart_fetching(self, db_maps):
         """Restarts fetching"""
         for db_map in db_maps:
             del self._cache[db_map]
-            self._get_worker(db_map).reset_queries()
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            worker.reset_queries()
 
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an icon renderer for a given entity class.
@@ -697,7 +720,10 @@ class SpineDBManager(QObject):
         item = self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
         if only_visible and item:
             return item
-        worker = self._get_worker(db_map)
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            return {}
         worker.fetch_all(item_types={item_type})
         return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
 
@@ -718,7 +744,10 @@ class SpineDBManager(QObject):
         items = list(self._cache.get(db_map, {}).get(item_type, {}).values())
         if only_visible:
             return items
-        worker = self._get_worker(db_map)
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            return []
         worker.fetch_all(item_types={item_type})
         return list(self._cache.get(db_map, {}).get(item_type, {}).values())
 
@@ -1000,13 +1029,22 @@ class SpineDBManager(QObject):
 
     def _add_or_update_items(self, db_map_data, method_name, item_type, signal_name, check):
         for db_map, data in db_map_data.items():
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                # We're closing the kiosk.
+                continue
             cache = self.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
-            self._get_worker(db_map).add_or_update_items(data, method_name, item_type, signal_name, check, cache)
+            worker.add_or_update_items(data, method_name, item_type, signal_name, check, cache)
 
     def _readd_items(self, db_map_data, method_name, item_type, signal_name):
         for db_map, data in db_map_data.items():
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
             cache = self.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
-            self._get_worker(db_map).readd_items(data, method_name, item_type, signal_name, cache)
+            worker.readd_items(data, method_name, item_type, signal_name, cache)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.
@@ -1422,7 +1460,11 @@ class SpineDBManager(QObject):
             db_map_typed_ids (dict): mapping DiffDatabaseMapping to item type (str) to lists of items to remove
         """
         for db_map, ids_per_type in db_map_typed_ids.items():
-            self._get_worker(db_map).remove_items(ids_per_type)
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            worker.remove_items(ids_per_type)
 
     @staticmethod
     def db_map_ids(db_map_data):
@@ -2010,7 +2052,11 @@ class SpineDBManager(QObject):
         Returns:
             list of namedtuple: entity metadata records
         """
-        return self._get_worker(db_map).get_entity_metadata(entity_id)
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            return []
+        return worker.get_entity_metadata(entity_id)
 
     def get_parameter_value_metadata(self, db_map, parameter_value_id):
         """Returns metadata records for given parameter value.
@@ -2022,10 +2068,17 @@ class SpineDBManager(QObject):
         Returns:
             list of namedtuple: parameter value metadata records
         """
-        return self._get_worker(db_map).get_parameter_value_metadata(parameter_value_id)
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            return []
+        return worker.get_parameter_value_metadata(parameter_value_id)
 
     def get_items_for_commit(self, db_map, commit_id):
-        worker = self._get_worker(db_map)
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            return {}
         worker.fetch_all()
         return worker.commit_cache.get(commit_id, {})
 
