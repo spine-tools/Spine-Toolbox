@@ -499,9 +499,9 @@ class TabularViewMixin:
     @busy_effect
     def do_reload_pivot_table(self):
         """Reloads pivot table."""
+        self.clear_pivot_table()
         if not self._can_build_pivot_table():
             return
-        self.clear_pivot_table()
         self.pivot_table_model = {
             self._PARAMETER_VALUE: ParameterValuePivotTableModel,
             self._RELATIONSHIP: RelationshipPivotTableModel,
