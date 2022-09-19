@@ -11,53 +11,68 @@
 
 """Unit tests for DB editor's custom ``QTableView`` classes."""
 import unittest
-from unittest import mock
 
 from PySide2.QtCore import QItemSelectionModel
 from PySide2.QtWidgets import QApplication
 
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinetoolbox.spine_db_manager import SpineDBManager
+from tests.spine_db_editor.widgets.helpers import add_object, add_object_class, TestBase, EditorDelegateMocking
 
 
-class TestParameterTableView(unittest.TestCase):
+class TestParameterTableView(TestBase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
 
     def setUp(self):
-        url = "sqlite://"
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
-        ):
-            mock_settings = mock.Mock()
-            mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = SpineDBManager(mock_settings, None)
-            logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=True)
-            self._db_editor = SpineDBEditor(self._db_mngr, {url: "database"})
-        QApplication.processEvents()
+        self._common_setup("sqlite://", create=True)
 
     def tearDown(self):
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
-            self._db_editor.close()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
-        self._db_editor.deleteLater()
-        self._db_editor = None
+        self._common_tear_down()
 
-    def test_remove_empty_row(self):
+    def test_remove_last_empty_row(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         index = model.index(0, 0)
         selection_model = table_view.selectionModel()
         selection_model.select(index, QItemSelectionModel.ClearAndSelect)
         table_view.remove_selected()
+        self.assertFalse(selection_model.hasSelection())
+        self.assertEqual(model.rowCount(), 1)
+
+    def test_remove_rows_from_empty_model(self):
+        tree_view = self._db_editor.ui.treeView_object
+        add_object_class(tree_view, "an_object_class")
+        add_object(tree_view, "an_object")
+        table_view = self._db_editor.ui.tableView_object_parameter_value
+        model = table_view.model()
+        self.assertEqual(model.rowCount(), 1)
+        index = model.index(0, 0)
+        delegate_mock = EditorDelegateMocking()
+        delegate_mock.write_to_index(table_view, index, "an_object_class")
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 6)
+        self.assertEqual(model.index(0, 0).data(), "an_object_class")
+        self.assertEqual(model.index(0, 1).data(), None)
+        self.assertEqual(model.index(0, 2).data(), None)
+        self.assertEqual(model.index(0, 3).data(), None)
+        self.assertEqual(model.index(0, 4).data(), None)
+        self.assertEqual(model.index(0, 5).data(), "database")
+        self.assertEqual(model.index(1, 0).data(), None)
+        self.assertEqual(model.index(1, 1).data(), None)
+        self.assertEqual(model.index(1, 2).data(), None)
+        self.assertEqual(model.index(1, 3).data(), None)
+        self.assertEqual(model.index(1, 4).data(), None)
+        self.assertEqual(model.index(1, 5).data(), "database")
+        selection_model = table_view.selectionModel()
+        selection_model.select(index, QItemSelectionModel.ClearAndSelect)
+        table_view.remove_selected()
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(), None)
+        self.assertEqual(model.index(0, 1).data(), None)
+        self.assertEqual(model.index(0, 2).data(), None)
+        self.assertEqual(model.index(0, 3).data(), None)
+        self.assertEqual(model.index(0, 4).data(), None)
         self.assertFalse(selection_model.hasSelection())
 
 

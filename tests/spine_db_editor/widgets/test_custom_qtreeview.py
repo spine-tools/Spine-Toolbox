@@ -17,11 +17,9 @@ Unit tests for DB editor's custom ``QTreeView`` classes.
 """
 import os.path
 from tempfile import TemporaryDirectory
-from types import MethodType
 import unittest
 from unittest import mock
-from PySide2.QtCore import Qt, QItemSelectionModel, QEvent
-from PySide2.QtGui import QKeyEvent
+from PySide2.QtCore import Qt, QItemSelectionModel
 from PySide2.QtWidgets import QApplication
 
 from spinedb_api import (
@@ -38,13 +36,7 @@ from spinedb_api import (
     import_tool_features,
     import_tool_feature_methods,
 )
-from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import (
-    AddObjectClassesDialog,
-    AddObjectsDialog,
-    AddRelationshipsDialog,
-    AddRelationshipClassesDialog,
-)
+from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddRelationshipsDialog, AddRelationshipClassesDialog
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
     EditObjectClassesDialog,
     EditObjectsDialog,
@@ -52,62 +44,20 @@ from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
     EditRelationshipClassesDialog,
     EditRelationshipsDialog,
 )
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.helpers import signal_waiter
-from spinetoolbox.widgets.custom_editors import SearchBarEditor
-
-
-class _EditorDelegateMocking:
-    def __init__(self):
-        self._cell_editor = None
-
-    def write_to_index(self, view, index, value):
-        delegate = view.itemDelegate(index)
-        if self._cell_editor is None:
-            original_create_editor = delegate.createEditor
-
-            def create_and_store_editor(instance, parent, option, target_index):
-                self._cell_editor = original_create_editor(parent, option, target_index)
-                return self._cell_editor
-
-            delegate.createEditor = MethodType(create_and_store_editor, delegate)
-        view.setCurrentIndex(index)
-        view.edit(index)
-        if self._cell_editor is None:
-            # Native editor widget is being used, fall back to setting value directly in model.
-            view.model().setData(index, value)
-            return
-        if isinstance(self._cell_editor, SearchBarEditor):
-            key_press_event = QKeyEvent(QEvent.KeyPress, Qt.Key_Down, Qt.NoModifier, 0, 0, 0)
-            i = 0
-            while self._cell_editor.data() != value:
-                if i == self._cell_editor.model.rowCount():
-                    raise RuntimeError("Value not found in editor widget.")
-                self._cell_editor.keyPressEvent(key_press_event)
-                i += 1
-        else:
-            self._cell_editor.setText(str(value))
-        delegate.commitData.emit(self._cell_editor)
-        delegate.closeEditor.emit(self._cell_editor)
-
-    def try_to_edit_index(self, view, index):
-        delegate = view.itemDelegate(index)
-        if self._cell_editor is None:
-            original_create_editor = delegate.createEditor
-
-            def create_and_store_editor(instance, parent, option, target_index):
-                self._cell_editor = original_create_editor(parent, option, target_index)
-                return self._cell_editor
-
-            delegate.createEditor = MethodType(create_and_store_editor, delegate)
-        view.setCurrentIndex(index)
-        view.edit(index)
+from tests.spine_db_editor.widgets.helpers import (
+    EditorDelegateMocking,
+    add_entity_tree_item,
+    add_object_class,
+    add_object,
+    TestBase,
+)
 
 
 class _ParameterValueListEdits:
     def __init__(self, view):
         self._view = view
-        self.view_editor = _EditorDelegateMocking()
+        self.view_editor = EditorDelegateMocking()
 
     def append_value_list(self, db_mngr, list_name):
         model = self._view.model()
@@ -133,41 +83,6 @@ class _ParameterValueListEdits:
                     waiter.wait()
                 return model.index(last_row, 0, list_index)
         raise RuntimeError(f"{list_name} not found.")
-
-
-def _add_entity_tree_item(item_names, view, menu_action_text, dialog_class):
-    add_items_action = None
-    for action in view._menu.actions():
-        if action.text() == menu_action_text:
-            add_items_action = action
-            break
-    if add_items_action is None:
-        raise RuntimeError("Menu action not found.")
-    patched = "spinetoolbox.spine_db_editor.widgets.tree_view_mixin." + dialog_class.__name__
-    with mock.patch(patched) as mock_dialog:
-        add_items_action.trigger()
-        arguments_list = mock_dialog.call_args_list
-    for arguments in arguments_list:
-        add_items_dialog = dialog_class(*arguments[0])
-        with signal_waiter(add_items_dialog.model.rowsInserted) as waiter:
-            QApplication.processEvents()
-            waiter.wait()
-        for column, name in item_names.items():
-            item_name_index = add_items_dialog.model.index(0, column)
-            add_items_dialog.set_model_data(item_name_index, name)
-        add_items_dialog.accept()
-
-
-def _add_object_class(view, class_name):
-    _add_entity_tree_item({0: class_name}, view, "Add object classes", AddObjectClassesDialog)
-
-
-def _add_object(view, object_name):
-    model = view.model()
-    root_index = model.index(0, 0)
-    class_index = model.index(0, 0, root_index)
-    view._context_item = model.item_from_index(class_index)
-    _add_entity_tree_item({1: object_name}, view, "Add objects", AddObjectsDialog)
 
 
 def _edit_entity_tree_item(new_entries, view, menu_action_text, dialog_class):
@@ -219,50 +134,12 @@ def _append_table_row(view, row):
     model = view.model()
     last_row = model.rowCount() - 1
     for column, value in enumerate(row):
-        delegate_mock = _EditorDelegateMocking()
+        delegate_mock = EditorDelegateMocking()
         index = model.index(last_row, column)
         delegate_mock.write_to_index(view, index, value)
 
 
-class _Base(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
-    def _common_setup(self, url, create):
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
-        ):
-            mock_settings = mock.Mock()
-            mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = SpineDBManager(mock_settings, None)
-            logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=create)
-            self._db_editor = SpineDBEditor(self._db_mngr, {url: "database"})
-        QApplication.processEvents()
-
-    def _common_tear_down(self):
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
-            self._db_editor.close()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
-        self._db_editor.deleteLater()
-        self._db_editor = None
-
-    def _commit_changes_to_database(self, commit_message):
-        with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
-            commit_msg.return_value = commit_message
-            with signal_waiter(self._db_mngr.session_committed) as waiter:
-                self._db_editor.ui.actionCommit.trigger()
-                waiter.wait()
-
-
-class TestObjectTreeViewWithInitiallyEmptyDatabase(_Base):
+class TestObjectTreeViewWithInitiallyEmptyDatabase(TestBase):
     def setUp(self):
         self._common_setup("sqlite://", create=True)
 
@@ -281,7 +158,7 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(_Base):
 
     def test_add_object_class(self):
         view = self._db_editor.ui.treeView_object
-        _add_object_class(view, "an_object_class")
+        add_object_class(view, "an_object_class")
         model = view.model()
         root_index = model.index(0, 0)
         self.assertEqual(model.rowCount(root_index), 1)
@@ -297,8 +174,8 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(_Base):
 
     def test_add_object(self):
         view = self._db_editor.ui.treeView_object
-        _add_object_class(view, "an_object_class")
-        _add_object(view, "an_object")
+        add_object_class(view, "an_object_class")
+        add_object(view, "an_object")
         model = view.model()
         root_index = model.index(0, 0)
         class_index = model.index(0, 0, root_index)
@@ -319,12 +196,12 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(_Base):
 
     def test_add_relationship_class_from_object_tree_view(self):
         object_tree_view = self._db_editor.ui.treeView_object
-        _add_object_class(object_tree_view, "an_object_class")
+        add_object_class(object_tree_view, "an_object_class")
         object_model = object_tree_view.model()
         root_index = object_model.index(0, 0)
         object_class_index = object_model.index(0, 0, root_index)
         object_tree_view._context_item = object_model.item_from_index(object_class_index)
-        _add_entity_tree_item(
+        add_entity_tree_item(
             {1: "a_relationship_class"}, object_tree_view, "Add relationship classes", AddRelationshipClassesDialog
         )
         view = self._db_editor.ui.treeView_relationship
@@ -342,7 +219,7 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(_Base):
         self.assertEqual(data[0].object_class_name_list, "an_object_class")
 
 
-class TestObjectTreeViewWithExistingData(_Base):
+class TestObjectTreeViewWithExistingData(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
@@ -480,7 +357,7 @@ class TestObjectTreeViewWithExistingData(_Base):
         _edit_entity_tree_item({0: object_name}, view, "Edit...", EditObjectsDialog)
 
 
-class TestRelationshipTreeViewWithInitiallyEmptyDatabase(_Base):
+class TestRelationshipTreeViewWithInitiallyEmptyDatabase(TestBase):
     def setUp(self):
         self._common_setup("sqlite://", create=True)
 
@@ -498,7 +375,7 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(_Base):
         self.assertEqual(model.headerData(1, Qt.Horizontal), "database")
 
     def test_add_relationship_class(self):
-        _add_object_class(self._db_editor.ui.treeView_object, "an_object_class")
+        add_object_class(self._db_editor.ui.treeView_object, "an_object_class")
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
@@ -517,8 +394,8 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(_Base):
 
     def test_add_relationship(self):
         object_tree_view = self._db_editor.ui.treeView_object
-        _add_object_class(object_tree_view, "an_object_class")
-        _add_object(object_tree_view, "an_object")
+        add_object_class(object_tree_view, "an_object_class")
+        add_object(object_tree_view, "an_object")
         view = self._db_editor.ui.treeView_relationship
         model = view.model()
         root_index = model.index(0, 0)
@@ -543,7 +420,7 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(_Base):
     def _add_relationship_class(self, class_name, object_class_names):
         item_names = {i: name for i, name in enumerate(object_class_names)}
         item_names[len(object_class_names)] = class_name
-        _add_entity_tree_item(
+        add_entity_tree_item(
             item_names,
             self._db_editor.ui.treeView_relationship,
             "Add relationship classes",
@@ -553,12 +430,12 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(_Base):
     def _add_relationship(self, relationship_name, object_names):
         item_names = {i: name for i, name in enumerate(object_names)}
         item_names[len(object_names)] = relationship_name
-        _add_entity_tree_item(
+        add_entity_tree_item(
             item_names, self._db_editor.ui.treeView_relationship, "Add relationships", AddRelationshipsDialog
         )
 
 
-class TestRelationshipTreeViewWithExistingData(_Base):
+class TestRelationshipTreeViewWithExistingData(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
@@ -796,7 +673,7 @@ class TestRelationshipTreeViewWithExistingData(_Base):
         _remove_entity_tree_item(view, "Remove...", RemoveEntitiesDialog)
 
 
-class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_Base):
+class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
     def setUp(self):
         self._common_setup("sqlite://", create=True)
         self._edits = _ParameterValueListEdits(self._db_editor.ui.treeView_parameter_value_list)
@@ -866,7 +743,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_Base):
             self.assertEqual(from_database(data[i].value), expected_value)
 
 
-class TestParameterValueListTreeViewWithExistingData(_Base):
+class TestParameterValueListTreeViewWithExistingData(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
@@ -997,7 +874,7 @@ class TestParameterValueListTreeViewWithExistingData(_Base):
             self.assertEqual(from_database(data[i].value), expected_value)
 
 
-class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(_Base):
+class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
     def setUp(self):
         self._common_setup("sqlite://", create=True)
         self._value_list_edits = _ParameterValueListEdits(self._db_editor.ui.treeView_parameter_value_list)
@@ -1029,7 +906,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(_Base):
         db_index = model.index(0, 0)
         feature_root_index = model.index(0, 0, db_index)
         feature_index = model.index(0, 0, feature_root_index)
-        view_edit = _EditorDelegateMocking()
+        view_edit = EditorDelegateMocking()
         with mock.patch.object(self._db_editor, "msg_error") as mock_error:
             view_edit.try_to_edit_index(tree_view, feature_index)
             mock_error.emit.assert_called_once_with(
@@ -1102,7 +979,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(_Base):
         tool_feature_index = model.index(0, 0, tool_feature_root_index)
         method_root_index = model.index(1, 0, tool_feature_index)
         method_index = model.index(0, 0, method_root_index)
-        view_edit = _EditorDelegateMocking()
+        view_edit = EditorDelegateMocking()
         with signal_waiter(self._db_mngr.tool_feature_methods_added) as waiter:
             view_edit.write_to_index(view, method_index, "2.3")
             waiter.wait()
@@ -1117,7 +994,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(_Base):
         self._value_list_edits.append_value_list(self._db_mngr, "my_value_list")
         self._value_list_edits.append_value(self._db_mngr, "my_value_list", 2.3)
         object_tree_view = self._db_editor.ui.treeView_object
-        _add_object_class(object_tree_view, "my_object_class")
+        add_object_class(object_tree_view, "my_object_class")
         object_parameter_definition_view = self._db_editor.ui.tableView_object_parameter_definition
         with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
             _append_table_row(object_parameter_definition_view, ["my_object_class", "my_parameter", "my_value_list"])
@@ -1129,7 +1006,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(_Base):
         db_index = model.index(0, 0)
         feature_root_index = model.index(0, 0, db_index)
         feature_index = model.index(0, 0, feature_root_index)
-        view_edit = _EditorDelegateMocking()
+        view_edit = EditorDelegateMocking()
         with signal_waiter(self._db_mngr.features_added) as waiter:
             view_edit.write_to_index(view, feature_index, "my_object_class/my_parameter")
             waiter.wait()
@@ -1140,7 +1017,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(_Base):
         db_index = model.index(0, 0)
         tool_root_index = model.index(1, 0, db_index)
         tool_index = model.index(0, 0, tool_root_index)
-        view_edit = _EditorDelegateMocking()
+        view_edit = EditorDelegateMocking()
         with signal_waiter(self._db_mngr.tools_added) as waiter:
             view_edit.write_to_index(view, tool_index, "my_tool")
             waiter.wait()
@@ -1153,13 +1030,13 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(_Base):
         tool_index = model.index(0, 0, tool_root_index)
         tool_feature_root_index = model.index(0, 0, tool_index)
         tool_feature_index = model.index(0, 0, tool_feature_root_index)
-        view_edit = _EditorDelegateMocking()
+        view_edit = EditorDelegateMocking()
         with signal_waiter(self._db_mngr.tool_features_added) as waiter:
             view_edit.write_to_index(view, tool_feature_index, "my_object_class/my_parameter")
             waiter.wait()
 
 
-class TestToolFeatureTreeViewWithExistingData(_Base):
+class TestToolFeatureTreeViewWithExistingData(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
