@@ -230,13 +230,14 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         # Get parameter data grouped by db_map
         db_map_typed_data = dict()
         model = self.model()
+        empty_row = model.rowCount() - 1
         for row in sorted(rows, reverse=True):
-            db_map = model.sub_model_at_row(row).db_map
-            if db_map is None:
+            if row == empty_row:
                 # It's an empty model, just remove the row
                 _, sub_row = model._row_map[row]
                 model.empty_model.removeRow(sub_row)
                 continue
+            db_map = model.sub_model_at_row(row).db_map
             id_ = model.item_at_row(row)
             db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
         model.db_mngr.remove_items(db_map_typed_data)
