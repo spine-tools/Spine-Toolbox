@@ -87,6 +87,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
              spine_db_editor (SpineDBEditor)
         """
         self._spine_db_editor = spine_db_editor
+        self.set_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self.populate_context_menu()
         self.create_delegates()
 
@@ -558,8 +559,8 @@ class PivotTableView(CopyPasteTableView):
             self._plot_in_window_menu = self._menu.addMenu("Plot in window")
             self._plot_in_window_menu.triggered.connect(self._plot_in_window)
             self._menu.addSeparator()
-            self._menu.addAction(self._db_editor.ui.actionCopy)
-            self._menu.addAction(self._db_editor.ui.actionPaste)
+            self._menu.addAction(self._view.copy_action)
+            self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_values_action = self._menu.addAction("Remove parameter values", self.remove_values)
             self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
@@ -680,8 +681,8 @@ class PivotTableView(CopyPasteTableView):
 
         def populate_context_menu(self):
             """See base class."""
-            self._menu.addAction(self._db_editor.ui.actionCopy)
-            self._menu.addAction(self._db_editor.ui.actionPaste)
+            self._menu.addAction(self._view.copy_action)
+            self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
             self._menu.aboutToShow.connect(self._db_editor.refresh_copy_paste_actions)
@@ -727,8 +728,8 @@ class PivotTableView(CopyPasteTableView):
             self._menu.addSeparator()
             self._menu.addAction(self._toggle_alternatives_checked)
             self._menu.addSeparator()
-            self._menu.addAction(self._db_editor.ui.actionCopy)
-            self._menu.addAction(self._db_editor.ui.actionPaste)
+            self._menu.addAction(self._view.copy_action)
+            self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
             self._remove_scenarios_action = self._menu.addAction(self._REMOVE_SCENARIO, self.remove_scenarios)
@@ -800,6 +801,7 @@ class PivotTableView(CopyPasteTableView):
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
+        self.set_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self._spine_db_editor.pivot_table_proxy.sourceModelChanged.connect(self._change_context)
 
     @Slot()
@@ -967,7 +969,9 @@ class MetadataTableViewBase(CopyPasteTableView):
         Args:
              db_editor (SpineDBEditor): database editor instance
         """
-        self._populate_context_menu(db_editor)
+        self.set_copy_and_paste_actions(db_editor.ui.actionCopy, db_editor.ui.actionPaste)
+        self._populate_context_menu()
+        self._menu.aboutToShow.connect(db_editor.refresh_copy_paste_actions)
         self._enable_delegates(db_editor)
 
     def contextMenuEvent(self, event):
@@ -991,14 +995,10 @@ class MetadataTableViewBase(CopyPasteTableView):
             db_editor (SpineDBEditor): database editor
         """
 
-    def _populate_context_menu(self, db_editor):
-        """Fills context menu with actions.
-
-        Args:
-            db_editor (SpineDBEditor): database editor
-        """
-        self._menu.addAction(db_editor.ui.actionCopy)
-        self._menu.addAction(db_editor.ui.actionPaste)
+    def _populate_context_menu(self,):
+        """Fills context menu with actions."""
+        self._menu.addAction(self.copy_action)
+        self._menu.addAction(self.paste_action)
         self._menu.addSeparator()
         self._menu.addAction("Remove row(s)", self._remove_selected)
 

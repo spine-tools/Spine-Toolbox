@@ -25,7 +25,7 @@ from numbers import Number
 import re
 from PySide2.QtWidgets import QTableView, QApplication, QAction
 from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
-from PySide2.QtGui import QKeySequence
+from PySide2.QtGui import QKeySequence, QIcon
 from spinedb_api import (
     DateTime,
     Duration,
@@ -45,21 +45,50 @@ _ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 class CopyPasteTableView(QTableView):
     """Custom QTableView class with copy and paste methods."""
 
-    def keyPressEvent(self, event):
-        """Copies and pastes to and from clipboard in Excel-like format."""
-        if event.matches(QKeySequence.Copy):
-            if not self.copy():
-                super().keyPressEvent(event)
-        elif event.matches(QKeySequence.Paste):
-            if not self.paste():
-                super().keyPressEvent(event)
-        elif event.matches(QKeySequence.Delete):
-            if not self.delete_content():
-                super().keyPressEvent(event)
-        else:
-            super().keyPressEvent(event)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._copy_action = None
+        self._paste_action = None
+        self._delete_action = QAction("Delete", self)
+        self._delete_action.setShortcut(QKeySequence.Delete)
+        self.addAction(self._delete_action)
+        self._delete_action.triggered.connect(self.delete_content)
 
-    def delete_content(self):
+    def init_copy_and_paste_actions(self):
+        """Initializes copy and paste actions and connects relevant signals."""
+        copy_icon = QIcon(":/icons/menu_icons/copy.svg")
+        self._copy_action = QAction(copy_icon, "Copy", self)
+        self._copy_action.setShortcut(QKeySequence.Copy)
+        self.addAction(self._copy_action)
+        self._copy_action.triggered.connect(self.copy)
+        paste_icon = QIcon(":/icons/menu_icons/paste.svg")
+        self._paste_action = QAction(paste_icon, "Paste", self)
+        self._paste_action.setShortcut(QKeySequence.Paste)
+        self.addAction(self._paste_action)
+        self._paste_action.triggered.connect(self.paste)
+
+    def set_copy_and_paste_actions(self, copy_action, paste_action):
+        """Sets basic actions and connects relevant signals.
+
+        Args:
+            copy_action (QAction): copy action
+            paste_action (QAction): paste action
+        """
+        self._copy_action = copy_action
+        self._copy_action.triggered.connect(self.copy)
+        self._paste_action = paste_action
+        self._paste_action.triggered.connect(self.paste)
+
+    @property
+    def copy_action(self):
+        return self._copy_action
+
+    @property
+    def paste_action(self):
+        return self._paste_action
+
+    @Slot(bool)
+    def delete_content(self, _=False):
         """Deletes content from editable indexes in current selection."""
         selection = self.selectionModel().selection()
         if not selection:
@@ -71,7 +100,8 @@ class CopyPasteTableView(QTableView):
         return not self.selectionModel().selection().isEmpty()
 
     @busy_effect
-    def copy(self):
+    @Slot(bool)
+    def copy(self, _=False):
         """Copies current selection to clipboard in excel format."""
         selection = self.selectionModel().selection()
         if not selection:
@@ -111,7 +141,8 @@ class CopyPasteTableView(QTableView):
         )
 
     @busy_effect
-    def paste(self):
+    @Slot(bool)
+    def paste(self, _=False):
         """Paste data from clipboard."""
         selection = self.selectionModel().selection()
         if len(selection.indexes()) > 1:
@@ -295,7 +326,8 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
 class IndexedParameterValueTableViewBase(CopyPasteTableView):
     """Custom QTableView base class with copy and paste methods for indexed parameter values."""
 
-    def copy(self):
+    @Slot(bool)
+    def copy(self, _=False):
         """Copies current selection to clipboard in CSV format."""
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
@@ -336,7 +368,8 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
         """Reads CSV formatted table."""
         raise NotImplementedError()
 
-    def paste(self):
+    @Slot(bool)
+    def paste(self, _=False):
         """Pastes data from clipboard to selection."""
         raise NotImplementedError()
 
@@ -344,7 +377,8 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
 class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
     """A QTableView for fixed resolution time series table."""
 
-    def paste(self):
+    @Slot(bool)
+    def paste(self, _=True):
         """Pastes data from clipboard."""
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
@@ -420,7 +454,8 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
 class IndexedValueTableView(IndexedParameterValueTableViewBase):
     """A QTableView class with for variable resolution time series and time patterns."""
 
-    def paste(self):
+    @Slot(bool)
+    def paste(self, _=False):
         """Pastes data from clipboard."""
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
@@ -552,7 +587,8 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
 class ArrayTableView(IndexedParameterValueTableViewBase):
     """Custom QTableView with copy and paste methods for single column tables."""
 
-    def copy(self):
+    @Slot(bool)
+    def copy(self, _=False):
         """Copies current selection to clipboard in CSV format."""
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
@@ -570,7 +606,8 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
                 QApplication.clipboard().setText(output.getvalue())
         return True
 
-    def paste(self):
+    @Slot(bool)
+    def paste(self, _=False):
         """Pastes data from clipboard."""
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
@@ -631,7 +668,8 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
 class MapTableView(CopyPasteTableView):
     """Custom QTableView with copy and paste methods for map tables."""
 
-    def copy(self):
+    @Slot(bool)
+    def copy(self, _=False):
         """Copies current selection to clipboard in Excel compatible CSV format."""
         selection = self.selectionModel().selection()
         if not selection:
@@ -665,14 +703,16 @@ class MapTableView(CopyPasteTableView):
             QApplication.clipboard().setText(output.getvalue())
         return True
 
-    def delete_content(self):
+    @Slot(bool)
+    def delete_content(self, _=False):
         """Deletes content in current selection."""
         selection = self.selectionModel().selection()
         if not selection:
             return False
         self.model().clear(selection.indexes())
 
-    def paste(self):
+    @Slot(bool)
+    def paste(self, _=False):
         """Pastes data from clipboard.
 
         Returns:
