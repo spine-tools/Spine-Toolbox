@@ -312,8 +312,11 @@ class SpineToolboxProject(MetaObject):
         self.restore_project_items(items_dict, item_factories, silent=True)
         self._logger.msg.emit("Restoring connections...")
         connection_dicts = project_info["project"]["connections"]
-        for connection in map(self.connection_from_dict, connection_dicts):
+        connections = list(map(self.connection_from_dict, connection_dicts))
+        for connection in connections:
             self.add_connection(connection, silent=True)
+        for connection in connections:
+            connection.link.update_icons()
         self._logger.msg.emit("Restoring jumps...")
         jump_dicts = project_info["project"].get("jumps", [])
         for jump in map(self.jump_from_dict, jump_dicts):

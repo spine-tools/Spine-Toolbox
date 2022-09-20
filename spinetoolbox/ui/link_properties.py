@@ -25,15 +25,38 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
+from spinetoolbox.widgets.custom_qwidgets import PropertyQSpinBox
+
 from spinetoolbox import resources_icons_rc
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(298, 288)
+        Form.resize(486, 288)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.label_write_index = QLabel(Form)
+        self.label_write_index.setObjectName(u"label_write_index")
+
+        self.horizontalLayout.addWidget(self.label_write_index)
+
+        self.spinBox_write_index = PropertyQSpinBox(Form)
+        self.spinBox_write_index.setObjectName(u"spinBox_write_index")
+        self.spinBox_write_index.setMinimum(1)
+        self.spinBox_write_index.setMaximum(999)
+
+        self.horizontalLayout.addWidget(self.spinBox_write_index)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout)
+
         self.treeView_filters = QTreeView(Form)
         self.treeView_filters.setObjectName(u"treeView_filters")
         self.treeView_filters.setAcceptDrops(True)
@@ -60,6 +83,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.label_write_index.setText(QCoreApplication.translate("Form", u"Write index (lower writes earlier):", None))
         self.checkBox_use_memory_db.setText(QCoreApplication.translate("Form", u"Use memory DB for tool execution", None))
         self.checkBox_use_datapackage.setText(QCoreApplication.translate("Form", u"Pack CSV files (datapackage.json)", None))
     # retranslateUi

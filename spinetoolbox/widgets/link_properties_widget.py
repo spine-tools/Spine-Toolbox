@@ -37,6 +37,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self.ui.setupUi(self)
         self.ui.checkBox_use_datapackage.stateChanged.connect(self._handle_use_datapackage_state_changed)
         self.ui.checkBox_use_memory_db.stateChanged.connect(self._handle_use_memory_db_state_changed)
+        self.ui.spinBox_write_index.valueChanged.connect(self._handle_write_index_value_changed)
 
     def set_link(self, connection):
         """Hooks the widget to given link, so that user actions are reflected in the link's filter configuration.
@@ -55,6 +56,8 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self.ui.treeView_filters.setEnabled(bool(self._connection.database_resources))
         self.ui.checkBox_use_memory_db.setEnabled({"Tool", "Data Store"} == {source_item_type, destination_item_type})
         self.ui.checkBox_use_datapackage.setEnabled(source_item_type in {"Exporter", "Data Connection", "Tool"})
+        self.ui.spinBox_write_index.setEnabled(destination_item_type == "Data Store")
+        self.ui.label_write_index.setEnabled(destination_item_type == "Data Store")
 
     def unset_link(self):
         """Releases the widget from any links."""
@@ -76,6 +79,14 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         options = {"use_memory_db": checked}
         self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._connection, options))
 
+    @Slot(int)
+    def _handle_write_index_value_changed(self, value):
+        if self._connection.write_index == value:
+            return
+        options = {"write_index": value}
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._connection, options))
+
     def load_connection_options(self):
         self.ui.checkBox_use_datapackage.setChecked(self._connection.use_datapackage)
         self.ui.checkBox_use_memory_db.setChecked(self._connection.use_memory_db)
+        self.ui.spinBox_write_index.setValue(self._connection.write_index)

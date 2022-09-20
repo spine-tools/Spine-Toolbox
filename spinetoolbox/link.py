@@ -454,7 +454,6 @@ class Link(JumpOrLink):
         """
         super().__init__(toolbox, src_connector, dst_connector)
         self._connection = connection
-        self.parallel_link = None
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
 
     def update_icons(self):
@@ -466,6 +465,11 @@ class Link(JumpOrLink):
             self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._FILTERS))
         if self._connection.use_memory_db:
             self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._MEMORY))
+        sibling_conns = self._toolbox.project()._incoming_connections(self.connection.destination)
+        if any(l.write_index > 1 for l in sibling_conns):
+            self._icons.append(
+                _TextIcon(0, 0, self._icon_extent, self._icon_extent, self, str(self._connection.write_index))
+            )
         self._place_icons()
 
     @property

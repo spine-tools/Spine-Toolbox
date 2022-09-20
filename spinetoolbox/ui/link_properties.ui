@@ -18,7 +18,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>298</width>
+    <width>486</width>
     <height>288</height>
    </rect>
   </property>
@@ -26,6 +26,40 @@
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="label_write_index">
+       <property name="text">
+        <string>Write index (lower writes earlier):</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="PropertyQSpinBox" name="spinBox_write_index">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>999</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
    <item>
     <widget class="QTreeView" name="treeView_filters">
      <property name="acceptDrops">
@@ -55,6 +89,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PropertyQSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>spinetoolbox/widgets/custom_qwidgets.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../../../items/spine_items/ui/resources/resources_icons.qrc"/>
  </resources>

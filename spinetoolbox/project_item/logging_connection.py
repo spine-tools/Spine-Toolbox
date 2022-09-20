@@ -9,12 +9,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """Contains logging connection and jump classes."""
-from copy import deepcopy
-
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from spine_engine.project_item.connection import Connection, ResourceConvertingConnection, Jump
+from spine_engine.project_item.connection import ResourceConvertingConnection, Jump
 from ..log_mixin import LogMixin
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
 from ..helpers import busy_effect
