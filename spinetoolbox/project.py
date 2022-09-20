@@ -1110,7 +1110,7 @@ class SpineToolboxProject(MetaObject):
             item (ProjectItem): item whose resources have changed
         """
         item_name = item.name
-        predecessor_names = {c.source for c in self._incoming_connections(item_name)}
+        predecessor_names = {c.source for c in self.incoming_connections(item_name)}
         successor_connections = self._outgoing_connections
         update_resources = self._update_predecessor
         trigger_resources = item.resources_for_direct_predecessors()
@@ -1131,7 +1131,7 @@ class SpineToolboxProject(MetaObject):
         """
         item_name = item.name
         successor_names = {c.destination for c in self._outgoing_connections(item_name)}
-        predecessor_connections = self._incoming_connections
+        predecessor_connections = self.incoming_connections
         update_resources = self._update_successor
         trigger_resources = item.resources_for_direct_successors()
         self._notify_resource_changes(
@@ -1204,7 +1204,7 @@ class SpineToolboxProject(MetaObject):
         """
         target_name = target_item.name
         if direction == ExecutionDirection.FORWARD:
-            connections = self._incoming_connections(target_name)
+            connections = self.incoming_connections(target_name)
             self._update_successor(target_item, connections, resource_cache={})
         else:
             connections = self._outgoing_connections(target_name)
@@ -1219,7 +1219,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             set of str: direct predecessor names
         """
-        return {c.source for c in self._incoming_connections(name)}
+        return {c.source for c in self.incoming_connections(name)}
 
     def successor_names(self, name):
         """Collects direct successor item names.
@@ -1265,7 +1265,7 @@ class SpineToolboxProject(MetaObject):
         """
         return self._outgoing_connections(name) + self._outgoing_jumps(name)
 
-    def _incoming_connections(self, name):
+    def incoming_connections(self, name):
         """Collects incoming connections.
 
         Args:
@@ -1296,7 +1296,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             set of Connection/Jump: incoming connections
         """
-        return self._incoming_connections(name) + self._incoming_jumps(name)
+        return self.incoming_connections(name) + self._incoming_jumps(name)
 
     def _update_successor(self, successor, incoming_connections, resource_cache):
         combined_resources = list()

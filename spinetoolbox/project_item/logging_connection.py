@@ -206,8 +206,10 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         if options == self.options:
             return
         self.options = options
-        self.link.update_icons()
         project = self._toolbox.project()
+        sibling_conns = project.incoming_connections(self.destination)
+        for conn in sibling_conns:
+            conn.link.update_icons()
         item = project.get_item(self.source)
         project.notify_resource_changes_to_successors(item)
         if self is self._toolbox.active_link_item:
