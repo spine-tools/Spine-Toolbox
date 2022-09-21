@@ -260,6 +260,8 @@ class SpineDBEditorBase(QMainWindow):
         menu.addAction(self.ui.dockWidget_tool_feature_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         menu.addAction(self.ui.dockWidget_alternative_scenario_tree.toggleViewAction())
+        menu.addAction(self.ui.metadata_dock_widget.toggleViewAction())
+        menu.addAction(self.ui.item_metadata_dock_widget.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_exports.toggleViewAction())
         return menu
