@@ -80,18 +80,14 @@ class HeadlessConnection(ResourceConvertingConnection):
                     for row in db_map.query(db_map.scenario_sq):
                         if row.id not in scenario_filter_ids:
                             disabled_scenarios.add(row.name)
-                self._disabled_filter_names.setdefault(resource.label, {})[SCENARIO_FILTER_TYPE] = sorted(
-                    list(disabled_scenarios)
-                )
+                self._disabled_filter_names.setdefault(resource.label, {})[SCENARIO_FILTER_TYPE] = disabled_scenarios
                 tool_filter_ids = resource_filter_ids.get(TOOL_FILTER_TYPE)
                 disabled_tools = set()
                 if tool_filter_ids is not None:
                     for row in db_map.query(db_map.tool_sq):
                         if row.id not in tool_filter_ids:
                             disabled_tools.add(row.name)
-                self._disabled_filter_names.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = sorted(
-                    list(disabled_tools)
-                )
+                self._disabled_filter_names.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = disabled_tools
             finally:
                 db_map.connection.close()
         self._legacy_resource_filter_ids = None
