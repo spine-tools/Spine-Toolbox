@@ -16,6 +16,7 @@ Classes for drawing graphics items on QGraphicsScene.
 :date:    4.4.2018
 """
 
+import functools
 from math import sin, cos, pi, radians
 from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
 from PySide2.QtWidgets import (
@@ -285,19 +286,19 @@ class _IconBase(QGraphicsEllipseItem):
         QToolTip.hideText()
 
 
-class _SvgIcon(_IconBase):
+class _SvgIcon(QGraphicsEllipseItem):
     """A svg icon to show over a Link."""
 
-    def __init__(self, x, y, w, h, parent, path, tooltip=None):
-        super().__init__(x, y, w, h, parent, tooltip=tooltip)
+    def __init__(self, parent, extent, path, tooltip=None):
+        super().__init__(0, 0, extent, extent, parent)
         self._svg_item = QGraphicsSvgItem(self)
         self._renderer = QSvgRenderer()
         self._renderer.load(path)
         self._svg_item.setSharedRenderer(self._renderer)
         scale = 0.8 * self.rect().width() / self._renderer.defaultSize().width()
         self._svg_item.setScale(scale)
-        self._svg_item.setPos(0, 0)
         self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
+        self.setPen(Qt.NoPen)
 
     def wipe_out(self):
         """Cleans up icon's resources."""
@@ -306,11 +307,11 @@ class _SvgIcon(_IconBase):
         self.scene().removeItem(self)
 
 
-class _TextIcon(_IconBase):
+class _TextIcon(QGraphicsEllipseItem):
     """A font awesome icon to show over a Link."""
 
-    def __init__(self, x, y, w, h, parent, char, tooltip=None, color=None):
-        super().__init__(x, y, w, h, parent, tooltip=tooltip)
+    def __init__(self, parent, extent, char, tooltip=None, color=None):
+        super().__init__(0, 0, extent, extent, parent)
         if color is None:
             color = QColor("slateblue")
         self._text_item = QGraphicsTextItem(self)
@@ -318,8 +319,8 @@ class _TextIcon(_IconBase):
         self._text_item.setFont(font)
         self._text_item.setDefaultTextColor(color)
         self._text_item.setPlainText(char)
-        self._text_item.setPos(0, 0)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
+        self.setPen(Qt.NoPen)
 
     def wipe_out(self):
         """Cleans up icon's resources."""
@@ -334,8 +335,9 @@ class JumpOrLink(LinkBase):
         super().__init__(toolbox, src_connector, dst_connector)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self._icon_extent = 4 * self.magic_number
+        self._icon_extent = 3 * self.magic_number
         self._icons = []
+        self._icon_bg = _IconBase(0, 0, self._icon_extent, self._icon_extent, self)
         self._anim = self._make_execution_animation()
         self.update_geometry()
 
@@ -349,14 +351,30 @@ class JumpOrLink(LinkBase):
         self._place_icons()
 
     def _place_icons(self):
-        path_length = self._guide_path.length()
-        icons_lenght = (len(self._icons) - 1) * self._icon_extent
-        length = (path_length - icons_lenght) / 2
-        for icon in self._icons:
-            percent = self._guide_path.percentAtLength(length)
-            center = self._guide_path.pointAtPercent(percent)
-            icon.setPos(center - 0.5 * QPointF(self._icon_extent, self._icon_extent))
-            length += self._icon_extent
+        center = self._guide_path.pointAtPercent(0.5)
+        icon_count = len(self._icons)
+        if not icon_count:
+            self._icon_bg.hide()
+            return
+        self._icon_bg.show()
+        bg_extent = 1.5 * self._icon_extent
+        rect = self._icon_bg.rect()
+        rect.setWidth(bg_extent)
+        rect.setHeight(bg_extent)
+        rect.moveCenter(center)
+        self._icon_bg.setRect(rect)
+        icon_extent = self._icon_extent / (icon_count ** (1 / 4))
+        offset = 0.5 * QPointF(icon_extent, icon_extent)
+        if icon_count == 1:
+            self._icons[0].setPos(center - offset)
+            return
+        points = list(_regular_poligon_points(icon_count, icon_extent * 0.7))
+        points_center = functools.reduce(lambda a, b: a + b, points) / icon_count
+        offset += points_center - center
+        scale = icon_extent / self._icon_extent
+        for icon, point in zip(self._icons, points):
+            icon.setScale(scale)
+            icon.setPos(point - offset)
 
     def mousePressEvent(self, e):
         """Ignores event if there's a connector button underneath,
@@ -382,12 +400,10 @@ class JumpOrLink(LinkBase):
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             self._outline.setPen(self.selected_pen)
-            for icon in self._icons:
-                icon.setPen(self.selected_pen)
+            self._icon_bg.setPen(self.selected_pen)
         else:
             self._outline.setPen(self.normal_pen)
-            for icon in self._icons:
-                icon.setPen(self.normal_pen)
+            self._icon_bg.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
     def shape(self):
@@ -463,18 +479,16 @@ class Link(JumpOrLink):
         while self._icons:
             self._icons.pop(0).wipe_out()
         if self._connection.use_datapackage:
-            self._icons.append(_SvgIcon(0, 0, self._icon_extent, self._icon_extent, self, self._DATAPACKAGE))
+            self._icons.append(_SvgIcon(self, self._icon_extent, self._DATAPACKAGE))
         if self._connection.may_have_filters():
-            self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._FILTERS))
+            self._icons.append(_TextIcon(self, self._icon_extent, self._FILTERS))
         if self._connection.use_memory_db:
-            self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._MEMORY))
+            self._icons.append(_TextIcon(self, self._icon_extent, self._MEMORY))
         if self._connection.purge_before_writing:
-            self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._PURGE))
+            self._icons.append(_TextIcon(self, self._icon_extent, self._PURGE))
         sibling_conns = self._toolbox.project().incoming_connections(self.connection.destination)
         if any(l.write_index > 1 for l in sibling_conns):
-            self._icons.append(
-                _TextIcon(0, 0, self._icon_extent, self._icon_extent, self, str(self._connection.write_index))
-            )
+            self._icons.append(_TextIcon(self, self._icon_extent, str(self._connection.write_index)))
         self._place_icons()
 
     @property
@@ -552,7 +566,7 @@ class JumpLink(JumpOrLink):
             text = self._NORMAL_TEXT
             color = None
             tooltip = ""
-        icon = _TextIcon(0, 0, self._icon_extent, self._icon_extent, self, text, color=color, tooltip=tooltip)
+        icon = _TextIcon(self, self._icon_extent, text, color=color, tooltip=tooltip)
         self._icons.append(icon)
         self._place_icons()
 
@@ -667,3 +681,16 @@ class JumpLinkDrawer(LinkDrawerBase):
     def add_link(self):
         self._toolbox.ui.graphicsView.add_jump(self.src_connector, self.dst_connector)
         self.sleep()
+
+
+def _regular_poligon_points(n, side):
+    internal_angle = 180 * (n - 2) / n
+    angle_inc = 180 - internal_angle
+    current_angle = internal_angle + 45
+    point = QPointF(0, 0)
+    for _ in range(n):
+        yield point
+        line = QLineF(point, point + QPointF(side, 0))
+        line.setAngle(current_angle)
+        point = line.p2()
+        current_angle += angle_inc
