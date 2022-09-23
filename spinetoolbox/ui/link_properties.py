@@ -33,17 +33,31 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(486, 288)
+        Form.resize(372, 355)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.treeView_filters = QTreeView(Form)
+        self.treeView_filters.setObjectName(u"treeView_filters")
+        self.treeView_filters.setAcceptDrops(True)
+        self.treeView_filters.setDragDropMode(QAbstractItemView.DragDrop)
+        self.treeView_filters.header().setVisible(True)
+
+        self.verticalLayout.addWidget(self.treeView_filters)
+
+        self.frame = QFrame(Form)
+        self.frame.setObjectName(u"frame")
+        self.frame.setFrameShape(QFrame.StyledPanel)
+        self.frame.setFrameShadow(QFrame.Raised)
+        self.verticalLayout_2 = QVBoxLayout(self.frame)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.label_write_index = QLabel(Form)
+        self.label_write_index = QLabel(self.frame)
         self.label_write_index.setObjectName(u"label_write_index")
 
         self.horizontalLayout.addWidget(self.label_write_index)
 
-        self.spinBox_write_index = PropertyQSpinBox(Form)
+        self.spinBox_write_index = PropertyQSpinBox(self.frame)
         self.spinBox_write_index.setObjectName(u"spinBox_write_index")
         self.spinBox_write_index.setMinimum(1)
         self.spinBox_write_index.setMaximum(999)
@@ -55,25 +69,39 @@ class Ui_Form(object):
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout)
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
 
-        self.treeView_filters = QTreeView(Form)
-        self.treeView_filters.setObjectName(u"treeView_filters")
-        self.treeView_filters.setAcceptDrops(True)
-        self.treeView_filters.setDragDropMode(QAbstractItemView.DragDrop)
-        self.treeView_filters.header().setVisible(True)
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.checkBox_purge_before_writing = QCheckBox(self.frame)
+        self.checkBox_purge_before_writing.setObjectName(u"checkBox_purge_before_writing")
 
-        self.verticalLayout.addWidget(self.treeView_filters)
+        self.horizontalLayout_2.addWidget(self.checkBox_purge_before_writing)
 
-        self.checkBox_use_memory_db = QCheckBox(Form)
+        self.purge_settings_button = QPushButton(self.frame)
+        self.purge_settings_button.setObjectName(u"purge_settings_button")
+
+        self.horizontalLayout_2.addWidget(self.purge_settings_button)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
+
+        self.checkBox_use_memory_db = QCheckBox(self.frame)
         self.checkBox_use_memory_db.setObjectName(u"checkBox_use_memory_db")
 
-        self.verticalLayout.addWidget(self.checkBox_use_memory_db)
+        self.verticalLayout_2.addWidget(self.checkBox_use_memory_db)
 
-        self.checkBox_use_datapackage = QCheckBox(Form)
+        self.checkBox_use_datapackage = QCheckBox(self.frame)
         self.checkBox_use_datapackage.setObjectName(u"checkBox_use_datapackage")
 
-        self.verticalLayout.addWidget(self.checkBox_use_datapackage)
+        self.verticalLayout_2.addWidget(self.checkBox_use_datapackage)
+
+
+        self.verticalLayout.addWidget(self.frame)
 
 
         self.retranslateUi(Form)
@@ -84,7 +112,12 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.label_write_index.setText(QCoreApplication.translate("Form", u"Write index (lower writes earlier):", None))
-        self.checkBox_use_memory_db.setText(QCoreApplication.translate("Form", u"Use memory DB for tool execution", None))
-        self.checkBox_use_datapackage.setText(QCoreApplication.translate("Form", u"Pack CSV files (datapackage.json)", None))
+        self.checkBox_purge_before_writing.setText(QCoreApplication.translate("Form", u"Purge before writing", None))
+#if QT_CONFIG(tooltip)
+        self.purge_settings_button.setToolTip(QCoreApplication.translate("Form", u"Choose what database items to purge.", None))
+#endif // QT_CONFIG(tooltip)
+        self.purge_settings_button.setText(QCoreApplication.translate("Form", u"Settings...", None))
+        self.checkBox_use_memory_db.setText(QCoreApplication.translate("Form", u"Use memory DB for Tool execution", None))
+        self.checkBox_use_datapackage.setText(QCoreApplication.translate("Form", u"Pack CSV files (as datapackage.json)", None))
     # retranslateUi
 
