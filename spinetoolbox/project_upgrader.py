@@ -444,7 +444,7 @@ class ProjectUpgrader:
                 }
         for conn in new["project"]["connections"]:
             from_name, _ = conn["from"]
-            purge_options = purge_options.get(from_name)
+            purge_options = purge_options_by_name.get(from_name)
             if purge_options is not None:
                 conn.setdefault("options", {}).update(purge_options)
         return new
