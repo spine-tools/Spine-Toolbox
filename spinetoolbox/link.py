@@ -349,12 +349,14 @@ class JumpOrLink(LinkBase):
         self._place_icons()
 
     def _place_icons(self):
-        delta = 0.6 / (len(self._icons) + 1)
-        percent = 0.2 + delta
+        path_length = self._guide_path.length()
+        icons_lenght = (len(self._icons) - 1) * self._icon_extent
+        length = (path_length - icons_lenght) / 2
         for icon in self._icons:
+            percent = self._guide_path.percentAtLength(length)
             center = self._guide_path.pointAtPercent(percent)
             icon.setPos(center - 0.5 * QPointF(self._icon_extent, self._icon_extent))
-            percent += delta
+            length += self._icon_extent
 
     def mousePressEvent(self, e):
         """Ignores event if there's a connector button underneath,
@@ -442,6 +444,7 @@ class Link(JumpOrLink):
     _COLOR = LINK_COLOR
     _MEMORY = "\uf538"
     _FILTERS = "\uf0b0"
+    _PURGE = "\uf0e7"
     _DATAPACKAGE = ":/icons/datapkg.svg"
 
     def __init__(self, toolbox, src_connector, dst_connector, connection):
@@ -465,6 +468,8 @@ class Link(JumpOrLink):
             self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._FILTERS))
         if self._connection.use_memory_db:
             self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._MEMORY))
+        if self._connection.purge_before_writing:
+            self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._PURGE))
         sibling_conns = self._toolbox.project().incoming_connections(self.connection.destination)
         if any(l.write_index > 1 for l in sibling_conns):
             self._icons.append(

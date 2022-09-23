@@ -36,10 +36,12 @@ from PySide2.QtWidgets import (
     QPushButton,
     QUndoStack,
     QSpinBox,
+    QDialog,
 )
 from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
 from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont, QIntValidator, QKeySequence
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
+from .select_database_items import SelectDatabaseItems
 from ..helpers import format_log_message
 
 
@@ -689,3 +691,32 @@ class HorizontalSpinBox(QToolBar):
 
 class PropertyQSpinBox(UndoRedoMixin, QSpinBox):
     """A spinbox where undo and redo key strokes apply to the project."""
+
+
+class PurgeSettingsDialog(QDialog):
+    """Purge settings dialog."""
+
+    def __init__(self, purge_settings, parent=None):
+        """
+        Args:
+            purge_settings (dict): purge settings
+            parent (QWidget, optional): parent widget
+        """
+        from ..ui.purge_settings_dialog import Ui_Dialog  # pylint: disable=import-outside-toplevel
+
+        super().__init__(parent)
+        self.setWindowTitle("Database purge settings")
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self._ui = Ui_Dialog()
+        self._ui.setupUi(self)
+        self._item_check_boxes_widget = SelectDatabaseItems(purge_settings, self)
+        self._ui.root_layout.insertWidget(0, self._item_check_boxes_widget)
+
+    def get_purge_settings(self):
+        """Returns current purge settings.
+
+        Returns:
+            dict: mapping from purgeable database item name to purge flag
+        """
+        return self._item_check_boxes_widget.checked_states()
