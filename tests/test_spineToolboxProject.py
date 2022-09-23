@@ -488,7 +488,7 @@ class TestSpineToolboxProject(unittest.TestCase):
                     "jumps": [],
                     "name": "UnitTest Project",
                     "specifications": {},
-                    "version": 7,
+                    "version": 8,
                 },
             },
         )
