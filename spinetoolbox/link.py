@@ -286,11 +286,11 @@ class _IconBase(QGraphicsEllipseItem):
         QToolTip.hideText()
 
 
-class _SvgIcon(QGraphicsEllipseItem):
+class _SvgIcon(_IconBase):
     """A svg icon to show over a Link."""
 
     def __init__(self, parent, extent, path, tooltip=None):
-        super().__init__(0, 0, extent, extent, parent)
+        super().__init__(0, 0, extent, extent, parent, tooltip=tooltip)
         self._svg_item = QGraphicsSvgItem(self)
         self._renderer = QSvgRenderer()
         self._renderer.load(path)
@@ -307,11 +307,11 @@ class _SvgIcon(QGraphicsEllipseItem):
         self.scene().removeItem(self)
 
 
-class _TextIcon(QGraphicsEllipseItem):
+class _TextIcon(_IconBase):
     """A font awesome icon to show over a Link."""
 
     def __init__(self, parent, extent, char, tooltip=None, color=None):
-        super().__init__(0, 0, extent, extent, parent)
+        super().__init__(0, 0, extent, extent, parent, tooltip=tooltip)
         if color is None:
             color = QColor("slateblue")
         self._text_item = QGraphicsTextItem(self)
@@ -337,7 +337,6 @@ class JumpOrLink(LinkBase):
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self._icon_extent = 3 * self.magic_number
         self._icons = []
-        self._icon_bg = _IconBase(0, 0, self._icon_extent, self._icon_extent, self)
         self._anim = self._make_execution_animation()
         self.update_geometry()
 
@@ -354,21 +353,13 @@ class JumpOrLink(LinkBase):
         center = self._guide_path.pointAtPercent(0.5)
         icon_count = len(self._icons)
         if not icon_count:
-            self._icon_bg.hide()
             return
-        self._icon_bg.show()
-        bg_extent = 1.5 * self._icon_extent
-        rect = self._icon_bg.rect()
-        rect.setWidth(bg_extent)
-        rect.setHeight(bg_extent)
-        rect.moveCenter(center)
-        self._icon_bg.setRect(rect)
-        icon_extent = self._icon_extent / (icon_count ** (1 / 4))
+        icon_extent = self._icon_extent / (icon_count ** (1 / 8))
         offset = 0.5 * QPointF(icon_extent, icon_extent)
         if icon_count == 1:
             self._icons[0].setPos(center - offset)
             return
-        points = list(_regular_poligon_points(icon_count, icon_extent * 0.7))
+        points = list(_regular_poligon_points(icon_count, icon_extent))
         points_center = functools.reduce(lambda a, b: a + b, points) / icon_count
         offset += points_center - center
         scale = icon_extent / self._icon_extent
@@ -400,10 +391,12 @@ class JumpOrLink(LinkBase):
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             self._outline.setPen(self.selected_pen)
-            self._icon_bg.setPen(self.selected_pen)
+            for icon in self._icons:
+                icon.setPen(self.selected_pen)
         else:
             self._outline.setPen(self.normal_pen)
-            self._icon_bg.setPen(self.normal_pen)
+            for icon in self._icons:
+                icon.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
     def shape(self):
