@@ -315,7 +315,7 @@ class _TextIcon(_IconBase):
         if color is None:
             color = QColor("slateblue")
         self._text_item = QGraphicsTextItem(self)
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont('Font Awesome 5 Free Solid', weight=QFont.Bold)
         self._text_item.setFont(font)
         self._text_item.setDefaultTextColor(color)
         self._text_item.setPlainText(char)
