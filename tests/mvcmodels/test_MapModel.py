@@ -486,6 +486,13 @@ class TestMapModel(unittest.TestCase):
         with self.assertRaises(ParameterValueFormatError):
             model.value()
 
+    def test_different_index_types_in_column_raises(self):
+        map_value = Map([99.0, 101.0], [-1.1, -2.2])
+        model = MapModel(map_value, self._parent)
+        model.setData(model.index(1, 0), "a")
+        with self.assertRaises(ParameterValueFormatError):
+            model.value()
+
     def test_value_shortening_rows(self):
         original = Map(["a", "b", "c"], [0.0, Map(["bb"], [Map(["bbb"], [Array([-1.0])])]), Array([-2.0])])
         model = MapModel(original, self._parent)
