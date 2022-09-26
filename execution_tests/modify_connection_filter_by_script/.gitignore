@@ -1,4 +1,4 @@
 out.csv
 .spinetoolbox/local/
 .spinetoolbox/items/export_values/
-*.bak
+*.bak*

@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 7,
+        "version": 8,
         "name": "scenario_filters",
         "description": "Test project to test scenario filtering in a Tool project item.",
         "specifications": {
