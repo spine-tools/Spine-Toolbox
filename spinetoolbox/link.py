@@ -679,7 +679,7 @@ class JumpLinkDrawer(LinkDrawerBase):
 def _regular_poligon_points(n, side, initial_angle=0):
     internal_angle = 180 * (n - 2) / n
     angle_inc = 180 - internal_angle
-    current_angle = (initial_angle + internal_angle) / 2
+    current_angle = initial_angle
     point = QPointF(0, 0)
     for _ in range(n):
         yield point
