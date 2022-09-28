@@ -262,7 +262,10 @@ class SpineEngineWorker(QObject):
             )
 
     def _handle_persistent_execution_msg(self, msg):
-        item = self._project_items[msg["item_name"]]
+        item = self._project_items.get(msg["item_name"])
+        if item is None:
+            # TODO: A jump with tool specification is starting a persistent process
+            return
         msg_type = msg["type"]
         if msg_type == "persistent_started":
             self._logger.persistent_console_requested.emit(item, msg["filter_id"], msg["key"], msg["language"])

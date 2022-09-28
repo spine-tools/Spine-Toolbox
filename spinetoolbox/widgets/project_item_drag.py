@@ -223,6 +223,7 @@ class ProjectItemSpecArray(QToolBar):
         self.addWidget(self._button_visible)
         self._button_new = ShadeButton()
         self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=self._icon.color())))
+        self._button_new.setIconSize(self.iconSize())
         self._button_new.setText("New...")
         self._button_new.setToolTip(f"<p>Create new <b>{item_type}</b> specification...</p>")
         font = QFont()

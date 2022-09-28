@@ -27,8 +27,8 @@ import networkx as nx
 from spine_engine.exception import EngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
 from .project_item.logging_connection import LoggingConnection, LoggingJump
-from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
-from spine_engine.utils.helpers import shorten
+from spine_engine.spine_engine import validate_single_jump
+from spine_engine.utils.helpers import ExecutionDirection, shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from .metaobject import MetaObject
 from .helpers import (
@@ -988,21 +988,26 @@ class SpineToolboxProject(MetaObject):
         Returns:
             SpineEngineWorker
         """
-        item_dicts = {}
-        specification_dicts = {}
         items = {name: item for name, item in self._project_items.items() if name in dag.nodes}
-        for name, project_item in items.items():
-            item_dicts[name] = project_item.item_dict()
-            spec = project_item.specification()
-            if spec is not None:
-                spec_dict = spec.to_dict().copy()
-                spec_dict["definition_file_path"] = spec.definition_file_path
-                specification_dicts.setdefault(project_item.item_type(), list()).append(spec_dict)
+        item_dicts = {name: project_item.item_dict() for name, project_item in items.items()}
         connections = {c.name: c for c in self._connections if {c.source, c.destination}.intersection(items)}
         connection_dicts = [c.to_dict() for c in connections.values()]
         jumps = {c.name: c for c in self._jumps if execution_permits.get(c.source, False)}
         jump_dicts = [c.to_dict() for c in jumps.values()]
         connections.update(jumps)
+        specs_by_type = {}
+        for project_item in items.values():
+            spec = project_item.specification()
+            if spec is not None:
+                specs_by_type.setdefault(project_item.item_type(), list()).append(spec)
+        for jump in jumps.values():
+            if jump.condition["type"] == "tool-specification":
+                spec = self.get_specification(jump.condition["specification"])
+                specs_by_type.setdefault("Tool", list()).append(spec)
+        specification_dicts = {
+            type_: [{**spec.to_dict(), "definition_file_path": spec.definition_file_path} for spec in specs]
+            for type_, specs in specs_by_type.items()
+        }
         data = {
             "items": item_dicts,
             "specifications": specification_dicts,

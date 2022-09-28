@@ -147,7 +147,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         return self.link
 
     @staticmethod
-    def item_type(self):
+    def item_type():
         return "connection"
 
     def may_have_filters(self):
@@ -276,5 +276,5 @@ class LoggingJump(LogMixin, Jump):
         return self.jump_link
 
     @staticmethod
-    def item_type(self):
+    def item_type():
         return "jump"
