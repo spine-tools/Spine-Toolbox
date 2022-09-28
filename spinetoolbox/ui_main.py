@@ -1420,9 +1420,12 @@ class ToolboxUI(QMainWindow):
 
     def _override_console(self):
         """Sets the jupyter console of the active project item in Jupyter Console and updates title."""
-        if self.active_project_item is None:
+        if self.active_project_item is not None:
+            console = self._item_consoles.get(self.active_project_item)
+        elif self.active_link_item is not None:
+            console = self._item_consoles.get(self.active_link_item)
+        else:
             return
-        console = self._item_consoles.get(self.active_project_item)
         self._do_override_console(console)
 
     def _do_override_console(self, console):

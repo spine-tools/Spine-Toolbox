@@ -34,7 +34,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1006, 668)
+        MainWindow.resize(1006, 671)
         MainWindow.setDockNestingEnabled(True)
         self.actionQuit = QAction(MainWindow)
         self.actionQuit.setObjectName(u"actionQuit")
@@ -190,7 +190,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1006, 21))
+        self.menubar.setGeometry(QRect(0, 0, 1006, 22))
         self.menubar.setNativeMenuBar(False)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
@@ -639,11 +639,11 @@ class Ui_MainWindow(object):
         self.dockWidget_eventlog.setWindowTitle(QCoreApplication.translate("MainWindow", u"Event Log", None))
         self.toolButton_executions.setText(QCoreApplication.translate("MainWindow", u"...", None))
         self.dockWidget_item.setWindowTitle(QCoreApplication.translate("MainWindow", u"Properties", None))
-        self.label_no_selection.setText(QCoreApplication.translate("MainWindow", u"Select a project item to view its properties", None))
+        self.label_no_selection.setText(QCoreApplication.translate("MainWindow", u"Select an item to view its properties", None))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_no_selection), QCoreApplication.translate("MainWindow", u"No Selection", None))
         self.dockWidget_project.setWindowTitle(QCoreApplication.translate("MainWindow", u"Project", None))
         self.dockWidget_console.setWindowTitle(QCoreApplication.translate("MainWindow", u"Console", None))
-        self.label_no_console.setText(QCoreApplication.translate("MainWindow", u"Select and execute a Tool to see its console", None))
+        self.label_no_console.setText(QCoreApplication.translate("MainWindow", u"Select an executing item to see its console", None))
         self.dockWidget_design_view.setWindowTitle(QCoreApplication.translate("MainWindow", u"Design View", None))
     # retranslateUi
 
