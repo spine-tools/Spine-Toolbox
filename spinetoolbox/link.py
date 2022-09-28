@@ -359,7 +359,7 @@ class JumpOrLink(LinkBase):
         if icon_count == 1:
             self._icons[0].setPos(center - offset)
             return
-        points = list(_regular_poligon_points(icon_count, icon_extent))
+        points = list(_regular_poligon_points(icon_count, icon_extent, self._guide_path.angleAtPercent(0.5)))
         points_center = functools.reduce(lambda a, b: a + b, points) / icon_count
         offset += points_center - center
         scale = icon_extent / self._icon_extent
@@ -676,10 +676,10 @@ class JumpLinkDrawer(LinkDrawerBase):
         self.sleep()
 
 
-def _regular_poligon_points(n, side):
+def _regular_poligon_points(n, side, initial_angle=0):
     internal_angle = 180 * (n - 2) / n
     angle_inc = 180 - internal_angle
-    current_angle = internal_angle + 45
+    current_angle = (initial_angle + internal_angle) / 2
     point = QPointF(0, 0)
     for _ in range(n):
         yield point

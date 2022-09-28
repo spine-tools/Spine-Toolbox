@@ -1422,7 +1422,7 @@ class ToolboxUI(QMainWindow):
         """Sets the jupyter console of the active project item in Jupyter Console and updates title."""
         if self.active_project_item is not None:
             console = self._item_consoles.get(self.active_project_item)
-        elif self.active_link_item is not None:
+        elif isinstance(self.active_link_item, LoggingJump):
             console = self._item_consoles.get(self.active_link_item)
         else:
             return
