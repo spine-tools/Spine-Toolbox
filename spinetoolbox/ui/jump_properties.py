@@ -150,7 +150,7 @@ class Ui_Form(object):
         self.radioButton_tool_spec.setText(QCoreApplication.translate("Form", u"Tool specification", None))
         self.toolButton_edit_tool_spec.setText(QCoreApplication.translate("Form", u"...", None))
         self.radioButton_py_script.setText(QCoreApplication.translate("Form", u"Python script", None))
-        self.pushButton_save_script.setText(QCoreApplication.translate("Form", u"Save", None))
+        self.pushButton_save_script.setText(QCoreApplication.translate("Form", u"Save script", None))
         self.toolButton_add_arg.setText(QCoreApplication.translate("Form", u"...", None))
         self.toolButton_remove_arg.setText(QCoreApplication.translate("Form", u"...", None))
     # retranslateUi

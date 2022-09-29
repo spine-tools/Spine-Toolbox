@@ -92,7 +92,7 @@
         <item>
          <widget class="QPushButton" name="pushButton_save_script">
           <property name="text">
-           <string>Save</string>
+           <string>Save script</string>
           </property>
          </widget>
         </item>
