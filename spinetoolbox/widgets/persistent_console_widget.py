@@ -298,8 +298,11 @@ class PersistentConsoleWidget(QTextEdit):
     def _get_prefix(self):
         if self._prefix is None:
             cursor = self.textCursor()
-            cursor.setPosition(self._input_start_pos, QTextCursor.KeepAnchor)
-            self._prefix = cursor.selectedText()
+            if cursor.position() > self._input_start_pos:
+                cursor.setPosition(self._input_start_pos, QTextCursor.KeepAnchor)
+                self._prefix = cursor.selectedText()
+            else:
+                self._prefix = ""
         return self._prefix
 
     def _highlight_current_input(self):
