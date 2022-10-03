@@ -56,6 +56,8 @@ class CopyPasteTableView(QTableView):
 
     def init_copy_and_paste_actions(self):
         """Initializes copy and paste actions and connects relevant signals."""
+        if self._copy_action is not None or self._paste_action is not None:
+            raise RuntimeError("Copy and paste actions have already been set.")
         copy_icon = QIcon(":/icons/menu_icons/copy.svg")
         self._copy_action = QAction(copy_icon, "Copy", self)
         self._copy_action.setShortcut(QKeySequence.Copy)
@@ -67,17 +69,20 @@ class CopyPasteTableView(QTableView):
         self.addAction(self._paste_action)
         self._paste_action.triggered.connect(self.paste)
 
-    def set_copy_and_paste_actions(self, copy_action, paste_action):
-        """Sets basic actions and connects relevant signals.
+    def set_external_copy_and_paste_actions(self, copy_action, paste_action):
+        """Sets the view to use external copy and paste actions.
+
+        Note that this doesn't connect the actions' trigger signals;
+        the owner of the actions is responsible for handling them.
 
         Args:
             copy_action (QAction): copy action
             paste_action (QAction): paste action
         """
+        if self._copy_action is not None or self._paste_action is not None:
+            raise RuntimeError("Copy and paste actions have already been set.")
         self._copy_action = copy_action
-        self._copy_action.triggered.connect(self.copy)
         self._paste_action = paste_action
-        self._paste_action.triggered.connect(self.paste)
 
     @property
     def copy_action(self):

@@ -87,7 +87,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
              spine_db_editor (SpineDBEditor)
         """
         self._spine_db_editor = spine_db_editor
-        self.set_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
+        self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self.populate_context_menu()
         self.create_delegates()
 
@@ -801,7 +801,7 @@ class PivotTableView(CopyPasteTableView):
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
-        self.set_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
+        self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self._spine_db_editor.pivot_table_proxy.sourceModelChanged.connect(self._change_context)
 
     @Slot()
@@ -969,7 +969,7 @@ class MetadataTableViewBase(CopyPasteTableView):
         Args:
              db_editor (SpineDBEditor): database editor instance
         """
-        self.set_copy_and_paste_actions(db_editor.ui.actionCopy, db_editor.ui.actionPaste)
+        self.set_external_copy_and_paste_actions(db_editor.ui.actionCopy, db_editor.ui.actionPaste)
         self._populate_context_menu()
         self._menu.aboutToShow.connect(db_editor.refresh_copy_paste_actions)
         self._enable_delegates(db_editor)
