@@ -17,10 +17,10 @@ Functions to make and handle QToolBars.
 """
 
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
+from PySide2.QtWidgets import QToolBar, QLabel
 from PySide2.QtGui import QIcon, QPainter
 from ..helpers import make_icon_toolbar_ss, ColoredIcon, CharIconEngine
-from .project_item_drag import ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
+from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
 
 
 class ToolBar(QToolBar):
@@ -161,8 +161,9 @@ class MainToolBar(ToolBar):
             self._add_project_item_button(item_type, factory, colored)
         self._make_tool_button(
             QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)),
-            "Add specification from file...",
+            "Import spec...",
             self._toolbox.import_specification,
+            tip="Import specification from file...",
         )
 
     def _add_project_item_button(self, item_type, factory, colored):
@@ -173,6 +174,8 @@ class MainToolBar(ToolBar):
         icon = ColoredIcon(icon_file_type, icon_color, self.iconSize(), colored=colored)
         if not self._toolbox.supports_specification(item_type):
             button = ProjectItemButton(self._toolbox, item_type, icon)
+            button.set_orientation(self.orientation())
+            self.orientationChanged.connect(button.set_orientation)
             self.addWidget(button)
             self._buttons.append(button)
         else:
@@ -188,19 +191,21 @@ class MainToolBar(ToolBar):
             w.set_colored_icons(colored)
         self.update()
 
-    def _make_tool_button(self, icon, tip, slot):
+    def _make_tool_button(self, icon, text, slot, tip=None):
         """Makes a new tool button and adds it to the toolbar.
 
         Args:
             icon (QIcon): button's icon
-            tip (str): button's tooltip
+            text (str): button's text
             slot (Callable): slot where to connect button's clicked signal
+            tip (str): button's tooltip
 
         Returns:
             QToolButton: created button
         """
-        button = QToolButton()
+        button = NiceButton()
         button.setIcon(icon)
+        button.setText(text)
         button.setToolTip(f"<p>{tip}</p>")
         button.clicked.connect(slot)
         self._add_tool_button(button)
@@ -213,19 +218,22 @@ class MainToolBar(ToolBar):
             button (QToolButton): button to add
         """
         button.setStyleSheet("QToolButton{padding: 2px}")
+        button.set_orientation(self.orientation())
+        self.orientationChanged.connect(button.set_orientation)
         self.addWidget(button)
 
     def add_execute_buttons(self):
         """Adds project execution buttons to the toolbar."""
         self.addSeparator()
         self.addWidget(PaddingLabel("Execute"))
-        self.execute_project_button = QToolButton()
+        self.execute_project_button = NiceButton()
+        self.execute_project_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self.execute_project_button.setDefaultAction(self._execute_project_action)
         self._add_tool_button(self.execute_project_button)
-        self.execute_selection_button = QToolButton()
+        self.execute_selection_button = NiceButton()
         self.execute_selection_button.setDefaultAction(self._execute_selection_action)
         self._add_tool_button(self.execute_selection_button)
-        self.stop_execution_button = QToolButton()
+        self.stop_execution_button = NiceButton()
         self.stop_execution_button.setDefaultAction(self._stop_execution_action)
         self._add_tool_button(self.stop_execution_button)
 

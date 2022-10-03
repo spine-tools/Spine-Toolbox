@@ -16,7 +16,6 @@ Classes for custom QListView.
 :date:   14.11.2018
 """
 
-import textwrap
 from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QMimeData
 from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine
 from PySide2.QtWidgets import QToolButton, QApplication, QToolBar, QWidgetAction
@@ -61,7 +60,22 @@ class ProjectItemDragMixin:
         self.mime_data = None
 
 
-class ProjectItemButtonBase(ProjectItemDragMixin, QToolButton):
+class NiceButton(QToolButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        font = self.font()
+        font.setPointSize(9)
+        self.setFont(font)
+        self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+
+    def set_orientation(self, orientation):
+        if orientation == Qt.Horizontal:
+            self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        else:
+            self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+
+
+class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
     def __init__(self, toolbox, item_type, icon, parent=None):
         super().__init__(parent=parent)
         self._toolbox = toolbox
@@ -99,6 +113,7 @@ class ProjectItemButton(ProjectItemButtonBase):
     def __init__(self, toolbox, item_type, icon, parent=None):
         super().__init__(toolbox, item_type, icon, parent=parent)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
+        self.setText(item_type)
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, ""])
@@ -113,18 +128,7 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
         self._spec_name = None
         self._index = None
         self.spec_name = spec_name
-        font = self.font()
-        font.setPointSize(9)
-        self.setFont(font)
         self.setText(self.spec_name)
-        self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-
-    def set_orientation(self, orientation):
-        if orientation == Qt.Horizontal:
-            new_text = self.spec_name
-        else:
-            new_text = textwrap.fill(self.spec_name, width=8)
-        self.setText(new_text)
 
     @property
     def spec_name(self):
@@ -163,7 +167,7 @@ class ShadeProjectItemSpecButton(ShadeMixin, ProjectItemSpecButton):
         return ShadeProjectItemSpecButton(self._toolbox, self.item_type, self.icon(), self.spec_name)
 
 
-class ShadeButton(ShadeMixin, QToolButton):
+class ShadeButton(ShadeMixin, NiceButton):
     pass
 
 
@@ -379,6 +383,8 @@ class ProjectItemSpecArray(QToolBar):
         spacing = 2  # additional space till next toolbar icon when collapsed
         if orientation is None:
             orientation = self.orientation()
+        self._button_base_item.set_orientation(orientation)
+        self._button_new.set_orientation(orientation)
         widgets = [self.widgetForAction(a) for a in self._actions.values()]
         for w in widgets:
             w.set_orientation(orientation)
@@ -388,11 +394,11 @@ class ProjectItemSpecArray(QToolBar):
         if orientation == Qt.Horizontal:
             icon = down if not self._visible else right
             width = extent
-            min_width = self._button_visible.frameGeometry().right() + self._margin + spacing
+            min_width = self._button_base_item.sizeHint().width() + extent + self._margin + spacing
             min_visible_width = min_width + self._button_new.sizeHint().width() - spacing
             if widgets:
                 min_visible_width += extent
-            min_height = self._button_new.sizeHint().height()
+            min_height = self._button_base_item.sizeHint().height()
             min_size = (min_width, min_height)
             min_visible_size = (min_visible_width, min_height)
             height = max((w.sizeHint().height() for w in widgets), default=min_height)
@@ -403,8 +409,8 @@ class ProjectItemSpecArray(QToolBar):
         else:
             icon = right if not self._visible else down
             height = extent
-            min_width = self._button_new.sizeHint().height()
-            min_height = self._button_visible.frameGeometry().bottom() + self._margin + spacing
+            min_width = self._button_base_item.sizeHint().width()
+            min_height = self._button_base_item.sizeHint().height() + extent + self._margin + spacing
             min_visible_height = min_height + self._button_new.sizeHint().height() - spacing
             if widgets:
                 min_visible_height += extent

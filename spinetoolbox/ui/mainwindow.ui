@@ -924,7 +924,7 @@
      <normaloff>:/icons/menu_icons/play-circle-solid.svg</normaloff>:/icons/menu_icons/play-circle-solid.svg</iconset>
    </property>
    <property name="text">
-    <string>Execute project</string>
+    <string>Project</string>
    </property>
    <property name="shortcut">
     <string>F5</string>
@@ -936,7 +936,7 @@
      <normaloff>:/icons/menu_icons/play-circle-regular.svg</normaloff>:/icons/menu_icons/play-circle-regular.svg</iconset>
    </property>
    <property name="text">
-    <string>Execute selection</string>
+    <string>Selection</string>
    </property>
    <property name="shortcut">
     <string>F6</string>
@@ -948,7 +948,7 @@
      <normaloff>:/icons/menu_icons/stop-circle-regular.svg</normaloff>:/icons/menu_icons/stop-circle-regular.svg</iconset>
    </property>
    <property name="text">
-    <string>Stop execution</string>
+    <string>Stop</string>
    </property>
    <property name="shortcut">
     <string>F7</string>
