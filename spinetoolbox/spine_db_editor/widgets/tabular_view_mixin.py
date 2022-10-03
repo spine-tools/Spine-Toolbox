@@ -190,6 +190,7 @@ class TabularViewMixin:
         self.current_class_id = class_id
         self.current_class_type = current_class_item.item_type
         self.current_class_name = current_class_item.display_data
+        self.clear_pivot_table()
 
     @staticmethod
     def _get_current_class_item(current_index):
@@ -499,7 +500,6 @@ class TabularViewMixin:
     @busy_effect
     def do_reload_pivot_table(self):
         """Reloads pivot table."""
-        self.clear_pivot_table()
         if not self._can_build_pivot_table():
             return
         self.pivot_table_model = {
