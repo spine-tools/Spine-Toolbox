@@ -306,7 +306,6 @@ class SpineDBEditorBase(QMainWindow):
         menu.addSeparator()
         menu.addAction(self.ui.actionUser_guide)
         menu.addAction(self.ui.actionSettings)
-        menu.aboutToShow.connect(self.refresh_copy_paste_actions)
         menu_action = self.url_toolbar.add_main_menu(menu)
         actions = [
             self.ui.actionNew_db_file,

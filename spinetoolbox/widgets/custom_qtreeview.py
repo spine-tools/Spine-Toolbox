@@ -29,7 +29,21 @@ class CopyTreeView(QTreeView):
         super().__init__(parent=parent)
 
     def can_copy(self):
+        """Returns True if tree view has a selection to copy from.
+
+        Returns:
+            bool: True if there is something to copy
+        """
         return not self.selectionModel().selection().isEmpty()
+
+    @staticmethod
+    def can_paste():
+        """Returns False always as pasting is disabled into this view.
+
+        Returns:
+            bool: whether it is possible to paste to the view
+        """
+        return False
 
     def copy(self):
         """Copy current selection to clipboard in excel format."""

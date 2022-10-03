@@ -106,7 +106,6 @@ class EntityTreeView(CopyTreeView):
     def connect_signals(self):
         """Connects signals."""
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
-        self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
@@ -140,6 +139,7 @@ class EntityTreeView(CopyTreeView):
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
+        self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
         if not self.selectionModel().hasSelection():
             return
@@ -388,7 +388,7 @@ class ItemTreeView(CopyTreeView):
 
     def connect_signals(self):
         """Connects signals."""
-        self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
+        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def remove_selected(self):
         """Removes items selected in the view."""
@@ -420,6 +420,11 @@ class ItemTreeView(CopyTreeView):
         item = index.model().item_from_index(index)
         self.update_actions_availability(item)
         self._menu.exec_(event.globalPos())
+
+    @Slot(QModelIndex, QModelIndex)
+    def _refresh_copy_paste_actions(self, _, __):
+        """Refreshes copy and paste actions enabled state."""
+        self._spine_db_editor.refresh_copy_paste_actions()
 
 
 class ToolFeatureTreeView(ItemTreeView):
