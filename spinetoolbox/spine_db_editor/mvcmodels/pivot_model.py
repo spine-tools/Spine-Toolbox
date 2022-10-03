@@ -77,6 +77,8 @@ class PivotModel:
             tuple: added row count and added column count
         """
         addable_data = {k: v for k, v in data.items() if v is not None or k not in self._data}
+        if not addable_data:
+            return 0, 0
         self._data.update(addable_data)
         if not any(self.frozen_value):
             first = next(iter(self._data), None)
