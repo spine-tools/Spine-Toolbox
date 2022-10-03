@@ -108,7 +108,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.selected_items = selected_objs + selected_rels
         self.graph_selection_changed.emit({"object": selected_objs, "relationship": selected_rels})
         default_data = selected_items[0].default_parameter_data() if len(selected_items) == 1 else {}
-        self._spine_db_editor.set_default_parameter_data(default_data)
+        default_db_map = selected_items[0].first_db_map if len(selected_items) == 1 else None
+        self._spine_db_editor.set_default_parameter_data(default_data, default_db_map)
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
