@@ -212,3 +212,13 @@ class EngineClient:
                 break
             yield json.loads(rcv[0].decode("utf-8"))
         pull_socket.close()
+
+    def send_get_persistent_completions(self, persistent_key, text):
+        data = persistent_key, "get_completions", text
+        json_d = json.dumps(data)
+        req = ServerMessage("execute_in_persistent", "1", json_d)
+        self._req_socket.send_multipart([req.to_bytes()])
+        response = self._req_socket.recv()
+        response_msg = ServerMessage.parse(response)
+        print(f"response to is_complete:{response_msg.getData()}")
+        return response_msg.getData()[1]

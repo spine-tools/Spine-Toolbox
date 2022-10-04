@@ -327,7 +327,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def get_persistent_completions(self, persistent_key, text):
         """See base class."""
-        raise NotImplementedError()
+        return self.engine_client.send_get_persistent_completions(persistent_key, text)
 
     def get_persistent_history_item(self, persistent_key, index):
         """Returns an item from persistent history.

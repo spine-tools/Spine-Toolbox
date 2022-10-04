@@ -420,8 +420,9 @@ class PersistentConsoleWidget(QTextEdit):
         Args:
             text (str)
         """
-        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
-        engine_mngr = make_engine_manager(exec_remotely)
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         prefix = self._get_prefix()
         completions = engine_mngr.get_persistent_completions(self._key, prefix)
         self._completions_available.emit(text, prefix, completions)
