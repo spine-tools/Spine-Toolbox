@@ -142,7 +142,7 @@ class MainToolBar(ToolBar):
         self.add_execute_buttons()
 
     def add_project_item_buttons(self):
-        self.addWidget(PaddingLabel("Main"))
+        self.addWidget(PaddingLabel("Items"))
         colored = self._toolbox.qsettings().value("appSettings/colorToolbarIcons", defaultValue="false") == "true"
         icon_ordering = self._toolbox.qsettings().value("appSettings/toolbarIconOrdering", defaultValue="")
         ordered_item_types = icon_ordering.split(self._SEPARATOR)
@@ -161,9 +161,9 @@ class MainToolBar(ToolBar):
             self._add_project_item_button(item_type, factory, colored)
         self._make_tool_button(
             QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)),
-            "Import spec...",
+            "From file",
             self._toolbox.import_specification,
-            tip="Import specification from file...",
+            tip="Add item specification from file...",
         )
 
     def _add_project_item_button(self, item_type, factory, colored):
