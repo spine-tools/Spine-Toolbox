@@ -161,7 +161,7 @@ class MainToolBar(ToolBar):
             self._add_project_item_button(item_type, factory, colored)
         self._make_tool_button(
             QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)),
-            "From file",
+            "From file...",
             self._toolbox.import_specification,
             tip="Add item specification from file...",
         )
