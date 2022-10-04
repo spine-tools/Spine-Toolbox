@@ -394,8 +394,9 @@ class PersistentConsoleWidget(QTextEdit):
 
     def _move_history(self, text, backwards):
         """Moves history."""
-        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
-        engine_mngr = make_engine_manager(exec_remotely)
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         prefix = self._get_prefix()
         history_item = engine_mngr.get_persistent_history_item(self._key, text, prefix, backwards)
         self._history_item_available.emit(history_item, prefix)
@@ -445,8 +446,9 @@ class PersistentConsoleWidget(QTextEdit):
     def _restart_persistent(self, _=False):
         """Restarts underlying persistent process."""
         self.clear()
-        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
-        engine_mngr = make_engine_manager(exec_remotely)
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         self._text_buffer.clear()
         for msg in engine_mngr.restart_persistent(self._key):
             msg_type = msg["type"]
@@ -459,8 +461,9 @@ class PersistentConsoleWidget(QTextEdit):
     @Slot(bool)
     def _interrupt_persistent(self, _=False):
         """Interrupts underlying persistent process."""
-        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
-        engine_mngr = make_engine_manager(exec_remotely)
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         engine_mngr.interrupt_persistent(self._key)
 
     def _extend_menu(self, menu):

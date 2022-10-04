@@ -319,27 +319,26 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def restart_persistent(self, persistent_key):
         """See base class."""
-        raise NotImplementedError()
+        return self.engine_client.send_restart_persistent(persistent_key)
 
     def interrupt_persistent(self, persistent_key):
         """See base class."""
-        raise NotImplementedError()
+        return self.engine_client.send_interrupt_persistent(persistent_key)
 
     def get_persistent_completions(self, persistent_key, text):
         """See base class."""
         return self.engine_client.send_get_persistent_completions(persistent_key, text)
 
-    def get_persistent_history_item(self, persistent_key, index):
+    def get_persistent_history_item(self, persistent_key, text, prefix, backwards):
         """Returns an item from persistent history.
 
         Args:
             persistent_key (tuple): persistent identifier
-            index (int): index of the history item, most recent first
 
         Returns:
             str: history item or empty string if none
         """
-        raise NotImplementedError()
+        return self.engine_client.send_get_persistent_history_item(persistent_key, text, prefix, backwards)
 
 
 def make_engine_manager(remote_execution_enabled=False, job_id=""):

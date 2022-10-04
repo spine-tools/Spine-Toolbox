@@ -185,26 +185,14 @@ class EngineClient:
     def send_is_complete(self, persistent_key, cmd):
         """Sends a request to process is_complete(cmd) on server and returns the response."""
         data = persistent_key, "is_complete", cmd
-        json_d = json.dumps(data)
-        req = ServerMessage("execute_in_persistent", "1", json_d)
-        self._req_socket.send_multipart([req.to_bytes()])
-        response = self._req_socket.recv()
-        response_msg = ServerMessage.parse(response)
-        print(f"response to is_complete:{response_msg.getData()}")
-        return response_msg.getData()[1]
+        return self.send_request_to_persistent(data)
 
     def send_issue_persistent_command(self, persistent_key, cmd):
         """Sends a request to process given command in persistent manager identified by given key.
         Yields the response string(s) as they arrive from server."""
         pull_socket = self._context.socket(zmq.PULL)
         data = persistent_key, "issue_persistent_command", cmd
-        json_d = json.dumps(data)
-        req = ServerMessage("execute_in_persistent", "1", json_d)
-        self._req_socket.send_multipart([req.to_bytes()])
-        response = self._req_socket.recv()
-        response_msg = ServerMessage.parse(response)
-        pull_port = response_msg.getData()[1]
-        print(f"response to issue_persistent_command:{response_msg.getData()}")
+        pull_port = self.send_request_to_persistent(data)
         pull_socket.connect(self.protocol + "://" + self.host + ":" + pull_port)
         while True:
             rcv = pull_socket.recv_multipart()
@@ -215,10 +203,26 @@ class EngineClient:
 
     def send_get_persistent_completions(self, persistent_key, text):
         data = persistent_key, "get_completions", text
+        return self.send_request_to_persistent(data)
+
+    def send_get_persistent_history_item(self, persistent_key, text, prefix, backwards):
+        data = persistent_key, "get_history_item", [text, prefix, backwards]
+        return self.send_request_to_persistent(data)
+
+    def send_restart_persistent(self, persistent_key):
+        data = persistent_key, "restart_persistent", ""
+        return self.send_request_to_persistent(data)
+
+    def send_interrupt_persistent(self, persistent_key):
+        data = persistent_key, "interrupt_persistent", ""
+        return self.send_request_to_persistent(data)
+
+    def send_request_to_persistent(self, data):
         json_d = json.dumps(data)
         req = ServerMessage("execute_in_persistent", "1", json_d)
         self._req_socket.send_multipart([req.to_bytes()])
         response = self._req_socket.recv()
         response_msg = ServerMessage.parse(response)
-        print(f"response to is_complete:{response_msg.getData()}")
+        print(f"response to {data[1]}:{response_msg.getData()}")
         return response_msg.getData()[1]
+
