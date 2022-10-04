@@ -16,6 +16,7 @@ Classes for custom QListView.
 :date:   14.11.2018
 """
 
+from textwrap import fill
 from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QMimeData
 from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine
 from PySide2.QtWidgets import QToolButton, QApplication, QToolBar, QWidgetAction
@@ -67,6 +68,9 @@ class NiceButton(QToolButton):
         font.setPointSize(9)
         self.setFont(font)
         self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+
+    def setText(self, text):
+        super().setText(fill(text, width=12, break_long_words=False))
 
     def set_orientation(self, orientation):
         if orientation == Qt.Horizontal:
@@ -230,10 +234,6 @@ class ProjectItemSpecArray(QToolBar):
         self._button_new.setIconSize(self.iconSize())
         self._button_new.setText("New...")
         self._button_new.setToolTip(f"<p>Create new <b>{item_type}</b> specification...</p>")
-        font = QFont()
-        font.setPointSize(9)
-        self._button_new.setFont(font)
-        self._button_new.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self._action_new = self.addWidget(self._button_new)
         self._action_new.setVisible(self._visible)
         self._actions = {}
@@ -281,7 +281,8 @@ class ProjectItemSpecArray(QToolBar):
             list(QAction)
             int or NoneType
         """
-        actions = [*self._actions.values()]
+        actions_iter = (self._actions.get(spec.name) for spec in self._model.specifications())
+        actions = [act for act in actions_iter if act is not None]
         if self.orientation() == Qt.Horizontal:
             get_point = lambda ref_geom: (ref_geom.right() + 1, ref_geom.top())
         else:
