@@ -22,6 +22,7 @@ import locale
 import logging
 import json
 import pathlib
+import tempfile
 from zipfile import ZipFile
 import numpy as np
 from PySide2.QtCore import (
@@ -127,7 +128,7 @@ class ToolboxUI(QMainWindow):
     information_box = Signal(str, str)
     error_box = Signal(str, str)
     # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
-    jupyter_console_requested = Signal(object, str, str, str)
+    jupyter_console_requested = Signal(object, str, str, str, dict)
     persistent_console_requested = Signal(object, str, tuple, str)
 
     def __init__(self):
@@ -1607,16 +1608,7 @@ class ToolboxUI(QMainWindow):
         if not project_dir:
             return
         self.msg.emit(f"Retrieving project {job_id} from server and extracting to: {project_dir}")
-        # Check remote execution settings
-        host = self._qsettings.value("engineSettings/remoteHost", "")  # Host name
-        port = self._qsettings.value("engineSettings/remotePort", "")  # Host port
-        sec_model = self._qsettings.value("engineSettings/remoteSecurityModel", "")  # ZQM security model
-        security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
-        sec_folder = (
-            ""
-            if security == ClientSecurityModel.NONE
-            else self._qsettings.value("engineSettings/remoteSecurityFolder", "")
-        )
+        host, port, sec_model, sec_folder = self.engine_server_settings()
         if not host:
             self.msg_error.emit("Spine Engine Server <b>host address</b> missing. "
                                 "Please enter host in <b>File->Settings->Engine</b>.")
@@ -1627,7 +1619,7 @@ class ToolboxUI(QMainWindow):
             return
         self.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
         try:
-            engine_client = EngineClient("tcp", host, port, sec_model, sec_folder, ping=True)
+            engine_client = EngineClient(host, port, sec_model, sec_folder)
         except RemoteEngineInitFailed as e:
             self.msg_error.emit(f"Server is not responding. {e}. Check settings in <b>File->Settings->Engine</b>.")
             return
@@ -1659,6 +1651,19 @@ class ToolboxUI(QMainWindow):
             os.remove(zip_path)  # Remove downloaded project_package.zip
         except OSError:
             self.msg_error.emit(f"Removing file {zip_path} failed")
+
+    def engine_server_settings(self):
+        """Returns the user given Spine Engine Server settings in a tuple."""
+        host = self._qsettings.value("engineSettings/remoteHost", defaultValue="")  # Host name
+        port = self._qsettings.value("engineSettings/remotePort", defaultValue="49152")  # Host port
+        sec_model = self._qsettings.value("engineSettings/remoteSecurityModel", defaultValue="")  # ZQM security model
+        security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
+        sec_folder = (
+            ""
+            if security == ClientSecurityModel.NONE
+            else self._qsettings.value("engineSettings/remoteSecurityFolder", defaultValue="")
+        )
+        return host, port, sec_model, sec_folder
 
     @Slot(QPoint)
     def show_item_context_menu(self, pos):
@@ -2352,16 +2357,22 @@ class ToolboxUI(QMainWindow):
         self._base_julia_console.deleteLater()
         self._base_julia_console = None
 
-    @Slot(object, str, str, str)
-    def _setup_jupyter_console(self, item, filter_id, kernel_name, connection_file):
+    @Slot(object, str, str, str, dict)
+    def _setup_jupyter_console(self, item, filter_id, kernel_name, connection_file, connection_file_dict):
         """Sets up jupyter console, eventually for a filter execution.
 
         Args:
-            item (ProjectItem): item
-            filter_id (str): filter identifier
-            kernel_name (str): jupyter kernel name
-            connection_file (str): path to connection file
+            item (ProjectItem): Item
+            filter_id (str): Filter identifier
+            kernel_name (str): Jupyter kernel name
+            connection_file (str): Path to connection file
+            connection_file_dict (dict): Contents of connection file when kernel manager runs on Spine Engine Server
         """
+        if not os.path.exists(connection_file):
+            fp = tempfile.TemporaryFile(mode="w+", suffix=".json", delete=False)
+            json.dump(connection_file_dict, fp)
+            connection_file = fp.name
+            fp.close()
         if not filter_id:
             self._item_consoles[item] = self._make_jupyter_console(item, kernel_name, connection_file)
         else:
@@ -2374,10 +2385,10 @@ class ToolboxUI(QMainWindow):
         """Sets up persistent console, eventually for a filter execution.
 
         Args:
-            item (ProjectItem): item
-            filter_id (str): filter identifier
-            key (tuple)
-            language (str)
+            item (ProjectItem): Item
+            filter_id (str): Filter identifier
+            key (tuple): Key
+            language (str): Language (e.g. 'python' or 'julia')
         """
         if not filter_id:
             self._item_consoles[item] = self._make_persistent_console(item, key, language)

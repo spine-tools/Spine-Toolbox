@@ -20,6 +20,7 @@ from PySide2.QtWidgets import QTextEdit
 from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont, QTextCursor, QColor, QTextBlockFormat, QTextOption
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
+from spinetoolbox.server.engine_client import ClientSecurityModel, RemoteEngineInitFailed
 
 
 class PersistentConsoleWidget(QTextEdit):
@@ -88,6 +89,7 @@ class PersistentConsoleWidget(QTextEdit):
         self._flush_timer.setInterval(self._FLUSH_INTERVAL)
         self._flush_timer.timeout.connect(self._flush_text_buffer)
         self._flush_timer.setSingleShot(True)
+        self.engine_mngr = None
 
     def name(self):
         """Returns console name for display purposes."""
@@ -334,14 +336,38 @@ class PersistentConsoleWidget(QTextEdit):
                 self.setTextCursor(cursor)
             self._highlight_current_input()
 
+    def create_engine_manager(self):
+        """Returns a new local or remote spine engine manager or
+        an existing remote spine engine manager if it exists.
+        Returns None if connecting to Spine Engine Server fails."""
+        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        if exec_remotely:
+            if self.engine_mngr:
+                return self.engine_mngr
+            self.engine_mngr = make_engine_manager(exec_remotely)
+            host, port, security, sec_folder = self._toolbox.engine_server_settings()
+            try:
+                self.engine_mngr.make_engine_client(host, port, security, sec_folder)
+            except RemoteEngineInitFailed as e:
+                self._toolbox.msg_error.emit(f"Connecting to Spine Engine Server failed. {e}")
+                return None
+            return self.engine_mngr
+        else:
+            engine_mngr = make_engine_manager(exec_remotely)
+            return engine_mngr
+
     def _issue_command(self, text):
         """Issues command.
 
         Args:
             text (str)
         """
-        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
-        engine_mngr = make_engine_manager(exec_remotely)
+        if not text.strip():  # Don't send empty command to execution manager
+            self._make_prompt_block(prompt=self._prompt)
+            return
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         if not engine_mngr.is_persistent_command_complete(self._key, text):
             self._make_continuation_block(self.textCursor())
             return
@@ -368,8 +394,8 @@ class PersistentConsoleWidget(QTextEdit):
 
     def _move_history(self, text, backwards):
         """Moves history."""
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        engine_mngr = make_engine_manager(exec_remotely)
         prefix = self._get_prefix()
         history_item = engine_mngr.get_persistent_history_item(self._key, text, prefix, backwards)
         self._history_item_available.emit(history_item, prefix)

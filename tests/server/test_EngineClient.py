@@ -57,7 +57,7 @@ class TestEngineClient(unittest.TestCase):
         msg_data_json = json.dumps(engine_data)
         zip_fname = "test_zipfile.zip"
         zip_fpath = os.path.join(str(Path(__file__).parent), zip_fname)
-        client = EngineClient("tcp", self.host, self.port, ClientSecurityModel.NONE, "")
+        client = EngineClient(self.host, self.port, ClientSecurityModel.NONE, "")
         start_event = client.send(msg_data_json, zip_fpath)
         self.assertEqual("remote_execution_started", start_event[0])
         client.connect_sub_socket(start_event[1])

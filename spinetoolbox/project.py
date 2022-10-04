@@ -30,8 +30,8 @@ from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
 from spine_engine.utils.helpers import shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
-from .server.util.file_packager import FilePackager
-from .server.engine_client import EngineClient, ClientSecurityModel
+from spine_engine.server.util.zip_handler import ZipHandler
+from .server.engine_client import EngineClient
 from .metaobject import MetaObject
 from .helpers import (
     create_dir,
@@ -1018,8 +1018,7 @@ class SpineToolboxProject(MetaObject):
             "settings": settings,
             "project_dir": self.project_dir.replace(os.sep, "/"),
         }
-        server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
-        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items, connections, self._logger, job_id)
+        worker = SpineEngineWorker(data, dag, dag_identifier, items, connections, self._logger, job_id)
         return worker
 
     def _handle_engine_worker_finished(self, worker):
@@ -1045,7 +1044,7 @@ class SpineToolboxProject(MetaObject):
             finished_worker.clean_up()
         self._engine_workers.clear()
         # We could remove the transmitted project zip-file here if we want
-        # FilePackager.remove_file(
+        # ZipHandler.remove_file(
         #     os.path.abspath(os.path.join(self._project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
         # )
         self.project_execution_finished.emit()
@@ -1363,16 +1362,7 @@ class SpineToolboxProject(MetaObject):
         """
         if not self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
             return "1"  # Something that isn't False
-        # Check remote execution settings
-        host = self._settings.value("engineSettings/remoteHost", "")  # Host name
-        port = self._settings.value("engineSettings/remotePort", "")  # Host port
-        sec_model = self._settings.value("engineSettings/remoteSecurityModel", "")  # ZQM security model
-        security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
-        sec_folder = (
-            ""
-            if security == ClientSecurityModel.NONE
-            else self._settings.value("engineSettings/remoteSecurityFolder", "")
-        )
+        host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
         if not host:
             self._logger.msg_error.emit("Spine Engine Server <b>host address</b> missing. "
                                         "Please enter host in <b>File->Settings->Engine</b>.")
@@ -1383,7 +1373,7 @@ class SpineToolboxProject(MetaObject):
             return ""
         self._logger.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
         try:
-            engine_client = EngineClient("tcp", host, port, sec_model, sec_folder, ping=True)
+            engine_client = EngineClient(host, port, sec_model, sec_folder)
         except RemoteEngineInitFailed as e:
             self._logger.msg_error.emit(f"Server is not responding. {e}. "
                                         f"Check settings in <b>File->Settings->Engine</b>.")
@@ -1391,7 +1381,7 @@ class SpineToolboxProject(MetaObject):
         # When preparing for remote execution, archive the project into a zip-file
         dest_dir = os.path.join(self.project_dir, os.pardir)  # Parent dir of project_dir TODO: Find a better dst
         try:
-            FilePackager.package(src_folder=self.project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
+            ZipHandler.package(src_folder=self.project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
         except Exception as e:
             self._logger.msg_error.emit(f"{e}")
             return ""

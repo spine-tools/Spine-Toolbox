@@ -15,16 +15,14 @@ Contains SpineEngineManagerBase.
 :authors: M. Marin (KTH), P. Pääkkönen (VTT), P. Savolainen (VTT)
 :date:   14.10.2020
 """
-import os
 import queue
+import socketserver
 import threading
 import time
 import json
-import ast
+import socket
 from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
-from spinetoolbox.config import PROJECT_ZIP_FILENAME
-from spine_engine.spine_engine import ItemExecutionFinishState
-from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
+from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.server.util.event_data_converter import EventDataConverter
 
 
@@ -221,18 +219,26 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         self._runner = threading.Thread(name="RemoteSpineEngineManagerRunnerThread", target=self._run)
         self._engine_data = None
         self.engine_client = None
-        self.job_id = job_id  # id of dag to start
-        self.q = queue.Queue()  # Queue for sending data forward to SpineEngineWorker
+        self.job_id = job_id  # id of DAG to execute
+        self.q = queue.Queue()  # Queue for sending events forward to SpineEngineWorker
+
+    def make_engine_client(self, host, port, security, sec_folder, ping=True):
+        """Creates a client for connecting to Spine Engine Server."""
+        try:
+            self.engine_client = EngineClient(host, port, security, sec_folder, ping)
+        except RemoteEngineInitFailed:
+            raise
+        except Exception:
+            raise
 
     def run_engine(self, engine_data):
-        """Establishes a connection to server. Starts a thread, where the current
-        project is packaged into a zip file and then sent to the server for execution.
+        """Makes an engine client for communicating with the engine server.
+        Starts a thread for monitoring the DAG execution on server.
 
         Args:
             engine_data (dict): The engine data.
         """
         app_settings = engine_data["settings"]
-        protocol = "tcp"  # Zero-MQ protocol. Hardcoded to tcp for now.
         host = app_settings.get("engineSettings/remoteHost", "")  # Host name
         port = app_settings.get("engineSettings/remotePort", "49152")  # Host port
         sec_model = app_settings.get("engineSettings/remoteSecurityModel", "")  # ZQM security model
@@ -242,12 +248,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             if security == ClientSecurityModel.NONE
             else app_settings.get("engineSettings/remoteSecurityFolder", "")
         )
-        try:
-            self.engine_client = EngineClient(protocol, host, port, security, sec_folder, ping=False)
-        except RemoteEngineInitFailed:
-            raise
-        except Exception:
-            raise
+        self.make_engine_client(host, port, security, sec_folder)
         self._engine_data = engine_data
         self._runner.start()
 
@@ -273,29 +274,26 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         Passes received events to SpineEngineWorker for processing.
         """
         start_time = round(time.time() * 1000.0)
+        # for k, v in self._engine_data.items():
+        #     print(f"{k}: {v}")
         engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
         # Send request to server, and wait for an execution started response containing the publish port
         start_event = self.engine_client.start_execute(engine_data_json, self.job_id)
-        print(f"start_event:{start_event}")
-        if start_event[0] == "remote_execution_init_failed" or start_event[0] == "server_init_failed":
-            # Execution on server did not start because something went wrong in the initialization
-            print(f"Remote execution init failed: event_type:{start_event[0]} data:{start_event[1]}. Aborting.")
-            self.q.put(start_event)
-            return
-        elif start_event[0] != "remote_execution_started":
-            print(f"Unhandled event received: event_type:{start_event[0]} data:{start_event[1]}. Aborting.")
+        if start_event[0] != "remote_execution_started":
+            # Initializing the server for execution failed. 'remote_execution_init_failed' and 'server_init_failed'
+            # are handled in SpineEngineWorker. TODO: Make sure engine_client is closed.
+            print(f"Server init failed: event_type:{start_event[0]} data:{start_event[1]}. Aborting.")
             self.q.put(start_event)
             return
         # Prepare subscribe socket and receive events until dag_exec_finished event is received
-        self.engine_client.connect_sub_socket(start_event[1])
-        while True:
-            rcv = self.engine_client.rcv_next_event()  # Wait for the next execution event
+        self.engine_client.connect_sub_socket(start_event[1], b"EVENTS")
+        while True:  # Keep listening for events until dag_exec_finished event
+            rcv = self.engine_client.rcv_next_event()
             event = EventDataConverter.deconvert(rcv[1])
-            # print(f"{event[0]}: {event[1]}")
-            if event[0] == "dag_exec_finished":
-                self.q.put(event)
-                break
+            print(f"{event[0]}: {event[1]}")
             self.q.put(event)
+            if event[0] == "dag_exec_finished":
+                break
         stop_time = round(time.time() * 1000.0)
         print("RemoteSpineEngineManager.run() run time after execution %d ms" % (stop_time - start_time))
 
@@ -305,20 +303,19 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def restart_kernel(self, connection_file):
         """See base class."""
-        self._send("restart_kernel", connection_file)
+        # self._send("restart_kernel", connection_file)
+        raise NotImplementedError()
 
     def shutdown_kernel(self, connection_file):
         """See base class."""
-        self._send("shutdown_kernel", connection_file)
+        # self._send("shutdown_kernel", connection_file)
+        raise NotImplementedError()
 
     def is_persistent_command_complete(self, persistent_key, command):
-        # pylint: disable=import-outside-toplevel
-        raise NotImplementedError()
+        return self.engine_client.send_is_complete(persistent_key, command)
 
     def issue_persistent_command(self, persistent_key, command):
-        """See base class."""
-        # TODO: Implementing this needs a new ServerMessage type
-        raise NotImplementedError()
+        return self.engine_client.send_issue_persistent_command(persistent_key, command)
 
     def restart_persistent(self, persistent_key):
         """See base class."""

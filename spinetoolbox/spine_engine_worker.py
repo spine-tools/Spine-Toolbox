@@ -17,7 +17,7 @@ Contains SpineEngineWorker.
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from PySide2.QtWidgets import QMessageBox
-from spine_engine.exception import EngineInitFailed
+from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from .spine_engine_manager import make_engine_manager, LocalSpineEngineManager
 from .helpers import get_upgrade_db_promt_text
@@ -111,7 +111,7 @@ class SpineEngineWorker(QObject):
     _flash_arrived = Signal(object)
     _all_items_failed = Signal(list)
 
-    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, connections, logger, job_id):
+    def __init__(self, engine_data, dag, dag_identifier, project_items, connections, logger, job_id):
         """
         Args:
             engine_data (dict): engine data
@@ -215,6 +215,13 @@ class SpineEngineWorker(QObject):
             self._all_items_failed.emit(list(self._project_items.values()))
             self.finished.emit()
             return
+        except RemoteEngineInitFailed as e:
+            self._logger.msg_error.emit(f"Server is not responding. {e}. Check settings "
+                                        f"in <b>File->Settings->Engine</b>.")
+            self._engine_final_state = str(SpineEngineState.FAILED)
+            self._all_items_failed.emit(list(self._project_items.values()))
+            self.finished.emit()
+            return
         while True:
             event_type, data = self._engine_mngr.get_engine_event()
             self._process_event(event_type, data)
@@ -294,7 +301,11 @@ class SpineEngineWorker(QObject):
         item = self._project_items[msg["item_name"]]
         if msg["type"] == "kernel_started":
             self._logger.jupyter_console_requested.emit(
-                item, msg["filter_id"], msg["kernel_name"], msg["connection_file"]
+                item,
+                msg["filter_id"],
+                msg["kernel_name"],
+                msg["connection_file"],
+                msg.get("connection_file_dict", dict())
             )
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (

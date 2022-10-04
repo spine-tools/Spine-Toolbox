@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Client for exchanging messages between the toolbox and the remote Spine Engine server.
+Client for exchanging messages between the toolbox and the Spine Engine Server.
 :author: P. Pääkkönen (VTT), P. Savolainen (VTT)
 :date:   02.09.2021
 """
@@ -32,23 +32,22 @@ class ClientSecurityModel(Enum):
 
 
 class EngineClient:
-    def __init__(self, protocol, host, port, sec_model, sec_folder, ping=True):
+    def __init__(self, host, port, sec_model, sec_folder, ping=True):
         """
         Args:
-            protocol (str): Zero-MQ protocol
-            host (str): Location of the remote spine server
-            port(int): Port of the remote spine server
-            sec_model (Enum): see: ClientSecurityModel
-            sec_folder (str): folder, where security files have been stored.
-            ping (bool): True checks connection before sending the request
+            host (str): IP address of the Spine Engine Server
+            port(int): Port of the client facing (frontend) socket on Spine Engine Server
+            sec_model (ClientSecurityModel): Client security scheme
+            sec_folder (str): Path to security file directory
+            ping (bool): Whether to check connectivity at instance creation
         """
-        self.protocol = protocol
+        self.protocol = "tcp"  # Hard-coded to tcp for now
         self.host = host
         self.port = port  # Request socket port
         self.ping = ping
         self._context = zmq.Context()
-        self._socket = self._context.socket(zmq.REQ)
-        self._socket.setsockopt(zmq.LINGER, 1)
+        self._req_socket = self._context.socket(zmq.REQ)
+        self._req_socket.setsockopt(zmq.LINGER, 1)
         self.sub_socket = self._context.socket(zmq.SUB)
         if sec_model == ClientSecurityModel.STONEHOUSE:
             # Security configs
@@ -63,13 +62,13 @@ class EngineClient:
             # to make a CURVE connection.
             client_secret_file = os.path.join(secret_keys_dir, "client.key_secret")
             client_public, client_secret = zmq.auth.load_certificate(client_secret_file)
-            self._socket.curve_secretkey = client_secret
-            self._socket.curve_publickey = client_public
+            self._req_socket.curve_secretkey = client_secret
+            self._req_socket.curve_publickey = client_public
             # The client must know the server's public key to make a CURVE connection.
             server_public_file = os.path.join(public_keys_dir, "server.key")
             server_public, _ = zmq.auth.load_certificate(server_public_file)
-            self._socket.curve_serverkey = server_public
-        self._socket.connect(protocol + "://" + host + ":" + str(port))
+            self._req_socket.curve_serverkey = server_public
+        self._req_socket.connect(self.protocol + "://" + host + ":" + str(port))
         if self.ping:
             try:
                 self._check_connectivity(1000)  # Ping server
@@ -90,22 +89,22 @@ class EngineClient:
             "remote_execution_init_failed" or "remote_execution_started. data is an error
             message or the publish socket port
         """
-        msg = ServerMessage("start_execution", job_id, engine_data, None)
-        self._socket.send_multipart([msg.to_bytes()])  # Send execute request
-        response = self._socket.recv()  # Blocks until a response is received
-        response_str = response.decode("utf-8")  # Decode received bytes to get (JSON) string
-        response_msg = ServerMessage.parse(response_str)  # Parse received JSON string into a ServerMessage
+        msg = ServerMessage("start_execution", job_id, engine_data)
+        self._req_socket.send_multipart([msg.to_bytes()])  # Send execute request
+        response = self._req_socket.recv()  # Blocks until a response is received
+        response_msg = ServerMessage.parse(response)  # Parse received bytes into a ServerMessage
         data = response_msg.getData()
         return data
 
-    def connect_sub_socket(self, publish_port):
+    def connect_sub_socket(self, publish_port, filt):
         """Connects and sets up a subscribe socket for receiving engine execution events from server.
 
         Args:
             publish_port (str): Port of the event publisher socket on server
+            filt (bytes): Filter for messages, b"" subscribes to all messages
         """
         self.sub_socket.connect(self.protocol + "://" + self.host + ":" + publish_port)
-        self.sub_socket.setsockopt(zmq.SUBSCRIBE, b"EVENTS")
+        self.sub_socket.setsockopt(zmq.SUBSCRIBE, filt)
 
     def rcv_next_event(self):
         """Waits until the subscribe socket receives a new event from server."""
@@ -113,8 +112,9 @@ class EngineClient:
 
     def close(self):
         """Closes client socket, context and thread."""
-        if not self._socket.closed:
-            self._socket.close()
+        if not self._req_socket.closed:
+            self._req_socket.close()
+        if not self.sub_socket.closed:
             self.sub_socket.close()
         if not self._context.closed:
             self._context.term()
@@ -133,17 +133,15 @@ class EngineClient:
         """
         start_time_ms = round(time.time() * 1000.0)
         random_id = random.randrange(10000000)
-        ping_request = ServerMessage("ping", str(random_id), "", None)
-        self._socket.send_multipart([ping_request.to_bytes()], flags=zmq.NOBLOCK)
-        event = self._socket.poll(timeout=timeout)
+        ping_request = ServerMessage("ping", str(random_id), "")
+        self._req_socket.send_multipart([ping_request.to_bytes()], flags=zmq.NOBLOCK)
+        event = self._req_socket.poll(timeout=timeout)
         if event == 0:
             raise RemoteEngineInitFailed("Timeout expired. Pinging the server failed.")
         else:
-            msg = self._socket.recv()
-            msg_str = msg.decode("utf-8")
-            response = ServerMessage.parse(msg_str)
-            # Check that request ID matches the response ID
-            response_id = int(response.getId())
+            msg = self._req_socket.recv()
+            response = ServerMessage.parse(msg)
+            response_id = int(response.getId())  # Check that request ID matches the response ID
             if not response_id == random_id:
                 raise RemoteEngineInitFailed(f"Ping failed. Request Id '{random_id}' does not "
                                              f"match reply Id '{response_id}'")
@@ -165,9 +163,9 @@ class EngineClient:
             file_data = f.read()  # Read file into bytes string
         _, zip_filename = os.path.split(fpath)
         req = ServerMessage("prepare_execution", "1", json.dumps(project_dir_name), [zip_filename])
-        self._socket.send_multipart([req.to_bytes(), file_data])
-        response = self._socket.recv()
-        response_server_message = ServerMessage.parse(response.decode("utf-8"))
+        self._req_socket.send_multipart([req.to_bytes(), file_data])
+        response = self._req_socket.recv()
+        response_server_message = ServerMessage.parse(response)
         return response_server_message.getId()
 
     def retrieve_project(self, job_id):
@@ -175,12 +173,42 @@ class EngineClient:
 
         Args:
             job_id (str): Job Id for finding the project directory on server
-            fpath (str): Absolute path to zipped project file.
 
         Returns:
             bytes: Zipped project file
         """
-        req = ServerMessage("retrieve_project", job_id, "", [])
-        self._socket.send_multipart([req.to_bytes()])
-        response = self._socket.recv_multipart()
+        req = ServerMessage("retrieve_project", job_id, "")
+        self._req_socket.send_multipart([req.to_bytes()])
+        response = self._req_socket.recv_multipart()
         return response[-1]
+
+    def send_is_complete(self, persistent_key, cmd):
+        """Sends a request to process is_complete(cmd) on server and returns the response."""
+        data = persistent_key, "is_complete", cmd
+        json_d = json.dumps(data)
+        req = ServerMessage("execute_in_persistent", "1", json_d)
+        self._req_socket.send_multipart([req.to_bytes()])
+        response = self._req_socket.recv()
+        response_msg = ServerMessage.parse(response)
+        print(f"response to is_complete:{response_msg.getData()}")
+        return response_msg.getData()[1]
+
+    def send_issue_persistent_command(self, persistent_key, cmd):
+        """Sends a request to process given command in persistent manager identified by given key.
+        Yields the response string(s) as they arrive from server."""
+        pull_socket = self._context.socket(zmq.PULL)
+        data = persistent_key, "issue_persistent_command", cmd
+        json_d = json.dumps(data)
+        req = ServerMessage("execute_in_persistent", "1", json_d)
+        self._req_socket.send_multipart([req.to_bytes()])
+        response = self._req_socket.recv()
+        response_msg = ServerMessage.parse(response)
+        pull_port = response_msg.getData()[1]
+        print(f"response to issue_persistent_command:{response_msg.getData()}")
+        pull_socket.connect(self.protocol + "://" + self.host + ":" + pull_port)
+        while True:
+            rcv = pull_socket.recv_multipart()
+            if rcv == [b"END"]:
+                break
+            yield json.loads(rcv[0].decode("utf-8"))
+        pull_socket.close()
