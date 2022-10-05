@@ -190,8 +190,45 @@ class EngineClient:
     def send_issue_persistent_command(self, persistent_key, cmd):
         """Sends a request to process given command in persistent manager identified by given key.
         Yields the response string(s) as they arrive from server."""
-        pull_socket = self._context.socket(zmq.PULL)
         data = persistent_key, "issue_persistent_command", cmd
+        yield from self.send_request_to_persistent_generator(data)
+
+    def send_get_persistent_completions(self, persistent_key, text):
+        """Requests completions to given text from persistent execution backend."""
+        data = persistent_key, "get_completions", text
+        return self.send_request_to_persistent(data)
+
+    def send_get_persistent_history_item(self, persistent_key, text, prefix, backwards):
+        """Requests the former or latter history item from persistent execution backend."""
+        data = persistent_key, "get_history_item", [text, prefix, backwards]
+        return self.send_request_to_persistent(data)
+
+    def send_restart_persistent(self, persistent_key):
+        """Sends restart persistent cmd to persistent execution manager backend on server.
+        Yields the messages resulting from this operation to persistent console client."""
+        data = persistent_key, "restart_persistent", ""
+        yield from self.send_request_to_persistent_generator(data)
+
+    def send_interrupt_persistent(self, persistent_key):
+        """Sends interrupt persistent cmd to persistent execution manager backend on server."""
+        data = persistent_key, "interrupt_persistent", ""
+        return self.send_request_to_persistent(data)
+
+    def send_request_to_persistent(self, data):
+        """Sends given data containing persistent_key, command, cmd_to_persistent to
+        Spine Engine Server to be processed by a persistent execution manager backend.
+        Makes a request using REQ socket, parses the response into a ServerMessage, and
+        returns the second part of the data field."""
+        json_d = json.dumps(data)
+        req = ServerMessage("execute_in_persistent", "1", json_d)
+        self._req_socket.send_multipart([req.to_bytes()])
+        response = self._req_socket.recv()
+        response_msg = ServerMessage.parse(response)
+        return response_msg.getData()[1]
+
+    def send_request_to_persistent_generator(self, data):
+        """Pulls all messages from server, that were the result of sending given data to Spine Engine Server."""
+        pull_socket = self._context.socket(zmq.PULL)
         pull_port = self.send_request_to_persistent(data)
         pull_socket.connect(self.protocol + "://" + self.host + ":" + pull_port)
         while True:
@@ -200,29 +237,3 @@ class EngineClient:
                 break
             yield json.loads(rcv[0].decode("utf-8"))
         pull_socket.close()
-
-    def send_get_persistent_completions(self, persistent_key, text):
-        data = persistent_key, "get_completions", text
-        return self.send_request_to_persistent(data)
-
-    def send_get_persistent_history_item(self, persistent_key, text, prefix, backwards):
-        data = persistent_key, "get_history_item", [text, prefix, backwards]
-        return self.send_request_to_persistent(data)
-
-    def send_restart_persistent(self, persistent_key):
-        data = persistent_key, "restart_persistent", ""
-        return self.send_request_to_persistent(data)
-
-    def send_interrupt_persistent(self, persistent_key):
-        data = persistent_key, "interrupt_persistent", ""
-        return self.send_request_to_persistent(data)
-
-    def send_request_to_persistent(self, data):
-        json_d = json.dumps(data)
-        req = ServerMessage("execute_in_persistent", "1", json_d)
-        self._req_socket.send_multipart([req.to_bytes()])
-        response = self._req_socket.recv()
-        response_msg = ServerMessage.parse(response)
-        print(f"response to {data[1]}:{response_msg.getData()}")
-        return response_msg.getData()[1]
-
