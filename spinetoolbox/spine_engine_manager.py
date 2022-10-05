@@ -274,28 +274,44 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         Passes received events to SpineEngineWorker for processing.
         """
         start_time = round(time.time() * 1000.0)
-        # for k, v in self._engine_data.items():
-        #     print(f"{k}: {v}")
+        self.engine_client.client_project_dir = self._engine_data["project_dir"]
         engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
         # Send request to server, and wait for an execution started response containing the publish port
-        start_event = self.engine_client.start_execute(engine_data_json, self.job_id)
-        if start_event[0] != "remote_execution_started":
+        start_response_data = self.engine_client.start_execute(engine_data_json, self.job_id)
+        if start_response_data[0] != "remote_execution_started":
             # Initializing the server for execution failed. 'remote_execution_init_failed' and 'server_init_failed'
             # are handled in SpineEngineWorker. TODO: Make sure engine_client is closed.
-            print(f"Server init failed: event_type:{start_event[0]} data:{start_event[1]}. Aborting.")
-            self.q.put(start_event)
+            self.q.put(("server_status_msg", {
+                "msg_type": "fail",
+                "text": f"Server init failed: event_type:{start_response_data[0]} "
+                        f"data:{start_response_data[1]}. Aborting."
+            }))
+            self.q.put(start_response_data)
             return
+        event_subcribe_socket_port, file_tx_pull_port = start_response_data[1].split(":")
         # Prepare subscribe socket and receive events until dag_exec_finished event is received
-        self.engine_client.connect_sub_socket(start_event[1], b"EVENTS")
+        self.engine_client.connect_sub_socket(event_subcribe_socket_port, b"EVENTS")
         while True:  # Keep listening for events until dag_exec_finished event
             rcv = self.engine_client.rcv_next_event()
             event = EventDataConverter.deconvert(rcv[1])
-            print(f"{event[0]}: {event[1]}")
-            self.q.put(event)
-            if event[0] == "dag_exec_finished":
+            if event[0] != "dag_exec_finished":
+                self.q.put(event)
+            else:
+                # Do all file transfers before sending 'dag_exec_finished' to SpineEngineWorker because it will destroy
+                # this thread before the file transfers have finished.
+                self.engine_client.connect_pull_socket(file_tx_pull_port)
+                self.q.put(("server_status_msg", {"msg_type": "neutral", "text": "*** Downloading files from server ***"}))
+                while True:  # Pull files from server until b"END" is received
+                    rcv = self.engine_client.rcv_next_file()
+                    if rcv[0] == b"END":
+                        break
+                    success, txt = self.engine_client.copy_file_to_project(rcv[0], rcv[1])
+                    self.q.put(("server_status_msg", {"msg_type": success, "text": txt}))
+                stop_time = round(time.time() * 1000.0)
+                self.q.put(("server_status_msg",
+                            {"msg_type": "success", "text": f"DAG completed in {stop_time - start_time} ms"}))
+                self.q.put(event)
                 break
-        stop_time = round(time.time() * 1000.0)
-        print("RemoteSpineEngineManager.run() run time after execution %d ms" % (stop_time - start_time))
 
     def answer_prompt(self, item_name, accepted):
         """See base class."""

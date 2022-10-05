@@ -49,6 +49,8 @@ class EngineClient:
         self._req_socket = self._context.socket(zmq.REQ)
         self._req_socket.setsockopt(zmq.LINGER, 1)
         self.sub_socket = self._context.socket(zmq.SUB)
+        self.file_pull_socket = self._context.socket(zmq.PULL)
+        self.client_project_dir = None
         if sec_model == ClientSecurityModel.STONEHOUSE:
             # Security configs
             # implementation below based on https://github.com/zeromq/pyzmq/blob/main/examples/security/stonehouse.py
@@ -87,13 +89,13 @@ class EngineClient:
         Returns:
             tuple: Response tuple (event_type: data). Event_type is "server_init_failed",
             "remote_execution_init_failed" or "remote_execution_started. data is an error
-            message or the publish socket port
+            message or the publish and push sockets ports concatenated with ':'.
         """
         msg = ServerMessage("start_execution", job_id, engine_data)
         self._req_socket.send_multipart([msg.to_bytes()])  # Send execute request
         response = self._req_socket.recv()  # Blocks until a response is received
         response_msg = ServerMessage.parse(response)  # Parse received bytes into a ServerMessage
-        data = response_msg.getData()
+        data = response_msg.getData()  # e.g. '1234:4575'
         return data
 
     def connect_sub_socket(self, publish_port, filt):
@@ -106,9 +108,41 @@ class EngineClient:
         self.sub_socket.connect(self.protocol + "://" + self.host + ":" + publish_port)
         self.sub_socket.setsockopt(zmq.SUBSCRIBE, filt)
 
+    def connect_pull_socket(self, pull_port):
+        self.file_pull_socket.connect(self.protocol + "://" + self.host + ":" + pull_port)
+
     def rcv_next_event(self):
         """Waits until the subscribe socket receives a new event from server."""
         return self.sub_socket.recv_multipart()
+
+    def rcv_next_file(self):
+        """Pulls the next file from server."""
+        return self.file_pull_socket.recv_multipart()
+
+    def copy_file_to_project(self, b_rel_path, file_data):
+        """Saves received file to project directory.
+
+        Args:
+            b_rel_path (bytes): Relative path to project directory
+            file_data (bytes): File as bytes object
+        """
+        rel_path = b_rel_path.decode("utf-8")
+        if not self.client_project_dir:
+            return "fail", f"Project dir should be {self.client_project_dir} but it was not found"
+        dst_fpath = os.path.abspath(os.path.join(self.client_project_dir, rel_path))
+        rel_path_wo_fname, _ = os.path.split(rel_path)
+        dst_dir, fname = os.path.split(dst_fpath)
+        if not os.path.exists(dst_dir):
+            try:
+                os.makedirs(dst_dir)  # Create dst directory
+            except OSError:
+                return "fail", f"Creating destination dir {dst_dir} for file {fname} failed"
+        try:
+            with open(dst_fpath, "wb") as f:
+                f.write(file_data)
+        except Exception as e:
+            return "fail", f"Saving the received file to '{dst_fpath}' failed. [{type(e).__name__}: {e}"
+        return "neutral", f"<b>{fname}</b> saved to  <b>&#x227A;project_dir&#x227B;/{rel_path_wo_fname}</b>"
 
     def close(self):
         """Closes client socket, context and thread."""
@@ -116,6 +150,8 @@ class EngineClient:
             self._req_socket.close()
         if not self.sub_socket.closed:
             self.sub_socket.close()
+        if not self.file_pull_socket.closed:
+            self.file_pull_socket.close()
         if not self._context.closed:
             self._context.term()
 

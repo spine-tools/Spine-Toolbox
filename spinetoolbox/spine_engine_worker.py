@@ -246,6 +246,7 @@ class SpineEngineWorker(QObject):
             "kernel_execution_msg": self._handle_kernel_execution_msg,
             "prompt": self._handle_prompt,
             "flash": self._handle_flash,
+            "server_status_msg": self._handle_server_status_msg,
         }.get(event_type)
         if handler is None:
             if event_type != "dag_exec_finished":
@@ -368,6 +369,14 @@ class SpineEngineWorker(QObject):
         # NOTE: A single item may seemingly finish multiple times
         # when the execution is stopped by user during filtered execution.
         self._node_execution_finished.emit(item, direction, item_state)
+
+    def _handle_server_status_msg(self, data):
+        if data["msg_type"] == "success":
+            self._logger.msg_success.emit(data["text"])
+        elif data["msg_type"] == "neutral":
+            self._logger.msg.emit(data["text"])
+        elif data["msg_type"] == "fail":
+            self._logger.msg_error(data["text"])
 
     def clean_up(self):
         for item in self._executing_items:
