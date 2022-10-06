@@ -709,7 +709,7 @@ class ToolboxUI(QMainWindow):
         return True
 
     @Slot(bool)
-    def rename_project(self, _checked=False):
+    def rename_project(self, _=False):
         """Opens a dialog where the user can enter a new name for the project."""
         if not self._project:
             return
@@ -2129,36 +2129,24 @@ class ToolboxUI(QMainWindow):
         self._project.specification_saved.connect(self._log_specification_saved)
 
     @Slot(bool)
-    def _execute_project(self, checked=False):
-        """Executes all DAGs in project.
-
-        Args:
-            checked (bool): unused
-        """
+    def _execute_project(self, _=False):
+        """Executes all DAGs in project."""
         if self._project is None:
             self.msg.emit("Please create a new project or open an existing one first")
             return
         self._project.execute_project()
 
     @Slot(bool)
-    def _execute_selection(self, checked=False):
-        """Executes selected items.
-
-        Args:
-            checked (bool): unused
-        """
+    def _execute_selection(self, _=False):
+        """Executes selected items."""
         if self._project is None:
             self.msg.emit("Please create a new project or open an existing one first")
             return
         self._project.execute_selected(self._selected_item_names)
 
     @Slot(bool)
-    def _stop_execution(self, checked=False):
-        """Stops execution in progress.
-
-        Args:
-            checked (bool): unused
-        """
+    def _stop_execution(self, _=False):
+        """Stops execution in progress."""
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
             return

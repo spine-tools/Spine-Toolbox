@@ -119,11 +119,25 @@ class EngineClient:
         """Pulls the next file from server."""
         return self.file_pull_socket.recv_multipart()
 
+    def download_files(self, pull_port, q):
+        """Pull files from server until b'END' is received."""
+        self.connect_pull_socket(pull_port)
+        q.put(("server_status_msg", {"msg_type": "neutral", "text": "*** Downloading files from server ***"}))
+        i = 0
+        while True:
+            rcv = self.rcv_next_file()
+            if rcv[0] == b"END":
+                q.put(("server_status_msg", {"msg_type": "neutral", "text": f"Downloaded {i} files"}))
+                break
+            success, txt = self.copy_file_to_project(rcv[0], rcv[1])
+            q.put(("server_status_msg", {"msg_type": success, "text": txt}))
+            i += 1
+
     def copy_file_to_project(self, b_rel_path, file_data):
         """Saves received file to project directory.
 
         Args:
-            b_rel_path (bytes): Relative path to project directory
+            b_rel_path (bytes): Relative path (to project dir) where the file should be saved
             file_data (bytes): File as bytes object
         """
         rel_path = b_rel_path.decode("utf-8")
