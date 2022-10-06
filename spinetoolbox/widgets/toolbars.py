@@ -324,4 +324,7 @@ class MainToolBar(ToolBar):
 class PaddingLabel(QLabel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        font = self.font()
+        font.setPointSize(8)
+        self.setFont(font)
         self.setStyleSheet("QLabel{padding: 2px}")
