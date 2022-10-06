@@ -310,12 +310,15 @@ class _SvgIcon(_IconBase):
 class _TextIcon(_IconBase):
     """A font awesome icon to show over a Link."""
 
+    FONT_SIZE_PIXELS = 16  # Using pixel size to prevent font scaling by system.
+
     def __init__(self, parent, extent, char, tooltip=None, color=None):
         super().__init__(0, 0, extent, extent, parent, tooltip=tooltip)
         if color is None:
             color = QColor("slateblue")
         self._text_item = QGraphicsTextItem(self)
         font = QFont('Font Awesome 5 Free Solid', weight=QFont.Bold)
+        font.setPixelSize(self.FONT_SIZE_PIXELS)
         self._text_item.setFont(font)
         self._text_item.setDefaultTextColor(color)
         self._text_item.setPlainText(char)

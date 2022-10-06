@@ -51,6 +51,7 @@ class ProjectItemIcon(QGraphicsPathItem):
     """Base class for project item icons drawn in Design View."""
 
     ITEM_EXTENT = 64
+    FONT_SIZE_PIXELS = 12  # pixel size to prevent font scaling by system
 
     def __init__(self, toolbox, icon_file, icon_color):
         """
@@ -73,7 +74,6 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.svg_item = QGraphicsSvgItem(self)
         self.svg_item.setZValue(100)
         self.colorizer = QGraphicsColorizeEffect()
-        self.text_font_size = 10  # point size
         self._rect = QRectF(-self.ITEM_EXTENT / 2, -self.ITEM_EXTENT / 2, self.ITEM_EXTENT, self.ITEM_EXTENT)
         self.component_rect = QRectF(0, 0, self.ITEM_EXTENT / 4, self.ITEM_EXTENT / 4)
         self._selection_halo = QGraphicsPathItem(self)
@@ -202,7 +202,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
         # Set font size and style
         font = self.name_item.font()
-        font.setPointSize(self.text_font_size)
+        font.setPixelSize(self.FONT_SIZE_PIXELS)
         font.setBold(True)
         self.name_item.setFont(font)
 
@@ -609,6 +609,8 @@ class ExecutionIcon(QGraphicsEllipseItem):
 class ExclamationIcon(QGraphicsTextItem):
     """An icon to notify that a ProjectItem is missing some configuration."""
 
+    FONT_SIZE_PIXELS = 14  # Use pixel size to prevent scaling by system.
+
     def __init__(self, parent):
         """
         Args:
@@ -618,6 +620,7 @@ class ExclamationIcon(QGraphicsTextItem):
         self._parent = parent
         self._notifications = list()
         font = QFont('Font Awesome 5 Free Solid')
+        font.setPixelSize(self.FONT_SIZE_PIXELS)
         self.setFont(font)
         self.setDefaultTextColor(QColor("red"))
         self.setPlainText("\uf06a")
@@ -682,7 +685,7 @@ class RankIcon(QGraphicsTextItem):
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         font = self.font()
-        font.setPointSize(parent.text_font_size)
+        font.setPixelSize(parent.FONT_SIZE_PIXELS)
         font.setBold(True)
         self.setFont(font)
         doc = self.document()
