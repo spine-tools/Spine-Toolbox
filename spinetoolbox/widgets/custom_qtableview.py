@@ -333,17 +333,24 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
 
     @Slot(bool)
     def copy(self, _=False):
-        """Copies current selection to clipboard in CSV format."""
+        """Copies current selection to clipboard in CSV format.
+
+        Returns:
+            bool: True if data was copied on the clipboard, False otherwise
+        """
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
             return False
-        selected_indexes = sorted(selection_model.selectedIndexes(), key=lambda index: 2 * index.row() + index.column())
+        data_model = self.model()
+        selected_indexes = sorted(
+            (index for index in selection_model.selectedIndexes() if not data_model.is_expanse_row(index.row())),
+            key=lambda i: 2 * i.row() + i.column(),
+        )
         row_first = selected_indexes[0].row()
         row_last = selected_indexes[-1].row()
         row_count = row_last - row_first + 1
         data_indexes = row_count * [None]
         data_values = row_count * [None]
-        data_model = self.model()
         for selected_index in selected_indexes:
             data = data_model.data(selected_index)
             row = selected_index.row()
@@ -594,7 +601,11 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
 
     @Slot(bool)
     def copy(self, _=False):
-        """Copies current selection to clipboard in CSV format."""
+        """Copies current selection to clipboard in CSV format.
+
+        Returns:
+            bool: True if data was copied on the clipboard, False otherwise
+        """
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
             return False
@@ -675,12 +686,23 @@ class MapTableView(CopyPasteTableView):
 
     @Slot(bool)
     def copy(self, _=False):
-        """Copies current selection to clipboard in Excel compatible CSV format."""
+        """Copies current selection to clipboard in Excel compatible CSV format.
+
+        Returns:
+            bool: True if data was copied on the clipboard, False otherwise
+        """
         selection = self.selectionModel().selection()
         if not selection:
             return False
         top, bottom, left, right = _range(selection)
         model = self.model()
+        if model.is_expanse_column(right):
+            right -= 1
+        if model.is_expanse_row(bottom):
+            bottom -= 1
+        if left > right or top > bottom:
+            QApplication.clipboard().setText("")
+            return True
         out_table = list()
         with system_lc_numeric():
             for y in range(top, bottom + 1):
