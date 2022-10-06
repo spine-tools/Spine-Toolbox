@@ -40,6 +40,7 @@ class InstallPluginDialog(QDialog):
     def __init__(self, parent):
         """Initialize class"""
         super().__init__(parent)
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowTitle('Install plugin')
         QVBoxLayout(self)
         self._line_edit = QLineEdit(self)
@@ -103,6 +104,7 @@ class ManagePluginsDialog(QDialog):
     def __init__(self, parent):
         """Initialize class"""
         super().__init__(parent)
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowTitle('Manage plugins')
         QVBoxLayout(self)
         self._list_view = QListView(self)
