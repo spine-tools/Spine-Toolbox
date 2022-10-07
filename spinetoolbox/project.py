@@ -1390,11 +1390,11 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
             return ""
         file_size = os.path.getsize(project_zip_file)
-        self._logger.msg.emit(f"Connection established. Transmitting <b>{PROJECT_ZIP_FILENAME + '.zip'} "
-                              f"[size:{file_size} B]</b> to server.")
+        self._logger.msg_warning.emit(f"Uploading <b>{PROJECT_ZIP_FILENAME + '.zip'} [{file_size} B]</b>")
         _, project_dir_name = os.path.split(self.project_dir)
         job_id = engine_client.send_project_file(project_dir_name, project_zip_file)
-        self._logger.msg.emit(f"Project is ready for execution at server. job_id:{job_id}")
+        t = engine_client.get_elapsed_time()
+        self._logger.msg.emit(f"Upload time: {t}. Job ID: <b>{job_id}</b>")
         engine_client.close()
         return job_id
 

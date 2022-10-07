@@ -48,9 +48,9 @@ class EngineClient:
         self._context = zmq.Context()
         self._req_socket = self._context.socket(zmq.REQ)
         self._req_socket.setsockopt(zmq.LINGER, 1)
-        self.sub_socket = self._context.socket(zmq.SUB)
-        self.file_pull_socket = self._context.socket(zmq.PULL)
+        self.pull_socket = self._context.socket(zmq.PULL)
         self.client_project_dir = None
+        self.start_time = 0
         if sec_model == ClientSecurityModel.STONEHOUSE:
             # Security configs
             # implementation below based on https://github.com/zeromq/pyzmq/blob/main/examples/security/stonehouse.py
@@ -80,7 +80,7 @@ class EngineClient:
 
     def start_execute(self, engine_data, job_id):
         """Sends the start execution request along with job Id and engine (dag) data to the server.
-        Response message data contains the publish socket port if execution starts successfully.
+        Response message data contains the push/pull socket port if execution starts successfully.
 
         Args:
             engine_data (str): Input for SpineEngine as JSON str. Includes most of project.json, settings, etc.
@@ -91,50 +91,42 @@ class EngineClient:
             "remote_execution_init_failed" or "remote_execution_started. data is an error
             message or the publish and push sockets ports concatenated with ':'.
         """
+        self.start_time = round(time.time() * 1000.0)
         msg = ServerMessage("start_execution", job_id, engine_data)
-        self._req_socket.send_multipart([msg.to_bytes()])  # Send execute request
+        self._req_socket.send_multipart([msg.to_bytes()])  # Send request
         response = self._req_socket.recv()  # Blocks until a response is received
         response_msg = ServerMessage.parse(response)  # Parse received bytes into a ServerMessage
-        data = response_msg.getData()  # e.g. '1234:4575'
+        data = response_msg.getData()
         return data
 
-    def connect_sub_socket(self, publish_port, filt):
-        """Connects and sets up a subscribe socket for receiving engine execution events from server.
+    def connect_pull_socket(self, port):
+        """Connects a PULL socket for receiving engine execution events and files from server.
 
         Args:
-            publish_port (str): Port of the event publisher socket on server
-            filt (bytes): Filter for messages, b"" subscribes to all messages
+            port (str): Port of the PUSH socket on server
         """
-        self.sub_socket.connect(self.protocol + "://" + self.host + ":" + publish_port)
-        self.sub_socket.setsockopt(zmq.SUBSCRIBE, filt)
+        self.pull_socket.connect(self.protocol + "://" + self.host + ":" + port)
 
-    def connect_pull_socket(self, pull_port):
-        self.file_pull_socket.connect(self.protocol + "://" + self.host + ":" + pull_port)
+    def rcv_next(self):
+        """Pulls the next event or file from server."""
+        return self.pull_socket.recv_multipart()
 
-    def rcv_next_event(self):
-        """Waits until the subscribe socket receives a new event from server."""
-        return self.sub_socket.recv_multipart()
-
-    def rcv_next_file(self):
-        """Pulls the next file from server."""
-        return self.file_pull_socket.recv_multipart()
-
-    def download_files(self, pull_port, q):
+    def download_files(self, q):
         """Pull files from server until b'END' is received."""
-        self.connect_pull_socket(pull_port)
+        # self.connect_file_pull_socket(pull_port)
         q.put(("server_status_msg", {"msg_type": "neutral", "text": "*** Downloading files from server ***"}))
         i = 0
         while True:
-            rcv = self.rcv_next_file()
+            rcv = self.rcv_next()
             if rcv[0] == b"END":
                 q.put(("server_status_msg", {"msg_type": "neutral", "text": f"Downloaded {i} files"}))
                 break
-            success, txt = self.copy_file_to_project(rcv[0], rcv[1])
+            success, txt = self.save_downloaded_file(rcv[0], rcv[1])
             q.put(("server_status_msg", {"msg_type": success, "text": txt}))
             i += 1
 
-    def copy_file_to_project(self, b_rel_path, file_data):
-        """Saves received file to project directory.
+    def save_downloaded_file(self, b_rel_path, file_data):
+        """Saves downloaded file to project directory.
 
         Args:
             b_rel_path (bytes): Relative path (to project dir) where the file should be saved
@@ -158,14 +150,30 @@ class EngineClient:
             return "fail", f"Saving the received file to '{dst_fpath}' failed. [{type(e).__name__}: {e}"
         return "neutral", f"<b>{fname}</b> saved to  <b>&#x227A;project_dir&#x227B;/{rel_path_wo_fname}</b>"
 
+    def get_elapsed_time(self):
+        """Returns the elapsed time of DAG execution.
+
+        Returns:
+            str: Time string with unit(s)
+        """
+        t = round(time.time() * 1000.0) - self.start_time  # ms
+        if t <= 1000:
+            return str(t) + " ms"
+        elif 1000 < t < 60000:  # 1 < t < 60 s
+            return str(t / 1000) + " s"
+        else:
+            m = (t / 1000) / 60
+            s = (t / 1000) % 60
+            return str(m) + " min " + str(s) + " s"
+
     def close(self):
         """Closes client socket, context and thread."""
         if not self._req_socket.closed:
             self._req_socket.close()
-        if not self.sub_socket.closed:
-            self.sub_socket.close()
-        if not self.file_pull_socket.closed:
-            self.file_pull_socket.close()
+        if not self.pull_socket.closed:
+            self.pull_socket.close()
+#         if not self.file_pull_socket.closed:
+#             self.file_pull_socket.close()
         if not self._context.closed:
             self._context.term()
 
@@ -209,6 +217,7 @@ class EngineClient:
         Returns:
             str: Project execution job Id
         """
+        self.start_time = round(time.time() * 1000.0)
         with open(fpath, "rb") as f:
             file_data = f.read()  # Read file into bytes string
         _, zip_filename = os.path.split(fpath)

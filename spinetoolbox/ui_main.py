@@ -2438,7 +2438,6 @@ class ToolboxUI(QMainWindow):
 
     def _shutdown_engine_kernels(self):
         """Shuts down all kernels managed by Spine Engine."""
-        engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
         while self._jupyter_consoles:

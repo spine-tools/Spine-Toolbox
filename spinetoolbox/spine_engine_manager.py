@@ -271,9 +271,9 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
     def _run(self):
         """Sends a start execution request to server with the job Id.
         Sets up a subscribe socket according to the publish port received from server.
-        Passes received events to SpineEngineWorker for processing.
+        Passes received events to SpineEngineWorker for processing. After execution
+        has finished, downloads new files from server.
         """
-        start_time = round(time.time() * 1000.0)
         self.engine_client.client_project_dir = self._engine_data["project_dir"]
         engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
         # Send request to server, and wait for an execution started response containing the publish port
@@ -288,20 +288,22 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             }))
             self.q.put(start_response_data)
             return
-        event_subcribe_socket_port, file_dl_pull_port = start_response_data[1].split(":")
         # Prepare subscribe socket
-        self.engine_client.connect_sub_socket(event_subcribe_socket_port, b"EVENTS")
-        while True:  # Keep listening for events until dag_exec_finished event
-            rcv = self.engine_client.rcv_next_event()
-            event = EventDataConverter.deconvert(rcv[1])
+        self.engine_client.connect_pull_socket(start_response_data[1])
+        while True:  # Pull events until dag_exec_finished event
+            rcv = self.engine_client.rcv_next()
+            event = EventDataConverter.deconvert(*rcv)  # Unpack list
             if event[0] == "dag_exec_finished":
                 # Download all files before sending 'dag_exec_finished' to SpineEngineWorker
                 # because it will destroy this thread before the file transfers have finished.
-                self.engine_client.download_files(file_dl_pull_port, self.q)
-                stop_time = round(time.time() * 1000.0)
-                self.q.put(("server_status_msg",
-                            {"msg_type": "success", "text": f"DAG completed in {stop_time - start_time} ms"}))
+                self.engine_client.download_files(self.q)
+                t = self.engine_client.get_elapsed_time()
+                self.q.put(("server_status_msg", {"msg_type": "success", "text": f"Execution time: {t}"}))
                 self.q.put(event)
+                break
+            elif event[0] == "server_execution_error":
+                # spine engine raised an exception during execution
+                self.q.put(("server_status_msg", {"msg_type": "fail", "text": f"{event[0]: {event[1]}}"}))
                 break
             else:
                 self.q.put(event)
@@ -312,6 +314,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def restart_kernel(self, connection_file):
         """See base class."""
+        # TODO: This does not restart the kernel, only replaces the client. Do kernel_manager.restart_kernel() on server
         pass
 
     def shutdown_kernel(self, connection_file):
