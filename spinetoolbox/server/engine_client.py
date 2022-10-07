@@ -78,6 +78,47 @@ class EngineClient:
                 self.close()
                 raise
 
+    def connect_pull_socket(self, port):
+        """Connects a PULL socket for receiving engine execution events and files from server.
+
+        Args:
+            port (str): Port of the PUSH socket on server
+        """
+        self.pull_socket.connect(self.protocol + "://" + self.host + ":" + port)
+
+    def rcv_next(self):
+        """Pulls the next event or file from server."""
+        return self.pull_socket.recv_multipart()
+
+    def _check_connectivity(self, timeout):
+        """Pings server, waits for the response, and acts accordingly.
+
+        Args:
+            timeout (int): Time to wait before giving up [ms]
+
+        Returns:
+            void
+
+        Raises:
+            RemoteEngineInitFailed if the server is not responding.
+        """
+        start_time_ms = round(time.time() * 1000.0)
+        random_id = random.randrange(10000000)
+        ping_request = ServerMessage("ping", str(random_id), "")
+        self._req_socket.send_multipart([ping_request.to_bytes()], flags=zmq.NOBLOCK)
+        event = self._req_socket.poll(timeout=timeout)
+        if event == 0:
+            raise RemoteEngineInitFailed("Timeout expired. Pinging the server failed.")
+        else:
+            msg = self._req_socket.recv()
+            response = ServerMessage.parse(msg)
+            response_id = int(response.getId())  # Check that request ID matches the response ID
+            if not response_id == random_id:
+                raise RemoteEngineInitFailed(f"Ping failed. Request Id '{random_id}' does not "
+                                             f"match reply Id '{response_id}'")
+            stop_time_ms = round(time.time() * 1000.0)  # debugging
+        return
+
     def start_execute(self, engine_data, job_id):
         """Sends the start execution request along with job Id and engine (dag) data to the server.
         Response message data contains the push/pull socket port if execution starts successfully.
@@ -99,21 +140,29 @@ class EngineClient:
         data = response_msg.getData()
         return data
 
-    def connect_pull_socket(self, port):
-        """Connects a PULL socket for receiving engine execution events and files from server.
+    def send_project_file(self, project_dir_name, fpath):
+        """Sends the zipped project file to server. Project zip file must be ready and the server available
+        before calling this method.
 
         Args:
-            port (str): Port of the PUSH socket on server
-        """
-        self.pull_socket.connect(self.protocol + "://" + self.host + ":" + port)
+            project_dir_name (str): Project directory name
+            fpath (str): Absolute path to zipped project file.
 
-    def rcv_next(self):
-        """Pulls the next event or file from server."""
-        return self.pull_socket.recv_multipart()
+        Returns:
+            str: Project execution job Id
+        """
+        self.start_time = round(time.time() * 1000.0)
+        with open(fpath, "rb") as f:
+            file_data = f.read()  # Read file into bytes string
+        _, zip_filename = os.path.split(fpath)
+        req = ServerMessage("prepare_execution", "1", json.dumps(project_dir_name), [zip_filename])
+        self._req_socket.send_multipart([req.to_bytes(), file_data])
+        response = self._req_socket.recv()
+        response_server_message = ServerMessage.parse(response)
+        return response_server_message.getId()
 
     def download_files(self, q):
         """Pull files from server until b'END' is received."""
-        # self.connect_file_pull_socket(pull_port)
         q.put(("server_status_msg", {"msg_type": "neutral", "text": "*** Downloading files from server ***"}))
         i = 0
         while True:
@@ -150,83 +199,6 @@ class EngineClient:
             return "fail", f"Saving the received file to '{dst_fpath}' failed. [{type(e).__name__}: {e}"
         return "neutral", f"<b>{fname}</b> saved to  <b>&#x227A;project_dir&#x227B;/{rel_path_wo_fname}</b>"
 
-    def get_elapsed_time(self):
-        """Returns the elapsed time of DAG execution.
-
-        Returns:
-            str: Time string with unit(s)
-        """
-        t = round(time.time() * 1000.0) - self.start_time  # ms
-        if t <= 1000:
-            return str(t) + " ms"
-        elif 1000 < t < 60000:  # 1 < t < 60 s
-            return str(t / 1000) + " s"
-        else:
-            m = (t / 1000) / 60
-            s = (t / 1000) % 60
-            return str(m) + " min " + str(s) + " s"
-
-    def close(self):
-        """Closes client socket, context and thread."""
-        if not self._req_socket.closed:
-            self._req_socket.close()
-        if not self.pull_socket.closed:
-            self.pull_socket.close()
-#         if not self.file_pull_socket.closed:
-#             self.file_pull_socket.close()
-        if not self._context.closed:
-            self._context.term()
-
-    def _check_connectivity(self, timeout):
-        """Pings server, waits for the response, and acts accordingly.
-
-        Args:
-            timeout (int): Time to wait before giving up [ms]
-
-        Returns:
-            void
-
-        Raises:
-            RemoteEngineInitFailed if the server is not responding.
-        """
-        start_time_ms = round(time.time() * 1000.0)
-        random_id = random.randrange(10000000)
-        ping_request = ServerMessage("ping", str(random_id), "")
-        self._req_socket.send_multipart([ping_request.to_bytes()], flags=zmq.NOBLOCK)
-        event = self._req_socket.poll(timeout=timeout)
-        if event == 0:
-            raise RemoteEngineInitFailed("Timeout expired. Pinging the server failed.")
-        else:
-            msg = self._req_socket.recv()
-            response = ServerMessage.parse(msg)
-            response_id = int(response.getId())  # Check that request ID matches the response ID
-            if not response_id == random_id:
-                raise RemoteEngineInitFailed(f"Ping failed. Request Id '{random_id}' does not "
-                                             f"match reply Id '{response_id}'")
-            stop_time_ms = round(time.time() * 1000.0)  # debugging
-        return
-
-    def send_project_file(self, project_dir_name, fpath):
-        """Sends the zipped project file to server. Project zip file must be ready and the server available
-        before calling this method.
-
-        Args:
-            project_dir_name (str): Project directory name
-            fpath (str): Absolute path to zipped project file.
-
-        Returns:
-            str: Project execution job Id
-        """
-        self.start_time = round(time.time() * 1000.0)
-        with open(fpath, "rb") as f:
-            file_data = f.read()  # Read file into bytes string
-        _, zip_filename = os.path.split(fpath)
-        req = ServerMessage("prepare_execution", "1", json.dumps(project_dir_name), [zip_filename])
-        self._req_socket.send_multipart([req.to_bytes(), file_data])
-        response = self._req_socket.recv()
-        response_server_message = ServerMessage.parse(response)
-        return response_server_message.getId()
-
     def retrieve_project(self, job_id):
         """Retrieves a zipped project file from server.
 
@@ -242,7 +214,7 @@ class EngineClient:
         return response[-1]
 
     def send_is_complete(self, persistent_key, cmd):
-        """Sends a request to process is_complete(cmd) on server and returns the response."""
+        """Sends a request to process is_complete(cmd) in persistent manager on server and returns the response."""
         data = persistent_key, "is_complete", cmd
         return self.send_request_to_persistent(data)
 
@@ -296,3 +268,28 @@ class EngineClient:
                 break
             yield json.loads(rcv[0].decode("utf-8"))
         pull_socket.close()
+
+    def get_elapsed_time(self):
+        """Returns the elapsed time between now and when self.start_time was set.
+
+        Returns:
+            str: Time string with unit(s)
+        """
+        t = round(time.time() * 1000.0) - self.start_time  # ms
+        if t <= 1000:
+            return str(t) + " ms"
+        elif 1000 < t < 60000:  # 1 < t < 60 s
+            return str(t / 1000) + " s"
+        else:
+            m = (t / 1000) / 60
+            s = (t / 1000) % 60
+            return str(m) + " min " + str(s) + " s"
+
+    def close(self):
+        """Closes client sockets, context and thread."""
+        if not self._req_socket.closed:
+            self._req_socket.close()
+        if not self.pull_socket.closed:
+            self.pull_socket.close()
+        if not self._context.closed:
+            self._context.term()
