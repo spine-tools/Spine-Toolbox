@@ -808,7 +808,8 @@ class MapTableView(CopyPasteTableView):
                         except ValueError:
                             pass
                         try:
-                            # Try parsing Duration before DateTime because DateTime will happily accept strings like '1h'
+                            # Try parsing Duration before DateTime
+                            # because DateTime will happily accept strings like '1h'
                             value = Duration(cell)
                             data_row.append(value)
                             continue

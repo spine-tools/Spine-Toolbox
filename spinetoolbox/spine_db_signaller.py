@@ -58,11 +58,13 @@ class SpineDBSignaller(QObject):
         self.listeners.setdefault(listener, set()).add(db_map)
 
     def remove_db_map_listener(self, db_map, listener):
-        """Removes db_map from the the maps listener listens to."""
+        """Removes db_map from the maps listener listens to."""
         db_maps = self.listeners.get(listener, set())
         db_maps.discard(db_map)
         if not db_maps:
-            self.listeners.pop(listener)
+            # We cannot just pop here because we might be iterating self.listeners
+            # in _call_in_listeners().
+            self.listeners = {l: db_maps for l, db_maps in self.listeners.items() if l is not listener}
 
     def db_map_listeners(self, db_map):
         return set(listener for listener, db_maps in self.listeners.items() if db_map in db_maps)

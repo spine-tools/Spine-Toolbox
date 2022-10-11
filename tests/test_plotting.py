@@ -19,27 +19,38 @@ Unit tests for the plotting module.
 import unittest
 from contextlib import contextmanager
 from unittest.mock import Mock, MagicMock, patch
+
+import numpy
 from PySide2.QtCore import QModelIndex, QItemSelectionModel, QObject
 from PySide2.QtWidgets import QApplication, QMessageBox
 
-from spinedb_api import DateTime, Map, TimeSeries, TimeSeriesVariableResolution, to_database, TimeSeriesFixedResolution
+from spinedb_api import (
+    DateTime,
+    Map,
+    TimeSeriesVariableResolution,
+    to_database,
+    TimeSeriesFixedResolution,
+    TimePattern,
+    Array,
+)
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.plotting import (
-    add_map_plot,
-    add_time_series_plot,
-    plot_pivot_column,
-    plot_selection,
     PlottingError,
-    ParameterTablePlottingHints,
-    PivotTablePlottingHints,
+    convert_indexed_value_to_tree,
+    TreeNode,
+    turn_nodes_to_xy_data,
+    XYData,
+    reduce_indexes,
+    combine_data_with_same_indexes,
+    plot_data,
+    raise_if_incompatible_x,
+    plot_pivot_table_selection,
 )
-from spinetoolbox.widgets.plot_widget import PlotWidget
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 
 
-@unittest.skip
-class TestPlotting(unittest.TestCase):
+class TestBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -53,8 +64,8 @@ class TestPlotting(unittest.TestCase):
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = SpineDBManager(mock_settings, None)
             logger = MagicMock()
-            self._db_map = self._db_mngr.get_db_map("sqlite:///", logger, codename="database", create=True)
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite:///": "database"})
+            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test database", create=True)
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test database"})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as message_box:
@@ -112,6 +123,8 @@ class TestPlotting(unittest.TestCase):
             )
             at_filter_refresh.wait()
 
+
+class TestPlotPivotTableSelection(TestBase):
     def _fill_pivot(self, values):
         self._add_object_parameter_values(values)
         self.assertEqual(self._db_editor.current_input_type, self._db_editor._PARAMETER_VALUE)
@@ -123,275 +136,280 @@ class TestPlotting(unittest.TestCase):
         while model.rowCount() != 2 + object_count + 1:
             QApplication.processEvents()
 
-    def _fill_parameter_value_table(self, values):
-        self._add_object_parameter_values(values)
-        self._select_object_class_in_tree_view()
+    @staticmethod
+    def _select_column(column, model):
+        first_data_row = model.sourceModel().headerRowCount()
+        data_rows_end = model.sourceModel().rowCount()
+        return [model.index(row, column) for row in range(first_data_row, data_rows_end)]
 
-    def test_plot_pivot_column_float_type(self):
+    def test_floats(self):
         self._fill_pivot({"floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
-        support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        selection = self._select_column(1, model)
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, float)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | floats")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 1.2, 1.3])
+            self.assertEqual(len(lines), 3)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1])
+            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[1].get_ydata(orig=True)), [1.2])
+            self.assertEqual(list(lines[2].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[2].get_ydata(orig=True)), [1.3])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_pivot_column_int_type(self):
+    def test_ints(self):
         self._fill_pivot({"ints": [-3, -1, 2]})
         model = self._db_editor.pivot_table_proxy
-        support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        selection = self._select_column(1, model)
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, float)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
+            self.assertEqual(len(lines), 3)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
+            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
+            self.assertEqual(list(lines[2].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_pivot_column_time_series_type(self):
+    def test_time_series(self):
         ts1 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [2.3, 5.0], False, False)
         ts2 = TimeSeriesFixedResolution("2019-07-10T13:00", "20m", [3.3, 4.0], False, False)
         ts3 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [4.3, 3.0], False, False)
         self._fill_pivot({"series": [ts1, ts2, ts3]})
         model = self._db_editor.pivot_table_proxy
-        support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        selection = self._select_column(1, model)
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, TimeSeries)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | series | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
             lines = plot_widget.canvas.axes.get_lines()
             self.assertEqual(len(lines), 3)
+            self.assertEqual(
+                list(lines[0].get_xdata(orig=True)),
+                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
+            )
             self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 5.0])
             self.assertEqual(list(lines[1].get_ydata(orig=True)), [3.3, 4.0])
+            self.assertEqual(
+                list(lines[1].get_xdata(orig=True)),
+                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
+            )
             self.assertEqual(list(lines[2].get_ydata(orig=True)), [4.3, 3.0])
+            self.assertEqual(
+                list(lines[2].get_xdata(orig=True)),
+                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
+            )
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_pivot_column_with_row_filtering(self):
+    def test_row_filtering(self):
         self._fill_pivot({"floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
         model.set_filter("class", {(self._db_map, 1), (self._db_map, 3)})
-        support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        selection = self._select_column(1, model)
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, float)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | floats")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(legend_texts, ["o1", "o3"])
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 1.3])
+            self.assertEqual(len(lines), 2)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1])
+            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[1].get_ydata(orig=True)), [1.3])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_pivot_column_with_column_filtering(self):
+    def test_column_filtering(self):
         self._fill_pivot({"floats": [1.1, 1.2, 1.3], "ints": [-3, -1, 2]})
         model = self._db_editor.pivot_table_proxy
         model.set_filter("parameter", {(self._db_map, 2)})
-        support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        selection = self._select_column(1, model)
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, float)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
+            self.assertEqual(len(lines), 3)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
+            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
+            self.assertEqual(list(lines[2].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_pivot_selection(self):
+    def test_multiple_columns_selected(self):
         self._fill_pivot({"ints": [-3, -1, 2], "floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
-        selected_indexes = list()
-        for row in range(2, 5):
-            for column in range(1, 3):
-                selected_indexes.append(model.index(row, column))
-        support = PivotTablePlottingHints()
-        plot_widget = plot_selection(model, selected_indexes, support)
+        selected_indexes = [model.index(row, column) for column in range(1, 3) for row in range(2, 5)]
+        plot_widget = plot_pivot_table_selection(model, selected_indexes)
         try:
-            self.assertEqual(plot_widget.plot_type, float)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(
+                legend_texts, ["ints | o1", "ints | o2", "ints | o3", "floats | o1", "floats | o2", "floats | o3"]
+            )
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [1.1, 1.2, 1.3])
+            self.assertEqual(len(lines), 6)
+            for i in range(6):
+                self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
+            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
+            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
+            self.assertEqual(list(lines[3].get_ydata(orig=True)), [1.1])
+            self.assertEqual(list(lines[4].get_ydata(orig=True)), [1.2])
+            self.assertEqual(list(lines[5].get_ydata(orig=True)), [1.3])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_pivot_column_with_x_column(self):
+    def test_x_column(self):
         self._fill_pivot({"ints": [-3, -1, 2], "floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
         model.sourceModel().set_plot_x_column(2, True)
-        support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        selection = self._select_column(1, model)
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, float)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "floats")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_xdata(orig=True)), [1.1, 1.2, 1.3])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
+            self.assertEqual(len(lines), 3)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), [1.1])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
+            self.assertEqual(list(lines[1].get_xdata(orig=True)), [1.2])
+            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
+            self.assertEqual(list(lines[2].get_xdata(orig=True)), [1.3])
+            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_pivot_column_when_x_column_hidden(self):
+    def test_hidden_x_column_should_disable_it(self):
         self._fill_pivot({"ints": [-3, -1, 2], "floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
-        model.sourceModel().set_plot_x_column(1, True)
+        model.sourceModel().set_plot_x_column(2, True)
         model.set_filter("parameter", {(self._db_map, 1)})
-        support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        selection = self._select_column(1, model)
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, float)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_xdata(orig=True)), [1.0, 2.0, 3.0])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0, -1.0, 2.0])
+            self.assertEqual(len(lines), 3)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
+            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
+            self.assertEqual(list(lines[2].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_pivot_column_on_existing_plot(self):
+    def test_add_to_existing_plot(self):
         ts1 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [2.3, 5.0], False, False)
         ts2 = TimeSeriesFixedResolution("2019-07-10T13:00", "20m", [3.3, 4.0], False, False)
-        ts3 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [4.3, 3.0], False, False)
-        self._fill_pivot({"series": [ts1, ts2, ts3]})
+        self._fill_pivot({"series": [ts1, ts2]})
         model = self._db_editor.pivot_table_proxy
-        support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        first_data_row = model.sourceModel().headerRowCount()
+        selection = [model.index(first_data_row, 1)]
+        plot_widget = plot_pivot_table_selection(model, selection)
+        selection = [model.index(first_data_row + 1, 1)]
+        plot_pivot_table_selection(model, selection, plot_widget)
         try:
-            plot_pivot_column(model, 1, support, plot_widget)
-            self.assertEqual(plot_widget.plot_type, TimeSeries)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | series | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(legend_texts, ["o1", "o2"])
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 6)
+            self.assertEqual(len(lines), 2)
+            self.assertEqual(
+                list(lines[0].get_xdata(orig=True)),
+                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
+            )
             self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 5.0])
+            self.assertEqual(
+                list(lines[1].get_xdata(orig=True)),
+                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
+            )
             self.assertEqual(list(lines[1].get_ydata(orig=True)), [3.3, 4.0])
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [4.3, 3.0])
-            self.assertEqual(list(lines[3].get_ydata(orig=True)), [2.3, 5.0])
-            self.assertEqual(list(lines[4].get_ydata(orig=True)), [3.3, 4.0])
-            self.assertEqual(list(lines[5].get_ydata(orig=True)), [4.3, 3.0])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_pivot_column_incompatible_data_types_on_existing_plot_raises(self):
+    def test_incompatible_data_types_on_existing_plot_raises(self):
         ts1 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [2.3, 5.0], False, False)
-        ts2 = TimeSeriesFixedResolution("2019-07-10T13:00", "20m", [3.3, 4.0], False, False)
-        ts3 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [4.3, 3.0], False, False)
-        self._fill_pivot({"series": [ts1, ts2, ts3], "floats": [1.1, 1.2, 1.3]})
+        self._fill_pivot({"series": [ts1], "floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
-        support = PivotTablePlottingHints()
-        plot_widget = plot_pivot_column(model, 1, support)
+        first_data_row = model.sourceModel().headerRowCount()
+        selection = [model.index(first_data_row, 1)]
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, TimeSeries)
             with self.assertRaises(PlottingError):
-                plot_pivot_column(model, 2, support, plot_widget)
+                selection = self._select_column(2, model)
+                plot_pivot_table_selection(model, selection, plot_widget)
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_tree_view_selection_of_floats(self):
-        self._fill_parameter_value_table({"floats": [-2.3, -0.5]})
-        model = self._db_editor.object_parameter_value_model
-        selected_indexes = list()
-        selected_indexes.append(model.index(0, 4))
-        selected_indexes.append(model.index(1, 4))
-        support = ParameterTablePlottingHints()
-        plot_widget = plot_selection(model, selected_indexes, support)
-        try:
-            self.assertEqual(plot_widget.plot_type, float)
-            lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-2.3, -0.5])
-        finally:
-            plot_widget.deleteLater()
-
-    def test_plot_tree_view_selection_of_time_series(self):
-        ts1 = TimeSeriesFixedResolution("2019-07-11T09:00", "3 days", [0.5, 2.3], False, False)
-        ts2 = TimeSeriesVariableResolution(["2019-07-11T09:00", "2019-07-17T10:35"], [-5.0, -3.3], False, False)
-        self._fill_parameter_value_table({"time_series": [ts1, ts2]})
-        model = self._db_editor.object_parameter_value_model
-        selected_indexes = list()
-        selected_indexes.append(model.index(0, 4))
-        selected_indexes.append(model.index(1, 4))
-        support = ParameterTablePlottingHints()
-        plot_widget = plot_selection(model, selected_indexes, support)
-        try:
-            lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [0.5, 2.3])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-5.0, -3.3])
-        finally:
-            plot_widget.deleteLater()
-
-    def test_plot_tree_view_selection_into_existing_plot(self):
-        ts1 = TimeSeriesFixedResolution("2019-07-11T09:00", "3 days", [0.5, 2.3], False, False)
-        ts2 = TimeSeriesVariableResolution(["2019-07-11T09:00", "2019-07-17T10:35"], [-5.0, -3.3], False, False)
-        self._fill_parameter_value_table({"time_series": [ts1, ts2]})
-        model = self._db_editor.object_parameter_value_model
-        selected_indexes = [model.index(0, 4)]
-        support = ParameterTablePlottingHints()
-        plot_widget = plot_selection(model, selected_indexes, support)
-        try:
-            self.assertEqual(plot_widget.plot_type, TimeSeries)
-            selected_indexes = [model.index(1, 4)]
-            plot_selection(model, selected_indexes, support, plot_widget)
-            lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [0.5, 2.3])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-5.0, -3.3])
-        finally:
-            plot_widget.deleteLater()
-
-    def test_plot_tree_view_selection_raises_with_mixed_data(self):
-        ts1 = TimeSeriesFixedResolution("2019-07-11T09:00", "3 days", [0.5, 2.3], False, False)
-        self._fill_parameter_value_table({"time_series": [ts1], "floats": [2.3, 5.5]})
-        model = self._db_editor.object_parameter_value_model
-        selected_indexes = [model.index(row, 4) for row in range(3)]
-        support = ParameterTablePlottingHints()
-        with self.assertRaises(PlottingError):
-            plot_selection(model, selected_indexes, support)
-
-    def test_plot_tree_view_selection_into_existing_plot_with_mixed_data_raises(self):
-        ts1 = TimeSeriesFixedResolution("2019-07-11T09:00", "3 days", [0.5, 2.3], False, False)
-        self._fill_parameter_value_table({"time_series": [ts1], "floats": [2.3, 5.5]})
-        model = self._db_editor.object_parameter_value_model
-        selected_indexes = [model.index(1, 4)]
-        support = ParameterTablePlottingHints()
-        plot_widget = plot_selection(model, selected_indexes, support)
-        try:
-            self.assertEqual(plot_widget.plot_type, TimeSeries)
-            selected_indexes = [model.index(0, 4), model.index(2, 4)]
-            with self.assertRaises(PlottingError):
-                plot_selection(model, selected_indexes, support, plot_widget)
-        finally:
-            plot_widget.deleteLater()
-
-    def test_plot_single_plain_number(self):
-        """Test that a selection containing a single plain number gets plotted."""
-        self._fill_parameter_value_table({"float": [5.0]})
-        model = self._db_editor.object_parameter_value_model
-        selected_indexes = list()
-        selected_indexes.append(model.index(0, 4))
-        support = ParameterTablePlottingHints()
-        plot_widget = plot_selection(model, selected_indexes, support)
-        try:
-            lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [5.0])
-        finally:
-            plot_widget.deleteLater()
-
-    def test_plot_simple_map(self):
+    def test_simple_map(self):
         """Test that a selection containing a single plain number gets plotted."""
         self._fill_pivot({"maps": [Map(["a", "b"], [-1.1, -2.2])]})
         model = self._db_editor.pivot_table_proxy
-        support = PivotTablePlottingHints()
-        plot_widget = plot_selection(model, [model.index(2, 1)], support)
+        selection = [model.index(2, 1)]
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, Map)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | maps | o1 | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
             lines = plot_widget.canvas.axes.get_lines()
             self.assertEqual(len(lines), 1)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["a", "b"])
             self.assertEqual(list(lines[0].get_ydata(orig=True)), [-1.1, -2.2])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_nested_map(self):
+    def test_nested_map(self):
         """Test that a selection containing a single plain number gets plotted."""
         self._fill_pivot(
             {
@@ -407,18 +425,31 @@ class TestPlotting(unittest.TestCase):
             }
         )
         model = self._db_editor.pivot_table_proxy
-        support = PivotTablePlottingHints()
-        plot_widget = plot_selection(model, [model.index(2, 1)], support)
+        selection = [model.index(2, 1)]
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, TimeSeries)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | maps | o1 | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(legend_texts, ["a", "b"])
             lines = plot_widget.canvas.axes.get_lines()
             self.assertEqual(len(lines), 2)
+            self.assertEqual(
+                list(lines[0].get_xdata(orig=True)),
+                [numpy.datetime64("2020-11-13T11:00:00"), numpy.datetime64("2020-11-13T12:00:00")],
+            )
             self.assertEqual(list(lines[0].get_ydata(orig=True)), [-1.1, -2.2])
+            self.assertEqual(
+                list(lines[1].get_xdata(orig=True)),
+                [numpy.datetime64("2020-11-13T11:00:00"), numpy.datetime64("2020-11-13T12:00:00")],
+            )
             self.assertEqual(list(lines[1].get_ydata(orig=True)), [-3.3, -4.4])
         finally:
             plot_widget.deleteLater()
 
-    def test_plot_nested_map_containing_time_series(self):
+    def test_nested_map_containing_time_series(self):
         """Test that a selection containing a single plain number gets plotted."""
         self._fill_pivot(
             {
@@ -454,61 +485,309 @@ class TestPlotting(unittest.TestCase):
             }
         )
         model = self._db_editor.pivot_table_proxy
-        support = PivotTablePlottingHints()
-        plot_widget = plot_selection(model, [model.index(2, 1)], support)
+        selection = [model.index(2, 1)]
+        plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.plot_type, TimeSeries)
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | maps | o1 | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+            self.assertEqual(
+                legend_texts,
+                [
+                    "a | 2020-11-13T11:00:00",
+                    "a | 2020-11-13T12:00:00",
+                    "b | 2020-11-13T11:00:00",
+                    "b | 2020-11-13T12:00:00",
+                ],
+            )
             lines = plot_widget.canvas.axes.get_lines()
             self.assertEqual(len(lines), 4)
+            self.assertEqual(
+                list(lines[0].get_xdata(orig=True)),
+                [numpy.datetime64("2020-11-13T11:00:00"), numpy.datetime64("2020-11-13T12:00:00")],
+            )
             self.assertEqual(list(lines[0].get_ydata(orig=True)), [-1.1, -2.2])
+            self.assertEqual(
+                list(lines[1].get_xdata(orig=True)),
+                [numpy.datetime64("2020-11-13T12:00:00"), numpy.datetime64("2020-11-13T13:00:00")],
+            )
             self.assertEqual(list(lines[1].get_ydata(orig=True)), [-3.3, -4.4])
+            self.assertEqual(
+                list(lines[2].get_xdata(orig=True)),
+                [numpy.datetime64("2020-11-13T11:00:00"), numpy.datetime64("2020-11-13T12:00:00")],
+            )
             self.assertEqual(list(lines[2].get_ydata(orig=True)), [-5.5, -6.6])
+            self.assertEqual(
+                list(lines[3].get_xdata(orig=True)),
+                [numpy.datetime64("2020-11-13T12:00:00"), numpy.datetime64("2020-11-13T13:00:00")],
+            )
             self.assertEqual(list(lines[3].get_ydata(orig=True)), [-7.7, -8.8])
         finally:
             plot_widget.deleteLater()
 
-    def test_add_dictionary_plot(self):
-        plot_widget = PlotWidget()
-        try:
-            dictionary = Map(["key 1 ", "key 2"], [2.3, 5.5])
-            add_map_plot(plot_widget, dictionary)
-            lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 5.5])
-        finally:
-            plot_widget.deleteLater()
 
-    def test_add_time_series_plot(self):
-        plot_widget = PlotWidget()
-        try:
-            time_series = TimeSeriesVariableResolution(["1917-12-06", "2017-12-06"], [0.0, 100.0], False, False)
-            add_time_series_plot(plot_widget, time_series)
-            lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [0.0, 100.0])
-        finally:
-            plot_widget.deleteLater()
+class TestConvertIndexedValueToTree(unittest.TestCase):
+    def test_time_pattern(self):
+        pattern = TimePattern(["D1-3", "D4-7"], [1.1, 2.2], index_name="weekdays")
+        node = convert_indexed_value_to_tree(pattern)
+        self.assertEqual(node.label, "weekdays")
+        self.assertEqual(node.content, {"D1-3": 1.1, "D4-7": 2.2})
 
-    def test_plot_time_series_and_maps(self):
-        ts = TimeSeriesFixedResolution("2019-07-11T09:00", "3 days", [0.5, 2.3], False, False)
-        map_ = Map([DateTime("2019-07-11T09:00"), DateTime("2019-07-17T10:35")], [-5.0, -3.3])
-        nested_map = Map(["A"], [Map([DateTime("2019-07-11T09:00"), DateTime("2019-07-17T10:35")], [-2.3, -1.2])])
-        self._fill_parameter_value_table({"indexed_values": [ts, map_, nested_map]})
-        model = self._db_editor.object_parameter_value_model
-        selected_indexes = list()
-        selected_indexes.append(model.index(0, 4))
-        selected_indexes.append(model.index(1, 4))
-        selected_indexes.append(model.index(2, 4))
-        support = ParameterTablePlottingHints()
-        plot_widget = plot_selection(model, selected_indexes, support)
-        try:
-            lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 3)
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [0.5, 2.3])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-5.0, -3.3])
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [-2.3, -1.2])
-        finally:
-            plot_widget.deleteLater()
+    def test_time_series_fixed_resolution(self):
+        time_series = TimeSeriesFixedResolution(
+            "2022-09-26T09:00", "3h", [1.1, 2.2], False, False, index_name="my_index"
+        )
+        node = convert_indexed_value_to_tree(time_series)
+        self.assertEqual(node.label, "my_index")
+        self.assertEqual(
+            node.content, {numpy.datetime64("2022-09-26T09:00:00"): 1.1, numpy.datetime64("2022-09-26T12:00:00"): 2.2}
+        )
+
+    def test_time_series_variable_resolution(self):
+        time_series = TimeSeriesVariableResolution(
+            ["2022-09-26T09:00", "2022-09-26T12:00"], [1.1, 2.2], False, False, index_name="my_index"
+        )
+        node = convert_indexed_value_to_tree(time_series)
+        self.assertEqual(node.label, "my_index")
+        self.assertEqual(
+            node.content, {numpy.datetime64("2022-09-26T09:00:00"): 1.1, numpy.datetime64("2022-09-26T12:00:00"): 2.2}
+        )
+
+    def test_array(self):
+        array = Array([1.1, 2.2], index_name="my_zero_based_index")
+        node = convert_indexed_value_to_tree(array)
+        self.assertEqual(node.label, "my_zero_based_index")
+        self.assertEqual(node.content, {0: 1.1, 1: 2.2})
+
+    def test_map_1d(self):
+        map_value = Map(["a", "b"], [1.1, 2.2], index_name="root_index")
+        node = convert_indexed_value_to_tree(map_value)
+        self.assertEqual(node.label, "root_index")
+        self.assertEqual(node.content, {"a": 1.1, "b": 2.2})
+
+    def test_map_2d(self):
+        map1 = Map([1, 2], [1.1, 2.2], index_name="map1_index")
+        map2 = Map([3, 4], [3.3, 4.4], index_name="map2_index")
+        map_value = Map(["a", "b"], [map1, map2], index_name="root_index")
+        node = convert_indexed_value_to_tree(map_value)
+        self.assertEqual(node.label, "root_index")
+        expected_map1_tree = TreeNode("map1_index")
+        expected_map1_tree.content = {1: 1.1, 2: 2.2}
+        expected_map2_tree = TreeNode("map2_index")
+        expected_map2_tree.content = {3: 3.3, 4: 4.4}
+        self.assertEqual(node.content, {"a": expected_map1_tree, "b": expected_map2_tree})
+
+    def test_map_mixed_dimensions(self):
+        map1 = Map([1, 2], [1.1, 2.2], index_name="map1_index")
+        map_value = Map(["a", "b"], [map1, 3.3], index_name="root_index")
+        node = convert_indexed_value_to_tree(map_value)
+        self.assertEqual(node.label, "root_index")
+        expected_map1_tree = TreeNode("map1_index")
+        expected_map1_tree.content = {1: 1.1, 2: 2.2}
+        self.assertEqual(node.content, {"a": expected_map1_tree, "b": 3.3})
+
+
+class TestTurnNodesToXYData(unittest.TestCase):
+    def test_shallow_tree(self):
+        node = TreeNode("my_index")
+        node.content = {1: 1.1, 2: 2.2}
+        xy_data = list(turn_nodes_to_xy_data(node))
+        expected = [XYData([1, 2], [1.1, 2.2], "my_index", "", [], [])]
+        self.assertEqual(xy_data, expected)
+
+    def test_one_index_deep_tree(self):
+        node1 = TreeNode("index_1")
+        node1.content = {1: 1.1, 2: 2.2}
+        node2 = TreeNode("index_2")
+        node2.content = {3: 3.3, 4: 4.4}
+        root = TreeNode("root_index")
+        root.content = {"a": node1, "b": node2}
+        xy_data = list(turn_nodes_to_xy_data(root))
+        expected = [
+            XYData([1, 2], [1.1, 2.2], "index_1", "", ["a"], ["root_index"]),
+            XYData([3, 4], [3.3, 4.4], "index_2", "", ["b"], ["root_index"]),
+        ]
+        self.assertEqual(xy_data, expected)
+
+    def test_variable_depth_tree(self):
+        node1 = TreeNode("index_1")
+        node1.content = {1: 1.1, 2: 2.2}
+        root = TreeNode("root_index")
+        root.content = {"a": node1, 3: 3.3, 4: 4.4}
+        xy_data = list(turn_nodes_to_xy_data(root))
+        expected = [
+            XYData([1, 2], [1.1, 2.2], "index_1", "", ["a"], ["root_index"]),
+            XYData([3, 4], [3.3, 4.4], "root_index", "", [], []),
+        ]
+        self.assertEqual(xy_data, expected)
+
+
+class TestReduceIndexes(unittest.TestCase):
+    def test_single_shallow_xy_data(self):
+        data = [XYData([1, 2], [1.1, 2.2], "my_index", "", [], [])]
+        reduced_data, common_indexes = reduce_indexes(data)
+        expected = [XYData([1, 2], [1.1, 2.2], "my_index", "", [], [])]
+        self.assertEqual(reduced_data, expected)
+        self.assertEqual(common_indexes, [])
+
+    def test_all_indexes_shared(self):
+        data = [
+            XYData([1, 2], [1.1, 2.2], "x_index_1", "", ["my_index"], ["index name"]),
+            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["my_index"], ["index name"]),
+        ]
+        reduced_data, common_indexes = reduce_indexes(data)
+        expected = [
+            XYData([1, 2], [1.1, 2.2], "x_index_1", "", [], []),
+            XYData([3, 4], [3.3, 4.4], "x_index_2", "", [], []),
+        ]
+        self.assertEqual(reduced_data, expected)
+        self.assertEqual(common_indexes, ["my_index"])
+
+    def test_uneven_depth(self):
+        data = [
+            XYData([1, 2], [1.1, 2.2], "x_index_1", "", ["shared_1"], ["shared index"]),
+            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["shared_1", "extra"], ["shared index", "goes deeper"]),
+        ]
+        reduced_data, common_indexes = reduce_indexes(data)
+        expected = [
+            XYData([1, 2], [1.1, 2.2], "x_index_1", "", [], []),
+            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["extra"], ["goes deeper"]),
+        ]
+        self.assertEqual(reduced_data, expected)
+        self.assertEqual(common_indexes, ["shared_1"])
+
+    def test_first_index_not_shared(self):
+        data = [
+            XYData([1, 2], [1.1, 2.2], "x_index_1", "", ["different_1", "shared"], ["my_index_1", "shared index"]),
+            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["different_2", "shared"], ["my_index_2", "shared index"]),
+        ]
+        reduced_data, common_indexes = reduce_indexes(data)
+        expected = [
+            XYData([1, 2], [1.1, 2.2], "x_index_1", "", ["different_1"], ["my_index_1"]),
+            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["different_2"], ["my_index_2"]),
+        ]
+        self.assertEqual(reduced_data, expected)
+        self.assertEqual(common_indexes, ["shared"])
+
+
+class TestCombineDataWithSameIndexes(unittest.TestCase):
+    def test_not_combined_due_to_different_x_labels(self):
+        data = [
+            XYData([1, 2], [1.1, 2.2], "x_index_1", "", [], []),
+            XYData([3, 4], [3.3, 4.4], "x_index_2", "", [], []),
+        ]
+        combined = combine_data_with_same_indexes(data)
+        expected = [
+            XYData([1, 2], [1.1, 2.2], "x_index_1", "", [], []),
+            XYData([3, 4], [3.3, 4.4], "x_index_2", "", [], []),
+        ]
+        self.assertEqual(combined, expected)
+
+    def test_not_combined_due_to_different_indexes(self):
+        data = [
+            XYData([1, 2], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"]),
+            XYData([3, 4], [3.3, 4.4], "x_index", "", ["index_2"], ["index name"]),
+        ]
+        combined = combine_data_with_same_indexes(data)
+        expected = [
+            XYData([1, 2], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"]),
+            XYData([3, 4], [3.3, 4.4], "x_index", "", ["index_2"], ["index name"]),
+        ]
+        self.assertEqual(combined, expected)
+
+    def test_same_x_axes_combined(self):
+        data = [XYData([1, 2], [1.1, 2.2], "x_index", "", [], []), XYData([3, 4], [3.3, 4.4], "x_index", "", [], [])]
+        combined = combine_data_with_same_indexes(data)
+        expected = [XYData([1, 2, 3, 4], [1.1, 2.2, 3.3, 4.4], "x_index", "", [], [])]
+        self.assertEqual(combined, expected)
+
+    def test_all_same_indexes_combined(self):
+        data = [
+            XYData([1, 2], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"]),
+            XYData([3, 4], [3.3, 4.4], "x_index", "", ["index_1"], ["index name"]),
+        ]
+        combined = combine_data_with_same_indexes(data)
+        expected = [XYData([1, 2, 3, 4], [1.1, 2.2, 3.3, 4.4], "x_index", "", ["index_1"], ["index name"])]
+        self.assertEqual(combined, expected)
+
+
+class TestPlotData(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def test_nothing_to_plot(self):
+        plot_widget = plot_data([])
+        self.assertEqual(len(plot_widget.canvas.axes.lines), 0)
+
+    def test_single_plot(self):
+        data = [XYData([-11, -22], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"])]
+        plot_widget = plot_data(data)
+        lines = plot_widget.canvas.axes.lines
+        self.assertEqual(plot_widget.canvas.axes.get_title(), "index_1")
+        self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x_index")
+        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+        self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(list(lines[0].get_xdata(orig=True)), [-11, -22])
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 2.2])
+
+    def test_two_plots_with_shared_and_individual_indexes(self):
+        data = [XYData([-11, -22], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"])]
+        plot_widget = plot_data(data)
+        lines = plot_widget.canvas.axes.lines
+        self.assertEqual(plot_widget.canvas.axes.get_title(), "index_1")
+        self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x_index")
+        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+        self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(list(lines[0].get_xdata(orig=True)), [-11, -22])
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 2.2])
+
+    def test_we_find_unsqueezed_index_no_matter_what(self):
+        data = [
+            XYData(x=['t1', 't2'], y=[13.0, 7.0], x_label='x', y_label='', data_index=['A1'], index_names=['x']),
+            XYData(x=['B1', 'B2'], y=[-13.0, -7.0], x_label='x', y_label='', data_index=[], index_names=[]),
+        ]
+        plot_widget = plot_data(data)
+        self.assertEqual(plot_widget.canvas.axes.get_title(), "")
+        self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
+        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+        legend = plot_widget.canvas.legend_axes.get_legend()
+        legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+        self.assertEqual(legend_texts, ["<root> | A1", "<root>"])
+        lines = plot_widget.canvas.axes.lines
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(list(lines[0].get_xdata(orig=True)), ["t1", "t2"])
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [13.0, 7.0])
+        self.assertEqual(list(lines[1].get_xdata(orig=True)), ["B1", "B2"])
+        self.assertEqual(list(lines[1].get_ydata(orig=True)), [-13.0, -7.0])
+
+
+class TestRaiseIfIncompatibleX(unittest.TestCase):
+    def test_data_with_numeric_and_string_x_data_raises(self):
+        data_list = [
+            XYData(
+                x=[1.0, 2.0, 3.0],
+                y=[5.0, 2.0, -1.0],
+                x_label='x',
+                y_label='',
+                data_index=['1d_map'],
+                index_names=['parameter_name'],
+            ),
+            XYData(
+                x=['t1', 't2'],
+                y=[13.0, 7.0],
+                x_label='x',
+                y_label='',
+                data_index=['uneven_map', 'A1'],
+                index_names=['parameter_name', 'x'],
+            ),
+        ]
+        self.assertRaises(PlottingError, raise_if_incompatible_x, data_list)
 
 
 class MultiSignalWaiter(QObject):

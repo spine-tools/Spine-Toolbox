@@ -15,6 +15,7 @@ Custom QTableView classes that support copy-paste and the like.
 :author: M. Marin (KTH)
 :date:   18.5.2018
 """
+from dataclasses import replace
 
 from PySide2.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint
 from PySide2.QtWidgets import QAction, QTableView, QHeaderView, QMenu
@@ -29,11 +30,16 @@ from ..mvcmodels.pivot_table_models import (
 )
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ...widgets.report_plotting_failure import report_plotting_failure
-from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
+from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
 from ...widgets.custom_qwidgets import TitleWidgetAction
-from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints, PivotTablePlottingHints
-from ...helpers import preferred_row_height, rows_to_row_count_tuples
+from ...plotting import (
+    PlottingError,
+    ParameterTableHeaderSection,
+    plot_parameter_table_selection,
+    plot_pivot_table_selection,
+)
+from ...helpers import preferred_row_height, rows_to_row_count_tuples, DB_ITEM_SEPARATOR
 from .pivot_table_header_view import (
     PivotTableHeaderView,
     ParameterValuePivotHeaderView,
@@ -62,6 +68,9 @@ def _set_parameter_data(index, new_value):
 
 
 class ParameterTableView(AutoFilterCopyPasteTableView):
+    value_column_header: str = NotImplemented
+    """Either "default value" or "value". Used to identify the value column for advanced editing and plotting."""
+
     def __init__(self, parent):
         """
         Args:
@@ -74,11 +83,6 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._plot_action = None
         self._plot_separator = None
         self.pinned_values = []
-
-    @property
-    def value_column_header(self):
-        """Either "default value" or "value". Used to identify the value column for advanced editing and plotting."""
-        raise NotImplementedError()
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -122,13 +126,24 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         """Plots current index."""
         selection = self.selectedIndexes()
         try:
-            hints = ParameterTablePlottingHints()
-            plot_widget = plot_selection(self.model(), selection, hints)
+            plot_widget = self._plot_selection(selection)
         except PlottingError as error:
             report_plotting_failure(error, self._spine_db_editor)
         else:
             plot_widget.use_as_window(self.window(), self.value_column_header)
             plot_widget.show()
+
+    def _plot_selection(self, selection, plot_widget=None):
+        """Adds selected indexes to existing plot or creates a new plot window.
+
+        Args:
+            selection (Iterable of QModelIndex): a list of QModelIndex objects for plotting
+            plot_widget (PlotWidget, optional): an existing plot widget to draw into or None to create a new widget
+
+        Returns:
+            PlotWidget: a PlotWidget object
+        """
+        raise NotImplementedError()
 
     @Slot(QAction)
     def plot_in_window(self, action):
@@ -137,8 +152,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         plot_window = PlotWidget.plot_windows.get(plot_window_name)
         selection = self.selectedIndexes()
         try:
-            hints = ParameterTablePlottingHints()
-            plot_selection(self.model(), selection, hints, plot_window)
+            self._plot_selection(selection, plot_window)
             plot_window.raise_()
         except PlottingError as error:
             report_plotting_failure(error, self._spine_db_editor)
@@ -180,7 +194,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         if is_value:
             plot_in_window_menu = QMenu("Plot in window")
             plot_in_window_menu.triggered.connect(self.plot_in_window)
-            _prepare_plot_in_window_menu(plot_in_window_menu)
+            prepare_plot_in_window_menu(plot_in_window_menu)
             self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
         self._menu.exec_(event.globalPos())
         if is_value:
@@ -267,9 +281,7 @@ class RelationshipParameterTableMixin:
 
 
 class ParameterDefinitionTableView(ParameterTableView):
-    @property
-    def value_column_header(self):
-        return "default_value"
+    value_column_header = "default_value"
 
     def create_delegates(self):
         super().create_delegates()
@@ -277,11 +289,13 @@ class ParameterDefinitionTableView(ParameterTableView):
         delegate = self._make_delegate("default_value", ParameterDefaultValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
+    def _plot_selection(self, selection, plot_widget=None):
+        """See base class"""
+        raise NotImplementedError()
+
 
 class ParameterValueTableView(ParameterTableView):
-    @property
-    def value_column_header(self):
-        return "value"
+    value_column_header = "value"
 
     def connect_spine_db_editor(self, spine_db_editor):
         super().connect_spine_db_editor(spine_db_editor)
@@ -314,13 +328,40 @@ class ParameterValueTableView(ParameterTableView):
             return None
         return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
 
+    def _plot_selection(self, selection, plot_widget=None):
+        """See base class"""
+        raise NotImplementedError()
+
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
     """A custom QTableView for the object parameter_definition pane in Spine db editor."""
 
+    def _plot_selection(self, selection, plot_widget=None):
+        """See base class"""
+        header_sections = [
+            ParameterTableHeaderSection(label) for label in ("database", "object_class_name", "parameter_name")
+        ]
+        return plot_parameter_table_selection(
+            self.model(), selection, header_sections, self.value_column_header, plot_widget
+        )
+
 
 class RelationshipParameterDefinitionTableView(RelationshipParameterTableMixin, ParameterDefinitionTableView):
     """A custom QTableView for the relationship parameter_definition pane in Spine db editor."""
+
+    def _plot_selection(self, selection, plot_widget=None):
+        """See base class"""
+        header_sections = [
+            ParameterTableHeaderSection(label)
+            for label in ("database", "relationship_class_name", "object_class_name_list", "parameter_name")
+        ]
+        for i, section in enumerate(header_sections):
+            if section.label == "object_class_name_list":
+                header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
+                break
+        return plot_parameter_table_selection(
+            self.model(), selection, header_sections, self.value_column_header, plot_widget
+        )
 
 
 class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTableView):
@@ -332,7 +373,14 @@ class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTab
 
     @property
     def _pk_fields(self):
-        return ("object_class_name", "object_name", "parameter_name", "alternative_name")
+        return "object_class_name", "object_name", "parameter_name", "alternative_name"
+
+    def _plot_selection(self, selection, plot_widget=None):
+        """See base class."""
+        header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._pk_fields]
+        return plot_parameter_table_selection(
+            self.model(), selection, header_sections, self.value_column_header, plot_widget
+        )
 
 
 class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
@@ -345,7 +393,18 @@ class RelationshipParameterValueTableView(RelationshipParameterTableMixin, Param
 
     @property
     def _pk_fields(self):
-        return ("relationship_class_name", "object_name_list", "parameter_name", "alternative_name")
+        return "relationship_class_name", "object_name_list", "parameter_name", "alternative_name"
+
+    def _plot_selection(self, selection, plot_widget=None):
+        """See base class."""
+        header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._pk_fields]
+        for i, section in enumerate(header_sections):
+            if section.label == "object_name_list":
+                header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
+                break
+        return plot_parameter_table_selection(
+            self.model(), selection, header_sections, self.value_column_header, plot_widget
+        )
 
 
 class PivotTableView(CopyPasteTableView):
@@ -583,17 +642,18 @@ class PivotTableView(CopyPasteTableView):
         def plot(self):
             """Plots the selected cells."""
             selected_indexes = self._view.selectedIndexes()
-            hints = PivotTablePlottingHints()
             model = self._view.model()
             try:
-                plot_window = plot_selection(model, selected_indexes, hints)
+                plot_window = plot_pivot_table_selection(model, selected_indexes)
             except PlottingError as error:
-                report_plotting_failure(error, self)
+                report_plotting_failure(error, self._view)
                 return
+            source_model = model.sourceModel()
             plotted_column_names = {
-                hints.column_label(model, index.column())
+                source_model.column_name(index.column())
                 for index in selected_indexes
-                if hints.is_index_in_data(model, index)
+                if source_model.index_in_data(model.mapToSource(index))
+                or source_model.column_is_index_column(model.mapToSource(index).column())
             }
             plot_window.use_as_window(self._view, ", ".join(plotted_column_names))
             plot_window.show()
@@ -607,12 +667,11 @@ class PivotTableView(CopyPasteTableView):
                 self.plot()
                 return
             selected_indexes = self._view.selectedIndexes()
-            hints = PivotTablePlottingHints()
             try:
-                plot_selection(self._view.model(), selected_indexes, hints, plot_window)
+                plot_pivot_table_selection(self._view.model(), selected_indexes, plot_window)
                 plot_window.raise_()
             except PlottingError as error:
-                report_plotting_failure(error, self)
+                report_plotting_failure(error, self._view)
 
         def remove_parameters(self):
             """Removes selected parameter definitions from the database."""
@@ -642,9 +701,9 @@ class PivotTableView(CopyPasteTableView):
                 db_map_typed_data.setdefault(db_map, {}).setdefault("parameter_value", set()).add(id_)
             self._db_editor.db_mngr.remove_items(db_map_typed_data)
 
-        def _show_context_menu(self, position):
-            """See base class."""
-            _prepare_plot_in_window_menu(self._plot_in_window_menu)
+        @Slot(QPoint)
+        def show_context_menu(self, position):
+            prepare_plot_in_window_menu(self._plot_in_window_menu)
             super().show_context_menu(position)
 
         def _to_selection_lists(self, index):

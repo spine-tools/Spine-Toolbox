@@ -36,21 +36,24 @@ class PlotWidget(QWidget):
 
     Attributes:
         canvas (PlotCanvas): the plotting canvas
-        plot_type (type): type of currently plotted data or None
+        original_xy_data (list of XYData): unmodified data on which the plots are based
     """
 
     plot_windows = dict()
     """A global list of plot windows."""
 
     def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent)
-        self.plot_type = None
         self._layout = QVBoxLayout(self)
         self.canvas = PlotCanvas(self)
         self._toolbar = NavigationToolBar(self.canvas, self)
         self._layout.addWidget(self._toolbar)
         self._layout.addWidget(self.canvas)
-        self.all_labels = list()
+        self.original_xy_data = list()
         QMetaObject.connectSlotsByName(self)
 
     def closeEvent(self, event):
@@ -61,32 +64,37 @@ class PlotWidget(QWidget):
         super().closeEvent(event)
 
     def contextMenuEvent(self, event):
+        """Shows plot context menu."""
         menu = QMenu(self)
         menu.addAction("Show plot data...", self.show_plot_data)
         menu.addAction("Copy plot data", self.copy_plot_data)
         menu.exec_(event.globalPos())
 
-    def _get_plot_data(self, parent=None, document_name=""):
-        header = ["indexes"]
-        indexes = []
-        data_dicts = []
-        for line in self.canvas.axes.get_lines():
-            label = line.get_label()
-            xdata = line.get_xdata()
-            ydata = line.get_ydata()
-            header.append(label)
-            indexes.append(xdata)
-            data_dict = dict(zip(xdata, ydata))
-            data_dicts.append(data_dict)
-        all_indexes = np.unique(np.concatenate(indexes))
-        rows = [header]
-        for index in all_indexes:
-            row = [str(index)] + [str(data_dict.get(index, "")) for data_dict in data_dicts]
-            rows.append(row)
+    def _get_plot_data(self):
+        """Gathers plot data into a table.
+
+        Returns:
+            list of list: data as table
+        """
+        if not self.original_xy_data:
+            return []
+        max_index_count = max(len(xy_data.data_index) for xy_data in self.original_xy_data)
+        header_of_agreeable_width = None
+        rows = []
+        for xy_data in self.original_xy_data:
+            if len(xy_data.data_index) == max_index_count:
+                if header_of_agreeable_width is None:
+                    header_of_agreeable_width = xy_data.index_names + [xy_data.x_label, xy_data.y_label]
+                rows += [xy_data.data_index + [x, y] for x, y in zip(xy_data.x, xy_data.y)]
+            else:
+                n = max_index_count - len(xy_data.data_index)
+                rows += [xy_data.data_index + [x, y] + n * [None] for x, y in zip(xy_data.x, xy_data.y)]
+        rows.insert(0, header_of_agreeable_width)
         return rows
 
     @busy_effect
     def copy_plot_data(self, parent=None, document_name=""):
+        """Copies plot data to clipboard."""
         rows = self._get_plot_data()
         with io.StringIO() as output:
             writer = csv.writer(output, delimiter="\t", quotechar="'")
@@ -96,11 +104,11 @@ class PlotWidget(QWidget):
 
     @busy_effect
     def show_plot_data(self, parent=None, document_name=""):
+        """Opens a separate window that shows the plot data."""
         if parent is None:
             parent = self
         rows = self._get_plot_data()
-        widget = _PlotDataWidget(rows)
-        widget.setParent(parent)
+        widget = _PlotDataWidget(rows, self)
         widget.setWindowFlag(Qt.Window, True)
         title = "Plot data"
         if document_name:
@@ -109,21 +117,9 @@ class PlotWidget(QWidget):
         widget.show()
 
     def add_legend(self):
+        """Adds a legend to the plot's legend axes."""
         h, l = self.canvas.axes.get_legend_handles_labels()
         self.canvas.legend_axes.legend(h, l, loc="upper center")
-
-    def infer_plot_type(self, values):
-        """Decides suitable plot_type according to a list of values."""
-        first_value = values[0]
-        if isinstance(first_value, TimeSeries):
-            self.plot_type = TimeSeries
-        elif isinstance(first_value, Map):
-            self.plot_type = Map
-        elif isinstance(first_value, IndexedValue):
-            self.plot_type = type(first_value)
-        else:
-            # It is some scalar type
-            self.plot_type = type(values[1][0])
 
     def use_as_window(self, parent_window, document_name):
         """
@@ -135,9 +131,10 @@ class PlotWidget(QWidget):
         """
         self.setParent(parent_window)
         self.setWindowFlag(Qt.Window, True)
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         title = "Plot"
         if document_name:
-            title += f"\t-- {document_name} --"
+            title += f"    -- {document_name} --"
         self.setWindowTitle(title)
         PlotWidget.plot_windows[self._unique_window_name(document_name)] = self
 
@@ -176,8 +173,12 @@ class _PlotDataWidget(QWidget):
         self.setAttribute(Qt.WA_DeleteOnClose)
 
 
-def _prepare_plot_in_window_menu(menu):
-    """Fills a given menu with available plot window names."""
+def prepare_plot_in_window_menu(menu):
+    """Fills a given menu with available plot window names.
+
+    Args:
+        menu (QMenu): menu to modify
+    """
     menu.clear()
     plot_windows = PlotWidget.plot_windows
     if not plot_windows:

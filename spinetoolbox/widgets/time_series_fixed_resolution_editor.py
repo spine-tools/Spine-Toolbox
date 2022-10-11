@@ -69,6 +69,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         initial_value = TimeSeriesFixedResolution(start, resolution, values, False, False)
         self._model = TimeSeriesModelFixedResolution(initial_value, self)
         self._model.dataChanged.connect(self._update_plot)
+        self._model.headerDataChanged.connect(self._update_plot)
         self._model.modelReset.connect(self._update_plot)
         self._model.rowsInserted.connect(self._update_plot)
         self._model.rowsRemoved.connect(self._update_plot)
@@ -160,7 +161,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updated the plot."""
         self._ui.plot_widget.canvas.axes.cla()
-        add_time_series_plot(self._ui.plot_widget, self._model)
+        add_time_series_plot(self._ui.plot_widget, self._model.value)
         self._ui.plot_widget.canvas.draw()
 
     def value(self):

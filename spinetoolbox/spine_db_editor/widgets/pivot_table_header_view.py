@@ -20,8 +20,8 @@ from PySide2.QtCore import Signal, Slot, Qt, QPoint
 from PySide2.QtWidgets import QHeaderView, QMenu, QAction
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...widgets.report_plotting_failure import report_plotting_failure
-from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
-from ...plotting import plot_pivot_column, PlottingError, PivotTablePlottingHints
+from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
+from ...plotting import PlottingError, plot_pivot_table_selection
 from ...config import PIVOT_TABLE_HEADER_COLOR
 
 
@@ -81,6 +81,17 @@ class ParameterValuePivotHeaderView(PivotTableHeaderView):
         self._set_as_x_action = self._menu.addAction("Use as X", self._set_x_flag)
         self._set_as_x_action.setCheckable(True)
 
+    def _column_selection(self):
+        """Lists current column's indexes that contain some data.
+
+        Returns:
+            list of QModelIndex: column indexes
+        """
+        column = self._model_index.column()
+        first_data_row = self._proxy_model.sourceModel().headerRowCount()
+        data_rows_end = self._proxy_model.rowCount()
+        return [self._proxy_model.index(row, column) for row in range(first_data_row, data_rows_end)]
+
     @Slot(QAction)
     def _add_column_to_plot(self, action):
         """Adds a single column to existing plot window."""
@@ -89,25 +100,39 @@ class ParameterValuePivotHeaderView(PivotTableHeaderView):
         if plot_window is None:
             self._plot_column()
             return
+        column = self._model_index.column()
+        selection = self._column_indexes(column)
         try:
-            support = PivotTablePlottingHints()
-            plot_pivot_column(self._proxy_model, self._model_index.column(), support, plot_window)
+            plot_pivot_table_selection(self._proxy_model, selection, plot_window)
         except PlottingError as error:
             report_plotting_failure(error, self)
 
     @Slot()
     def _plot_column(self):
         """Plots a single column not the selection."""
+        column = self._model_index.column()
+        selection = self._column_indexes(column)
         try:
-            support = PivotTablePlottingHints()
-            plot_window = plot_pivot_column(self._proxy_model, self._model_index.column(), support)
+            plot_window = plot_pivot_table_selection(self._proxy_model, selection)
         except PlottingError as error:
             report_plotting_failure(error, self)
             return
-        plot_window.use_as_window(
-            self.parentWidget(), support.column_label(self._proxy_model, self._model_index.column())
-        )
+        column_label = self._proxy_model.sourceModel().column_name(column)
+        plot_window.use_as_window(self.parentWidget(), column_label)
         plot_window.show()
+
+    def _column_indexes(self, column):
+        """Makes indexes for given column.
+
+        Args:
+            column (int): column
+
+        Returns:
+            list of QModelIndex: column indexes
+        """
+        first_data_row = self._proxy_model.sourceModel().headerRowCount()
+        data_rows_end = self._proxy_model.sourceModel().rowCount()
+        return [self._proxy_model.index(row, column) for row in range(first_data_row, data_rows_end)]
 
     @Slot()
     def _set_x_flag(self):
@@ -136,7 +161,7 @@ class ParameterValuePivotHeaderView(PivotTableHeaderView):
             self._plot_action.setEnabled(True)
             self._set_as_x_action.setEnabled(True)
             self._set_as_x_action.setChecked(source_index.column() == self._proxy_model.sourceModel().plot_x_column)
-        _prepare_plot_in_window_menu(self._add_to_plot_menu)
+        prepare_plot_in_window_menu(self._add_to_plot_menu)
         self._menu.show()
 
 

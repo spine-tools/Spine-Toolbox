@@ -237,9 +237,24 @@ class MapModel(QAbstractTableModel):
         self.endInsertRows()
         return True
 
+    def is_leaf_value(self, index):
+        """Checks if given model index contains a leaf value.
+
+        Args:
+            index (QModelIndex): index to check
+
+        Returns:
+            bool: True if index points to leaf value, False otherwise
+        """
+        row = index.row()
+        column = index.column()
+        if self._is_in_expanse(row, column):
+            return False
+        return column > 0 and column + 1 == _data_length(self._rows[row])
+
     def _is_in_expanse(self, row, column):
         """
-        Returns True, if given row and column is in the right or bottom 'expanding' zone
+        Returns True, if given row and column is in the right or bottom 'expanding' zone.
 
         Args:
             row (int): row index
