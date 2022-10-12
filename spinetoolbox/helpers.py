@@ -30,22 +30,7 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import matplotlib
-from PySide2.QtCore import (
-    Qt,
-    Slot,
-    QFile,
-    QIODevice,
-    QSize,
-    QRect,
-    QPoint,
-    QUrl,
-    QObject,
-    QEvent,
-    QThreadPool,
-    QRunnable,
-    QWaitCondition,
-    QMutex,
-)
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
@@ -1583,33 +1568,3 @@ class HTMLTagFilter(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == "br":
             self._text += "\n"
-
-
-class _QuickRunnable(QRunnable):
-    def __init__(self, fn, *args, **kwargs):
-        super().__init__()
-        self._fn = fn
-        self._args = args
-        self._kwargs = kwargs
-        self._result = None
-        self._mutex = QMutex()
-        self._condition = QWaitCondition()
-
-    def run(self):
-        self._mutex.lock()
-        self._result = self._fn(*self._args, **self._kwargs)
-        self._condition.wakeAll()
-        self._mutex.unlock()
-
-    def result(self):
-        self._mutex.lock()
-        self._condition.wait(self._mutex)
-        self._mutex.unlock()
-        return self._result
-
-
-class QuickThreadPool(QThreadPool):
-    def quick_start(self, fn, *args, **kwargs):
-        runnable = _QuickRunnable(fn, *args, **kwargs)
-        self.start(runnable)
-        return runnable
