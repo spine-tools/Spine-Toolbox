@@ -521,9 +521,7 @@ class JumpLink(JumpOrLink):
     """A graphics icon to represent a jump connection between items."""
 
     _COLOR = JUMP_COLOR
-    _ISSUE_TEXT = "\uf071"
-    _NORMAL_TEXT = "\uf2f9"
-    _ISSUE_COLOR = QColor("red")
+    _ISSUE = "\uf071"
 
     def __init__(self, toolbox, src_connector, dst_connector, jump):
         """
@@ -562,15 +560,9 @@ class JumpLink(JumpOrLink):
         while self._icons:
             self._icons.pop(0).wipe_out()
         issues = self.issues()
-        if issues:
-            text = self._ISSUE_TEXT
-            color = self._ISSUE_COLOR
-            tooltip = issues[0]
-        else:
-            text = self._NORMAL_TEXT
-            color = None
-            tooltip = ""
-        icon = _TextIcon(self, self._icon_extent, text, color=color, tooltip=tooltip)
+        if not issues:
+            return
+        icon = _TextIcon(self, self._icon_extent, self._ISSUE, active=True, tooltip="\n".join(issues))
         self._icons.append(icon)
         self._place_icons()
 
