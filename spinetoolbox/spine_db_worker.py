@@ -20,7 +20,7 @@ import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, QTimer, Signal, Slot
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from spinetoolbox.helpers import busy_effect, QuickThreadPool
+from spinetoolbox.helpers import busy_effect, QThreadExecutor
 
 
 @unique
@@ -52,11 +52,11 @@ class SpineDBWorker(QObject):
         self._fetched_parents = set()
         self._fetched_item_types = set()
         self.commit_cache = {}
-        self._pool = QuickThreadPool(self)
-        self._pool.setMaxThreadCount(1)
+        self._executor = QThreadExecutor(self)
         self._something_happened.connect(self._handle_something_happened)
 
     def clean_up(self):
+        self._executor.tear_down()
         self.deleteLater()
 
     @Slot(object, tuple)
@@ -73,13 +73,13 @@ class SpineDBWorker(QObject):
 
     def query(self, sq_name):
         """For tests."""
-        return self._pool.quick_start(self._query, sq_name).result()
+        return self._executor.submit(self._query, sq_name).result()
 
     def _query(self, sq_name):
         return self._db_map.query(getattr(self._db_map, sq_name)).all()
 
     def get_db_map(self, *args, **kwargs):
-        future = self._pool.quick_start(self._get_db_map, *args, **kwargs)
+        future = self._executor.submit(self._get_db_map, *args, **kwargs)
         self._db_map, err = future.result()
         return self._db_map, err
 
@@ -108,11 +108,11 @@ class SpineDBWorker(QObject):
         query = self._queries.get(parent)
         if query is None:
             # Query not made yet. Init query and return True
-            self._pool.quick_start(self._init_query, parent)
+            self._executor.submit(self._init_query, parent)
             return True
         return self._query_has_elements(query)
 
-    @busy_effect
+    # @busy_effect
     def _init_query(self, parent):
         """Initializes query for parent."""
         lock = self._db_mngr.db_map_locks.get(self._db_map)
@@ -154,9 +154,9 @@ class SpineDBWorker(QObject):
             parent (object)
         """
         self._busy_parents.add(parent)
-        self._pool.quick_start(self._fetch_more, parent)
+        self._executor.submit(self._fetch_more, parent)
 
-    @busy_effect
+    # @busy_effect
     def _fetch_more(self, parent):
         lock = self._db_mngr.db_map_locks.get(self._db_map)
         if lock is None or not lock.tryLock():
@@ -195,10 +195,10 @@ class SpineDBWorker(QObject):
         if not item_types:
             # FIXME: Needed? QCoreApplication.processEvents()
             return
-        future = self._pool.quick_start(self._fetch_all, item_types)
+        future = self._executor.submit(self._fetch_all, item_types)
         _ = future.result()
 
-    @busy_effect
+    # @busy_effect
     def _fetch_all(self, item_types):
         lock = self._db_mngr.db_map_locks.get(self._db_map)
         if lock is None or not lock.tryLock():
@@ -245,7 +245,9 @@ class SpineDBWorker(QObject):
             self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])
 
     def close_db_map(self):
-        self._pool.quick_start(self._close_db_map)
+        print("close_db_map")
+        x = self._executor.submit(self._close_db_map).result()
+        print(x)
 
     def _close_db_map(self):
         if not self._db_map.connection.closed:
@@ -260,7 +262,7 @@ class SpineDBWorker(QObject):
         Returns:
             list of namedtuple: entity metadata records
         """
-        future = self._pool.quick_start(self._get_entity_metadata, entity_id)
+        future = self._executor.submit(self._get_entity_metadata, entity_id)
         return future.result()
 
     def _get_entity_metadata(self, entity_id):
@@ -284,7 +286,7 @@ class SpineDBWorker(QObject):
         Returns:
             list of namedtuple: parameter value metadata records
         """
-        future = self._pool.quick_start(self._get_parameter_value_metadata, parameter_value_id)
+        future = self._executor.submit(self._get_parameter_value_metadata, parameter_value_id)
         return future.result()
 
     def _get_parameter_value_metadata(self, parameter_value_id):
@@ -310,9 +312,9 @@ class SpineDBWorker(QObject):
             check (bool): Whether or not to check integrity
             cache (dict): Cache
         """
-        self._pool.quick_start(self._add_or_update_items, items, method_name, item_type, signal_name, check, cache)
+        self._executor.submit(self._add_or_update_items, items, method_name, item_type, signal_name, check, cache)
 
-    @busy_effect
+    # @busy_effect
     def _add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
@@ -333,9 +335,9 @@ class SpineDBWorker(QObject):
             item_type (str): item type
             signal_name (str) : signal attribute of SpineDBManager to emit if successful
         """
-        self._pool.quick_start(self._readd_items, items, method_name, item_type, signal_name, cache)
+        self._executor.submit(self._readd_items, items, method_name, item_type, signal_name, cache)
 
-    @busy_effect
+    # @busy_effect
     def _readd_items(self, items, method_name, item_type, signal_name, cache):
         getattr(self._db_map, method_name)(*items, readd=True, cache=cache)
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
@@ -351,9 +353,9 @@ class SpineDBWorker(QObject):
         Args:
             ids_per_type (dict): lists of items to remove keyed by item type (str)
         """
-        self._pool.quick_start(self._remove_items, ids_per_type)
+        self._executor.submit(self._remove_items, ids_per_type)
 
-    @busy_effect
+    # @busy_effect
     def _remove_items(self, ids_per_type):
         try:
             self._db_map.remove_items(**ids_per_type)
@@ -377,7 +379,7 @@ class SpineDBWorker(QObject):
         # Make sure that the worker thread has a reference to undo stacks even if they get deleted
         # in the GUI thread.
         undo_stack = self._db_mngr.undo_stack[self._db_map]
-        self._pool.quick_start(self._commit_session, commit_msg, undo_stack, cookie)
+        self._executor.submit(self._commit_session, commit_msg, undo_stack, cookie)
 
     def _commit_session(self, commit_msg, undo_stack, cookie=None):
         """Commits session for given database maps.
@@ -410,7 +412,7 @@ class SpineDBWorker(QObject):
         # Make sure that the worker thread has a reference to undo stacks even if they get deleted
         # in the GUI thread.
         undo_stack = self._db_mngr.undo_stack[self._db_map]
-        self._pool.quick_start(self._rollback_session, undo_stack)
+        self._executor.submit(self._rollback_session, undo_stack)
 
     def _rollback_session(self, undo_stack):
         """Rolls back session for given database maps.

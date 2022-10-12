@@ -32,6 +32,7 @@ from contextlib import contextmanager
 import matplotlib
 from PySide2.QtCore import (
     Qt,
+    Signal,
     Slot,
     QFile,
     QIODevice,
@@ -41,10 +42,9 @@ from PySide2.QtCore import (
     QUrl,
     QObject,
     QEvent,
-    QThreadPool,
-    QRunnable,
     QWaitCondition,
     QMutex,
+    QThread,
 )
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
@@ -1585,7 +1585,10 @@ class HTMLTagFilter(HTMLParser):
             self._text += "\n"
 
 
-class _QuickRunnable(QRunnable):
+class _Job(QObject):
+    _started = Signal()
+    finished = Signal(object)
+
     def __init__(self, fn, *args, **kwargs):
         super().__init__()
         self._fn = fn
@@ -1593,23 +1596,54 @@ class _QuickRunnable(QRunnable):
         self._kwargs = kwargs
         self._result = None
         self._mutex = QMutex()
+        self._mutex_locker = None
         self._condition = QWaitCondition()
+        self._started.connect(self._run)
+        self._done = False
 
-    def run(self):
+    def start(self):
+        self._started.emit()
+
+    @Slot()
+    def _run(self):
         self._mutex.lock()
         self._result = self._fn(*self._args, **self._kwargs)
+        self.finished.emit(self)
         self._condition.wakeAll()
         self._mutex.unlock()
+        self._done = True
 
     def result(self):
         self._mutex.lock()
-        self._condition.wait(self._mutex)
+        while not self._done:
+            if self._condition.wait(self._mutex, 20):
+                break
+            print("loop")
         self._mutex.unlock()
         return self._result
 
 
-class QuickThreadPool(QThreadPool):
-    def quick_start(self, fn, *args, **kwargs):
-        runnable = _QuickRunnable(fn, *args, **kwargs)
-        self.start(runnable)
-        return runnable
+class QThreadExecutor(QObject):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self._thread = QThread()
+        self._thread.start()
+        self._jobs = []
+        self._mutex = QMutex()
+        self.destroyed.connect(lambda obj=None: self.tear_down())
+
+    def tear_down(self):
+        self._thread.quit()
+        self._thread.wait()
+
+    def submit(self, fn, *args, **kwargs):
+        job = _Job(fn, *args, **kwargs)
+        job.moveToThread(self._thread)
+        self._jobs.append(job)
+        job.finished.connect(self._clean_up_job)
+        job.start()
+        return job
+
+    @Slot(object)
+    def _clean_up_job(self, job):
+        self._jobs.remove(job)
