@@ -554,15 +554,15 @@ class SpineDBManager(QObject):
             except AttributeError:
                 pass
 
-    def unregister_listener(self, listener, commit_dirty, commit_msg, *db_maps):
+    def unregister_listener(self, listener, *db_maps, commit_dirty=False, commit_msg=""):
         """Unregisters given listener from given db_map signals.
         If any of the db_maps becomes an orphan and is dirty, prompts user to commit or rollback.
 
         Args:
             listener (object)
+            *db_maps (DiffDatabaseMapping)
             commit_dirty (bool): True to commit dirty database mapping, False to roll back
             commit_msg (str): commit message
-            *db_maps (DiffDatabaseMapping)
         """
         dirty_orphan_db_maps = self.dirty_or_orphan(listener, *db_maps)
         for db_map in db_maps:

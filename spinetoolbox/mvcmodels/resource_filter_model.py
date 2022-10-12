@@ -18,7 +18,6 @@ Contains ResourceFilterModel.
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 
-from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from ..project_commands import SetFiltersOnlineCommand
@@ -81,6 +80,7 @@ class ResourceFilterModel(QStandardItemModel):
                 disabled_names = self._connection.disabled_filter_names(resource_label, type_)
                 append_filter_items(filter_parent, filters_by_type, type_, disabled_names)
                 self._set_all_selected_item(resource_label, filter_parent)
+        self.tree_built.emit()
 
     def fetch_filters(self):
         filters = {}
@@ -88,19 +88,12 @@ class ResourceFilterModel(QStandardItemModel):
             url = resource.url
             if not url:
                 continue
-            try:
-                db_map = DatabaseMapping(url)
-            except (SpineDBAPIError, SpineDBVersionError):
-                continue
-            try:
-                scenario_names = sorted([row.name for row in db_map.query(db_map.scenario_sq)])
-                if scenario_names:
-                    filters.setdefault(resource.label, {})[SCENARIO_FILTER_TYPE] = scenario_names
-                tool_names = sorted([row.name for row in db_map.query(db_map.tool_sq)])
-                if tool_names:
-                    filters.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = tool_names
-            finally:
-                db_map.connection.close()
+            scenario_names = self._connection.get_scenario_names(url)
+            if scenario_names:
+                filters.setdefault(resource.label, {})[SCENARIO_FILTER_TYPE] = scenario_names
+            tool_names = self._connection.get_tool_names(url)
+            if tool_names:
+                filters.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = tool_names
         return filters
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -139,6 +132,7 @@ class ResourceFilterModel(QStandardItemModel):
             online (dict): mapping from scenario/tool id to online flag
         """
         self.connection.set_online(resource, filter_type, online)
+        self.connection.link.update_icons()
         filter_type_item = self._find_filter_type_item(resource, filter_type)
         for row in range(filter_type_item.rowCount()):
             filter_item = filter_type_item.child(row)

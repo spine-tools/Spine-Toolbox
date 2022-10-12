@@ -962,7 +962,7 @@ class SpineDBEditorBase(QMainWindow):
                 if not commit_msg:
                     return False
         self._torn_down = True
-        self.db_mngr.unregister_listener(self, commit_dirty, commit_msg, *self.db_maps)
+        self.db_mngr.unregister_listener(self, *self.db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg)
         return True
 
     def _prompt_to_commit_changes(self):

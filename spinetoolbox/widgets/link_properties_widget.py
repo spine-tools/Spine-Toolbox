@@ -50,19 +50,20 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
             connection (LoggingConnection)
         """
         self._connection = connection
-        self._connection.refresh_resource_filter_model()
+        model = self.ui.treeView_filters.model()
+        if model is not None:
+            model.tree_built.disconnect(self.ui.treeView_filters.expandAll)
         self.ui.treeView_filters.setModel(self._connection.resource_filter_model)
-        self.ui.treeView_filters.expandAll()
+        self._connection.resource_filter_model.tree_built.connect(self.ui.treeView_filters.expandAll)
+        self._connection.refresh_resource_filter_model()
         self._toolbox.label_item_name.setText(f"<b>Link {self._connection.link.name}</b>")
         self.load_connection_options()
-        source_item_type = self._toolbox.project().get_item(self._connection.source).item_type()
-        destination_item_type = self._toolbox.project().get_item(self._connection.destination).item_type()
-        self.ui.treeView_filters.setEnabled(bool(self._connection.database_resources))
-        self.ui.spinBox_write_index.setEnabled(destination_item_type == "Data Store")
-        self.ui.label_write_index.setEnabled(destination_item_type == "Data Store")
-        self.ui.checkBox_use_memory_db.setEnabled({"Tool", "Data Store"} == {source_item_type, destination_item_type})
-        self.ui.checkBox_use_datapackage.setEnabled(source_item_type in {"Exporter", "Data Connection", "Tool"})
-        self.ui.checkBox_purge_before_writing.setEnabled(destination_item_type == "Data Store")
+        self.ui.treeView_filters.setEnabled(self._connection.may_have_filters())
+        self.ui.spinBox_write_index.setEnabled(self._connection.may_have_write_index())
+        self.ui.label_write_index.setEnabled(self._connection.may_have_write_index())
+        self.ui.checkBox_use_memory_db.setEnabled(self._connection.may_use_memory_db())
+        self.ui.checkBox_use_datapackage.setEnabled(self._connection.may_use_datapackage())
+        self.ui.checkBox_purge_before_writing.setEnabled(self._connection.may_purge_before_writing())
 
     def unset_link(self):
         """Releases the widget from any links."""

@@ -26,6 +26,7 @@ from PySide2.QtWidgets import (
     QGraphicsEllipseItem,
     QStyle,
     QToolTip,
+    QGraphicsColorizeEffect,
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor, QPainterPathStroker
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
@@ -270,14 +271,16 @@ class LinkBase(QGraphicsPathItem):
 class _IconBase(QGraphicsEllipseItem):
     """Base class for icons to show over a Link."""
 
-    def __init__(self, x, y, w, h, parent, tooltip=None):
+    def __init__(self, x, y, w, h, parent, tooltip=None, active=True):
         super().__init__(x, y, w, h, parent)
+        palette = qApp.palette()  # pylint: disable=undefined-variable
+        brush = palette.highlight() if active else palette.mid()
+        self._fg_color = brush.color()
         if tooltip:
             self.setToolTip(tooltip)
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-        self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
+        self.setBrush(palette.window())
 
     def hoverEnterEvent(self, event):
         QToolTip.showText(event.screenPos(), self.toolTip())
@@ -289,12 +292,15 @@ class _IconBase(QGraphicsEllipseItem):
 class _SvgIcon(_IconBase):
     """A svg icon to show over a Link."""
 
-    def __init__(self, parent, extent, path, tooltip=None):
-        super().__init__(0, 0, extent, extent, parent, tooltip=tooltip)
+    def __init__(self, parent, extent, path, tooltip=None, active=False):
+        super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)
         self._svg_item = QGraphicsSvgItem(self)
         self._renderer = QSvgRenderer()
         self._renderer.load(path)
+        self._colorizer = QGraphicsColorizeEffect()
+        self._colorizer.setColor(self._fg_color)
         self._svg_item.setSharedRenderer(self._renderer)
+        self._svg_item.setGraphicsEffect(self._colorizer)
         scale = 0.8 * self.rect().width() / self._renderer.defaultSize().width()
         self._svg_item.setScale(scale)
         self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
@@ -312,15 +318,12 @@ class _TextIcon(_IconBase):
 
     FONT_SIZE_PIXELS = 16  # Using pixel size to prevent font scaling by system.
 
-    def __init__(self, parent, extent, char, tooltip=None, color=None):
-        super().__init__(0, 0, extent, extent, parent, tooltip=tooltip)
-        if color is None:
-            color = QColor("slateblue")
+    def __init__(self, parent, extent, char, tooltip=None, active=False):
+        super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)
         self._text_item = QGraphicsTextItem(self)
         font = QFont('Font Awesome 5 Free Solid', weight=QFont.Bold)
-        font.setPixelSize(self.FONT_SIZE_PIXELS)
         self._text_item.setFont(font)
-        self._text_item.setDefaultTextColor(color)
+        self._text_item.setDefaultTextColor(self._fg_color)
         self._text_item.setPlainText(char)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
         self.setPen(Qt.NoPen)
@@ -357,7 +360,7 @@ class JumpOrLink(LinkBase):
         icon_count = len(self._icons)
         if not icon_count:
             return
-        icon_extent = self._icon_extent / (icon_count ** (1 / 8))
+        icon_extent = self._icon_extent / (icon_count ** (1 / 4))
         offset = 0.5 * QPointF(icon_extent, icon_extent)
         if icon_count == 1:
             self._icons[0].setPos(center - offset)
@@ -474,17 +477,22 @@ class Link(JumpOrLink):
     def update_icons(self):
         while self._icons:
             self._icons.pop(0).wipe_out()
-        if self._connection.use_datapackage:
-            self._icons.append(_SvgIcon(self, self._icon_extent, self._DATAPACKAGE))
+        if self._connection.may_use_datapackage():
+            active = self._connection.use_datapackage
+            self._icons.append(_SvgIcon(self, self._icon_extent, self._DATAPACKAGE, active=active))
         if self._connection.may_have_filters():
-            self._icons.append(_TextIcon(self, self._icon_extent, self._FILTERS))
-        if self._connection.use_memory_db:
-            self._icons.append(_TextIcon(self, self._icon_extent, self._MEMORY))
-        if self._connection.purge_before_writing:
-            self._icons.append(_TextIcon(self, self._icon_extent, self._PURGE))
-        sibling_conns = self._toolbox.project().incoming_connections(self.connection.destination)
-        if any(l.write_index > 1 for l in sibling_conns):
-            self._icons.append(_TextIcon(self, self._icon_extent, str(self._connection.write_index)))
+            active = self._connection.has_filters
+            self._icons.append(_TextIcon(self, self._icon_extent, self._FILTERS, active=active))
+        if self._connection.may_use_memory_db():
+            active = self._connection.use_memory_db
+            self._icons.append(_TextIcon(self, self._icon_extent, self._MEMORY, active=active))
+        if self._connection.may_purge_before_writing():
+            active = self._connection.purge_before_writing
+            self._icons.append(_TextIcon(self, self._icon_extent, self._PURGE, active=active))
+        if self._connection.may_have_write_index():
+            sibling_conns = self._toolbox.project().incoming_connections(self.connection.destination)
+            active = any(l.write_index > 1 for l in sibling_conns)
+            self._icons.append(_TextIcon(self, self._icon_extent, str(self._connection.write_index), active=active))
         self._place_icons()
 
     @property
