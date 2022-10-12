@@ -79,8 +79,7 @@ class SpineDBWorker(QObject):
         return self._db_map.query(getattr(self._db_map, sq_name)).all()
 
     def get_db_map(self, *args, **kwargs):
-        future = self._executor.submit(self._get_db_map, *args, **kwargs)
-        self._db_map, err = future.result()
+        self._db_map, err = self._executor.submit(self._get_db_map, *args, **kwargs).result()
         return self._db_map, err
 
     def _get_db_map(self, *args, **kwargs):
@@ -112,7 +111,7 @@ class SpineDBWorker(QObject):
             return True
         return self._query_has_elements(query)
 
-    # @busy_effect
+    @busy_effect
     def _init_query(self, parent):
         """Initializes query for parent."""
         lock = self._db_mngr.db_map_locks.get(self._db_map)
@@ -156,7 +155,7 @@ class SpineDBWorker(QObject):
         self._busy_parents.add(parent)
         self._executor.submit(self._fetch_more, parent)
 
-    # @busy_effect
+    @busy_effect
     def _fetch_more(self, parent):
         lock = self._db_mngr.db_map_locks.get(self._db_map)
         if lock is None or not lock.tryLock():
@@ -195,10 +194,9 @@ class SpineDBWorker(QObject):
         if not item_types:
             # FIXME: Needed? QCoreApplication.processEvents()
             return
-        future = self._executor.submit(self._fetch_all, item_types)
-        _ = future.result()
+        self._executor.submit(self._fetch_all, item_types).wait()
 
-    # @busy_effect
+    @busy_effect
     def _fetch_all(self, item_types):
         lock = self._db_mngr.db_map_locks.get(self._db_map)
         if lock is None or not lock.tryLock():
@@ -245,9 +243,7 @@ class SpineDBWorker(QObject):
             self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])
 
     def close_db_map(self):
-        print("close_db_map")
-        x = self._executor.submit(self._close_db_map).result()
-        print(x)
+        self._executor.submit(self._close_db_map).wait()
 
     def _close_db_map(self):
         if not self._db_map.connection.closed:
@@ -262,8 +258,7 @@ class SpineDBWorker(QObject):
         Returns:
             list of namedtuple: entity metadata records
         """
-        future = self._executor.submit(self._get_entity_metadata, entity_id)
-        return future.result()
+        return self._executor.submit(self._get_entity_metadata, entity_id).result()
 
     def _get_entity_metadata(self, entity_id):
         """Queries metadata records for a single entity.
@@ -286,8 +281,7 @@ class SpineDBWorker(QObject):
         Returns:
             list of namedtuple: parameter value metadata records
         """
-        future = self._executor.submit(self._get_parameter_value_metadata, parameter_value_id)
-        return future.result()
+        return self._executor.submit(self._get_parameter_value_metadata, parameter_value_id).result()
 
     def _get_parameter_value_metadata(self, parameter_value_id):
         """Queries metadata records for a single parameter value.
@@ -314,7 +308,7 @@ class SpineDBWorker(QObject):
         """
         self._executor.submit(self._add_or_update_items, items, method_name, item_type, signal_name, check, cache)
 
-    # @busy_effect
+    @busy_effect
     def _add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
@@ -337,7 +331,7 @@ class SpineDBWorker(QObject):
         """
         self._executor.submit(self._readd_items, items, method_name, item_type, signal_name, cache)
 
-    # @busy_effect
+    @busy_effect
     def _readd_items(self, items, method_name, item_type, signal_name, cache):
         getattr(self._db_map, method_name)(*items, readd=True, cache=cache)
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
@@ -355,7 +349,7 @@ class SpineDBWorker(QObject):
         """
         self._executor.submit(self._remove_items, ids_per_type)
 
-    # @busy_effect
+    @busy_effect
     def _remove_items(self, ids_per_type):
         try:
             self._db_map.remove_items(**ids_per_type)

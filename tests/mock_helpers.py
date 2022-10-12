@@ -324,6 +324,9 @@ class _MockFuture:
     def __init__(self, result):
         self._result = result
 
+    def wait(self):
+        pass
+
     def result(self):
         return self._result
 

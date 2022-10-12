@@ -1613,13 +1613,15 @@ class _Job(QObject):
         self._mutex.unlock()
         self._done = True
 
-    def result(self):
+    def wait(self):
         self._mutex.lock()
         while not self._done:
             if self._condition.wait(self._mutex, 20):
                 break
-            print("loop")
         self._mutex.unlock()
+
+    def result(self):
+        self.wait()
         return self._result
 
 
