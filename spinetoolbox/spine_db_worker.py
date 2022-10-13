@@ -18,7 +18,7 @@ The SpineDBWorker class
 
 import itertools
 from enum import Enum, unique, auto
-from PySide2.QtCore import QObject, QTimer, Signal, Slot
+from PySide2.QtCore import QObject, QTimer, Signal, Slot, QThread
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinetoolbox.helpers import busy_effect, QThreadExecutor
 
@@ -61,6 +61,12 @@ class SpineDBWorker(QObject):
 
     @Slot(object, tuple)
     def _handle_something_happened(self, event, args):
+        ui_thread = qApp.thread()
+        current_thread = QThread.currentThread()
+        if ui_thread != current_thread:
+            raise RuntimeError(
+                f"event {event} received in the wrong thread - current is {current_thread} should be {ui_thread} "
+            )
         {
             _Event.FETCH: self._fetch_event,
             _Event.FETCH_STATUS_CHANGE: self._fetch_status_change_event,
