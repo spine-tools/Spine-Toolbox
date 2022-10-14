@@ -198,16 +198,19 @@ class EngineClient:
 
     def download_files(self, q):
         """Pulls files from server until b'END' is received."""
-        q.put(("server_status_msg", {"msg_type": "neutral", "text": "*** Downloading files from server ***"}))
         i = 0
         while True:
             rcv = self.rcv_next("pull")
             if rcv[0] == b"END":
-                q.put(("server_status_msg", {"msg_type": "neutral", "text": f"Downloaded {i} files"}))
+                if i > 0:
+                    q.put(("server_status_msg", {"msg_type": "neutral", "text": f"Downloaded {i} files"}))
                 break
-            success, txt = self.save_downloaded_file(rcv[0], rcv[1])
-            q.put(("server_status_msg", {"msg_type": success, "text": txt}))
-            i += 1
+            elif rcv[0] == b"incoming_file":
+                q.put(("server_status_msg", {"msg_type": "warning", "text": "Downloading file " + rcv[1].decode("utf-8")}))
+            else:
+                success, txt = self.save_downloaded_file(rcv[0], rcv[1])
+                q.put(("server_status_msg", {"msg_type": success, "text": txt}))
+                i += 1
 
     def save_downloaded_file(self, b_rel_path, file_data):
         """Saves downloaded file to project directory.

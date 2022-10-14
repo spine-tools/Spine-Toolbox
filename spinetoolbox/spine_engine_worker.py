@@ -374,7 +374,9 @@ class SpineEngineWorker(QObject):
         elif data["msg_type"] == "neutral":
             self._logger.msg.emit(data["text"])
         elif data["msg_type"] == "fail":
-            self._logger.msg_error(data["text"])
+            self._logger.msg_error.emit(data["text"])
+        elif data["msg_type"] == "warning":
+            self._logger.msg_warning.emit(data["text"])
 
     def clean_up(self):
         for item in self._executing_items:
