@@ -16,11 +16,8 @@ Contains SpineEngineManagerBase.
 :date:   14.10.2020
 """
 import queue
-import socketserver
 import threading
-import time
 import json
-import socket
 from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
 from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.server.util.event_data_converter import EventDataConverter
@@ -219,7 +216,8 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         self._runner = threading.Thread(name="RemoteSpineEngineManagerRunnerThread", target=self._run)
         self._engine_data = None
         self.engine_client = None
-        self.job_id = job_id  # id of DAG to execute
+        self.job_id = job_id  # Job Id of ProjectExtractionService for finding the extracted project on server
+        self.exec_job_id = ""  # Job Id of RemoteExecutionService for stopping the execution
         self.q = queue.Queue()  # Queue for sending events forward to SpineEngineWorker
 
     def make_engine_client(self, host, port, security, sec_folder, ping=True):
@@ -257,16 +255,10 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         return self.q.get()
 
     def stop_engine(self):
-        """Stops EngineClient and _runner threads."""
-        # TODO: This stops the client, but we need to stop the execution on server as well
-        if self.engine_client is not None:
-            self.engine_client.close()
-        if self._runner.is_alive():
+        """Sends a request to stop execution on Server, kills EngineClient and _runner threads."""
+        if self._runner.is_alive():  # because this is called in spine engine worker clean_up()
+            response = self.engine_client.stop_execution(self.exec_job_id)
             self._runner.join()
-
-    def close(self):
-        """Closes client and thread."""
-        self.stop_engine()
 
     def _run(self):
         """Sends a start execution request to server with the job Id.
@@ -277,7 +269,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         self.engine_client.client_project_dir = self._engine_data["project_dir"]
         engine_data_json = json.dumps(self._engine_data)  # Transform dictionary to JSON string
         # Send request to server, and wait for an execution started response containing the publish port
-        start_response_data = self.engine_client.start_execute(engine_data_json, self.job_id)
+        start_response_data = self.engine_client.start_execution(engine_data_json, self.job_id)
         if start_response_data[0] != "remote_execution_started":
             # Initializing the server for execution failed. 'remote_execution_init_failed' and 'server_init_failed'
             # are handled in SpineEngineWorker.
@@ -288,15 +280,17 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             }))
             self.q.put(start_response_data)
             return
+        self.exec_job_id = start_response_data[2]  # Needed for stopping DAG execution on server
         # Prepare subscribe socket
         self.engine_client.connect_pull_socket(start_response_data[1])
         while True:  # Pull events until dag_exec_finished event
-            rcv = self.engine_client.rcv_next()
+            rcv = self.engine_client.rcv_next("pull")
             event = EventDataConverter.deconvert(*rcv)  # Unpack list
             if event[0] == "dag_exec_finished":
                 # Download all files before sending 'dag_exec_finished' to SpineEngineWorker
                 # because it will destroy this thread before the file transfers have finished.
-                self.engine_client.download_files(self.q)
+                if event[1] == "COMPLETED":
+                    self.engine_client.download_files(self.q)
                 t = self.engine_client.get_elapsed_time()
                 self.q.put(("server_status_msg", {"msg_type": "success", "text": f"Execution time: {t}"}))
                 self.q.put(event)
@@ -307,6 +301,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 break
             else:
                 self.q.put(event)
+        self.engine_client.close()
 
     def answer_prompt(self, item_name, accepted):
         """See base class."""

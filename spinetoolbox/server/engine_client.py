@@ -49,6 +49,14 @@ class EngineClient:
         self._req_socket = self._context.socket(zmq.REQ)
         self._req_socket.setsockopt(zmq.LINGER, 1)
         self.pull_socket = self._context.socket(zmq.PULL)
+        self.client_ctrl_sender = self._context.socket(zmq.PAIR)
+        self.client_ctrl_sender.bind("inproc://client_control")  # inproc:// transport requires bind() before connect()
+        self.client_ctrl_receiver = self._context.socket(zmq.PAIR)
+        self.client_ctrl_receiver.connect("inproc://client_control")
+        self.poller = zmq.Poller()
+        self.poller.register(self._req_socket, zmq.POLLIN)
+        self.poller.register(self.pull_socket, zmq.POLLIN)
+        self.poller.register(self.client_ctrl_receiver, zmq.POLLIN)
         self.client_project_dir = None
         self.start_time = 0
         if sec_model == ClientSecurityModel.STONEHOUSE:
@@ -86,15 +94,34 @@ class EngineClient:
         """
         self.pull_socket.connect(self.protocol + "://" + self.host + ":" + port)
 
-    def rcv_next(self):
-        """Pulls the next event or file from server."""
-        return self.pull_socket.recv_multipart()
+    def rcv_next(self, req_or_pull):
+        """Polls all sockets and returns a new reply based on given socket 'name'.
+
+        Args:
+            req_or_pull (str): "req" to wait for reply to REQ socket, "pull" to wait for reply to PULL socket.
+        """
+        while True:
+            sockets = dict(self.poller.poll())
+            if sockets.get(self.pull_socket) == zmq.POLLIN:
+                if req_or_pull == "pull":
+                    return self.pull_socket.recv_multipart()
+                continue
+            if sockets.get(self._req_socket) == zmq.POLLIN:
+                if req_or_pull == "req":
+                    return self._req_socket.recv()
+                continue
+            if sockets.get(self.client_ctrl_receiver) == zmq.POLLIN:
+                print("debug")
+                break
+        # TODO: Does not work
+        self.close()
+        return None
 
     def _check_connectivity(self, timeout):
         """Pings server, waits for the response, and acts accordingly.
 
         Args:
-            timeout (int): Time to wait before giving up [ms]
+            timeout (int): Time to wait for a response before giving up [ms]
 
         Returns:
             void
@@ -119,29 +146,8 @@ class EngineClient:
             stop_time_ms = round(time.time() * 1000.0)  # debugging
         return
 
-    def start_execute(self, engine_data, job_id):
-        """Sends the start execution request along with job Id and engine (dag) data to the server.
-        Response message data contains the push/pull socket port if execution starts successfully.
-
-        Args:
-            engine_data (str): Input for SpineEngine as JSON str. Includes most of project.json, settings, etc.
-            job_id (str): Project execution job Id on server
-
-        Returns:
-            tuple: Response tuple (event_type: data). Event_type is "server_init_failed",
-            "remote_execution_init_failed" or "remote_execution_started. data is an error
-            message or the publish and push sockets ports concatenated with ':'.
-        """
-        self.start_time = round(time.time() * 1000.0)
-        msg = ServerMessage("start_execution", job_id, engine_data)
-        self._req_socket.send_multipart([msg.to_bytes()])  # Send request
-        response = self._req_socket.recv()  # Blocks until a response is received
-        response_msg = ServerMessage.parse(response)  # Parse received bytes into a ServerMessage
-        data = response_msg.getData()
-        return data
-
-    def send_project_file(self, project_dir_name, fpath):
-        """Sends the zipped project file to server. Project zip file must be ready and the server available
+    def upload_project(self, project_dir_name, fpath):
+        """Uploads the zipped project file to server. Project zip file must be ready and the server available
         before calling this method.
 
         Args:
@@ -157,16 +163,45 @@ class EngineClient:
         _, zip_filename = os.path.split(fpath)
         req = ServerMessage("prepare_execution", "1", json.dumps(project_dir_name), [zip_filename])
         self._req_socket.send_multipart([req.to_bytes(), file_data])
-        response = self._req_socket.recv()
+        response = self.rcv_next("req")
         response_server_message = ServerMessage.parse(response)
         return response_server_message.getId()
 
+    def start_execution(self, engine_data, job_id):
+        """Sends the start execution request along with job Id and engine (dag) data to the server.
+        Response message data contains the push/pull socket port if execution starts successfully.
+
+        Args:
+            engine_data (str): Input for SpineEngine as JSON str. Includes most of project.json, settings, etc.
+            job_id (str): Project execution job Id on server
+
+        Returns:
+            tuple: Response tuple (event_type, data). Event_type is "server_init_failed",
+            "remote_execution_init_failed" or "remote_execution_started. data is an error
+            message or the publish and push sockets ports concatenated with ':'.
+        """
+        self.start_time = round(time.time() * 1000.0)
+        msg = ServerMessage("start_execution", job_id, engine_data)
+        self._req_socket.send_multipart([msg.to_bytes()])  # Send request
+        response = self.rcv_next("req")
+        response_msg = ServerMessage.parse(response)  # Parse received bytes into a ServerMessage
+        start_msg = response_msg.getData()
+        return start_msg
+
+    def stop_execution(self, job_id):
+        """Sends a request to stop executing the DAG that is managed by this client."""
+        req = ServerMessage("stop_execution", job_id, "", None)
+        self._req_socket.send_multipart([req.to_bytes()])
+        response = self.rcv_next("req")
+        response_server_message = ServerMessage.parse(response)
+        return response_server_message.getData()
+
     def download_files(self, q):
-        """Pull files from server until b'END' is received."""
+        """Pulls files from server until b'END' is received."""
         q.put(("server_status_msg", {"msg_type": "neutral", "text": "*** Downloading files from server ***"}))
         i = 0
         while True:
-            rcv = self.rcv_next()
+            rcv = self.rcv_next("pull")
             if rcv[0] == b"END":
                 q.put(("server_status_msg", {"msg_type": "neutral", "text": f"Downloaded {i} files"}))
                 break
@@ -291,5 +326,9 @@ class EngineClient:
             self._req_socket.close()
         if not self.pull_socket.closed:
             self.pull_socket.close()
+        if not self.client_ctrl_sender.closed:
+            self.client_ctrl_sender.close()
+        if not self.client_ctrl_receiver.closed:
+            self.client_ctrl_receiver.close()
         if not self._context.closed:
             self._context.term()

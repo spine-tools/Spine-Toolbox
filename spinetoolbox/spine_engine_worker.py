@@ -249,8 +249,6 @@ class SpineEngineWorker(QObject):
             "server_status_msg": self._handle_server_status_msg,
         }.get(event_type)
         if handler is None:
-            if event_type != "dag_exec_finished":
-                print(f"No handler for event_type:{event_type} data:{data}")
             return
         handler(data)
 
@@ -381,10 +379,7 @@ class SpineEngineWorker(QObject):
     def clean_up(self):
         for item in self._executing_items:
             self._node_execution_finished.emit(item, None, None)
-        if isinstance(self._engine_mngr, LocalSpineEngineManager):
-            self._engine_mngr.stop_engine()
-        else:
-            self._engine_mngr.close()
+        self._engine_mngr.stop_engine()
         self._thread.quit()
         self._thread.wait()
         self._thread.deleteLater()

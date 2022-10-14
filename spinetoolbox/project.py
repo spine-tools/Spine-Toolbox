@@ -28,7 +28,7 @@ from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
-from spine_engine.utils.helpers import shorten
+from spine_engine.utils.helpers import shorten, get_file_size
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_engine.server.util.zip_handler import ZipHandler
 from .server.engine_client import EngineClient
@@ -1389,10 +1389,10 @@ class SpineToolboxProject(MetaObject):
         if not os.path.isfile(project_zip_file):
             self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
             return ""
-        file_size = os.path.getsize(project_zip_file)
-        self._logger.msg_warning.emit(f"Uploading <b>{PROJECT_ZIP_FILENAME + '.zip'} [{file_size} B]</b>")
+        file_size = get_file_size(os.path.getsize(project_zip_file))
+        self._logger.msg_warning.emit(f"Uploading project [{file_size}] ...")
         _, project_dir_name = os.path.split(self.project_dir)
-        job_id = engine_client.send_project_file(project_dir_name, project_zip_file)
+        job_id = engine_client.upload_project(project_dir_name, project_zip_file)
         t = engine_client.get_elapsed_time()
         self._logger.msg.emit(f"Upload time: {t}. Job ID: <b>{job_id}</b>")
         engine_client.close()

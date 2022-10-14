@@ -42,7 +42,7 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
     def test_remote_engine_manager_when_dag_execution_succeeds(self):
         # Mock return values for EngineClient methods
         event_yielder = self.yield_event1()
-        attrs = {"start_execute.return_value": ("remote_execution_started", "12345"),
+        attrs = {"start_execution.return_value": ("remote_execution_started", "12345"),
                  "connect_sub_socket.return_value": True,
                  "rcv_next_event.side_effect": event_yielder
                  }
@@ -50,7 +50,7 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
 
     def test_remote_engine_manager_ds_prompt_event_type_received(self):
         event_yielder = self.yield_event2()
-        attrs = {"start_execute.return_value": ("remote_execution_started", "12345"),
+        attrs = {"start_execution.return_value": ("remote_execution_started", "12345"),
                  "connect_sub_socket.return_value": True,
                  "rcv_next_event.side_effect": event_yielder
                  }
