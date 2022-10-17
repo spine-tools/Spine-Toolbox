@@ -1595,29 +1595,29 @@ class _Job(QObject):
         self._args = args
         self._kwargs = kwargs
         self._result = None
+        self._done = False
         self._mutex = QMutex()
-        self._mutex_locker = None
         self._condition = QWaitCondition()
         self._started.connect(self._run)
-        self._done = False
 
     def start(self):
         self._started.emit()
 
     @Slot()
     def _run(self):
-        self._mutex.lock()
         self._result = self._fn(*self._args, **self._kwargs)
-        self.finished.emit(self)
+        # Atomically set _done = True and notify waiting threads
+        self._mutex.lock()
+        self._done = True
         self._condition.wakeAll()
         self._mutex.unlock()
-        self._done = True
+        self.finished.emit(self)
 
     def wait(self):
         self._mutex.lock()
-        while not self._done:
-            if self._condition.wait(self._mutex, 20):
-                break
+        # Wait on the condition only if _done is False
+        if not self._done:
+            self._condition.wait(self._mutex)
         self._mutex.unlock()
 
     def result(self):
@@ -1632,7 +1632,6 @@ class QThreadExecutor(QObject):
         self._thread.start()
         self._jobs = []
         self._mutex = QMutex()
-        self.destroyed.connect(lambda obj=None: self.tear_down())
 
     def tear_down(self):
         self._thread.quit()
@@ -1648,4 +1647,5 @@ class QThreadExecutor(QObject):
 
     @Slot(object)
     def _clean_up_job(self, job):
-        self._jobs.remove(job)
+        job.destroyed.connect(lambda obj=None, job=job: self._jobs.remove(job))
+        job.deleteLater()
