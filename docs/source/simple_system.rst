@@ -16,7 +16,7 @@
 Simple System tutorial
 **********************
 
-Welcome to Spine Toolbox's Symple System tutorial.
+Welcome to Spine Toolbox's Simple System tutorial.
 
 This tutorial provides a step-by-step guide to setup a simple energy system on Spine Toolbox
 and is organized as follows:
@@ -143,9 +143,11 @@ Entering input data
 Importing the SpineOpt database template
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Download `the basic SpineOpt database template 
+#. Download `the SpineOpt database template 
+   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/templates/spineopt_template.json>`_
+   and `the basic SpineOpt model 
    <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/templates/models/basic_model_template.json>`_
-   (right click on the link, then select *Save link as...*)
+   (right click on the links, then select *Save link as...*)
 
 #. Select the 'input' Data Store item in the *Design View*.
 
@@ -159,10 +161,10 @@ Importing the SpineOpt database template
       for visualizing and managing Spine databases.
 
 #. Press **Alt + F** to display the main menu, select **File -> Import...**,
-   and then select the template file you previously downloaded. 
+   and then select the template file you previously downloaded (`spineopt_template.json`). 
    The contents of that file will be imported into the current database,
    and you should then see classes like ‘commodity’, ‘connection’ and ‘model’ under 
-   the root node in the *Object tree* (on the left).
+   the root node in the *Object tree* (on the left). Then import the second file (`basic_model_template.json`).
 
 #. From the main menu, select **Session -> Commit**.
    Enter ‘Import SpineOpt template’ as message in the popup dialog, and click **Commit**.
@@ -191,25 +193,14 @@ Creating objects
 #. Right click on the `unit` class, and select *Add objects* from the context menu.
    The *Add objects* dialog will pop up.
 
+.. note:: In SpineOpt, nodes are points where an energy balance takes place, whereas units are energy conversion
+   devices that can take energy from nodes, and release energy to nodes.
+
 #. Enter the names for the system units as seen in the image below, then press *Ok*. This will create two objects
    of class `unit`, called `power_plant_a` and `power_plant_b`.
 
    .. image:: img/simple_system_add_units.png
       :align: center
-
-.. note:: In SpineOpt, nodes are points where an energy balance takes place, whereas units are energy conversion
-   devices that can take energy from nodes, and release energy to nodes.
-
-#. Right click on the `output` class, and select *Add objects* from the context menu.
-   The *Add objects* dialog will pop up.
-
-#. Enter `unit_flow` under *object name* as in the image below, then press *Ok*. This will create one object
-   of class `unit`, called `unit_flow`.
-
-   .. image:: img/simple_system_add_output.png
-      :align: center
-
-.. note:: In SpineOpt, outputs represent optimization variables that can be written to the output database as part of a report.
 
 .. note:: To modify an object after you enter it, right click on it and select **Edit...** from the context menu.
 
@@ -248,6 +239,7 @@ Establishing relationships
    .. image:: img/simple_system_add_report__output_relationships.png
       :align: center
 
+.. note:: In SpineOpt, outputs represent optimization variables that can be written to the output database as part of a report.
 
 .. _Specifying object parameter values:
 
@@ -353,6 +345,10 @@ Examining the results
 
 #. Select `report__unit__node__direction__stochastic_scenario` under **Relationship tree**, and
    the first cell under **alternative** in the *Frozen table*.
+
+#. Under alternative in the Frozen table, you can choose results from different runs. Pick 
+   the run you want to view. If the workflow has been run several times, the most recent run will 
+   usually be found at the bottom.
 
 #. The *Pivot table* will be populated with results from the SpineOpt run. It will look something like the image below.
 
