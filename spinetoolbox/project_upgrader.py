@@ -97,7 +97,9 @@ class ProjectUpgrader:
             elif v == 5:
                 project_dict = self.upgrade_v5_to_v6(project_dict, project_dir)
             elif v == 6:
-                project_dict = self.upgrade_v6_to_v7(project_dict, project_dir)
+                project_dict = self.upgrade_v6_to_v7(project_dict)
+            elif v == 7:
+                project_dict = self.upgrade_v7_to_v8(project_dict)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -323,6 +325,7 @@ class ProjectUpgrader:
 
         Args:
             old (dict): Version 5 project dictionary
+            project_dir (str): Path to current project directory
 
         Returns:
             dict: Version 6 project dictionary
@@ -368,7 +371,7 @@ class ProjectUpgrader:
         return new
 
     @staticmethod
-    def upgrade_v6_to_v7(old, project_dir):
+    def upgrade_v6_to_v7(old):
         """Upgrades version 6 project dictionary to version 7.
 
         Changes:
@@ -418,6 +421,35 @@ class ProjectUpgrader:
         return new
 
     @staticmethod
+    def upgrade_v7_to_v8(old):
+        """Upgrades version 7 project dictionary to version 8.
+
+        Changes:
+            1. Move purge settings from items to their outgoing connections.
+
+        Args:
+            old (dict): Version 7 project dictionary
+
+        Returns:
+            dict: Version 8 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 8
+        purge_options_by_name = {}
+        for name, item_dict in new["items"].items():
+            if item_dict.get("purge_before_writing", False):
+                purge_options_by_name[name] = {
+                    "purge_before_writing": True,
+                    "purge_settings": item_dict.get("purge_settings"),
+                }
+        for conn in new["project"]["connections"]:
+            from_name, _ = conn["from"]
+            purge_options = purge_options_by_name.get(from_name)
+            if purge_options is not None:
+                conn.setdefault("options", {}).update(purge_options)
+        return new
+
+    @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
 
@@ -461,8 +493,8 @@ class ProjectUpgrader:
         """Checks given project dict if it is valid for given version."""
         if v == 1:
             return self.is_valid_v1(p)
-        if 2 <= v <= 7:
-            return self.is_valid_v2_to_7(p, v)
+        if 2 <= v <= 8:
+            return self.is_valid_v2_to_8(p, v)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -511,7 +543,7 @@ class ProjectUpgrader:
             return False
         return True
 
-    def is_valid_v2_to_7(self, p, v):
+    def is_valid_v2_to_8(self, p, v):
         """Checks that the given project JSON dictionary contains
         a valid version 2 to 6 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct

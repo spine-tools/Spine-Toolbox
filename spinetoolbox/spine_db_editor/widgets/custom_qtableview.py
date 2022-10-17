@@ -87,8 +87,10 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
              spine_db_editor (SpineDBEditor)
         """
         self._spine_db_editor = spine_db_editor
+        self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self.populate_context_menu()
         self.create_delegates()
+        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def _make_delegate(self, column_name, delegate_class):
         """Creates a delegate for the given column and returns it.
@@ -157,7 +159,6 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addSeparator()
         self._menu.addAction("Clear all filters", self._spine_db_editor.clear_all_filters)
         self._menu.addSeparator()
-        self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
         # Shortcuts
         remove_rows_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
         remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
@@ -230,13 +231,14 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         # Get parameter data grouped by db_map
         db_map_typed_data = dict()
         model = self.model()
+        empty_model = model.empty_model
         for row in sorted(rows, reverse=True):
-            db_map = model.sub_model_at_row(row).db_map
-            if db_map is None:
-                # It's an empty model, just remove the row
-                _, sub_row = model._row_map[row]
-                model.empty_model.removeRow(sub_row)
+            sub_model = model.sub_model_at_row(row)
+            if sub_model is empty_model:
+                sub_row = model.sub_model_row(row)
+                sub_model.removeRow(sub_row)
                 continue
+            db_map = sub_model.db_map
             id_ = model.item_at_row(row)
             db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
         model.db_mngr.remove_items(db_map_typed_data)
@@ -245,6 +247,11 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self.resizeColumnsToContents()
+
+    @Slot(QModelIndex, QModelIndex)
+    def _refresh_copy_paste_actions(self, _, __):
+        """Enables or disables copy and paste actions."""
+        self._spine_db_editor.refresh_copy_paste_actions()
 
 
 class ObjectParameterTableMixin:
@@ -557,8 +564,8 @@ class PivotTableView(CopyPasteTableView):
             self._plot_in_window_menu = self._menu.addMenu("Plot in window")
             self._plot_in_window_menu.triggered.connect(self._plot_in_window)
             self._menu.addSeparator()
-            self._menu.addAction(self._db_editor.ui.actionCopy)
-            self._menu.addAction(self._db_editor.ui.actionPaste)
+            self._menu.addAction(self._view.copy_action)
+            self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_values_action = self._menu.addAction("Remove parameter values", self.remove_values)
             self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
@@ -567,7 +574,6 @@ class PivotTableView(CopyPasteTableView):
             )
             self._remove_parameters_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
             self._remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
-            self._menu.aboutToShow.connect(self._db_editor.refresh_copy_paste_actions)
 
         def open_in_editor(self):
             """Opens the parameter value editor for the first selected cell."""
@@ -679,11 +685,10 @@ class PivotTableView(CopyPasteTableView):
 
         def populate_context_menu(self):
             """See base class."""
-            self._menu.addAction(self._db_editor.ui.actionCopy)
-            self._menu.addAction(self._db_editor.ui.actionPaste)
+            self._menu.addAction(self._view.copy_action)
+            self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
-            self._menu.aboutToShow.connect(self._db_editor.refresh_copy_paste_actions)
 
         def _update_actions_availability(self):
             """See base class."""
@@ -726,13 +731,12 @@ class PivotTableView(CopyPasteTableView):
             self._menu.addSeparator()
             self._menu.addAction(self._toggle_alternatives_checked)
             self._menu.addSeparator()
-            self._menu.addAction(self._db_editor.ui.actionCopy)
-            self._menu.addAction(self._db_editor.ui.actionPaste)
+            self._menu.addAction(self._view.copy_action)
+            self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
             self._remove_scenarios_action = self._menu.addAction(self._REMOVE_SCENARIO, self.remove_scenarios)
             self._duplicate_scenario_action = self._menu.addAction(self._DUPLICATE_SCENARIO, self.duplicate_scenario)
-            self._menu.aboutToShow.connect(self._db_editor.refresh_copy_paste_actions)
 
         def remove_scenarios(self):
             """Removes selected scenarios from the database."""
@@ -799,7 +803,9 @@ class PivotTableView(CopyPasteTableView):
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
+        self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self._spine_db_editor.pivot_table_proxy.sourceModelChanged.connect(self._change_context)
+        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     @Slot()
     def _change_context(self):
@@ -927,6 +933,10 @@ class PivotTableView(CopyPasteTableView):
         self._top_header_table.setGeometry(x, y, total_w, header_h)
         self._top_left_header_table.setGeometry(x, y, header_w, header_h)
 
+    @Slot(QModelIndex, QModelIndex)
+    def _refresh_copy_paste_actions(self, _, __):
+        self._spine_db_editor.refresh_copy_paste_actions()
+
 
 class FrozenTableView(QTableView):
 
@@ -959,6 +969,7 @@ class MetadataTableViewBase(CopyPasteTableView):
         super().__init__(parent)
         self.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
         self._menu = QMenu(self)
+        self._db_editor = None
 
     def connect_spine_db_editor(self, db_editor):
         """Finishes view's initialization.
@@ -966,8 +977,11 @@ class MetadataTableViewBase(CopyPasteTableView):
         Args:
              db_editor (SpineDBEditor): database editor instance
         """
-        self._populate_context_menu(db_editor)
+        self._db_editor = db_editor
+        self.set_external_copy_and_paste_actions(db_editor.ui.actionCopy, db_editor.ui.actionPaste)
+        self._populate_context_menu()
         self._enable_delegates(db_editor)
+        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def contextMenuEvent(self, event):
         menu_position = event.globalPos()
@@ -990,14 +1004,10 @@ class MetadataTableViewBase(CopyPasteTableView):
             db_editor (SpineDBEditor): database editor
         """
 
-    def _populate_context_menu(self, db_editor):
-        """Fills context menu with actions.
-
-        Args:
-            db_editor (SpineDBEditor): database editor
-        """
-        self._menu.addAction(db_editor.ui.actionCopy)
-        self._menu.addAction(db_editor.ui.actionPaste)
+    def _populate_context_menu(self,):
+        """Fills context menu with actions."""
+        self._menu.addAction(self.copy_action)
+        self._menu.addAction(self.paste_action)
         self._menu.addSeparator()
         self._menu.addAction("Remove row(s)", self._remove_selected)
 
@@ -1010,6 +1020,10 @@ class MetadataTableViewBase(CopyPasteTableView):
             value (str): value
         """
         self.model().setData(index, value)
+
+    @Slot(QModelIndex, QModelIndex)
+    def _refresh_copy_paste_actions(self):
+        self._db_editor.refresh_copy_paste_actions()
 
 
 class MetadataTableView(MetadataTableViewBase):

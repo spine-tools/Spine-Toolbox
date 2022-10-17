@@ -484,7 +484,12 @@ def _reconstruct_map(tree):
             value = _reconstruct_map(value)
         indexes.append(key)
         values.append(value)
-    return Map(indexes, values)
+    if len(indexes) > 1:
+        first_type = type(indexes[0])
+        if any(not isinstance(i, first_type) for i in indexes[1:]):
+            raise ParameterValueFormatError(f"Index type mismatch.")
+    map_ = Map(indexes, values)
+    return map_
 
 
 def _data_length(row):

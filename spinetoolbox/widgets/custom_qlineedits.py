@@ -20,30 +20,11 @@ import os
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QLineEdit, QUndoStack, QStyle
 from PySide2.QtGui import QKeySequence
-from .custom_qwidgets import ElidedTextMixin
+from .custom_qwidgets import ElidedTextMixin, UndoRedoMixin
 
 
-class PropertyQLineEdit(QLineEdit):
+class PropertyQLineEdit(UndoRedoMixin, QLineEdit):
     """A custom QLineEdit for Project Item Properties."""
-
-    def keyPressEvent(self, e):
-        """Overridden to catch and pass on the
-        Undo and Redo commands when this line
-        edit has the focus.
-
-        Args:
-            e (QKeyEvent): Event
-        """
-        undo_stack = self.nativeParentWidget().findChild(QUndoStack)
-        if undo_stack is None:
-            super().keyPressEvent(e)
-            return
-        if e.matches(QKeySequence.Undo):
-            undo_stack.undo()
-        elif e.matches(QKeySequence.Redo):
-            undo_stack.redo()
-        else:
-            super().keyPressEvent(e)
 
     def setText(self, text):
         """Overridden to prevent the cursor going to the end whenever the user is still editing.

@@ -13,16 +13,13 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.14.2
+## Created by: Qt User Interface Compiler version 5.15.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
-    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
-from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
-    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
-    QPixmap, QRadialGradient)
+from PySide2.QtCore import *
+from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
@@ -269,7 +266,6 @@ class Ui_MainWindow(object):
         self.tableView_object_parameter_value.horizontalHeader().setHighlightSections(False)
         self.tableView_object_parameter_value.horizontalHeader().setStretchLastSection(True)
         self.tableView_object_parameter_value.verticalHeader().setVisible(False)
-        self.tableView_object_parameter_value.verticalHeader().setMinimumSectionSize(20)
         self.tableView_object_parameter_value.verticalHeader().setHighlightSections(False)
 
         self.verticalLayout_3.addWidget(self.tableView_object_parameter_value)

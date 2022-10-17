@@ -27,8 +27,8 @@ import networkx as nx
 from spine_engine.exception import EngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
 from .project_item.logging_connection import LoggingConnection, LoggingJump
-from spine_engine.spine_engine import ExecutionDirection, validate_single_jump
-from spine_engine.utils.helpers import shorten
+from spine_engine.spine_engine import validate_single_jump
+from spine_engine.utils.helpers import ExecutionDirection, shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from .metaobject import MetaObject
 from .helpers import (
@@ -312,8 +312,11 @@ class SpineToolboxProject(MetaObject):
         self.restore_project_items(items_dict, item_factories, silent=True)
         self._logger.msg.emit("Restoring connections...")
         connection_dicts = project_info["project"]["connections"]
-        for connection in map(self.connection_from_dict, connection_dicts):
+        connections = list(map(self.connection_from_dict, connection_dicts))
+        for connection in connections:
             self.add_connection(connection, silent=True)
+        for connection in connections:
+            connection.link.update_icons()
         self._logger.msg.emit("Restoring jumps...")
         jump_dicts = project_info["project"].get("jumps", [])
         for jump in map(self.jump_from_dict, jump_dicts):
@@ -985,21 +988,26 @@ class SpineToolboxProject(MetaObject):
         Returns:
             SpineEngineWorker
         """
-        item_dicts = {}
-        specification_dicts = {}
         items = {name: item for name, item in self._project_items.items() if name in dag.nodes}
-        for name, project_item in items.items():
-            item_dicts[name] = project_item.item_dict()
-            spec = project_item.specification()
-            if spec is not None:
-                spec_dict = spec.to_dict().copy()
-                spec_dict["definition_file_path"] = spec.definition_file_path
-                specification_dicts.setdefault(project_item.item_type(), list()).append(spec_dict)
+        item_dicts = {name: project_item.item_dict() for name, project_item in items.items()}
         connections = {c.name: c for c in self._connections if {c.source, c.destination}.intersection(items)}
         connection_dicts = [c.to_dict() for c in connections.values()]
         jumps = {c.name: c for c in self._jumps if execution_permits.get(c.source, False)}
         jump_dicts = [c.to_dict() for c in jumps.values()]
         connections.update(jumps)
+        specs_by_type = {}
+        for project_item in items.values():
+            spec = project_item.specification()
+            if spec is not None:
+                specs_by_type.setdefault(project_item.item_type(), list()).append(spec)
+        for jump in jumps.values():
+            if jump.condition["type"] == "tool-specification":
+                spec = self.get_specification(jump.condition["specification"])
+                specs_by_type.setdefault("Tool", list()).append(spec)
+        specification_dicts = {
+            type_: [{**spec.to_dict(), "definition_file_path": spec.definition_file_path} for spec in specs]
+            for type_, specs in specs_by_type.items()
+        }
         data = {
             "items": item_dicts,
             "specifications": specification_dicts,
@@ -1107,7 +1115,7 @@ class SpineToolboxProject(MetaObject):
             item (ProjectItem): item whose resources have changed
         """
         item_name = item.name
-        predecessor_names = {c.source for c in self._incoming_connections(item_name)}
+        predecessor_names = {c.source for c in self.incoming_connections(item_name)}
         successor_connections = self._outgoing_connections
         update_resources = self._update_predecessor
         trigger_resources = item.resources_for_direct_predecessors()
@@ -1128,7 +1136,7 @@ class SpineToolboxProject(MetaObject):
         """
         item_name = item.name
         successor_names = {c.destination for c in self._outgoing_connections(item_name)}
-        predecessor_connections = self._incoming_connections
+        predecessor_connections = self.incoming_connections
         update_resources = self._update_successor
         trigger_resources = item.resources_for_direct_successors()
         self._notify_resource_changes(
@@ -1201,7 +1209,7 @@ class SpineToolboxProject(MetaObject):
         """
         target_name = target_item.name
         if direction == ExecutionDirection.FORWARD:
-            connections = self._incoming_connections(target_name)
+            connections = self.incoming_connections(target_name)
             self._update_successor(target_item, connections, resource_cache={})
         else:
             connections = self._outgoing_connections(target_name)
@@ -1216,7 +1224,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             set of str: direct predecessor names
         """
-        return {c.source for c in self._incoming_connections(name)}
+        return {c.source for c in self.incoming_connections(name)}
 
     def successor_names(self, name):
         """Collects direct successor item names.
@@ -1262,7 +1270,7 @@ class SpineToolboxProject(MetaObject):
         """
         return self._outgoing_connections(name) + self._outgoing_jumps(name)
 
-    def _incoming_connections(self, name):
+    def incoming_connections(self, name):
         """Collects incoming connections.
 
         Args:
@@ -1293,7 +1301,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             set of Connection/Jump: incoming connections
         """
-        return self._incoming_connections(name) + self._incoming_jumps(name)
+        return self.incoming_connections(name) + self._incoming_jumps(name)
 
     def _update_successor(self, successor, incoming_connections, resource_cache):
         combined_resources = list()

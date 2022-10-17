@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>1006</width>
-    <height>668</height>
+    <height>671</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,7 +35,7 @@
      <x>0</x>
      <y>0</y>
      <width>1006</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -274,7 +274,7 @@
          <item>
           <widget class="QLabel" name="label_no_selection">
            <property name="text">
-            <string>Select a project item to view its properties</string>
+            <string>Select an item to view its properties</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>
@@ -414,7 +414,7 @@
          <enum>Qt::DefaultContextMenu</enum>
         </property>
         <property name="text">
-         <string>Select and execute a Tool to see its console</string>
+         <string>Select an executing item to see its console</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -924,7 +924,7 @@
      <normaloff>:/icons/menu_icons/play-circle-solid.svg</normaloff>:/icons/menu_icons/play-circle-solid.svg</iconset>
    </property>
    <property name="text">
-    <string>Execute project</string>
+    <string>Project</string>
    </property>
    <property name="shortcut">
     <string>F5</string>
@@ -936,7 +936,7 @@
      <normaloff>:/icons/menu_icons/play-circle-regular.svg</normaloff>:/icons/menu_icons/play-circle-regular.svg</iconset>
    </property>
    <property name="text">
-    <string>Execute selection</string>
+    <string>Selection</string>
    </property>
    <property name="shortcut">
     <string>F6</string>
@@ -948,7 +948,7 @@
      <normaloff>:/icons/menu_icons/stop-circle-regular.svg</normaloff>:/icons/menu_icons/stop-circle-regular.svg</iconset>
    </property>
    <property name="text">
-    <string>Stop execution</string>
+    <string>Stop</string>
    </property>
    <property name="shortcut">
     <string>F7</string>

@@ -68,8 +68,18 @@ class PivotModel:
         self._data.update(data)
 
     def add_to_model(self, data):
-        data.update(self._data)
-        self._data = data
+        """Adds data to model.
+
+        Args:
+            data (dict): pivot model data
+
+        Returns:
+            tuple: added row count and added column count
+        """
+        addable_data = {k: v for k, v in data.items() if v is not None or k not in self._data}
+        if not addable_data:
+            return 0, 0
+        self._data.update(addable_data)
         if not any(self.frozen_value):
             first = next(iter(self._data), None)
             if first is None:

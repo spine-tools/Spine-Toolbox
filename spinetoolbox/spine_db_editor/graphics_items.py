@@ -594,7 +594,8 @@ class ObjectItem(EntityItem):
             return {(db_map, id_) for db_map, rel_cls in db_map_rel_clss for id_ in rel_cls["relationship_ids"]}
         return {
             (db_map, id_)
-            for db_map, rel_cls in self._db_map_relationship_class_lists.values()
+            for class_list in self._db_map_relationship_class_lists.values()
+            for db_map, rel_cls in class_list
             for id_ in rel_cls["relationship_ids"]
         }
 

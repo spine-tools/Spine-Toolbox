@@ -18,7 +18,7 @@ Unit tests for ``graphics_items`` module.
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch, PropertyMock
+from unittest.mock import patch, MagicMock
 from PySide2.QtCore import QEvent, QPoint, Qt
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
@@ -28,6 +28,7 @@ from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, Ran
 from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
+from spinetoolbox.helpers import signal_waiter
 from tests.mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project
 
 
@@ -72,6 +73,7 @@ class TestProjectItemIcon(unittest.TestCase):
     def test_outgoing_and_incoming_links(self):
         source_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
         target_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        self._toolbox.project().get_item = MagicMock()
         connection = LoggingConnection("source item", "bottom", "destination item", "bottom", toolbox=self._toolbox)
         link = Link(self._toolbox, source_icon.conn_button("bottom"), target_icon.conn_button("bottom"), connection)
         link.src_connector.links.append(link)
@@ -153,18 +155,18 @@ class TestLink(unittest.TestCase):
 
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
-        with patch("spinetoolbox.ui_main.SpineDBManager.thread", new_callable=PropertyMock) as mock_thread:
-            mock_thread.return_value = QApplication.instance().thread()
-            self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
-        type(self._toolbox.db_mngr).worker_thread = PropertyMock(return_value=QApplication.instance().thread())
+        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
         source_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
         source_item_icon.update_name_item("source icon")
         destination_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
         destination_item_icon.update_name_item("destination icon")
+        project = self._toolbox.project()
+        project.get_item = MagicMock()
         connection = LoggingConnection("source icon", "right", "destination icon", "left", toolbox=self._toolbox)
         connection.link = self._link = Link(
             self._toolbox, source_item_icon.conn_button(), destination_item_icon.conn_button(), connection
         )
+        self._link.update_icons = MagicMock()
 
     def tearDown(self):
         clean_up_toolbox(self._toolbox)
@@ -180,6 +182,8 @@ class TestLink(unittest.TestCase):
             [database_resource("provider", url, "my_database", filterable=True)]
         )
         self._link.connection.refresh_resource_filter_model()
+        with signal_waiter(self._toolbox.db_mngr.scenarios_added) as waiter:
+            waiter.wait()
         filter_model = self._link.connection.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
         self.assertEqual(filter_model.columnCount(), 1)
@@ -210,6 +214,8 @@ class TestLink(unittest.TestCase):
             [database_resource("provider", url, "my_database", filterable=True)]
         )
         self._link.connection.refresh_resource_filter_model()
+        with signal_waiter(self._toolbox.db_mngr.tools_added) as waiter:
+            waiter.wait()
         filter_model = self._link.connection.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
         self.assertEqual(filter_model.columnCount(), 1)
@@ -238,6 +244,8 @@ class TestLink(unittest.TestCase):
         db_map.connection.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url, filterable=True)])
         self._link.connection.refresh_resource_filter_model()
+        with signal_waiter(self._toolbox.db_mngr.scenarios_added) as waiter:
+            waiter.wait()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {1: True})
         self.assertEqual(self._link.connection.disabled_filter_names(url, "scenario_filter"), set())
@@ -250,6 +258,8 @@ class TestLink(unittest.TestCase):
         db_map.connection.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url, filterable=True)])
         self._link.connection.refresh_resource_filter_model()
+        with signal_waiter(self._toolbox.db_mngr.tools_added) as waiter:
+            waiter.wait()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "tool_filter", {1: True})
         self.assertEqual(self._link.connection.disabled_filter_names(url, "tool_filter"), set())

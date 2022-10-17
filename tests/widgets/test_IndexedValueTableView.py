@@ -57,6 +57,22 @@ class TestIndexedValueTableView(unittest.TestCase):
         with system_lc_numeric():
             self.assertEqual(copied, f"2019-08-08T12:00:00\t\r\n\t{locale.str(2.2)}\r\n2019-08-08T14:00:00\t\r\n")
 
+    def test_copy_does_not_copy_expansion_row(self):
+        selection_model = self._table_view.selectionModel()
+        model = self._table_view.model()
+        for column in range(model.columnCount()):
+            for row in range(model.rowCount()):
+                selection_model.select(model.index(row, column), QItemSelectionModel.Select)
+        self._table_view.copy()
+        copied = QApplication.clipboard().text()
+        with system_lc_numeric():
+            expected = f"""2019-08-08T12:00:00\t{locale.str(1.1)}\r
+2019-08-08T13:00:00\t{locale.str(2.2)}\r
+2019-08-08T14:00:00\t{locale.str(3.3)}\r
+2019-08-08T15:00:00\t{locale.str(4.4)}\r
+"""
+            self.assertEqual(copied, expected)
+
     def test_paste_single_value(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()

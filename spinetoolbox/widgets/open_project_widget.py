@@ -26,7 +26,7 @@ from spinetoolbox.widgets.custom_menus import OpenProjectDialogComboBoxContextMe
 
 
 class OpenProjectDialog(QDialog):
-    """A dialog that let's user select a project to open either by choosing
+    """A dialog that lets user select a project to open either by choosing
     an old .proj file or by choosing a project directory."""
 
     def __init__(self, toolbox):
@@ -45,6 +45,7 @@ class OpenProjectDialog(QDialog):
         self.combobox_context_menu = None
         # Ensure this dialog is garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         # QActions for keyboard shortcuts
         self.go_root_action = QAction(self)
         self.go_home_action = QAction(self)

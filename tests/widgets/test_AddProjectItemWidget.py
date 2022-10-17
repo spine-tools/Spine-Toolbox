@@ -18,7 +18,7 @@ Unit tests for AddProjectItemWidget.
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QWidget
 from PySide2.QtGui import QColor
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
@@ -35,7 +35,10 @@ class TestAddProjectItemWidget(unittest.TestCase):
     def setUp(self):
         """Set up toolbox."""
         self._temp_dir = TemporaryDirectory()
-        with patch("spinetoolbox.ui_main.load_project_items") as mock_load_project_items:
+        with patch("spinetoolbox.ui_main.JumpPropertiesWidget") as mock_jump_props_widget, patch(
+            "spinetoolbox.ui_main.load_project_items"
+        ) as mock_load_project_items:
+            mock_jump_props_widget.return_value = QWidget()
             mock_load_project_items.return_value = (
                 {TestProjectItem.item_type(): TestProjectItem.item_category()},
                 {TestProjectItem.item_type(): TestItemFactory},
@@ -65,9 +68,12 @@ class TestAddProjectItemWidgetWithSpecifications(unittest.TestCase):
     def setUp(self):
         """Set up toolbox."""
         self._temp_dir = TemporaryDirectory()
-        with patch("spinetoolbox.ui_main.load_project_items") as mock_load_project_items, patch(
+        with patch("spinetoolbox.ui_main.JumpPropertiesWidget") as mock_jump_props_widget, patch(
+            "spinetoolbox.ui_main.load_project_items"
+        ) as mock_load_project_items, patch(
             "spinetoolbox.ui_main.load_item_specification_factories"
         ) as mock_load_specification_factories:
+            mock_jump_props_widget.return_value = QWidget()
             mock_load_project_items.return_value = (
                 {TestProjectItem.item_type(): TestProjectItem.item_category()},
                 {TestProjectItem.item_type(): TestItemFactory},

@@ -51,24 +51,24 @@ class TestJumpPropertiesWidget(unittest.TestCase):
     def test_set_link(self):
         properties_widget = self._find_widget()
         self._set_link(properties_widget)
-        self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(23)")
+        self.assertEqual(properties_widget._ui.condition_script_edit.toPlainText(), "exit(23)")
 
     def test_unset_link(self):
         properties_widget = self._find_widget()
         self._set_link(properties_widget)
-        self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(23)")
+        self.assertEqual(properties_widget._ui.condition_script_edit.toPlainText(), "exit(23)")
         QApplication.processEvents()
         properties_widget.unset_link()
-        self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(23)")
+        self.assertEqual(properties_widget._ui.condition_script_edit.toPlainText(), "exit(23)")
 
     def test_edit_condition(self):
         properties_widget = self._find_widget()
         self._set_link(properties_widget)
-        cursor = properties_widget._ui.condition_edit.textCursor()
+        cursor = properties_widget._ui.condition_script_edit.textCursor()
         cursor.select(QTextCursor.Document)
         cursor.removeSelectedText()
         cursor.insertText("exit(5)")
-        self.assertEqual(properties_widget._ui.condition_edit.toPlainText(), "exit(5)")
+        self.assertEqual(properties_widget._ui.condition_script_edit.toPlainText(), "exit(5)")
 
     def _set_link(self, properties_widget):
         project = self._toolbox.project()
@@ -77,7 +77,16 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         project.add_item(item1)
         project.add_item(item2)
         project.add_connection(LoggingConnection("dc 1", "right", "dc 2", "left", toolbox=self._toolbox))
-        project.add_jump(LoggingJump("dc 2", "bottom", "dc 1", "bottom", "exit(23)", toolbox=self._toolbox))
+        project.add_jump(
+            LoggingJump(
+                "dc 2",
+                "bottom",
+                "dc 1",
+                "bottom",
+                {"type": "python-script", "script": "exit(23)"},
+                toolbox=self._toolbox,
+            )
+        )
         link = next(item for item in self._toolbox.ui.graphicsView.items() if isinstance(item, JumpLink))
         properties_widget.set_link(link.item)
 

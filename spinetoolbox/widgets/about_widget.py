@@ -140,8 +140,6 @@ class AboutWidget(QWidget):
         Args:
             e (QMouseEvent): Mouse event
         """
-        # logging.debug("MouseMoveEvent at pos:%s" % e.pos())
-        # logging.debug("MouseMoveEvent globalpos:%s" % e.globalPos())
         currentpos = self.pos()
         globalpos = e.globalPos()
         diff = globalpos - self._mouseMovePos

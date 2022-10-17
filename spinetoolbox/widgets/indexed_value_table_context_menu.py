@@ -55,6 +55,9 @@ class ContextMenuBase(QMenu):
 
     def _add_default_actions(self):
         """Adds default actions to the menu."""
+        self.addAction(self._table_view.copy_action)
+        self.addAction(self._table_view.paste_action)
+        self.addSeparator()
         self.addAction(_INSERT_SINGLE_ROW_BEFORE, self._insert_single_row_before)
         self.addAction(_INSERT_MULTIPLE_ROWS_BEFORE, self._insert_multiple_rows_before)
         self.addSeparator()

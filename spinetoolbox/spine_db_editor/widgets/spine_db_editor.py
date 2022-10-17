@@ -149,6 +149,8 @@ class SpineDBEditorBase(QMainWindow):
             return
         if not self.tear_down():
             return
+        if self.db_maps:
+            self.save_window_state()
         self.db_maps = []
         self._changelog.clear()
         while self._change_notifiers:
@@ -176,6 +178,7 @@ class SpineDBEditorBase(QMainWindow):
         self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
+        self.restore_ui()
 
     def init_add_undo_redo_actions(self):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
@@ -257,6 +260,8 @@ class SpineDBEditorBase(QMainWindow):
         menu.addAction(self.ui.dockWidget_tool_feature_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         menu.addAction(self.ui.dockWidget_alternative_scenario_tree.toggleViewAction())
+        menu.addAction(self.ui.metadata_dock_widget.toggleViewAction())
+        menu.addAction(self.ui.item_metadata_dock_widget.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_exports.toggleViewAction())
         return menu
@@ -301,7 +306,6 @@ class SpineDBEditorBase(QMainWindow):
         menu.addSeparator()
         menu.addAction(self.ui.actionUser_guide)
         menu.addAction(self.ui.actionSettings)
-        menu.aboutToShow.connect(self.refresh_copy_paste_actions)
         menu_action = self.url_toolbar.add_main_menu(menu)
         actions = [
             self.ui.actionNew_db_file,
@@ -958,8 +962,7 @@ class SpineDBEditorBase(QMainWindow):
                 if not commit_msg:
                     return False
         self._torn_down = True
-        self.db_mngr.unregister_listener(self, commit_dirty, commit_msg, *self.db_maps)
-        self.save_window_state()
+        self.db_mngr.unregister_listener(self, *self.db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg)
         return True
 
     def _prompt_to_commit_changes(self):
@@ -1029,10 +1032,6 @@ class SpineDBEditorBase(QMainWindow):
         answer = message_box.exec_()
         return answer == QMessageBox.Ok
 
-    def showEvent(self, event):
-        super().showEvent(event)
-        self.restore_ui()
-
     def closeEvent(self, event):
         """Handle close window.
 
@@ -1042,6 +1041,7 @@ class SpineDBEditorBase(QMainWindow):
         if not self.tear_down():
             event.ignore()
             return
+        self.save_window_state()
         super().closeEvent(event)
 
     def scenario_items(self, db_map):

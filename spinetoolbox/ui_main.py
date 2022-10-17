@@ -93,7 +93,8 @@ from .helpers import (
     busy_effect,
     format_log_message,
     color_from_index,
-    load_specification_from_file, load_specification_local_data,
+    load_specification_from_file,
+    load_specification_local_data,
 )
 from .project_commands import (
     AddSpecificationCommand,
@@ -169,14 +170,6 @@ class ToolboxUI(QMainWindow):
         self._selected_item_names = set()
         self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
-        self.link_properties_widgets = {
-            LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
-            LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
-        }
-        link_tab = self._make_properties_tab(self.link_properties_widgets[LoggingConnection])
-        jump_tab = self._make_properties_tab(self.link_properties_widgets[LoggingJump])
-        self.ui.tabWidget_item_properties.addTab(link_tab, "Link properties")
-        self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._anchor_callbacks = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
         # DB manager
@@ -222,6 +215,14 @@ class ToolboxUI(QMainWindow):
         self.init_specification_model()
         self.make_item_properties_uis()
         self.main_toolbar.setup()
+        self.link_properties_widgets = {
+            LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
+            LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
+        }
+        link_tab = self._make_properties_tab(self.link_properties_widgets[LoggingConnection])
+        jump_tab = self._make_properties_tab(self.link_properties_widgets[LoggingJump])
+        self.ui.tabWidget_item_properties.addTab(link_tab, "Link properties")
+        self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._plugin_manager = PluginManager(self)
         self._plugin_manager.load_installed_plugins()
         self.set_work_directory()
@@ -1419,9 +1420,12 @@ class ToolboxUI(QMainWindow):
 
     def _override_console(self):
         """Sets the jupyter console of the active project item in Jupyter Console and updates title."""
-        if self.active_project_item is None:
+        if self.active_project_item is not None:
+            console = self._item_consoles.get(self.active_project_item)
+        elif isinstance(self.active_link_item, LoggingJump):
+            console = self._item_consoles.get(self.active_link_item)
+        else:
             return
-        console = self._item_consoles.get(self.active_project_item)
         self._do_override_console(console)
 
     def _do_override_console(self, console):

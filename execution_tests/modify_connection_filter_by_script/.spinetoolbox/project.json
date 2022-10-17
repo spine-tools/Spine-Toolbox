@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 7,
+        "version": 8,
         "name": "modify_connection_filter_by_script",
         "description": "",
         "specifications": {

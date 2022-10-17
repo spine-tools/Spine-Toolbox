@@ -47,6 +47,7 @@ class ArrayEditor(QWidget):
         self._model.modelReset.connect(self._update_plot)
         self._model.rowsInserted.connect(self._update_plot)
         self._model.rowsRemoved.connect(self._update_plot)
+        self._ui.array_table_view.init_copy_and_paste_actions()
         self._ui.array_table_view.setModel(self._model)
         self._ui.array_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.array_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
