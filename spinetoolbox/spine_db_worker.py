@@ -19,7 +19,7 @@ The SpineDBWorker class
 import traceback
 import itertools
 from enum import Enum, unique, auto
-from PySide2.QtCore import QObject, QTimer, Signal, Slot, QWaitCondition, QMutex, QThread
+from PySide2.QtCore import QObject, QTimer, Signal, Slot, QSemaphore, QMutex, QThread
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinetoolbox.helpers import busy_effect
 
@@ -72,6 +72,18 @@ class SpineDBWorker(QObject):
             _Event.ROLLBACK_SESSION: self._rollback_session_event,
         }[event](*args)
 
+    def _db_map_lock(func):  # pylint: disable=no-self-argument
+        def new_function(self, *args, **kwargs):
+            lock = self._db_mngr.db_map_locks.get(self._db_map)
+            if lock is None or not lock.tryLock():
+                return
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                lock.unlock()
+
+        return new_function
+
     def query(self, sq_name):
         """For tests."""
         return self._executor.submit(self._query, sq_name).result()
@@ -113,18 +125,13 @@ class SpineDBWorker(QObject):
         return self._query_has_elements(query)
 
     @busy_effect
+    @_db_map_lock
     def _init_query(self, parent):
         """Initializes query for parent."""
-        lock = self._db_mngr.db_map_locks.get(self._db_map)
-        if lock is None or not lock.tryLock():
-            return
-        try:
-            query = self._get_query(parent)
-            if not self._query_has_elements(query):
-                self._fetched_parents.add(parent)
-                self._something_happened.emit(_Event.FETCH_STATUS_CHANGE, (parent,))
-        finally:
-            lock.unlock()
+        query = self._get_query(parent)
+        if not self._query_has_elements(query):
+            self._fetched_parents.add(parent)
+            self._something_happened.emit(_Event.FETCH_STATUS_CHANGE, (parent,))
 
     def _fetch_status_change_event(self, parent):
         parent.fetch_status_change()
@@ -157,17 +164,12 @@ class SpineDBWorker(QObject):
         self._executor.submit(self._fetch_more, parent)
 
     @busy_effect
+    @_db_map_lock
     def _fetch_more(self, parent):
-        lock = self._db_mngr.db_map_locks.get(self._db_map)
-        if lock is None or not lock.tryLock():
-            return
-        try:
-            query = self._get_query(parent)
-            iterator = self._get_iterator(parent, query)
-            chunk = next(iterator, [])
-            self._something_happened.emit(_Event.FETCH, (parent, chunk))
-        finally:
-            lock.unlock()
+        query = self._get_query(parent)
+        iterator = self._get_iterator(parent, query)
+        chunk = next(iterator, [])
+        self._something_happened.emit(_Event.FETCH, (parent, chunk))
 
     def _fetch_event(self, parent, chunk):
         # Mark parent as unbusy, but after emitting the 'added' signal below otherwise we have an infinite fetch loop
@@ -198,19 +200,14 @@ class SpineDBWorker(QObject):
         self._executor.submit(self._fetch_all, item_types).wait()
 
     @busy_effect
+    @_db_map_lock
     def _fetch_all(self, item_types):
-        lock = self._db_mngr.db_map_locks.get(self._db_map)
-        if lock is None or not lock.tryLock():
-            return
-        try:
-            for item_type in item_types:
-                query, _ = self._make_query_for_item_type(item_type)
-                for chunk in _make_iterator(query):
-                    self._populate_commit_cache(item_type, chunk)
-                    self._db_mngr.cache_items(item_type, {self._db_map: chunk})
-                self._fetched_item_types.add(item_type)
-        finally:
-            lock.unlock()
+        for item_type in item_types:
+            query, _ = self._make_query_for_item_type(item_type)
+            for chunk in _make_iterator(query):
+                self._populate_commit_cache(item_type, chunk)
+                self._db_mngr.cache_items(item_type, {self._db_map: chunk})
+            self._fetched_item_types.add(item_type)
 
     def _make_query_for_parent(self, parent):
         """Makes a database query for given item type.
@@ -453,18 +450,17 @@ class _Queue:
     def __init__(self):
         self._items = []
         self._mutex = QMutex()
-        self._condition = QWaitCondition()
+        self._semafore = QSemaphore()
 
     def put(self, item):
         self._mutex.lock()
         self._items.append(item)
         self._mutex.unlock()
-        self._condition.wakeOne()
+        self._semafore.release()
 
     def get(self):
+        self._semafore.acquire()
         self._mutex.lock()
-        if not self._items:
-            self._condition.wait(self._mutex)
         item = self._items.pop(0)
         self._mutex.unlock()
         return item
@@ -510,7 +506,7 @@ class QThreadExecutor(QThread):
             fn, args, kwargs, future = request
             try:
                 result = fn(*args, **kwargs)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 print(f"Exception in QThread {QThread.currentThreadId()}")
                 print(traceback.format_exc())
                 result = None
