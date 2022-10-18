@@ -447,6 +447,8 @@ def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
 
 
 class _Queue:
+    """A simple queue class to pass information between QThreads."""
+
     def __init__(self):
         self._items = []
         self._mutex = QMutex()
@@ -468,6 +470,8 @@ class _Queue:
 
 
 class _Future:
+    """A simple future class to hold the result of an asynchronous computation."""
+
     def __init__(self):
         self._queue = _Queue()
 
@@ -482,6 +486,8 @@ class _Future:
 
 
 class QThreadExecutor(QThread):
+    """A QThread subclass to run arbitrary functions and eventually wait on the results."""
+
     _QUIT = "quit"
 
     def __init__(self, parent=None):
@@ -490,6 +496,7 @@ class QThreadExecutor(QThread):
         self.start()
 
     def submit(self, fn, *args, **kwargs):
+        """Runs the given function in this QThread and returns the result as a _Future."""
         future = _Future()
         self._requests.put((fn, args, kwargs, future))
         return future
