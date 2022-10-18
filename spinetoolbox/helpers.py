@@ -1585,67 +1585,64 @@ class HTMLTagFilter(HTMLParser):
             self._text += "\n"
 
 
-class _Job(QObject):
-    _started = Signal()
-    finished = Signal(object)
+class QThreadExecutor(QThread):
+    _QUIT = "quit"
 
-    def __init__(self, fn, *args, **kwargs):
-        super().__init__()
-        self._fn = fn
-        self._args = args
-        self._kwargs = kwargs
-        self._result = None
-        self._done = False
-        self._mutex = QMutex()
-        self._condition = QWaitCondition()
-        self._started.connect(self._run)
+    class _Queue:
+        def __init__(self):
+            self._items = []
+            self._mutex = QMutex()
+            self._condition = QWaitCondition()
 
-    def start(self):
-        self._started.emit()
+        def put(self, item):
+            self._mutex.lock()
+            self._items.append(item)
+            self._mutex.unlock()
+            self._condition.wakeOne()
 
-    @Slot()
-    def _run(self):
-        self._result = self._fn(*self._args, **self._kwargs)
-        # Atomically set _done = True and notify waiting threads
-        self._mutex.lock()
-        self._done = True
-        self._condition.wakeAll()
-        self._mutex.unlock()
-        self.finished.emit(self)
+        def get(self):
+            self._mutex.lock()
+            if not self._items:
+                self._condition.wait(self._mutex)
+            item = self._items.pop(0)
+            self._mutex.unlock()
+            return item
 
-    def wait(self):
-        self._mutex.lock()
-        # Wait on the condition only if _done is False
-        if not self._done:
-            self._condition.wait(self._mutex)
-        self._mutex.unlock()
+    class _Future:
+        def __init__(self):
+            self._queue = QThreadExecutor._Queue()
 
-    def result(self):
-        self.wait()
-        return self._result
+        def set_result(self, result):
+            self._queue.put(result)
 
+        def result(self):
+            return self._queue.get()
 
-class QThreadExecutor(QObject):
+        def wait(self):
+            _ = self.result()
+
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        self._thread = QThread()
-        self._thread.start()
-        self._jobs = []
-        self._mutex = QMutex()
-
-    def tear_down(self):
-        self._thread.quit()
-        self._thread.wait()
+        self._requests = self._Queue()
+        self.start()
 
     def submit(self, fn, *args, **kwargs):
-        job = _Job(fn, *args, **kwargs)
-        job.moveToThread(self._thread)
-        self._jobs.append(job)
-        job.finished.connect(self._clean_up_job)
-        job.start()
-        return job
+        future = self._Future()
+        self._requests.put((future, fn, args, kwargs))
+        return future
 
-    @Slot(object)
-    def _clean_up_job(self, job):
-        job.destroyed.connect(lambda obj=None, job=job: self._jobs.remove(job))
-        job.deleteLater()
+    def run(self):
+        while True:
+            request = self._requests.get()
+            if request == self._QUIT:
+                break
+            future, fn, args, kwargs = request
+            result = fn(*args, **kwargs)
+            future.set_result(result)
+
+    def quit(self):
+        self._requests.put(self._QUIT)
+
+    def tear_down(self):
+        self.quit()
+        self.wait()
