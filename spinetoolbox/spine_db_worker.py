@@ -18,9 +18,9 @@ The SpineDBWorker class
 
 import itertools
 from enum import Enum, unique, auto
-from PySide2.QtCore import QObject, QTimer, Signal, Slot, QThread
+from PySide2.QtCore import QObject, QTimer, Signal, Slot, QWaitCondition, QMutex, QThread
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from spinetoolbox.helpers import busy_effect, QThreadExecutor
+from spinetoolbox.helpers import busy_effect
 
 
 @unique
@@ -52,7 +52,7 @@ class SpineDBWorker(QObject):
         self._fetched_parents = set()
         self._fetched_item_types = set()
         self.commit_cache = {}
-        self._executor = QThreadExecutor(self)
+        self._executor = _QThreadExecutor(self)
         self._something_happened.connect(self._handle_something_happened)
 
     def clean_up(self):
@@ -61,12 +61,6 @@ class SpineDBWorker(QObject):
 
     @Slot(object, tuple)
     def _handle_something_happened(self, event, args):
-        ui_thread = qApp.thread()
-        current_thread = QThread.currentThread()
-        if ui_thread != current_thread:
-            raise RuntimeError(
-                f"event {event} received in the wrong thread - current is {current_thread} should be {ui_thread} "
-            )
         {
             _Event.FETCH: self._fetch_event,
             _Event.FETCH_STATUS_CHANGE: self._fetch_status_change_event,
@@ -450,3 +444,68 @@ def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
         yield chunk
         if not chunk:
             break
+
+
+class _Queue:
+    def __init__(self):
+        self._items = []
+        self._mutex = QMutex()
+        self._condition = QWaitCondition()
+
+    def put(self, item):
+        self._mutex.lock()
+        self._items.append(item)
+        self._mutex.unlock()
+        self._condition.wakeOne()
+
+    def get(self):
+        self._mutex.lock()
+        if not self._items:
+            self._condition.wait(self._mutex)
+        item = self._items.pop(0)
+        self._mutex.unlock()
+        return item
+
+
+class _Future:
+    def __init__(self):
+        self._queue = _Queue()
+
+    def set_result(self, result):
+        self._queue.put(result)
+
+    def result(self):
+        return self._queue.get()
+
+    def wait(self):
+        _ = self.result()
+
+
+class _QThreadExecutor(QThread):
+    _QUIT = "quit"
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self._requests = _Queue()
+        self.start()
+
+    def submit(self, fn, *args, **kwargs):
+        future = _Future()
+        self._requests.put((fn, args, kwargs, future))
+        return future
+
+    def run(self):
+        while True:
+            request = self._requests.get()
+            if request == self._QUIT:
+                break
+            fn, args, kwargs, future = request
+            result = fn(*args, **kwargs)
+            future.set_result(result)
+
+    def quit(self):
+        self._requests.put(self._QUIT)
+
+    def tear_down(self):
+        self.quit()
+        self.wait()

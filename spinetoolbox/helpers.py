@@ -30,22 +30,7 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import matplotlib
-from PySide2.QtCore import (
-    Qt,
-    Signal,
-    Slot,
-    QFile,
-    QIODevice,
-    QSize,
-    QRect,
-    QPoint,
-    QUrl,
-    QObject,
-    QEvent,
-    QWaitCondition,
-    QMutex,
-    QThread,
-)
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
@@ -1583,66 +1568,3 @@ class HTMLTagFilter(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == "br":
             self._text += "\n"
-
-
-class QThreadExecutor(QThread):
-    _QUIT = "quit"
-
-    class _Queue:
-        def __init__(self):
-            self._items = []
-            self._mutex = QMutex()
-            self._condition = QWaitCondition()
-
-        def put(self, item):
-            self._mutex.lock()
-            self._items.append(item)
-            self._mutex.unlock()
-            self._condition.wakeOne()
-
-        def get(self):
-            self._mutex.lock()
-            if not self._items:
-                self._condition.wait(self._mutex)
-            item = self._items.pop(0)
-            self._mutex.unlock()
-            return item
-
-    class _Future:
-        def __init__(self):
-            self._queue = QThreadExecutor._Queue()
-
-        def set_result(self, result):
-            self._queue.put(result)
-
-        def result(self):
-            return self._queue.get()
-
-        def wait(self):
-            _ = self.result()
-
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        self._requests = self._Queue()
-        self.start()
-
-    def submit(self, fn, *args, **kwargs):
-        future = self._Future()
-        self._requests.put((future, fn, args, kwargs))
-        return future
-
-    def run(self):
-        while True:
-            request = self._requests.get()
-            if request == self._QUIT:
-                break
-            future, fn, args, kwargs = request
-            result = fn(*args, **kwargs)
-            future.set_result(result)
-
-    def quit(self):
-        self._requests.put(self._QUIT)
-
-    def tear_down(self):
-        self.quit()
-        self.wait()
