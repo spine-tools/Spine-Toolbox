@@ -271,7 +271,10 @@ class SingleParameterModel(HalfSortedTableModel):
         """Returns the result of the auto filter."""
         if self._auto_filter is None:
             return False
-        item_id = item["id"]
+        try:
+            item_id = item["id"]
+        except KeyError as error:
+            raise error
         for accepted_ids in self._auto_filter.values():
             if accepted_ids and item_id not in accepted_ids:
                 return False

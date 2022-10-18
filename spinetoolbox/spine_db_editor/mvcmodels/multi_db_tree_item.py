@@ -15,6 +15,8 @@ Base classes to represent items from multiple databases in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:    17.6.2020
 """
+from operator import attrgetter
+
 from PySide2.QtCore import Qt, QTimer
 from ...helpers import rows_to_row_count_tuples, bisect_chunks, FetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
@@ -192,11 +194,14 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         Args:
             db_map (DiffDatabaseMapping): create children for this db_map
             children_ids (iter): create children from these ids
+
+        Returns:
+            list of MultiDBTreeItem: new children
         """
         return [self.child_item_class(self.model, {db_map: id_}) for id_ in children_ids]
 
     def _merge_children(self, new_children):
-        """Merges new children into this item. Ensures that each children has a valid display id afterwards."""
+        """Merges new children into this item. Ensures that each child has a valid display id afterwards."""
         if not new_children:
             return
         existing_children = {child.display_id: child for child in self.children}
@@ -218,7 +223,7 @@ class MultiDBTreeItem(FetchParent, TreeItem):
 
     def _insert_children_sorted(self, new_children):
         """Inserts and sorts children."""
-        new_children = sorted(new_children, key=lambda x: x.display_id)
+        new_children = sorted(new_children, key=attrgetter("display_id"))
         for chunk, pos in bisect_chunks(self.children, new_children, key=self._children_sort_key):
             self.insert_children(pos, chunk)
 

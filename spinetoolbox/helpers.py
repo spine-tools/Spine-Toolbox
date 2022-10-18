@@ -1399,6 +1399,14 @@ def bisect_chunks(current_data, new_data, key=None):
 
 
 class FetchParent:
+    fetch_token = None
+    _is_fetched = False
+    _is_busy_fetching = False
+    query = None
+    query_key = None
+    query_iterator = None
+    query_initialized = None
+
     @property
     def fetch_item_type(self):
         """Returns the type of item to fetch, e.g., "object_class".
@@ -1426,9 +1434,45 @@ class FetchParent:
     def fetch_status_change(self):
         """Called when fetch status changes."""
 
+    @property
+    def is_fetched(self):
+        return self._is_fetched
+
+    def set_fetched(self, fetched):
+        """Sets the fetched status.
+
+        Args:
+            fetched (bool): whether parent has been fetched completely
+        """
+        self._is_fetched = fetched
+
+    @property
+    def is_busy_fetching(self):
+        return self._is_busy_fetching
+
+    def set_busy_fetching(self, busy):
+        """Sets the busy status.
+
+        Args:
+            busy (bool): whether the parent is busy
+        """
+        self._is_busy_fetching = busy
+
+    def reset_fetching(self, fetch_token):
+        """Resets fetch parent as if nothing was ever fetched.
+
+        Args:
+            fetch_token (object): current fetch token
+        """
+        self.fetch_token = fetch_token
+        self._is_fetched = False
+        self.query = None
+        self.query_iterator = None
+
 
 class ItemTypeFetchParent(FetchParent):
     def __init__(self, fetch_item_type):
+        super().__init__()
         self._fetch_item_type = fetch_item_type
 
     @property

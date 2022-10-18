@@ -18,7 +18,7 @@ The SpineDBWorker class
 
 import itertools
 from concurrent.futures import ThreadPoolExecutor
-from PySide2.QtCore import QObject, QEvent, QCoreApplication, QTimer
+from PySide2.QtCore import QObject, QEvent, QCoreApplication, QWaitCondition, QMutex
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinetoolbox.helpers import busy_effect
 
@@ -89,12 +89,9 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._queries = {}
+        self._init_query_lock = QMutex(QMutex.NonRecursive)
+        self._current_fetch_token = object()
         self._query_has_elements_by_key = {}
-        self._query_keys = {}
-        self._iterators = {}
-        self._busy_parents = set()
-        self._fetched_parents = set()
         self._fetched_item_types = set()
         self.commit_cache = {}
         self._executor = ThreadPoolExecutor(max_workers=1)
@@ -146,67 +143,113 @@ class SpineDBWorker(QObject):
             return None, err
 
     def reset_queries(self, item_type=None):
-        parents = list(self._queries)
-        for parent in parents:
-            if item_type is not None and parent.fetch_item_type != item_type:
-                continue
-            self._iterators.pop(parent, None)
-            query = self._queries.pop(parent)
-            key = self._query_keys.pop(query)
-            self._query_has_elements_by_key.pop(key, None)
-            self._fetched_parents.discard(parent)
-            self._fetched_item_types.discard(parent.fetch_item_type)
-            parent.fetch_status_change()
+        """Resets queries and clears caches.
+
+        Args:
+            item_type (str, optional): query item type to reset or None to reset everything
+        """
+        self._current_fetch_token = object()
+        if item_type is None:
+            self._fetched_item_types.clear()
+        else:
+            self._fetched_item_types.discard(item_type)
+        self._query_has_elements_by_key.clear()
+        # !!! parent.fetch_status_change()
 
     def can_fetch_more(self, parent):
-        if parent in self._fetched_parents | self._busy_parents:
+        """Returns whether more data can be fetches for parent.
+
+        Args:
+            parent (FetchParent): fetch parent
+
+        Returns:
+            bool: True if more data is available, False otherwise
+        """
+        if parent.fetch_token is not self._current_fetch_token:
+            parent.reset_fetching(self._current_fetch_token)
+        elif parent.is_fetched or parent.is_busy_fetching:
             return False
-        query = self._queries.get(parent)
-        if query is None:
+        if parent.query is None:
             # Query not made yet. Init query and return True
+            parent.query_initialized = QWaitCondition()
             self._executor.submit(self._init_query, parent)
             return True
-        return self._query_has_elements(query)
+        if parent.query_initialized is not None:
+            self._init_query_lock.lock()
+            parent.query_initialized.wait(self._init_query_lock)
+            self._init_query_lock.unlock()
+        return self._query_has_elements(parent)
 
     @busy_effect
     def _init_query(self, parent):
-        """Initializes query for parent."""
-        lock = self._db_mngr.db_map_locks.get(self._db_map)
-        if lock is None or not lock.tryLock():
-            return
+        """Initializes query for parent.
+
+        Args:
+            parent (FetchParent): fetch parent
+        """
         try:
-            query = self._get_query(parent)
-            if not self._query_has_elements(query):
-                self._fetched_parents.add(parent)
-                QCoreApplication.postEvent(self, _FetchStatusChangeEvent(parent))
+            lock = self._db_mngr.db_map_locks.get(self._db_map)
+            if lock is None or not lock.tryLock():
+                return
+            try:
+                self._setdefault_query(parent)
+                if not self._query_has_elements(parent):
+                    parent.set_fetched(True)
+                    QCoreApplication.postEvent(self, _FetchStatusChangeEvent(parent))
+            finally:
+                lock.unlock()
         finally:
-            lock.unlock()
+            wait_condition = parent.query_initialized
+            parent.query_initialized = None
+            wait_condition.wakeAll()
 
-    def _get_query(self, parent):
-        """Creates a query for parent. Stores both the query and whether or not it has elements."""
-        if parent not in self._queries:
-            query = self._make_query_for_parent(parent)
-            key = self._make_query_key(query)
-            if key not in self._query_has_elements_by_key:
-                self._query_has_elements_by_key[key] = bool(query.first())
-            self._queries[parent] = query
-        return self._queries[parent]
+    def _setdefault_query(self, parent):
+        """Creates a query for parent. Stores both the query and whether it has elements.
 
-    def _query_has_elements(self, query):
-        return self._query_has_elements_by_key[self._make_query_key(query)]
+        Args:
+            parent (FetchParent): fetch parent
+        """
+        if parent.query is None:
+            parent.query = self._make_query_for_parent(parent)
+            self._setdefault_query_key(parent)
+            if parent.query_key not in self._query_has_elements_by_key:
+                self._query_has_elements_by_key[parent.query_key] = bool(parent.query.first())
+        return parent.query
 
-    def _make_query_key(self, query):
-        if query not in self._query_keys:
-            self._query_keys[query] = str(query.statement.compile(compile_kwargs={"literal_binds": True}))
-        return self._query_keys[query]
+    def _query_has_elements(self, parent):
+        """Checks whether query has something to return.
+
+        Args:
+            parent (FetchParent): fetch parent
+
+        Returns:
+            bool: True if query will give records, False otherwise
+        """
+        return self._query_has_elements_by_key[self._setdefault_query_key(parent)]
+
+    @staticmethod
+    def _setdefault_query_key(parent):
+        """Returns parent's query key or creates and sets a new one if it doesn't exist.
+
+        Args:
+            parent (FetchParent): fetch parent
+
+        Returns:
+            str: query key
+        """
+        if parent.query_key is None:
+            parent.query_key = str(parent.query.statement.compile(compile_kwargs={"literal_binds": True}))
+        return parent.query_key
 
     def fetch_more(self, parent):
         """Fetches items from the database.
 
         Args:
-            parent (object)
+            parent (FetchParent): fetch parent
         """
-        self._busy_parents.add(parent)
+        if parent.fetch_token is not self._current_fetch_token:
+            parent.reset_fetching(self._current_fetch_token)
+        parent.set_busy_fetching(True)
         self._executor.submit(self._fetch_more, parent)
 
     @busy_effect
@@ -215,8 +258,7 @@ class SpineDBWorker(QObject):
         if lock is None or not lock.tryLock():
             return
         try:
-            query = self._get_query(parent)
-            iterator = self._get_iterator(parent, query)
+            iterator = self._get_iterator(parent)
             chunk = next(iterator, [])
             QCoreApplication.postEvent(self, _FetchEvent(parent, chunk))
         finally:
@@ -224,12 +266,12 @@ class SpineDBWorker(QObject):
 
     def _fetch_event(self, ev):
         # Mark parent as unbusy, but after emitting the 'added' signal below otherwise we have an infinite fetch loop
-        QTimer.singleShot(0, lambda parent=ev.parent: self._busy_parents.discard(parent))
+        ev.parent.set_busy_fetching(False)
         if ev.chunk:
             signal = self._db_mngr.added_signals[ev.parent.fetch_item_type]
             signal.emit({self._db_map: ev.chunk})
-        else:
-            self._fetched_parents.add(ev.parent)
+        elif ev.parent.query is not None:
+            ev.parent.set_fetched(True)
 
     def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
         if item_types is None:
@@ -284,10 +326,10 @@ class SpineDBWorker(QObject):
         query = self._db_map.query(subquery)
         return query, subquery
 
-    def _get_iterator(self, parent, query):
-        if parent not in self._iterators:
-            self._iterators[parent] = _make_iterator(query)
-        return self._iterators[parent]
+    def _get_iterator(self, parent):
+        if parent.query_iterator is None:
+            parent.query_iterator = _make_iterator(self._setdefault_query(parent))
+        return parent.query_iterator
 
     def _populate_commit_cache(self, item_type, items):
         if item_type == "commit":
@@ -455,11 +497,7 @@ class SpineDBWorker(QObject):
             self._db_mngr.session_committed.emit({self._db_map}, ev.cookie)
 
     def rollback_session(self):
-        """Initiates rollback session action for given database maps in the worker thread.
-
-        Args:
-            dirty_db_maps (Iterable of DiffDatabaseMapping): database mapping to roll back
-        """
+        """Initiates rollback session action for given database maps in the worker thread."""
         # Make sure that the worker thread has a reference to undo stacks even if they get deleted
         # in the GUI thread.
         undo_stack = self._db_mngr.undo_stack[self._db_map]

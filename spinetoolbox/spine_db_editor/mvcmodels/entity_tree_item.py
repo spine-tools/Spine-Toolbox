@@ -29,7 +29,7 @@ class EntityRootItem(MultiDBTreeItem):
 
     @property
     def display_id(self):
-        """ "See super class."""
+        """See super class."""
         return "root"
 
     @property
@@ -38,7 +38,7 @@ class EntityRootItem(MultiDBTreeItem):
 
     @property
     def display_data(self):
-        """ "See super class."""
+        """See super class."""
         return "root"
 
     def set_data(self, column, value, role):
