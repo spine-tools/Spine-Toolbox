@@ -52,7 +52,7 @@ class SpineDBWorker(QObject):
         self._fetched_parents = set()
         self._fetched_item_types = set()
         self.commit_cache = {}
-        self._executor = _QThreadExecutor(self)
+        self._executor = QThreadExecutor(self)
         self._something_happened.connect(self._handle_something_happened)
 
     def clean_up(self):
@@ -481,7 +481,7 @@ class _Future:
         _ = self.result()
 
 
-class _QThreadExecutor(QThread):
+class QThreadExecutor(QThread):
     _QUIT = "quit"
 
     def __init__(self, parent=None):
