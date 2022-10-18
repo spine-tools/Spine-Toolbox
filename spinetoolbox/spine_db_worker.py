@@ -16,6 +16,7 @@ The SpineDBWorker class
 :date:   2.10.2019
 """
 
+import traceback
 import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, QTimer, Signal, Slot, QWaitCondition, QMutex, QThread
@@ -507,7 +508,12 @@ class QThreadExecutor(QThread):
             if request == self._QUIT:
                 break
             fn, args, kwargs, future = request
-            result = fn(*args, **kwargs)
+            try:
+                result = fn(*args, **kwargs)
+            except Exception:
+                print(f"Exception in QThread {QThread.currentThreadId()}")
+                print(traceback.format_exc())
+                result = None
             future.set_result(result)
 
     def quit(self):
