@@ -122,18 +122,17 @@ class ToolFeatureModel(TreeModelBase):
                 continue
             tool_root_item = db_item.child(1)
             for tool_feat_id, items in items_per_tool_feat_id.items():
-                tool_feat_leaf_item = next(
-                    iter(
-                        child
-                        for tool_leaf_item in tool_root_item.children
-                        for child in tool_leaf_item.child(0).children
-                        if child.id == tool_feat_id
-                    ),
-                    None,
-                )
-                if tool_feat_leaf_item is None:
+                target_tool_feat_leaf_item = None
+                for tool_leaf_item in tool_root_item.children:
+                    tool_feat_root_item = tool_leaf_item.child(0)
+                    if tool_feat_root_item is None:
+                        continue
+                    for tool_feat_leaf_item in tool_feat_root_item.children:
+                        if tool_feat_leaf_item.id == tool_feat_id:
+                            target_tool_feat_leaf_item = tool_feat_leaf_item
+                if target_tool_feat_leaf_item is None:
                     continue
-                tool_feat_meth_root_item = tool_feat_leaf_item.child(1)
+                tool_feat_meth_root_item = target_tool_feat_leaf_item.child(1)
                 d[tool_feat_meth_root_item] = items
         return d
 
