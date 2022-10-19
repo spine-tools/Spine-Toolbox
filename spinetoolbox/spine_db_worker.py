@@ -21,6 +21,7 @@ import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, Signal, Slot, QMutex, QSemaphore, QThread
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
+from .helpers import busy_effect
 
 
 @unique
@@ -129,6 +130,7 @@ class SpineDBWorker(QObject):
             # Query not initialized yet. Just return True
             return True
 
+    @busy_effect
     @_db_map_lock
     def _init_query(self, parent):
         """Initializes query for parent.
