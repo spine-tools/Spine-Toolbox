@@ -19,9 +19,8 @@ The SpineDBWorker class
 import os
 import itertools
 from enum import Enum, unique, auto
-from PySide2.QtCore import QObject, Signal, Slot, QWaitCondition, QMutex, QSemaphore, QThread
+from PySide2.QtCore import QObject, Signal, Slot, QMutex, QSemaphore, QThread
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
-from spinetoolbox.helpers import busy_effect
 
 
 @unique
@@ -45,7 +44,6 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._init_query_lock = QMutex(QMutex.NonRecursive)
         self._current_fetch_token = object()
         self._query_has_elements_by_key = {}
         self._fetched_item_types = set()
@@ -123,16 +121,14 @@ class SpineDBWorker(QObject):
             return False
         if parent.query is None:
             # Query not made yet. Init query and return True
-            parent.query_initialized = QWaitCondition()
             self._executor.submit(self._init_query, parent)
             return True
-        if parent.query_initialized is not None:
-            self._init_query_lock.lock()
-            parent.query_initialized.wait(self._init_query_lock)
-            self._init_query_lock.unlock()
-        return self._query_has_elements(parent)
+        try:
+            return self._query_has_elements(parent)
+        except KeyError:
+            # Query not initialized yet. Just return True
+            return True
 
-    @busy_effect
     @_db_map_lock
     def _init_query(self, parent):
         """Initializes query for parent.
@@ -140,15 +136,10 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): fetch parent
         """
-        try:
-            self._setdefault_query(parent)
-            if not self._query_has_elements(parent):
-                parent.set_fetched(True)
-                self._something_happened.emit(_Event.FETCH_STATUS_CHANGE, (parent,))
-        finally:
-            wait_condition = parent.query_initialized
-            parent.query_initialized = None
-            wait_condition.wakeAll()
+        self._setdefault_query(parent)
+        if not self._query_has_elements(parent):
+            parent.set_fetched(True)
+            self._something_happened.emit(_Event.FETCH_STATUS_CHANGE, (parent,))
 
     def _fetch_status_change_event(self, parent):
         parent.fetch_status_change()

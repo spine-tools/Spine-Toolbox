@@ -1405,7 +1405,6 @@ class FetchParent:
     query = None
     query_key = None
     query_iterator = None
-    query_initialized = None
 
     @property
     def fetch_item_type(self):
