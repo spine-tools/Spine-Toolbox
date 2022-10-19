@@ -16,6 +16,7 @@ The SpineDBWorker class
 :date:   2.10.2019
 """
 
+import os
 import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, QTimer, Signal, Slot, QSemaphore, QMutex, QThread
@@ -52,11 +53,11 @@ class SpineDBWorker(QObject):
         self._fetched_parents = set()
         self._fetched_item_types = set()
         self.commit_cache = {}
-        self._executor = QThreadExecutor(self)
+        self._executor = PythonLikeQThreadPoolExecutor(max_workers=1)
         self._something_happened.connect(self._handle_something_happened)
 
     def clean_up(self):
-        self._executor.tear_down()
+        self._executor.shutdown()
         self.deleteLater()
 
     @Slot(object, tuple)
@@ -440,7 +441,7 @@ def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
             break
 
 
-class _TimeOutError(Exception):
+class TimeOutError(Exception):
     """An exception to raise when a timeouts expire"""
 
 
@@ -463,7 +464,7 @@ class _Queue:
             timeout = -1
         timeout *= 1000
         if not self._semafore.tryAcquire(1, timeout):
-            raise _TimeOutError()
+            raise TimeOutError()
         self._mutex.lock()
         item = self._items.pop(0)
         self._mutex.unlock()
@@ -496,37 +497,59 @@ class _Future:
         return self._exception_queue.get(timeout=timeout)
 
 
-class QThreadExecutor(QThread):
-    """A QThread subclass to run arbitrary functions and eventually wait on the results."""
-
-    _QUIT = "quit"
-
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        self._requests = _Queue()
-        self.start()
-
-    def submit(self, fn, *args, **kwargs):
-        """Runs the given function in this QThread and returns the result as a _Future."""
-        future = _Future()
-        self._requests.put((fn, args, kwargs, future))
-        return future
+class PythonLikeQThread(QThread):
+    def __init__(self, target=None, args=()):
+        super().__init__()
+        self._target = target
+        self._args = args
 
     def run(self):
+        return self._target(*self._args)
+
+
+class PythonLikeQThreadPoolExecutor:
+    """A thread pool executor that always reuses - never discards - their QThreads."""
+
+    def __init__(self, max_workers=None):
+        if max_workers is None:
+            max_workers = min(32, os.cpu_count() + 4)
+        self._max_workers = max_workers
+        self._threads = set()
+        self._requests = _Queue()
+        self._semafore = QSemaphore()
+
+    def submit(self, fn, *args, **kwargs):
+        future = _Future()
+        self._requests.put((future, fn, args, kwargs))
+        self._spawn_thread()
+        return future
+
+    def _spawn_thread(self):
+        if self._semafore.tryAcquire():
+            # No need to spawn a new thread
+            return
+        if len(self._threads) == self._max_workers:
+            # Not possible to spawn a new thread
+            return
+        thread = PythonLikeQThread(target=self._do_work)
+        self._threads.add(thread)
+        thread.start()
+
+    def _do_work(self):
         while True:
             request = self._requests.get()
-            if request == self._QUIT:
+            if request is None:
                 break
-            fn, args, kwargs, future = request
+            future, fn, args, kwargs = request
             try:
                 result = fn(*args, **kwargs)
                 future.set_result(result)
             except Exception as exc:  # pylint: disable=broad-except
                 future.set_exception(exc)
+            self._semafore.release()
 
-    def quit(self):
-        self._requests.put(self._QUIT)
-
-    def tear_down(self):
-        self.quit()
-        self.wait()
+    def shutdown(self):
+        for _ in self._threads:
+            self._requests.put(None)
+        while self._threads:
+            self._threads.pop().wait()
