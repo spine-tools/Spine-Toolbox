@@ -242,11 +242,11 @@ class LoggingConnection(LogMixin, HeadlessConnection):
 
     def get_scenario_names(self, url):
         db_map = self._get_db_map(url)
-        return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario", only_visible=False))
+        return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario", only_visible=True))
 
     def get_tool_names(self, url):
         db_map = self._get_db_map(url)
-        return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "tool", only_visible=False))
+        return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "tool", only_visible=True))
 
     def may_have_filters(self):
         """Returns whether this connection may have filters.
