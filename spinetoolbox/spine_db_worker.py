@@ -16,11 +16,10 @@ The SpineDBWorker class
 :date:   2.10.2019
 """
 
-import traceback
 import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, QTimer, Signal, Slot, QSemaphore, QMutex, QThread
-from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
+from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
 from spinetoolbox.helpers import busy_effect
 
 
@@ -92,14 +91,11 @@ class SpineDBWorker(QObject):
         return self._db_map.query(getattr(self._db_map, sq_name)).all()
 
     def get_db_map(self, *args, **kwargs):
-        self._db_map, err = self._executor.submit(self._get_db_map, *args, **kwargs).result()
-        return self._db_map, err
+        return self._executor.submit(self._get_db_map, *args, **kwargs).result()
 
     def _get_db_map(self, *args, **kwargs):
-        try:
-            return DiffDatabaseMapping(self._db_url, *args, **kwargs), None
-        except (SpineDBVersionError, SpineDBAPIError) as err:
-            return None, err
+        self._db_map = DiffDatabaseMapping(self._db_url, *args, **kwargs)
+        return self._db_map
 
     def reset_queries(self, item_type=None):
         parents = list(self._queries)
@@ -197,7 +193,7 @@ class SpineDBWorker(QObject):
         if not item_types:
             # FIXME: Needed? QCoreApplication.processEvents()
             return
-        self._executor.submit(self._fetch_all, item_types).wait()
+        _ = self._executor.submit(self._fetch_all, item_types).result()
 
     @busy_effect
     @_db_map_lock
@@ -241,7 +237,7 @@ class SpineDBWorker(QObject):
             self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])
 
     def close_db_map(self):
-        self._executor.submit(self._close_db_map).wait()
+        _ = self._executor.submit(self._close_db_map).result()
 
     def _close_db_map(self):
         if not self._db_map.connection.closed:
@@ -444,6 +440,10 @@ def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
             break
 
 
+class _TimeOutError(Exception):
+    """An exception to raise when a timeouts expire"""
+
+
 class _Queue:
     """A simple queue class to pass information between QThreads."""
 
@@ -458,8 +458,12 @@ class _Queue:
         self._mutex.unlock()
         self._semafore.release()
 
-    def get(self):
-        self._semafore.acquire()
+    def get(self, timeout=None):
+        if timeout is None:
+            timeout = -1
+        timeout *= 1000
+        if not self._semafore.tryAcquire(1, timeout):
+            raise _TimeOutError()
         self._mutex.lock()
         item = self._items.pop(0)
         self._mutex.unlock()
@@ -470,16 +474,26 @@ class _Future:
     """A simple future class to hold the result of an asynchronous computation."""
 
     def __init__(self):
-        self._queue = _Queue()
+        self._result_queue = _Queue()
+        self._exception_queue = _Queue()
 
     def set_result(self, result):
-        self._queue.put(result)
+        self._exception_queue.put(None)
+        self._result_queue.put(result)
 
-    def result(self):
-        return self._queue.get()
+    def set_exception(self, exc):
+        self._exception_queue.put(exc)
+        self._result_queue.put(None)
 
-    def wait(self):
-        _ = self.result()
+    def result(self, timeout=None):
+        result = self._result_queue.get(timeout=timeout)
+        exc = self.exception(timeout=0)
+        if exc is not None:
+            raise exc
+        return result
+
+    def exception(self, timeout=None):
+        return self._exception_queue.get(timeout=timeout)
 
 
 class QThreadExecutor(QThread):
@@ -506,11 +520,9 @@ class QThreadExecutor(QThread):
             fn, args, kwargs, future = request
             try:
                 result = fn(*args, **kwargs)
-            except Exception:  # pylint: disable=broad-except
-                print(f"Exception in QThread {QThread.currentThreadId()}")
-                print(traceback.format_exc())
-                result = None
-            future.set_result(result)
+                future.set_result(result)
+            except Exception as exc:  # pylint: disable=broad-except
+                future.set_exception(exc)
 
     def quit(self):
         self._requests.put(self._QUIT)
