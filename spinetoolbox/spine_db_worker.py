@@ -552,4 +552,6 @@ class PythonLikeQThreadPoolExecutor:
         for _ in self._threads:
             self._requests.put(None)
         while self._threads:
-            self._threads.pop().wait()
+            thread = self._threads.pop()
+            thread.wait()
+            thread.deleteLater()
