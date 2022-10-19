@@ -16,6 +16,7 @@ Client for exchanging messages between the toolbox and the Spine Engine Server.
 """
 
 import os
+import threading
 import zmq
 import zmq.auth
 import time
@@ -44,7 +45,6 @@ class EngineClient:
         self.protocol = "tcp"  # Hard-coded to tcp for now
         self.host = host
         self.port = port  # Request socket port
-        self.ping = ping
         self._context = zmq.Context()
         self._req_socket = self._context.socket(zmq.REQ)
         self._req_socket.setsockopt(zmq.LINGER, 1)
@@ -78,8 +78,8 @@ class EngineClient:
             server_public_file = os.path.join(public_keys_dir, "server.key")
             server_public, _ = zmq.auth.load_certificate(server_public_file)
             self._req_socket.curve_serverkey = server_public
-        self._req_socket.connect(self.protocol + "://" + host + ":" + str(port))
-        if self.ping:
+        self._req_socket.connect(self.protocol + "://" + self.host + ":" + str(self.port))
+        if ping:
             try:
                 self._check_connectivity(1000)  # Ping server
             except RemoteEngineInitFailed:
@@ -146,6 +146,11 @@ class EngineClient:
             stop_time_ms = round(time.time() * 1000.0)  # debugging
         return
 
+    def set_start_time(self):
+        """Sets a start time for an operation. Call get_elapsed_time() after
+        an operation has finished to get an elapset time string."""
+        self.start_time = round(time.time() * 1000.0)
+
     def upload_project(self, project_dir_name, fpath):
         """Uploads the zipped project file to server. Project zip file must be ready and the server available
         before calling this method.
@@ -157,13 +162,15 @@ class EngineClient:
         Returns:
             str: Project execution job Id
         """
-        self.start_time = round(time.time() * 1000.0)
         with open(fpath, "rb") as f:
             file_data = f.read()  # Read file into bytes string
         _, zip_filename = os.path.split(fpath)
         req = ServerMessage("prepare_execution", "1", json.dumps(project_dir_name), [zip_filename])
-        self._req_socket.send_multipart([req.to_bytes(), file_data])
-        response = self.rcv_next("req")
+        req_socket = self._context.socket(zmq.REQ)
+        req_socket.connect(self.protocol + "://" + self.host + ":" + str(self.port))
+        req_socket.send_multipart([req.to_bytes(), file_data])
+        response = req_socket.recv()
+        req_socket.close()
         response_server_message = ServerMessage.parse(response)
         return response_server_message.getId()
 
@@ -189,7 +196,11 @@ class EngineClient:
         return start_msg
 
     def stop_execution(self, job_id):
-        """Sends a request to stop executing the DAG that is managed by this client."""
+        """Sends a request to stop executing the DAG that is managed by this client.
+
+        Args:
+            job_id (str): Job Id on server to stop
+        """
         req = ServerMessage("stop_execution", job_id, "", None)
         self._req_socket.send_multipart([req.to_bytes()])
         response = self.rcv_next("req")

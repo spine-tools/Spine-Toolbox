@@ -21,7 +21,7 @@ import os
 from pathlib import Path
 import json
 import random
-from PySide2.QtCore import Signal
+from PySide2.QtCore import Signal, QCoreApplication
 from PySide2.QtGui import QColor
 import networkx as nx
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
@@ -42,6 +42,7 @@ from .helpers import (
     load_local_project_data,
     merge_dicts,
     load_specification_local_data,
+    busy_effect,
 )
 from .project_upgrader import ProjectUpgrader
 from .config import (
@@ -1353,6 +1354,7 @@ class SpineToolboxProject(MetaObject):
     def settings(self):
         return self._settings
 
+    @busy_effect
     def prepare_remote_execution(self):
         """Pings the server and sends the project as a zip-file to server.
 
@@ -1378,8 +1380,11 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg_error.emit(f"Server is not responding. {e}. "
                                         f"Check settings in <b>File->Settings->Engine</b>.")
             return ""
-        # When preparing for remote execution, archive the project into a zip-file
+        engine_client.set_start_time()  # Set start_time for upload operation
+        # Archive the project into a zip-file
         dest_dir = os.path.join(self.project_dir, os.pardir)  # Parent dir of project_dir TODO: Find a better dst
+        self._logger.msg.emit(f"Squeezing project <b>{self.name}</b> into {PROJECT_ZIP_FILENAME}.zip")
+        QCoreApplication.processEvents()
         try:
             ZipHandler.package(src_folder=self.project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
         except Exception as e:
@@ -1391,6 +1396,7 @@ class SpineToolboxProject(MetaObject):
             return ""
         file_size = get_file_size(os.path.getsize(project_zip_file))
         self._logger.msg_warning.emit(f"Uploading project [{file_size}] ...")
+        QCoreApplication.processEvents()
         _, project_dir_name = os.path.split(self.project_dir)
         job_id = engine_client.upload_project(project_dir_name, project_zip_file)
         t = engine_client.get_elapsed_time()

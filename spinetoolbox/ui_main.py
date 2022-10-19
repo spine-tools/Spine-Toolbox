@@ -2158,6 +2158,9 @@ class ToolboxUI(QMainWindow):
         self.ui.actionExecute_project.setEnabled(False)
         self.ui.actionExecute_selection.setEnabled(False)
         self.ui.actionStop_execution.setEnabled(True)
+        self.ui.textBrowser_eventlog.verticalScrollBar().setValue(
+            self.ui.textBrowser_eventlog.verticalScrollBar().maximum()
+        )
 
     @Slot()
     def _unset_execution_in_progress(self):
