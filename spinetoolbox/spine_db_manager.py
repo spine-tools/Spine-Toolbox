@@ -446,6 +446,7 @@ class SpineDBManager(QObject):
             if worker is not None:
                 worker.close_db_map()
                 worker.clean_up()
+            self._cache.pop(db_map, None)
             del self.undo_stack[db_map]
             del self.undo_action[db_map]
             del self.redo_action[db_map]
@@ -637,6 +638,16 @@ class SpineDBManager(QObject):
             except KeyError:
                 continue
             worker.commit_session(commit_msg, cookie)
+
+    def notify_session_committed(self, cookie, *db_maps):
+        """Notifies manager and listeners when a commit has taken place by a third party.
+
+        Args:
+            cookie (Any): commit cookie
+            *db_maps: database maps that were committed
+        """
+        self.refresh_session(*db_maps)
+        self.session_committed.emit(set(db_maps), cookie)
 
     def rollback_session(self, *dirty_db_maps):
         """

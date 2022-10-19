@@ -692,7 +692,6 @@ class SpineDBEditorBase(QMainWindow):
             self.msg.emit(msg)
             return
         # Commit done by an 'outside force'.
-        self.db_mngr.refresh_session(*db_maps)
         self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
@@ -1346,6 +1345,13 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         super().receive_session_rolled_back(db_maps)
         self._metadata_editor.roll_back(db_maps)
         self._item_metadata_editor.roll_back(db_maps)
+
+    def tear_down(self):
+        if not super().tear_down():
+            return False
+        for model in self._parameter_models:
+            model.stop_invalidating_filter()
+        return True
 
     @staticmethod
     def _get_base_dir():

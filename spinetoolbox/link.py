@@ -481,7 +481,7 @@ class Link(JumpOrLink):
             active = self._connection.use_datapackage
             self._icons.append(_SvgIcon(self, self._icon_extent, self._DATAPACKAGE, active=active))
         if self._connection.may_have_filters():
-            active = self._connection.has_filters
+            active = self._connection.has_filters()
             self._icons.append(_TextIcon(self, self._icon_extent, self._FILTERS, active=active))
         if self._connection.may_use_memory_db():
             active = self._connection.use_memory_db

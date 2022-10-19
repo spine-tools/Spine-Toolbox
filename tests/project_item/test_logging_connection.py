@@ -33,6 +33,7 @@ class TestLoggingConnection(unittest.TestCase):
         connection.replace_resources_from_source([original], [modified])
         self.assertEqual(connection.database_resources, {modified})
         self.assertEqual(connection._disabled_filter_names, {"new database": {"scenario_filter": {"Base"}}})
+        connection.tear_down()
 
     def test_set_online(self):
         toolbox = MagicMock()
@@ -42,6 +43,7 @@ class TestLoggingConnection(unittest.TestCase):
         )
         connection.set_online("label", "scenario_filter", {"Base": True})
         self.assertEqual(connection.disabled_filter_names("label", "scenario_filter"), set())
+        connection.tear_down()
 
 
 if __name__ == '__main__':

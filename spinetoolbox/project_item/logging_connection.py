@@ -13,7 +13,7 @@
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from spine_engine.project_item.connection import ResourceConvertingConnection, Jump
+from spine_engine.project_item.connection import ResourceConvertingConnection, Jump, ConnectionBase
 from ..log_mixin import LogMixin
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
 from ..helpers import busy_effect, ItemTypeFetchParent
@@ -148,8 +148,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         self._fetch_parents = {}
 
     def __hash__(self):
-        # FIXME: Don't we have this in the Base class?
-        return hash((self.source, self._source_position, self.destination, self._destination_position))
+        return super(ConnectionBase, self).__hash__()
 
     @staticmethod
     def item_type():
@@ -159,8 +158,12 @@ class LoggingConnection(LogMixin, HeadlessConnection):
     def graphics_item(self):
         return self.link
 
-    @property
     def has_filters(self):
+        """Returns True if connection has scenario or tool filters.
+
+        Returns:
+            bool: True if connection has filters, False otherwise
+        """
         for resource in self._resources:
             url = resource.url
             if not url:
@@ -190,13 +193,14 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         return self._db_maps[url]
 
     def _pop_unused_db_maps(self):
+        """Removes unused database maps and unregisters from listening the DB manager."""
         resource_urls = {resource.url for resource in self._resources}
         resource_urls.discard(None)
         obsolete_urls = set(self._db_maps) - resource_urls
         for url in obsolete_urls:
             db_map = self._db_maps.pop(url)
-            self._toolbox.db_mngr.unregister_listener(self, db_map)
             self._fetch_parents.pop(db_map)
+            self._toolbox.db_mngr.unregister_listener(self, db_map)
 
     def _fetch_more_if_possible(self):
         for db_map in self._db_maps.values():
@@ -228,6 +232,12 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         self._receive_data_changed()
 
     def receive_tools_updated(self, _db_map_data):
+        self._receive_data_changed()
+
+    def receive_session_committed(self, db_maps, cookie):
+        self._receive_data_changed()
+
+    def receive_session_rolled_back(self, db_map):
         self._receive_data_changed()
 
     def get_scenario_names(self, url):
@@ -317,6 +327,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         """See base class."""
         super().replace_resources_from_source(old, new)
         self._pop_unused_db_maps()
+        self.link.update_icons()
 
     @busy_effect
     def set_connection_options(self, options):
@@ -388,6 +399,8 @@ class LoggingConnection(LogMixin, HeadlessConnection):
 
     def tear_down(self):
         """Releases system resources held by the connection."""
+        for db_map in self._db_maps.values():
+            self._toolbox.db_mngr.unregister_listener(self, db_map)
         self.resource_filter_model.deleteLater()
 
 
