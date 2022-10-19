@@ -49,7 +49,7 @@ class SpineDBWorker(QObject):
         self._query_has_elements_by_key = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
-        self._executor = PythonLikeQThreadPoolExecutor(max_workers=1)
+        self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._something_happened.connect(self._handle_something_happened)
 
     def clean_up(self):
@@ -475,8 +475,8 @@ class TimeOutError(Exception):
     """An exception to raise when a timeouts expire"""
 
 
-class _Queue:
-    """A simple queue class to pass information between QThreads."""
+class QtBasedQueue:
+    """A Qt-based clone of queue.Queue."""
 
     def __init__(self):
         self._items = []
@@ -501,12 +501,12 @@ class _Queue:
         return item
 
 
-class _Future:
-    """A simple future class to hold the result of an asynchronous computation."""
+class QtBasedFuture:
+    """A Qt-based clone of concurrent.futures.Future."""
 
     def __init__(self):
-        self._result_queue = _Queue()
-        self._exception_queue = _Queue()
+        self._result_queue = QtBasedQueue()
+        self._exception_queue = QtBasedQueue()
 
     def set_result(self, result):
         self._exception_queue.put(None)
@@ -527,7 +527,9 @@ class _Future:
         return self._exception_queue.get(timeout=timeout)
 
 
-class PythonLikeQThread(QThread):
+class QtBasedThread(QThread):
+    """A Qt-based clone of threading.Thread."""
+
     def __init__(self, target=None, args=()):
         super().__init__()
         self._target = target
@@ -537,19 +539,19 @@ class PythonLikeQThread(QThread):
         return self._target(*self._args)
 
 
-class PythonLikeQThreadPoolExecutor:
-    """A thread pool executor that always reuses - never discards - their QThreads."""
+class QtBasedThreadPoolExecutor:
+    """A Qt-based clone of concurrent.futures.ThreadPoolExecutor"""
 
     def __init__(self, max_workers=None):
         if max_workers is None:
             max_workers = min(32, os.cpu_count() + 4)
         self._max_workers = max_workers
         self._threads = set()
-        self._requests = _Queue()
+        self._requests = QtBasedQueue()
         self._semafore = QSemaphore()
 
     def submit(self, fn, *args, **kwargs):
-        future = _Future()
+        future = QtBasedFuture()
         self._requests.put((future, fn, args, kwargs))
         self._spawn_thread()
         return future
@@ -561,7 +563,7 @@ class PythonLikeQThreadPoolExecutor:
         if len(self._threads) == self._max_workers:
             # Not possible to spawn a new thread
             return
-        thread = PythonLikeQThread(target=self._do_work)
+        thread = QtBasedThread(target=self._do_work)
         self._threads.add(thread)
         thread.start()
 

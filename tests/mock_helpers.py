@@ -307,7 +307,7 @@ class TestSpineDBManager(SpineDBManager):
             qApp.processEvents()
 
     def get_db_map(self, *args, **kwargs):
-        with mock.patch("spinetoolbox.spine_db_worker.PythonLikeQThreadPoolExecutor") as mock_executor:
+        with mock.patch("spinetoolbox.spine_db_worker.QtBasedThreadPoolExecutor") as mock_executor:
             mock_executor.return_value = _MockExecutor()
             return super().get_db_map(*args, **kwargs)
 
