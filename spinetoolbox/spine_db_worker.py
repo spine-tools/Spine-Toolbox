@@ -20,7 +20,7 @@ import os
 import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, Signal, Slot, QWaitCondition, QMutex, QSemaphore, QThread
-from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
+from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
 from spinetoolbox.helpers import busy_effect
 
 
@@ -144,11 +144,14 @@ class SpineDBWorker(QObject):
             self._setdefault_query(parent)
             if not self._query_has_elements(parent):
                 parent.set_fetched(True)
-                self._something_happened.emit(_Event.FETCH_STATUS_CHANGE, (parent,))            
+                self._something_happened.emit(_Event.FETCH_STATUS_CHANGE, (parent,))
         finally:
             wait_condition = parent.query_initialized
             parent.query_initialized = None
             wait_condition.wakeAll()
+
+    def _fetch_status_change_event(self, parent):
+        parent.fetch_status_change()
 
     def _setdefault_query(self, parent):
         """Creates a query for parent. Stores both the query and whether it has elements.
