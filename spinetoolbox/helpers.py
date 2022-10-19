@@ -1468,6 +1468,7 @@ class FetchParent:
         self._is_fetched = False
         self.query = None
         self.query_iterator = None
+        self.fetch_status_change()
 
 
 class ItemTypeFetchParent(FetchParent):

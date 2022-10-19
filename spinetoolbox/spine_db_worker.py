@@ -154,7 +154,6 @@ class SpineDBWorker(QObject):
         else:
             self._fetched_item_types.discard(item_type)
         self._query_has_elements_by_key.clear()
-        # !!! parent.fetch_status_change()
 
     def can_fetch_more(self, parent):
         """Returns whether more data can be fetches for parent.
