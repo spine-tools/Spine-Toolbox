@@ -192,21 +192,8 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             self._fetch_more_if_possible()
         return self._db_maps[url]
 
-    def _disconnect_replaced_databases(self, old_resources):
-        """Disconnects listening to events from databases that have gone out of scope.
-
-        Args:
-            old_resources (list of ProjectItemResource): resources that have been replaced
-        """
-        database_resources = (resource for resource in old_resources if resource.type_ == "database")
-        for resource in database_resources:
-            db_map = self._db_maps.pop(resource.url, None)
-            if db_map is None:
-                continue
-            self._fetch_parents.pop(db_map)
-            self._toolbox.db_mngr.unregister_listener(self, db_map)
-
     def _pop_unused_db_maps(self):
+        """Removes unused database maps and unregisters from listening the DB manager."""
         resource_urls = {resource.url for resource in self._resources}
         resource_urls.discard(None)
         obsolete_urls = set(self._db_maps) - resource_urls
@@ -338,8 +325,8 @@ class LoggingConnection(LogMixin, HeadlessConnection):
 
     def replace_resources_from_source(self, old, new):
         """See base class."""
-        self._disconnect_replaced_databases(old)
         super().replace_resources_from_source(old, new)
+        self._pop_unused_db_maps()
         self.link.update_icons()
 
     @busy_effect
