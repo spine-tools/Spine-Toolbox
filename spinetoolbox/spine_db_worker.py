@@ -19,7 +19,7 @@ The SpineDBWorker class
 import os
 import itertools
 from enum import Enum, unique, auto
-from PySide2.QtCore import QObject, Signal, Slot, QMutex, QSemaphore, QThread
+from PySide2.QtCore import QObject, Signal, Slot, QMutex, QSemaphore, QThread, QTimer
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
 from .helpers import busy_effect
 
@@ -204,7 +204,7 @@ class SpineDBWorker(QObject):
 
     def _fetch_event(self, parent, chunk):
         # Mark parent as unbusy, but after emitting the 'added' signal below otherwise we have an infinite fetch loop
-        parent.set_busy_fetching(False)
+        QTimer.singleShot(0, lambda: parent.set_busy_fetching(False))
         if chunk:
             signal = self._db_mngr.added_signals[parent.fetch_item_type]
             signal.emit({self._db_map: chunk})
