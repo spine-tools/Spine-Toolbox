@@ -502,4 +502,4 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if not event.isAccepted():
             event.accept()
             global_pos = self.viewport().mapToGlobal(event.pos())
-            self._toolbox.show_project_item_context_menu(global_pos, None)
+            self._toolbox.show_project_or_item_context_menu(global_pos, None)

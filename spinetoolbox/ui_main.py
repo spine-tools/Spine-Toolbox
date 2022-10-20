@@ -1602,9 +1602,9 @@ class ToolboxUI(QMainWindow):
         """
         ind = self.ui.treeView_project.indexAt(pos)
         global_pos = self.ui.treeView_project.viewport().mapToGlobal(pos)
-        self.show_project_item_context_menu(global_pos, ind)
+        self.show_project_or_item_context_menu(global_pos, ind)
 
-    def show_project_item_context_menu(self, pos, index):
+    def show_project_or_item_context_menu(self, pos, index):
         """Creates and shows the project item context menu.
 
         Args:
@@ -1615,6 +1615,8 @@ class ToolboxUI(QMainWindow):
             menu = QMenu(self)
             menu.addAction(self.ui.actionPaste)
             menu.addAction(self.ui.actionPasteAndDuplicateFiles)
+            menu.addSeparator()
+            menu.addAction(self.ui.actionOpen_project_directory)
         elif not index.isValid():  # Clicked on a blank area in Project tree view
             menu = QMenu(self)
             menu.addAction(self.ui.actionOpen_project_directory)
