@@ -155,10 +155,13 @@ class SpineDBWorker(QObject):
             self._setdefault_query(parent)
             if not self._query_has_elements(parent):
                 parent.set_fetched(True)
-                QCoreApplication.postEvent(self, _FetchStatusChangeEvent(parent))
+                self._something_happened.emit(_Event.FETCH_STATUS_CHANGE, (parent,))
         finally:
             parent.query_initialized = FetchParent.Init.FINISHED
             lock.unlock()
+
+    def _fetch_status_change_event(self, parent):
+        parent.fetch_status_change()
 
     def _setdefault_query(self, parent):
         """Creates a query for parent. Stores both the query and whether it has elements.
