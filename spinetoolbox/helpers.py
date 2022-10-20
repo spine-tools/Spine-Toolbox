@@ -16,7 +16,7 @@ General helper functions and classes.
 :date:   10.1.2018
 """
 
-from enum import Enum, unique
+from enum import Enum, unique, auto
 import itertools
 import os
 import glob
@@ -1399,13 +1399,20 @@ def bisect_chunks(current_data, new_data, key=None):
 
 
 class FetchParent:
+    @unique
+    class Init(Enum):
+        UNINITIALIZED = auto()
+        IN_PROGRESS = auto()
+        FINISHED = auto()
+        FAILED = auto()
+
     fetch_token = None
     _is_fetched = False
     _is_busy_fetching = False
     query = None
     query_key = None
     query_iterator = None
-    query_initialized = None
+    query_initialized = Init.UNINITIALIZED
 
     @property
     def fetch_item_type(self):
@@ -1468,6 +1475,7 @@ class FetchParent:
         self._is_fetched = False
         self.query = None
         self.query_iterator = None
+        self.query_initialized = FetchParent.Init.UNINITIALIZED
         self.fetch_status_change()
 
 

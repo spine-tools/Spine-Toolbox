@@ -15,12 +15,11 @@ The SpineDBWorker class
 :authors: P. Vennström (VTT) and M. Marin (KTH)
 :date:   2.10.2019
 """
-
 import itertools
 from concurrent.futures import ThreadPoolExecutor
-from PySide2.QtCore import QObject, QEvent, QCoreApplication, QWaitCondition, QMutex, QTimer
+from PySide2.QtCore import QObject, QEvent, QCoreApplication, QMutex, QTimer
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from spinetoolbox.helpers import busy_effect
+from spinetoolbox.helpers import busy_effect, FetchParent
 
 _FETCH = QEvent.Type(QEvent.registerEventType())
 _FETCH_STATUS_CHANGE = QEvent.Type(QEvent.registerEventType())
@@ -155,6 +154,17 @@ class SpineDBWorker(QObject):
             self._fetched_item_types.discard(item_type)
         self._query_has_elements_by_key.clear()
 
+    def _reset_fetching_if_required(self, parent):
+        """Sets fetch parent's token or resets the parent if fetch tokens don't match.
+
+        Args:
+            parent (FetchParent): fetch parent
+        """
+        if parent.fetch_token is None:
+            parent.fetch_token = self._current_fetch_token
+        elif parent.fetch_token is not self._current_fetch_token:
+            parent.reset_fetching(self._current_fetch_token)
+
     def can_fetch_more(self, parent):
         """Returns whether more data can be fetches for parent.
 
@@ -164,19 +174,17 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if more data is available, False otherwise
         """
-        if parent.fetch_token is not self._current_fetch_token:
-            parent.reset_fetching(self._current_fetch_token)
-        elif parent.is_fetched or parent.is_busy_fetching:
+        self._reset_fetching_if_required(parent)
+        if parent.is_fetched or parent.is_busy_fetching:
             return False
-        if parent.query is None:
-            # Query not made yet. Init query and return True
-            parent.query_initialized = QWaitCondition()
+        if parent.query_initialized == FetchParent.Init.UNINITIALIZED:
+            parent.query_initialized = FetchParent.Init.IN_PROGRESS
             self._executor.submit(self._init_query, parent)
             return True
-        if parent.query_initialized is not None:
-            self._init_query_lock.lock()
-            parent.query_initialized.wait(self._init_query_lock)
-            self._init_query_lock.unlock()
+        if parent.query_initialized == FetchParent.Init.IN_PROGRESS:
+            return True
+        if parent.query_initialized == FetchParent.Init.FAILED:
+            return False
         return self._query_has_elements(parent)
 
     @busy_effect
@@ -186,21 +194,18 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): fetch parent
         """
+        lock = self._db_mngr.db_map_locks.get(self._db_map)
+        if lock is None or not lock.tryLock():
+            parent.query_initialized = FetchParent.Init.FAILED
+            return
         try:
-            lock = self._db_mngr.db_map_locks.get(self._db_map)
-            if lock is None or not lock.tryLock():
-                return
-            try:
-                self._setdefault_query(parent)
-                if not self._query_has_elements(parent):
-                    parent.set_fetched(True)
-                    QCoreApplication.postEvent(self, _FetchStatusChangeEvent(parent))
-            finally:
-                lock.unlock()
+            self._setdefault_query(parent)
+            if not self._query_has_elements(parent):
+                parent.set_fetched(True)
+                QCoreApplication.postEvent(self, _FetchStatusChangeEvent(parent))
         finally:
-            wait_condition = parent.query_initialized
-            parent.query_initialized = None
-            wait_condition.wakeAll()
+            parent.query_initialized = FetchParent.Init.FINISHED
+            lock.unlock()
 
     def _setdefault_query(self, parent):
         """Creates a query for parent. Stores both the query and whether it has elements.
@@ -246,8 +251,7 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): fetch parent
         """
-        if parent.fetch_token is not self._current_fetch_token:
-            parent.reset_fetching(self._current_fetch_token)
+        self._reset_fetching_if_required(parent)
         parent.set_busy_fetching(True)
         self._executor.submit(self._fetch_more, parent)
 
