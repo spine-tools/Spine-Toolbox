@@ -129,7 +129,7 @@ class EngineClient:
         Raises:
             RemoteEngineInitFailed if the server is not responding.
         """
-        start_time_ms = round(time.time() * 1000.0)
+        self.set_start_time()
         random_id = random.randrange(10000000)
         ping_request = ServerMessage("ping", str(random_id), "")
         self._req_socket.send_multipart([ping_request.to_bytes()], flags=zmq.NOBLOCK)
@@ -148,7 +148,7 @@ class EngineClient:
 
     def set_start_time(self):
         """Sets a start time for an operation. Call get_elapsed_time() after
-        an operation has finished to get an elapset time string."""
+        an operation has finished to get the elapsed time string."""
         self.start_time = round(time.time() * 1000.0)
 
     def upload_project(self, project_dir_name, fpath):
@@ -217,7 +217,8 @@ class EngineClient:
                     q.put(("server_status_msg", {"msg_type": "neutral", "text": f"Downloaded {i} files"}))
                 break
             elif rcv[0] == b"incoming_file":
-                q.put(("server_status_msg", {"msg_type": "warning", "text": "Downloading file " + rcv[1].decode("utf-8")}))
+                q.put(("server_status_msg",
+                       {"msg_type": "warning", "text": "Downloading file " + rcv[1].decode("utf-8")}))
             else:
                 success, txt = self.save_downloaded_file(rcv[0], rcv[1])
                 q.put(("server_status_msg", {"msg_type": success, "text": txt}))
