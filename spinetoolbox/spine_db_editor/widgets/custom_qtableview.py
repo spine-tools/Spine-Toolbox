@@ -17,7 +17,7 @@ Custom QTableView classes that support copy-paste and the like.
 """
 
 from PySide2.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint
-from PySide2.QtWidgets import QAction, QTableView, QMenu
+from PySide2.QtWidgets import QAction, QTableView, QHeaderView, QMenu
 from PySide2.QtGui import QKeySequence
 
 from .scenario_generator import ScenarioGenerator
@@ -87,8 +87,10 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
              spine_db_editor (SpineDBEditor)
         """
         self._spine_db_editor = spine_db_editor
+        self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self.populate_context_menu()
         self.create_delegates()
+        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def _make_delegate(self, column_name, delegate_class):
         """Creates a delegate for the given column and returns it.
@@ -155,7 +157,8 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction("Filter by", self.filter_by_selection)
         self._menu.addAction("Filter excluding", self.filter_excluding_selection)
         self._menu.addSeparator()
-        self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
+        self._menu.addAction("Clear all filters", self._spine_db_editor.clear_all_filters)
+        self._menu.addSeparator()
         # Shortcuts
         remove_rows_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
         remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
@@ -228,13 +231,14 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         # Get parameter data grouped by db_map
         db_map_typed_data = dict()
         model = self.model()
+        empty_model = model.empty_model
         for row in sorted(rows, reverse=True):
-            db_map = model.sub_model_at_row(row).db_map
-            if db_map is None:
-                # It's an empty model, just remove the row
-                _, sub_row = model._row_map[row]
-                model.empty_model.removeRow(sub_row)
+            sub_model = model.sub_model_at_row(row)
+            if sub_model is empty_model:
+                sub_row = model.sub_model_row(row)
+                sub_model.removeRow(sub_row)
                 continue
+            db_map = sub_model.db_map
             id_ = model.item_at_row(row)
             db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
         model.db_mngr.remove_items(db_map_typed_data)
@@ -243,6 +247,11 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self.resizeColumnsToContents()
+
+    @Slot(QModelIndex, QModelIndex)
+    def _refresh_copy_paste_actions(self, _, __):
+        """Enables or disables copy and paste actions."""
+        self._spine_db_editor.refresh_copy_paste_actions()
 
 
 class ObjectParameterTableMixin:
@@ -301,6 +310,8 @@ class ParameterValueTableView(ParameterTableView):
         if db_map is None:
             return None
         db_item = self.model().db_item(index)
+        if db_item is None:
+            return None
         return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
 
 
@@ -352,12 +363,26 @@ class PivotTableView(CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
+        self.setHorizontalScrollMode(QTableView.ScrollPerPixel)
+        self.setVerticalScrollMode(QTableView.ScrollPerPixel)
+        # NOTE: order of creation of header tables is important for them to stack properly
+        self._left_header_table = CopyPasteTableView(self)
+        self._top_header_table = CopyPasteTableView(self)
+        self._top_left_header_table = CopyPasteTableView(self)
+        self._left_header_table.setObjectName("left")
+        self._top_header_table.setObjectName("top")
+        self._top_left_header_table.setObjectName("top-left")
         self._spine_db_editor = None
         self._context = None
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
         self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
+        self._left_header_table.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
+        self.verticalScrollBar().valueChanged.connect(self._left_header_table.verticalScrollBar().setValue)
+        self._top_header_table.horizontalScrollBar().valueChanged.connect(self.horizontalScrollBar().setValue)
+        self.horizontalScrollBar().valueChanged.connect(self._top_header_table.horizontalScrollBar().setValue)
+        self._init_header_tables()
 
     class _ContextBase:
         """Base class for pivot table view's contexts."""
@@ -367,6 +392,7 @@ class PivotTableView(CopyPasteTableView):
         _REMOVE_PARAMETER = "Remove parameter definitions"
         _REMOVE_ALTERNATIVE = "Remove alternatives"
         _REMOVE_SCENARIO = "Remove scenarios"
+        _DUPLICATE_SCENARIO = "Duplicate scenario"
 
         def __init__(self, view, db_editor, horizontal_header, vertical_header):
             """
@@ -400,9 +426,8 @@ class PivotTableView(CopyPasteTableView):
         def _refresh_selected_indexes(self):
             """Caches selected index lists."""
             self._clear_selection_lists()
-            source_model = self._view.source_model
             for index in map(self._view.model().mapToSource, self._view.selectedIndexes()):
-                self._to_selection_lists(index, source_model)
+                self._to_selection_lists(index)
 
         def remove_alternatives(self):
             """Removes selected alternatives from the database."""
@@ -420,16 +445,15 @@ class PivotTableView(CopyPasteTableView):
             self._update_actions_availability()
             self._menu.exec_(position)
 
-        def _to_selection_lists(self, index, source_model):
+        def _to_selection_lists(self, index):
             """Caches given index to corresponding selected index list.
 
             Args:
                 index (QModelIndex): index to cache
-                source_model (PivotTableModelBase): underlying model
             """
-            if source_model.index_in_headers(index):
-                top_left_id = source_model.top_left_id(index)
-                header_type = source_model.top_left_headers[top_left_id].header_type
+            if self._view.source_model.index_in_headers(index):
+                top_left_id = self._view.source_model.top_left_id(index)
+                header_type = self._view.source_model.top_left_headers[top_left_id].header_type
                 try:
                     self._header_selection_lists[header_type].append(index)
                 except KeyError:
@@ -540,8 +564,8 @@ class PivotTableView(CopyPasteTableView):
             self._plot_in_window_menu = self._menu.addMenu("Plot in window")
             self._plot_in_window_menu.triggered.connect(self._plot_in_window)
             self._menu.addSeparator()
-            self._menu.addAction(self._db_editor.ui.actionCopy)
-            self._menu.addAction(self._db_editor.ui.actionPaste)
+            self._menu.addAction(self._view.copy_action)
+            self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_values_action = self._menu.addAction("Remove parameter values", self.remove_values)
             self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
@@ -550,7 +574,6 @@ class PivotTableView(CopyPasteTableView):
             )
             self._remove_parameters_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
             self._remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
-            self._menu.aboutToShow.connect(self._db_editor.refresh_copy_paste_actions)
 
         def open_in_editor(self):
             """Opens the parameter value editor for the first selected cell."""
@@ -624,12 +647,12 @@ class PivotTableView(CopyPasteTableView):
             _prepare_plot_in_window_menu(self._plot_in_window_menu)
             super().show_context_menu(position)
 
-        def _to_selection_lists(self, index, source_model):
+        def _to_selection_lists(self, index):
             """See base class."""
-            if source_model.index_in_data(index):
+            if self._view.source_model.index_in_data(index):
                 self._selected_value_indexes.append(index)
             else:
-                super()._to_selection_lists(index, source_model)
+                super()._to_selection_lists(index)
 
         def _update_actions_availability(self):
             """See base class."""
@@ -662,11 +685,10 @@ class PivotTableView(CopyPasteTableView):
 
         def populate_context_menu(self):
             """See base class."""
-            self._menu.addAction(self._db_editor.ui.actionCopy)
-            self._menu.addAction(self._db_editor.ui.actionPaste)
+            self._menu.addAction(self._view.copy_action)
+            self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
-            self._menu.aboutToShow.connect(self._db_editor.refresh_copy_paste_actions)
 
         def _update_actions_availability(self):
             """See base class."""
@@ -687,6 +709,7 @@ class PivotTableView(CopyPasteTableView):
             self._toggle_alternatives_checked = QAction("Check/uncheck selected")
             self._toggle_alternatives_checked.triggered.connect(self._toggle_checked_state)
             self._remove_scenarios_action = None
+            self._duplicate_scenario_action = None
             horizontal_header = ScenarioAlternativePivotHeaderView(Qt.Horizontal, "columns", view)
             horizontal_header.context_menu_requested.connect(self.show_context_menu)
             vertical_header = ScenarioAlternativePivotHeaderView(Qt.Vertical, "rows", view)
@@ -696,8 +719,8 @@ class PivotTableView(CopyPasteTableView):
 
         def _clear_selection_lists(self):
             """See base class."""
-            self._selected_scenario_indexes = list()
-            self._selected_scenario_alternative_indexes = list()
+            self._selected_scenario_indexes.clear()
+            self._selected_scenario_alternative_indexes.clear()
             super()._clear_selection_lists()
 
         def populate_context_menu(self):
@@ -708,12 +731,12 @@ class PivotTableView(CopyPasteTableView):
             self._menu.addSeparator()
             self._menu.addAction(self._toggle_alternatives_checked)
             self._menu.addSeparator()
-            self._menu.addAction(self._db_editor.ui.actionCopy)
-            self._menu.addAction(self._db_editor.ui.actionPaste)
+            self._menu.addAction(self._view.copy_action)
+            self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
             self._remove_scenarios_action = self._menu.addAction(self._REMOVE_SCENARIO, self.remove_scenarios)
-            self._menu.aboutToShow.connect(self._db_editor.refresh_copy_paste_actions)
+            self._duplicate_scenario_action = self._menu.addAction(self._DUPLICATE_SCENARIO, self.duplicate_scenario)
 
         def remove_scenarios(self):
             """Removes selected scenarios from the database."""
@@ -724,18 +747,25 @@ class PivotTableView(CopyPasteTableView):
                 db_map_typed_data.setdefault(db_map, {}).setdefault("scenario", set()).add(id_)
             self._db_editor.db_mngr.remove_items(db_map_typed_data)
 
-        def _to_selection_lists(self, index, source_model):
+        def duplicate_scenario(self):
+            """Duplicates current scenario in the database."""
+            index = self._selected_scenario_indexes[0]
+            db_map, scen_id = self._view.source_model._header_id(index)
+            self._db_editor.duplicate_scenario(db_map, scen_id)
+
+        def _to_selection_lists(self, index):
             """See base class."""
-            if source_model.index_in_data(index):
+            if self._view.source_model.index_in_data(index):
                 self._selected_scenario_alternative_indexes.append(index)
             else:
-                super()._to_selection_lists(index, source_model)
+                super()._to_selection_lists(index)
 
         def _update_actions_availability(self):
             """See base class."""
             self._generate_scenarios_action.setEnabled(bool(self._selected_alternative_indexes))
             self._remove_alternatives_action.setEnabled(bool(self._selected_alternative_indexes))
             self._remove_scenarios_action.setEnabled(bool(self._selected_scenario_indexes))
+            self._duplicate_scenario_action.setEnabled(len(self._selected_scenario_indexes) == 1)
 
         def _open_scenario_generator(self):
             """Opens the scenario generator dialog."""
@@ -773,7 +803,9 @@ class PivotTableView(CopyPasteTableView):
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
+        self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self._spine_db_editor.pivot_table_proxy.sourceModelChanged.connect(self._change_context)
+        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     @Slot()
     def _change_context(self):
@@ -811,8 +843,31 @@ class PivotTableView(CopyPasteTableView):
         old_model = self.model()
         if old_model:
             old_model.model_data_changed.disconnect(self._fetch_more_timer.start)
+            old_model.modelReset.disconnect(self._update_header_tables)
         super().setModel(model)
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.setModel(model)
         model.model_data_changed.connect(self._fetch_more_timer.start)
+        model.modelReset.connect(self._update_header_tables)
+
+    def setIndexWidget(self, proxy_index, widget):
+        self._top_left_header_table.setIndexWidget(proxy_index, widget)
+
+    def setHorizontalHeader(self, horizontal_header):
+        super().setHorizontalHeader(horizontal_header)
+        horizontal_header.sectionResized.connect(self._update_section_width)
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.horizontalHeader().setResizeContentsPrecision(horizontal_header.resizeContentsPrecision())
+
+    def setVerticalHeader(self, vertical_header):
+        super().setVerticalHeader(vertical_header)
+        vertical_header.sectionResized.connect(self._update_section_height)
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.verticalHeader().setDefaultSectionSize(vertical_header.defaultSectionSize())
+
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        self._update_header_tables_geometry()
 
     def _fetch_more_visible(self):
         model = self.model()
@@ -820,6 +875,67 @@ class PivotTableView(CopyPasteTableView):
         scrollbar_at_max = scrollbar.value() == scrollbar.maximum()
         if scrollbar_at_max and model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
+
+    def _init_header_tables(self):
+        # NOTE: order of the iteration below is important for calls to stackUnder
+        for header_table in (self._top_left_header_table, self._top_header_table, self._left_header_table):
+            header_table.setFocusPolicy(Qt.NoFocus)
+            header_table.setStyleSheet(self.styleSheet())
+            header_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            header_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            header_table.show()
+            header_table.verticalHeader().hide()
+            header_table.horizontalHeader().hide()
+            header_table.setHorizontalScrollMode(QTableView.ScrollPerPixel)
+            header_table.setVerticalScrollMode(QTableView.ScrollPerPixel)
+            header_table.setStyleSheet("QTableView { border: none;}")
+            self.viewport().stackUnder(header_table)
+
+    def _update_header_tables(self):
+        # Top
+        for header_table in (self._top_header_table, self._top_left_header_table):
+            for i in range(0, self.source_model.headerRowCount()):
+                header_table.setRowHeight(i, self.rowHeight(i))
+                header_table.setRowHidden(i, False)
+            for i in range(self.source_model.headerRowCount(), self.source_model.rowCount() - 1):
+                header_table.setRowHidden(i, True)
+        # Left
+        for header_table in (self._left_header_table, self._top_left_header_table):
+            for j in range(0, self.source_model.headerColumnCount()):
+                header_table.setColumnWidth(j, self.columnWidth(j))
+                header_table.setColumnHidden(j, False)
+            for j in range(self.source_model.headerColumnCount(), self.source_model.columnCount() - 1):
+                header_table.setColumnHidden(j, True)
+        self._update_header_tables_geometry()
+
+    @Slot(int, int, int)
+    def _update_section_width(self, logical_index, _old_size, new_size):
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.setColumnWidth(logical_index, new_size)
+        self._update_header_tables_geometry()
+
+    @Slot(int, int, int)
+    def _update_section_height(self, logical_index, _old_size, new_size):
+        for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
+            header_table.setRowHeight(logical_index, new_size)
+        self._update_header_tables_geometry()
+
+    def _update_header_tables_geometry(self):
+        if not self.source_model:
+            return
+        x = self.verticalHeader().width() + self.frameWidth()
+        y = self.horizontalHeader().height() + self.frameWidth()
+        header_w = sum(self.columnWidth(j) for j in range(0, self.source_model.headerColumnCount()))
+        header_h = sum(self.rowHeight(i) for i in range(0, self.source_model.headerRowCount()))
+        total_w = self.viewport().width()
+        total_h = self.viewport().height()
+        self._left_header_table.setGeometry(x, y, header_w, total_h)
+        self._top_header_table.setGeometry(x, y, total_w, header_h)
+        self._top_left_header_table.setGeometry(x, y, header_w, header_h)
+
+    @Slot(QModelIndex, QModelIndex)
+    def _refresh_copy_paste_actions(self, _, __):
+        self._spine_db_editor.refresh_copy_paste_actions()
 
 
 class FrozenTableView(QTableView):
@@ -853,6 +969,7 @@ class MetadataTableViewBase(CopyPasteTableView):
         super().__init__(parent)
         self.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
         self._menu = QMenu(self)
+        self._db_editor = None
 
     def connect_spine_db_editor(self, db_editor):
         """Finishes view's initialization.
@@ -860,8 +977,11 @@ class MetadataTableViewBase(CopyPasteTableView):
         Args:
              db_editor (SpineDBEditor): database editor instance
         """
-        self._populate_context_menu(db_editor)
+        self._db_editor = db_editor
+        self.set_external_copy_and_paste_actions(db_editor.ui.actionCopy, db_editor.ui.actionPaste)
+        self._populate_context_menu()
         self._enable_delegates(db_editor)
+        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def contextMenuEvent(self, event):
         menu_position = event.globalPos()
@@ -884,14 +1004,10 @@ class MetadataTableViewBase(CopyPasteTableView):
             db_editor (SpineDBEditor): database editor
         """
 
-    def _populate_context_menu(self, db_editor):
-        """Fills context menu with actions.
-
-        Args:
-            db_editor (SpineDBEditor): database editor
-        """
-        self._menu.addAction(db_editor.ui.actionCopy)
-        self._menu.addAction(db_editor.ui.actionPaste)
+    def _populate_context_menu(self,):
+        """Fills context menu with actions."""
+        self._menu.addAction(self.copy_action)
+        self._menu.addAction(self.paste_action)
         self._menu.addSeparator()
         self._menu.addAction("Remove row(s)", self._remove_selected)
 
@@ -904,6 +1020,10 @@ class MetadataTableViewBase(CopyPasteTableView):
             value (str): value
         """
         self.model().setData(index, value)
+
+    @Slot(QModelIndex, QModelIndex)
+    def _refresh_copy_paste_actions(self):
+        self._db_editor.refresh_copy_paste_actions()
 
 
 class MetadataTableView(MetadataTableViewBase):

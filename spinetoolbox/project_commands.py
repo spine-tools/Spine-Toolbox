@@ -16,16 +16,8 @@ QUndoCommand subclasses for modifying the project.
 :date:   12.2.2020
 """
 
-from enum import IntEnum, unique
 from PySide2.QtWidgets import QUndoCommand
 from spine_engine.project_item.connection import Connection, Jump
-
-
-@unique
-class Id(IntEnum):
-    """Id numbers for project commands."""
-
-    JUMP_CONDITION = 1
 
 
 class SpineToolboxCommand(QUndoCommand):
@@ -409,15 +401,6 @@ class SetJumpConditionCommand(SpineToolboxCommand):
         self._condition = condition
         self._previous_condition = jump.condition
         self.setText("change loop condition")
-
-    def id(self):
-        return Id.JUMP_CONDITION
-
-    def mergeWith(self, other):
-        if not isinstance(other, SetJumpConditionCommand) or self._jump is not other._jump:
-            return False
-        self._condition = other._condition
-        return True
 
     def redo(self):
         self._jump_properties.set_condition(self._jump, self._condition)

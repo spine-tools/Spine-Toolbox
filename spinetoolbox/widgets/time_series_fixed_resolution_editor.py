@@ -79,6 +79,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.calendar_button.clicked.connect(self._show_calendar)
         self._ui.resolution_edit.setText(_resolution_to_text(initial_value.resolution))
         self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
+        self._ui.time_series_table.init_copy_and_paste_actions()
         self._ui.time_series_table.setModel(self._model)
         self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)

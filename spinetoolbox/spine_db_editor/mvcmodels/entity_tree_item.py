@@ -29,7 +29,7 @@ class EntityRootItem(MultiDBTreeItem):
 
     @property
     def display_id(self):
-        """ "See super class."""
+        """See super class."""
         return "root"
 
     @property
@@ -38,7 +38,7 @@ class EntityRootItem(MultiDBTreeItem):
 
     @property
     def display_data(self):
-        """ "See super class."""
+        """See super class."""
         return "root"
 
     def set_data(self, column, value, role):
@@ -249,9 +249,9 @@ class EntityItem(MultiDBTreeItem):
 
     def _fetch_members_item(self):
         if self._can_fetch_members_item():
+            self._has_members_item = True
             # Insert members item. Note that we pass the db_map_ids of the parent object class item
             self.insert_children(0, [MemberObjectClassItem(self.model, self.parent_item.db_map_ids.copy())])
-            self._has_members_item = True
 
     def can_fetch_more(self):
         return super().can_fetch_more() or self._can_fetch_members_item()

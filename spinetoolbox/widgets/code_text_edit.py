@@ -61,7 +61,7 @@ class CodeTextEdit(QPlainTextEdit):
             pass
 
     def setPlainText(self, text):
-        doc = QTextDocument(self)
+        doc = self.document()
         doc.setPlainText(text)
         self.setDocument(doc)
 

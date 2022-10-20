@@ -266,10 +266,18 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         """Sets the filter invalid."""
         self._filter_timer.start()
 
+    def stop_invalidating_filter(self):
+        """Stops invalidating the filter."""
+        self._filter_timer.stop()
+
     def set_filter_class_ids(self, class_ids):
         if class_ids != self._filter_class_ids:
             self._filter_class_ids = class_ids
             self._invalidate_filter()
+
+    def clear_auto_filter(self):
+        self._auto_filter = {}
+        self._invalidate_filter()
 
     @Slot(str, dict)
     def set_auto_filter(self, field, values):

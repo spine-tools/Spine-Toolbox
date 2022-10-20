@@ -75,6 +75,21 @@ class TestArrayTableView(unittest.TestCase):
             self.assertEqual(array, [[locale.str(5.5)]])
         table_view.deleteLater()
 
+    def test_copy_does_not_copy_expansion_row(self):
+        model = ArrayModel(self._parent)
+        table_view = ArrayTableView()
+        table_view.setModel(model)
+        model.reset(Array([5.5]))
+        for column in range(model.columnCount()):
+            for row in range(model.rowCount()):
+                table_view.selectionModel().select(model.index(row, column), QItemSelectionModel.Select)
+        self.assertTrue(table_view.copy())
+        clip = StringIO(QApplication.clipboard().text())
+        array = [row for row in csv.reader(clip, delimiter='\t')]
+        with system_lc_numeric():
+            self.assertEqual(array, [["1"], [locale.str(5.5)]])
+        table_view.deleteLater()
+
     def test_paste_non_numeric_to_empty_table(self):
         model = ArrayModel(self._parent)
         model.set_array_type(str)

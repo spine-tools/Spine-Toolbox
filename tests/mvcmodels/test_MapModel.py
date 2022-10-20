@@ -58,6 +58,11 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value, self._parent)
         self.assertEqual(model.columnCount(), 4)
 
+    def test_columnCount_empty_map(self):
+        map_value = Map([], [], index_type=int)
+        model = MapModel(map_value, self._parent)
+        self.assertEqual(model.columnCount(), 3)
+
     def test_convert_leaf_maps(self):
         nested_map = Map([DateTime("2020-07-03 12:00:00"), DateTime("2020-07-03 12:00:00")], [22.2, 23.3])
         map_ = Map([1.0], [nested_map])
@@ -283,12 +288,17 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value, self._parent)
         self.assertEqual(model.rowCount(), 4)
 
+    def test_row_count_empty_map(self):
+        map_value = Map([], [], index_type=str)
+        model = MapModel(map_value, self._parent)
+        self.assertEqual(model.rowCount(), 1)
+
     def test_removeRows_single_row(self):
         map_value = Map(["a"], [1.1])
         model = MapModel(map_value, self._parent)
         self.assertTrue(model.removeRows(0, 1))
         self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.columnCount(), 1)
+        self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.index(0, 0).data(), "")
 
     def test_removeRows_first_row(self):
@@ -335,7 +345,7 @@ class TestMapModel(unittest.TestCase):
     def test_setData_expands_empty_table(self):
         model = MapModel(Map([], [], Duration), self._parent)
         self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.columnCount(), 1)
+        self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.index(0, 0).data(), "")
         self.assertTrue(model.setData(model.index(0, 0), Duration("1 month")))
         self.assertEqual(model.rowCount(), 2)
@@ -476,11 +486,56 @@ class TestMapModel(unittest.TestCase):
         with self.assertRaises(ParameterValueFormatError):
             model.value()
 
+    def test_different_index_types_in_column_raises(self):
+        map_value = Map([99.0, 101.0], [-1.1, -2.2])
+        model = MapModel(map_value, self._parent)
+        model.setData(model.index(1, 0), "a")
+        with self.assertRaises(ParameterValueFormatError):
+            model.value()
+
     def test_value_shortening_rows(self):
         original = Map(["a", "b", "c"], [0.0, Map(["bb"], [Map(["bbb"], [Array([-1.0])])]), Array([-2.0])])
         model = MapModel(original, self._parent)
         map_ = model.value()
         self.assertEqual(map_, original)
+
+    def test_insertColumns_to_empty_map(self):
+        map_value = Map([], [], index_type=str)
+        model = MapModel(map_value, self._parent)
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.columnCount(), 3)
+        self.assertTrue(model.insertColumns(0, 1))
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.columnCount(), 4)
+        self.assertEqual(model.headerData(0, Qt.Horizontal), "x")
+        self.assertEqual(model.headerData(1, Qt.Horizontal), "x")
+        self.assertEqual(model.headerData(2, Qt.Horizontal), "Value")
+        self.assertEqual(model.headerData(3, Qt.Horizontal), None)
+        self.assertEqual(model.index(0, 0).data(), "")
+        self.assertEqual(model.index(0, 1).data(), "")
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(0, 3).data(), "")
+
+    def test_insertColumns_to_map(self):
+        map_value = Map(["A"], [1.0], index_name="Panda")
+        model = MapModel(map_value, self._parent)
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 3)
+        self.assertTrue(model.insertColumns(0, 1))
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 4)
+        self.assertEqual(model.headerData(0, Qt.Horizontal), "x")
+        self.assertEqual(model.headerData(1, Qt.Horizontal), "Panda")
+        self.assertEqual(model.headerData(2, Qt.Horizontal), "Value")
+        self.assertEqual(model.headerData(3, Qt.Horizontal), None)
+        self.assertEqual(model.index(0, 0).data(), "")
+        self.assertEqual(model.index(0, 1).data(), "A")
+        self.assertEqual(model.index(0, 2).data(), 1.0)
+        self.assertEqual(model.index(0, 3).data(), "")
+        self.assertEqual(model.index(1, 0).data(), "")
+        self.assertEqual(model.index(1, 1).data(), "")
+        self.assertEqual(model.index(1, 2).data(), "")
+        self.assertEqual(model.index(1, 3).data(), "")
 
 
 if __name__ == '__main__':

@@ -34,11 +34,65 @@ from PySide2.QtWidgets import (
     QWizardPage,
     QToolButton,
     QPushButton,
+    QUndoStack,
+    QSpinBox,
+    QDialog,
 )
 from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
-from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont, QIntValidator
+from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont, QIntValidator, QKeySequence
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
+from .select_database_items import SelectDatabaseItems
 from ..helpers import format_log_message
+
+
+class ElidedTextMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._full_text = ""
+        self.elided_mode = Qt.ElideLeft
+
+    def setText(self, text):
+        self._update_text(text)
+
+    def _update_text(self, text):
+        self._full_text = text
+        self._set_text_elided()
+
+    def _set_text_elided(self, width=None):
+        if width is None:
+            width = self.rect().width()
+        text_width = width - self._elided_offset() - self.fontMetrics().averageCharWidth()
+        elided_text = self.fontMetrics().elidedText(self._full_text, self.elided_mode, text_width)
+        super().setText(elided_text)
+
+    def _elided_offset(self):
+        return 0
+
+    def text(self):
+        return self._full_text
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._set_text_elided(event.size().width())
+
+
+class UndoRedoMixin:
+    def keyPressEvent(self, e):
+        """Overridden to catch and pass on the Undo and Redo commands when this line edit has the focus.
+
+        Args:
+            e (QKeyEvent): Event
+        """
+        undo_stack = self.nativeParentWidget().findChild(QUndoStack)
+        if undo_stack is None:
+            super().keyPressEvent(e)
+            return
+        if e.matches(QKeySequence.Undo):
+            undo_stack.undo()
+        elif e.matches(QKeySequence.Redo):
+            undo_stack.redo()
+        else:
+            super().keyPressEvent(e)
 
 
 class FilterWidgetBase(QWidget):
@@ -576,37 +630,6 @@ class LabelWithCopyButton(QWidget):
         button.clicked.connect(lambda _=False, le=line_edit: qApp.clipboard().setText(le.text()))
 
 
-class ElidedTextMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._full_text = ""
-        self.elided_mode = Qt.ElideLeft
-
-    def setText(self, text):
-        self._update_text(text)
-
-    def _update_text(self, text):
-        self._full_text = text
-        self._set_text_elided()
-
-    def _set_text_elided(self, width=None):
-        if width is None:
-            width = self.rect().width()
-        text_width = width - self._elided_offset() - self.fontMetrics().averageCharWidth()
-        elided_text = self.fontMetrics().elidedText(self._full_text, self.elided_mode, text_width)
-        super().setText(elided_text)
-
-    def _elided_offset(self):
-        return 0
-
-    def text(self):
-        return self._full_text
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._set_text_elided(event.size().width())
-
-
 class ElidedLabel(ElidedTextMixin, QLabel):
     """A QLabel with elided text."""
 
@@ -664,3 +687,36 @@ class HorizontalSpinBox(QToolBar):
     def _focus_line_edit(self):
         self._line_edit.selectAll()
         self._line_edit.setFocus()
+
+
+class PropertyQSpinBox(UndoRedoMixin, QSpinBox):
+    """A spinbox where undo and redo key strokes apply to the project."""
+
+
+class PurgeSettingsDialog(QDialog):
+    """Purge settings dialog."""
+
+    def __init__(self, purge_settings, parent=None):
+        """
+        Args:
+            purge_settings (dict): purge settings
+            parent (QWidget, optional): parent widget
+        """
+        from ..ui.purge_settings_dialog import Ui_Dialog  # pylint: disable=import-outside-toplevel
+
+        super().__init__(parent)
+        self.setWindowTitle("Database purge settings")
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self._ui = Ui_Dialog()
+        self._ui.setupUi(self)
+        self._item_check_boxes_widget = SelectDatabaseItems(purge_settings, self)
+        self._ui.root_layout.insertWidget(0, self._item_check_boxes_widget)
+
+    def get_purge_settings(self):
+        """Returns current purge settings.
+
+        Returns:
+            dict: mapping from purgeable database item name to purge flag
+        """
+        return self._item_check_boxes_widget.checked_states()

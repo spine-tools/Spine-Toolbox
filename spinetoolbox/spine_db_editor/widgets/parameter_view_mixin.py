@@ -125,15 +125,29 @@ class ParameterViewMixin:
             index (QModelIndex): and index of the object or relationship tree
         """
         if index is None or not index.isValid():
-            default_data = dict(database=next(iter(self.db_maps)).codename)
+            default_db_map = next(iter(self.db_maps))
+            default_data = dict(database=default_db_map.codename)
         else:
-            default_data = index.model().item_from_index(index).default_parameter_data()
-        self.set_default_parameter_data(default_data)
+            item = index.model().item_from_index(index)
+            default_db_map = item.first_db_map
+            default_data = item.default_parameter_data()
+        self.set_default_parameter_data(default_data, default_db_map)
 
-    def set_default_parameter_data(self, default_data):
+    def set_default_parameter_data(self, default_data, default_db_map):
         for model in self._parameter_models:
+            model.empty_model.db_map = default_db_map
             model.empty_model.set_default_row(**default_data)
             model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
+
+    def clear_all_filters(self):
+        for model in self._parameter_models:
+            model.clear_auto_filter()
+        for model in self._parameter_value_models:
+            model.clear_auto_filter()
+        self._filter_class_ids = {}
+        self._filter_entity_ids = {}
+        self._filter_alternative_ids = {}
+        self._reset_filters()
 
     def _reset_filters(self):
         """Resets filters."""

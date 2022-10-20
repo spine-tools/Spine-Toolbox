@@ -37,7 +37,7 @@ class _ParameterFetchParent(ItemTypeFetchParent):
         self._parent = parent
 
     def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.entity_class_id == self._parent.current_class_id[db_map])
+        return query.filter(subquery.c.entity_class_id == self._parent.current_class_id.get(db_map))
 
 
 class _EntityFetchParent(ItemTypeFetchParent):
@@ -46,7 +46,7 @@ class _EntityFetchParent(ItemTypeFetchParent):
         self._parent = parent
 
     def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.class_id == self._parent.current_class_id[db_map])
+        return query.filter(subquery.c.class_id == self._parent.current_class_id.get(db_map))
 
 
 class _MemberObjectFetchParent(ItemTypeFetchParent):

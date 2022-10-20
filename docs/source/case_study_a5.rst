@@ -56,9 +56,6 @@ For each power station in the river, the following information is known:
 - The reservoir level at the beginning of the simulation period and at the end.
 - The minimal amount of water that the plant must discharge at every hour.
   This is usually zero (except for one of the plants).
-- The minimal amount of water that needs to be *spilled* at every hour.
-  Spilled water does not go through the turbine and thus is not used for producing electricity;
-  it just helps keeping the reservoir level at bay.
 - The downstream plant, or next plant in the river course.
 - The time that it takes for the water to reach the downstream plant.
   This time can be different depending on whether the water is discharged (goes through the turbine) or spilled.
@@ -100,120 +97,21 @@ Below is a schematic of the model. For clarity, only the Rebnis station is prese
    :scale: 50%
 
 
-Installing requirements
-=======================
+In order to run this tutorial you must first execute some preliminary steps from the 
+`Simple System <./simple_system.html>`_
+tutorial. Specifically, execute all steps from the `guide <./simple_system.html#guide>`_,
+up to and including the step of `importing-the-spineopt-database-template <./simple_system.html#importing-the-spineopt-database-template>`_.
+It is advisable to go through the whole tutorial in order to familiarise yourself with Spine.
 
-.. note:: This tutorial is written for latest `Spine Toolbox 
-   <https://github.com/Spine-project/Spine-Toolbox/>`_ and `SpineOpt 
-   <https://github.com/Spine-project/SpineOpt.jl>`_ master versions.
-
-Follow the instructions `here <https://github.com/Spine-project/SpineOpt.jl#installation>`_ 
-to install Spine Toolbox and SpineOpt in your system.
-
-Creating a new project
-======================
-
-Each Spine Toolbox project resides in its own directory, where the user can
-store data, programming scripts and other necessary material. The Toolbox
-application also creates its own special subdirectory *.spinetoolbox*, for project
-settings, etc.
-
-To create a new project, select **File -> New project…** from Spine Toolbox main
-menu. Browse to a location where you want to create the project and create a new
-folder for it, e.g. ‘cs_a5_importer’, and then click **Select Folder**.
-
-Configuring SpineOpt
---------------------
-
-#. To use SpineOpt in your project, you need to create a Tool specification
-   for it. Click on the small arrow next to the Tool icon |tool_icon| (in the *Main* section of
-   the tool bar), and press **New…** The *Tool specification editor* will popup:
-
-   .. image:: img/edit_tool_specification_blank.png
-         :align: center
-
-#. Type ‘SpineOpt’ as the name of the specification and select ‘Julia’ as the
-   tool type. Deselect *Execute in work directory*.
-#. Press |file-regular| next to *Main program* file to create a new Julia file. Enter a file
-   name, e.g. ‘run_spineopt.jl’, and click **Save**.
-#. Back in the *Tool specification editor*, select the file you just created
-   under *Main program file*. Then, enter the following text in the text editor to
-   the right:
-
-   .. code-block:: julia
-
-      using SpineOpt
-
-      run_spineopt(ARGS...)
-
-   At this point, the form should be looking like this:
-
-   .. image:: img/edit_tool_specification_spine_opt.png
-         :align: center
-
-#. Press **Ctrl+S** to save everything, then close the *Tool specification editor*.
-
-Setting up a project
---------------------
-
-#. Drag the Data Store icon |ds_icon| from the tool bar and drop it into the 
-   *Design View*. This will open the *Add Data Store* dialogue. 
-   Type ‘input’ as the Data Store name and click **Ok**.
-
-#. Repeat the above procedure to create a Data Store called ‘output’.
-
-#. Create a database for the ‘input‘ Data Store:
-
-   #. Select the `input` Data Store item in the *Design View* to show the *Data Store Properties* 
-      (on the right side of the window, usually).
-
-   #. In *Data Store Properties*, select the *sqlite* dialect at the top, and hit **New Spine db**.
-
-#. Repeat the above procedure to create a database for the ‘output’ Data Store.
-
-#. Drag the ‘SpineOpt’ item from the tool bar into the *Design View*.
-   This will open the *Add Tool* dialogue. Type ‘SpineOpt’ as the Tool name and click **Ok**.
-
-   .. note:: Each item in the *Design view* is equipped with three *connectors*
-      (the small squares at the item boundaries).
-
-#. Click on one of ‘input’ connectors and then on one of ‘SpineOpt’ connectors. 
-   This will create a *connection* from the former to the latter.
-
-#. Repeat the procedure to create a *connection* from `SpineOpt` to `output`. 
-   It should look something like this:
-
-   .. image:: img/case_study_a5_item_connections.png
-      :align: center
-
-#. Setup the arguments for the `SpineOpt` Tool:
-
-   #. Select the `SpineOpt` Tool to show the *Tool Properties* (on the right side of the window, usually).
-      You should see two elements listed under *Available resources*, ``{db_url@input}`` and ``{db_url@output}``.
-
-   #. Drag the first resource, ``{db_url@input}``, and drop it in *Command line arguments*,
-      just as shown in the image below.
-
-      .. image:: img/case_study_a5_spine_opt_tool_properties.png
-         :align: center
-
-   #. Drag the second resource, ``{db_url@output}``, and drop it right below the previous one.
-      The panel should be now looking like this:
-
-      .. image:: img/case_study_a5_spine_opt_tool_properties_cmdline_args.png
-         :align: center
-
-   #. Double-check that the *order* of the arguments is correct: first, ``{db_url@input}``, and second, ``{db_url@output}``.
-      (You can drag and drop to reorganize them if needed.)
-
-#. From the main menu, select **File -> Save project**.
+.. note:: Just remember to give a different name for the Spine Project of the hydropower tutorial (e.g., ‘Case Study A5’) 
+   in the corresponding step, so to not mix up the Spine Toolbox projects! 
 
 
 Importing the SpineOpt database template
 ----------------------------------------
 
 #. Download `the SpineOpt database template 
-   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/data/spineopt_template.json>`_
+   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/templates/spineopt_template.json>`_
    (right click on the link, then select *Save link as...*)
 
 #. Select the `input` Data Store item in the *Design View*.
@@ -230,7 +128,7 @@ Importing the SpineOpt database template
       for visualizing and managing Spine databases.
 
 #. Press **Alt + F** to display the editor menu, select **File -> Import...**,
-   and then select the template file you previously downloaded (in case it is not displayed in the folder where you saved it, doublecheck that you selected . 
+   and then select the template file you previously downloaded (in case it is not displayed in the folder where you saved it, double-check that you selected . 
    The contents of that file will be imported into the current database,
    and you should then see classes like ‘commodity’, ‘connection’ and ‘model’ under 
    the root node in the *Object tree* (on the left).
@@ -248,8 +146,12 @@ Importing the SpineOpt database template
 Entering data
 =============
 
-There are two options in this tutorial to enter data in the Database. The first one is to enter data manually
-and the second to use the importer functionality. These are described in the next two subsections respectively.
+.. note::
+   There are two options in this tutorial to enter data in the Database. The first one is to enter data manually
+   and the second to :ref:`use the importer <importer>` functionality. These are described in the next two subsections 
+   respectively and produce similar models. The model created when using the importer creates a model with two-segments
+   efficiency curves for converting water to electricity (while the model created when entering the data manually
+   assumes a simplified efficiency curve with a single segment).
 
 Entering data manually
 ----------------------
@@ -573,7 +475,7 @@ Additional Steps for Project Setup
    Design View. This will open the *Add Data connection dialogue*. Type in ‘Data
    Connection’ and click on **Ok**.
 
-#. To import the model of the planning problem into the Spine database, you need
+#. To import the model into the Spine database, you need
    to create an *Import specification*. Create an *Import specification* by clicking
    on the small arrow next to the Importer item (in the Main section of the toolbar) and
    press **New**. The *Importer specification editor* will pop-up.
@@ -591,7 +493,7 @@ Additional Steps for Project Setup
    to this:
 
    .. image:: img/items_connections.png
-         :align: center
+      :align: center
 
 #. From the main menu, select **File -> Save project**.
 
@@ -600,19 +502,19 @@ Importing the model
 
 
 #. Download `the data <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/a5.xlsx>`_ and `the 
-   accompanying mapping <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/mapping_case_study_a5.json>`_
+   accompanying mapping <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/A5_importer_specification.json>`_
    (right click on the links, then select *Save link as...*).
 
 #. Add a reference to the file containing the model.
 
   #. Select the *Data Connection item* in the *Design View* to show the *Data
      Connection properties* window (on the right side of the window usually).
-  #. In *Data Connection Properties*, click on the plus icon and select the
-     previously downloaded Excel file.
+  #. In *Data Connection Properties*, click on , click on the icon furthest to the left **Add file references** 
+     and select the previously downloaded Excel file.
   #. Next, double click on the *Import model* in the *Design view*. A window called *Select
      connector* for *Import Model* will pop-up, select Excel and klick **OK**. Next, still in
-     the *Importer specification editor*, click the alternatives icon in the top
-     right and import the mappings previously downloaded. Finally, save by clicking
+     the *Importer specification editor*, click on the main menu icon in the top right (or Press **Alt + F** to automatically display it) 
+     and import the mappings previously downloaded (by clicking on **Import mappings**). Finally, save by clicking
      **Ctrl+S** and exit the *Importer specification editor*.
 
 Executing the workflow
@@ -646,3 +548,9 @@ The *Parameter value editor* will pop up. You should see something like this:
 
 .. image:: img/case_study_a5_output_electricity_load_unit_flow.png
    :align: center
+
+.. note::
+   If you have used the importer to instantiate the model you can easily modify the parameters in the **model** worksheet, 
+   run the project and observe the differences in the results. If you need to make changes dirrectly to the input database,
+   in order for the importer not to overwrite them, you will need to dissassociate the importer from the input DB
+   (right click in the connecting yellow arrow between the two items and click on **remove**).

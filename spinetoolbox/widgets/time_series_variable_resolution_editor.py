@@ -49,6 +49,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._model.rowsRemoved.connect(self._update_plot)
         self._ui = Ui_TimeSeriesVariableResolutionEditor()
         self._ui.setupUi(self)
+        self._ui.time_series_table.init_copy_and_paste_actions()
         self._ui.time_series_table.setModel(self._model)
         self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)

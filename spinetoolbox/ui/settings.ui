@@ -1189,9 +1189,19 @@
         <item>
          <widget class="QGroupBox" name="process_limits_group_box">
           <property name="title">
-           <string>Parallel Engine processes</string>
+           <string>Maximum number of concurrent processes</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QRadioButton" name="unlimited_engine_process_radio_button">
+             <property name="text">
+              <string>Unlimited</string>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">engine_processes_button_group</string>
+             </attribute>
+            </widget>
+           </item>
            <item>
             <widget class="QRadioButton" name="automatic_engine_process_limit_radio_button">
              <property name="text">
@@ -1245,7 +1255,7 @@
         <item>
          <widget class="QGroupBox" name="persistent_process_limits_group_box">
           <property name="title">
-           <string>Persistent consoles</string>
+           <string>Maximum number of open consoles</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_17">
            <item>

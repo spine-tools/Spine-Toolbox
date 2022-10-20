@@ -15,6 +15,8 @@ Context menus for parameter value editor widgets.
 :author: A. Soininen (VTT)
 :date:   5.7.2019
 """
+from operator import itemgetter
+
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QInputDialog, QMenu, QAction
 from spinetoolbox.plotting import plot_selection, PlottingError, MapTablePlottingHints
@@ -53,6 +55,9 @@ class ContextMenuBase(QMenu):
 
     def _add_default_actions(self):
         """Adds default actions to the menu."""
+        self.addAction(self._table_view.copy_action)
+        self.addAction(self._table_view.paste_action)
+        self.addSeparator()
         self.addAction(_INSERT_SINGLE_ROW_BEFORE, self._insert_single_row_before)
         self.addAction(_INSERT_MULTIPLE_ROWS_BEFORE, self._insert_multiple_rows_before)
         self.addSeparator()
@@ -329,7 +334,9 @@ def _merge_intervals(intervals):
     Returns:
         list of list: merged intervals in the form [first, last]
     """
-    intervals.sort(key=lambda i: i[0])
+    if not intervals:
+        return []
+    intervals.sort(key=itemgetter(0))
     merged_intervals = [intervals.pop(0)]
     while intervals:
         interval = intervals.pop(0)

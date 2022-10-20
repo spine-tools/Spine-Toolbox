@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
     QDialog,
     QInputDialog,
 )
-from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer, SIGNAL
+from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
@@ -114,6 +114,10 @@ class SpineDBEditorBase(QMainWindow):
         self.update_commit_enabled()
         self.setContextMenuPolicy(Qt.NoContextMenu)
         self._torn_down = False
+        self._purge_items_dialog = None
+        self._purge_items_dialog_state = None
+        self._export_items_dialog = None
+        self._export_items_dialog_state = None
 
     @property
     def toolbox(self):
@@ -145,6 +149,8 @@ class SpineDBEditorBase(QMainWindow):
             return
         if not self.tear_down():
             return
+        if self.db_maps:
+            self.save_window_state()
         self.db_maps = []
         self._changelog.clear()
         while self._change_notifiers:
@@ -172,6 +178,7 @@ class SpineDBEditorBase(QMainWindow):
         self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
+        self.restore_ui()
 
     def init_add_undo_redo_actions(self):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
@@ -253,6 +260,8 @@ class SpineDBEditorBase(QMainWindow):
         menu.addAction(self.ui.dockWidget_tool_feature_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         menu.addAction(self.ui.dockWidget_alternative_scenario_tree.toggleViewAction())
+        menu.addAction(self.ui.metadata_dock_widget.toggleViewAction())
+        menu.addAction(self.ui.item_metadata_dock_widget.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_exports.toggleViewAction())
         return menu
@@ -297,7 +306,6 @@ class SpineDBEditorBase(QMainWindow):
         menu.addSeparator()
         menu.addAction(self.ui.actionUser_guide)
         menu.addAction(self.ui.actionSettings)
-        menu.aboutToShow.connect(self.refresh_copy_paste_actions)
         menu_action = self.url_toolbar.add_main_menu(menu)
         actions = [
             self.ui.actionNew_db_file,
@@ -494,9 +502,26 @@ class SpineDBEditorBase(QMainWindow):
     @Slot(bool)
     def show_mass_export_items_dialog(self, checked=False):
         """Shows dialog for user to select dbs and items for export."""
-        dialog = MassExportItemsDialog(self, self.db_mngr, *self.db_maps)
-        dialog.data_submitted.connect(self.mass_export_items)
-        dialog.show()
+        if self._export_items_dialog is not None:
+            self._export_items_dialog.raise_()
+            return
+        self._export_items_dialog = MassExportItemsDialog(
+            self, self.db_mngr, *self.db_maps, stored_state=self._export_items_dialog_state
+        )
+        self._export_items_dialog.state_storing_requested.connect(self._store_export_settings)
+        self._export_items_dialog.data_submitted.connect(self.mass_export_items)
+        self._export_items_dialog.destroyed.connect(self._clean_up_export_items_dialog)
+        self._export_items_dialog.show()
+
+    @Slot(dict)
+    def _store_export_settings(self, state):
+        """Stores export items dialog settings."""
+        self._export_items_dialog_state = state
+
+    @Slot()
+    def _clean_up_export_items_dialog(self):
+        """Cleans up export items dialog."""
+        self._export_items_dialog = None
 
     @Slot(bool)
     def export_session(self, checked=False):
@@ -574,7 +599,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def duplicate_object(self, object_item):
         """
-        Duplicates the object at the given object tree model index.
+        Duplicates an object.
 
         Args:
             object_item (ObjectTreeItem of ObjectItem)
@@ -588,7 +613,25 @@ class SpineDBEditorBase(QMainWindow):
         parcel = SpineDBParcel(self.db_mngr)
         db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
         parcel.inner_push_object_ids(db_map_obj_ids)
-        self.db_mngr.duplicate_object(object_item.db_maps, parcel.data, orig_name, dup_name)
+        self.db_mngr.duplicate_object(parcel.data, orig_name, dup_name, object_item.db_maps)
+
+    def duplicate_scenario(self, db_map, scen_id):
+        """
+        Duplicates a scenario.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            scen_id (int)
+        """
+        orig_name = self.db_mngr.get_item(db_map, "scenario", scen_id)["name"]
+        dup_name, ok = QInputDialog.getText(
+            self, "Duplicate object", "Enter a name for the duplicate object:", text=orig_name + "_copy"
+        )
+        if not ok:
+            return
+        parcel = SpineDBParcel(self.db_mngr)
+        parcel.full_push_scenario_ids({db_map: {scen_id}})
+        self.db_mngr.duplicate_scenario(parcel.data, dup_name, db_map)
 
     @Slot(object)
     def export_data(self, db_map_ids_for_export):
@@ -630,7 +673,7 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def rollback_session(self, checked=False):
-        """Rolls back dirty datbase maps."""
+        """Rolls back dirty database maps."""
         dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
         if not dirty_db_maps:
             return
@@ -649,7 +692,6 @@ class SpineDBEditorBase(QMainWindow):
             self.msg.emit(msg)
             return
         # Commit done by an 'outside force'.
-        self.db_mngr.refresh_session(*db_maps)
         self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
@@ -670,8 +712,30 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def show_mass_remove_items_form(self, checked=False):
-        dialog = MassRemoveItemsDialog(self, self.db_mngr, *self.db_maps)
-        dialog.show()
+        """Opens the purge items dialog."""
+        if self._purge_items_dialog is not None:
+            self._purge_items_dialog.raise_()
+            return
+        self._purge_items_dialog = MassRemoveItemsDialog(
+            self, self.db_mngr, *self.db_maps, stored_state=self._purge_items_dialog_state
+        )
+        self._purge_items_dialog.state_storing_requested.connect(self._store_purge_settings)
+        self._purge_items_dialog.destroyed.connect(self._clean_up_purge_items_dialog)
+        self._purge_items_dialog.show()
+
+    @Slot(dict)
+    def _store_purge_settings(self, state):
+        """Stores Purge items dialog state.
+
+        Args:
+            state (dict): dialog state
+        """
+        self._purge_items_dialog_state = state
+
+    @Slot()
+    def _clean_up_purge_items_dialog(self):
+        """Removes references to purge items dialog."""
+        self._purge_items_dialog = None
 
     @busy_effect
     @Slot(QModelIndex)
@@ -897,8 +961,7 @@ class SpineDBEditorBase(QMainWindow):
                 if not commit_msg:
                     return False
         self._torn_down = True
-        self.db_mngr.unregister_listener(self, commit_dirty, commit_msg, *self.db_maps)
-        self.save_window_state()
+        self.db_mngr.unregister_listener(self, *self.db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg)
         return True
 
     def _prompt_to_commit_changes(self):
@@ -968,10 +1031,6 @@ class SpineDBEditorBase(QMainWindow):
         answer = message_box.exec_()
         return answer == QMessageBox.Ok
 
-    def showEvent(self, event):
-        super().showEvent(event)
-        self.restore_ui()
-
     def closeEvent(self, event):
         """Handle close window.
 
@@ -981,6 +1040,7 @@ class SpineDBEditorBase(QMainWindow):
         if not self.tear_down():
             event.ignore()
             return
+        self.save_window_state()
         super().closeEvent(event)
 
     def scenario_items(self, db_map):
@@ -1285,6 +1345,13 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         super().receive_session_rolled_back(db_maps)
         self._metadata_editor.roll_back(db_maps)
         self._item_metadata_editor.roll_back(db_maps)
+
+    def tear_down(self):
+        if not super().tear_down():
+            return False
+        for model in self._parameter_models:
+            model.stop_invalidating_filter()
+        return True
 
     @staticmethod
     def _get_base_dir():

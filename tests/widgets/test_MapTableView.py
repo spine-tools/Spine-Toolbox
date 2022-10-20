@@ -59,6 +59,20 @@ class TestMapTableView(unittest.TestCase):
             self.assertEqual(table, [["A", locale.str(2.3)]])
         table_view.deleteLater()
 
+    def test_copy_selection_does_not_copy_expanse_row_or_column(self):
+        table_view = MapTableView()
+        model = MapModel(Map(["A"], [2.3]), table_view)
+        table_view.setModel(model)
+        for column in range(model.columnCount()):
+            for row in range(model.rowCount()):
+                table_view.selectionModel().select(model.index(row, column), QItemSelectionModel.Select)
+        self.assertTrue(table_view.copy())
+        clip = StringIO(QApplication.clipboard().text())
+        table = [row for row in csv.reader(clip, delimiter="\t")]
+        with system_lc_numeric():
+            self.assertEqual(table, [["A", locale.str(2.3)]])
+        table_view.deleteLater()
+
     def test_paste_without_selection_returns_false(self):
         table_view = MapTableView()
         model = MapModel(Map(["A"], [2.3]), table_view)

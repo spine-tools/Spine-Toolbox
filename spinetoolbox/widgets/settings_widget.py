@@ -662,19 +662,19 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         sec_folder = self._qsettings.value("engineSettings/remoteSecurityFolder", defaultValue="")
         self.ui.lineEdit_secfolder.setText(sec_folder)
         # Parallel process limits
-        parallel_process_limit_choice = self._qsettings.value("engineSettings/processLimiter", defaultValue="auto")
-        if parallel_process_limit_choice == "auto":
+        process_limiter = self._qsettings.value("engineSettings/processLimiter", defaultValue="unlimited")
+        if process_limiter == "unlimited":
+            self.ui.unlimited_engine_process_radio_button.setChecked(True)
+        elif process_limiter == "auto":
             self.ui.automatic_engine_process_limit_radio_button.setChecked(True)
         else:
             self.ui.user_defined_engine_process_limit_radio_button.setChecked(True)
-        parallel_process_limit = int(self._qsettings.value("engineSettings/maxProcesses", defaultValue=os.cpu_count()))
-        self.ui.engine_process_limit_spin_box.setValue(parallel_process_limit)
-        persistent_process_limit_choice = self._qsettings.value(
-            "engineSettings/persistentLimiter", defaultValue="unlimited"
-        )
-        if persistent_process_limit_choice == "unlimited":
+        process_limit = int(self._qsettings.value("engineSettings/maxProcesses", defaultValue=os.cpu_count()))
+        self.ui.engine_process_limit_spin_box.setValue(process_limit)
+        persistent_limiter = self._qsettings.value("engineSettings/persistentLimiter", defaultValue="unlimited")
+        if persistent_limiter == "unlimited":
             self.ui.unlimited_persistent_process_radio_button.setChecked(True)
-        elif persistent_process_limit_choice == "auto":
+        elif persistent_limiter == "auto":
             self.ui.automatic_persistent_process_limit_radio_button.setChecked(True)
         else:
             self.ui.user_defined_persistent_process_limit_radio_button.setChecked(True)
@@ -803,7 +803,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("engineSettings/remoteSecurityModel", sec_str)
         self._qsettings.setValue("engineSettings/remoteSecurityFolder", self.ui.lineEdit_secfolder.text())
         # Parallel process limits
-        if self.ui.automatic_engine_process_limit_radio_button.isChecked():
+        if self.ui.unlimited_engine_process_radio_button.isChecked():
+            limiter = "unlimited"
+        elif self.ui.automatic_engine_process_limit_radio_button.isChecked():
             limiter = "auto"
         else:
             limiter = "user"

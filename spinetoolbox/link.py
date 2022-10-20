@@ -16,6 +16,7 @@ Classes for drawing graphics items on QGraphicsScene.
 :date:    4.4.2018
 """
 
+import functools
 from math import sin, cos, pi, radians
 from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
 from PySide2.QtWidgets import (
@@ -25,6 +26,7 @@ from PySide2.QtWidgets import (
     QGraphicsEllipseItem,
     QStyle,
     QToolTip,
+    QGraphicsColorizeEffect,
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor, QPainterPathStroker
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
@@ -269,14 +271,16 @@ class LinkBase(QGraphicsPathItem):
 class _IconBase(QGraphicsEllipseItem):
     """Base class for icons to show over a Link."""
 
-    def __init__(self, x, y, w, h, parent, tooltip=None):
+    def __init__(self, x, y, w, h, parent, tooltip=None, active=True):
         super().__init__(x, y, w, h, parent)
+        palette = qApp.palette()  # pylint: disable=undefined-variable
+        brush = palette.highlight() if active else palette.mid()
+        self._fg_color = brush.color()
         if tooltip:
             self.setToolTip(tooltip)
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-        self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
+        self.setBrush(palette.window())
 
     def hoverEnterEvent(self, event):
         QToolTip.showText(event.screenPos(), self.toolTip())
@@ -288,16 +292,19 @@ class _IconBase(QGraphicsEllipseItem):
 class _SvgIcon(_IconBase):
     """A svg icon to show over a Link."""
 
-    def __init__(self, x, y, w, h, parent, path, tooltip=None):
-        super().__init__(x, y, w, h, parent, tooltip=tooltip)
+    def __init__(self, parent, extent, path, tooltip=None, active=False):
+        super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)
         self._svg_item = QGraphicsSvgItem(self)
         self._renderer = QSvgRenderer()
         self._renderer.load(path)
+        self._colorizer = QGraphicsColorizeEffect()
+        self._colorizer.setColor(self._fg_color)
         self._svg_item.setSharedRenderer(self._renderer)
+        self._svg_item.setGraphicsEffect(self._colorizer)
         scale = 0.8 * self.rect().width() / self._renderer.defaultSize().width()
         self._svg_item.setScale(scale)
-        self._svg_item.setPos(0, 0)
         self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
+        self.setPen(Qt.NoPen)
 
     def wipe_out(self):
         """Cleans up icon's resources."""
@@ -309,17 +316,17 @@ class _SvgIcon(_IconBase):
 class _TextIcon(_IconBase):
     """A font awesome icon to show over a Link."""
 
-    def __init__(self, x, y, w, h, parent, char, tooltip=None, color=None):
-        super().__init__(x, y, w, h, parent, tooltip=tooltip)
-        if color is None:
-            color = QColor("slateblue")
+    FONT_SIZE_PIXELS = 16  # Using pixel size to prevent font scaling by system.
+
+    def __init__(self, parent, extent, char, tooltip=None, active=False):
+        super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)
         self._text_item = QGraphicsTextItem(self)
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont('Font Awesome 5 Free Solid', weight=QFont.Bold)
         self._text_item.setFont(font)
-        self._text_item.setDefaultTextColor(color)
+        self._text_item.setDefaultTextColor(self._fg_color)
         self._text_item.setPlainText(char)
-        self._text_item.setPos(0, 0)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
+        self.setPen(Qt.NoPen)
 
     def wipe_out(self):
         """Cleans up icon's resources."""
@@ -334,7 +341,7 @@ class JumpOrLink(LinkBase):
         super().__init__(toolbox, src_connector, dst_connector)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self._icon_extent = 4 * self.magic_number
+        self._icon_extent = 3 * self.magic_number
         self._icons = []
         self._anim = self._make_execution_animation()
         self.update_geometry()
@@ -349,12 +356,22 @@ class JumpOrLink(LinkBase):
         self._place_icons()
 
     def _place_icons(self):
-        delta = 0.6 / (len(self._icons) + 1)
-        percent = 0.2 + delta
-        for icon in self._icons:
-            center = self._guide_path.pointAtPercent(percent)
-            icon.setPos(center - 0.5 * QPointF(self._icon_extent, self._icon_extent))
-            percent += delta
+        center = self._guide_path.pointAtPercent(0.5)
+        icon_count = len(self._icons)
+        if not icon_count:
+            return
+        icon_extent = self._icon_extent / (icon_count ** (1 / 4))
+        offset = 0.5 * QPointF(icon_extent, icon_extent)
+        if icon_count == 1:
+            self._icons[0].setPos(center - offset)
+            return
+        points = list(_regular_poligon_points(icon_count, icon_extent, self._guide_path.angleAtPercent(0.5)))
+        points_center = functools.reduce(lambda a, b: a + b, points) / icon_count
+        offset += points_center - center
+        scale = icon_extent / self._icon_extent
+        for icon, point in zip(self._icons, points):
+            icon.setScale(scale)
+            icon.setPos(point - offset)
 
     def mousePressEvent(self, e):
         """Ignores event if there's a connector button underneath,
@@ -442,6 +459,7 @@ class Link(JumpOrLink):
     _COLOR = LINK_COLOR
     _MEMORY = "\uf538"
     _FILTERS = "\uf0b0"
+    _PURGE = "\uf0e7"
     _DATAPACKAGE = ":/icons/datapkg.svg"
 
     def __init__(self, toolbox, src_connector, dst_connector, connection):
@@ -454,18 +472,27 @@ class Link(JumpOrLink):
         """
         super().__init__(toolbox, src_connector, dst_connector)
         self._connection = connection
-        self.parallel_link = None
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
 
     def update_icons(self):
         while self._icons:
             self._icons.pop(0).wipe_out()
-        if self._connection.use_datapackage:
-            self._icons.append(_SvgIcon(0, 0, self._icon_extent, self._icon_extent, self, self._DATAPACKAGE))
+        if self._connection.may_use_datapackage():
+            active = self._connection.use_datapackage
+            self._icons.append(_SvgIcon(self, self._icon_extent, self._DATAPACKAGE, active=active))
         if self._connection.may_have_filters():
-            self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._FILTERS))
-        if self._connection.use_memory_db:
-            self._icons.append(_TextIcon(0, 0, self._icon_extent, self._icon_extent, self, self._MEMORY))
+            active = self._connection.has_filters()
+            self._icons.append(_TextIcon(self, self._icon_extent, self._FILTERS, active=active))
+        if self._connection.may_use_memory_db():
+            active = self._connection.use_memory_db
+            self._icons.append(_TextIcon(self, self._icon_extent, self._MEMORY, active=active))
+        if self._connection.may_purge_before_writing():
+            active = self._connection.purge_before_writing
+            self._icons.append(_TextIcon(self, self._icon_extent, self._PURGE, active=active))
+        if self._connection.may_have_write_index():
+            sibling_conns = self._toolbox.project().incoming_connections(self.connection.destination)
+            active = any(l.write_index > 1 for l in sibling_conns)
+            self._icons.append(_TextIcon(self, self._icon_extent, str(self._connection.write_index), active=active))
         self._place_icons()
 
     @property
@@ -494,9 +521,7 @@ class JumpLink(JumpOrLink):
     """A graphics icon to represent a jump connection between items."""
 
     _COLOR = JUMP_COLOR
-    _ISSUE_TEXT = "\uf071"
-    _NORMAL_TEXT = "\uf2f9"
-    _ISSUE_COLOR = QColor("red")
+    _ISSUE = "\uf071"
 
     def __init__(self, toolbox, src_connector, dst_connector, jump):
         """
@@ -535,15 +560,9 @@ class JumpLink(JumpOrLink):
         while self._icons:
             self._icons.pop(0).wipe_out()
         issues = self.issues()
-        if issues:
-            text = self._ISSUE_TEXT
-            color = self._ISSUE_COLOR
-            tooltip = issues[0]
-        else:
-            text = self._NORMAL_TEXT
-            color = None
-            tooltip = ""
-        icon = _TextIcon(0, 0, self._icon_extent, self._icon_extent, self, text, color=color, tooltip=tooltip)
+        if not issues:
+            return
+        icon = _TextIcon(self, self._icon_extent, self._ISSUE, active=True, tooltip="\n".join(issues))
         self._icons.append(icon)
         self._place_icons()
 
@@ -658,3 +677,16 @@ class JumpLinkDrawer(LinkDrawerBase):
     def add_link(self):
         self._toolbox.ui.graphicsView.add_jump(self.src_connector, self.dst_connector)
         self.sleep()
+
+
+def _regular_poligon_points(n, side, initial_angle=0):
+    internal_angle = 180 * (n - 2) / n
+    angle_inc = 180 - internal_angle
+    current_angle = initial_angle
+    point = QPointF(0, 0)
+    for _ in range(n):
+        yield point
+        line = QLineF(point, point + QPointF(side, 0))
+        line.setAngle(current_angle)
+        point = line.p2()
+        current_angle += angle_inc

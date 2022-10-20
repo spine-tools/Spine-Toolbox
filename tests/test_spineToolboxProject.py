@@ -272,7 +272,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_execute_project_with_single_item(self):
         view = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
         view_executable = self._make_mock_executable(view)
-        with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
+        with mock.patch("spine_engine.spine_engine.SpineEngine.make_item") as mock_make_item:
             mock_make_item.return_value = view_executable
             self._execute_project()
         self.assertTrue(view_executable.execute_called)
@@ -282,8 +282,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1_executable = self._make_mock_executable(item1)
         item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
         item2_executable = self._make_mock_executable(item2)
-        with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
-            mock_make_item.side_effect = lambda name, *args: {
+        with mock.patch("spine_engine.spine_engine.SpineEngine.make_item") as mock_make_item:
+            mock_make_item.side_effect = lambda name, *args, **kwargs: {
                 item1.name: item1_executable,
                 item2.name: item2_executable,
             }[name]
@@ -296,8 +296,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1_executable = self._make_mock_executable(item1)
         item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
         item2_executable = self._make_mock_executable(item2)
-        with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
-            mock_make_item.side_effect = lambda name, *args: {
+        with mock.patch("spine_engine.spine_engine.SpineEngine.make_item") as mock_make_item:
+            mock_make_item.side_effect = lambda name, *args, **kwargs: {
                 item1.name: item1_executable,
                 item2.name: item2_executable,
             }[name]
@@ -333,8 +333,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.toolbox.project().add_connection(
             LoggingConnection(data_connection.name, "bottom", view.name, "top", toolbox=self.toolbox)
         )
-        with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
-            mock_make_item.side_effect = lambda name, *args: {
+        with mock.patch("spine_engine.spine_engine.SpineEngine.make_item") as mock_make_item:
+            mock_make_item.side_effect = lambda name, *args, **kwargs: {
                 data_store.name: data_store_executable,
                 data_connection.name: data_connection_executable,
                 view.name: view_executable,
@@ -504,7 +504,7 @@ class TestSpineToolboxProject(unittest.TestCase):
                     "jumps": [],
                     "name": "UnitTest Project",
                     "specifications": {},
-                    "version": 7,
+                    "version": 8,
                 },
             },
         )
@@ -551,6 +551,9 @@ class _MockExecutableItem(ExecutableItemBase):
     @staticmethod
     def item_type():
         return "Mock item"
+
+    def ready_to_execute(self, _settings):
+        return True
 
     def execute(self, _forward_resources, _backward_resources):
         self.execute_called = True

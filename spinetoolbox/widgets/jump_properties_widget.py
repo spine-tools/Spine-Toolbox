@@ -33,6 +33,7 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
         from ..ui.jump_properties import Ui_Form
 
         super().__init__(toolbox, base_color=base_color)
+        self._track_changes = True
         self._cmd_line_args_model = JumpCommandLineArgsModel(self)
         self._input_file_model = FileListModel(header_label="Available resources", draggable=True)
         self._jump = None
@@ -40,8 +41,14 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
         self._ui.setupUi(self)
         self._ui.treeView_cmd_line_args.setModel(self._cmd_line_args_model)
         self._ui.treeView_input_files.setModel(self._input_file_model)
-        self._ui.condition_edit.set_lexer_name("python")
-        self._ui.condition_edit.textChanged.connect(self._change_condition)
+        self._ui.condition_script_edit.set_lexer_name("python")
+        self._ui.comboBox_tool_spec.setModel(self._toolbox.filtered_spec_factory_models["Tool"])
+        self._ui.radioButton_tool_spec.clicked.connect(self._change_condition)
+        self._ui.radioButton_py_script.clicked.connect(self._change_condition)
+        self._ui.comboBox_tool_spec.activated.connect(self._change_condition)
+        self._ui.toolButton_edit_tool_spec.clicked.connect(self._show_tool_spec_form)
+        self._ui.condition_script_edit.textChanged.connect(self._set_save_script_button_enabled)
+        self._ui.pushButton_save_script.clicked.connect(self._change_condition)
         self._ui.toolButton_remove_arg.clicked.connect(self._remove_arg)
         self._ui.toolButton_add_arg.clicked.connect(self._add_args)
         self._cmd_line_args_model.args_updated.connect(self._push_update_cmd_line_args_command)
@@ -49,6 +56,51 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
             self._update_remove_args_button_enabled
         )
         self._ui.treeView_input_files.selectionModel().selectionChanged.connect(self._update_add_args_button_enabled)
+
+    def _load_condition_into_ui(self, condition):
+        self._track_changes = False
+        self._ui.pushButton_save_script.setEnabled(False)
+        self._ui.condition_script_edit.setEnabled(condition["type"] == "python-script")
+        self._ui.comboBox_tool_spec.setEnabled(condition["type"] == "tool-specification")
+        self._ui.toolButton_edit_tool_spec.setEnabled(condition["type"] == "tool-specification")
+        if not condition["type"] == "python-script":
+            self._ui.condition_script_edit.clear()
+        if condition["type"] == "python-script":
+            self._ui.radioButton_py_script.setChecked(True)
+            if not condition["script"] or condition["script"] != self._ui.condition_script_edit.toPlainText():
+                self._ui.condition_script_edit.setPlainText(condition["script"])
+        elif condition["type"] == "tool-specification":
+            self._ui.radioButton_tool_spec.setChecked(True)
+            self._ui.comboBox_tool_spec.setCurrentText(condition["specification"])
+        self._track_changes = True
+
+    def _make_condition_from_ui(self):
+        if self._ui.radioButton_py_script.isChecked():
+            return {"type": "python-script", "script": self._ui.condition_script_edit.toPlainText()}
+        if self._ui.radioButton_tool_spec.isChecked():
+            return {"type": "tool-specification", "specification": self._ui.comboBox_tool_spec.currentText()}
+        return {}
+
+    def _change_condition(self):
+        """Stores jump condition to link."""
+        if not self._track_changes:
+            return
+        condition = self._make_condition_from_ui()
+        if self._jump.condition != condition:
+            self._toolbox.undo_stack.push(SetJumpConditionCommand(self, self._jump, condition))
+
+    @Slot(bool)
+    def _show_tool_spec_form(self, _checked=False):
+        name = self._jump.condition["specification"]
+        specification = self._toolbox.project().get_specification(name)
+        self._toolbox.show_specification_form("Tool", specification)
+
+    @Slot()
+    def _set_save_script_button_enabled(self):
+        condition = self._jump.condition
+        self._ui.pushButton_save_script.setEnabled(
+            condition["type"] == "python-script" and condition["script"] != self._ui.condition_script_edit.toPlainText()
+        )
 
     @Slot(QItemSelection, QItemSelection)
     def _update_add_args_button_enabled(self, _selected, _deselected):
@@ -66,6 +118,25 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
         enabled = self._ui.treeView_cmd_line_args.selectionModel().hasSelection()
         self._ui.toolButton_remove_arg.setEnabled(enabled)
 
+    def _populate_cmd_line_args_model(self):
+        self._cmd_line_args_model.reset_model(self._jump.cmd_line_args)
+
+    @Slot(list)
+    def _push_update_cmd_line_args_command(self, cmd_line_args):
+        if self._jump.cmd_line_args != cmd_line_args:
+            self._toolbox.undo_stack.push(UpdateJumpCmdLineArgsCommand(self, self._jump, cmd_line_args))
+
+    @Slot(bool)
+    def _remove_arg(self, _=False):
+        removed_rows = [index.row() for index in self._ui.treeView_cmd_line_args.selectedIndexes()]
+        cmd_line_args = [arg for row, arg in enumerate(self._jump.cmd_line_args) if row not in removed_rows]
+        self._push_update_cmd_line_args_command(cmd_line_args)
+
+    @Slot(bool)
+    def _add_args(self, _=False):
+        new_args = [LabelArg(index.data()) for index in self._ui.treeView_input_files.selectedIndexes()]
+        self._push_update_cmd_line_args_command(self._jump.cmd_line_args + new_args)
+
     def set_link(self, jump):
         """Hooks the widget to given jump link, so that user actions are reflected in the jump link's configuration.
 
@@ -73,7 +144,7 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
             jump (LoggingJump): link to hook into
         """
         self._jump = jump
-        self._ui.condition_edit.setPlainText(self._jump.condition)
+        self._load_condition_into_ui(self._jump.condition)
         self._toolbox.label_item_name.setText(f"<b>Loop {self._jump.jump_link.name}</b>")
         self._input_file_model.update(self._jump.resources)
         self._populate_cmd_line_args_model()
@@ -86,38 +157,10 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
 
     def set_condition(self, jump, condition):
         jump.condition = condition
-        if jump is self._jump and self._ui.condition_edit.toPlainText() != condition:
-            self._ui.condition_edit.setPlainText(condition)
+        if jump is self._jump:
+            self._load_condition_into_ui(condition)
 
     def update_cmd_line_args(self, jump, cmd_line_args):
         jump.cmd_line_args = cmd_line_args
         if jump is self._jump and self._cmd_line_args_model.args != cmd_line_args:
             self._populate_cmd_line_args_model()
-
-    def _populate_cmd_line_args_model(self):
-        self._cmd_line_args_model.reset_model(self._jump.cmd_line_args)
-
-    @Slot()
-    def _change_condition(self):
-        """Stores jump condition to link."""
-        condition = self._ui.condition_edit.toPlainText()
-        if self._jump.condition == condition:
-            return
-        self._toolbox.undo_stack.push(SetJumpConditionCommand(self, self._jump, condition))
-
-    @Slot(list)
-    def _push_update_cmd_line_args_command(self, cmd_line_args):
-        if self._jump.cmd_line_args == cmd_line_args:
-            return
-        self._toolbox.undo_stack.push(UpdateJumpCmdLineArgsCommand(self, self._jump, cmd_line_args))
-
-    @Slot(bool)
-    def _remove_arg(self, _=False):
-        removed_rows = [index.row() for index in self._ui.treeView_cmd_line_args.selectedIndexes()]
-        cmd_line_args = [arg for row, arg in enumerate(self._jump.cmd_line_args) if row not in removed_rows]
-        self._push_update_cmd_line_args_command(cmd_line_args)
-
-    @Slot(bool)
-    def _add_args(self, _=False):
-        new_args = [LabelArg(index.data()) for index in self._ui.treeView_input_files.selectedIndexes()]
-        self._push_update_cmd_line_args_command(self._jump.cmd_line_args + new_args)

@@ -33,6 +33,7 @@ class ManageItemsDialogBase(QDialog):
             db_mngr (SpineDBManager)
         """
         super().__init__(parent)
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.db_mngr = db_mngr
         self.table_view = self.make_table_view()
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)

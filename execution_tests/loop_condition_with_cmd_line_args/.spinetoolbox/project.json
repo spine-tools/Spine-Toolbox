@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 7,
+        "version": 8,
         "name": "loop_condition_with_cmd_line_args",
         "description": "",
         "specifications": {

@@ -29,7 +29,7 @@ from ..mvcmodels.parameter_mixins import (
     FillInEntityIdsMixin,
     ImposeEntityClassIdMixin,
 )
-from ...mvcmodels.shared import PARSED_ROLE
+from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from .colors import FIXED_FIELD_COLOR
 
 
@@ -230,10 +230,10 @@ class SingleParameterModel(HalfSortedTableModel):
             if role == Qt.DisplayRole and data and field in self.group_fields:
                 data = data.replace(",", DB_ITEM_SEPARATOR)
             return data
-        # Decoration role
-
         if role == Qt.DecorationRole and field == self.entity_class_name_field:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
+        if role == DB_MAP_ROLE:
+            return self.db_map
         return super().data(index, role)
 
     def batch_set_data(self, indexes, data):
@@ -271,7 +271,10 @@ class SingleParameterModel(HalfSortedTableModel):
         """Returns the result of the auto filter."""
         if self._auto_filter is None:
             return False
-        item_id = item["id"]
+        try:
+            item_id = item["id"]
+        except KeyError as error:
+            raise error
         for accepted_ids in self._auto_filter.values():
             if accepted_ids and item_id not in accepted_ids:
                 return False

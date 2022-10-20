@@ -15,6 +15,7 @@ Classes and functions that can be shared among unit test modules.
 :author: P. Savolainen (VTT)
 :date:   18.4.2019
 """
+from contextlib import contextmanager
 from unittest import mock
 from concurrent.futures import Executor
 
@@ -329,3 +330,19 @@ class _MockFuture:
 
     def result(self):
         return self._result
+
+
+@contextmanager
+def q_object(o):
+    """Deletes given QObject after the context runs out.
+
+    Args:
+        o (QObject): object to delete
+
+    Yields:
+        QObject: object
+    """
+    try:
+        yield o
+    finally:
+        o.deleteLater()

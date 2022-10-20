@@ -98,6 +98,18 @@ class CompoundTableModel(MinimalTableModel):
         sub_model, _ = self._row_map[row]
         return sub_model
 
+    def sub_model_row(self, row):
+        """Calculates sub model row.
+
+        Args:
+            row (int): row in compound model
+
+        Returns:
+            int: row in sub model
+        """
+        _, sub_row = self._row_map[row]
+        return sub_row
+
     @Slot()
     def refresh(self):
         """Refreshes the layout by computing a new row map."""

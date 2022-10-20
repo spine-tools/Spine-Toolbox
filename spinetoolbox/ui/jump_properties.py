@@ -13,16 +13,13 @@
 ################################################################################
 ## Form generated from reading UI file 'jump_properties.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.14.2
+## Created by: Qt User Interface Compiler version 5.15.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
-    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
-from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
-    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
-    QPixmap, QRadialGradient)
+from PySide2.QtCore import *
+from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.code_text_edit import CodeTextEdit
@@ -33,31 +30,77 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(276, 628)
+        Form.resize(520, 628)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.splitter = QSplitter(Form)
-        self.splitter.setObjectName(u"splitter")
-        self.splitter.setOrientation(Qt.Vertical)
-        self.condition_edit = CodeTextEdit(self.splitter)
-        self.condition_edit.setObjectName(u"condition_edit")
-        self.splitter.addWidget(self.condition_edit)
-        self.treeView_cmd_line_args = QTreeView(self.splitter)
-        self.treeView_cmd_line_args.setObjectName(u"treeView_cmd_line_args")
-        self.treeView_cmd_line_args.setDragDropMode(QAbstractItemView.DragDrop)
-        self.splitter.addWidget(self.treeView_cmd_line_args)
-        self.verticalLayoutWidget = QWidget(self.splitter)
-        self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
-        self.gridLayout = QGridLayout(self.verticalLayoutWidget)
+        self.groupBox_condition = QGroupBox(Form)
+        self.groupBox_condition.setObjectName(u"groupBox_condition")
+        self.verticalLayout_2 = QVBoxLayout(self.groupBox_condition)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.radioButton_tool_spec = QRadioButton(self.groupBox_condition)
+        self.radioButton_tool_spec.setObjectName(u"radioButton_tool_spec")
+
+        self.horizontalLayout_2.addWidget(self.radioButton_tool_spec)
+
+        self.comboBox_tool_spec = QComboBox(self.groupBox_condition)
+        self.comboBox_tool_spec.setObjectName(u"comboBox_tool_spec")
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.comboBox_tool_spec.sizePolicy().hasHeightForWidth())
+        self.comboBox_tool_spec.setSizePolicy(sizePolicy)
+
+        self.horizontalLayout_2.addWidget(self.comboBox_tool_spec)
+
+        self.toolButton_edit_tool_spec = QToolButton(self.groupBox_condition)
+        self.toolButton_edit_tool_spec.setObjectName(u"toolButton_edit_tool_spec")
+        icon = QIcon()
+        icon.addFile(u":/icons/wrench.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_edit_tool_spec.setIcon(icon)
+
+        self.horizontalLayout_2.addWidget(self.toolButton_edit_tool_spec)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
+
+        self.radioButton_py_script = QRadioButton(self.groupBox_condition)
+        self.radioButton_py_script.setObjectName(u"radioButton_py_script")
+
+        self.verticalLayout_2.addWidget(self.radioButton_py_script)
+
+        self.condition_script_edit = CodeTextEdit(self.groupBox_condition)
+        self.condition_script_edit.setObjectName(u"condition_script_edit")
+
+        self.verticalLayout_2.addWidget(self.condition_script_edit)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
+
+        self.pushButton_save_script = QPushButton(self.groupBox_condition)
+        self.pushButton_save_script.setObjectName(u"pushButton_save_script")
+
+        self.horizontalLayout_3.addWidget(self.pushButton_save_script)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout_3)
+
+
+        self.verticalLayout.addWidget(self.groupBox_condition)
+
+        self.gridLayout = QGridLayout()
         self.gridLayout.setObjectName(u"gridLayout")
-        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.toolButton_add_arg = QToolButton(self.verticalLayoutWidget)
+        self.toolButton_add_arg = QToolButton(Form)
         self.toolButton_add_arg.setObjectName(u"toolButton_add_arg")
-        icon = QIcon()
-        icon.addFile(u":/icons/file-upload.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toolButton_add_arg.setIcon(icon)
+        icon1 = QIcon()
+        icon1.addFile(u":/icons/file-upload.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_add_arg.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.toolButton_add_arg)
 
@@ -65,27 +108,32 @@ class Ui_Form(object):
 
         self.horizontalLayout.addItem(self.horizontalSpacer_2)
 
-        self.toolButton_remove_arg = QToolButton(self.verticalLayoutWidget)
+        self.toolButton_remove_arg = QToolButton(Form)
         self.toolButton_remove_arg.setObjectName(u"toolButton_remove_arg")
-        icon1 = QIcon()
-        icon1.addFile(u":/icons/minus.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toolButton_remove_arg.setIcon(icon1)
+        icon2 = QIcon()
+        icon2.addFile(u":/icons/minus.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_remove_arg.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.toolButton_remove_arg)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
+        self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
 
-        self.treeView_input_files = QTreeView(self.verticalLayoutWidget)
+        self.treeView_input_files = QTreeView(Form)
         self.treeView_input_files.setObjectName(u"treeView_input_files")
         self.treeView_input_files.setDragDropMode(QAbstractItemView.DragDrop)
         self.treeView_input_files.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
-        self.gridLayout.addWidget(self.treeView_input_files, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.treeView_input_files, 2, 0, 1, 1)
 
-        self.splitter.addWidget(self.verticalLayoutWidget)
+        self.treeView_cmd_line_args = QTreeView(Form)
+        self.treeView_cmd_line_args.setObjectName(u"treeView_cmd_line_args")
+        self.treeView_cmd_line_args.setDragDropMode(QAbstractItemView.DragDrop)
 
-        self.verticalLayout.addWidget(self.splitter)
+        self.gridLayout.addWidget(self.treeView_cmd_line_args, 0, 0, 1, 1)
+
+
+        self.verticalLayout.addLayout(self.gridLayout)
 
 
         self.retranslateUi(Form)
@@ -95,6 +143,11 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.groupBox_condition.setTitle(QCoreApplication.translate("Form", u"Condition", None))
+        self.radioButton_tool_spec.setText(QCoreApplication.translate("Form", u"Tool specification", None))
+        self.toolButton_edit_tool_spec.setText(QCoreApplication.translate("Form", u"...", None))
+        self.radioButton_py_script.setText(QCoreApplication.translate("Form", u"Python script", None))
+        self.pushButton_save_script.setText(QCoreApplication.translate("Form", u"Save script", None))
         self.toolButton_add_arg.setText(QCoreApplication.translate("Form", u"...", None))
         self.toolButton_remove_arg.setText(QCoreApplication.translate("Form", u"...", None))
     # retranslateUi

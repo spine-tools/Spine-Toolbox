@@ -19,3 +19,4 @@ Contains stuff that is used by more than one model
 from PySide2.QtCore import Qt
 
 PARSED_ROLE = Qt.UserRole
+DB_MAP_ROLE = Qt.UserRole + 1

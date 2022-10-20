@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 # Created by: object code
-# Created by: The Resource Compiler for Qt version 5.14.2
+# Created by: The Resource Compiler for Qt version 5.15.2
 # WARNING! All changes made in this file will be lost!
 
 from PySide2 import QtCore
@@ -22655,7 +22655,7 @@ qt_resource_struct = b"\
 \x00\x00\x07\xca\x00\x00\x00\x00\x00\x01\x00\x04\xbf\xf0\
 \x00\x00\x01y\x13P\x1f\xdf\
 \x00\x00\x0b\x0a\x00\x01\x00\x00\x00\x01\x00\x05F\x90\
-\x00\x00\x01\x82\xf4x\xa3P\
+\x00\x00\x01\x83\xf4\x98\x91\xf1\
 \x00\x00\x08\xdc\x00\x00\x00\x00\x00\x01\x00\x04\xf6I\
 \x00\x00\x01y#!\xbfu\
 \x00\x00\x08\x16\x00\x00\x00\x00\x00\x01\x00\x04\xd0\xa0\

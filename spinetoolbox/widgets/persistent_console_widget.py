@@ -84,7 +84,7 @@ class PersistentConsoleWidget(QTextEdit):
         self._history_item_available.connect(self._display_history_item)
         self._completions_available.connect(self._display_completions)
         self._flush_needed.connect(self._start_flush_timer)
-        self._flush_in_progess = False
+        self._flush_in_progress = False
         self._flush_timer = QTimer()
         self._flush_timer.setInterval(self._FLUSH_INTERVAL)
         self._flush_timer.timeout.connect(self._flush_text_buffer)
@@ -219,8 +219,8 @@ class PersistentConsoleWidget(QTextEdit):
             text (str)
         """
         self._text_buffer.append((text, with_prompt))
-        if not self._flush_in_progess:
-            self._flush_in_progess = True
+        if not self._flush_in_progress:
+            self._flush_in_progress = True
             self._flush_needed.emit()
 
     @Slot()
@@ -251,7 +251,7 @@ class PersistentConsoleWidget(QTextEdit):
             cursor.insertText(f"<--- {len(self._text_buffer)} more lines --->", char_format)
             self._text_buffer.clear()
         cursor.endEditBlock()
-        self._flush_in_progess = False
+        self._flush_in_progress = False
 
     def _insert_text(self, cursor, text, with_prompt):
         cursor.insertBlock(QTextBlockFormat())
@@ -300,8 +300,11 @@ class PersistentConsoleWidget(QTextEdit):
     def _get_prefix(self):
         if self._prefix is None:
             cursor = self.textCursor()
-            cursor.setPosition(self._input_start_pos, QTextCursor.KeepAnchor)
-            self._prefix = cursor.selectedText()
+            if cursor.position() > self._input_start_pos:
+                cursor.setPosition(self._input_start_pos, QTextCursor.KeepAnchor)
+                self._prefix = cursor.selectedText()
+            else:
+                self._prefix = ""
         return self._prefix
 
     def _highlight_current_input(self):

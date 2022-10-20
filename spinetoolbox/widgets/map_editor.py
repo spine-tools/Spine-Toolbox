@@ -42,6 +42,7 @@ class MapEditor(QWidget):
         self._model = MapModel(Map(["key"], [0.0]), self)
         self._ui = Ui_MapEditor()
         self._ui.setupUi(self)
+        self._ui.map_table_view.init_copy_and_paste_actions()
         self._ui.map_table_view.setModel(self._model)
         self._ui.map_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.map_table_view.customContextMenuRequested.connect(self._show_table_context_menu)

@@ -43,6 +43,7 @@ class SpineDBParcel:
         return self._data
 
     def _get_fields(self, db_map, item_type, field, ids):
+        """Returns a list of field values for items of given type, having given ids."""
         if ids is Asterisk:
             fields = {x.get(field) for x in self.db_mngr.get_items(db_map, item_type, only_visible=False)}
         else:
@@ -263,6 +264,13 @@ class SpineDBParcel:
         self.push_parameter_value_ids(param_val_ids, "relationship")
         db_map_ids = {db_map: ids - param_val_ids.get(db_map, set()) for db_map, ids in db_map_ids.items()}
         self.push_relationship_ids(db_map_ids)
+
+    def full_push_scenario_ids(self, db_map_ids):
+        self.push_scenario_ids(db_map_ids)
+        scenario_alternative_ids = self.db_mngr.db_map_ids(
+            self.db_mngr.find_cascading_scenario_alternatives_by_scenario(db_map_ids, only_visible=False)
+        )
+        self.push_scenario_alternative_ids(scenario_alternative_ids)
 
     def inner_push_object_ids(self, db_map_ids):
         """Pushes object ids, cascading relationship ids, and the associated parameter values,

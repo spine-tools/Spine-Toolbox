@@ -39,6 +39,7 @@ class TimePatternEditor(QWidget):
         self._model = TimePatternModel(TimePattern(["D1-7"], [0.0]), self)
         self._ui = Ui_TimePatternEditor()
         self._ui.setupUi(self)
+        self._ui.pattern_edit_table.init_copy_and_paste_actions()
         self._ui.pattern_edit_table.setModel(self._model)
         self._ui.pattern_edit_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.pattern_edit_table.customContextMenuRequested.connect(self._show_table_context_menu)
