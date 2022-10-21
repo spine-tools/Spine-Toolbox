@@ -141,17 +141,10 @@ class SpineDBWorker(QObject):
         except (SpineDBVersionError, SpineDBAPIError) as err:
             return None, err
 
-    def reset_queries(self, item_type=None):
-        """Resets queries and clears caches.
-
-        Args:
-            item_type (str, optional): query item type to reset or None to reset everything
-        """
+    def reset_queries(self):
+        """Resets queries and clears caches."""
         self._current_fetch_token = object()
-        if item_type is None:
-            self._fetched_item_types.clear()
-        else:
-            self._fetched_item_types.discard(item_type)
+        self._fetched_item_types.clear()
         self._query_has_elements_by_key.clear()
 
     def _reset_fetching_if_required(self, parent):
@@ -331,6 +324,9 @@ class SpineDBWorker(QObject):
 
     def _get_iterator(self, parent):
         if parent.query_iterator is None:
+            # For some reason queries that haven't been iterated before don't
+            # keep up with deleted items. Reset the query here as a workaround.
+            parent.query = self._make_query_for_parent(parent)
             parent.query_iterator = _make_iterator(self._setdefault_query(parent))
         return parent.query_iterator
 
