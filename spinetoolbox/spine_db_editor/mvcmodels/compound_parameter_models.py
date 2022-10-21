@@ -480,6 +480,8 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
     def db_map_id(self, index):
         sub_index = self.map_to_sub(index)
         sub_model = sub_index.model()
+        if sub_model is None:
+            return None, None
         return sub_model.db_map, sub_model.item_id(sub_index.row())
 
     def index_name(self, index):
