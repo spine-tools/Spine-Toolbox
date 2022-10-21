@@ -226,7 +226,7 @@ class SpineDBManager(QObject):
         for item_type, signal in self.updated_signals.items():
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
         # Uncache
-        self.items_removed.connect(self.uncache_items)
+        self.items_removed.connect(self.uncache_removed_items)
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
@@ -328,8 +328,8 @@ class SpineDBManager(QObject):
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
 
-    def uncache_items(self, db_map_typed_ids):
-        """Removes data from cache.
+    def uncache_removed_items(self, db_map_typed_ids):
+        """Removes data that has been removed from the database also from cache.
 
         Args:
             db_map_typed_ids (dict): items to remove
@@ -346,7 +346,6 @@ class SpineDBManager(QObject):
                         worker = self._get_worker(db_map)
                     except KeyError:
                         continue
-                    worker.reset_queries(item_type)
             if db_map_data:
                 typed_db_map_data[item_type] = db_map_data
                 signal.emit(db_map_data)

@@ -71,6 +71,9 @@ class EditorDelegateMocking:
         view.setCurrentIndex(index)
         view.edit(index)
 
+    def reset(self):
+        self._cell_editor = None
+
 
 def add_entity_tree_item(item_names, view, menu_action_text, dialog_class):
     """Adds an entity to object or relationship tree view.
