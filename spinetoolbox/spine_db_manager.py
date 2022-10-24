@@ -523,9 +523,7 @@ class SpineDBManager(QObject):
                 db_map.codename = codename
             return db_map
         worker = SpineDBWorker(self, url)
-        db_map, err = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
-        if err is not None:
-            raise err
+        db_map = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
         self._workers[db_map] = worker
         self._db_maps[url] = db_map
         self.db_map_locks[db_map] = QMutex(QMutex.Recursive)
