@@ -383,6 +383,23 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(0, 0).data(), "idx")
         self.assertEqual(model.index(0, 1).data(), 0.0)
 
+    def test_init_converts_numpy_strings_to_real_strings(self):
+        map_value = Map(["a"], [1.1])
+        model = MapModel(map_value, self._parent)
+        model.setData(model.index(1, 0), "b", Qt.EditRole)
+        model.setData(model.index(1, 1), 2.2, Qt.EditRole)
+        value = model.value()
+        self.assertEqual(value, Map(["a", "b"], [1.1, 2.2]))
+
+    def test_reset_converts_numpy_strings_to_real_strings(self):
+        model = MapModel(Map([], [], str), self._parent)
+        map_value = Map(["a"], [1.1])
+        model.reset(map_value)
+        model.setData(model.index(1, 0), "b", Qt.EditRole)
+        model.setData(model.index(1, 1), 2.2, Qt.EditRole)
+        value = model.value()
+        self.assertEqual(value, Map(["a", "b"], [1.1, 2.2]))
+
     def test_trim_columns(self):
         map_value = Map(["a"], [1.1])
         model = MapModel(map_value, self._parent)

@@ -18,6 +18,7 @@ A model for maps, used by the parameter_value editors.
 from copy import deepcopy
 from numbers import Number
 from itertools import takewhile
+import numpy
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtGui import QColor, QFont
 from spinedb_api import (
@@ -72,7 +73,7 @@ class MapModel(QAbstractTableModel):
             parent (QObject): parent object
         """
         super().__init__(parent)
-        self._rows = convert_map_to_table(map_value, empty=empty)
+        self._rows = _numpy_string_to_python_strings(convert_map_to_table(map_value, empty=empty))
         self._index_names = _gather_index_names(map_value)
         self._BOLD = QFont()
         self._BOLD.setBold(True)
@@ -321,7 +322,7 @@ class MapModel(QAbstractTableModel):
     def reset(self, map_value):
         """Resets the model to given map_value."""
         self.beginResetModel()
-        self._rows = convert_map_to_table(map_value, empty=empty)
+        self._rows = _numpy_string_to_python_strings(convert_map_to_table(map_value, empty=empty))
         self._index_names = _gather_index_names(map_value)
         self.endResetModel()
 
@@ -536,3 +537,15 @@ def _apply_index_names(map_value, index_names):
     for value in map_value.values:
         if isinstance(value, Map):
             _apply_index_names(value, index_names[1:])
+
+
+def _numpy_string_to_python_strings(rows):
+    """Converts instances of numpy.str_ to regular Python strings.
+
+    Args:
+        rows (list of list): table rows
+
+    Returns:
+        list of list: converted rows
+    """
+    return [[str(x) if isinstance(x, numpy.str_) else x for x in row] for row in rows]
