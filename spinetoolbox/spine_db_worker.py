@@ -163,7 +163,8 @@ class SpineDBWorker(QObject):
             parent.query_initialized = FetchParent.Init.FINISHED
             lock.unlock()
 
-    def _fetch_status_change_event(self, parent):
+    @staticmethod
+    def _fetch_status_change_event(parent):
         parent.fetch_status_change()
 
     def _setdefault_query(self, parent):
