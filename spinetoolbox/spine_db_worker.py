@@ -15,7 +15,7 @@ The SpineDBWorker class
 :authors: P. Vennström (VTT) and M. Marin (KTH)
 :date:   2.10.2019
 """
-
+from functools import wraps
 import os
 import itertools
 from enum import Enum, unique, auto
@@ -33,6 +33,28 @@ class _Event(Enum):
     REMOVE_ITEMS = auto()
     COMMIT_SESSION = auto()
     ROLLBACK_SESSION = auto()
+
+
+def _db_map_lock(func):
+    """A wrapper for SpineDBWorker that locks the database for the duration of the wrapped method.
+
+    In case the locking fails, the wrapped method will not be invoked.
+
+    Args:
+        func (Callable): method to wrap
+    """
+
+    @wraps(func)
+    def new_function(self, *args, **kwargs):
+        lock = self._db_mngr.db_map_locks.get(self._db_map)
+        if lock is None or not lock.tryLock():
+            return
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            lock.unlock()
+
+    return new_function
 
 
 class SpineDBWorker(QObject):
@@ -67,18 +89,6 @@ class SpineDBWorker(QObject):
             _Event.COMMIT_SESSION: self._commit_session_event,
             _Event.ROLLBACK_SESSION: self._rollback_session_event,
         }[event](*args)
-
-    def _db_map_lock(func):  # pylint: disable=no-self-argument
-        def new_function(self, *args, **kwargs):
-            lock = self._db_mngr.db_map_locks.get(self._db_map)
-            if lock is None or not lock.tryLock():
-                return
-            try:
-                return func(self, *args, **kwargs)
-            finally:
-                lock.unlock()
-
-        return new_function
 
     def query(self, sq_name):
         """For tests."""
