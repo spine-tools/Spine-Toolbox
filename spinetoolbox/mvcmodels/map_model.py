@@ -83,7 +83,7 @@ class MapModel(QAbstractTableModel):
         """Appends a new column to the right."""
         if not self._rows:
             return
-        first = len(self._rows[0])
+        first = len(self._rows[0]) + 1
         last = first
         self.beginInsertColumns(QModelIndex(), first, last)
         self._rows = list(map(lambda row: row + [empty], self._rows))
@@ -369,7 +369,7 @@ class MapModel(QAbstractTableModel):
         if row_index == len(self._rows):
             if not value:
                 return False
-            self.insertRow(row_index)
+            self.insertRow(row_index + 1)
             row = self._rows[row_index]
             for i in range(column_index + 1, len(row)):
                 row[i] = empty
