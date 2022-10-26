@@ -374,6 +374,18 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(2, 1).data(), "")
         self.assertEqual(model.index(2, 2).data(), "")
 
+    def test_setData_does_not_expand_rows_if_value_is_empty(self):
+        model = MapModel(Map([Duration("1 month")], [1.1]), self._parent)
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 3)
+        self.assertFalse(model.setData(model.index(1, 0), ""))
+
+    def test_setData_does_not_expand_columns_if_value_is_empty(self):
+        model = MapModel(Map([Duration("1 month")], [1.1]), self._parent)
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 3)
+        self.assertFalse(model.setData(model.index(0, 2), ""))
+
     def test_setData_does_not_clear_value_if_it_is_zero(self):
         model = MapModel(Map([], [], str), self._parent)
         model.setData(model.index(0, 0), "idx")

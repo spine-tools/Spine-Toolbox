@@ -367,6 +367,8 @@ class MapModel(QAbstractTableModel):
         row_index = index.row()
         column_index = index.column()
         if row_index == len(self._rows):
+            if not value:
+                return False
             self.insertRow(row_index)
             row = self._rows[row_index]
             for i in range(column_index + 1, len(row)):
@@ -378,6 +380,8 @@ class MapModel(QAbstractTableModel):
         else:
             row = self._rows[row_index]
         if column_index == len(row):
+            if not value:
+                return False
             self.append_column()
             row = self._rows[row_index]
         if value is None or (isinstance(value, str) and value.lower() in ("null", "none")):
