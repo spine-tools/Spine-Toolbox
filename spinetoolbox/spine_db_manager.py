@@ -898,8 +898,8 @@ class SpineDBManager(QObject):
             return self.tool_tip_data_from_parsed(parsed_value)
         if role == Qt.TextAlignmentRole:
             if isinstance(parsed_value, str):
-                return Qt.AlignLeft
-            return Qt.AlignRight
+                return int(Qt.AlignLeft | Qt.AlignVCenter)
+            return int(Qt.AlignRight | Qt.AlignVCenter)
         if role == PARSED_ROLE:
             return parsed_value
         return None
