@@ -385,15 +385,25 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             db_map_data (dict): list of added dict-items keyed by DiffDatabaseMapping
         """
         for db_map, items in db_map_data.items():
+            db_map_single_models = [m for m in self.single_models if m.db_map is db_map]
+            existing_ids = set().union(*(m.item_ids() for m in db_map_single_models))
+            entity_class_ids_of_committed_data = {m.entity_class_id for m in db_map_single_models}
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids_committed = list()
                 ids_uncommitted = list()
+                is_entity_class_committed = entity_class_id in entity_class_ids_of_committed_data
                 for item in class_items:
-                    if item.get("commit_id") is not None:
-                        ids_committed.append(item["id"])
+                    is_committed = item.get("commit_id") is not None
+                    if is_entity_class_committed and is_committed:
+                        continue
+                    item_id = item["id"]
+                    if item_id in existing_ids:
+                        continue
+                    if is_committed:
+                        ids_committed.append(item_id)
                     else:
-                        ids_uncommitted.append(item["id"])
+                        ids_uncommitted.append(item_id)
                 self._add_parameter_data(db_map, entity_class_id, ids_committed, committed=True)
                 self._add_parameter_data(db_map, entity_class_id, ids_uncommitted, committed=False)
                 self._do_add_data_to_filter_menus(db_map, class_items)
@@ -412,15 +422,16 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         return model
 
     def _add_parameter_data(self, db_map, entity_class_id, ids, committed):
+        """Creates new single model and resets it with the given parameter ids.
+
+        Args:
+            db_map (DiffDatabaseMapping): database map
+            entity_class_id (int): parameter's entity class id
+            ids (list of int): parameter ids
+            committed (bool): True if the ids have been committed, False otherwise
+        """
         if not ids:
             return
-        if committed:
-            existing = next(
-                (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
-            )
-            if existing is not None:
-                existing.add_rows(ids)
-                return
         model = self._create_single_model(db_map, entity_class_id, committed)
         model.reset_model(ids)
 
