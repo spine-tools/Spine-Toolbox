@@ -188,8 +188,7 @@ class EngineClient:
         self.dealer_socket.send_multipart([msg.to_bytes()])  # Send request
         response = self.rcv_next("dealer")
         response_msg = ServerMessage.parse(response[1])  # Parse received bytes into a ServerMessage
-        start_msg = response_msg.getData()
-        return start_msg
+        return response_msg.getData()
 
     def stop_execution(self, job_id):
         """Sends a request to stop executing the DAG that is managed by this client.
@@ -268,7 +267,6 @@ class EngineClient:
         """Sends a request to process given command in persistent manager identified by given key.
         Yields the response string(s) as they arrive from server."""
         data = persistent_key, "issue_persistent_command", cmd
-        print(f"issue_persistent_cmd:{data}")
         yield from self.send_request_to_persistent_generator(data)
 
     def send_get_persistent_completions(self, persistent_key, text):
@@ -311,7 +309,6 @@ class EngineClient:
         pull_socket.connect(self.protocol + "://" + self.host + ":" + pull_port)
         while True:
             rcv = pull_socket.recv_multipart()
-            print(f"rcv:{rcv}")
             if rcv == [b"END"]:
                 break
             yield json.loads(rcv[0].decode("utf-8"))

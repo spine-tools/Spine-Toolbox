@@ -281,7 +281,6 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
             self.q.put(start_response_data)
             return
         self.exec_job_id = start_response_data[2]  # Needed for stopping DAG execution on server
-        # Prepare subscribe socket
         self.engine_client.connect_pull_socket(start_response_data[1])
         while True:  # Pull events until dag_exec_finished event
             rcv = self.engine_client.rcv_next("pull")
