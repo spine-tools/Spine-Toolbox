@@ -18,6 +18,7 @@ A model for maps, used by the parameter_value editors.
 from copy import deepcopy
 from numbers import Number
 from itertools import takewhile
+import numpy
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtGui import QColor, QFont
 from spinedb_api import (
@@ -72,7 +73,7 @@ class MapModel(QAbstractTableModel):
             parent (QObject): parent object
         """
         super().__init__(parent)
-        self._rows = convert_map_to_table(map_value, empty=empty)
+        self._rows = _numpy_string_to_python_strings(convert_map_to_table(map_value, empty=empty))
         self._index_names = _gather_index_names(map_value)
         self._BOLD = QFont()
         self._BOLD.setBold(True)
@@ -82,7 +83,7 @@ class MapModel(QAbstractTableModel):
         """Appends a new column to the right."""
         if not self._rows:
             return
-        first = len(self._rows[0])
+        first = len(self._rows[0]) + 1
         last = first
         self.beginInsertColumns(QModelIndex(), first, last)
         self._rows = list(map(lambda row: row + [empty], self._rows))
@@ -236,9 +237,24 @@ class MapModel(QAbstractTableModel):
         self.endInsertRows()
         return True
 
+    def is_leaf_value(self, index):
+        """Checks if given model index contains a leaf value.
+
+        Args:
+            index (QModelIndex): index to check
+
+        Returns:
+            bool: True if index points to leaf value, False otherwise
+        """
+        row = index.row()
+        column = index.column()
+        if self._is_in_expanse(row, column):
+            return False
+        return column > 0 and column + 1 == _data_length(self._rows[row])
+
     def _is_in_expanse(self, row, column):
         """
-        Returns True, if given row and column is in the right or bottom 'expanding' zone
+        Returns True, if given row and column is in the right or bottom 'expanding' zone.
 
         Args:
             row (int): row index
@@ -321,7 +337,7 @@ class MapModel(QAbstractTableModel):
     def reset(self, map_value):
         """Resets the model to given map_value."""
         self.beginResetModel()
-        self._rows = convert_map_to_table(map_value, empty=empty)
+        self._rows = _numpy_string_to_python_strings(convert_map_to_table(map_value, empty=empty))
         self._index_names = _gather_index_names(map_value)
         self.endResetModel()
 
@@ -366,7 +382,9 @@ class MapModel(QAbstractTableModel):
         row_index = index.row()
         column_index = index.column()
         if row_index == len(self._rows):
-            self.insertRow(row_index)
+            if not value:
+                return False
+            self.insertRow(row_index + 1)
             row = self._rows[row_index]
             for i in range(column_index + 1, len(row)):
                 row[i] = empty
@@ -377,6 +395,8 @@ class MapModel(QAbstractTableModel):
         else:
             row = self._rows[row_index]
         if column_index == len(row):
+            if not value:
+                return False
             self.append_column()
             row = self._rows[row_index]
         if value is None or (isinstance(value, str) and value.lower() in ("null", "none")):
@@ -536,3 +556,15 @@ def _apply_index_names(map_value, index_names):
     for value in map_value.values:
         if isinstance(value, Map):
             _apply_index_names(value, index_names[1:])
+
+
+def _numpy_string_to_python_strings(rows):
+    """Converts instances of numpy.str_ to regular Python strings.
+
+    Args:
+        rows (list of list): table rows
+
+    Returns:
+        list of list: converted rows
+    """
+    return [[str(x) if isinstance(x, numpy.str_) else x for x in row] for row in rows]

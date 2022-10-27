@@ -71,7 +71,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self.link_drawer = None
         self.icon_group = set()  # Group of project item icons that are moving together
         self.dirty_links = set()
-        self._timer = QTimer()
+        self._timer = QTimer(self)
         self._timer.setInterval(5)
         self._timer.timeout.connect(self._handle_timeout)
         self._timer.start()

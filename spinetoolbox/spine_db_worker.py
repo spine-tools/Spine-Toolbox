@@ -15,114 +15,80 @@ The SpineDBWorker class
 :authors: P. Vennström (VTT) and M. Marin (KTH)
 :date:   2.10.2019
 """
-
+from functools import wraps
+import os
 import itertools
-from concurrent.futures import ThreadPoolExecutor
-from PySide2.QtCore import QObject, QEvent, QCoreApplication, QWaitCondition, QMutex, QTimer
-from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from spinetoolbox.helpers import busy_effect
-
-_FETCH = QEvent.Type(QEvent.registerEventType())
-_FETCH_STATUS_CHANGE = QEvent.Type(QEvent.registerEventType())
-_ADD_OR_UPDATE_ITEMS = QEvent.Type(QEvent.registerEventType())
-_READD_ITEMS = QEvent.Type(QEvent.registerEventType())
-_REMOVE_ITEMS = QEvent.Type(QEvent.registerEventType())
-_COMMIT_SESSION = QEvent.Type(QEvent.registerEventType())
-_ROLLBACK_SESSION = QEvent.Type(QEvent.registerEventType())
+from enum import Enum, unique, auto
+from PySide2.QtCore import QObject, Signal, Slot, QMutex, QSemaphore, QThread, QTimer
+from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
+from .helpers import busy_effect, FetchParent
 
 
-class _FetchEvent(QEvent):
-    def __init__(self, parent, chunk):
-        super().__init__(_FETCH)
-        self.parent = parent
-        self.chunk = chunk
+@unique
+class _Event(Enum):
+    FETCH = auto()
+    FETCH_STATUS_CHANGE = auto()
+    ADD_OR_UPDATE_ITEMS = auto()
+    READD_ITEMS = auto()
+    REMOVE_ITEMS = auto()
+    COMMIT_SESSION = auto()
+    ROLLBACK_SESSION = auto()
 
 
-class _FetchStatusChangeEvent(QEvent):
-    def __init__(self, parent):
-        super().__init__(_FETCH_STATUS_CHANGE)
-        self.parent = parent
+def _db_map_lock(func):
+    """A wrapper for SpineDBWorker that locks the database for the duration of the wrapped method.
 
+    In case the locking fails, the wrapped method will not be invoked.
 
-class _AddOrUpdateItemsEvent(QEvent):
-    def __init__(self, items, errors, signal_name):
-        super().__init__(_ADD_OR_UPDATE_ITEMS)
-        self.items = items
-        self.errors = errors
-        self.signal_name = signal_name
+    Args:
+        func (Callable): method to wrap
+    """
 
+    @wraps(func)
+    def new_function(self, *args, **kwargs):
+        lock = self._db_mngr.db_map_locks.get(self._db_map)
+        if lock is None or not lock.tryLock():
+            return
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            lock.unlock()
 
-class _ReaddItemsEvent(QEvent):
-    def __init__(self, items, signal_name):
-        super().__init__(_READD_ITEMS)
-        self.items = items
-        self.signal_name = signal_name
-
-
-class _RemoveItemsEvent(QEvent):
-    def __init__(self, ids_per_type, errors):
-        super().__init__(_REMOVE_ITEMS)
-        self.ids_per_type = ids_per_type
-        self.errors = errors
-
-
-class _CommitSessionEvent(QEvent):
-    def __init__(self, errors, undo_stack, cookie):
-        super().__init__(_COMMIT_SESSION)
-        self.errors = errors
-        self.undo_stack = undo_stack
-        self.cookie = cookie
-
-
-class _RollbackSessionEvent(QEvent):
-    def __init__(self, errors, undo_stack):
-        super().__init__(_ROLLBACK_SESSION)
-        self.errors = errors
-        self.undo_stack = undo_stack
+    return new_function
 
 
 class SpineDBWorker(QObject):
-    """Does all the DB communication for SpineDBManager, in the non-GUI thread."""
+    """Does all the communication with a certain DB for SpineDBManager, in a non-GUI thread."""
+
+    _something_happened = Signal(object, tuple)
 
     def __init__(self, db_mngr, db_url):
         super().__init__()
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._init_query_lock = QMutex(QMutex.NonRecursive)
         self._current_fetch_token = object()
         self._query_has_elements_by_key = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
-        self._executor = ThreadPoolExecutor(max_workers=1)
+        self._executor = QtBasedThreadPoolExecutor(max_workers=1)
+        self._something_happened.connect(self._handle_something_happened)
 
     def clean_up(self):
-        self.deleteLater()
         self._executor.shutdown()
+        self.deleteLater()
 
-    def event(self, ev):
-        if ev.type() == _FETCH:
-            self._fetch_event(ev)
-            return True
-        if ev.type() == _FETCH_STATUS_CHANGE:
-            ev.parent.fetch_status_change()
-            return True
-        if ev.type() == _ADD_OR_UPDATE_ITEMS:
-            self._add_or_update_items_event(ev)
-            return True
-        if ev.type() == _READD_ITEMS:
-            self._readd_items_event(ev)
-            return True
-        if ev.type() == _REMOVE_ITEMS:
-            self._remove_items_event(ev)
-            return True
-        if ev.type() == _COMMIT_SESSION:
-            self._commit_session_event(ev)
-            return True
-        if ev.type() == _ROLLBACK_SESSION:
-            self._rollback_session_event(ev)
-            return True
-        return super().event(ev)
+    @Slot(object, tuple)
+    def _handle_something_happened(self, event, args):
+        {
+            _Event.FETCH: self._fetch_event,
+            _Event.FETCH_STATUS_CHANGE: self._fetch_status_change_event,
+            _Event.ADD_OR_UPDATE_ITEMS: self._add_or_update_items_event,
+            _Event.READD_ITEMS: self._readd_items_event,
+            _Event.REMOVE_ITEMS: self._remove_items_event,
+            _Event.COMMIT_SESSION: self._commit_session_event,
+            _Event.ROLLBACK_SESSION: self._rollback_session_event,
+        }[event](*args)
 
     def query(self, sq_name):
         """For tests."""
@@ -132,28 +98,28 @@ class SpineDBWorker(QObject):
         return self._db_map.query(getattr(self._db_map, sq_name)).all()
 
     def get_db_map(self, *args, **kwargs):
-        future = self._executor.submit(self._get_db_map, *args, **kwargs)
-        self._db_map, err = future.result()
-        return self._db_map, err
+        return self._executor.submit(self._get_db_map, *args, **kwargs).result()
 
     def _get_db_map(self, *args, **kwargs):
-        try:
-            return DiffDatabaseMapping(self._db_url, *args, **kwargs), None
-        except (SpineDBVersionError, SpineDBAPIError) as err:
-            return None, err
+        self._db_map = DiffDatabaseMapping(self._db_url, *args, **kwargs)
+        return self._db_map
 
-    def reset_queries(self, item_type=None):
-        """Resets queries and clears caches.
+    def reset_queries(self):
+        """Resets queries and clears caches."""
+        self._current_fetch_token = object()
+        self._fetched_item_types.clear()
+        self._query_has_elements_by_key.clear()
+
+    def _reset_fetching_if_required(self, parent):
+        """Sets fetch parent's token or resets the parent if fetch tokens don't match.
 
         Args:
-            item_type (str, optional): query item type to reset or None to reset everything
+            parent (FetchParent): fetch parent
         """
-        self._current_fetch_token = object()
-        if item_type is None:
-            self._fetched_item_types.clear()
-        else:
-            self._fetched_item_types.discard(item_type)
-        self._query_has_elements_by_key.clear()
+        if parent.fetch_token is None:
+            parent.fetch_token = self._current_fetch_token
+        elif parent.fetch_token is not self._current_fetch_token:
+            parent.reset_fetching(self._current_fetch_token)
 
     def can_fetch_more(self, parent):
         """Returns whether more data can be fetches for parent.
@@ -164,19 +130,17 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if more data is available, False otherwise
         """
-        if parent.fetch_token is not self._current_fetch_token:
-            parent.reset_fetching(self._current_fetch_token)
-        elif parent.is_fetched or parent.is_busy_fetching:
+        self._reset_fetching_if_required(parent)
+        if parent.is_fetched or parent.is_busy_fetching:
             return False
-        if parent.query is None:
-            # Query not made yet. Init query and return True
-            parent.query_initialized = QWaitCondition()
+        if parent.query_initialized == FetchParent.Init.UNINITIALIZED:
+            parent.query_initialized = FetchParent.Init.IN_PROGRESS
             self._executor.submit(self._init_query, parent)
             return True
-        if parent.query_initialized is not None:
-            self._init_query_lock.lock()
-            parent.query_initialized.wait(self._init_query_lock)
-            self._init_query_lock.unlock()
+        if parent.query_initialized == FetchParent.Init.IN_PROGRESS:
+            return True
+        if parent.query_initialized == FetchParent.Init.FAILED:
+            return False
         return self._query_has_elements(parent)
 
     @busy_effect
@@ -186,21 +150,22 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): fetch parent
         """
+        lock = self._db_mngr.db_map_locks.get(self._db_map)
+        if lock is None or not lock.tryLock():
+            parent.query_initialized = FetchParent.Init.FAILED
+            return
         try:
-            lock = self._db_mngr.db_map_locks.get(self._db_map)
-            if lock is None or not lock.tryLock():
-                return
-            try:
-                self._setdefault_query(parent)
-                if not self._query_has_elements(parent):
-                    parent.set_fetched(True)
-                    QCoreApplication.postEvent(self, _FetchStatusChangeEvent(parent))
-            finally:
-                lock.unlock()
+            self._setdefault_query(parent)
+            if not self._query_has_elements(parent):
+                parent.set_fetched(True)
+                self._something_happened.emit(_Event.FETCH_STATUS_CHANGE, (parent,))
         finally:
-            wait_condition = parent.query_initialized
-            parent.query_initialized = None
-            wait_condition.wakeAll()
+            parent.query_initialized = FetchParent.Init.FINISHED
+            lock.unlock()
+
+    @staticmethod
+    def _fetch_status_change_event(parent):
+        parent.fetch_status_change()
 
     def _setdefault_query(self, parent):
         """Creates a query for parent. Stores both the query and whether it has elements.
@@ -246,31 +211,25 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): fetch parent
         """
-        if parent.fetch_token is not self._current_fetch_token:
-            parent.reset_fetching(self._current_fetch_token)
+        self._reset_fetching_if_required(parent)
         parent.set_busy_fetching(True)
         self._executor.submit(self._fetch_more, parent)
 
     @busy_effect
+    @_db_map_lock
     def _fetch_more(self, parent):
-        lock = self._db_mngr.db_map_locks.get(self._db_map)
-        if lock is None or not lock.tryLock():
-            return
-        try:
-            iterator = self._get_iterator(parent)
-            chunk = next(iterator, [])
-            QCoreApplication.postEvent(self, _FetchEvent(parent, chunk))
-        finally:
-            lock.unlock()
+        iterator = self._get_iterator(parent)
+        chunk = next(iterator, [])
+        self._something_happened.emit(_Event.FETCH, (parent, chunk))
 
-    def _fetch_event(self, ev):
+    def _fetch_event(self, parent, chunk):
         # Mark parent as unbusy, but after emitting the 'added' signal below otherwise we have an infinite fetch loop
-        QTimer.singleShot(0, lambda: ev.parent.set_busy_fetching(False))
-        if ev.chunk:
-            signal = self._db_mngr.added_signals[ev.parent.fetch_item_type]
-            signal.emit({self._db_map: ev.chunk})
-        elif ev.parent.query is not None:
-            ev.parent.set_fetched(True)
+        QTimer.singleShot(0, lambda: parent.set_busy_fetching(False))
+        if chunk:
+            signal = self._db_mngr.added_signals[parent.fetch_item_type]
+            signal.emit({self._db_map: chunk})
+        elif parent.query is not None:
+            parent.set_fetched(True)
 
     def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
         if item_types is None:
@@ -289,23 +248,17 @@ class SpineDBWorker(QObject):
         if not item_types:
             # FIXME: Needed? QCoreApplication.processEvents()
             return
-        future = self._executor.submit(self._fetch_all, item_types)
-        _ = future.result()
+        _ = self._executor.submit(self._fetch_all, item_types).result()
 
     @busy_effect
+    @_db_map_lock
     def _fetch_all(self, item_types):
-        lock = self._db_mngr.db_map_locks.get(self._db_map)
-        if lock is None or not lock.tryLock():
-            return
-        try:
-            for item_type in item_types:
-                query, _ = self._make_query_for_item_type(item_type)
-                for chunk in _make_iterator(query):
-                    self._populate_commit_cache(item_type, chunk)
-                    self._db_mngr.cache_items(item_type, {self._db_map: chunk})
-                self._fetched_item_types.add(item_type)
-        finally:
-            lock.unlock()
+        for item_type in item_types:
+            query, _ = self._make_query_for_item_type(item_type)
+            for chunk in _make_iterator(query):
+                self._populate_commit_cache(item_type, chunk)
+                self._db_mngr.cache_items(item_type, {self._db_map: chunk})
+            self._fetched_item_types.add(item_type)
 
     def _make_query_for_parent(self, parent):
         """Makes a database query for given item type.
@@ -327,6 +280,9 @@ class SpineDBWorker(QObject):
 
     def _get_iterator(self, parent):
         if parent.query_iterator is None:
+            # For some reason queries that haven't been iterated before don't
+            # keep up with deleted items. Reset the query here as a workaround.
+            parent.query = self._make_query_for_parent(parent)
             parent.query_iterator = _make_iterator(self._setdefault_query(parent))
         return parent.query_iterator
 
@@ -339,7 +295,7 @@ class SpineDBWorker(QObject):
             self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])
 
     def close_db_map(self):
-        self._executor.submit(self._close_db_map)
+        _ = self._executor.submit(self._close_db_map).result()
 
     def _close_db_map(self):
         if not self._db_map.connection.closed:
@@ -354,8 +310,7 @@ class SpineDBWorker(QObject):
         Returns:
             list of namedtuple: entity metadata records
         """
-        future = self._executor.submit(self._get_entity_metadata, entity_id)
-        return future.result()
+        return self._executor.submit(self._get_entity_metadata, entity_id).result()
 
     def _get_entity_metadata(self, entity_id):
         """Queries metadata records for a single entity.
@@ -378,8 +333,7 @@ class SpineDBWorker(QObject):
         Returns:
             list of namedtuple: parameter value metadata records
         """
-        future = self._executor.submit(self._get_parameter_value_metadata, parameter_value_id)
-        return future.result()
+        return self._executor.submit(self._get_parameter_value_metadata, parameter_value_id).result()
 
     def _get_parameter_value_metadata(self, parameter_value_id):
         """Queries metadata records for a single parameter value.
@@ -410,13 +364,13 @@ class SpineDBWorker(QObject):
     def _add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
-        QCoreApplication.postEvent(self, _AddOrUpdateItemsEvent(items, errors, signal_name))
+        self._something_happened.emit(_Event.ADD_OR_UPDATE_ITEMS, (items, errors, signal_name))
 
-    def _add_or_update_items_event(self, ev):
-        signal = getattr(self._db_mngr, ev.signal_name)
-        signal.emit({self._db_map: ev.items})
-        if ev.errors:
-            self._db_mngr.error_msg.emit({self._db_map: ev.errors})
+    def _add_or_update_items_event(self, items, errors, signal_name):
+        signal = getattr(self._db_mngr, signal_name)
+        signal.emit({self._db_map: items})
+        if errors:
+            self._db_mngr.error_msg.emit({self._db_map: errors})
 
     def readd_items(self, items, method_name, item_type, signal_name, cache):
         """Adds or updates items in db.
@@ -433,11 +387,11 @@ class SpineDBWorker(QObject):
     def _readd_items(self, items, method_name, item_type, signal_name, cache):
         getattr(self._db_map, method_name)(*items, readd=True, cache=cache)
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
-        QCoreApplication.postEvent(self, _ReaddItemsEvent(items, signal_name))
+        self._something_happened.emit(_Event.READD_ITEMS, (items, signal_name))
 
-    def _readd_items_event(self, ev):
-        signal = getattr(self._db_mngr, ev.signal_name)
-        signal.emit({self._db_map: ev.items})
+    def _readd_items_event(self, items, signal_name):
+        signal = getattr(self._db_mngr, signal_name)
+        signal.emit({self._db_map: items})
 
     def remove_items(self, ids_per_type):
         """Removes items from database.
@@ -454,12 +408,12 @@ class SpineDBWorker(QObject):
             errors = []
         except SpineDBAPIError as err:
             errors = [err]
-        QCoreApplication.postEvent(self, _RemoveItemsEvent(ids_per_type, errors))
+        self._something_happened.emit(_Event.REMOVE_ITEMS, (ids_per_type, errors))
 
-    def _remove_items_event(self, ev):
-        if ev.errors:
-            self._db_mngr.error_msg.emit({self._db_map: ev.errors})
-        self._db_mngr.items_removed.emit({self._db_map: ev.ids_per_type})
+    def _remove_items_event(self, ids_per_type, errors):
+        if errors:
+            self._db_mngr.error_msg.emit({self._db_map: errors})
+        self._db_mngr.items_removed.emit({self._db_map: ids_per_type})
 
     def commit_session(self, commit_msg, cookie=None):
         """Initiates commit session.
@@ -486,14 +440,14 @@ class SpineDBWorker(QObject):
             errors = []
         except SpineDBAPIError as e:
             errors = [e.msg]
-        QCoreApplication.postEvent(self, _CommitSessionEvent(errors, undo_stack, cookie))
+        self._something_happened.emit(_Event.COMMIT_SESSION, (errors, undo_stack, cookie))
 
-    def _commit_session_event(self, ev):
-        ev.undo_stack.setClean()
-        if ev.errors:
-            self._db_mngr.error_msg.emit({self._db_map: ev.errors})
+    def _commit_session_event(self, errors, undo_stack, cookie):
+        undo_stack.setClean()
+        if errors:
+            self._db_mngr.error_msg.emit({self._db_map: errors})
         else:
-            self._db_mngr.session_committed.emit({self._db_map}, ev.cookie)
+            self._db_mngr.session_committed.emit({self._db_map}, cookie)
 
     def rollback_session(self):
         """Initiates rollback session action for given database maps in the worker thread."""
@@ -513,12 +467,12 @@ class SpineDBWorker(QObject):
             errors = []
         except SpineDBAPIError as e:
             errors = [e.msg]
-        QCoreApplication.postEvent(self, _RollbackSessionEvent(errors, undo_stack))
+        self._something_happened.emit(_Event.ROLLBACK_SESSION, (errors, undo_stack))
 
-    def _rollback_session_event(self, ev):
-        ev.undo_stack.setClean()
-        if ev.errors:
-            self._db_mngr.error_msg.emit({self._db_map: ev.errors})
+    def _rollback_session_event(self, errors, undo_stack):
+        undo_stack.setClean()
+        if errors:
+            self._db_mngr.error_msg.emit({self._db_map: errors})
         else:
             self._db_mngr.session_rolled_back.emit({self._db_map})
 
@@ -538,3 +492,121 @@ def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
         yield chunk
         if not chunk:
             break
+
+
+class TimeOutError(Exception):
+    """An exception to raise when a timeouts expire"""
+
+
+class QtBasedQueue:
+    """A Qt-based clone of queue.Queue."""
+
+    def __init__(self):
+        self._items = []
+        self._mutex = QMutex()
+        self._semafore = QSemaphore()
+
+    def put(self, item):
+        self._mutex.lock()
+        self._items.append(item)
+        self._mutex.unlock()
+        self._semafore.release()
+
+    def get(self, timeout=None):
+        if timeout is None:
+            timeout = -1
+        timeout *= 1000
+        if not self._semafore.tryAcquire(1, timeout):
+            raise TimeOutError()
+        self._mutex.lock()
+        item = self._items.pop(0)
+        self._mutex.unlock()
+        return item
+
+
+class QtBasedFuture:
+    """A Qt-based clone of concurrent.futures.Future."""
+
+    def __init__(self):
+        self._result_queue = QtBasedQueue()
+        self._exception_queue = QtBasedQueue()
+
+    def set_result(self, result):
+        self._exception_queue.put(None)
+        self._result_queue.put(result)
+
+    def set_exception(self, exc):
+        self._exception_queue.put(exc)
+        self._result_queue.put(None)
+
+    def result(self, timeout=None):
+        result = self._result_queue.get(timeout=timeout)
+        exc = self.exception(timeout=0)
+        if exc is not None:
+            raise exc
+        return result
+
+    def exception(self, timeout=None):
+        return self._exception_queue.get(timeout=timeout)
+
+
+class QtBasedThread(QThread):
+    """A Qt-based clone of threading.Thread."""
+
+    def __init__(self, target=None, args=()):
+        super().__init__()
+        self._target = target
+        self._args = args
+
+    def run(self):
+        return self._target(*self._args)
+
+
+class QtBasedThreadPoolExecutor:
+    """A Qt-based clone of concurrent.futures.ThreadPoolExecutor"""
+
+    def __init__(self, max_workers=None):
+        if max_workers is None:
+            max_workers = min(32, os.cpu_count() + 4)
+        self._max_workers = max_workers
+        self._threads = set()
+        self._requests = QtBasedQueue()
+        self._semafore = QSemaphore()
+
+    def submit(self, fn, *args, **kwargs):
+        future = QtBasedFuture()
+        self._requests.put((future, fn, args, kwargs))
+        self._spawn_thread()
+        return future
+
+    def _spawn_thread(self):
+        if self._semafore.tryAcquire():
+            # No need to spawn a new thread
+            return
+        if len(self._threads) == self._max_workers:
+            # Not possible to spawn a new thread
+            return
+        thread = QtBasedThread(target=self._do_work)
+        self._threads.add(thread)
+        thread.start()
+
+    def _do_work(self):
+        while True:
+            request = self._requests.get()
+            if request is None:
+                break
+            future, fn, args, kwargs = request
+            try:
+                result = fn(*args, **kwargs)
+                future.set_result(result)
+            except Exception as exc:  # pylint: disable=broad-except
+                future.set_exception(exc)
+            self._semafore.release()
+
+    def shutdown(self):
+        for _ in self._threads:
+            self._requests.put(None)
+        while self._threads:
+            thread = self._threads.pop()
+            thread.wait()
+            thread.deleteLater()

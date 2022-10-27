@@ -237,6 +237,31 @@ class PivotTableModelBase(QAbstractTableModel):
         """Returns the index of the column designated as Y values for plotting or None."""
         return self._plot_x_column
 
+    def x_value(self, index):
+        """Returns x value for given model index.
+
+        Args:
+            index (QModelIndex): model index
+
+        Returns:
+            Any: x value
+        """
+        x_index = self.index(index.row(), self._plot_x_column)
+        return self.data(x_index, PARSED_ROLE)
+
+    def x_parameter_name(self):
+        """Returns x column's parameter name.
+
+        Returns:
+            str: parameter name
+        """
+        pivot_column = self._plot_x_column - self.headerColumnCount()
+        header_ids = self._header_ids(0, pivot_column)
+        _, parameter_id = header_ids[-3]
+        db_map = header_ids[-1]
+        parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id).get("parameter_name", "")
+        return parameter_name
+
     def headerRowCount(self):
         """Returns number of rows occupied by header."""
         return len(self.model.pivot_columns) + int(bool(self.model.pivot_rows))
@@ -788,7 +813,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         ]
         return header_ids[-1], [header_ids[k][1] for k in object_indexes]
 
-    def _all_header_names(self, index):
+    def all_header_names(self, index):
         """Returns the object, parameter, alternative, and db names corresponding to the given data index.
 
         Args:
@@ -823,7 +848,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         if not self.index_in_data(index):
             return ""
-        object_names, parameter_name, alternative_name, db_name = self._all_header_names(index)
+        object_names, parameter_name, alternative_name, db_name = self.all_header_names(index)
         return parameter_identifier(db_name, parameter_name, object_names, alternative_name)
 
     def column_name(self, column):

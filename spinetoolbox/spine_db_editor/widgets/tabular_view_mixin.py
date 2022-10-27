@@ -194,6 +194,8 @@ class TabularViewMixin:
 
     @staticmethod
     def _get_current_class_item(current_index):
+        if not current_index.isValid():
+            return None
         item = current_index.model().item_from_index(current_index)
         while item.item_type != "root":
             if item.item_type in ("object_class", "relationship_class"):

@@ -25,10 +25,10 @@ from ...widgets.custom_menus import FilterMenuBase
 
 class MainMenu(QMenu):
     def event(self, ev):
-        """Intercepts shortcurts and instead sends an equivalent event with the 'Alt' modifier,
+        """Intercepts shortcuts and instead sends an equivalent event with the 'Alt' modifier,
         so that mnemonics works with just the key.
         Also sends a key press event with the 'Alt' key when this menu shows,
-        so that mnemonics are underligned on windows.
+        so that mnemonics are underlined on Windows.
         """
         if ev.type() == QEvent.KeyPress and ev.key() == Qt.Key_Alt:
             return True

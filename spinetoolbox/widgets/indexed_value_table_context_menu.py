@@ -19,8 +19,8 @@ from operator import itemgetter
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QInputDialog, QMenu, QAction
-from spinetoolbox.plotting import plot_selection, PlottingError, MapTablePlottingHints
-from spinetoolbox.widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
+from spinetoolbox.plotting import PlottingError, plot_value_editor_table_selection
+from spinetoolbox.widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from spinetoolbox.widgets.report_plotting_failure import report_plotting_failure
 
 _INSERT_SINGLE_COLUMN_AFTER = "Insert column after"
@@ -182,7 +182,7 @@ class MapTableContextMenu(ContextMenuBase):
         self.addAction(_PLOT, self._plot)
         self._plot_in_window_menu = self.addMenu(_PLOT_IN_WINDOW)
         self._plot_in_window_menu.triggered.connect(self._plot_in_window)
-        _prepare_plot_in_window_menu(self._plot_in_window_menu)
+        prepare_plot_in_window_menu(self._plot_in_window_menu)
         self.addSeparator()
         self._add_default_actions()
         self.addSeparator()
@@ -268,8 +268,7 @@ class MapTableContextMenu(ContextMenuBase):
         """Plots current indexes."""
         selection = self._table_view.selectedIndexes()
         try:
-            hints = MapTablePlottingHints()
-            plot_widget = plot_selection(self._table_view.model(), selection, hints)
+            plot_widget = plot_value_editor_table_selection(self._table_view.model(), selection)
         except PlottingError as error:
             report_plotting_failure(error, self._table_view)
         else:
@@ -285,9 +284,8 @@ class MapTableContextMenu(ContextMenuBase):
             self._plot()
             return
         selected_indexes = self._table_view.selectedIndexes()
-        hints = MapTablePlottingHints()
         try:
-            plot_selection(self._table_view.model(), selected_indexes, hints, plot_window)
+            plot_value_editor_table_selection(self._table_view.model(), selected_indexes, plot_window)
             plot_window.raise_()
         except PlottingError as error:
             report_plotting_failure(error, self._table_view)

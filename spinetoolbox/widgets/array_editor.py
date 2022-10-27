@@ -44,6 +44,7 @@ class ArrayEditor(QWidget):
         self._ui.setupUi(self)
         self._model = ArrayModel(self)
         self._model.dataChanged.connect(self._update_plot)
+        self._model.headerDataChanged.connect(self._update_plot)
         self._model.modelReset.connect(self._update_plot)
         self._model.rowsInserted.connect(self._update_plot)
         self._model.rowsRemoved.connect(self._update_plot)

@@ -196,6 +196,7 @@ class PivotModel:
         Args:
             row_mask (list)
             column_mask (list)
+
         Returns:
             list(list)
         """

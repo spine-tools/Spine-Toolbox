@@ -50,13 +50,11 @@ class CompoundTableModel(MinimalTableModel):
         """
         if not index.isValid():
             return QModelIndex()
-        row = index.row()
-        column = index.column()
         try:
-            sub_model, sub_row = self._row_map[row]
+            sub_model, sub_row = self._row_map[index.row()]
         except IndexError:
             return QModelIndex()
-        return sub_model.index(sub_row, column)
+        return sub_model.index(sub_row, index.column())
 
     def map_from_sub(self, sub_model, sub_index):
         """Returns an equivalent compound model index.
@@ -311,13 +309,12 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     @Slot(QModelIndex, int, int)
     def _handle_empty_rows_removed(self, parent, empty_first, empty_last):
-        """Runs when rows are removed from the empty model.
-        Updates row_map, then emits rowsRemoved so the removed rows are no longer visible.
-        """
+        """Updates row_map when rows are removed from the empty model."""
         first = self._inv_row_map[self.empty_model, empty_first]
         last = self._inv_row_map[self.empty_model, empty_last]
+        self.beginRemoveRows(QModelIndex(), first, last)
         self._recompute_empty_row_map()
-        self.rowsRemoved.emit(QModelIndex(), first, last)
+        self.endRemoveRows()
 
     @Slot(QModelIndex, int, int)
     def _handle_empty_rows_inserted(self, parent, empty_first, empty_last):
@@ -339,11 +336,12 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         first = self._inv_row_map[row_map[0]]
         last = first + len(row_map) - 1
         tail_row_map = self._row_map[last + 1 :]
+        self.beginRemoveRows(QModelIndex(), first, last)
         for key in self._row_map[first:]:
             self._inv_row_map.pop(key)
         self._row_map[first:] = []
         self._append_row_map(tail_row_map)
-        self.rowsRemoved.emit(QModelIndex(), first, last)
+        self.endRemoveRows()
 
     def _handle_single_model_reset(self, model):
         """Runs when given model is reset."""
@@ -381,12 +379,12 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             QTimer.singleShot(0, self.layoutChanged.emit)
             return
         row = self._get_row_for_insertion(pos)
+        last = row + len(single_row_map) - 1
+        self.beginInsertRows(QModelIndex(), row, last)
         self._row_map, tail_row_map = self._row_map[:row], self._row_map[row:]
         self._append_row_map(single_row_map)
         self._append_row_map(tail_row_map)
-        first = row
-        last = row + len(single_row_map) - 1
-        self.rowsInserted.emit(QModelIndex(), first, last)
+        self.endInsertRows()
 
     def clear_model(self):
         """Clears the model."""
