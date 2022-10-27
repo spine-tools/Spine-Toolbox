@@ -387,16 +387,12 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         for db_map, items in db_map_data.items():
             db_map_single_models = [m for m in self.single_models if m.db_map is db_map]
             existing_ids = set().union(*(m.item_ids() for m in db_map_single_models))
-            entity_class_ids_of_committed_data = {m.entity_class_id for m in db_map_single_models}
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids_committed = list()
                 ids_uncommitted = list()
-                is_entity_class_committed = entity_class_id in entity_class_ids_of_committed_data
                 for item in class_items:
                     is_committed = item.get("commit_id") is not None
-                    if is_entity_class_committed and is_committed:
-                        continue
                     item_id = item["id"]
                     if item_id in existing_ids:
                         continue
@@ -432,6 +428,13 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         """
         if not ids:
             return
+        if committed:
+            existing = next(
+                (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+            )
+            if existing is not None:
+                existing.add_rows(ids)
+                return
         model = self._create_single_model(db_map, entity_class_id, committed)
         model.reset_model(ids)
 
