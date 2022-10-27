@@ -67,7 +67,7 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._current_fetch_token = object()
+        self._current_fetch_token = 0
         self._query_has_elements_by_key = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
@@ -106,7 +106,7 @@ class SpineDBWorker(QObject):
 
     def reset_queries(self):
         """Resets queries and clears caches."""
-        self._current_fetch_token = object()
+        self._current_fetch_token += 1
         self._fetched_item_types.clear()
         self._query_has_elements_by_key.clear()
 
@@ -118,7 +118,7 @@ class SpineDBWorker(QObject):
         """
         if parent.fetch_token is None:
             parent.fetch_token = self._current_fetch_token
-        elif parent.fetch_token is not self._current_fetch_token:
+        elif parent.fetch_token != self._current_fetch_token:
             parent.reset_fetching(self._current_fetch_token)
 
     def can_fetch_more(self, parent):
