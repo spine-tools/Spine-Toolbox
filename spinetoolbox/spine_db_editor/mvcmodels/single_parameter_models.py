@@ -135,7 +135,23 @@ class SingleParameterModel(HalfSortedTableModel):
         return True
 
     def item_id(self, row):
+        """Returns parameter id for row.
+
+        Args:
+            row (int): row index
+
+        Returns:
+            int: parameter id
+        """
         return self._main_data[row]
+
+    def item_ids(self):
+        """Returns model's parameter ids.
+
+        Returns:
+            set of int: ids
+        """
+        return set(self._main_data)
 
     def db_item(self, index):
         return self._db_item(index.row())

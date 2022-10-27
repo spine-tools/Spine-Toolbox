@@ -15,7 +15,7 @@ import unittest
 from PySide2.QtCore import QItemSelectionModel, Qt, QModelIndex
 from PySide2.QtWidgets import QApplication
 
-from spinetoolbox.helpers import signal_waiter
+from spinetoolbox.helpers import signal_waiter, ItemTypeFetchParent
 from tests.spine_db_editor.widgets.helpers import add_object, add_object_class, TestBase, EditorDelegateMocking
 
 
@@ -121,6 +121,45 @@ class TestParameterTableView(TestBase):
             ["an_object_class", "object_2", "Base", "value_2", "database"],
             [None, None, None, None, None, "database"],
         ]
+        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+            self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+    def test_receiving_uncommitted_but_existing_value_does_not_create_duplicate_entry(self):
+        tree_view = self._db_editor.ui.treeView_object
+        add_object_class(tree_view, "an_object_class")
+        add_object(tree_view, "an_object")
+        definition_table_view = self._db_editor.ui.tableView_object_parameter_definition
+        definition_model = definition_table_view.model()
+        delegate_mock = EditorDelegateMocking()
+        delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 0), "an_object_class")
+        delegate_mock.reset()
+        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
+            delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
+            waiter.wait()
+        table_view = self._db_editor.ui.tableView_object_parameter_value
+        model = table_view.model()
+        self.assertEqual(model.rowCount(), 1)
+        _set_row_data(table_view, model, 0, ["an_object_class", "an_object", "a_parameter", "Base"], delegate_mock)
+        delegate_mock.reset()
+        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
+            delegate_mock.write_to_index(table_view, model.index(0, 4), "value_1")
+            waiter.wait()
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 6)
+        expected = [
+            ["an_object_class", "an_object", "Base", "value_1", "database"],
+            [None, None, None, None, None, "database"],
+        ]
+        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        fetch_parent = ItemTypeFetchParent("parameter_value")
+        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
+            while self._db_mngr.can_fetch_more(self._db_map, fetch_parent):
+                self._db_mngr.fetch_more(self._db_map, fetch_parent)
+                QApplication.processEvents()
+            waiter.wait()
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 6)
         for row, column in zip(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
