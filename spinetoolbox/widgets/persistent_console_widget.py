@@ -152,6 +152,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
     _command_finished = Signal()
     _history_item_available = Signal(str, str)
     _completions_available = Signal(str, str, list)
+    _restarted = Signal()
     _flush_needed = Signal()
     _FLUSH_INTERVAL = 200
     _MAX_LINES_PER_SECOND = 2000
@@ -224,6 +225,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._command_finished.connect(self._handle_command_finished)
         self._history_item_available.connect(self._display_history_item)
         self._completions_available.connect(self._display_completions)
+        self._restarted.connect(self._handle_restarted)
 
     def closeEvent(self, ev):
         super().closeEvent(ev)
@@ -318,9 +320,12 @@ class PersistentConsoleWidget(QPlainTextEdit):
     @Slot(QRect, int)
     def _handle_update_request(self, _rect, _dy):
         """Move line edit to input start pos."""
-        self._move_line_edit()
+        if not self._updating:
+            self._move_line_edit()
 
     def _move_line_edit(self):
+        if self._prompt_block is None:
+            return
         cursor = self.textCursor()
         cursor.setPosition(self._prompt_block.position())
         rect = self.cursorRect(cursor)
@@ -545,22 +550,17 @@ class PersistentConsoleWidget(QPlainTextEdit):
         log_stdin = bool(self._pending_command_count)
         self._pending_command_count += 1
         for msg in engine_mngr.issue_persistent_command(self._key, text):
-            msg_type = msg["type"]
-            if msg_type == "stdin" and log_stdin:
-                self._msg_available.emit("stdin", msg["data"])
-            elif msg_type == "stdout":
-                self._msg_available.emit("stdout", msg["data"])
-            elif msg_type == "stderr":
-                self._msg_available.emit("stderr", msg["data"])
+            if msg["type"] != "stdin" or log_stdin:
+                self._msg_available.emit(msg["type"], msg["data"])
         self._command_finished.emit()
 
     @Slot(str, str)
-    def _handle_msg_available(self, type_, text):
-        if type_ == "stdin":
+    def _handle_msg_available(self, msg_type, text):
+        if msg_type == "stdin":
             self.add_stdin(text)
-        elif type_ == "stdout":
+        elif msg_type == "stdout":
             self.add_stdout(text)
-        elif type_ == "stderr":
+        elif msg_type == "stderr":
             self.add_stderr(text)
 
     @Slot()
@@ -633,21 +633,30 @@ class PersistentConsoleWidget(QPlainTextEdit):
     @Slot(bool)
     def _restart_persistent(self, _=False):
         """Restarts underlying persistent process."""
+        self._updating = True
         self.clear()
+        self._make_prompt_block("")
+        self._updating = False
+        self._text_buffer.clear()
+        self._executor.submit(self._do_restart_persistent)
+
+    def _do_restart_persistent(self):
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
-        self._text_buffer.clear()
         for msg in engine_mngr.restart_persistent(self._key):
-            msg_type = msg["type"]
-            if msg_type == "stdout":
-                self.add_stdout(msg["data"])
-            elif msg_type == "stderr":
-                self.add_stderr(msg["data"])
+            self._msg_available.emit(msg["type"], msg["data"])
+        self._restarted.emit()
+
+    @Slot()
+    def _handle_restarted(self):
         self._make_prompt_block(prompt=self._prompt)
 
     @Slot(bool)
     def _interrupt_persistent(self, _=False):
         """Interrupts underlying persistent process."""
+        self._executor.submit(self._do_interrupt_persistent)
+
+    def _do_interrupt_persistent(self):
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
         engine_mngr.interrupt_persistent(self._key)
