@@ -16,7 +16,6 @@ Client for exchanging messages between the toolbox and the Spine Engine Server.
 """
 
 import os
-import threading
 import zmq
 import zmq.auth
 import time
@@ -46,15 +45,15 @@ class EngineClient:
         self.host = host
         self.port = port  # Request socket port
         self._context = zmq.Context()
-        self._req_socket = self._context.socket(zmq.REQ)
-        self._req_socket.setsockopt(zmq.LINGER, 1)
+        self.dealer_socket = self._context.socket(zmq.DEALER)
+        self.dealer_socket.setsockopt(zmq.LINGER, 1)
         self.pull_socket = self._context.socket(zmq.PULL)
         self.client_ctrl_sender = self._context.socket(zmq.PAIR)
         self.client_ctrl_sender.bind("inproc://client_control")  # inproc:// transport requires bind() before connect()
         self.client_ctrl_receiver = self._context.socket(zmq.PAIR)
         self.client_ctrl_receiver.connect("inproc://client_control")
         self.poller = zmq.Poller()
-        self.poller.register(self._req_socket, zmq.POLLIN)
+        self.poller.register(self.dealer_socket, zmq.POLLIN)
         self.poller.register(self.pull_socket, zmq.POLLIN)
         self.poller.register(self.client_ctrl_receiver, zmq.POLLIN)
         self.client_project_dir = None
@@ -72,13 +71,13 @@ class EngineClient:
             # to make a CURVE connection.
             client_secret_file = os.path.join(secret_keys_dir, "client.key_secret")
             client_public, client_secret = zmq.auth.load_certificate(client_secret_file)
-            self._req_socket.curve_secretkey = client_secret
-            self._req_socket.curve_publickey = client_public
+            self.dealer_socket.curve_secretkey = client_secret
+            self.dealer_socket.curve_publickey = client_public
             # The client must know the server's public key to make a CURVE connection.
             server_public_file = os.path.join(public_keys_dir, "server.key")
             server_public, _ = zmq.auth.load_certificate(server_public_file)
-            self._req_socket.curve_serverkey = server_public
-        self._req_socket.connect(self.protocol + "://" + self.host + ":" + str(self.port))
+            self.dealer_socket.curve_serverkey = server_public
+        self.dealer_socket.connect(self.protocol + "://" + self.host + ":" + str(self.port))
         if ping:
             try:
                 self._check_connectivity(1000)  # Ping server
@@ -94,26 +93,26 @@ class EngineClient:
         """
         self.pull_socket.connect(self.protocol + "://" + self.host + ":" + port)
 
-    def rcv_next(self, req_or_pull):
+    def rcv_next(self, dealer_or_pull):
         """Polls all sockets and returns a new reply based on given socket 'name'.
 
         Args:
-            req_or_pull (str): "req" to wait for reply to REQ socket, "pull" to wait for reply to PULL socket.
+            dealer_or_pull (str): "dealer" to wait reply from DEALER socket, "pull" to wait reply from PULL socket
         """
         while True:
             sockets = dict(self.poller.poll())
             if sockets.get(self.pull_socket) == zmq.POLLIN:
-                if req_or_pull == "pull":
+                if dealer_or_pull == "pull":
                     return self.pull_socket.recv_multipart()
                 continue
-            if sockets.get(self._req_socket) == zmq.POLLIN:
-                if req_or_pull == "req":
-                    return self._req_socket.recv()
+            if sockets.get(self.dealer_socket) == zmq.POLLIN:
+                if dealer_or_pull == "dealer":
+                    return self.dealer_socket.recv_multipart()
                 continue
             if sockets.get(self.client_ctrl_receiver) == zmq.POLLIN:
                 print("debug")
                 break
-        # TODO: Does not work
+        # TODO: This is never reached
         self.close()
         return None
 
@@ -132,13 +131,13 @@ class EngineClient:
         self.set_start_time()
         random_id = random.randrange(10000000)
         ping_request = ServerMessage("ping", str(random_id), "")
-        self._req_socket.send_multipart([ping_request.to_bytes()], flags=zmq.NOBLOCK)
-        event = self._req_socket.poll(timeout=timeout)
+        self.dealer_socket.send_multipart([ping_request.to_bytes()], flags=zmq.NOBLOCK)
+        event = self.dealer_socket.poll(timeout=timeout)
         if event == 0:
             raise RemoteEngineInitFailed("Timeout expired. Pinging the server failed.")
         else:
-            msg = self._req_socket.recv()
-            response = ServerMessage.parse(msg)
+            msg = self.dealer_socket.recv_multipart()
+            response = ServerMessage.parse(msg[1])
             response_id = int(response.getId())  # Check that request ID matches the response ID
             if not response_id == random_id:
                 raise RemoteEngineInitFailed(f"Ping failed. Request Id '{random_id}' does not "
@@ -166,12 +165,9 @@ class EngineClient:
             file_data = f.read()  # Read file into bytes string
         _, zip_filename = os.path.split(fpath)
         req = ServerMessage("prepare_execution", "1", json.dumps(project_dir_name), [zip_filename])
-        req_socket = self._context.socket(zmq.REQ)
-        req_socket.connect(self.protocol + "://" + self.host + ":" + str(self.port))
-        req_socket.send_multipart([req.to_bytes(), file_data])
-        response = req_socket.recv()
-        req_socket.close()
-        response_server_message = ServerMessage.parse(response)
+        self.dealer_socket.send_multipart([req.to_bytes(), file_data])
+        response = self.dealer_socket.recv_multipart()
+        response_server_message = ServerMessage.parse(response[1])
         return response_server_message.getId()
 
     def start_execution(self, engine_data, job_id):
@@ -189,9 +185,9 @@ class EngineClient:
         """
         self.start_time = round(time.time() * 1000.0)
         msg = ServerMessage("start_execution", job_id, engine_data)
-        self._req_socket.send_multipart([msg.to_bytes()])  # Send request
-        response = self.rcv_next("req")
-        response_msg = ServerMessage.parse(response)  # Parse received bytes into a ServerMessage
+        self.dealer_socket.send_multipart([msg.to_bytes()])  # Send request
+        response = self.rcv_next("dealer")
+        response_msg = ServerMessage.parse(response[1])  # Parse received bytes into a ServerMessage
         start_msg = response_msg.getData()
         return start_msg
 
@@ -202,9 +198,9 @@ class EngineClient:
             job_id (str): Job Id on server to stop
         """
         req = ServerMessage("stop_execution", job_id, "", None)
-        self._req_socket.send_multipart([req.to_bytes()])
-        response = self.rcv_next("req")
-        response_server_message = ServerMessage.parse(response)
+        self.dealer_socket.send_multipart([req.to_bytes()])
+        response = self.rcv_next("dealer")
+        response_server_message = ServerMessage.parse(response[1])
         return response_server_message.getData()
 
     def download_files(self, q):
@@ -259,8 +255,8 @@ class EngineClient:
             bytes: Zipped project file
         """
         req = ServerMessage("retrieve_project", job_id, "")
-        self._req_socket.send_multipart([req.to_bytes()])
-        response = self._req_socket.recv_multipart()
+        self.dealer_socket.send_multipart([req.to_bytes()])
+        response = self.dealer_socket.recv_multipart()
         return response[-1]
 
     def send_is_complete(self, persistent_key, cmd):
@@ -272,6 +268,7 @@ class EngineClient:
         """Sends a request to process given command in persistent manager identified by given key.
         Yields the response string(s) as they arrive from server."""
         data = persistent_key, "issue_persistent_command", cmd
+        print(f"issue_persistent_cmd:{data}")
         yield from self.send_request_to_persistent_generator(data)
 
     def send_get_persistent_completions(self, persistent_key, text):
@@ -302,9 +299,9 @@ class EngineClient:
         returns the second part of the data field."""
         json_d = json.dumps(data)
         req = ServerMessage("execute_in_persistent", "1", json_d)
-        self._req_socket.send_multipart([req.to_bytes()])
-        response = self._req_socket.recv()
-        response_msg = ServerMessage.parse(response)
+        self.dealer_socket.send_multipart([req.to_bytes()])
+        response = self.dealer_socket.recv_multipart()
+        response_msg = ServerMessage.parse(response[1])
         return response_msg.getData()[1]
 
     def send_request_to_persistent_generator(self, data):
@@ -314,10 +311,12 @@ class EngineClient:
         pull_socket.connect(self.protocol + "://" + self.host + ":" + pull_port)
         while True:
             rcv = pull_socket.recv_multipart()
+            print(f"rcv:{rcv}")
             if rcv == [b"END"]:
                 break
             yield json.loads(rcv[0].decode("utf-8"))
         pull_socket.close()
+        completed_msg = self.dealer_socket.recv_multipart()  # Get the final 'completed' msg
 
     def get_elapsed_time(self):
         """Returns the elapsed time between now and when self.start_time was set.
@@ -337,8 +336,8 @@ class EngineClient:
 
     def close(self):
         """Closes client sockets, context and thread."""
-        if not self._req_socket.closed:
-            self._req_socket.close()
+        if not self.dealer_socket.closed:
+            self.dealer_socket.close()
         if not self.pull_socket.closed:
             self.pull_socket.close()
         if not self.client_ctrl_sender.closed:

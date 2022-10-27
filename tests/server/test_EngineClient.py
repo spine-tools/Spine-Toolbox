@@ -53,9 +53,9 @@ class TestEngineClient(unittest.TestCase):
 
     def test_engine_client_execution(self):
         """Tests EngineClient part when executing a DC->Tool DAG on a remote server."""
-        engine_data = self.make_engine_data_for_test_zipfile_project()
+        engine_data = self.make_engine_data_for_helloworld_project()
         msg_data_json = json.dumps(engine_data)
-        zip_fname = "test_zipfile.zip"
+        zip_fname = "helloworld.zip"
         zip_fpath = os.path.join(str(Path(__file__).parent), zip_fname)
         client = EngineClient(self.host, self.port, ClientSecurityModel.NONE, "")
         start_event = client.send(msg_data_json, zip_fpath)
@@ -70,8 +70,8 @@ class TestEngineClient(unittest.TestCase):
                 break
         client.close()
 
-    def make_engine_data_for_test_zipfile_project(self):
-        """Returns an engine data dictionary for SpineEngine() for the project in file test_zipfile.zip.
+    def make_engine_data_for_helloworld_project(self):
+        """Returns an engine data dictionary for SpineEngine() for the project in file helloworld.zip.
 
         engine_data dict must be the same as what is passed to SpineEngineWorker() in
         spinetoolbox.project.create_engine_worker()
