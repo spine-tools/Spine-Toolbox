@@ -35,8 +35,7 @@ from spinetoolbox.qthread_pool_executor import QtBasedThreadPoolExecutor
 class _CustomLineEdit(QPlainTextEdit):
     def __init__(self, console):
         super().__init__(console)
-        self._last_position = 0
-        self._setting_cursor = False
+        self._updating = False
         self._console = console
         self._current_prompt = ""
         self.setStyleSheet("QPlainTextEdit {background-color: transparent; color: transparent; border:none;}")
@@ -56,58 +55,62 @@ class _CustomLineEdit(QPlainTextEdit):
 
     @property
     def new_line_indent(self):
-        return len(self._current_prompt.lstrip())
+        return len(self._current_prompt.lstrip())  # lstrip() is to remove leading '\n'
 
     def reset(self, current_prompt):
         self._current_prompt = current_prompt
-        super().setPlainText(current_prompt)
+        self.setPlainText(current_prompt)
 
     def new_line(self):
-        self._setting_cursor = True
         cursor = self.textCursor()
-        cursor.insertBlock()
-        cursor.insertText(self.new_line_indent * " ")
-        self.setTextCursor(cursor)
-        self._setting_cursor = False
+        cursor.insertText("\n")
 
-    def current_text(self):
-        text = self.toPlainText()
+    def formatted_text(self):
+        text = self.raw_text()
         if not text:
             return ""
         lines = iter(text.splitlines())
         new_lines = [next(lines).rstrip()] + [line.rstrip()[self.new_line_indent :] for line in lines]
         return "\n".join(new_lines)
 
-    def toPlainText(self):
-        return super().toPlainText()[self.min_pos :]
+    def raw_text(self):
+        return self.toPlainText()[self.min_pos :]
 
-    def setPlainText(self, text):
-        super().setPlainText(self._current_prompt + text)
+    def set_raw_text(self, text):
+        self.setPlainText(self._current_prompt + text)
 
     @Slot()
     def _handle_text_changed(self):
-        if not super().toPlainText().startswith(self._current_prompt):
-            super().setPlainText(self._current_prompt)
+        """Add indent to new lines."""
+        if self._updating:
+            return
+        if not self.raw_text():
+            return
+        self._updating = True
+        cursor = self.textCursor()
+        for i in range(self.document().blockCount()):
+            block = self.document().findBlockByNumber(i)
+            if block.position() < self.min_pos:
+                continue
+            if not block.text().startswith(self.new_line_indent * " "):
+                cursor.setPosition(block.position())
+                cursor.insertText(self.new_line_indent * " ")
+        self._updating = False
 
     @Slot()
     def _handle_cursor_position_changed(self):
-        if self._setting_cursor:
-            self._last_position = self.textCursor().position()
+        """Move cursor away from indent areas."""
+        if self._updating:
             return
-        self._setting_cursor = True
+        self._updating = True
         cursor = self.textCursor()
         if cursor.position() < self.min_pos:
             cursor.setPosition(self.min_pos)
         elif cursor.positionInBlock() < self.new_line_indent:
-            if self._last_position > cursor.position():
-                cursor.movePosition(QTextCursor.PreviousBlock)
-                cursor.movePosition(QTextCursor.EndOfBlock)
-            else:
-                cursor.movePosition(QTextCursor.StartOfBlock)
-                cursor.movePosition(QTextCursor.NextCharacter, n=self.new_line_indent)
+            cursor.movePosition(QTextCursor.StartOfBlock)
+            cursor.movePosition(QTextCursor.NextCharacter, n=self.new_line_indent)
         self.setTextCursor(cursor)
-        self._last_position = self.textCursor().position()
-        self._setting_cursor = False
+        self._updating = False
 
     def sizeHint(self):
         return QSize(self._console.width(), 16777215)
@@ -116,8 +119,26 @@ class _CustomLineEdit(QPlainTextEdit):
         if ev.matches(QKeySequence.Copy):
             ev.ignore()
             return
-        if ev.key() == Qt.Key_Backspace and self.textCursor().position() == self.min_pos:
-            return
+        if ev.key() == Qt.Key_Backspace:
+            cursor = self.textCursor()
+            if cursor.position() == self.min_pos:
+                return
+            if cursor.positionInBlock() == self.new_line_indent:
+                cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.KeepAnchor, n=self.new_line_indent + 1)
+                cursor.removeSelectedText()
+                return
+        if ev.key() == Qt.Key_Left:
+            cursor = self.textCursor()
+            if cursor.positionInBlock() == self.new_line_indent:
+                cursor.movePosition(QTextCursor.PreviousCharacter, n=self.new_line_indent + 1)
+                self.setTextCursor(cursor)
+                return
+        if ev.key() == Qt.Key_Delete:
+            cursor = self.textCursor()
+            if cursor.atBlockEnd():
+                cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor, n=self.new_line_indent + 1)
+                cursor.removeSelectedText()
+                return
         if self._console.key_press_event(ev):
             return
         super().keyPressEvent(ev)
@@ -311,8 +332,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor = self.textCursor()
         cursor.setPosition(self._input_start_pos)
         cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
-        text = self._line_edit.toPlainText()
-        self._insert_stdin_text(cursor, text)
+        text = self._line_edit.raw_text()
+        cursor.insertText(text)
+        self._highlight_current_input()
         self._updating = False
 
     @Slot()
@@ -371,6 +393,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor.movePosition(QTextCursor.End)
         self._current_prompt = prompt
         self._line_edit.reset(self._current_prompt)
+        self._move_line_edit()
 
     def _insert_stdin_text(self, cursor, text):
         """Inserts highlighted text.
@@ -449,7 +472,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._insert_text_before_prompt(data)
 
     def _get_current_text(self):
-        return self._line_edit.current_text()
+        return self._line_edit.formatted_text()
 
     def _get_prefix(self):
         le_cursor = self._line_edit.textCursor()
@@ -559,7 +582,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     @Slot(str, str)
     def _display_history_item(self, history_item, prefix):
-        self._line_edit.setPlainText(history_item)
+        self._line_edit.set_raw_text(history_item)
         if prefix:
             le_cursor = self._line_edit.textCursor()
             le_cursor.setPosition(self._line_edit.min_pos + len(prefix))
@@ -594,7 +617,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
             self.add_stdin(text)
             self.add_stdout("\t\t".join(completions))
             le_cursor = self._line_edit.textCursor()
-            self._line_edit.setPlainText(text)
+            self._line_edit.set_raw_text(text)
             self._line_edit.setTextCursor(le_cursor)
         else:
             # Complete in current line
@@ -602,7 +625,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
             text_to_insert = completion[len(last_prefix_word) :]
             index = len(prefix)
             new_text = text[:index] + text_to_insert + text[index:]
-            self._line_edit.setPlainText(new_text)
+            self._line_edit.set_raw_text(new_text)
             le_cursor = self._line_edit.textCursor()
             le_cursor.setPosition(self._line_edit.min_pos + index + len(text_to_insert))
             self._line_edit.setTextCursor(le_cursor)
