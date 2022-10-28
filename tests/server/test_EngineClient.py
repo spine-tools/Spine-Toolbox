@@ -142,6 +142,20 @@ class TestEngineClient(unittest.TestCase):
         self.assertEqual(2, n_msgs)
         client.close()
 
+    def test_upload_project(self):
+        project_zip_fpath = os.path.join(str(Path(__file__).parent), "helloworld.zip")
+        client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
+        job_id = client.upload_project("Hello World", project_zip_fpath)
+        self.assertTrue(isinstance(job_id, str))
+        self.assertTrue(len(job_id) == 32)
+        client.close()
+
+    # def test_start_execution(self):
+    #     project_zip_fpath = os.path.join(str(Path(__file__).parent), "helloworld.zip")
+    #     client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
+    #     job_id = client.upload_project("Hello World", project_zip_fpath)
+    #     start_execution_response = client.start_execution("", job_id)
+
     # def test_engine_client_execution(self):
     #     """Tests EngineClient part when executing a DC->Tool DAG on a remote server."""
     #     engine_data = self.make_engine_data_for_helloworld_project()
@@ -161,39 +175,39 @@ class TestEngineClient(unittest.TestCase):
     #             break
     #     client.close()
 
-    def make_engine_data_for_helloworld_project(self):
-        """Returns an engine data dictionary for SpineEngine() for the project in file helloworld.zip.
-
-        engine_data dict must be the same as what is passed to SpineEngineWorker() in
-        spinetoolbox.project.create_engine_worker()
-        """
-        specification = PythonTool(name="helloworld2", tooltype="python", path="../../..",
-                                   includes=["helloworld.py"], inputfiles=["input2.txt"],
-                                   execute_in_work=True, settings=self.toolbox.qsettings(), logger=mock.Mock())
-        self.toolbox.project().add_specification(specification, save_to_disk=False)
-        add_tool(self.toolbox.project(), self.toolbox.item_factories, "helloworld", tool_spec="helloworld2")
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, "Data Connection 1",
-               file_refs=[{"type": "path", "relative": True, "path": "input2.txt"}])
-        tool_item_dict = self.toolbox.project().get_item("helloworld").item_dict()
-        dc_item_dict = self.toolbox.project().get_item("Data Connection 1").item_dict()
-        spec_dict = specification.to_dict()
-        spec_dict["definition_file_path"] = "./helloworld/.spinetoolbox/specifications/Tool/helloworld2.json"
-        item_dicts = dict()
-        item_dicts["helloworld"] = tool_item_dict
-        item_dicts["Data Connection 1"] = dc_item_dict
-        specification_dicts = dict()
-        specification_dicts["Tool"] = [spec_dict]
-        engine_data = {
-            "items": item_dicts,
-            "specifications": specification_dicts,
-            "connections": [{"from": ["Data Connection 1", "left"], "to": ["helloworld", "right"]}],
-            "jumps": [],
-            "execution_permits": {"Data Connection 1": True, "helloworld": True},
-            "items_module_name": "spine_items",
-            "settings": {},
-            "project_dir": "./helloworld",
-        }
-        return engine_data
+    # def make_engine_data_for_helloworld_project(self):
+    #     """Returns an engine data dictionary for SpineEngine() for the project in file helloworld.zip.
+    #
+    #     engine_data dict must be the same as what is passed to SpineEngineWorker() in
+    #     spinetoolbox.project.create_engine_worker()
+    #     """
+    #     specification = PythonTool(name="helloworld2", tooltype="python", path="../../..",
+    #                                includes=["helloworld.py"], inputfiles=["input2.txt"],
+    #                                execute_in_work=True, settings=self.toolbox.qsettings(), logger=mock.Mock())
+    #     self.toolbox.project().add_specification(specification, save_to_disk=False)
+    #     add_tool(self.toolbox.project(), self.toolbox.item_factories, "helloworld", tool_spec="helloworld2")
+    #     add_dc(self.toolbox.project(), self.toolbox.item_factories, "Data Connection 1",
+    #            file_refs=[{"type": "path", "relative": True, "path": "input2.txt"}])
+    #     tool_item_dict = self.toolbox.project().get_item("helloworld").item_dict()
+    #     dc_item_dict = self.toolbox.project().get_item("Data Connection 1").item_dict()
+    #     spec_dict = specification.to_dict()
+    #     spec_dict["definition_file_path"] = "./helloworld/.spinetoolbox/specifications/Tool/helloworld2.json"
+    #     item_dicts = dict()
+    #     item_dicts["helloworld"] = tool_item_dict
+    #     item_dicts["Data Connection 1"] = dc_item_dict
+    #     specification_dicts = dict()
+    #     specification_dicts["Tool"] = [spec_dict]
+    #     engine_data = {
+    #         "items": item_dicts,
+    #         "specifications": specification_dicts,
+    #         "connections": [{"from": ["Data Connection 1", "left"], "to": ["helloworld", "right"]}],
+    #         "jumps": [],
+    #         "execution_permits": {"Data Connection 1": True, "helloworld": True},
+    #         "items_module_name": "spine_items",
+    #         "settings": {},
+    #         "project_dir": "./helloworld",
+    #     }
+    #     return engine_data
 
 
 if __name__ == "__main__":
