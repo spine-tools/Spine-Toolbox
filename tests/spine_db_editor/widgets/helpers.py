@@ -110,10 +110,10 @@ def add_object_class(view, class_name):
     add_entity_tree_item({0: class_name}, view, "Add object classes", AddObjectClassesDialog)
 
 
-def add_object(view, object_name):
+def add_object(view, object_name, object_class_index=0):
     model = view.model()
     root_index = model.index(0, 0)
-    class_index = model.index(0, 0, root_index)
+    class_index = model.index(object_class_index, 0, root_index)
     view._context_item = model.item_from_index(class_index)
     add_entity_tree_item({1: object_name}, view, "Add objects", AddObjectsDialog)
 

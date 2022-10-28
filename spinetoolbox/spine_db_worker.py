@@ -35,6 +35,9 @@ class _Event(Enum):
     ROLLBACK_SESSION = auto()
 
 
+_CHUNK_SIZE = 1000
+
+
 def _db_map_lock(func):
     """A wrapper for SpineDBWorker that locks the database for the duration of the wrapped method.
 
@@ -477,7 +480,7 @@ class SpineDBWorker(QObject):
             self._db_mngr.session_rolled_back.emit({self._db_map})
 
 
-def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
+def _make_iterator(query):
     """Runs the given query and yields results by chunks of given size.
 
     Args:
@@ -486,9 +489,9 @@ def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
     Yields:
         list: chunk of items
     """
-    it = (x._asdict() for x in query.yield_per(query_chunk_size).enable_eagerloads(False))
+    it = (x._asdict() for x in query.yield_per(_CHUNK_SIZE).enable_eagerloads(False))
     while True:
-        chunk = list(itertools.islice(it, iter_chunk_size))
+        chunk = list(itertools.islice(it, _CHUNK_SIZE))
         yield chunk
         if not chunk:
             break
