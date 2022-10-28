@@ -746,6 +746,7 @@ class SpineToolboxProject(MetaObject):
         connection.source_position = source_position
         connection.destination_position = destination_position
         self.connection_updated.emit(connection)
+        connection.link.update_icons()
 
     def jumps_for_item(self, item_name):
         """Returns jumps that have given item as source or destination.
