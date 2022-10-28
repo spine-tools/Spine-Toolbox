@@ -11,8 +11,8 @@
 
 """Unit tests for DB editor's custom ``QTableView`` classes."""
 import unittest
-
-from PySide2.QtCore import QItemSelectionModel, Qt, QModelIndex
+from unittest import mock
+from PySide2.QtCore import QItemSelectionModel, QModelIndex
 from PySide2.QtWidgets import QApplication
 
 from spinetoolbox.helpers import signal_waiter, ItemTypeFetchParent
@@ -160,6 +160,64 @@ class TestParameterTableView(TestBase):
             waiter.wait()
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
+        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+            self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+    @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=1)
+    def test_incremental_fetching_groups_values_by_entity_class(self):
+        tree_view = self._db_editor.ui.treeView_object
+        add_object_class(tree_view, "object_1_class")
+        add_object(tree_view, "an_object_1")
+        add_object(tree_view, "another_object_1")
+        add_object_class(tree_view, "object_2_class")
+        add_object(tree_view, "an_object_2", object_class_index=1)
+        definition_table_view = self._db_editor.ui.tableView_object_parameter_definition
+        definition_model = definition_table_view.model()
+        delegate_mock = EditorDelegateMocking()
+        _set_row_data(definition_table_view, definition_model, 0, ["object_1_class", "parameter_1"], delegate_mock)
+        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
+            _set_row_data(definition_table_view, definition_model, 1, ["object_2_class", "parameter_2"], delegate_mock)
+            waiter.wait()
+        table_view = self._db_editor.ui.tableView_object_parameter_value
+        model = table_view.model()
+        self.assertEqual(model.rowCount(), 1)
+        _set_row_data(
+            table_view, model, 0, ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value"], delegate_mock
+        )
+        _set_row_data(
+            table_view, model, 1, ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value"], delegate_mock
+        )
+        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
+            _set_row_data(
+                table_view,
+                model,
+                2,
+                ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value"],
+                delegate_mock,
+            )
+            waiter.wait()
+        self.assertEqual(model.rowCount(), 4)
+        self.assertEqual(model.columnCount(), 6)
+        expected = [
+            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", "database"],
+            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", "database"],
+            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", "database"],
+            [None, None, None, None, None, "database"],
+        ]
+        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        self._commit_changes_to_database("Add test data.")
+        with signal_waiter(self._db_mngr.session_refreshed) as waiter:
+            self._db_editor.refresh_session()
+            waiter.wait()
+        while model.rowCount() != 4:
+            QApplication.processEvents()
+        expected = [
+            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", "database"],
+            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", "database"],
+            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", "database"],
+            [None, None, None, None, None, "database"],
+        ]
         for row, column in zip(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 

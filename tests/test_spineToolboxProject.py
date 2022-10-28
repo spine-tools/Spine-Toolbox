@@ -24,6 +24,7 @@ from unittest import mock
 from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
 
+from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.utils.helpers import shorten
@@ -529,6 +530,100 @@ class TestSpineToolboxProject(unittest.TestCase):
         item = self.toolbox.project().get_item("test item")
         self.assertEqual(item.kwargs, {"type": "Tester", "a": {"b": 1, "c": 2, "d": 3}})
 
+    def test_add_and_save_specification(self):
+        project = self.toolbox.project()
+        specification = _MockSpecification(
+            "a specification", "Specification for testing.", "Tester", "Testing category"
+        )
+        project.add_specification(specification)
+        self.assertTrue(specification.is_equivalent(project.get_specification("a specification")))
+        specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
+        self.assertTrue(specification_dir.exists())
+        specification_file = specification_dir / (specification.short_name + ".json")
+        self.assertEqual(specification_file, Path(specification.definition_file_path))
+        self.assertTrue(specification_file.exists())
+        with open(specification_file) as specification_input:
+            specification_dict = json.load(specification_input)
+        self.assertEqual(specification_dict, specification.to_dict())
+        local_data_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "local"
+        self.assertFalse(local_data_dir.exists())
+
+    def test_add_and_save_specification_with_local_data(self):
+        project = self.toolbox.project()
+        specification = _MockSpecificationWithLocalData(
+            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+        )
+        project.add_specification(specification)
+        self.assertTrue(specification.is_equivalent(project.get_specification("a specification")))
+        specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
+        self.assertTrue(specification_dir.exists())
+        specification_file = specification_dir / (specification.short_name + ".json")
+        self.assertEqual(specification_file, Path(specification.definition_file_path))
+        self.assertTrue(specification_file.exists())
+        with open(specification_file) as specification_input:
+            specification_dict = json.load(specification_input)
+        expected = specification.to_dict()
+        expected.pop("data")
+        self.assertEqual(specification_dict, expected)
+        local_data_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "local"
+        self.assertTrue(local_data_dir.exists())
+        local_data_file = local_data_dir / "specification_local_data.json"
+        self.assertTrue(local_data_file.exists())
+        with open(local_data_file) as data_input:
+            local_data = json.load(data_input)
+        self.assertEqual(local_data, {"Tester": {"a specification": {"data": "my precious data"}}})
+
+    def test_renaming_specification_with_local_data_updates_local_data_file(self):
+        project = self.toolbox.project()
+        original_specification = _MockSpecificationWithLocalData(
+            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+        )
+        project.add_specification(original_specification)
+        local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
+        self.assertTrue(local_data_file.exists())
+        specification = _MockSpecificationWithLocalData(
+            "another specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+        )
+        project.replace_specification("a specification", specification)
+        specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
+        self.assertTrue(specification_dir.exists())
+        specification_file = specification_dir / (specification.short_name + ".json")
+        self.assertEqual(specification_file, Path(specification.definition_file_path))
+        self.assertTrue(specification_file.exists())
+        self.assertTrue(Path(original_specification.definition_file_path).exists())
+        with open(specification_file) as specification_input:
+            specification_dict = json.load(specification_input)
+        expected = specification.to_dict()
+        expected.pop("data")
+        self.assertEqual(specification_dict, expected)
+        with open(local_data_file) as data_input:
+            local_data = json.load(data_input)
+        self.assertEqual(local_data, {"Tester": {"another specification": {"data": "my precious data"}}})
+
+    def test_replace_specification_with_local_data_by_one_without_removes_local_data_from_the_file(self):
+        project = self.toolbox.project()
+        specification_with_local_data = _MockSpecificationWithLocalData(
+            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+        )
+        project.add_specification(specification_with_local_data)
+        local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
+        self.assertTrue(local_data_file.exists())
+        specification = _MockSpecification(
+            "another specification", "Specification without local data", "Tester", "Testing category"
+        )
+        project.replace_specification("a specification", specification)
+        specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
+        self.assertTrue(specification_dir.exists())
+        specification_file = specification_dir / (specification.short_name + ".json")
+        self.assertEqual(specification_file, Path(specification.definition_file_path))
+        self.assertTrue(specification_file.exists())
+        with open(specification_file) as specification_input:
+            specification_dict = json.load(specification_input)
+        self.assertEqual(specification_dict, specification.to_dict())
+        with open(local_data_file) as data_input:
+            local_data = json.load(data_input)
+        self.assertEqual(local_data, {})
+
     def _make_mock_executable(self, item):
         item_name = item.name
         item = self.toolbox.project_item_model.get_item(item_name).project_item
@@ -595,6 +690,39 @@ class _MockItemFactoryForLocalDataTests(ProjectItemFactory):
     @staticmethod
     def make_item(name, item_dict, toolbox, project):
         return _MockItemWithLocalData(project, **item_dict)
+
+
+class _MockSpecification(ProjectItemSpecification):
+    def to_dict(self):
+        return {"name": self.name, "description": self.description}
+
+    def is_equivalent(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return self.name == other.name and self.item_type == other.item_type and self.description == other.description
+
+
+class _MockSpecificationWithLocalData(ProjectItemSpecification):
+    def __init__(self, name, description, item_type, item_category, local_data):
+        super().__init__(name, description, item_type, item_category)
+        self._local_data = local_data
+
+    def to_dict(self):
+        return {"name": self.name, "description": self.description, "data": self._local_data}
+
+    def is_equivalent(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return (
+            self.name == other.name
+            and self.item_type == other.item_type
+            and self.description == other.description
+            and self._local_data == other._local_data
+        )
+
+    @staticmethod
+    def _definition_local_entries():
+        return [("data",)]
 
 
 if __name__ == '__main__':

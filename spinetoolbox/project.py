@@ -461,7 +461,7 @@ class SpineToolboxProject(MetaObject):
         if name != specification.name and self.is_specification_name_reserved(specification.name):
             self._logger.msg_error.emit(f"Specification name {specification.name} already in use.")
             return False
-        if save_to_disk and not self.save_specification_file(specification):
+        if save_to_disk and not self.save_specification_file(specification, name):
             return False
         id_ = self.specification_name_to_id(name)
         self._specifications[id_] = specification
@@ -484,13 +484,14 @@ class SpineToolboxProject(MetaObject):
         self.specification_replaced.emit(name, specification.name)
         return True
 
-    def save_specification_file(self, specification):
+    def save_specification_file(self, specification, previous_name=None):
         """Saves the given project item specification.
 
         Save path is determined by specification directory and specification's name.
 
         Args:
             specification (ProjectItemSpecification): specification to save
+            previous_name (str, optional): specification's earlier name if it has been renamed/replaced
 
         Returns:
             bool: True if operation was successful, False otherwise
@@ -501,19 +502,45 @@ class SpineToolboxProject(MetaObject):
                 return False
             specification.definition_file_path = candidate_path
         local_data = specification.save()
-        if local_data:
-            local_data_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, SPECIFICATION_LOCAL_DATA_FILENAME)
-            if local_data_path.exists():
-                with open(local_data_path) as local_data_file:
-                    specification_local_data = json.load(local_data_file)
-                specification_local_data.setdefault(specification.item_type, {})[specification.name] = local_data
-            else:
-                specification_local_data = {specification.item_type: {specification.name: local_data}}
-            local_data_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(local_data_path, "w") as local_data_file:
-                self._dump(specification_local_data, local_data_file)
+        self._update_specification_local_data_store(specification, local_data, previous_name)
         self.specification_saved.emit(specification.name, specification.definition_file_path)
         return True
+
+    def _update_specification_local_data_store(self, specification, local_data, previous_name):
+        """Updates the file containing local data of project's specifications.
+
+        Args:
+            specification (ProjectItemSpecification): specification
+            local_data (dict): local data serialized into dict
+            previous_name (str, optional): specification's earlier name if it has been renamed/replaced
+        """
+        local_data_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, SPECIFICATION_LOCAL_DATA_FILENAME)
+        if local_data_path.exists():
+            with open(local_data_path) as local_data_file:
+                specification_local_data = json.load(local_data_file)
+            if local_data:
+                data_by_item_type = specification_local_data.setdefault(specification.item_type, {})
+                if previous_name is not None:
+                    data_by_item_type.pop(previous_name, None)
+                data_by_item_type[specification.name] = local_data
+            else:
+                local_item_data = specification_local_data.get(specification.item_type)
+                if local_item_data is not None:
+                    name = specification.name if previous_name is None else previous_name
+                    previous_data = local_item_data.pop(name, None)
+                    if previous_data is None:
+                        return
+                    if not local_item_data:
+                        del specification_local_data[specification.item_type]
+                else:
+                    return
+        elif not local_data:
+            return
+        else:
+            specification_local_data = {specification.item_type: {specification.name: local_data}}
+        local_data_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(local_data_path, "w") as local_data_file:
+            self._dump(specification_local_data, local_data_file)
 
     def _default_specification_file_path(self, specification):
         """Determines a path inside project directory to save a specification.
@@ -750,6 +777,7 @@ class SpineToolboxProject(MetaObject):
         connection.source_position = source_position
         connection.destination_position = destination_position
         self.connection_updated.emit(connection)
+        connection.link.update_icons()
 
     def jumps_for_item(self, item_name):
         """Returns jumps that have given item as source or destination.

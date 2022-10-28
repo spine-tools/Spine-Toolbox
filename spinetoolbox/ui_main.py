@@ -816,6 +816,7 @@ class ToolboxUI(QMainWindow):
         self._restore_original_console()
         self.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self._shutdown_engine_kernels()
+        self._close_item_consoles()
 
     def undo_critical_commands(self):
         """Undoes critical commands in the undo stack.
@@ -1940,6 +1941,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.tear_down_consoles()
+        self._close_item_consoles()
         if self._project is not None:
             self._project.tear_down()
         for item_type in self.item_factories:
@@ -2448,10 +2450,14 @@ class ToolboxUI(QMainWindow):
         """Shuts down all kernels managed by Spine Engine."""
         exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
-        while self._jupyter_consoles:
-            connection_file, console = self._jupyter_consoles.popitem()
+        for connection_file in self._jupyter_consoles:
             engine_mngr.shutdown_kernel(connection_file)
-            console.deleteLater()
+
+    def _close_item_consoles(self):
+        while self._persistent_consoles:
+            self._persistent_consoles.popitem()[1].close()
+        while self._jupyter_consoles:
+            self._jupyter_consoles.popitem()[1].close()
 
     def restore_and_activate(self):
         if self.isMinimized():
