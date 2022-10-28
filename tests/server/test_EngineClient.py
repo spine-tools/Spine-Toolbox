@@ -118,7 +118,7 @@ class TestEngineClient(unittest.TestCase):
         self.assertTrue(client3.pull_socket.closed)
         self.assertTrue(client3._context.closed)
 
-    def test_python_persistent_execution_mngr_running_on_server(self):
+    def test_engine_client_send_issue_persistent_command(self):
         client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
         logger = mock.MagicMock()
         logger.msg_warning = mock.MagicMock()
@@ -140,6 +140,20 @@ class TestEngineClient(unittest.TestCase):
         self.assertEqual(1, n_stdin_msgs)
         self.assertEqual(1, n_stdout_msgs)
         self.assertEqual(2, n_msgs)
+        client.close()
+
+    def test_engine_client_send_is_complete(self):
+        client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
+        logger = mock.MagicMock()
+        logger.msg_warning = mock.MagicMock()
+        exec_mngr1 = PythonPersistentExecutionManager(
+            logger, ["python"], [], "alias", group_id="SomeGroup"
+        )
+        self.service.persistent_exec_mngrs["123"] = exec_mngr1
+        should_be_true = client.send_is_complete("123", "print('hi')")
+        self.assertTrue(should_be_true)
+        should_be_false = client.send_is_complete("123", "if True:")
+        self.assertFalse(should_be_false)
         client.close()
 
     def test_upload_project(self):
