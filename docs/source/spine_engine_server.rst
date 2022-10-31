@@ -1,24 +1,24 @@
-.. Setting up Spine Engine Server
+.. Spine Engine Server
    Created 31.10.2022
 
 .. _Spine Engine Server:
 
-**********************************************
-How to Execute Projects on Spine Engine Server
-**********************************************
+*******************
+Spine Engine Server
+*******************
 
 Setting up Spine Engine Server
 ------------------------------
 
-1. Make a new environment for spine engine server
+1. Make a new environment for Spine Engine Server
 
-   - Make a new miniconda environment & activate it
-   - Clone and checkout spine-engine branch **server**.
+   - Make a miniconda environment & activate it
+   - Clone and checkout spine-engine
    - cd to spine-engine repo root, run::
 
       pip install -e .
 
-   - Clone and checkout spine-items branch **server**.
+   - Clone and checkout spine-items
    - cd to spine-items repo root, run::
 
       pip install --no-deps -e .
@@ -59,7 +59,6 @@ Setting up Spine Engine Server
       python start_server.py 50001
 
    - where 50001 is the server port number.
-
    - With Stonehouse security, run::
 
       python start_server.py 50001 StoneHouse <repo_root>/spine-engine/server/connectivity/certs
@@ -78,9 +77,10 @@ Setting up Spine Toolbox (client)
 2. Start Spine Toolbox and open a project
 
 3. Open the **Engine** page in application settings (**File->Settings**)
+
    - Enable remote execution from the checkbox (Enabled)
-   - Set up the remote server settings: host, port, security model, and security folder
-     Host is 127.0.0.1 when the Spine Engine Server is running on the same computer as the client.
+   - Set up the Spine Engine Server settings (host, port, security model, and security folder).
+     Host is 127.0.0.1 when the Server runs on the same computer as the client.
    - Click Ok, to close and save the new Settings
 
 4. Click Play to execute the project.
