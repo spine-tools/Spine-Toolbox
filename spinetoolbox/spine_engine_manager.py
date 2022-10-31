@@ -254,10 +254,16 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         """Returns the next engine execution event."""
         return self.q.get()
 
+    def clean_up(self):
+        """Closes EngineClient and joins _runner thread if still active."""
+        self.engine_client.close()
+        if self._runner.is_alive():
+            self._runner.join()
+
     def stop_engine(self):
-        """Sends a request to stop execution on Server, kills EngineClient and _runner threads."""
-        if self._runner.is_alive():  # because this is called in spine engine worker clean_up()
-            self.engine_client.stop_execution(self.exec_job_id)  # response not needed
+        """Sends a request to stop execution on Server then waits for _runner thread to end."""
+        if self._runner.is_alive():
+            self.engine_client.stop_execution(self.exec_job_id)
             self._runner.join()
 
     def _run(self):

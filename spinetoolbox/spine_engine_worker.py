@@ -381,7 +381,10 @@ class SpineEngineWorker(QObject):
     def clean_up(self):
         for item in self._executing_items:
             self._node_execution_finished.emit(item, None, None)
-        self._engine_mngr.stop_engine()
+        if isinstance(self._engine_mngr, LocalSpineEngineManager):
+            self._engine_mngr.stop_engine()
+        else:
+            self._engine_mngr.clean_up()
         self._thread.quit()
         self._thread.wait()
         self._thread.deleteLater()
