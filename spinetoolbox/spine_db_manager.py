@@ -562,7 +562,6 @@ class SpineDBManager(QObject):
             commit_dirty (bool): True to commit dirty database mapping, False to roll back
             commit_msg (str): commit message
         """
-        dirty_orphan_db_maps = self.dirty_or_orphan(listener, *db_maps)
         for db_map in db_maps:
             self.signaller.remove_db_map_listener(db_map, listener)
             try:
@@ -570,6 +569,7 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
             except AttributeError:
                 pass
+        dirty_orphan_db_maps = self.dirty_and_orphan(listener, *db_maps)
         if dirty_orphan_db_maps:
             if commit_dirty:
                 self.commit_session(commit_msg, *dirty_orphan_db_maps)
@@ -590,15 +590,15 @@ class SpineDBManager(QObject):
         """
         return [db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()]
 
-    def dirty_or_orphan(self, listener, *db_maps):
-        """Checks which of the given database mappings are dirty or orphaned.
+    def dirty_and_orphan(self, listener, *db_maps):
+        """Checks which of the given database mappings are dirty and have no listeners.
 
         Args:
             listener (Any): a listener object
             *db_maps: mappings to check
 
         Return:
-            list of DiffDatabaseMapping: dirty or orphaned mappings
+            list of DiffDatabaseMapping: dirty and orphaned mappings
         """
 
         def is_dirty(db_map):
@@ -608,6 +608,25 @@ class SpineDBManager(QObject):
             return not set(self.signaller.db_map_listeners(db_map)) - {listener}
 
         return [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
+
+    def dirty_and_without_editors(self, listener, *db_maps):
+        """Checks which of the given database mappings are dirty and have no editors.
+
+        Args:
+            listener (Any): a listener object
+            *db_maps: mappings to check
+
+        Return:
+            list of DiffDatabaseMapping: mappings that are dirty and don't have editors
+        """
+
+        def is_dirty(db_map):
+            return not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
+
+        def has_no_editors(db_map):
+            return not set(self.signaller.db_map_editors(db_map)) - {listener}
+
+        return [db_map for db_map in db_maps if has_no_editors(db_map) and is_dirty(db_map)]
 
     def clean_up(self):
         while self._workers:

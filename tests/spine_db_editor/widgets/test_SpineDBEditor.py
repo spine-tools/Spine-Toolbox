@@ -20,7 +20,7 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtCore import QModelIndex, QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
@@ -411,6 +411,68 @@ class TestSpineDBEditor(
         for row in range(model.rowCount()):
             row_data.append(tuple(model.index(row, h(field)).data() for field in ("object_class_name", "database")))
         self.assertIn(("fish", "database"), row_data)
+
+
+class TestClosingDBEditors(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        self._editors = []
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        ):
+            mock_settings = mock.Mock()
+            mock_settings.value.side_effect = lambda *args, **kwargs: 0
+            self._db_mngr = SpineDBManager(mock_settings, None)
+            logger = mock.MagicMock()
+            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.connection.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+        for editor in self._editors:
+            editor.deleteLater()
+
+    def _make_db_editor(self):
+        editor = SpineDBEditor(self._db_mngr, {"sqlite://": "database"})
+        self._editors.append(editor)
+        return editor
+
+    def test_first_editor_to_close_does_not_ask_for_confirmation_on_dirty_database(self):
+        editor_1 = self._make_db_editor()
+        editor_2 = self._make_db_editor()
+        self._db_mngr.add_object_classes({self._db_map: [{"name": "my_object_class"}]})
+        self.assertTrue(self._db_mngr.dirty(self._db_map))
+        with mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
+        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
+        ) as commit_changes:
+            commit_changes.return_value = QMessageBox.Discard
+            editor_1.close()
+            commit_changes.assert_not_called()
+            editor_2.close()
+            commit_changes.assert_called_once()
+
+    def test_editor_asks_for_confirmation_even_when_non_editor_listeners_are_connected(self):
+        editor = self._make_db_editor()
+        self._db_mngr.add_object_classes({self._db_map: [{"name": "my_object_class"}]})
+        self.assertTrue(self._db_mngr.dirty(self._db_map))
+        non_editor_listener = object()
+        self._db_mngr.register_listener(non_editor_listener, self._db_map)
+        with mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
+        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
+        ) as commit_changes:
+            commit_changes.return_value = QMessageBox.Discard
+            editor.close()
+            commit_changes.assert_called_once()
 
 
 if __name__ == '__main__':

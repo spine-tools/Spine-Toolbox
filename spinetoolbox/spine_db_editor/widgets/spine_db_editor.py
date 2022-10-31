@@ -73,8 +73,7 @@ class SpineDBEditorBase(QMainWindow):
     sqlite_file_exported = Signal(str)
 
     def __init__(self, db_mngr):
-        """Initializes form.
-
+        """
         Args:
             db_mngr (SpineDBManager): The manager to use
         """
@@ -138,6 +137,18 @@ class SpineDBEditorBase(QMainWindow):
     @property
     def db_url_codenames(self):
         return {db_map.db_url: db_map.codename for db_map in self.db_maps}
+
+    @staticmethod
+    def is_db_map_editor():
+        """Always returns True as SpineDBEditors are truly database editors.
+
+        Unless, of course, the database can one day be opened in read-only mode.
+        In that case this method should return False.
+
+        Returns:
+            bool: Always True
+        """
+        return True
 
     def load_db_urls(self, db_url_codenames, create=False, update_history=True):
         self.ui.actionImport.setEnabled(False)
@@ -947,14 +958,14 @@ class SpineDBEditorBase(QMainWindow):
         Returns:
             bool: True if editor is ready to close, False otherwise
         """
-        dirty_or_orphan = self.db_mngr.dirty_or_orphan(self, *self.db_maps)
+        needs_committing = self.db_mngr.dirty_and_without_editors(self, *self.db_maps)
         commit_dirty = False
         commit_msg = ""
-        if dirty_or_orphan:
+        if needs_committing:
             answer = self._prompt_to_commit_changes()
             if answer == QMessageBox.Cancel:
                 return False
-            db_names = ", ".join([db_map.codename for db_map in dirty_or_orphan])
+            db_names = ", ".join([db_map.codename for db_map in needs_committing])
             if answer == QMessageBox.Save:
                 commit_dirty = True
                 commit_msg = self._get_commit_msg(db_names)
