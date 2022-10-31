@@ -119,6 +119,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
             self.link_drawer.sleep()
             self.emit_connection_failed()
             return
+        self.link_drawer.dst_connector.set_normal_brush()
         self.link_drawer.add_link()
 
     def emit_connection_failed(self):
