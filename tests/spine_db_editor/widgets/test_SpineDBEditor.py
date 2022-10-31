@@ -18,11 +18,10 @@ Unit tests for SpineDBEditor classes.
 
 import unittest
 from unittest import mock
-import logging
-import sys
 from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtCore import QModelIndex, QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
@@ -461,7 +460,9 @@ class TestClosingDBEditors(unittest.TestCase):
 
     def test_editor_asks_for_confirmation_even_when_non_editor_listeners_are_connected(self):
         editor = self._make_db_editor()
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "my_object_class"}]})
+        with signal_waiter(self._db_mngr.object_classes_added) as waiter:
+            self._db_mngr.add_object_classes({self._db_map: [{"name": "my_object_class"}]})
+            waiter.wait()
         self.assertTrue(self._db_mngr.dirty(self._db_map))
         non_editor_listener = object()
         self._db_mngr.register_listener(non_editor_listener, self._db_map)

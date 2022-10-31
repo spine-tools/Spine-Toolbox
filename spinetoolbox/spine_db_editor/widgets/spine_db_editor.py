@@ -408,7 +408,7 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def update_commit_enabled(self, _clean=False):
-        dirty = not all(self.db_mngr.undo_stack[db_map].isClean() for db_map in self.db_maps)
+        dirty = any(self.db_mngr.is_dirty(db_map) for db_map in self.db_maps)
         self.ui.actionExport_session.setEnabled(dirty)
         self.ui.actionCommit.setEnabled(dirty)
         self.ui.actionRollback.setEnabled(dirty)
