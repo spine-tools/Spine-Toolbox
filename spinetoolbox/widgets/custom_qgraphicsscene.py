@@ -99,17 +99,21 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     def mousePressEvent(self, event):
         """Puts link drawer to sleep and log message if it looks like the user doesn't know what they're doing."""
-        was_drawing = self.link_drawer is not None
         super().mousePressEvent(event)
-        if was_drawing and self.link_drawer is not None:
-            self.link_drawer.sleep()
-            if event.button() == Qt.LeftButton:
-                self.emit_connection_failed()
+        if self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false":
+            self._finish_link()
 
     def mouseReleaseEvent(self, event):
         """Makes link if drawer is released over a valid connector button."""
         super().mouseReleaseEvent(event)
-        if self.link_drawer is None or self.link_drawer.src_connector.isUnderMouse():
+        if self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true":
+            self._finish_link()
+
+    def _finish_link(self):
+        if self.link_drawer is None:
+            return
+        if self.link_drawer.src_connector.isUnderMouse():
+            self.link_drawer.sleep()
             return
         if self.link_drawer.dst_connector is None:
             self.link_drawer.sleep()
