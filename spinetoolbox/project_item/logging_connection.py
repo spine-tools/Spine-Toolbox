@@ -173,6 +173,8 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             if not disabled_scenarios and not disabled_tools:
                 return True
             db_map = self._get_db_map(url)
+            if db_map is None:
+                return False
             available_scenarios = {
                 x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario", only_visible=True)
             }
@@ -188,6 +190,8 @@ class LoggingConnection(LogMixin, HeadlessConnection):
     def _get_db_map(self, url):
         if url not in self._db_maps:
             self._db_maps[url] = db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox)
+            if db_map is None:
+                return None
             self._toolbox.db_mngr.register_listener(self, db_map)
             self._fetch_more_if_possible()
         return self._db_maps[url]
@@ -242,10 +246,14 @@ class LoggingConnection(LogMixin, HeadlessConnection):
 
     def get_scenario_names(self, url):
         db_map = self._get_db_map(url)
+        if db_map is None:
+            return []
         return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario", only_visible=True))
 
     def get_tool_names(self, url):
         db_map = self._get_db_map(url)
+        if db_map is None:
+            return []
         return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "tool", only_visible=True))
 
     def may_have_filters(self):
