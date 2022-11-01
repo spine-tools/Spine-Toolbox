@@ -48,14 +48,9 @@ class EngineClient:
         self.dealer_socket = self._context.socket(zmq.DEALER)
         self.dealer_socket.setsockopt(zmq.LINGER, 1)
         self.pull_socket = self._context.socket(zmq.PULL)
-        self.client_ctrl_sender = self._context.socket(zmq.PAIR)
-        self.client_ctrl_sender.bind("inproc://client_control")  # inproc:// transport requires bind() before connect()
-        self.client_ctrl_receiver = self._context.socket(zmq.PAIR)
-        self.client_ctrl_receiver.connect("inproc://client_control")
         self.poller = zmq.Poller()
         self.poller.register(self.dealer_socket, zmq.POLLIN)
         self.poller.register(self.pull_socket, zmq.POLLIN)
-        self.poller.register(self.client_ctrl_receiver, zmq.POLLIN)
         self.client_project_dir = None
         self.start_time = 0
         if sec_model == ClientSecurityModel.STONEHOUSE:
@@ -109,12 +104,6 @@ class EngineClient:
                 if dealer_or_pull == "dealer":
                     return self.dealer_socket.recv_multipart()
                 continue
-            if sockets.get(self.client_ctrl_receiver) == zmq.POLLIN:
-                print("debug")
-                break
-        # TODO: This is never reached
-        self.close()
-        return None
 
     def _check_connectivity(self, timeout):
         """Pings server, waits for the response, and acts accordingly.
@@ -337,9 +326,5 @@ class EngineClient:
             self.dealer_socket.close()
         if not self.pull_socket.closed:
             self.pull_socket.close()
-        if not self.client_ctrl_sender.closed:
-            self.client_ctrl_sender.close()
-        if not self.client_ctrl_receiver.closed:
-            self.client_ctrl_receiver.close()
         if not self._context.closed:
             self._context.term()
