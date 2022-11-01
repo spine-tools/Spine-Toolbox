@@ -540,6 +540,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         color_properties_widgets = self._qsettings.value("appSettings/colorPropertiesWidgets", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
+        drag_to_draw_links = self._qsettings.value("appSettings/dragToDrawLinks", defaultValue="false")
         rounded_items = self._qsettings.value("appSettings/roundedItems", defaultValue="false")
         prevent_overlapping = self._qsettings.value("appSettings/preventOverlapping", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
@@ -581,6 +582,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_color_properties_widgets.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
+        if drag_to_draw_links == "true":
+            self.ui.checkBox_drag_to_draw_links.setCheckState(Qt.Checked)
         if rounded_items == "true":
             self.ui.checkBox_use_rounded_items.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
@@ -714,6 +717,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/colorPropertiesWidgets", color_properties_widgets)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
+        drag_to_draw_links = "true" if int(self.ui.checkBox_drag_to_draw_links.checkState()) else "false"
+        self._qsettings.setValue("appSettings/dragToDrawLinks", drag_to_draw_links)
         rounded_items = "true" if int(self.ui.checkBox_use_rounded_items.checkState()) else "false"
         self._qsettings.setValue("appSettings/roundedItems", rounded_items)
         prevent_overlapping = "true" if int(self.ui.checkBox_prevent_overlapping.checkState()) else "false"

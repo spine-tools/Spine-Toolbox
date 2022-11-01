@@ -69,6 +69,24 @@ class SpineDBSignaller(QObject):
     def db_map_listeners(self, db_map):
         return set(listener for listener, db_maps in self.listeners.items() if db_map in db_maps)
 
+    def db_map_editors(self, db_map):
+        """Creates a set of given database map's editors.
+
+        Editors are listeners that are interested whether the database is dirty.
+        They are expected to implement ``is_db_map_editor()`` which returns a bool.
+
+        Args:
+            db_map (DiffDatabaseMapping): database map
+
+        Returns:
+            set: database mapping's editors
+        """
+        return {
+            listener
+            for listener in self.db_map_listeners(db_map)
+            if getattr(listener, "is_db_map_editor", lambda: False)()
+        }
+
     def connect_signals(self):
         """Connects signals."""
         # Added

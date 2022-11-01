@@ -239,6 +239,28 @@ class ProjectItemIcon(QGraphicsPathItem):
         """
         return [l for conn in self.connectors.values() for l in conn.incoming_links()]
 
+    def _closest_connector(self, pos):
+        """Returns the closest connector button to given scene pos."""
+        connectors = list(self.connectors.values())
+        distances = [(pos - connector.sceneBoundingRect().center()).manhattanLength() for connector in connectors]
+        index_min = min(range(len(distances)), key=distances.__getitem__)
+        return connectors[index_min]
+
+    def _update_link_drawer_destination(self, pos=None):
+        """Updates link drawer destination. If pos is None, then the link drawer would have no destination.
+        Otherwise, the destination would be the connector button closest to pos.
+        """
+        link_drawer = self.scene().link_drawer
+        if link_drawer is not None:
+            if link_drawer.dst_connector is not None:
+                link_drawer.dst_connector.set_normal_brush()
+            if pos is not None:
+                link_drawer.dst_connector = self._closest_connector(pos)
+                link_drawer.dst_connector.set_hover_brush()
+            else:
+                link_drawer.dst_connector = None
+            link_drawer.update_geometry()
+
     def hoverEnterEvent(self, event):
         """Sets a drop shadow effect to icon when mouse enters its boundaries.
 
@@ -248,6 +270,11 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.prepareGeometryChange()
         self.graphicsEffect().setEnabled(True)
         event.accept()
+        self._update_link_drawer_destination(event.scenePos())
+
+    def hoverMoveEvent(self, event):
+        event.accept()
+        self._update_link_drawer_destination(event.scenePos())
 
     def hoverLeaveEvent(self, event):
         """Disables the drop shadow when mouse leaves icon boundaries.
@@ -258,6 +285,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.prepareGeometryChange()
         self.graphicsEffect().setEnabled(False)
         event.accept()
+        self._update_link_drawer_destination()
 
     def mousePressEvent(self, event):
         """Updates scene's icon group."""
@@ -467,7 +495,7 @@ class ConnectorButton(QGraphicsPathItem):
         return self._toolbox.project().get_item(self._parent.name())
 
     def mousePressEvent(self, event):
-        """Connector button mouse press event. Either starts or closes a link.
+        """Connector button mouse press event.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
@@ -476,14 +504,26 @@ class ConnectorButton(QGraphicsPathItem):
             event.accept()
             return
         self._parent.select_item()
+        if self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true":
+            self._start_link(event)
+
+    def mouseReleaseEvent(self, event):
+        """Connector button mouse release event.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        if (
+            self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false"
+            and self.isUnderMouse()
+        ):
+            self._start_link(event)
+
+    def _start_link(self, event):
         scene = self.scene()
         if scene.link_drawer is None:
             scene.select_link_drawer(LinkType.JUMP if event.modifiers() & Qt.AltModifier else LinkType.CONNECTION)
-        link_drawer = scene.link_drawer
-        if not link_drawer.isVisible():
-            link_drawer.wake_up(self)
-        else:
-            link_drawer.add_link()
+            scene.link_drawer.wake_up(self)
 
     def set_friend_connectors_enabled(self, enabled):
         """Enables or disables all connectors in the parent.
@@ -497,17 +537,19 @@ class ConnectorButton(QGraphicsPathItem):
             conn.setEnabled(enabled)
             conn.setBrush(conn.brush)  # Remove hover brush from src connector that was clicked
 
+    def set_hover_brush(self):
+        self.setBrush(self.hover_brush)
+
+    def set_normal_brush(self):
+        self.setBrush(self.brush)
+
     def hoverEnterEvent(self, event):
         """Sets a darker shade to connector button when mouse enters its boundaries.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        self.setBrush(self.hover_brush)
-        link_drawer = self.scene().link_drawer
-        if link_drawer is not None:
-            link_drawer.dst_connector = self
-            link_drawer.update_geometry()
+        self.set_hover_brush()
 
     def hoverLeaveEvent(self, event):
         """Restore original brush when mouse leaves connector button boundaries.
@@ -515,11 +557,7 @@ class ConnectorButton(QGraphicsPathItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        self.setBrush(self.brush)
-        link_drawer = self.scene().link_drawer
-        if link_drawer is not None:
-            link_drawer.dst_connector = None
-            link_drawer.update_geometry()
+        self.set_normal_brush()
 
     def itemChange(self, change, value):
         """If this is being removed from the scene while it's the origin of the link drawer,
