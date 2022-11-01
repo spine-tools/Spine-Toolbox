@@ -1,0 +1,122 @@
+{
+    "project": {
+        "version": 8,
+        "name": "merger_write_order",
+        "description": "",
+        "specifications": {},
+        "connections": [
+            {
+                "name": "from Second source to Second merger",
+                "from": [
+                    "Second source",
+                    "right"
+                ],
+                "to": [
+                    "Second merger",
+                    "bottom"
+                ]
+            },
+            {
+                "name": "from First source to First merger",
+                "from": [
+                    "First source",
+                    "left"
+                ],
+                "to": [
+                    "First merger",
+                    "bottom"
+                ]
+            },
+            {
+                "name": "from First merger to Sink",
+                "from": [
+                    "First merger",
+                    "right"
+                ],
+                "to": [
+                    "Sink",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Second merger to Sink",
+                "from": [
+                    "Second merger",
+                    "left"
+                ],
+                "to": [
+                    "Sink",
+                    "right"
+                ],
+                "options": {
+                    "write_index": 2
+                }
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "First source": {
+            "type": "Data Store",
+            "description": "",
+            "x": -24.043046357615914,
+            "y": 183.32822847682124,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/first_source/source 1.sqlite"
+                }
+            }
+        },
+        "Second source": {
+            "type": "Data Store",
+            "description": "",
+            "x": 71.12734547461368,
+            "y": 182.32643487858732,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/second_source/source 2.sqlite"
+                }
+            }
+        },
+        "Sink": {
+            "type": "Data Store",
+            "description": "",
+            "x": 20.03587196467992,
+            "y": -101.18115342163357,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/sink/sink.sqlite"
+                }
+            }
+        },
+        "First merger": {
+            "type": "Merger",
+            "description": "",
+            "x": -108.19370860927155,
+            "y": 61.109409492273755,
+            "cancel_on_error": false
+        },
+        "Second merger": {
+            "type": "Merger",
+            "description": "",
+            "x": 151.27083333333337,
+            "y": 61.10940949227376,
+            "cancel_on_error": false
+        }
+    }
+}
