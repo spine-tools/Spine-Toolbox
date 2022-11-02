@@ -124,7 +124,7 @@ class EmptyChildMixin:
         self.append_children([empty_child])
 
 
-class SortsChildrenMixin:
+class SortChildrenMixin:
     def insert_children_sorted(self, children):
         for child in children:
             child.parent_item = self
@@ -134,13 +134,28 @@ class SortsChildrenMixin:
         return True
 
 
+class CallbackFetchParent(ItemTypeFetchParent):
+    def __init__(self, fetch_item_type, filter_query=None, handle_items_added=None):
+        super().__init__(fetch_item_type)
+        self._filter_query = filter_query if filter_query is not None else lambda qry: qry
+        self._handle_items_added = handle_items_added if handle_items_added is not None else lambda db_map_data: None
+
+    def handle_items_added(self, db_map_data):
+        self._handle_items_added(db_map_data)
+
+    def filter_query(self, query, subquery, db_map):
+        return self._filter_query(query, subquery, db_map)
+
+
 class FetchMoreMixin:
     # FIXME: Use parent for calls to fetch_more can_fetch_more
     # and also insert items from db map cache in case they were already fetched
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._natural_fetch_parent = ItemTypeFetchParent(self.fetch_item_type)
+        self._natural_fetch_parent = CallbackFetchParent(
+            self.fetch_item_type, self.filter_query, self.handle_items_added
+        )
 
     @property
     def fetch_item_type(self):
@@ -156,8 +171,29 @@ class FetchMoreMixin:
         for parent in self._fetch_parents():
             self.db_mngr.fetch_more(self.db_map, parent)
 
+    def _make_child(self, id_):
+        raise NotImplementedError()
 
-class StandardDBItem(SortsChildrenMixin, StandardTreeItem):
+    # pylint: disable=no-self-use
+    def filter_query(self, query, subquery, db_map):
+        return query
+
+    def handle_items_added(self, db_map_data):
+        db_items = db_map_data.get(self.db_map, [])
+        ids_committed = []
+        ids_uncommitted = []
+        for item in db_items:
+            if item["id"] in self.children_ids:
+                continue
+            ids = ids_committed if item.get("commit_id") is not None else ids_uncommitted
+            ids.append(item["id"])
+        children_committed = [self._make_child(id_) for id_ in ids_committed]
+        children_uncommitted = [self._make_child(id_) for id_ in ids_uncommitted]
+        self.insert_children_sorted(children_committed)
+        self.insert_children(len(self.non_empty_children), children_uncommitted)
+
+
+class StandardDBItem(SortChildrenMixin, StandardTreeItem):
     """An item representing a db."""
 
     def __init__(self, db_map):
@@ -184,7 +220,7 @@ class StandardDBItem(SortsChildrenMixin, StandardTreeItem):
             return self.db_map.codename
 
 
-class RootItem(SortsChildrenMixin, BoldTextMixin, FetchMoreMixin, StandardTreeItem):
+class RootItem(SortChildrenMixin, BoldTextMixin, FetchMoreMixin, StandardTreeItem):
     """A root item."""
 
     @property
@@ -274,16 +310,3 @@ class LeafItem(StandardTreeItem):
 
     def can_fetch_more(self):
         return False
-
-
-class ListValueFetchParent(FetchParent):
-    def __init__(self, parameter_value_list_id):
-        super().__init__()
-        self._parameter_value_list_id = parameter_value_list_id
-
-    @property
-    def fetch_item_type(self):
-        return "list_value"
-
-    def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.parameter_value_list_id == self._parameter_value_list_id)

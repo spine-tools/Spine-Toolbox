@@ -1438,6 +1438,10 @@ class FetchParent:
         """
         return query
 
+    # pylint: disable=no-self-use
+    def accepts_item(self, item):
+        return True
+
     def fetch_status_change(self):
         """Called when fetch status changes."""
 
@@ -1478,6 +1482,12 @@ class FetchParent:
         self.query_initialized = FetchParent.Init.UNINITIALIZED
         self.fetch_status_change()
 
+    def handle_items_added(self, db_map_data):
+        raise NotImplementedError()
+
+    def handle_items_removed(self, db_map_data):
+        raise NotImplementedError()
+
 
 class ItemTypeFetchParent(FetchParent):
     def __init__(self, fetch_item_type):
@@ -1487,6 +1497,9 @@ class ItemTypeFetchParent(FetchParent):
     @property
     def fetch_item_type(self):
         return self._fetch_item_type
+
+    def handle_items_added(self, db_map_data):
+        raise NotImplementedError()
 
 
 def load_project_dict(project_config_dir, logger):

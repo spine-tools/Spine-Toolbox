@@ -28,8 +28,8 @@ from .qthread_pool_executor import QtBasedThreadPoolExecutor
 class _Event(Enum):
     FETCH = auto()
     FETCH_STATUS_CHANGE = auto()
-    ADD_OR_UPDATE_ITEMS = auto()
-    READD_ITEMS = auto()
+    ADD_ITEMS = auto()
+    UPDATE_ITEMS = auto()
     REMOVE_ITEMS = auto()
     COMMIT_SESSION = auto()
     ROLLBACK_SESSION = auto()
@@ -67,6 +67,7 @@ class SpineDBWorker(QObject):
 
     def __init__(self, db_mngr, db_url):
         super().__init__()
+        self._parents = set()
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
@@ -86,8 +87,8 @@ class SpineDBWorker(QObject):
         {
             _Event.FETCH: self._fetch_event,
             _Event.FETCH_STATUS_CHANGE: self._fetch_status_change_event,
-            _Event.ADD_OR_UPDATE_ITEMS: self._add_or_update_items_event,
-            _Event.READD_ITEMS: self._readd_items_event,
+            _Event.ADD_ITEMS: self._add_items_event,
+            _Event.UPDATE_ITEMS: self._update_items_event,
             _Event.REMOVE_ITEMS: self._remove_items_event,
             _Event.COMMIT_SESSION: self._commit_session_event,
             _Event.ROLLBACK_SESSION: self._rollback_session_event,
@@ -133,6 +134,7 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if more data is available, False otherwise
         """
+        self._parents.add(parent)
         self._reset_fetching_if_required(parent)
         if parent.is_fetched or parent.is_busy_fetching:
             return False
@@ -229,8 +231,14 @@ class SpineDBWorker(QObject):
         # Mark parent as unbusy, but after emitting the 'added' signal below otherwise we have an infinite fetch loop
         QTimer.singleShot(0, lambda: parent.set_busy_fetching(False))
         if chunk:
-            signal = self._db_mngr.added_signals[parent.fetch_item_type]
-            signal.emit({self._db_map: chunk})
+            # signal = self._db_mngr.added_signals[parent.fetch_item_type]
+            # signal.emit({self._db_map: chunk})
+            db_map_data = {self._db_map: chunk}
+            self._db_mngr.cache_items(parent.fetch_item_type, db_map_data)
+            try:
+                parent.handle_items_added(db_map_data)
+            except NotImplementedError:
+                print(parent.fetch_item_type)
         elif parent.query is not None:
             parent.set_fetched(True)
 
@@ -350,73 +358,94 @@ class SpineDBWorker(QObject):
         sq = self._db_map.ext_parameter_value_metadata_sq
         return self._db_map.query(sq).filter(sq.c.parameter_value_id == parameter_value_id).all()
 
-    def add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
-        """Adds or updates items in db.
+    def add_items(self, items, method_name, item_type, readd, check, cache, callback):
+        """Adds items to db.
 
         Args:
             items (dict): lists of items to add or update
             method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
             item_type (str): item type
-            signal_name (str) : signal attribute of SpineDBManager to emit if successful
+            readd (bool) : Whether to re-add items that were previously removed
             check (bool): Whether or not to check integrity
             cache (dict): Cache
+            callback (None or function): something to call with the result
         """
-        self._executor.submit(self._add_or_update_items, items, method_name, item_type, signal_name, check, cache)
+        self._executor.submit(self._add_items, items, method_name, item_type, readd, check, cache, callback)
 
     @busy_effect
-    def _add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
-        items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
+    def _add_items(self, items, method_name, item_type, readd, check, cache, callback):
+        items, errors = getattr(self._db_map, method_name)(
+            *items, check=check, readd=readd, return_items=True, cache=cache
+        )
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
-        self._something_happened.emit(_Event.ADD_OR_UPDATE_ITEMS, (items, errors, signal_name))
+        self._something_happened.emit(_Event.ADD_ITEMS, (items, errors, item_type, callback))
 
-    def _add_or_update_items_event(self, items, errors, signal_name):
-        signal = getattr(self._db_mngr, signal_name)
-        signal.emit({self._db_map: items})
+    def _add_items_event(self, items, errors, item_type, callback):
+        self._db_mngr.cache_items(item_type, {self._db_map: items})
+        for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
+            children = [x for x in items if parent.accepts_item(x)]
+            parent.handle_items_added({self._db_map: children})
+        if callback is not None:
+            callback({self._db_map: items})
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
 
-    def readd_items(self, items, method_name, item_type, signal_name, cache):
-        """Adds or updates items in db.
+    def update_items(self, items, method_name, item_type, check, cache, callback):
+        """Updates items in db.
 
         Args:
             items (dict): lists of items to add or update
             method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
             item_type (str): item type
-            signal_name (str) : signal attribute of SpineDBManager to emit if successful
+            check (bool): Whether or not to check integrity
+            cache (dict): Cache
+            callback (None or function): something to call with the result
         """
-        self._executor.submit(self._readd_items, items, method_name, item_type, signal_name, cache)
+        self._executor.submit(self._update_items, items, method_name, item_type, check, cache, callback)
 
     @busy_effect
-    def _readd_items(self, items, method_name, item_type, signal_name, cache):
-        getattr(self._db_map, method_name)(*items, readd=True, cache=cache)
+    def _update_items(self, items, method_name, item_type, check, cache, callback):
+        items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
-        self._something_happened.emit(_Event.READD_ITEMS, (items, signal_name))
+        self._something_happened.emit(_Event.UPDATE_ITEMS, (items, errors, item_type, callback))
 
-    def _readd_items_event(self, items, signal_name):
-        signal = getattr(self._db_mngr, signal_name)
-        signal.emit({self._db_map: items})
+    def _update_items_event(self, items, errors, item_type, callback):
+        self._db_mngr.cache_items(item_type, {self._db_map: items})
+        if callback is not None:
+            callback({self._db_map: items})
+        if errors:
+            self._db_mngr.error_msg.emit({self._db_map: errors})
 
-    def remove_items(self, ids_per_type):
+    def remove_items(self, ids_per_type, callback):
         """Removes items from database.
 
         Args:
             ids_per_type (dict): lists of items to remove keyed by item type (str)
         """
-        self._executor.submit(self._remove_items, ids_per_type)
+        self._executor.submit(self._remove_items, ids_per_type, callback)
 
     @busy_effect
-    def _remove_items(self, ids_per_type):
+    def _remove_items(self, ids_per_type, callback):
         try:
             self._db_map.remove_items(**ids_per_type)
             errors = []
         except SpineDBAPIError as err:
             errors = [err]
-        self._something_happened.emit(_Event.REMOVE_ITEMS, (ids_per_type, errors))
+        self._something_happened.emit(_Event.REMOVE_ITEMS, (ids_per_type, errors, callback))
 
-    def _remove_items_event(self, ids_per_type, errors):
+    def _remove_items_event(self, ids_per_type, errors, callback):
+        items_per_type = self._db_mngr.uncache_removed_items({self._db_map: ids_per_type}).get(self._db_map, {})
+        for item_type, items in items_per_type.items():
+            for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
+                children = [x for x in items if parent.accepts_item(x)]
+                try:
+                    parent.handle_items_removed({self._db_map: children})
+                except NotImplementedError:
+                    print(parent.fetch_item_type)
+        if callback is not None:
+            callback({self._db_map: ids_per_type})
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        self._db_mngr.items_removed.emit({self._db_map: ids_per_type})
 
     def commit_session(self, commit_msg, cookie=None):
         """Initiates commit session.

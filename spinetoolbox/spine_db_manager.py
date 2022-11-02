@@ -48,7 +48,6 @@ from spinedb_api.parameter_value import join_value_and_type, split_value_and_typ
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.helpers import CacheItem
 from .spine_db_icon_manager import SpineDBIconManager
-from .spine_db_signaller import SpineDBSignaller
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
@@ -88,26 +87,6 @@ class SpineDBManager(QObject):
     metadata_added = Signal(dict)
     entity_metadata_added = Signal(dict)
     parameter_value_metadata_added = Signal(dict)
-    # Removed
-    scenarios_removed = Signal(dict)
-    alternatives_removed = Signal(dict)
-    object_classes_removed = Signal(dict)
-    objects_removed = Signal(dict)
-    relationship_classes_removed = Signal(dict)
-    relationships_removed = Signal(dict)
-    entity_groups_removed = Signal(dict)
-    parameter_definitions_removed = Signal(dict)
-    parameter_values_removed = Signal(dict)
-    parameter_value_lists_removed = Signal(dict)
-    list_values_removed = Signal(dict)
-    features_removed = Signal(dict)
-    tools_removed = Signal(dict)
-    tool_features_removed = Signal(dict)
-    tool_feature_methods_removed = Signal(dict)
-    metadata_removed = Signal(dict)
-    entity_metadata_removed = Signal(dict)
-    parameter_value_metadata_removed = Signal(dict)
-    items_removed = Signal(dict)
     # Updated
     scenarios_updated = Signal(dict)
     alternatives_updated = Signal(dict)
@@ -126,8 +105,6 @@ class SpineDBManager(QObject):
     metadata_updated = Signal(dict)
     entity_metadata_updated = Signal(dict)
     parameter_value_metadata_updated = Signal(dict)
-    # Uncached
-    items_removed_from_cache = Signal(dict)
     # Internal
     scenario_alternatives_added = Signal(dict)
     scenario_alternatives_updated = Signal(dict)
@@ -148,12 +125,12 @@ class SpineDBManager(QObject):
         self._db_maps = {}
         self.db_map_locks = {}
         self._workers = {}
+        self.listeners = dict()
         self.undo_stack = {}
         self.undo_action = {}
         self.redo_action = {}
         self._cache = {}
         self._icon_mngr = {}
-        self.signaller = SpineDBSignaller(self)
         self.added_signals = {
             "object_class": self.object_classes_added,
             "relationship_class": self.relationship_classes_added,
@@ -195,46 +172,16 @@ class SpineDBManager(QObject):
             "entity_metadata": self.entity_metadata_updated,
             "parameter_value_metadata": self.parameter_value_metadata_updated,
         }
-        self.removed_signals = {
-            "parameter_value": self.parameter_values_removed,
-            "entity_group": self.entity_groups_removed,
-            "relationship": self.relationships_removed,
-            "object": self.objects_removed,
-            "scenario_alternative": self.scenario_alternatives_removed,
-            "scenario": self.scenarios_removed,
-            "alternative": self.alternatives_removed,
-            "tool_feature_method": self.tool_feature_methods_removed,
-            "tool_feature": self.tool_features_removed,
-            "feature": self.features_removed,
-            "tool": self.tools_removed,
-            "parameter_definition": self.parameter_definitions_removed,
-            "parameter_value_list": self.parameter_value_lists_removed,
-            "list_value": self.list_values_removed,
-            "relationship_class": self.relationship_classes_removed,
-            "object_class": self.object_classes_removed,
-            "metadata": self.metadata_removed,
-            "entity_metadata": self.entity_metadata_removed,
-            "parameter_value_metadata": self.parameter_value_metadata_removed,
-        }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
         self.connect_signals()
 
     def connect_signals(self):
         """Connects signals."""
-        # Cache
-        for item_type, signal in self.added_signals.items():
-            signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
-        for item_type, signal in self.updated_signals.items():
-            signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
-        # Uncache
-        self.items_removed.connect(self.uncache_removed_items)
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
         self.relationship_classes_added.connect(self.update_icons)
         self.relationship_classes_updated.connect(self.update_icons)
-        # Signaller (after caching, so items are there when listeners receive signals)
-        self.signaller.connect_signals()
-        # Refresh (after caching, so items are there when listeners receive signals)
+        # Refresh
         self.alternatives_updated.connect(self._cascade_refresh_parameter_values_by_alternative)
         self.object_classes_updated.connect(self._cascade_refresh_relationship_classes)
         self.object_classes_updated.connect(self._cascade_refresh_parameter_definitions)
@@ -249,15 +196,15 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_added.connect(self._cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_updated.connect(self._cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_parameter_value_list)
-        self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_removed_value_list)
+        # self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_removed_value_list)
         self.features_updated.connect(self._cascade_refresh_tool_features_by_feature)
         self.list_values_added.connect(self._refresh_parameter_value_lists)
-        self.list_values_removed.connect(self._refresh_parameter_value_lists)
+        # self.list_values_removed.connect(self._refresh_parameter_value_lists)
         self.list_values_updated.connect(self._cascade_refresh_parameter_values_by_list_value)
         self.list_values_updated.connect(self._cascade_refresh_parameter_definitions_by_list_value)
         self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
-        self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
+        # self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
         self.entity_groups_added.connect(self._cascade_refresh_objects_by_group)
         self.entity_groups_added.connect(self._cascade_refresh_relationships_by_group)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
@@ -332,25 +279,22 @@ class SpineDBManager(QObject):
         """Removes data that has been removed from the database also from cache.
 
         Args:
-            db_map_typed_ids (dict): items to remove
+            db_map_typed_ids (dict): mapping db_map, to item type, to ids to remove
+
+        Returns:
+            dict: mapping db_map, to item type, to items removed
         """
-        typed_db_map_data = {}
-        for item_type, signal in self.removed_signals.items():
-            db_map_data = {}
-            for db_map, ids_per_type in db_map_typed_ids.items():
-                ids = ids_per_type.get(item_type, [])
-                items = [item for item in (self._pop_item(db_map, item_type, id_) for id_ in ids) if item]
+        db_map_typed_items = {}
+        for db_map, ids_per_type in db_map_typed_ids.items():
+            for item_type, ids in ids_per_type.items():
+                items = []
+                for id_ in ids:
+                    item = self._pop_item(db_map, item_type, id_)
+                    if item:
+                        items.append(item)
                 if items:
-                    db_map_data[db_map] = items
-                    try:
-                        worker = self._get_worker(db_map)
-                    except KeyError:
-                        continue
-            if db_map_data:
-                typed_db_map_data[item_type] = db_map_data
-                signal.emit(db_map_data)
-        if typed_db_map_data:
-            self.items_removed_from_cache.emit(typed_db_map_data)
+                    db_map_typed_items.setdefault(db_map, {})[item_type] = items
+        return db_map_typed_items
 
     @busy_effect
     def get_db_map_cache(self, db_map, item_types=None, only_descendants=False, include_ancestors=False):
@@ -536,6 +480,20 @@ class SpineDBManager(QObject):
         """For tests."""
         return self._get_worker(db_map).query(sq_name)
 
+    def add_db_map_listener(self, db_map, listener):
+        """Adds listener for given db_map."""
+        self.listeners.setdefault(db_map, set()).add(listener)
+
+    def remove_db_map_listener(self, db_map, listener):
+        """Removes db_map from the maps listener listens to."""
+        listeners = self.listeners.get(db_map, set())
+        listeners.discard(listener)
+        if not listeners:
+            self.listeners.pop(db_map)
+
+    def db_map_listeners(self, db_map):
+        return self.listeners.get(db_map, set())
+
     def register_listener(self, listener, *db_maps):
         """Register given listener for all given db_map's signals.
 
@@ -544,7 +502,7 @@ class SpineDBManager(QObject):
             db_maps (DiffDatabaseMapping)
         """
         for db_map in db_maps:
-            self.signaller.add_db_map_listener(db_map, listener)
+            self.add_db_map_listener(db_map, listener)
             stack = self.undo_stack[db_map]
             try:
                 stack.indexChanged.connect(listener.update_undo_redo_actions)
@@ -563,7 +521,7 @@ class SpineDBManager(QObject):
             commit_msg (str): commit message
         """
         for db_map in db_maps:
-            self.signaller.remove_db_map_listener(db_map, listener)
+            self.remove_db_map_listener(db_map, listener)
             try:
                 self.undo_stack[db_map].indexChanged.disconnect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
@@ -576,7 +534,7 @@ class SpineDBManager(QObject):
             else:
                 self.rollback_session(*dirty_db_maps)
         for db_map in db_maps:
-            if not self.signaller.db_map_listeners(db_map):
+            if not self.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
 
     def is_dirty(self, db_map):
@@ -612,10 +570,10 @@ class SpineDBManager(QObject):
             list of DiffDatabaseMapping: mappings that are dirty and don't have editors
         """
 
-        def has_no_editors(db_map):
-            return not set(self.signaller.db_map_editors(db_map)) - {listener}
+        def has_listeners(db_map):
+            return self.db_map_listeners(db_map) - {listener}
 
-        return [db_map for db_map in db_maps if has_no_editors(db_map) and self.is_dirty(db_map)]
+        return [db_map for db_map in db_maps if not has_listeners(db_map) and self.is_dirty(db_map)]
 
     def clean_up(self):
         while self._workers:
@@ -1011,7 +969,6 @@ class SpineDBManager(QObject):
             macro = AgedUndoCommand()
             macro.setText(command_text)
             child_cmds = []
-            self.signaller.pause(db_map)
             # NOTE: we push the import macro before adding the children,
             # because we *need* to call redo() on the children one by one so the data gets in gradually
             self.undo_stack[db_map].push(macro)
@@ -1033,17 +990,10 @@ class SpineDBManager(QObject):
                 # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
                 macro.setObsolete(True)
                 self.undo_stack[db_map].undo()
-            self.signaller.resume(db_map)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
-    def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
-        if readd:
-            self._readd_items(db_map_data, method_name, item_type, signal_name)
-        else:
-            self._add_or_update_items(db_map_data, method_name, item_type, signal_name, check)
-
-    def _add_or_update_items(self, db_map_data, method_name, item_type, signal_name, check):
+    def add_items(self, db_map_data, method_name, item_type, readd=False, check=True, callback=None):
         for db_map, data in db_map_data.items():
             try:
                 worker = self._get_worker(db_map)
@@ -1051,16 +1001,17 @@ class SpineDBManager(QObject):
                 # We're closing the kiosk.
                 continue
             cache = self.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
-            worker.add_or_update_items(data, method_name, item_type, signal_name, check, cache)
+            worker.add_items(data, method_name, item_type, readd, check, cache, callback)
 
-    def _readd_items(self, db_map_data, method_name, item_type, signal_name):
+    def update_items(self, db_map_data, method_name, item_type, check=True, callback=None):
         for db_map, data in db_map_data.items():
             try:
                 worker = self._get_worker(db_map)
             except KeyError:
+                # We're closing the kiosk.
                 continue
             cache = self.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
-            worker.readd_items(data, method_name, item_type, signal_name, cache)
+            worker.update_items(data, method_name, item_type, check, cache, callback)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.
@@ -1469,7 +1420,7 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].push(RemoveItemsCommand(self, db_map, ids_per_type))
 
     @busy_effect
-    def do_remove_items(self, db_map_typed_ids):
+    def do_remove_items(self, db_map_typed_ids, callback=None):
         """Removes items from database.
 
         Args:
@@ -1480,7 +1431,7 @@ class SpineDBManager(QObject):
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            worker.remove_items(ids_per_type)
+            worker.remove_items(ids_per_type, callback)
 
     @staticmethod
     def db_map_ids(db_map_data):

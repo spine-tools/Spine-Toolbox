@@ -376,7 +376,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             d.setdefault(entity_class_id, list()).append(item)
         return d
 
-    def receive_parameter_data_added(self, db_map_data):
+    def handle_items_added(self, db_map_data):
         """Runs when either parameter definitions or values are added to the dbs.
         Adds necessary sub-models and initializes them with data.
         Also notifies the empty model so it can remove rows that are already in.
@@ -453,7 +453,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         # NOTE: parameter_definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names are. Why?
 
-    def receive_parameter_data_removed(self, db_map_data):
+    def handle_items_removed(self, db_map_data):
         """Runs when either parameter definitions or values are removed from the dbs.
         Removes the affected rows from the corresponding single models.
 

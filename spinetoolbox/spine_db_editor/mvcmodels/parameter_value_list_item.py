@@ -18,7 +18,6 @@ Tree items for parameter_value lists.
 
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
-from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from .tree_item_utility import (
     EmptyChildMixin,
@@ -28,7 +27,6 @@ from .tree_item_utility import (
     StandardDBItem,
     FetchMoreMixin,
     LeafItem,
-    ListValueFetchParent,
 )
 from ...helpers import CharIconEngine
 
@@ -47,6 +45,9 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
     def empty_child(self):
         return ListItem()
 
+    def _make_child(self, id_):
+        return ListItem(id_)
+
 
 class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, FetchMoreMixin, LeafItem):
     """A list item."""
@@ -54,14 +55,14 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, F
     def __init__(self, identifier=None, name=None):
         super().__init__(identifier=identifier)
         self._name = name
-        self._list_value_fetch_parent = ListValueFetchParent(identifier)
 
     @property
     def item_type(self):
         return "parameter_value_list"
 
-    def _fetch_parents(self):
-        yield self._list_value_fetch_parent
+    @property
+    def fetch_item_type(self):
+        return "list_value"
 
     def _make_item_data(self):
         return {"name": "Type new list name here..." if self._name is None else self._name}
@@ -74,6 +75,15 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, F
     # pylint: disable=no-self-use
     def empty_child(self):
         return ValueItem()
+
+    def _make_child(self, id_):
+        return ValueItem(id_)
+
+    def filter_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.parameter_value_list_id == self.id)
+
+    def insert_children_sorted(self, children):
+        return self.insert_children(len(self.non_empty_children), children)
 
     def data(self, column, role=Qt.DisplayRole):
         if role == Qt.DecorationRole:

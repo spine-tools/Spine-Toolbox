@@ -553,30 +553,6 @@ class PivotTableModelBase(QAbstractTableModel):
             names_by_top_left_id.setdefault(top_left_id, set()).add(value)
         return any(self.top_left_headers[id_].add_data(names) for id_, names in names_by_top_left_id.items())
 
-    def receive_data_added_or_removed(self, db_map_data, action):
-        {"add": self.add_to_model, "remove": self.remove_from_model}[action](db_map_data)
-
-    def receive_objects_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_relationships_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_alternatives_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_parameter_values_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_scenarios_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_scenarios_updated(self, db_map_data):  # pylint: disable=no-self-use
-        return False
-
 
 class TopLeftHeaderItem:
     """Base class for all 'top left pivot headers'.

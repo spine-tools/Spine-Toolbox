@@ -17,7 +17,7 @@ Base classes to represent items from multiple databases in a tree.
 """
 from operator import attrgetter
 
-from PySide2.QtCore import Qt, QTimer
+from PySide2.QtCore import Qt
 from ...helpers import rows_to_row_count_tuples, bisect_chunks, FetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
 
@@ -260,6 +260,14 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         for db_map, ids in self._child_map.items():
             for id_ in ids:
                 yield (db_map, id_)
+
+    def handle_items_added(self, db_map_data):
+        db_map_ids = {db_map: [x["id"] for x in data] for db_map, data in db_map_data.items()}
+        self.append_children_by_id(db_map_ids)
+
+    def handle_items_removed(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self.remove_children_by_id(db_map_ids)
 
     def append_children_by_id(self, db_map_ids):
         """
