@@ -199,6 +199,9 @@ class ToolFeatureRootItem(EmptyChildRootItem):
     def filter_query(self, query, subquery, db_map):
         return query.filter(subquery.c.tool_id == self.parent_item.id)
 
+    def accepts_item(self, item, db_map):
+        return item["tool_id"] == self.parent_item.id
+
 
 class ToolFeatureLeafItem(GrayIfLastMixin, LeafItem):
     """A tool feature leaf item."""
@@ -314,9 +317,11 @@ class ToolFeatureMethodRootItem(EmptyChildRootItem):
     def filter_query(self, query, subquery, db_map):
         return query.filter(subquery.c.tool_feature_id == self.parent_item.id)
 
+    def accepts_item(self, item, db_map):
+        return item["tool_feature_id"] == self.parent_item.id
+
     def _filter_list_value_query(self, query, subquery, db_map):
-        parameter_value_list_id = self.parent_item.item_data["parameter_value_list_id"]
-        return query.filter(subquery.c.parameter_value_list_id == parameter_value_list_id)
+        return query.filter(subquery.c.parameter_value_list_id == self.parent_item.item_data["parameter_value_list_id"])
 
 
 class ToolFeatureMethodLeafItem(GrayIfLastMixin, LeafItem):

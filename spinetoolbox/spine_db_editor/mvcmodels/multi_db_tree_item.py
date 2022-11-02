@@ -269,6 +269,10 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
         self.remove_children_by_id(db_map_ids)
 
+    def handle_items_updated(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self.update_children_by_id(db_map_ids)
+
     def append_children_by_id(self, db_map_ids):
         """
         Appends children by id.

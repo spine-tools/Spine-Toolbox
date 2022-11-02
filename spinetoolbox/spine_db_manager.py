@@ -261,7 +261,7 @@ class SpineDBManager(QObject):
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
-        if item_type != "entity_metadata" and item_type != "parameter_value_metadata":
+        if item_type not in ("entity_metadata", "parameter_value_metadata"):
             for db_map, items in db_map_data.items():
                 for item in items:
                     self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
@@ -284,25 +284,20 @@ class SpineDBManager(QObject):
         Returns:
             dict: mapping db_map, to item type, to items removed
         """
-        db_map_typed_items = {}
         for db_map, ids_per_type in db_map_typed_ids.items():
             for item_type, ids in ids_per_type.items():
-                items = []
                 for id_ in ids:
-                    item = self._pop_item(db_map, item_type, id_)
-                    if item:
-                        items.append(item)
-                if items:
-                    db_map_typed_items.setdefault(db_map, {})[item_type] = items
-        return db_map_typed_items
+                    _ = self._pop_item(db_map, item_type, id_)
 
     @busy_effect
-    def get_db_map_cache(self, db_map, item_types=None, only_descendants=False, include_ancestors=False):
+    def get_db_map_cache(self, db_map, fetch_item_types=None, only_descendants=False, include_ancestors=False):
         try:
             worker = self._get_worker(db_map)
         except KeyError:
             return {}
-        worker.fetch_all(item_types=item_types, only_descendants=only_descendants, include_ancestors=include_ancestors)
+        worker.fetch_all(
+            fetch_item_types=fetch_item_types, only_descendants=only_descendants, include_ancestors=include_ancestors
+        )
         return self._cache.setdefault(db_map, {})
 
     def get_icon_mngr(self, db_map):
@@ -698,7 +693,7 @@ class SpineDBManager(QObject):
             worker = self._get_worker(db_map)
         except KeyError:
             return {}
-        worker.fetch_all(item_types={item_type})
+        worker.fetch_all(fetch_item_types={item_type})
         return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
 
     def get_field(self, db_map, item_type, id_, field, only_visible=True):
@@ -722,7 +717,7 @@ class SpineDBManager(QObject):
             worker = self._get_worker(db_map)
         except KeyError:
             return []
-        worker.fetch_all(item_types={item_type})
+        worker.fetch_all(fetch_item_types={item_type})
         return list(self._cache.get(db_map, {}).get(item_type, {}).values())
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
@@ -958,7 +953,7 @@ class SpineDBManager(QObject):
         db_map_error_log = dict()
         for db_map, data in db_map_data.items():
             make_cache = lambda tablenames, db_map=db_map, **kwargs: self.get_db_map_cache(
-                db_map, item_types=tablenames, **kwargs
+                db_map, fetch_item_types=tablenames, **kwargs
             )
             try:
                 data_for_import = get_data_for_import(db_map, make_cache=make_cache, **data)
@@ -1385,15 +1380,13 @@ class SpineDBManager(QObject):
             items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data, cache=cache)
             if ids_to_remove:
                 rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove}, parent=macro)
-                with signal_waiter(rm_cmd.completed_signal) as waiter:
-                    rm_cmd.redo()
-                    waiter.wait()
+                rm_cmd.redo()
+                # FIXME: Wait till finish
                 child_cmds.append(rm_cmd)
             if items_to_add:
                 add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative", parent=macro)
-                with signal_waiter(add_cmd.completed_signal) as waiter:
-                    add_cmd.redo()
-                    waiter.wait()
+                add_cmd.redo()
+                # FIXME: Wait till finish
                 child_cmds.append(add_cmd)
             if not child_cmds or all(cmd.isObsolete() for cmd in child_cmds):
                 macro.setObsolete(True)
@@ -1936,7 +1929,7 @@ class SpineDBManager(QObject):
         data = {}
         for db_map, item_ids in db_map_item_ids.items():
             make_cache = lambda tablenames, db_map=db_map, **kwargs: self.get_db_map_cache(
-                db_map, item_types=tablenames, **kwargs
+                db_map, fetch_item_types=tablenames, **kwargs
             )
             for key, items in export_data(db_map, make_cache=make_cache, parse_value=load_db_value, **item_ids).items():
                 data.setdefault(key, []).extend(items)

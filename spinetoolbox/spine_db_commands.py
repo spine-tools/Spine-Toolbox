@@ -163,6 +163,10 @@ class SpineDBCommand(AgedUndoCommand):
     def _do_receive_items_changed(self, _):
         raise NotImplementedError()
 
+    def _undo_item(self, db_map, item_type, id_):
+        undo_item = self.db_mngr.get_item(db_map, item_type, id_, only_visible=True)
+        return db_map.cache_to_db(item_type, undo_item)
+
 
 class AddItemsCommand(SpineDBCommand):
     def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
@@ -232,20 +236,16 @@ class UpdateItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not data:
             self.setObsolete(True)
-        self.item_type = item_type
-        undo_data = [self._undo_item(db_map, item["id"]) for item in data]
+        undo_data = [self._undo_item(db_map, item_type, item["id"]) for item in data]
         redo_data = [{**undo_item, **item} for undo_item, item in zip(undo_data, data)]
         if undo_data == redo_data:
             self.setObsolete(True)
         self.redo_db_map_data = {db_map: redo_data}
         self.undo_db_map_data = {db_map: undo_data}
+        self.item_type = item_type
         self.method_name = self._update_method_name[item_type]
         self._check = check
         self.setText(self._update_command_name.get(item_type, "update item") + f" in '{db_map.codename}'")
-
-    def _undo_item(self, db_map, id_):
-        undo_item = self.db_mngr.get_item(db_map, self.item_type, id_)
-        return db_map.cache_to_db(self.item_type, undo_item)
 
     def redo(self):
         super().redo()
@@ -283,43 +283,44 @@ class RemoveItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not any(typed_data.values()):
             self.setObsolete(True)
-        typed_data = db_map.cascading_ids(
+        self.redo_typed_data = db_map.cascading_ids(
             cache=self.db_mngr.get_db_map_cache(db_map, set(typed_data), only_descendants=True), **typed_data
         )
-        self.redo_db_map_typed_data = {db_map: typed_data}
-        self.undo_typed_db_map_data = {}
+        self.undo_typed_data = {}
         self.setText(f"remove items from '{db_map.codename}'")
 
     def redo(self):
         super().redo()
-        self.db_mngr.do_remove_items(self.redo_db_map_typed_data, callback=self.receive_items_changed)
+        self.db_mngr.do_remove_items({self.db_map: self.redo_typed_data}, callback=self.receive_items_changed)
 
     def undo(self):
         super().undo()
-        item_type_iter = reversed(list(self.undo_typed_db_map_data.keys()))
+        item_type_iter = iter(list(self.undo_typed_data))
         self._undo_next(item_type_iter)
 
     def _undo_next(self, item_type_iter):
         item_type = next(item_type_iter, None)
         if item_type is None:
             return
-        db_map_data = self.undo_typed_db_map_data[item_type]
+        data = self.undo_typed_data[item_type]
         method_name = self._add_method_name[item_type]
         self.db_mngr.add_items(
-            db_map_data,
+            {self.db_map: data},
             method_name,
             item_type,
             readd=True,
             callback=lambda _db_map_data: self._undo_next(item_type_iter),
         )
 
-    def _do_receive_items_changed(self, typed_db_map_data):
-        if not any(db_map_data.get(self.db_map) for db_map_data in typed_db_map_data.values()):
+    def _do_receive_items_changed(self, db_map_typed_ids):
+        for item_type, ids_ in db_map_typed_ids.get(self.db_map, {}).items():
+            undo_items = []
+            for id_ in ids_:
+                undo_item = self._undo_item(self.db_map, item_type, id_)
+                if undo_item:
+                    undo_items.append(undo_item)
+            if undo_items:
+                self.undo_typed_data[item_type] = undo_items
+        print(list(self.undo_typed_data))
+        if not self.undo_typed_data:
             self.setObsolete(True)
-            return
-        self.undo_typed_db_map_data = {
-            item_type: {
-                self.db_map: [self.db_map.cache_to_db(item_type, item) for item in db_map_data.get(self.db_map, [])]
-            }
-            for item_type, db_map_data in typed_db_map_data.items()
-        }

@@ -18,7 +18,7 @@ import json
 from PySide2.QtCore import QMimeData, Qt
 from .tree_model_base import TreeModelBase
 from .tree_item_utility import StandardDBItem
-from .alternative_scenario_item import AlternativeRootItem, ScenarioRootItem, AlternativeLeafItem, ScenarioLeafItem
+from .alternative_scenario_item import AlternativeRootItem, ScenarioRootItem
 
 
 class AlternativeScenarioModel(TreeModelBase):
@@ -31,36 +31,6 @@ class AlternativeScenarioModel(TreeModelBase):
     @staticmethod
     def _top_children():
         return [AlternativeRootItem(), ScenarioRootItem()]
-
-    def _scenarios_per_root(self, db_map_data):
-        return self._items_per_root(db_map_data, root_number=1)
-
-    def _alternatives_per_root(self, db_map_data):
-        return self._items_per_root(db_map_data, root_number=0)
-
-    def add_alternatives(self, db_map_data):
-        for root_item, items in self._alternatives_per_root(db_map_data).items():
-            self._insert_items(root_item, items, AlternativeLeafItem)
-
-    def add_scenarios(self, db_map_data):
-        for root_item, items in self._scenarios_per_root(db_map_data).items():
-            self._insert_items(root_item, items, ScenarioLeafItem)
-
-    def update_alternatives(self, db_map_data):
-        for root_item, items in self._alternatives_per_root(db_map_data).items():
-            self._update_leaf_items(root_item, [x["id"] for x in items])
-
-    def update_scenarios(self, db_map_data):
-        for root_item, items in self._scenarios_per_root(db_map_data).items():
-            self._update_leaf_items(root_item, [x["id"] for x in items])
-
-    def remove_alternatives(self, db_map_data):
-        for root_item, items in self._alternatives_per_root(db_map_data).items():
-            self._remove_leaf_items(root_item, [x["id"] for x in items])
-
-    def remove_scenarios(self, db_map_data):
-        for root_item, items in self._scenarios_per_root(db_map_data).items():
-            self._remove_leaf_items(root_item, [x["id"] for x in items])
 
     def supportedDropActions(self):
         return Qt.CopyAction | Qt.MoveAction

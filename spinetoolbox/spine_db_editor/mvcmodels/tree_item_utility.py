@@ -135,16 +135,40 @@ class SortChildrenMixin:
 
 
 class CallbackFetchParent(ItemTypeFetchParent):
-    def __init__(self, fetch_item_type, filter_query=None, handle_items_added=None):
+    def __init__(
+        self,
+        fetch_item_type,
+        handle_items_added=None,
+        handle_items_removed=None,
+        handle_items_updated=None,
+        filter_query=None,
+        accepts_item=None,
+    ):
         super().__init__(fetch_item_type)
-        self._filter_query = filter_query if filter_query is not None else lambda qry: qry
+        self._filter_query = filter_query if filter_query is not None else lambda qry, *args: qry
+        self._accepts_item = accepts_item if accepts_item is not None else lambda *args: True
         self._handle_items_added = handle_items_added if handle_items_added is not None else lambda db_map_data: None
+        self._handle_items_removed = (
+            handle_items_removed if handle_items_removed is not None else lambda db_map_data: None
+        )
+        self._handle_items_updated = (
+            handle_items_updated if handle_items_updated is not None else lambda db_map_data: None
+        )
 
     def handle_items_added(self, db_map_data):
         self._handle_items_added(db_map_data)
 
+    def handle_items_removed(self, db_map_data):
+        self._handle_items_removed(db_map_data)
+
+    def handle_items_updated(self, db_map_data):
+        self._handle_items_updated(db_map_data)
+
     def filter_query(self, query, subquery, db_map):
         return self._filter_query(query, subquery, db_map)
+
+    def accepts_item(self, item, db_map):
+        return self._accepts_item(item, db_map)
 
 
 class FetchMoreMixin:
@@ -154,7 +178,11 @@ class FetchMoreMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._natural_fetch_parent = CallbackFetchParent(
-            self.fetch_item_type, self.filter_query, self.handle_items_added
+            self.fetch_item_type,
+            handle_items_added=self.handle_items_added,
+            handle_items_removed=self.handle_items_removed,
+            handle_items_updated=self.handle_items_updated,
+            filter_query=self.filter_query,
         )
 
     @property
@@ -178,7 +206,16 @@ class FetchMoreMixin:
     def filter_query(self, query, subquery, db_map):
         return query
 
+    def accepts_item(self, item, db_map):
+        return True
+
     def handle_items_added(self, db_map_data):
+        """Inserts items at right positions. Items with commit_id are kept sorted.
+        Items without a commit_id are put at the end.
+
+        Args:
+            db_map_data (dict): mapping db_map to list of dict corresponding to db items
+        """
         db_items = db_map_data.get(self.db_map, [])
         ids_committed = []
         ids_uncommitted = []
@@ -191,6 +228,28 @@ class FetchMoreMixin:
         children_uncommitted = [self._make_child(id_) for id_ in ids_uncommitted]
         self.insert_children_sorted(children_committed)
         self.insert_children(len(self.non_empty_children), children_uncommitted)
+
+    def handle_items_removed(self, db_map_data):
+        ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        removed_rows = []
+        for row, leaf_item in enumerate(self.children):
+            if leaf_item.id and leaf_item.id in ids:
+                removed_rows.append(row)
+        for row in sorted(removed_rows, reverse=True):
+            self.remove_children(row, 1)
+
+    def handle_items_updated(self, db_map_data):
+        leaf_items = {leaf_item.id: leaf_item for leaf_item in self.children if leaf_item.id}
+        ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        for id_ in set(ids).intersection(leaf_items):
+            leaf_item = leaf_items[id_]
+            leaf_item.handle_updated_in_db()
+            index = self.model.index_from_item(leaf_item)
+            self.model.dataChanged.emit(index, index)
+            if leaf_item.children:
+                top_left = self.model.index_from_item(leaf_item.child(0))
+                bottom_right = self.model.index_from_item(leaf_item.child(-1))
+                self.model.dataChanged.emit(top_left, bottom_right)
 
 
 class StandardDBItem(SortChildrenMixin, StandardTreeItem):

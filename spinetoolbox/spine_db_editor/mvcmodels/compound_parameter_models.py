@@ -77,6 +77,9 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             subquery.c.entity_class_name
         )
 
+    def accepts_item(self, item, db_map):
+        return item[self.entity_class_id_key] is not None
+
     def _make_header(self):
         raise NotImplementedError()
 

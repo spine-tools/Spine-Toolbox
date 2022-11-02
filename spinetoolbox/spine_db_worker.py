@@ -231,41 +231,42 @@ class SpineDBWorker(QObject):
         # Mark parent as unbusy, but after emitting the 'added' signal below otherwise we have an infinite fetch loop
         QTimer.singleShot(0, lambda: parent.set_busy_fetching(False))
         if chunk:
-            # signal = self._db_mngr.added_signals[parent.fetch_item_type]
-            # signal.emit({self._db_map: chunk})
+            signal = self._db_mngr.added_signals[parent.fetch_item_type]
+            signal.emit({self._db_map: chunk})
             db_map_data = {self._db_map: chunk}
             self._db_mngr.cache_items(parent.fetch_item_type, db_map_data)
-            try:
-                parent.handle_items_added(db_map_data)
-            except NotImplementedError:
-                print(parent.fetch_item_type)
+            parent.handle_items_added(db_map_data)
         elif parent.query is not None:
             parent.set_fetched(True)
 
-    def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
-        if item_types is None:
-            item_types = set(self._db_mngr.added_signals)
+    def fetch_all(self, fetch_item_types=None, only_descendants=False, include_ancestors=False):
+        if fetch_item_types is None:
+            fetch_item_types = set(self._db_mngr.added_signals)
         if only_descendants:
-            item_types = {
+            fetch_item_types = {
                 descendant
-                for item_type in item_types
+                for item_type in fetch_item_types
                 for descendant in self._db_map.descendant_tablenames.get(item_type, ())
             }
         if include_ancestors:
-            item_types |= {
-                ancestor for item_type in item_types for ancestor in self._db_map.ancestor_tablenames.get(item_type, ())
+            fetch_item_types |= {
+                ancestor
+                for item_type in fetch_item_types
+                for ancestor in self._db_map.ancestor_tablenames.get(item_type, ())
             }
-        item_types -= self._fetched_item_types
-        if not item_types:
+        fetch_item_types -= self._fetched_item_types
+        if not fetch_item_types:
             # FIXME: Needed? QCoreApplication.processEvents()
             return
-        _ = self._executor.submit(self._fetch_all, item_types).result()
+        _ = self._executor.submit(self._fetch_all, fetch_item_types).result()
 
     @busy_effect
     @_db_map_lock
     def _fetch_all(self, item_types):
         for item_type in item_types:
             query, _ = self._make_query_for_item_type(item_type)
+            if query is None:
+                continue
             for chunk in _make_iterator(query):
                 self._populate_commit_cache(item_type, chunk)
                 self._db_mngr.cache_items(item_type, {self._db_map: chunk})
@@ -284,7 +285,10 @@ class SpineDBWorker(QObject):
         return parent.filter_query(query, subquery, self._db_map)
 
     def _make_query_for_item_type(self, item_type):
-        subquery_name = self._db_map.cache_sqs[item_type]
+        try:
+            subquery_name = self._db_map.cache_sqs[item_type]
+        except KeyError:
+            return None, None
         subquery = getattr(self._db_map, subquery_name)
         query = self._db_map.query(subquery)
         return query, subquery
@@ -383,7 +387,7 @@ class SpineDBWorker(QObject):
     def _add_items_event(self, items, errors, item_type, callback):
         self._db_mngr.cache_items(item_type, {self._db_map: items})
         for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
-            children = [x for x in items if parent.accepts_item(x)]
+            children = [x for x in items if parent.accepts_item(x, self._db_map)]
             parent.handle_items_added({self._db_map: children})
         if callback is not None:
             callback({self._db_map: items})
@@ -411,6 +415,14 @@ class SpineDBWorker(QObject):
 
     def _update_items_event(self, items, errors, item_type, callback):
         self._db_mngr.cache_items(item_type, {self._db_map: items})
+        ids_by_type = {item_type: {x["id"] for x in items}}
+        cascading_ids_by_type = self._db_map.cascading_ids(
+            cache=self._db_mngr.get_db_map_cache(self._db_map, fetch_item_types=set()), **ids_by_type
+        )
+        print(cascading_ids_by_type)
+        for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
+            children = [x for x in items if parent.accepts_item(x, self._db_map)]
+            parent.handle_items_updated({self._db_map: children})
         if callback is not None:
             callback({self._db_map: items})
         if errors:
@@ -434,18 +446,16 @@ class SpineDBWorker(QObject):
         self._something_happened.emit(_Event.REMOVE_ITEMS, (ids_per_type, errors, callback))
 
     def _remove_items_event(self, ids_per_type, errors, callback):
-        items_per_type = self._db_mngr.uncache_removed_items({self._db_map: ids_per_type}).get(self._db_map, {})
-        for item_type, items in items_per_type.items():
+        for item_type, ids in ids_per_type.items():
             for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
-                children = [x for x in items if parent.accepts_item(x)]
-                try:
-                    parent.handle_items_removed({self._db_map: children})
-                except NotImplementedError:
-                    print(parent.fetch_item_type)
+                items = [self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids]
+                children = [x for x in items if parent.accepts_item(x, self._db_map)]
+                parent.handle_items_removed({self._db_map: children})
         if callback is not None:
             callback({self._db_map: ids_per_type})
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
+        self._db_mngr.uncache_removed_items({self._db_map: ids_per_type})
 
     def commit_session(self, commit_msg, cookie=None):
         """Initiates commit session.

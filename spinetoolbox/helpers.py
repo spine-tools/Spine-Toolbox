@@ -1439,7 +1439,17 @@ class FetchParent:
         return query
 
     # pylint: disable=no-self-use
-    def accepts_item(self, item):
+    def accepts_item(self, item, db_map):
+        """Returns whether or not a given item is a children of this parent.
+        Used when modifying data, to update the parents after the changes.
+
+        Args:
+            item (dict): The item
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            bool
+        """
         return True
 
     def fetch_status_change(self):
@@ -1483,10 +1493,16 @@ class FetchParent:
         self.fetch_status_change()
 
     def handle_items_added(self, db_map_data):
-        raise NotImplementedError()
+        pass
+        # raise NotImplementedError()
 
     def handle_items_removed(self, db_map_data):
-        raise NotImplementedError()
+        pass
+        # raise NotImplementedError()
+
+    def handle_items_updated(self, db_map_data):
+        pass
+        # raise NotImplementedError()
 
 
 class ItemTypeFetchParent(FetchParent):

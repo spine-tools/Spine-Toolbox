@@ -189,6 +189,9 @@ class ScenarioAlternativeRootItem(EmptyChildRootItem):
     def handle_items_added(self, _db_map_data):
         self.update_alternative_id_list()
 
+    def handle_items_removed(self, _db_map_data):
+        self.update_alternative_id_list()
+
     def _make_child(self, id_):
         """Not needed - we don't quite add childrens here, but rather update them in update_alternative_id_list."""
 

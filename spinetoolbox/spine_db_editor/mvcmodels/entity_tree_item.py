@@ -115,6 +115,9 @@ class EntityClassItem(MultiDBTreeItem):
     def filter_query(self, query, subquery, db_map):
         return query.filter(subquery.c.class_id == self.db_map_id(db_map))
 
+    def accepts_item(self, item, db_map):
+        return item["class_id"] == self.db_map_id(db_map)
+
     def set_data(self, column, value, role):
         """See base class."""
         return False
@@ -167,6 +170,12 @@ class ObjectRelationshipClassItem(RelationshipClassItem):
         query = query.filter(db_map.in_(subquery.c.id, ids))
         return super().filter_query(query, subquery, db_map)
 
+    def accepts_item(self, item, db_map):
+        if not super().accepts_item(item, db_map):
+            return False
+        object_id = self.parent_item.db_map_id(db_map)
+        return str(object_id) in item["object_id_list"].split(",")
+
 
 class MemberObjectClassItem(ObjectClassItem):
     """A member object class item."""
@@ -196,6 +205,9 @@ class MemberObjectClassItem(ObjectClassItem):
     def filter_query(self, query, subquery, db_map):
         query = query.filter(subquery.c.group_id == self.parent_item.db_map_id(db_map))
         return super().filter_query(query, subquery, db_map)
+
+    def accepts_item(self, item, db_map):
+        return super().accepts_item(item, db_map) and item["group_id"] == self.parent_item.db_map_id(db_map)
 
     @property
     def child_item_class(self):
@@ -283,6 +295,12 @@ class ObjectItem(EntityItem):
         object_class_id = self.db_map_data_field(db_map, 'class_id')
         ids = set(x.id for x in db_map.query(db_map.relationship_class_sq).filter_by(object_class_id=object_class_id))
         return query.filter(db_map.in_(subquery.c.id, ids))
+
+    def accepts_item(self, item, db_map):
+        if not super().accepts_item(item, db_map):
+            return False
+        object_class_id = self.db_map_data_field(db_map, 'class_id')
+        return str(object_class_id) in item["object_class_id_list"].split(",")
 
 
 class MemberObjectItem(ObjectItem):
