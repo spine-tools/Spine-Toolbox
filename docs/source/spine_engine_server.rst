@@ -7,6 +7,23 @@
 Spine Engine Server
 *******************
 
+Notes
+-----
+Here's a list of items that you should be aware of when running projects on Spine Engine Server.
+
+- Projects must be 'self-contained' for them to work in remote execution. Meaning that all input and output
+  files, file/db references, Specification files and scripts must be inside the project directory.
+- **Work or Source directory execution mode** setting is ignored. Tools are always executed in 'source'
+  directory, i.e. in the directory where the Tool Spec main script resides.
+- **Python Basic Console**. Interpreter setting in Tool Specification Editor is ignored. Basic Console runs the
+  same Python that was used in starting the Server.
+- **Python Jupyter Console**. Kernel spec setting in Tool Specification Editor is ignored. Jupyter Console is
+  launched using the **python3** kernel spec.
+- **Julia Basic Console**. Interpreter setting in app settings (Tools page in File->Settings) is ignored. Basic
+  Console runs the Julia that is found in PATH. See installation instructions below.
+- **Julia Jupyter Console**. Kernel spec setting in app settings (Tools page in File->Settings) is ignored. Jupyter
+  Console is launched using the **julia-1.8** kernel spec. See installation instructions below.
+
 Setting up Spine Engine Server
 ------------------------------
 
@@ -63,7 +80,7 @@ Setting up Spine Engine Server
 
       python start_server.py 50001 StoneHouse <repo_root>/spine-engine/server/connectivity/certs
 
-   - where, 50001 is the server port number, StoneHouse is the security model, and the path is the folder
+   - where, 50001 is an example server port number, StoneHouse is the security model, and the path is the folder
      containing the security credentials.
 
 .. Note:: Valid port range is 49152-65535.
