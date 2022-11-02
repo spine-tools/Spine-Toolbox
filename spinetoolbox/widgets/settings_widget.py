@@ -19,7 +19,7 @@ Widget for controlling user settings.
 import os
 from PySide2.QtWidgets import QWidget, QFileDialog, QColorDialog
 from PySide2.QtCore import Slot, Qt, QSize, QSettings
-from PySide2.QtGui import QPixmap
+from PySide2.QtGui import QPixmap, QIntValidator
 from spine_engine.utils.helpers import (
     resolve_python_interpreter,
     resolve_julia_executable,
@@ -46,6 +46,7 @@ from ..helpers import (
     select_julia_executable,
     select_julia_project,
     select_conda_executable,
+    select_certificate_directory,
     file_is_valid,
     dir_is_valid,
     home_dir,
@@ -260,6 +261,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self._kernel_editor = None
+        self._remote_host = ""
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
@@ -270,6 +272,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.read_settings()
         self._update_python_widgets_enabled(self.ui.radioButton_use_python_jupyter_console.isChecked())
         self._update_julia_widgets_enabled(self.ui.radioButton_use_julia_jupyter_console.isChecked())
+        self._update_remote_execution_page_widget_status(self.ui.checkBox_enable_remote_exec.isChecked())
 
     def connect_signals(self):
         """Connect signals."""
@@ -279,6 +282,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.toolButton_browse_julia_project.clicked.connect(self.browse_julia_project_button_clicked)
         self.ui.toolButton_browse_python.clicked.connect(self.browse_python_button_clicked)
         self.ui.toolButton_browse_conda.clicked.connect(self.browse_conda_button_clicked)
+        self.ui.toolButton_pick_secfolder.clicked.connect(self.browse_certificate_directory_clicked)
         self.ui.pushButton_open_kernel_editor_python.clicked.connect(self.show_python_kernel_editor)
         self.ui.pushButton_open_kernel_editor_julia.clicked.connect(self.show_julia_kernel_editor)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
@@ -293,6 +297,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
         self.ui.radioButton_use_python_jupyter_console.toggled.connect(self._update_python_widgets_enabled)
         self.ui.radioButton_use_julia_jupyter_console.toggled.connect(self._update_julia_widgets_enabled)
+        self.ui.checkBox_enable_remote_exec.clicked.connect(self._update_remote_execution_page_widget_status)
+        self.ui.lineEdit_host.textEdited.connect(self._edit_remote_host)
         self.ui.user_defined_engine_process_limit_radio_button.toggled.connect(
             self.ui.engine_process_limit_spin_box.setEnabled
         )
@@ -317,6 +323,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.lineEdit_julia_project_path.setEnabled(not state)
         self.ui.toolButton_browse_julia.setEnabled(not state)
         self.ui.toolButton_browse_julia_project.setEnabled(not state)
+
+    @Slot(bool)
+    def _update_remote_execution_page_widget_status(self, state):
+        """Enables or disables widgets on Remote Execution page,
+        based on the state of remote execution enabled check box."""
+        self.ui.lineEdit_host.setEnabled(state)
+        self.ui.spinBox_port.setEnabled(state)
+        self.ui.comboBox_security.setEnabled(state)
+        self.ui.lineEdit_secfolder.setEnabled(state)
+        self.ui.toolButton_pick_secfolder.setEnabled(state)
 
     def _show_install_julia_wizard(self):
         wizard = InstallJuliaWizard(self)
@@ -367,6 +383,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def browse_conda_button_clicked(self, checked=False):
         """Calls static method that shows a file browser for selecting a Conda executable."""
         select_conda_executable(self, self.ui.lineEdit_conda_path)
+
+    @Slot(bool)
+    def browse_certificate_directory_clicked(self, _):
+        """Calls static method that shows a file browser for selecting the security folder for Engine Server."""
+        select_certificate_directory(self, self.ui.lineEdit_secfolder)
 
     @Slot(bool)
     def show_python_kernel_editor(self, checked=False):
@@ -628,6 +649,22 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     def _read_engine_settings(self):
         """Reads Engine settings and sets the corresponding UI elements."""
+        # Remote execution settings
+        enable_remote_exec = self._qsettings.value("engineSettings/remoteExecutionEnabled", defaultValue="false")
+        if enable_remote_exec == "true":
+            self.ui.checkBox_enable_remote_exec.setCheckState(Qt.Checked)
+        remote_host = self._qsettings.value("engineSettings/remoteHost", defaultValue="")
+        self._edit_remote_host(remote_host)
+        remote_port = int(self._qsettings.value("engineSettings/remotePort", defaultValue="49152"))
+        self.ui.spinBox_port.setValue(remote_port)
+        security = self._qsettings.value("engineSettings/remoteSecurityModel", defaultValue="")
+        if not security:
+            self.ui.comboBox_security.setCurrentIndex(0)
+        else:
+            self.ui.comboBox_security.setCurrentIndex(1)
+        sec_folder = self._qsettings.value("engineSettings/remoteSecurityFolder", defaultValue="")
+        self.ui.lineEdit_secfolder.setText(sec_folder)
+        # Parallel process limits
         process_limiter = self._qsettings.value("engineSettings/processLimiter", defaultValue="unlimited")
         if process_limiter == "unlimited":
             self.ui.unlimited_engine_process_radio_button.setChecked(True)
@@ -759,6 +796,18 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         Returns:
             bool: True if settings were stored successfully, False otherwise
         """
+        # Remote execution settings
+        remote_exec = "true" if int(self.ui.checkBox_enable_remote_exec.checkState()) else "false"
+        self._qsettings.setValue("engineSettings/remoteExecutionEnabled", remote_exec)
+        self._qsettings.setValue("engineSettings/remoteHost", self._remote_host)
+        self._qsettings.setValue("engineSettings/remotePort", self.ui.spinBox_port.value())
+        if self.ui.comboBox_security.currentIndex() == 0:
+            sec_str = ""
+        else:
+            sec_str = self.ui.comboBox_security.currentText()
+        self._qsettings.setValue("engineSettings/remoteSecurityModel", sec_str)
+        self._qsettings.setValue("engineSettings/remoteSecurityFolder", self.ui.lineEdit_secfolder.text())
+        # Parallel process limits
         if self.ui.unlimited_engine_process_radio_button.isChecked():
             limiter = "unlimited"
         elif self.ui.automatic_engine_process_limit_radio_button.isChecked():
@@ -817,11 +866,28 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
         self.update_scene_bg()
-        if bg_color == "false":
-            pass
-        else:
+        if not bg_color == "false":
             self.bg_color = bg_color
         self.update_bg_color()
+
+    @Slot(str)
+    def _edit_remote_host(self, new_text):
+        """Prepends host line edit with the protocol for user convenience.
+
+        Args:
+            new_text (str): Text in the line edit after user has entered a character
+        """
+        prep_str = "tcp://"
+        if new_text.startswith(prep_str):  # prep str already present
+            new = new_text[len(prep_str):]
+        else:    # First letter has been entered
+            new = new_text
+        # Clear when only prep str present or when clear (x) button is clicked
+        if new_text == prep_str or not new_text:
+            self.ui.lineEdit_host.clear()
+        else:
+            self.ui.lineEdit_host.setText(prep_str + new)  # Add prep str + user input
+        self._remote_host = new
 
     def closeEvent(self, ev):
         super().closeEvent(ev)

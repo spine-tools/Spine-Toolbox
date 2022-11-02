@@ -30,7 +30,6 @@ from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 from spinetoolbox.widgets.kernel_editor import find_kernels
 from spinetoolbox.spine_engine_manager import make_engine_manager
 
-
 # Set logging level for jupyter loggers
 traitlets_logger = logging.getLogger("traitlets")
 asyncio_logger = logging.getLogger("asyncio")
@@ -76,7 +75,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         return " & ".join(x.name for x in self.owners if x is not None)
 
     @Slot(bool)
-    def start_console(self, checked=False):
+    def start_console(self, _=False):
         """Starts chosen Python/Julia kernel if available and not already running.
         Context menu start action handler."""
         if self.kernel_manager and self.kernel_name == self._target_kernel_name:
@@ -85,14 +84,14 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.call_start_kernel()
 
     @Slot(bool)
-    def restart_console(self, checked=False):
+    def restart_console(self, _=False):
         """Restarts current Python/Julia kernel. Starts a new kernel if it
         is not running or if chosen kernel has been changed in Settings.
         Context menu restart action handler."""
         if self._engine_connection_file:
             self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
-            engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-            engine_mngr = make_engine_manager(engine_server_address)
+            exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+            engine_mngr = make_engine_manager(exec_remotely)
             engine_mngr.restart_kernel(self._engine_connection_file)
             self._replace_client()
             return
@@ -187,12 +186,11 @@ class JupyterConsoleWidget(RichJupyterWidget):
         super()._handle_status(msg)
         kernel_execution_state = msg["content"].get("execution_state", "")
         if kernel_execution_state == "starting":
-            # This msg does not show up when starting the Python Console but on Restart it does (strange)
+            # This msg does not show up when starting the Console but on Restart it does (strange)
             self._kernel_starting = True
             return
         if kernel_execution_state == "idle" and self._kernel_starting:
             self._kernel_starting = False
-            self._toolbox.msg.emit(f"{self.name()} ready for action")
             self._control.viewport().setCursor(self.normal_cursor)
 
     def enterEvent(self, event):

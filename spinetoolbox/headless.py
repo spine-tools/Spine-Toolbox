@@ -323,6 +323,9 @@ class ActionsWithProject(QObject):
                 self._specification_dicts.setdefault(item_type, []).append(spec_dict)
         dags = self._dags()
         settings = make_settings_dict_for_engine(self._app_settings)
+        # Force local execution in headless mode
+        if not settings.get("engineSettings/remoteExecutionEnabled", "false") == "false":
+            settings["engineSettings/remoteExecutionEnabled"] = "false"
         selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
         deselected = {name for name_list in self._args.deselect for name in name_list} if self._args.deselect else None
         for dag in dags:
@@ -350,8 +353,9 @@ class ActionsWithProject(QObject):
                 "settings": settings,
                 "project_dir": self._project_dir,
             }
-            engine_server_address = self._app_settings.value("appSettings/engineServerAddress", defaultValue="")
-            engine_manager = make_engine_manager(engine_server_address)
+            # exec_remotely is forced to False (see above)
+            exec_remotely = settings.get("engineSettings/remoteExecutionEnabled", "false") == "true"
+            engine_manager = make_engine_manager(exec_remotely)
             try:
                 engine_manager.run_engine(engine_data)
             except EngineInitFailed as error:

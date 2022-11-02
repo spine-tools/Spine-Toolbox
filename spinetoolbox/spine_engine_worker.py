@@ -14,14 +14,12 @@ Contains SpineEngineWorker.
 :authors: M. Marin (KTH)
 :date:   14.10.2020
 """
-
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from PySide2.QtWidgets import QMessageBox
-
-from spine_engine.exception import EngineInitFailed
+from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
-from .spine_engine_manager import make_engine_manager
+from .spine_engine_manager import make_engine_manager, LocalSpineEngineManager
 from .helpers import get_upgrade_db_promt_text
 
 
@@ -113,20 +111,21 @@ class SpineEngineWorker(QObject):
     _flash_arrived = Signal(object)
     _all_items_failed = Signal(list)
 
-    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, connections, logger):
+    def __init__(self, engine_data, dag, dag_identifier, project_items, connections, logger, job_id):
         """
         Args:
-            engine_server_address (str): Address of engine server if any
             engine_data (dict): engine data
-            dag (DirectedGraphHandler)
-            dag_identifier (str)
+            dag (DirectedGraphHandler):
+            dag_identifier (str):
             project_items (dict): mapping from project item name to :class:`ProjectItem`
             connections (dict): mapping from jump name to :class:`LoggingConnection` or :class:`LoggingJump`
             logger (LoggerInterface): a logger
+            job_id: Job Id for remote execution
         """
         super().__init__()
         self._engine_data = engine_data
-        self._engine_mngr = make_engine_manager(engine_server_address)
+        exec_remotely = engine_data["settings"].get("engineSettings/remoteExecutionEnabled", "false") == "true"
+        self._engine_mngr = make_engine_manager(exec_remotely, job_id)
         self.dag = dag
         self.dag_identifier = dag_identifier
         self._engine_final_state = "UNKNOWN"
@@ -216,11 +215,23 @@ class SpineEngineWorker(QObject):
             self._all_items_failed.emit(list(self._project_items.values()))
             self.finished.emit()
             return
+        except RemoteEngineInitFailed as e:
+            self._logger.msg_error.emit(f"Server is not responding. {e}. Check settings "
+                                        f"in <b>File->Settings->Engine</b>.")
+            self._engine_final_state = str(SpineEngineState.FAILED)
+            self._all_items_failed.emit(list(self._project_items.values()))
+            self.finished.emit()
+            return
         while True:
             event_type, data = self._engine_mngr.get_engine_event()
             self._process_event(event_type, data)
             if event_type == "dag_exec_finished":
                 self._engine_final_state = data
+                break
+            elif event_type == "remote_execution_init_failed" or event_type == "server_init_failed":
+                self._logger.msg_error.emit(f"{data}")
+                self._engine_final_state = str(SpineEngineState.FAILED)
+                self._all_items_failed.emit(list(self._project_items.values()))
                 break
         self.finished.emit()
 
@@ -235,6 +246,7 @@ class SpineEngineWorker(QObject):
             "kernel_execution_msg": self._handle_kernel_execution_msg,
             "prompt": self._handle_prompt,
             "flash": self._handle_flash,
+            "server_status_msg": self._handle_server_status_msg,
         }.get(event_type)
         if handler is None:
             return
@@ -288,7 +300,11 @@ class SpineEngineWorker(QObject):
         item = self._project_items[msg["item_name"]] or self._connections.get(msg["item_name"])
         if msg["type"] == "kernel_started":
             self._logger.jupyter_console_requested.emit(
-                item, msg["filter_id"], msg["kernel_name"], msg["connection_file"]
+                item,
+                msg["filter_id"],
+                msg["kernel_name"],
+                msg["connection_file"],
+                msg.get("connection_file_dict", dict())
             )
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
@@ -352,9 +368,23 @@ class SpineEngineWorker(QObject):
         # when the execution is stopped by user during filtered execution.
         self._node_execution_finished.emit(item, direction, item_state)
 
+    def _handle_server_status_msg(self, data):
+        if data["msg_type"] == "success":
+            self._logger.msg_success.emit(data["text"])
+        elif data["msg_type"] == "neutral":
+            self._logger.msg.emit(data["text"])
+        elif data["msg_type"] == "fail":
+            self._logger.msg_error.emit(data["text"])
+        elif data["msg_type"] == "warning":
+            self._logger.msg_warning.emit(data["text"])
+
     def clean_up(self):
         for item in self._executing_items:
             self._node_execution_finished.emit(item, None, None)
+        if isinstance(self._engine_mngr, LocalSpineEngineManager):
+            self._engine_mngr.stop_engine()
+        else:
+            self._engine_mngr.clean_up()
         self._thread.quit()
         self._thread.wait()
         self._thread.deleteLater()

@@ -879,6 +879,19 @@ def select_conda_executable(parent, line_edit):
     line_edit.setText(answer[0])
 
 
+def select_certificate_directory(parent, line_edit):
+    """Shows file browser and inserts selected certificate directory to given line edit.
+
+    Args:
+        parent (QWidget, optional): Parent of QFileDialog
+        line_edit (QLineEdit): Line edit where the selected dir path will be inserted
+    """
+    answer = QFileDialog.getExistingDirectory(parent, "Select certificates directory", home_dir())
+    if not answer:
+        return
+    line_edit.setText(answer)
+
+
 def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
     """Checks that given path is not a directory and it's a file that actually exists.
     In addition, can be used to check if the file name in given file path starts with
