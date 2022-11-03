@@ -9,7 +9,7 @@ on:
       - '.github/workflows/*.yml'
       - 'requirements.txt'
       - 'setup.cfg'
-  
+
 jobs:
   unit-tests:
     name: Unit tests
@@ -17,8 +17,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [3.7, 3.8]
-        os: [windows-latest, ubuntu-20.04]
+        python-version: [3.7, 3.8, 3.9]
+        os: [windows-latest, ubuntu-22.04]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -60,8 +60,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, 3.8]
-        os: [windows-latest, ubuntu-20.04]
+        python-version: [3.7, 3.8, 3.9]
+        os: [windows-latest, ubuntu-22.04]
     needs: unit-tests
     steps:
     - uses: actions/checkout@v2
