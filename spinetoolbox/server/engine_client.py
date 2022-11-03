@@ -129,8 +129,9 @@ class EngineClient:
             response = ServerMessage.parse(msg[1])
             response_id = int(response.getId())  # Check that request ID matches the response ID
             if not response_id == random_id:
-                raise RemoteEngineInitFailed(f"Ping failed. Request Id '{random_id}' does not "
-                                             f"match reply Id '{response_id}'")
+                raise RemoteEngineInitFailed(
+                    f"Ping failed. Request Id '{random_id}' does not " f"match reply Id '{response_id}'"
+                )
             stop_time_ms = round(time.time() * 1000.0)  # debugging
         return
 
@@ -201,8 +202,9 @@ class EngineClient:
                     q.put(("server_status_msg", {"msg_type": "neutral", "text": f"Downloaded {i} files"}))
                 break
             elif rcv[0] == b"incoming_file":
-                q.put(("server_status_msg",
-                       {"msg_type": "warning", "text": "Downloading file " + rcv[1].decode("utf-8")}))
+                q.put(
+                    ("server_status_msg", {"msg_type": "warning", "text": "Downloading file " + rcv[1].decode("utf-8")})
+                )
             else:
                 success, txt = self.save_downloaded_file(rcv[0], rcv[1])
                 q.put(("server_status_msg", {"msg_type": success, "text": txt}))

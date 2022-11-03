@@ -122,9 +122,7 @@ class TestEngineClient(unittest.TestCase):
         client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
         logger = mock.MagicMock()
         logger.msg_warning = mock.MagicMock()
-        exec_mngr1 = PythonPersistentExecutionManager(
-            logger, ["python"], [], "alias", group_id="SomeGroup"
-        )
+        exec_mngr1 = PythonPersistentExecutionManager(logger, ["python"], [], "alias", group_id="SomeGroup")
         # Make exec_mngr live on the server, then send command from client to server for processing and check output
         self.service.persistent_exec_mngrs["123"] = exec_mngr1
         gener = client.send_issue_persistent_command("123", "print('hi')")
@@ -146,9 +144,7 @@ class TestEngineClient(unittest.TestCase):
         client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
         logger = mock.MagicMock()
         logger.msg_warning = mock.MagicMock()
-        exec_mngr1 = PythonPersistentExecutionManager(
-            logger, ["python"], [], "alias", group_id="SomeGroup"
-        )
+        exec_mngr1 = PythonPersistentExecutionManager(logger, ["python"], [], "alias", group_id="SomeGroup")
         self.service.persistent_exec_mngrs["123"] = exec_mngr1
         should_be_true = client.send_is_complete("123", "print('hi')")
         self.assertTrue(should_be_true)

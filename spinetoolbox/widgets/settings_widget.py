@@ -879,8 +879,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """
         prep_str = "tcp://"
         if new_text.startswith(prep_str):  # prep str already present
-            new = new_text[len(prep_str):]
-        else:    # First letter has been entered
+            new = new_text[len(prep_str) :]
+        else:  # First letter has been entered
             new = new_text
         # Clear when only prep str present or when clear (x) button is clicked
         if new_text == prep_str or not new_text:

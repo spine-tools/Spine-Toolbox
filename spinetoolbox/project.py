@@ -1402,19 +1402,23 @@ class SpineToolboxProject(MetaObject):
             return "1"  # Something that isn't False
         host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
         if not host:
-            self._logger.msg_error.emit("Spine Engine Server <b>host address</b> missing. "
-                                        "Please enter host in <b>File->Settings->Engine</b>.")
+            self._logger.msg_error.emit(
+                "Spine Engine Server <b>host address</b> missing. "
+                "Please enter host in <b>File->Settings->Engine</b>."
+            )
             return ""
         elif not port:
-            self._logger.msg_error.emit("Spine Engine Server <b>port</b> missing. "
-                                        "Please select port in <b>File->Settings->Engine</b>.")
+            self._logger.msg_error.emit(
+                "Spine Engine Server <b>port</b> missing. " "Please select port in <b>File->Settings->Engine</b>."
+            )
             return ""
         self._logger.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
         try:
             engine_client = EngineClient(host, port, sec_model, sec_folder)
         except RemoteEngineInitFailed as e:
-            self._logger.msg_error.emit(f"Server is not responding. {e}. "
-                                        f"Check settings in <b>File->Settings->Engine</b>.")
+            self._logger.msg_error.emit(
+                f"Server is not responding. {e}. " f"Check settings in <b>File->Settings->Engine</b>."
+            )
             return ""
         engine_client.set_start_time()  # Set start_time for upload operation
         # Archive the project into a zip-file

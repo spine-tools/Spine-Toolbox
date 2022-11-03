@@ -1634,3 +1634,20 @@ class HTMLTagFilter(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == "br":
             self._text += "\n"
+
+
+def same_path(path1, path2):
+    """Checks if two paths are equal.
+
+    This is a lightweight version of os.path.samefile(): it doesn't check if the paths
+    point to the same file system object but rather takes into account file system
+    case-sensitivity and such.
+
+    Args:
+        path1 (str): a path
+        path2 (str): a path
+
+    Returns:
+        bool: True if paths point to the same
+    """
+    return os.path.normcase(path1) == os.path.normcase(path2)
