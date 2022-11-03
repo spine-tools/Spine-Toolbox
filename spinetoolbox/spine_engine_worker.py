@@ -216,8 +216,9 @@ class SpineEngineWorker(QObject):
             self.finished.emit()
             return
         except RemoteEngineInitFailed as e:
-            self._logger.msg_error.emit(f"Server is not responding. {e}. Check settings "
-                                        f"in <b>File->Settings->Engine</b>.")
+            self._logger.msg_error.emit(
+                f"Server is not responding. {e}. Check settings " f"in <b>File->Settings->Engine</b>."
+            )
             self._engine_final_state = str(SpineEngineState.FAILED)
             self._all_items_failed.emit(list(self._project_items.values()))
             self.finished.emit()
@@ -304,7 +305,7 @@ class SpineEngineWorker(QObject):
                 msg["filter_id"],
                 msg["kernel_name"],
                 msg["connection_file"],
-                msg.get("connection_file_dict", dict())
+                msg.get("connection_file_dict", dict()),
             )
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (

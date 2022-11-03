@@ -244,8 +244,9 @@ class TestSpineToolboxProject(unittest.TestCase):
     def _execute_project(self):
         waiter = SignalWaiter()
         self.toolbox.project().project_execution_finished.connect(waiter.trigger)
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, \
-                mock.patch("spinetoolbox.project.make_settings_dict_for_engine") as mock_settings_dict:
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, mock.patch(
+            "spinetoolbox.project.make_settings_dict_for_engine"
+        ) as mock_settings_dict:
             # Make sure that the test uses LocalSpineEngineManager
             # This mocks the check for engineSettings/remoteEngineEnabled in SpineToolboxProject.execute_dags()
             mock_qsettings_value.side_effect = qsettings_value_side_effect
@@ -260,8 +261,9 @@ class TestSpineToolboxProject(unittest.TestCase):
     def _execute_selected(self, names):
         waiter = SignalWaiter()
         self.toolbox.project().project_execution_finished.connect(waiter.trigger)
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, \
-                mock.patch("spinetoolbox.project.make_settings_dict_for_engine") as mock_settings_dict:
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, mock.patch(
+            "spinetoolbox.project.make_settings_dict_for_engine"
+        ) as mock_settings_dict:
             # Make sure that the test uses LocalSpineEngineManager
             # This mocks the check for engineSettings/remoteEngineEnabled in SpineToolboxProject.execute_dags()
             mock_settings_dict.return_value = dict()

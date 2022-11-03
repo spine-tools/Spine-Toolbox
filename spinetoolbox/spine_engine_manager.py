@@ -210,6 +210,7 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
 class RemoteSpineEngineManager(SpineEngineManagerBase):
     """Responsible for remote project execution."""
+
     def __init__(self, job_id=""):
         """Initializer."""
         super().__init__()
@@ -242,9 +243,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         sec_model = app_settings.get("engineSettings/remoteSecurityModel", "")  # ZQM security model
         security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
         sec_folder = (
-            ""
-            if security == ClientSecurityModel.NONE
-            else app_settings.get("engineSettings/remoteSecurityFolder", "")
+            "" if security == ClientSecurityModel.NONE else app_settings.get("engineSettings/remoteSecurityFolder", "")
         )
         self.make_engine_client(host, port, security, sec_folder)
         self._engine_data = engine_data
@@ -279,11 +278,16 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         if start_response_data[0] != "remote_execution_started":
             # Initializing the server for execution failed. 'remote_execution_init_failed' and 'server_init_failed'
             # are handled in SpineEngineWorker.
-            self.q.put(("server_status_msg", {
-                "msg_type": "fail",
-                "text": f"Server init failed: event_type:{start_response_data[0]} "
-                        f"data:{start_response_data[1]}. Aborting."
-            }))
+            self.q.put(
+                (
+                    "server_status_msg",
+                    {
+                        "msg_type": "fail",
+                        "text": f"Server init failed: event_type:{start_response_data[0]} "
+                        f"data:{start_response_data[1]}. Aborting.",
+                    },
+                )
+            )
             self.q.put(start_response_data)
             return
         self.exec_job_id = start_response_data[2]  # Needed for stopping DAG execution on server

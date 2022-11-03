@@ -96,7 +96,7 @@ from .helpers import (
     format_log_message,
     color_from_index,
     load_specification_from_file,
-    load_specification_local_data,
+    load_specification_local_data, same_path,
 )
 from .project_commands import (
     AddSpecificationCommand,
@@ -1879,7 +1879,7 @@ class ToolboxUI(QMainWindow):
         recents_list = recents.split("\n")
         for entry in recents_list:
             _, path = entry.split("<>")
-            if os.path.normcase(path) == os.path.normcase(p):
+            if same_path(path, p):
                 recents_list.pop(recents_list.index(entry))
                 break
         updated_recents = "\n".join(recents_list)
