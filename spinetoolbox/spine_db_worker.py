@@ -18,7 +18,7 @@ The SpineDBWorker class
 from functools import wraps
 import itertools
 from enum import Enum, unique, auto
-from PySide2.QtCore import QObject, Signal, Slot, QTimer
+from PySide2.QtCore import QObject, Signal, Slot
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
 from spinedb_api.helpers import CacheItem
 from .helpers import busy_effect, FetchParent
@@ -229,20 +229,17 @@ class SpineDBWorker(QObject):
         self._something_happened.emit(_Event.FETCH, (parent, chunk))
 
     def _fetch_event(self, parent, chunk):
-        # Mark parent as unbusy, but after emitting the 'added' signal below otherwise we have an infinite fetch loop
-        QTimer.singleShot(0, lambda: parent.set_busy_fetching(False))
         if chunk:
-            signal = self._db_mngr.added_signals[parent.fetch_item_type]
-            signal.emit({self._db_map: chunk})
             db_map_data = {self._db_map: chunk}
             self._db_mngr.cache_items(parent.fetch_item_type, db_map_data)
             parent.handle_items_added(db_map_data)
         elif parent.query is not None:
             parent.set_fetched(True)
+        parent.set_busy_fetching(False)
 
     def fetch_all(self, fetch_item_types=None, only_descendants=False, include_ancestors=False):
         if fetch_item_types is None:
-            fetch_item_types = set(self._db_mngr.added_signals)
+            fetch_item_types = set(self._db_map.ITEM_TYPES)
         if only_descendants:
             fetch_item_types = {
                 descendant
@@ -410,21 +407,31 @@ class SpineDBWorker(QObject):
 
     @busy_effect
     def _update_items(self, items, method_name, item_type, check, cache, callback):
+        # FIXME: This needs more work, especially don't modify cache from this thread
+        def _new_item_from_db_item(item_type, db_item):
+            try:
+                item = self._db_map.db_to_cache(cache, item_type, db_item, fetch=False)
+                cache.setdefault(item_type, {})[item["id"]] = CacheItem(**item)
+                return item
+            except KeyError:
+                return None
+
+        def _new_item_from_id(item_type, id_):
+            old_item = cache.get(item_type, {}).get(id_)
+            if old_item is None:
+                return None
+            db_item = self._db_map.cache_to_db(item_type, old_item)
+            return _new_item_from_db_item(item_type, db_item)
+
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
-        items_by_type = {}
+        items_by_type = {item_type: list(filter(None, (_new_item_from_db_item(item_type, x) for x in items)))}
         ids_by_type = {item_type: {x["id"] for x in items}}
         cascading_ids_by_type = self._db_map.cascading_ids(cache=cache, **ids_by_type)
+        del cascading_ids_by_type[item_type]
         for cascading_item_type, ids in cascading_ids_by_type.items():
-            if cascading_item_type != item_type:
-                old_items = (cache.get(cascading_item_type, {}).get(id_) for id_ in ids)
-                db_items = (self._db_map.cache_to_db(cascading_item_type, x) for x in old_items if x is not None)
-            else:
-                db_items = items
-            new_items = items_by_type[cascading_item_type] = [
-                self._db_map.db_to_cache(cache, cascading_item_type, x) for x in db_items
-            ]
-            for item in new_items:
-                cache.setdefault(cascading_item_type, {})[item["id"]] = CacheItem(**item)
+            items = list(filter(None, (_new_item_from_id(cascading_item_type, id_) for id_ in ids)))
+            if items:
+                items_by_type[cascading_item_type] = items
         self._something_happened.emit(_Event.UPDATE_ITEMS, (item_type, items_by_type, errors, callback))
 
     def _update_items_event(self, item_type, items_by_type, errors, callback):

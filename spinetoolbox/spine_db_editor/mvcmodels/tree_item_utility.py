@@ -125,10 +125,13 @@ class EmptyChildMixin:
 
 
 class SortChildrenMixin:
+    def _children_sort_key(self, child):
+        return child.data(0)
+
     def insert_children_sorted(self, children):
         for child in children:
             child.parent_item = self
-        for chunk, pos in bisect_chunks(self.non_empty_children, children, key=lambda x: x.data(0)):
+        for chunk, pos in bisect_chunks(self.non_empty_children, children, key=self._children_sort_key):
             if not super().insert_children(pos, chunk):
                 return False
         return True

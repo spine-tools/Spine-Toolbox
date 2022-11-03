@@ -26,6 +26,7 @@ from .tree_item_utility import (
     EditableMixin,
     StandardDBItem,
     FetchMoreMixin,
+    SortChildrenMixin,
     LeafItem,
 )
 from ...helpers import CharIconEngine
@@ -49,7 +50,9 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
         return ListItem(id_)
 
 
-class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, FetchMoreMixin, LeafItem):
+class ListItem(
+    GrayIfLastMixin, EditableMixin, EmptyChildMixin, SortChildrenMixin, BoldTextMixin, FetchMoreMixin, LeafItem
+):
     """A list item."""
 
     def __init__(self, identifier=None, name=None):
@@ -85,8 +88,8 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, F
     def accepts_item(self, item, db_map):
         return item["parameter_value_list_id"] == self.id
 
-    def insert_children_sorted(self, children):
-        return self.insert_children(len(self.non_empty_children), children)
+    def _children_sort_key(self, child):
+        return self.db_mngr.get_item(self.db_map, "list_value", child.id)["index"]
 
     def data(self, column, role=Qt.DisplayRole):
         if role == Qt.DecorationRole:

@@ -52,7 +52,7 @@ from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import SpineDBMacro, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, signal_waiter, busy_effect, separate_metadata_and_item_metadata
+from .helpers import get_upgrade_db_promt_text, busy_effect, separate_metadata_and_item_metadata
 
 
 @busy_effect
@@ -70,45 +70,17 @@ class SpineDBManager(QObject):
     session_rolled_back = Signal(set)
     # Added
     scenarios_added = Signal(dict)
-    alternatives_added = Signal(dict)
-    object_classes_added = Signal(dict)
-    objects_added = Signal(dict)
-    relationship_classes_added = Signal(dict)
-    relationships_added = Signal(dict)
     entity_groups_added = Signal(dict)
-    parameter_definitions_added = Signal(dict)
-    parameter_values_added = Signal(dict)
     parameter_value_lists_added = Signal(dict)
     list_values_added = Signal(dict)
-    features_added = Signal(dict)
-    tools_added = Signal(dict)
-    tool_features_added = Signal(dict)
-    tool_feature_methods_added = Signal(dict)
-    metadata_added = Signal(dict)
-    entity_metadata_added = Signal(dict)
-    parameter_value_metadata_added = Signal(dict)
     # Updated
-    scenarios_updated = Signal(dict)
-    alternatives_updated = Signal(dict)
-    object_classes_updated = Signal(dict)
     objects_updated = Signal(dict)
-    relationship_classes_updated = Signal(dict)
     relationships_updated = Signal(dict)
     parameter_definitions_updated = Signal(dict)
     parameter_values_updated = Signal(dict)
     parameter_value_lists_updated = Signal(dict)
     list_values_updated = Signal(dict)
     features_updated = Signal(dict)
-    tools_updated = Signal(dict)
-    tool_features_updated = Signal(dict)
-    tool_feature_methods_updated = Signal(dict)
-    metadata_updated = Signal(dict)
-    entity_metadata_updated = Signal(dict)
-    parameter_value_metadata_updated = Signal(dict)
-    # Internal
-    scenario_alternatives_added = Signal(dict)
-    scenario_alternatives_updated = Signal(dict)
-    scenario_alternatives_removed = Signal(dict)
     # Closing
     waiting_for_fetcher = Signal()
     fetcher_waiting_over = Signal()
@@ -131,80 +103,19 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self._cache = {}
         self._icon_mngr = {}
-        self.added_signals = {
-            "object_class": self.object_classes_added,
-            "relationship_class": self.relationship_classes_added,
-            "parameter_value_list": self.parameter_value_lists_added,
-            "list_value": self.list_values_added,
-            "parameter_definition": self.parameter_definitions_added,
-            "alternative": self.alternatives_added,
-            "scenario": self.scenarios_added,
-            "scenario_alternative": self.scenario_alternatives_added,
-            "object": self.objects_added,
-            "relationship": self.relationships_added,
-            "entity_group": self.entity_groups_added,
-            "parameter_value": self.parameter_values_added,
-            "feature": self.features_added,
-            "tool": self.tools_added,
-            "tool_feature": self.tool_features_added,
-            "tool_feature_method": self.tool_feature_methods_added,
-            "metadata": self.metadata_added,
-            "entity_metadata": self.entity_metadata_added,
-            "parameter_value_metadata": self.parameter_value_metadata_added,
-        }
-        self.updated_signals = {
-            "object_class": self.object_classes_updated,
-            "relationship_class": self.relationship_classes_updated,
-            "parameter_value_list": self.parameter_value_lists_updated,
-            "list_value": self.list_values_updated,
-            "parameter_definition": self.parameter_definitions_updated,
-            "alternative": self.alternatives_updated,
-            "scenario": self.scenarios_updated,
-            "scenario_alternative": self.scenario_alternatives_updated,
-            "object": self.objects_updated,
-            "relationship": self.relationships_updated,
-            "parameter_value": self.parameter_values_updated,
-            "feature": self.features_updated,
-            "tool": self.tools_updated,
-            "tool_feature": self.tool_features_updated,
-            "tool_feature_method": self.tool_feature_methods_updated,
-            "metadata": self.metadata_updated,
-            "entity_metadata": self.entity_metadata_updated,
-            "parameter_value_metadata": self.parameter_value_metadata_updated,
-        }
         self.connect_signals()
 
     def connect_signals(self):
         """Connects signals."""
-        # Icons
-        self.object_classes_added.connect(self.update_icons)
-        self.object_classes_updated.connect(self.update_icons)
-        self.relationship_classes_added.connect(self.update_icons)
-        self.relationship_classes_updated.connect(self.update_icons)
         # Refresh
-        self.alternatives_updated.connect(self._cascade_refresh_parameter_values_by_alternative)
-        self.object_classes_updated.connect(self._cascade_refresh_relationship_classes)
-        self.object_classes_updated.connect(self._cascade_refresh_parameter_definitions)
-        self.object_classes_updated.connect(self._cascade_refresh_parameter_values_by_entity_class)
-        self.relationship_classes_updated.connect(self._cascade_refresh_parameter_definitions)
-        self.relationship_classes_updated.connect(self._cascade_refresh_parameter_values_by_entity_class)
-        self.objects_updated.connect(self._cascade_refresh_relationships_by_object)
-        self.objects_updated.connect(self._cascade_refresh_parameter_values_by_entity)
-        self.relationships_updated.connect(self._cascade_refresh_parameter_values_by_entity)
-        self.parameter_definitions_updated.connect(self._cascade_refresh_parameter_values_by_definition)
-        self.parameter_definitions_updated.connect(self._cascade_refresh_features_by_paremeter_definition)
         self.parameter_value_lists_added.connect(self._cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_updated.connect(self._cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_parameter_value_list)
         # self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_removed_value_list)
-        self.features_updated.connect(self._cascade_refresh_tool_features_by_feature)
         self.list_values_added.connect(self._refresh_parameter_value_lists)
         # self.list_values_removed.connect(self._refresh_parameter_value_lists)
         self.list_values_updated.connect(self._cascade_refresh_parameter_values_by_list_value)
         self.list_values_updated.connect(self._cascade_refresh_parameter_definitions_by_list_value)
-        self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
-        self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
-        # self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
         self.entity_groups_added.connect(self._cascade_refresh_objects_by_group)
         self.entity_groups_added.connect(self._cascade_refresh_relationships_by_group)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
@@ -261,6 +172,8 @@ class SpineDBManager(QObject):
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
+        if item_type in ("object_class", "relationship_class"):
+            self.update_icons(db_map_data)
         if item_type not in ("entity_metadata", "parameter_value_metadata"):
             for db_map, items in db_map_data.items():
                 for item in items:
@@ -923,13 +836,10 @@ class SpineDBManager(QObject):
             id_ (int): The parameter_value_list id
             role (int, optional)
         """
-        item = self.get_item(db_map, "parameter_value_list", id_, only_visible=only_visible)
-        if not item:
-            return []
         return [
             self.get_value(db_map, "list_value", item["id"], role=role)
             for item in self.get_items_by_field(
-                db_map, "list_value", "parameter_value_list_id", item["id"], only_visible=only_visible
+                db_map, "list_value", "parameter_value_list_id", id_, only_visible=only_visible
             )
         ]
 
@@ -938,7 +848,14 @@ class SpineDBManager(QObject):
             self.get_items_by_field(db_map, "scenario_alternative", "scenario_id", scen_id, only_visible=only_visible),
             key=lambda x: x["rank"],
         )
-        return [x["alternative_id"] for x in sorted_scenario_alternatives]
+        alternative_id_list = [x["alternative_id"] for x in sorted_scenario_alternatives]
+        alternative_name_list = [
+            self.get_item(db_map, "alternative", id_, only_visible=False)["name"] for id_ in alternative_id_list
+        ]
+        scenario = self.get_item(db_map, "scenario", scen_id, only_visible=False)
+        scenario["alternative_id_list"] = ",".join(str(id_) for id_ in alternative_id_list)
+        scenario["alternative_name_list"] = ",".join(alternative_name_list)
+        return alternative_id_list
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -1704,32 +1621,6 @@ class SpineDBManager(QObject):
                 db_map_value_list_data.setdefault(db_map, []).append(value_list)
         self.parameter_value_lists_updated.emit(db_map_value_list_data)
 
-    def _refresh_scenario_alternatives(self, db_map_data):
-        """Refreshes cached scenarios when updating scenario alternatives.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_scenario_data = {}
-        for db_map, data in db_map_data.items():
-            scenario_ids = {item["scenario_id"] for item in data}
-            for scenario_id in scenario_ids:
-                sorted_scenario_alternatives = sorted(
-                    self.get_items_by_field(
-                        db_map, "scenario_alternative", "scenario_id", scenario_id, only_visible=False
-                    ),
-                    key=lambda x: x["rank"],
-                )
-                alternative_id_list = [x["alternative_id"] for x in sorted_scenario_alternatives]
-                alternative_name_list = [
-                    self.get_item(db_map, "alternative", id_, only_visible=False)["name"] for id_ in alternative_id_list
-                ]
-                scenario = self.get_item(db_map, "scenario", scenario_id, only_visible=False)
-                scenario["alternative_id_list"] = ",".join(str(id_) for id_ in alternative_id_list)
-                scenario["alternative_name_list"] = ",".join(alternative_name_list)
-                db_map_scenario_data.setdefault(db_map, []).append(scenario)
-        self.scenarios_updated.emit(db_map_scenario_data)
-
     def _cascade_refresh_objects_by_group(self, db_map_data):
         self._cascade_refresh_entities_by_group(db_map_data, "object", self.objects_updated)
 
@@ -1745,33 +1636,6 @@ class SpineDBManager(QObject):
                     entity["group_id"] = item["group_id"]
                     db_map_entity_data.setdefault(db_map, []).append(entity)
         updated_signal.emit(db_map_entity_data)
-
-    def _cascade_refresh_relationship_classes(self, db_map_data):
-        """Refreshes cached relationship classes when updating object classes.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_relationship_classes(self.db_map_ids(db_map_data))
-        self.relationship_classes_updated.emit(db_map_cascading_data)
-
-    def _cascade_refresh_relationships_by_object(self, db_map_data):
-        """Refreshed cached relationships in cascade when updating objects.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_relationships(self.db_map_ids(db_map_data))
-        self.relationships_updated.emit(db_map_cascading_data)
-
-    def _cascade_refresh_parameter_definitions(self, db_map_data):
-        """Refreshes cached parameter definitions in cascade when updating entity classes.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter_definition")
-        self.parameter_definitions_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
         """Refreshes cached parameter definitions when updating parameter_value lists.
@@ -1793,51 +1657,6 @@ class SpineDBManager(QObject):
         )
         self.parameter_definitions_updated.emit(db_map_cascading_data)
 
-    def _cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
-        """Refreshes cached parameter values in cascade when updating entity classes.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter_value")
-        self.parameter_values_updated.emit(db_map_cascading_data)
-
-    def _cascade_refresh_parameter_values_by_entity(self, db_map_data):
-        """Refreshes cached parameter values in cascade when updating entities.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.db_map_ids(db_map_data))
-        self.parameter_values_updated.emit(db_map_cascading_data)
-
-    def _cascade_refresh_parameter_values_by_alternative(self, db_map_data):
-        """Refreshes cached parameter values in cascade when updating alternatives.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self.db_map_ids(db_map_data))
-        self.parameter_values_updated.emit(db_map_cascading_data)
-
-    def _cascade_refresh_parameter_values_by_definition(self, db_map_data):
-        """Refreshes cached parameter values in cascade when updating parameter definitions.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.db_map_ids(db_map_data))
-        self.parameter_values_updated.emit(db_map_cascading_data)
-
-    def _cascade_refresh_features_by_paremeter_definition(self, db_map_data):
-        """Refreshes cached features in cascade when updating parameter definitions.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_features_by_parameter_definition(self.db_map_ids(db_map_data))
-        self.features_updated.emit(db_map_cascading_data)
-
     def _cascade_refresh_features_by_parameter_value_list(self, db_map_data):
         """Refreshes cached features in cascade when updating parameter value lists.
 
@@ -1846,15 +1665,6 @@ class SpineDBManager(QObject):
         """
         db_map_cascading_data = self.find_cascading_features_by_parameter_value_list(self.db_map_ids(db_map_data))
         self.features_updated.emit(db_map_cascading_data)
-
-    def _cascade_refresh_tool_features_by_feature(self, db_map_data):
-        """Refreshes cached tool features in cascade when updating features.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_tool_features_by_feature(self.db_map_ids(db_map_data))
-        self.tool_features_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_parameter_values_by_list_value(self, db_map_data):
         """Refreshes cached parameter values in cascade when updating list values.
