@@ -1,7 +1,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.7%20|%203.8-blue.svg)](https://www.python.org/downloads/release/python-379/)
+[![Python](https://img.shields.io/badge/python-3.7%20|%203.8%20|%203.9-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/Spine-project/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/Spine-project/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
@@ -13,8 +13,9 @@ Spine Toolbox is an open source Python package to manage data, scenarios and wor
 
 - Python 3.7
 - Python 3.8
+- Python 3.9
 
-Python 3.8.0 is not supported (use Python 3.8.1 or later). Please note that Python 3.9 or 3.10 are not supported yet.
+Python 3.8.0 is not supported (use Python 3.8.1 or later).
 
 ## License
 
@@ -42,8 +43,8 @@ and [from source files](#installation-from-sources-using-git).
 This works best for users that want to just use Spine Toolbox but also keep it 
 updated with new releases.
 
-1. If you don't yet have Python 3.7 or 3.8, install the latest Python 3.8 release
-   from [Python.org](https://www.python.org/downloads/release/python-3810/).
+1. If you don't yet have Python 3.7, 3.8, or 3.9, install the latest Python 3.9 release
+   from [Python.org](https://www.python.org/downloads/release/python-3913/).
 
 2. Open a terminal (e.g., Command Prompt on Windows).
 
@@ -85,7 +86,7 @@ development version.
 ### Windows 64-bit installer package
 
 There are old Windows installer packages available for a quick install, but they are
-at this point (7.5.2022) quite obsolete and cannot be recommended for anything but 
+at this point (3.11.2022) quite obsolete and cannot be recommended for anything but 
 a quick look at how Spine Toolbox looks and feels (although even that has changed).
 Download the installer package from 
 [here](https://github.com/Spine-project/Spine-Toolbox/releases),
@@ -107,7 +108,7 @@ version of pip.
 
     or a new [conda](https://docs.conda.io/projects/conda/) environment using 
 
-        conda create -n spinetoolbox python=3.8
+        conda create -n spinetoolbox python=3.9
     
 3. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
    or `source .venv/bin/activate` (bash, zsh) or `conda activate spinetoolbox`. 
@@ -135,7 +136,7 @@ is active.
 
 ### About requirements
 
-Python 3.7 or Python 3.8.1 or later is required. Python 3.8.0 is not allowed due to problems in DLL loading on Windows.
+Python 3.7, 3.8, or 3.9 is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
 
 See file `setup.cfg` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
@@ -161,7 +162,7 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 
 #### Installation fails
 
-Please make sure you are using Python 3.7 or Python 3.8 to install the requirements.
+Please make sure you are using Python 3.7, 3.8, or 3.9 to install the requirements.
 
 #### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 
@@ -189,9 +190,6 @@ recommended.**
 The required `qtconsole` package from the ***conda-forge*** channel also
 installs `qt` and `PyQt` packages. Since this is a `PySide2` application, those 
 are not needed and there is a chance of conflicts between the packages.
-
-**Note**: Supported PySide2 version is **5.14**. Spine Toolbox does not support 
-PySide2 version 5.15 (yet).
 
 **Note**: Python 3.8.0 is not supported. Use Python 3.8.1 or later.
 
@@ -254,8 +252,8 @@ What to put in your bug report:
     also be included.
 
 ### Feature requests
-The developers of Spine Toolbox are happy to hear new ideas for features or improvements 
-to existing functionality. The format for requesting new features is free. Just fill 
+The developers of Spine Toolbox are happy to hear feature requests or ideas for improving 
+existing functionality. The format for requesting new features is free. Just fill 
 out the required fields on the issue tracker and give a description of the new feature. 
 A picture accompanying the description is a good way to get your idea into development
 faster. But before you make a new issue, please check that there isn't a related idea 
