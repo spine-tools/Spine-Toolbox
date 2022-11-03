@@ -15,6 +15,7 @@ expected = f"# Copyright (C) 2017-{current_year} Spine project consortium"
 def update_copyrights(path, suffix, recursive=True):
     for path in path.iterdir():
         if path.suffix == suffix:
+            i = 0
             with open(path) as python_file:
                 lines = python_file.readlines()
                 for i, line in enumerate(lines[1:4]):
