@@ -21,15 +21,17 @@ import os
 from pathlib import Path
 import json
 import random
-from PySide2.QtCore import Signal
+from PySide2.QtCore import Signal, QCoreApplication
 from PySide2.QtGui import QColor
 import networkx as nx
-from spine_engine.exception import EngineInitFailed
+from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import validate_single_jump
-from spine_engine.utils.helpers import ExecutionDirection, shorten
+from spine_engine.utils.helpers import ExecutionDirection, shorten, get_file_size
 from spine_engine.utils.serialization import deserialize_path, serialize_path
+from spine_engine.server.util.zip_handler import ZipHandler
+from .server.engine_client import EngineClient
 from .metaobject import MetaObject
 from .helpers import (
     create_dir,
@@ -40,6 +42,7 @@ from .helpers import (
     load_local_project_data,
     merge_dicts,
     load_specification_local_data,
+    busy_effect,
 )
 from .project_upgrader import ProjectUpgrader
 from .config import (
@@ -50,6 +53,7 @@ from .config import (
     PROJECT_LOCAL_DATA_FILENAME,
     FG_COLOR,
     SPECIFICATION_LOCAL_DATA_FILENAME,
+    PROJECT_ZIP_FILENAME,
 )
 from .project_commands import SetProjectNameAndDescriptionCommand
 from .spine_engine_worker import SpineEngineWorker
@@ -983,12 +987,16 @@ class SpineToolboxProject(MetaObject):
         if self._engine_workers:
             self._logger.msg_error.emit("Execution already in progress.")
             return
+        job_id = self.prepare_remote_execution()
+        if not job_id:
+            self.project_execution_finished.emit()
+            return
         settings = make_settings_dict_for_engine(self._settings)
         darker_fg_color = QColor(FG_COLOR).darker().name()
         darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
-            worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
+            worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings, job_id)
             if worker is None:
                 continue
             self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
@@ -1004,7 +1012,7 @@ class SpineToolboxProject(MetaObject):
         for worker in self._engine_workers:
             worker.start()
 
-    def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
+    def create_engine_worker(self, dag, execution_permits, dag_identifier, settings, job_id):
         """Creates and returns a SpineEngineWorker to execute given *validated* dag.
 
         Args:
@@ -1012,6 +1020,7 @@ class SpineToolboxProject(MetaObject):
             execution_permits (dict): mapping item names to a boolean indicating whether to execute it or skip it
             dag_identifier (str): A string identifying the dag, for logging
             settings (dict): project and app settings to send to the spine engine.
+            job_id (str): Job Id for remote execution
 
         Returns:
             SpineEngineWorker
@@ -1044,10 +1053,9 @@ class SpineToolboxProject(MetaObject):
             "execution_permits": execution_permits,
             "items_module_name": "spine_items",
             "settings": settings,
-            "project_dir": self.project_dir,
+            "project_dir": self.project_dir.replace(os.sep, "/"),
         }
-        server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
-        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items, connections, self._logger)
+        worker = SpineEngineWorker(data, dag, dag_identifier, items, connections, self._logger, job_id)
         return worker
 
     def _handle_engine_worker_finished(self, worker):
@@ -1057,6 +1065,7 @@ class SpineToolboxProject(MetaObject):
             "COMPLETED": [self._logger.msg_success, "completed successfully"],
         }
         outcome = finished_outcomes.get(worker.engine_final_state())
+        # print("project._handle_engine_worker_finished() worker state: %s"%outcome)
         if outcome is not None:
             outcome[0].emit(f"<b>DAG {worker.dag_identifier} {outcome[1]}</b>")
         if any(worker.engine_final_state() not in finished_outcomes for worker in self._engine_workers):
@@ -1071,6 +1080,10 @@ class SpineToolboxProject(MetaObject):
                 item.handle_execution_successful(direction, state)
             finished_worker.clean_up()
         self._engine_workers.clear()
+        # We could remove the transmitted project zip-file here if we want
+        # ZipHandler.remove_file(
+        #     os.path.abspath(os.path.join(self._project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
+        # )
         self.project_execution_finished.emit()
 
     def execute_selected(self, names):
@@ -1376,6 +1389,60 @@ class SpineToolboxProject(MetaObject):
     @property
     def settings(self):
         return self._settings
+
+    @busy_effect
+    def prepare_remote_execution(self):
+        """Pings the server and sends the project as a zip-file to server.
+
+        Returns:
+            str: Job Id if server is ready for remote execution, empty string if something went wrong or "1" if
+            local execution is enabled.
+        """
+        if not self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
+            return "1"  # Something that isn't False
+        host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
+        if not host:
+            self._logger.msg_error.emit(
+                "Spine Engine Server <b>host address</b> missing. "
+                "Please enter host in <b>File->Settings->Engine</b>."
+            )
+            return ""
+        elif not port:
+            self._logger.msg_error.emit(
+                "Spine Engine Server <b>port</b> missing. " "Please select port in <b>File->Settings->Engine</b>."
+            )
+            return ""
+        self._logger.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
+        try:
+            engine_client = EngineClient(host, port, sec_model, sec_folder)
+        except RemoteEngineInitFailed as e:
+            self._logger.msg_error.emit(
+                f"Server is not responding. {e}. " f"Check settings in <b>File->Settings->Engine</b>."
+            )
+            return ""
+        engine_client.set_start_time()  # Set start_time for upload operation
+        # Archive the project into a zip-file
+        dest_dir = os.path.join(self.project_dir, os.pardir)  # Parent dir of project_dir TODO: Find a better dst
+        self._logger.msg.emit(f"Squeezing project <b>{self.name}</b> into {PROJECT_ZIP_FILENAME}.zip")
+        QCoreApplication.processEvents()
+        try:
+            ZipHandler.package(src_folder=self.project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
+        except Exception as e:
+            self._logger.msg_error.emit(f"{e}")
+            return ""
+        project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
+        if not os.path.isfile(project_zip_file):
+            self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
+            return ""
+        file_size = get_file_size(os.path.getsize(project_zip_file))
+        self._logger.msg_warning.emit(f"Uploading project [{file_size}] ...")
+        QCoreApplication.processEvents()
+        _, project_dir_name = os.path.split(self.project_dir)
+        job_id = engine_client.upload_project(project_dir_name, project_zip_file)
+        t = engine_client.get_elapsed_time()
+        self._logger.msg.emit(f"Upload time: {t}. Job ID: <b>{job_id}</b>")
+        engine_client.close()
+        return job_id
 
     def tear_down(self):
         """Cleans up project."""

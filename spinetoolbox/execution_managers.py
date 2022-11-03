@@ -264,7 +264,7 @@ class QProcessExecutionManager(ExecutionManager):
         if not chunk.endswith(b"\n"):
             return
         line = b"".join(self._out_chunks)
-        line = str(line, "unicode_escape", errors="replace").strip()
+        line = str(line, "utf-8", errors="replace").strip()
         self._logger.msg_proc.emit(line)
         self._out_chunks.clear()
 

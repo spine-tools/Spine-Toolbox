@@ -64,9 +64,12 @@ def create_toolboxui_with_project(project_dir):
 
 def clean_up_toolbox(toolbox):
     """Cleans up toolbox and project."""
-    if toolbox.project():
-        toolbox.close_project(ask_confirmation=False)
-        QApplication.processEvents()  # Makes sure Design view animations finish properly.
+    with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+        mock_qsettings_value.side_effect = qsettings_value_side_effect
+        if toolbox.project():
+            toolbox.close_project(ask_confirmation=False)
+            QApplication.processEvents()  # Makes sure Design view animations finish properly.
+            mock_qsettings_value.assert_called()  # The call in _shutdown_engine_kernels()
     toolbox.db_mngr.close_all_sessions()
     toolbox.db_mngr.clean_up()
     toolbox.db_mngr = None
@@ -87,7 +90,9 @@ def qsettings_value_side_effect(key, defaultValue="0"):
         defaultValue (QVariant): Default value if key is missing
     """
     if key == "appSettings/openPreviousProject":
-        return "0"  # Do not open previos project when instantiating ToolboxUI
+        return "0"  # Do not open previous project when instantiating ToolboxUI
+    elif key == "engineSettings/remoteExecutionEnabled":
+        return "false"
     return defaultValue
 
 
@@ -109,7 +114,7 @@ def add_ds(project, item_factories, name, x=0.0, y=0.0):
     return project.get_item(name)
 
 
-def add_dc(project, item_factories, name, x=0, y=0):
+def add_dc(project, item_factories, name, x=0, y=0, file_refs=None):
     """Helper function to create a Data Connection to given project.
 
     Args:
@@ -118,11 +123,13 @@ def add_dc(project, item_factories, name, x=0, y=0):
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
+        file_refs (list): File references
 
     Returns:
         DataConnection: added project item
     """
-    item_dict = {name: {"type": "Data Connection", "description": "", "references": list(), "x": x, "y": y}}
+    frefs = list() if not file_refs else file_refs
+    item_dict = {name: {"type": "Data Connection", "description": "", "references": frefs, "x": x, "y": y}}
     project.restore_project_items(item_dict, item_factories, silent=True)
     return project.get_item(name)
 

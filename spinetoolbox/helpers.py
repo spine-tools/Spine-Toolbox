@@ -879,6 +879,19 @@ def select_conda_executable(parent, line_edit):
     line_edit.setText(answer[0])
 
 
+def select_certificate_directory(parent, line_edit):
+    """Shows file browser and inserts selected certificate directory to given line edit.
+
+    Args:
+        parent (QWidget, optional): Parent of QFileDialog
+        line_edit (QLineEdit): Line edit where the selected dir path will be inserted
+    """
+    answer = QFileDialog.getExistingDirectory(parent, "Select certificates directory", home_dir())
+    if not answer:
+        return
+    line_edit.setText(answer)
+
+
 def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
     """Checks that given path is not a directory and it's a file that actually exists.
     In addition, can be used to check if the file name in given file path starts with
@@ -1650,3 +1663,20 @@ class HTMLTagFilter(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == "br":
             self._text += "\n"
+
+
+def same_path(path1, path2):
+    """Checks if two paths are equal.
+
+    This is a lightweight version of os.path.samefile(): it doesn't check if the paths
+    point to the same file system object but rather takes into account file system
+    case-sensitivity and such.
+
+    Args:
+        path1 (str): a path
+        path2 (str): a path
+
+    Returns:
+        bool: True if paths point to the same
+    """
+    return os.path.normcase(path1) == os.path.normcase(path2)

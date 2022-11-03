@@ -22,6 +22,8 @@ import locale
 import logging
 import json
 import pathlib
+import tempfile
+from zipfile import ZipFile
 import numpy as np
 from PySide2.QtCore import (
     QByteArray,
@@ -94,7 +96,7 @@ from .helpers import (
     format_log_message,
     color_from_index,
     load_specification_from_file,
-    load_specification_local_data,
+    load_specification_local_data, same_path,
 )
 from .project_commands import (
     AddSpecificationCommand,
@@ -110,6 +112,7 @@ from .project_commands import (
 from .plugin_manager import PluginManager
 from .link import JumpLink, Link, LINK_COLOR, JUMP_COLOR
 from .project_item.logging_connection import LoggingConnection, LoggingJump
+from spinetoolbox.server.engine_client import EngineClient, RemoteEngineInitFailed, ClientSecurityModel
 
 
 class ToolboxUI(QMainWindow):
@@ -125,7 +128,7 @@ class ToolboxUI(QMainWindow):
     information_box = Signal(str, str)
     error_box = Signal(str, str)
     # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
-    jupyter_console_requested = Signal(object, str, str, str)
+    jupyter_console_requested = Signal(object, str, str, str, dict)
     persistent_console_requested = Signal(object, str, tuple, str)
 
     def __init__(self):
@@ -281,6 +284,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
+        self.ui.actionRetrieve_project.triggered.connect(self.retrieve_project)
         self.ui.menuEdit.aboutToShow.connect(self.refresh_edit_action_states)
         self.ui.menuEdit.aboutToHide.connect(self.enable_edit_actions)
         # noinspection PyArgumentList
@@ -705,7 +709,7 @@ class ToolboxUI(QMainWindow):
         return True
 
     @Slot(bool)
-    def rename_project(self, _checked=False):
+    def rename_project(self, _=False):
         """Opens a dialog where the user can enter a new name for the project."""
         if not self._project:
             return
@@ -1594,6 +1598,77 @@ class ToolboxUI(QMainWindow):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         open_url(index_url)
 
+    @Slot()
+    def retrieve_project(self):
+        """Retrieves project from server."""
+        msg = "Retrieve project by Job Id"
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QInputDialog.getText(self, msg, "Job Id?:", flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        job_id = answer[0]
+        if not job_id:  # Cancel button clicked
+            return
+        initial_path = os.path.abspath(os.path.join(str(pathlib.Path.home())))  # Home dir
+        project_dir = QFileDialog.getExistingDirectory(self, "Select new project directory...)", initial_path)
+        if not project_dir:
+            return
+        self.msg.emit(f"Retrieving project {job_id} from server and extracting to: {project_dir}")
+        host, port, sec_model, sec_folder = self.engine_server_settings()
+        if not host:
+            self.msg_error.emit("Spine Engine Server <b>host address</b> missing. "
+                                "Please enter host in <b>File->Settings->Engine</b>.")
+            return
+        elif not port:
+            self.msg_error.emit("Spine Engine Server <b>port</b> missing. "
+                                "Please select port in <b>File->Settings->Engine</b>.")
+            return
+        self.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
+        try:
+            engine_client = EngineClient(host, port, sec_model, sec_folder)
+        except RemoteEngineInitFailed as e:
+            self.msg_error.emit(f"Server is not responding. {e}. Check settings in <b>File->Settings->Engine</b>.")
+            return
+        project_file = engine_client.retrieve_project(job_id)
+        # Save the received zip file
+        zip_path = os.path.join(project_dir, "project_package.zip")
+        try:
+            with open(zip_path, "wb") as f:
+                f.write(project_file)
+        except Exception as e:
+            self.msg_error.emit(f"Saving the downloaded file to '{zip_path}' failed. [{type(e).__name__}: {e}")
+            engine_client.close()
+            return
+        # Extract the saved file
+        self.msg.emit(f"Extracting project file project_package.zip to: {project_dir}")
+        with ZipFile(zip_path, "r") as zip_obj:
+            try:
+                first_bad_file = zip_obj.testzip()  # debugging
+                if not first_bad_file:
+                    zip_obj.extractall(project_dir)
+                else:
+                    self.msg_error.emit(f"Zip-file {zip_path} test failed. First bad file: {first_bad_file}")
+            except Exception as e:
+                self.msg_error.emit(f"Problem in extracting downloaded project: {e}")
+                engine_client.close()
+                return
+        engine_client.close()
+        try:
+            os.remove(zip_path)  # Remove downloaded project_package.zip
+        except OSError:
+            self.msg_error.emit(f"Removing file {zip_path} failed")
+
+    def engine_server_settings(self):
+        """Returns the user given Spine Engine Server settings in a tuple."""
+        host = self._qsettings.value("engineSettings/remoteHost", defaultValue="")  # Host name
+        port = self._qsettings.value("engineSettings/remotePort", defaultValue="49152")  # Host port
+        sec_model = self._qsettings.value("engineSettings/remoteSecurityModel", defaultValue="")  # ZQM security model
+        security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
+        sec_folder = (
+            ""
+            if security == ClientSecurityModel.NONE
+            else self._qsettings.value("engineSettings/remoteSecurityFolder", defaultValue="")
+        )
+        return host, port, sec_model, sec_folder
+
     @Slot(QPoint)
     def show_item_context_menu(self, pos):
         """Context menu for project items listed in the project QTreeView.
@@ -1804,7 +1879,7 @@ class ToolboxUI(QMainWindow):
         recents_list = recents.split("\n")
         for entry in recents_list:
             _, path = entry.split("<>")
-            if os.path.normcase(path) == os.path.normcase(p):
+            if same_path(path, p):
                 recents_list.pop(recents_list.index(entry))
                 break
         updated_recents = "\n".join(recents_list)
@@ -2061,36 +2136,24 @@ class ToolboxUI(QMainWindow):
         self._project.specification_saved.connect(self._log_specification_saved)
 
     @Slot(bool)
-    def _execute_project(self, checked=False):
-        """Executes all DAGs in project.
-
-        Args:
-            checked (bool): unused
-        """
+    def _execute_project(self, _=False):
+        """Executes all DAGs in project."""
         if self._project is None:
             self.msg.emit("Please create a new project or open an existing one first")
             return
         self._project.execute_project()
 
     @Slot(bool)
-    def _execute_selection(self, checked=False):
-        """Executes selected items.
-
-        Args:
-            checked (bool): unused
-        """
+    def _execute_selection(self, _=False):
+        """Executes selected items."""
         if self._project is None:
             self.msg.emit("Please create a new project or open an existing one first")
             return
         self._project.execute_selected(self._selected_item_names)
 
     @Slot(bool)
-    def _stop_execution(self, checked=False):
-        """Stops execution in progress.
-
-        Args:
-            checked (bool): unused
-        """
+    def _stop_execution(self, _=False):
+        """Stops execution in progress."""
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
             return
@@ -2102,6 +2165,9 @@ class ToolboxUI(QMainWindow):
         self.ui.actionExecute_project.setEnabled(False)
         self.ui.actionExecute_selection.setEnabled(False)
         self.ui.actionStop_execution.setEnabled(True)
+        self.ui.textBrowser_eventlog.verticalScrollBar().setValue(
+            self.ui.textBrowser_eventlog.verticalScrollBar().maximum()
+        )
 
     @Slot()
     def _unset_execution_in_progress(self):
@@ -2289,16 +2355,22 @@ class ToolboxUI(QMainWindow):
         self._base_julia_console.deleteLater()
         self._base_julia_console = None
 
-    @Slot(object, str, str, str)
-    def _setup_jupyter_console(self, item, filter_id, kernel_name, connection_file):
+    @Slot(object, str, str, str, dict)
+    def _setup_jupyter_console(self, item, filter_id, kernel_name, connection_file, connection_file_dict):
         """Sets up jupyter console, eventually for a filter execution.
 
         Args:
-            item (ProjectItem): item
-            filter_id (str): filter identifier
-            kernel_name (str): jupyter kernel name
-            connection_file (str): path to connection file
+            item (ProjectItem): Item
+            filter_id (str): Filter identifier
+            kernel_name (str): Jupyter kernel name
+            connection_file (str): Path to connection file
+            connection_file_dict (dict): Contents of connection file when kernel manager runs on Spine Engine Server
         """
+        if not os.path.exists(connection_file):
+            fp = tempfile.TemporaryFile(mode="w+", suffix=".json", delete=False)
+            json.dump(connection_file_dict, fp)
+            connection_file = fp.name
+            fp.close()
         if not filter_id:
             self._item_consoles[item] = self._make_jupyter_console(item, kernel_name, connection_file)
         else:
@@ -2311,10 +2383,10 @@ class ToolboxUI(QMainWindow):
         """Sets up persistent console, eventually for a filter execution.
 
         Args:
-            item (ProjectItem): item
-            filter_id (str): filter identifier
-            key (tuple)
-            language (str)
+            item (ProjectItem): Item
+            filter_id (str): Filter identifier
+            key (tuple): Key
+            language (str): Language (e.g. 'python' or 'julia')
         """
         if not filter_id:
             self._item_consoles[item] = self._make_persistent_console(item, key, language)
@@ -2376,8 +2448,8 @@ class ToolboxUI(QMainWindow):
 
     def _shutdown_engine_kernels(self):
         """Shuts down all kernels managed by Spine Engine."""
-        engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        engine_mngr = make_engine_manager(exec_remotely)
         for connection_file in self._jupyter_consoles:
             engine_mngr.shutdown_kernel(connection_file)
 

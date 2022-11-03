@@ -32,6 +32,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    plotting
    parameter_value_editor
    data_import_export
+   spine_engine_server
    terminology
    dependencies
    contribution_guide

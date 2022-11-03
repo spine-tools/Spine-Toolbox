@@ -36,7 +36,15 @@ from spinetoolbox.widgets.persistent_console_widget import PersistentConsoleWidg
 from spinetoolbox.link import Link
 from spinetoolbox.mvcmodels.project_tree_item import RootProjectTreeItem
 from spinetoolbox.resources_icons_rc import qInitResources
-from .mock_helpers import clean_up_toolbox, create_toolboxui, create_project, add_ds, add_dc, add_tool
+from .mock_helpers import (
+    clean_up_toolbox,
+    create_toolboxui,
+    create_project,
+    add_ds,
+    add_dc,
+    add_tool,
+    qsettings_value_side_effect,
+)
 
 
 # noinspection PyUnusedLocal,DuplicatedCode
@@ -252,7 +260,11 @@ class TestToolboxUI(unittest.TestCase):
         add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
         self.toolbox.save_project()
         self.assertTrue(self.toolbox.undo_stack.isClean())
-        self.assertTrue(self.toolbox.close_project())
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            # Make sure that the test uses LocalSpineEngineManager
+            mock_qsettings_value.side_effect = qsettings_value_side_effect
+            self.assertTrue(self.toolbox.close_project())
+            mock_qsettings_value.assert_called()
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.project.create_dir"
         ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
@@ -269,7 +281,11 @@ class TestToolboxUI(unittest.TestCase):
         with TemporaryDirectory() as project_dir:
             create_project(self.toolbox, project_dir)
             self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
-            self.assertTrue(self.toolbox.close_project())
+            with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+                # Make sure that the test uses LocalSpineEngineManager
+                mock_qsettings_value.side_effect = qsettings_value_side_effect
+                self.assertTrue(self.toolbox.close_project())
+                mock_qsettings_value.assert_called()
         self.assertIsNone(self.toolbox.project())
 
     def test_selection_in_project_item_list_1(self):

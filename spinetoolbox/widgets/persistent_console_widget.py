@@ -29,6 +29,7 @@ from PySide2.QtGui import (
 )
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
+from spinetoolbox.server.engine_client import RemoteEngineInitFailed
 from spinetoolbox.qthread_pool_executor import QtBasedThreadPoolExecutor
 
 
@@ -213,6 +214,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._flush_timer.setInterval(self._FLUSH_INTERVAL)
         self._flush_timer.timeout.connect(self._flush_text_buffer)
         self._flush_timer.setSingleShot(True)
+        self.engine_mngr = None
         self.setReadOnly(True)
         self.document().contentsChanged.connect(self._handle_contents_changed)
         self.updateRequest.connect(self._handle_update_request)
@@ -517,6 +519,26 @@ class PersistentConsoleWidget(QPlainTextEdit):
             return False
         return True
 
+    def create_engine_manager(self):
+        """Returns a new local or remote spine engine manager or
+        an existing remote spine engine manager.
+        Returns None if connecting to Spine Engine Server fails."""
+        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        if exec_remotely:
+            if self.engine_mngr:
+                return self.engine_mngr
+            self.engine_mngr = make_engine_manager(exec_remotely)
+            host, port, security, sec_folder = self._toolbox.engine_server_settings()
+            try:
+                self.engine_mngr.make_engine_client(host, port, security, sec_folder)
+            except RemoteEngineInitFailed as e:
+                self._toolbox.msg_error.emit(f"Connecting to Spine Engine Server failed. {e}")
+                return None
+            return self.engine_mngr
+        else:
+            engine_mngr = make_engine_manager(exec_remotely)
+            return engine_mngr
+
     def _issue_command(self, text):
         """Issues command.
 
@@ -526,8 +548,12 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._executor.submit(self._do_check_command, text)
 
     def _do_check_command(self, text):
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        if not text.strip():  # Don't send empty command to execution manager
+            self._make_prompt_block(prompt=self._prompt)
+            return
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         complete = engine_mngr.is_persistent_command_complete(self._key, text)
         self._command_checked.emit(text, complete)
 
@@ -545,8 +571,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._executor.submit(self._do_issue_command, text)
 
     def _do_issue_command(self, text):
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         log_stdin = bool(self._pending_command_count)
         self._pending_command_count += 1
         for msg in engine_mngr.issue_persistent_command(self._key, text):
@@ -574,8 +601,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._executor.submit(self._do_move_history, text, backwards)
 
     def _do_move_history(self, text, backwards):
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         prefix = self._get_prefix()
         history_item = engine_mngr.get_persistent_history_item(self._key, text, prefix, backwards)
         self._history_item_available.emit(history_item, prefix)
@@ -603,8 +631,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._executor.submit(self._do_autocomplete, text)
 
     def _do_autocomplete(self, text):
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         prefix = self._get_prefix()
         completions = engine_mngr.get_persistent_completions(self._key, prefix)
         self._completions_available.emit(text, prefix, completions)
@@ -641,8 +670,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._executor.submit(self._do_restart_persistent)
 
     def _do_restart_persistent(self):
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         for msg in engine_mngr.restart_persistent(self._key):
             self._msg_available.emit(msg["type"], msg["data"])
         self._restarted.emit()
@@ -657,8 +687,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._executor.submit(self._do_interrupt_persistent)
 
     def _do_interrupt_persistent(self):
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
         engine_mngr.interrupt_persistent(self._key)
 
     def _extend_menu(self, menu):

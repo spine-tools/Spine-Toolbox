@@ -13,16 +13,13 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.14.2
+## Created by: Qt User Interface Compiler version 5.15.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
-    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
-from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
-    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
-    QPixmap, QRadialGradient)
+from PySide2.QtCore import *
+from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
@@ -185,6 +182,8 @@ class Ui_MainWindow(object):
         self.actionStop_execution.setIcon(icon18)
         self.actionTake_link = QAction(MainWindow)
         self.actionTake_link.setObjectName(u"actionTake_link")
+        self.actionRetrieve_project = QAction(MainWindow)
+        self.actionRetrieve_project.setObjectName(u"actionRetrieve_project")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         MainWindow.setCentralWidget(self.centralwidget)
@@ -209,6 +208,8 @@ class Ui_MainWindow(object):
         self.menuPlugins.setObjectName(u"menuPlugins")
         self.menuConsoles = QMenu(self.menubar)
         self.menuConsoles.setObjectName(u"menuConsoles")
+        self.menuServer = QMenu(self.menubar)
+        self.menuServer.setObjectName(u"menuServer")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -381,6 +382,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuPlugins.menuAction())
         self.menubar.addAction(self.menuConsoles.menuAction())
+        self.menubar.addAction(self.menuServer.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
@@ -418,6 +420,7 @@ class Ui_MainWindow(object):
         self.menuPlugins.addAction(self.actionCreate_plugin)
         self.menuConsoles.addAction(self.actionStartPythonConsole)
         self.menuConsoles.addAction(self.actionStartJuliaConsole)
+        self.menuServer.addAction(self.actionRetrieve_project)
 
         self.retranslateUi(MainWindow)
 
@@ -628,6 +631,7 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionTake_link.setToolTip(QCoreApplication.translate("MainWindow", u"Change link's destination.", None))
 #endif // QT_CONFIG(tooltip)
+        self.actionRetrieve_project.setText(QCoreApplication.translate("MainWindow", u"Retrieve project", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"Edit", None))
@@ -636,6 +640,7 @@ class Ui_MainWindow(object):
         self.menuDock_Widgets.setTitle(QCoreApplication.translate("MainWindow", u"Dock widgets", None))
         self.menuPlugins.setTitle(QCoreApplication.translate("MainWindow", u"Plugins", None))
         self.menuConsoles.setTitle(QCoreApplication.translate("MainWindow", u"Consoles", None))
+        self.menuServer.setTitle(QCoreApplication.translate("MainWindow", u"Server", None))
         self.dockWidget_eventlog.setWindowTitle(QCoreApplication.translate("MainWindow", u"Event Log", None))
         self.toolButton_executions.setText(QCoreApplication.translate("MainWindow", u"...", None))
         self.dockWidget_item.setWindowTitle(QCoreApplication.translate("MainWindow", u"Properties", None))
