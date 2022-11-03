@@ -21,7 +21,7 @@ def update_copyrights(path, suffix, recursive=True):
                     if line.startswith("# Copyright (C) "):
                         lines[i + 1] = lines[i + 1][:21] + str(current_year) + lines[i + 1][25:]
                         break
-            if not lines[i + 1].startswith(expected):
+            if len(lines) <= i + 1 or not lines[i + 1].startswith(expected):
                 print(f"Confusing or no copyright: {path}")
             else:
                 with open(path, "w") as python_file:
