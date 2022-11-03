@@ -16,13 +16,16 @@ A widget for presenting basic information about the application.
 :date: 14.12.2017
 """
 
-from PySide2.QtWidgets import QWidget
-from PySide2.QtCore import Qt, QPoint
+import os
+import sys
+import platform
+from PySide2.QtWidgets import QWidget, QApplication
+from PySide2.QtCore import Qt, QPoint, Slot
 from PySide2.QtGui import QTextCursor
+import spinetoolbox
 import spinedb_api
 import spine_engine
 import spine_items
-from spinetoolbox import __version__, __version_info__
 
 
 class AboutWidget(QWidget):
@@ -41,24 +44,39 @@ class AboutWidget(QWidget):
         # Set up the user interface from Designer file.
         self.ui = about.Ui_Form()
         self.ui.setupUi(self)
+        self.ui.toolButton_copy_to_clipboard.clicked.connect(self.copy_to_clipboard)
         self.setWindowFlags(Qt.Popup)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         full_version = (
-            str(__version_info__.major)
+            str(spinetoolbox.__version_info__.major)
             + "."
-            + str(__version_info__.minor)
+            + str(spinetoolbox.__version_info__.minor)
             + "."
-            + str(__version_info__.micro)
+            + str(spinetoolbox.__version_info__.micro)
             + "-"
-            + __version_info__.releaselevel
+            + spinetoolbox.__version_info__.releaselevel
             + "."
-            + str(__version_info__.serial)
+            + str(spinetoolbox.__version_info__.serial)
         )
-        self.ui.label_spine_toolbox.setText("Spine Toolbox<br/>v{0}<br/>{1}".format(__version__, full_version))
-        self.ui.label_spinedb_api.setText("spinedb_api<br/>v{0}".format(spinedb_api.__version__))
-        self.ui.label_spine_engine.setText("spine_engine<br/>v{0}".format(spine_engine.__version__))
-        self.ui.label_spine_items.setText("spine_items<br/>v{0}".format(spine_items.__version__))
+        self.v_spinetoolbox = spinetoolbox.__version__
+        self.v_spinedb_api = spinedb_api.__version__
+        self.v_spine_engine = spine_engine.__version__
+        self.v_spine_items = spine_items.__version__
+        self.import_path_spinetoolbox, _ = os.path.split(spinetoolbox.__file__)
+        self.import_path_spinedb_api, _ = os.path.split(spinedb_api.__file__)
+        self.import_path_spine_engine, _ = os.path.split(spine_engine.__file__)
+        self.import_path_spine_items, _ = os.path.split(spine_items.__file__)
+        self.ui.label_spine_toolbox.setText(f"Spine Toolbox<br/>{self.v_spinetoolbox}")
+        self.ui.label_spine_toolbox.setToolTip(f"{self.import_path_spinetoolbox}")
+        self.ui.label_spinedb_api.setText(f"spinedb_api<br/>{self.v_spinedb_api}")
+        self.ui.label_spinedb_api.setToolTip(self.import_path_spinedb_api)
+        self.ui.label_spine_engine.setText(f"spine_engine<br/>{self.v_spine_engine}")
+        self.ui.label_spine_engine.setToolTip(self.import_path_spine_engine)
+        self.ui.label_spine_items.setText(f"spine_items<br/>{self.v_spine_items}")
+        self.ui.label_spine_items.setToolTip(self.import_path_spine_items)
+        self.ui.label_python.setText(f"Python {platform.python_version()}")
+        self.ui.label_python.setToolTip(sys.executable)
         self.setup_license_text()
         self._mousePressPos = None
         self._mouseReleasePos = None
@@ -66,6 +84,19 @@ class AboutWidget(QWidget):
         # Move About Popup to correct position
         pos = self.calc_pos()
         self.move(pos)
+
+    @Slot(bool)
+    def copy_to_clipboard(self, _):
+        QApplication.clipboard().setText(f"spinetoolbox {self.v_spinetoolbox}\n"
+                                         f"spinetoolbox import path {self.import_path_spinetoolbox}\n\n"
+                                         f"spinedb_api {self.v_spinedb_api}\n"
+                                         f"spinedb_api import path {self.import_path_spinedb_api}\n\n"
+                                         f"spine_engine {self.v_spine_engine}\n"
+                                         f"spine_engine import path {self.import_path_spine_engine}\n\n"
+                                         f"spine_items {self.v_spine_items}\n"
+                                         f"spine_items import path {self.import_path_spine_items}\n\n"
+                                         f"Python {sys.version}\n"
+                                         f"sys.executable {sys.executable}\n")
 
     def calc_pos(self):
         """Calculate the top-left corner position of this widget in relation to main window
