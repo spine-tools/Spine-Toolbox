@@ -60,7 +60,42 @@ class AgedUndoCommand(QUndoCommand):
         return self._age
 
 
+class SpineDBMacro(AgedUndoCommand):
+    """A command that just runs a series of SpineDBCommand's one after another, *waiting* for each one to finish
+    before starting the next."""
+
+    def __init__(self, children, parent=None):
+        super().__init__(parent=parent)
+        self._children = children
+
+    def redo(self):
+        super().redo()
+        child_iter = iter(self._children)
+        self._redo_next(child_iter)
+
+    def _redo_next(self, child_iter):
+        child = next(child_iter, None)
+        if child is None:
+            return
+        child.redo_complete_callback = lambda *args: self._redo_next(child_iter)
+        child.redo()
+
+    def undo(self):
+        super().undo()
+        child_iter = reversed(self._children)
+        self._undo_next(child_iter)
+
+    def _undo_next(self, child_iter):
+        child = next(child_iter, None)
+        if child is None:
+            return
+        child.undo_complete_callback = lambda *args: self._undo_next(child_iter)
+        child.undo()
+
+
 class SpineDBCommand(AgedUndoCommand):
+    """Base class for all commands that modify a Spine DB."""
+
     _add_command_name = {
         "object_class": "add object classes",
         "object": "add objects",
@@ -153,14 +188,25 @@ class SpineDBCommand(AgedUndoCommand):
         self.db_mngr = db_mngr
         self.db_map = db_map
         self._done_once = False
+        self.redo_complete_callback = lambda *args: None
+        self.undo_complete_callback = lambda *args: None
 
-    def receive_items_changed(self, data):
+    def handle_undo_complete(self, data):
+        """Calls the undo complete callback with the data from undo().
+        Subclasses need to pass this as the callback to the function that modifies the db in undo()."""
+        self.undo_complete_callback(data)
+
+    def handle_redo_complete(self, data):
+        """Calls the redo complete callback with the data from redo().
+        Subclasses need to pass this as the callback to the function that modifies the db in redo()."""
+        self.redo_complete_callback(data)
         if self._done_once:
             return
         self._done_once = True
-        self._do_receive_items_changed(data)
+        self._handle_first_redo_complete(data)
 
-    def _do_receive_items_changed(self, _):
+    def _handle_first_redo_complete(self, _):
+        """Reimplement in subclasses to do stuff with the data from running redo() the first time."""
         raise NotImplementedError()
 
     def _undo_item(self, db_map, item_type, id_):
@@ -197,15 +243,15 @@ class AddItemsCommand(SpineDBCommand):
             self.item_type,
             readd=self._readd,
             check=self._check,
-            callback=self.receive_items_changed,
+            callback=self.handle_redo_complete,
         )
 
     def undo(self):
         super().undo()
-        self.db_mngr.do_remove_items(self.undo_db_map_typed_ids)
+        self.db_mngr.do_remove_items(self.undo_db_map_typed_ids, callback=self.handle_undo_complete)
         self._readd = True
 
-    def _do_receive_items_changed(self, db_map_data):
+    def _handle_first_redo_complete(self, db_map_data):
         if self.db_map not in db_map_data:
             self.setObsolete(True)
             return
@@ -254,14 +300,16 @@ class UpdateItemsCommand(SpineDBCommand):
             self.method_name,
             self.item_type,
             check=self._check,
-            callback=self.receive_items_changed,
+            callback=self.handle_redo_complete,
         )
 
     def undo(self):
         super().undo()
-        self.db_mngr.update_items(self.undo_db_map_data, self.method_name, self.item_type, check=False)
+        self.db_mngr.update_items(
+            self.undo_db_map_data, self.method_name, self.item_type, check=False, callback=self.handle_undo_complete
+        )
 
-    def _do_receive_items_changed(self, db_map_data):
+    def _handle_first_redo_complete(self, db_map_data):
         if not db_map_data.get(self.db_map):
             self.setObsolete(True)
             return
@@ -291,7 +339,7 @@ class RemoveItemsCommand(SpineDBCommand):
 
     def redo(self):
         super().redo()
-        self.db_mngr.do_remove_items({self.db_map: self.redo_typed_data}, callback=self.receive_items_changed)
+        self.db_mngr.do_remove_items({self.db_map: self.redo_typed_data}, callback=self.handle_redo_complete)
 
     def undo(self):
         super().undo()
@@ -301,6 +349,7 @@ class RemoveItemsCommand(SpineDBCommand):
     def _undo_next(self, item_type_iter):
         item_type = next(item_type_iter, None)
         if item_type is None:
+            self.handle_undo_complete(None)
             return
         data = self.undo_typed_data[item_type]
         method_name = self._add_method_name[item_type]
@@ -312,15 +361,15 @@ class RemoveItemsCommand(SpineDBCommand):
             callback=lambda _db_map_data: self._undo_next(item_type_iter),
         )
 
-    def _do_receive_items_changed(self, db_map_typed_ids):
-        for item_type, ids_ in db_map_typed_ids.get(self.db_map, {}).items():
+    def _handle_first_redo_complete(self, db_map_typed_items):
+        for item_type, items in db_map_typed_items.get(self.db_map, {}).items():
+            if item_type not in self.db_map.ITEM_TYPES:
+                continue
             undo_items = []
-            for id_ in ids_:
-                undo_item = self._undo_item(self.db_map, item_type, id_)
-                if undo_item:
-                    undo_items.append(undo_item)
+            for item in items:
+                undo_item = self.db_map.cache_to_db(item_type, item)
+                undo_items.append(undo_item)
             if undo_items:
                 self.undo_typed_data[item_type] = undo_items
-        print(list(self.undo_typed_data))
         if not self.undo_typed_data:
             self.setObsolete(True)

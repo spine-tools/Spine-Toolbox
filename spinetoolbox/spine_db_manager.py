@@ -49,7 +49,7 @@ from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.helpers import CacheItem
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
-from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
+from .spine_db_commands import SpineDBMacro, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .helpers import get_upgrade_db_promt_text, signal_waiter, busy_effect, separate_metadata_and_item_metadata
@@ -934,12 +934,11 @@ class SpineDBManager(QObject):
         ]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id, only_visible=True):
-        alternative_id_list = self.get_item(db_map, "scenario", scen_id, only_visible=only_visible).get(
-            "alternative_id_list"
+        sorted_scenario_alternatives = sorted(
+            self.get_items_by_field(db_map, "scenario_alternative", "scenario_id", scen_id, only_visible=only_visible),
+            key=lambda x: x["rank"],
         )
-        if not alternative_id_list:
-            return []
-        return [int(id_) for id_ in alternative_id_list.split(",")]
+        return [x["alternative_id"] for x in sorted_scenario_alternatives]
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -961,30 +960,19 @@ class SpineDBManager(QObject):
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
                 db_map_error_log.setdefault(db_map, []).append(msg)
                 continue
-            macro = AgedUndoCommand()
-            macro.setText(command_text)
             child_cmds = []
-            # NOTE: we push the import macro before adding the children,
-            # because we *need* to call redo() on the children one by one so the data gets in gradually
-            self.undo_stack[db_map].push(macro)
             for item_type, (to_add, to_update, import_error_log) in data_for_import:
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
                 if to_add:
-                    add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=macro, check=False)
-                    with signal_waiter(add_cmd.completed_signal) as waiter:
-                        add_cmd.redo()
-                        waiter.wait()
+                    add_cmd = AddItemsCommand(self, db_map, to_add, item_type, check=False)
                     child_cmds.append(add_cmd)
                 if to_update:
-                    upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=macro, check=False)
-                    with signal_waiter(upd_cmd.completed_signal) as waiter:
-                        upd_cmd.redo()
-                        waiter.wait()
+                    upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, check=False)
                     child_cmds.append(upd_cmd)
-            if not child_cmds or all(cmd.isObsolete() for cmd in child_cmds):
-                # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
-                macro.setObsolete(True)
-                self.undo_stack[db_map].undo()
+            if child_cmds:
+                macro = SpineDBMacro(child_cmds)
+                macro.setText(command_text)
+                self.undo_stack[db_map].push(macro)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
@@ -1372,25 +1360,19 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            macro = AgedUndoCommand()
-            macro.setText(f"set scenario alternatives in {db_map.codename}")
-            self.undo_stack[db_map].push(macro)
             child_cmds = []
             cache = self.get_db_map_cache(db_map, {"scenario_alternative"}, include_ancestors=True)
             items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data, cache=cache)
             if ids_to_remove:
-                rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove}, parent=macro)
-                rm_cmd.redo()
-                # FIXME: Wait till finish
+                rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove})
                 child_cmds.append(rm_cmd)
             if items_to_add:
-                add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative", parent=macro)
-                add_cmd.redo()
-                # FIXME: Wait till finish
+                add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative")
                 child_cmds.append(add_cmd)
-            if not child_cmds or all(cmd.isObsolete() for cmd in child_cmds):
-                macro.setObsolete(True)
-                self.undo_stack[db_map].undo()
+            if child_cmds:
+                macro = SpineDBMacro(child_cmds)
+                macro.setText(f"set scenario alternatives in {db_map.codename}")
+                self.undo_stack[db_map].push(macro)
 
     def purge_items(self, db_map_purgable_items):
         """Purges selected items from given database.

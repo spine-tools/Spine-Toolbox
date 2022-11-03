@@ -20,6 +20,7 @@ import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, Signal, Slot, QTimer
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
+from spinedb_api.helpers import CacheItem
 from .helpers import busy_effect, FetchParent
 from .qthread_pool_executor import QtBasedThreadPoolExecutor
 
@@ -382,9 +383,9 @@ class SpineDBWorker(QObject):
             *items, check=check, readd=readd, return_items=True, cache=cache
         )
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
-        self._something_happened.emit(_Event.ADD_ITEMS, (items, errors, item_type, callback))
+        self._something_happened.emit(_Event.ADD_ITEMS, (item_type, items, errors, callback))
 
-    def _add_items_event(self, items, errors, item_type, callback):
+    def _add_items_event(self, item_type, items, errors, callback):
         self._db_mngr.cache_items(item_type, {self._db_map: items})
         for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
             children = [x for x in items if parent.accepts_item(x, self._db_map)]
@@ -405,26 +406,34 @@ class SpineDBWorker(QObject):
             cache (dict): Cache
             callback (None or function): something to call with the result
         """
-        self._executor.submit(self._update_items, items, method_name, item_type, check, cache, callback)
+        self._executor.submit(self._update_items, items, method_name, item_type, check, cache, callback).result()
 
     @busy_effect
     def _update_items(self, items, method_name, item_type, check, cache, callback):
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
-        items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
-        self._something_happened.emit(_Event.UPDATE_ITEMS, (items, errors, item_type, callback))
-
-    def _update_items_event(self, items, errors, item_type, callback):
-        self._db_mngr.cache_items(item_type, {self._db_map: items})
+        items_by_type = {}
         ids_by_type = {item_type: {x["id"] for x in items}}
-        cascading_ids_by_type = self._db_map.cascading_ids(
-            cache=self._db_mngr.get_db_map_cache(self._db_map, fetch_item_types=set()), **ids_by_type
-        )
-        print(cascading_ids_by_type)
-        for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
-            children = [x for x in items if parent.accepts_item(x, self._db_map)]
-            parent.handle_items_updated({self._db_map: children})
+        cascading_ids_by_type = self._db_map.cascading_ids(cache=cache, **ids_by_type)
+        for cascading_item_type, ids in cascading_ids_by_type.items():
+            if cascading_item_type != item_type:
+                old_items = (cache.get(cascading_item_type, {}).get(id_) for id_ in ids)
+                db_items = (self._db_map.cache_to_db(cascading_item_type, x) for x in old_items if x is not None)
+            else:
+                db_items = items
+            new_items = items_by_type[cascading_item_type] = [
+                self._db_map.db_to_cache(cache, cascading_item_type, x) for x in db_items
+            ]
+            for item in new_items:
+                cache.setdefault(cascading_item_type, {})[item["id"]] = CacheItem(**item)
+        self._something_happened.emit(_Event.UPDATE_ITEMS, (item_type, items_by_type, errors, callback))
+
+    def _update_items_event(self, item_type, items_by_type, errors, callback):
+        for cascading_item_type, items in items_by_type.items():
+            for parent in {x for x in self._parents if x.fetch_item_type == cascading_item_type}:
+                children = [x for x in items if parent.accepts_item(x, self._db_map)]
+                parent.handle_items_updated({self._db_map: children})
         if callback is not None:
-            callback({self._db_map: items})
+            callback({self._db_map: items_by_type[item_type]})
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
 
@@ -446,16 +455,19 @@ class SpineDBWorker(QObject):
         self._something_happened.emit(_Event.REMOVE_ITEMS, (ids_per_type, errors, callback))
 
     def _remove_items_event(self, ids_per_type, errors, callback):
+        items_per_type = {}
         for item_type, ids in ids_per_type.items():
+            if not ids:
+                continue
+            items = items_per_type[item_type] = [self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids]
             for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
-                items = [self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids]
                 children = [x for x in items if parent.accepts_item(x, self._db_map)]
                 parent.handle_items_removed({self._db_map: children})
+        self._db_mngr.uncache_removed_items({self._db_map: ids_per_type})
         if callback is not None:
-            callback({self._db_map: ids_per_type})
+            callback({self._db_map: items_per_type})
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        self._db_mngr.uncache_removed_items({self._db_map: ids_per_type})
 
     def commit_session(self, commit_msg, cookie=None):
         """Initiates commit session.

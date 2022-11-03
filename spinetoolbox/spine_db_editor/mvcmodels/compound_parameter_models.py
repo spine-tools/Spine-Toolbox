@@ -441,7 +441,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         model = self._create_single_model(db_map, entity_class_id, committed)
         model.reset_model(ids)
 
-    def receive_parameter_data_updated(self, db_map_data):
+    def handle_items_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated in the dbs.
         Emits dataChanged so the parameter_name column is refreshed.
 
@@ -646,6 +646,7 @@ class CompoundParameterValueMixin:
         Args:
             db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
         """
+        # FIXME: This is never called now
         self._emit_data_changed_for_column("alternative_id")
 
 
