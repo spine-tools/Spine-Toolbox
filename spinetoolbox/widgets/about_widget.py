@@ -88,16 +88,18 @@ class AboutWidget(QWidget):
     @Slot(bool)
     def copy_to_clipboard(self, _):
         """Copies package and Python info to clipboard."""
-        QApplication.clipboard().setText(f"spinetoolbox {self.v_spinetoolbox}\n"
-                                         f"spinetoolbox import path {self.import_path_spinetoolbox}\n\n"
-                                         f"spinedb_api {self.v_spinedb_api}\n"
-                                         f"spinedb_api import path {self.import_path_spinedb_api}\n\n"
-                                         f"spine_engine {self.v_spine_engine}\n"
-                                         f"spine_engine import path {self.import_path_spine_engine}\n\n"
-                                         f"spine_items {self.v_spine_items}\n"
-                                         f"spine_items import path {self.import_path_spine_items}\n\n"
-                                         f"Python {sys.version}\n"
-                                         f"sys.executable {sys.executable}\n")
+        QApplication.clipboard().setText(
+            f"spinetoolbox {self.v_spinetoolbox}\n"
+            f"spinetoolbox import path {self.import_path_spinetoolbox}\n\n"
+            f"spinedb_api {self.v_spinedb_api}\n"
+            f"spinedb_api import path {self.import_path_spinedb_api}\n\n"
+            f"spine_engine {self.v_spine_engine}\n"
+            f"spine_engine import path {self.import_path_spine_engine}\n\n"
+            f"spine_items {self.v_spine_items}\n"
+            f"spine_items import path {self.import_path_spine_items}\n\n"
+            f"Python {sys.version}\n"
+            f"sys.executable {sys.executable}\n"
+        )
 
     def calc_pos(self):
         """Calculate the top-left corner position of this widget in relation to main window
