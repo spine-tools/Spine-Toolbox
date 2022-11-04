@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
+# Copyright (C) 2017-2021 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -56,14 +56,21 @@ class Ui_Form(object):
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.label = QLabel(Form)
         self.label.setObjectName(u"label")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy1)
         self.label.setPixmap(QPixmap(u":/symbols/Spine_symbol.png"))
         self.label.setScaledContents(False)
         self.label.setAlignment(Qt.AlignCenter)
 
         self.horizontalLayout.addWidget(self.label)
 
-        self.widget_9 = QWidget(Form)
-        self.widget_9.setObjectName(u"widget_9")
+        self.frame_9 = QFrame(Form)
+        self.frame_9.setObjectName(u"frame_9")
+        sizePolicy1.setHeightForWidth(self.frame_9.sizePolicy().hasHeightForWidth())
+        self.frame_9.setSizePolicy(sizePolicy1)
         palette1 = QPalette()
         palette1.setBrush(QPalette.Active, QPalette.Base, brush)
         brush1 = QBrush(QColor(0, 74, 194, 255))
@@ -73,17 +80,23 @@ class Ui_Form(object):
         palette1.setBrush(QPalette.Inactive, QPalette.Window, brush1)
         palette1.setBrush(QPalette.Disabled, QPalette.Base, brush1)
         palette1.setBrush(QPalette.Disabled, QPalette.Window, brush1)
-        self.widget_9.setPalette(palette1)
-        self.widget_9.setAutoFillBackground(True)
-        self.verticalLayout = QVBoxLayout(self.widget_9)
+        self.frame_9.setPalette(palette1)
+        self.frame_9.setCursor(QCursor(Qt.ArrowCursor))
+        self.frame_9.setAutoFillBackground(True)
+        self.verticalLayout = QVBoxLayout(self.frame_9)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.label_spine_toolbox = QLabel(self.widget_9)
+        self.verticalLayout.setContentsMargins(0, -1, 0, 0)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer)
+
+        self.label_spine_toolbox = QLabel(self.frame_9)
         self.label_spine_toolbox.setObjectName(u"label_spine_toolbox")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.label_spine_toolbox.sizePolicy().hasHeightForWidth())
-        self.label_spine_toolbox.setSizePolicy(sizePolicy1)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.label_spine_toolbox.sizePolicy().hasHeightForWidth())
+        self.label_spine_toolbox.setSizePolicy(sizePolicy2)
         self.label_spine_toolbox.setMinimumSize(QSize(0, 0))
         self.label_spine_toolbox.setMaximumSize(QSize(16777215, 16777215))
         self.label_spine_toolbox.setBaseSize(QSize(0, 0))
@@ -94,56 +107,79 @@ class Ui_Form(object):
         font.setWeight(50)
         font.setStyleStrategy(QFont.PreferDefault)
         self.label_spine_toolbox.setFont(font)
-        self.label_spine_toolbox.setStyleSheet(u"color: rgb(255, 255, 255);")
+        self.label_spine_toolbox.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
         self.label_spine_toolbox.setScaledContents(True)
         self.label_spine_toolbox.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spine_toolbox)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.verticalLayout.addItem(self.verticalSpacer)
-
-        self.label_spinedb_api = QLabel(self.widget_9)
+        self.label_spinedb_api = QLabel(self.frame_9)
         self.label_spinedb_api.setObjectName(u"label_spinedb_api")
-        sizePolicy1.setHeightForWidth(self.label_spinedb_api.sizePolicy().hasHeightForWidth())
-        self.label_spinedb_api.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.label_spinedb_api.sizePolicy().hasHeightForWidth())
+        self.label_spinedb_api.setSizePolicy(sizePolicy2)
         font1 = QFont()
         font1.setFamily(u"Arial Black")
         font1.setPointSize(6)
         font1.setStyleStrategy(QFont.PreferDefault)
         self.label_spinedb_api.setFont(font1)
-        self.label_spinedb_api.setStyleSheet(u"color: rgb(255, 255, 255);")
+        self.label_spinedb_api.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
         self.label_spinedb_api.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spinedb_api)
 
-        self.label_spine_engine = QLabel(self.widget_9)
+        self.label_spine_engine = QLabel(self.frame_9)
         self.label_spine_engine.setObjectName(u"label_spine_engine")
-        sizePolicy1.setHeightForWidth(self.label_spine_engine.sizePolicy().hasHeightForWidth())
-        self.label_spine_engine.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.label_spine_engine.sizePolicy().hasHeightForWidth())
+        self.label_spine_engine.setSizePolicy(sizePolicy2)
         self.label_spine_engine.setFont(font1)
-        self.label_spine_engine.setStyleSheet(u"color: rgb(255, 255, 255);")
+        self.label_spine_engine.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
         self.label_spine_engine.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spine_engine)
 
-        self.label_spine_items = QLabel(self.widget_9)
+        self.label_spine_items = QLabel(self.frame_9)
         self.label_spine_items.setObjectName(u"label_spine_items")
-        sizePolicy1.setHeightForWidth(self.label_spine_items.sizePolicy().hasHeightForWidth())
-        self.label_spine_items.setSizePolicy(sizePolicy1)
+        sizePolicy2.setHeightForWidth(self.label_spine_items.sizePolicy().hasHeightForWidth())
+        self.label_spine_items.setSizePolicy(sizePolicy2)
         self.label_spine_items.setFont(font1)
-        self.label_spine_items.setStyleSheet(u"color: rgb(255, 255, 255);")
+        self.label_spine_items.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
         self.label_spine_items.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spine_items)
+
+        self.label_python = QLabel(self.frame_9)
+        self.label_python.setObjectName(u"label_python")
+        sizePolicy2.setHeightForWidth(self.label_python.sizePolicy().hasHeightForWidth())
+        self.label_python.setSizePolicy(sizePolicy2)
+        self.label_python.setFont(font1)
+        self.label_python.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
+        self.label_python.setAlignment(Qt.AlignCenter)
+
+        self.verticalLayout.addWidget(self.label_python)
 
         self.verticalSpacer_3 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout.addItem(self.verticalSpacer_3)
 
+        self.horizontalLayout_8 = QHBoxLayout()
+        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        self.horizontalLayout.addWidget(self.widget_9)
+        self.horizontalLayout_8.addItem(self.horizontalSpacer)
+
+        self.toolButton_copy_to_clipboard = QToolButton(self.frame_9)
+        self.toolButton_copy_to_clipboard.setObjectName(u"toolButton_copy_to_clipboard")
+        icon = QIcon()
+        icon.addFile(u":/icons/menu_icons/copy.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_copy_to_clipboard.setIcon(icon)
+
+        self.horizontalLayout_8.addWidget(self.toolButton_copy_to_clipboard)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_8)
+
+
+        self.horizontalLayout.addWidget(self.frame_9)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout)
@@ -219,11 +255,11 @@ class Ui_Form(object):
 
         self.label_3 = QLabel(Form)
         self.label_3.setObjectName(u"label_3")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
-        self.label_3.setSizePolicy(sizePolicy2)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
+        self.label_3.setSizePolicy(sizePolicy3)
         self.label_3.setMinimumSize(QSize(200, 0))
         font3 = QFont()
         font3.setFamily(u"Arial Black")
@@ -290,6 +326,10 @@ class Ui_Form(object):
         self.label_spinedb_api.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>spinedb_api</p></body></html>", None))
         self.label_spine_engine.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>spine_engine</p></body></html>", None))
         self.label_spine_items.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>spine_items</p></body></html>", None))
+        self.label_python.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>Python</p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.toolButton_copy_to_clipboard.setToolTip(QCoreApplication.translate("Form", u"Copy to clipboard", None))
+#endif // QT_CONFIG(tooltip)
         self.textBrowser.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
