@@ -87,6 +87,7 @@ class AboutWidget(QWidget):
 
     @Slot(bool)
     def copy_to_clipboard(self, _):
+        """Copies package and Python info to clipboard."""
         QApplication.clipboard().setText(f"spinetoolbox {self.v_spinetoolbox}\n"
                                          f"spinetoolbox import path {self.import_path_spinetoolbox}\n\n"
                                          f"spinedb_api {self.v_spinedb_api}\n"
