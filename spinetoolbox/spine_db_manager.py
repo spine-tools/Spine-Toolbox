@@ -108,17 +108,65 @@ class SpineDBManager(QObject):
     def connect_signals(self):
         """Connects signals."""
         # Refresh
-        self.parameter_value_lists_added.connect(self._cascade_refresh_parameter_definitions_by_value_list)
-        self.parameter_value_lists_updated.connect(self._cascade_refresh_parameter_definitions_by_value_list)
-        self.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_parameter_value_list)
         # self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_removed_value_list)
-        self.list_values_added.connect(self._refresh_parameter_value_lists)
-        # self.list_values_removed.connect(self._refresh_parameter_value_lists)
         self.list_values_updated.connect(self._cascade_refresh_parameter_values_by_list_value)
         self.list_values_updated.connect(self._cascade_refresh_parameter_definitions_by_list_value)
         self.entity_groups_added.connect(self._cascade_refresh_objects_by_group)
         self.entity_groups_added.connect(self._cascade_refresh_relationships_by_group)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
+
+    def _new_item_from_db_item(self, db_map, item_type, db_item):
+        try:
+            return db_map.db_to_cache(self._cache.get(db_map, {}), item_type, db_item, fetch=False)
+        except KeyError:
+            return None
+
+    def _new_item_from_id(self, db_map, item_type, id_):
+        old_item = self._cache.get(db_map, {}).get(item_type, {}).get(id_)
+        if old_item is None:
+            return None
+        db_item = db_map.cache_to_db(item_type, old_item)
+        return self._new_item_from_db_item(db_map, item_type, db_item)
+
+    def _make_items(self, function, db_map, item_type, iterable):
+        items = list(filter(None, (function(db_map, item_type, x) for x in iterable)))
+        self.cache_items(item_type, {db_map: items})
+        return items
+
+    def make_items_from_db_items(self, db_map, item_type, db_items):
+        return self._make_items(self._new_item_from_db_item, db_map, item_type, db_items)
+
+    def make_items_from_ids(self, db_map, item_type, ids):
+        return self._make_items(self._new_item_from_id, db_map, item_type, ids)
+
+    def special_cascading_ids(self, db_map, item_type, ids):
+        cascading_ids = {}
+        if item_type == "scenario_alternative":
+            cascading_ids["scenario"] = {
+                self.get_item(db_map, "scenario_alternative", id_)["scenario_id"] for id_ in ids
+            }
+        return cascading_ids
+        if item_type == "parameter_value_list":
+            for item in self.get_items(db_map, "parameter_definition"):
+                if item["value_list_id"] in ids:
+                    cascading_ids.setdefault("parameter_definition", set()).add(item["id"])
+            for item in self.get_items(db_map, "feature"):
+                if item["parameter_value_list_id"] in ids:
+                    cascading_ids.setdefault("feature", set()).add(item["id"])
+        if item_type == "list_value":
+            for item in self.get_items(db_map, "parameter_value_list"):
+                if ids.intersection(item["value_id_list"].split(",")):
+                    cascading_ids.setdefault("parameter_value_list", set()).add(item["id"])
+            # TODO: parameter_value and parameter_definition
+
+    def update_special_refs(self, db_map, item_type, ids):
+        cascading_ids_by_type = self.special_cascading_ids(db_map, item_type, ids)
+        for cascading_item_type, cascading_ids in cascading_ids_by_type.items():
+            cascading_items = [self._db_mngr.get_item(db_map, cascading_item_type, id_) for id_ in cascading_ids]
+            print(cascading_items)
+            for parent in {x for x in self._parents if x.fetch_item_type == cascading_item_type}:
+                children = [x for x in cascading_items if parent.accepts_item(x, self._db_map)]
+                parent.handle_items_updated({self._db_map: children})
 
     def _get_worker(self, db_map):
         """Returns a worker.
@@ -844,6 +892,10 @@ class SpineDBManager(QObject):
         ]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id, only_visible=True):
+        scenario = self.get_item(db_map, "scenario", scen_id, only_visible=only_visible)
+        if scenario is None:
+            return []
+        return [int(id_) for id_ in scenario["alternative_id_list"].split(",")]
         sorted_scenario_alternatives = sorted(
             self.get_items_by_field(db_map, "scenario_alternative", "scenario_id", scen_id, only_visible=only_visible),
             key=lambda x: x["rank"],

@@ -1507,15 +1507,15 @@ class FetchParent:
 
     def handle_items_added(self, db_map_data):
         pass
-        # raise NotImplementedError()
+        # raise NotImplementedError(self.fetch_item_type)
 
     def handle_items_removed(self, db_map_data):
         pass
-        # raise NotImplementedError()
+        # raise NotImplementedError(self.fetch_item_type)
 
     def handle_items_updated(self, db_map_data):
         pass
-        # raise NotImplementedError()
+        # raise NotImplementedError(self.fetch_item_type)
 
 
 class ItemTypeFetchParent(FetchParent):

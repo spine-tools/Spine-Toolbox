@@ -20,7 +20,6 @@ import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, Signal, Slot
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
-from spinedb_api.helpers import CacheItem
 from .helpers import busy_effect, FetchParent
 from .qthread_pool_executor import QtBasedThreadPoolExecutor
 
@@ -407,40 +406,23 @@ class SpineDBWorker(QObject):
 
     @busy_effect
     def _update_items(self, items, method_name, item_type, check, cache, callback):
-        # FIXME: This needs more work, especially don't modify cache from this thread
-        def _new_item_from_db_item(item_type, db_item):
-            try:
-                item = self._db_map.db_to_cache(cache, item_type, db_item, fetch=False)
-                cache.setdefault(item_type, {})[item["id"]] = CacheItem(**item)
-                return item
-            except KeyError:
-                return None
-
-        def _new_item_from_id(item_type, id_):
-            old_item = cache.get(item_type, {}).get(id_)
-            if old_item is None:
-                return None
-            db_item = self._db_map.cache_to_db(item_type, old_item)
-            return _new_item_from_db_item(item_type, db_item)
-
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
-        items_by_type = {item_type: list(filter(None, (_new_item_from_db_item(item_type, x) for x in items)))}
-        ids_by_type = {item_type: {x["id"] for x in items}}
-        cascading_ids_by_type = self._db_map.cascading_ids(cache=cache, **ids_by_type)
+        self._something_happened.emit(_Event.UPDATE_ITEMS, (items, errors, item_type, cache, callback))
+
+    def _update_items_event(self, items, errors, item_type, cache, callback):
+        cascading_items_by_type = {item_type: self._db_mngr.make_items_from_db_items(self._db_map, item_type, items)}
+        cascading_ids_by_type = self._db_map.cascading_ids(cache=cache, **{item_type: {x["id"] for x in items}})
         del cascading_ids_by_type[item_type]
         for cascading_item_type, ids in cascading_ids_by_type.items():
-            items = list(filter(None, (_new_item_from_id(cascading_item_type, id_) for id_ in ids)))
+            items = self._db_mngr.make_items_from_ids(self._db_map, cascading_item_type, ids)
             if items:
-                items_by_type[cascading_item_type] = items
-        self._something_happened.emit(_Event.UPDATE_ITEMS, (item_type, items_by_type, errors, callback))
-
-    def _update_items_event(self, item_type, items_by_type, errors, callback):
-        for cascading_item_type, items in items_by_type.items():
+                cascading_items_by_type[cascading_item_type] = items
+        for cascading_item_type, cascading_items in cascading_items_by_type.items():
             for parent in {x for x in self._parents if x.fetch_item_type == cascading_item_type}:
-                children = [x for x in items if parent.accepts_item(x, self._db_map)]
+                children = [x for x in cascading_items if parent.accepts_item(x, self._db_map)]
                 parent.handle_items_updated({self._db_map: children})
         if callback is not None:
-            callback({self._db_map: items_by_type[item_type]})
+            callback({self._db_map: cascading_items_by_type[item_type]})
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
 
