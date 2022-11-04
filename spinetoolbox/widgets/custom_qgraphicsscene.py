@@ -99,28 +99,35 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     def mousePressEvent(self, event):
         """Puts link drawer to sleep and log message if it looks like the user doesn't know what they're doing."""
+        if (
+            self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false"
+            and self._finish_link()
+        ):
+            return
         super().mousePressEvent(event)
-        if self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false":
-            self._finish_link()
 
     def mouseReleaseEvent(self, event):
         """Makes link if drawer is released over a valid connector button."""
+        if (
+            self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true"
+            and self._finish_link()
+        ):
+            return
         super().mouseReleaseEvent(event)
-        if self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true":
-            self._finish_link()
 
     def _finish_link(self):
         if self.link_drawer is None:
-            return
+            return False
         if self.link_drawer.src_connector.isUnderMouse():
             self.link_drawer.sleep()
-            return
+            return False
         if self.link_drawer.dst_connector is None:
             self.link_drawer.sleep()
             self.emit_connection_failed()
-            return
+            return False
         self.link_drawer.dst_connector.set_normal_brush()
         self.link_drawer.add_link()
+        return True
 
     def emit_connection_failed(self):
         self._toolbox.msg_warning.emit(

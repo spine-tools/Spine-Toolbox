@@ -35,3 +35,5 @@ update_copyrights(root_dir, ".py", recursive=False)
 update_copyrights(project_source_dir, ".py")
 update_copyrights(project_source_dir, ".ui")
 update_copyrights(test_source_dir, ".py")
+
+print("Done. Don't forget to update append_license.py!")
