@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
+# Copyright (C) 2017-2021 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -13,16 +13,13 @@
 ################################################################################
 ## Form generated from reading UI file 'open_project_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.14.2
+## Created by: Qt User Interface Compiler version 5.15.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
-    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
-from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
-    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
-    QPixmap, QRadialGradient)
+from PySide2.QtCore import *
+from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.custom_combobox import OpenProjectDialogComboBox

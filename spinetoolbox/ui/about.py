@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
+# Copyright (C) 2017-2021 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -86,6 +86,10 @@ class Ui_Form(object):
         self.verticalLayout = QVBoxLayout(self.frame_9)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, -1, 0, 0)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer)
+
         self.label_spine_toolbox = QLabel(self.frame_9)
         self.label_spine_toolbox.setObjectName(u"label_spine_toolbox")
         sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -166,7 +170,7 @@ class Ui_Form(object):
         self.toolButton_copy_to_clipboard = QToolButton(self.frame_9)
         self.toolButton_copy_to_clipboard.setObjectName(u"toolButton_copy_to_clipboard")
         icon = QIcon()
-        icon.addFile(u":/icons/menu_icons/save_solid.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/icons/menu_icons/copy.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_copy_to_clipboard.setIcon(icon)
 
         self.horizontalLayout_8.addWidget(self.toolButton_copy_to_clipboard)
@@ -323,6 +327,9 @@ class Ui_Form(object):
         self.label_spine_engine.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>spine_engine</p></body></html>", None))
         self.label_spine_items.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>spine_items</p></body></html>", None))
         self.label_python.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>Python</p></body></html>", None))
+#if QT_CONFIG(tooltip)
+        self.toolButton_copy_to_clipboard.setToolTip(QCoreApplication.translate("Form", u"Copy to clipboard", None))
+#endif // QT_CONFIG(tooltip)
         self.textBrowser.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"

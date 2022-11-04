@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
+# Copyright (C) 2017-2021 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -230,6 +230,19 @@
          <number>0</number>
         </property>
         <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
          <widget class="QLabel" name="label_spine_toolbox">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -412,9 +425,12 @@
           </item>
           <item>
            <widget class="QToolButton" name="toolButton_copy_to_clipboard">
+            <property name="toolTip">
+             <string>Copy to clipboard</string>
+            </property>
             <property name="icon">
              <iconset resource="resources/resources_icons.qrc">
-              <normaloff>:/icons/menu_icons/save_solid.svg</normaloff>:/icons/menu_icons/save_solid.svg</iconset>
+              <normaloff>:/icons/menu_icons/copy.svg</normaloff>:/icons/menu_icons/copy.svg</iconset>
             </property>
            </widget>
           </item>
