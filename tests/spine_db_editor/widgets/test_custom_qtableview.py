@@ -20,11 +20,6 @@ from tests.spine_db_editor.widgets.helpers import add_object, add_object_class, 
 
 
 class TestParameterTableView(TestBase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
     def setUp(self):
         self._common_setup("sqlite://", create=True)
 
