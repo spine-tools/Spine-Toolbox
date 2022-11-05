@@ -186,6 +186,7 @@ class FetchMoreMixin:
             handle_items_removed=self.handle_items_removed,
             handle_items_updated=self.handle_items_updated,
             filter_query=self.filter_query,
+            accepts_item=self.accepts_item,
         )
 
     @property

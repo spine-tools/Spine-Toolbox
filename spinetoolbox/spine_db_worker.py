@@ -359,6 +359,19 @@ class SpineDBWorker(QObject):
         sq = self._db_map.ext_parameter_value_metadata_sq
         return self._db_map.query(sq).filter(sq.c.parameter_value_id == parameter_value_id).all()
 
+    def _update_special_refs(self, item_type, ids):
+        cascading_ids_by_type = self._db_mngr.special_cascading_ids(self._db_map, item_type, ids)
+        self._do_update_special_refs(cascading_ids_by_type)
+
+    def _do_update_special_refs(self, cascading_ids_by_type, fill_missing=True):
+        for cascading_item_type, cascading_ids in cascading_ids_by_type.items():
+            cascading_items = self._db_mngr.make_items_from_ids(
+                self._db_map, cascading_item_type, cascading_ids, fill_missing=fill_missing
+            )
+            for parent in {x for x in self._parents if x.fetch_item_type == cascading_item_type}:
+                children = [x for x in cascading_items if parent.accepts_item(x, self._db_map)]
+                parent.handle_items_updated({self._db_map: children})
+
     def add_items(self, items, method_name, item_type, readd, check, cache, callback):
         """Adds items to db.
 
@@ -378,14 +391,14 @@ class SpineDBWorker(QObject):
         items, errors = getattr(self._db_map, method_name)(
             *items, check=check, readd=readd, return_items=True, cache=cache
         )
-        items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
+        items = self._db_mngr.make_items_from_db_items(self._db_map, item_type, items)
         self._something_happened.emit(_Event.ADD_ITEMS, (item_type, items, errors, callback))
 
     def _add_items_event(self, item_type, items, errors, callback):
-        self._db_mngr.cache_items(item_type, {self._db_map: items})
         for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
             children = [x for x in items if parent.accepts_item(x, self._db_map)]
             parent.handle_items_added({self._db_map: children})
+        self._update_special_refs(item_type, {x["id"] for x in items})
         if callback is not None:
             callback({self._db_map: items})
         if errors:
@@ -402,25 +415,26 @@ class SpineDBWorker(QObject):
             cache (dict): Cache
             callback (None or function): something to call with the result
         """
-        self._executor.submit(self._update_items, items, method_name, item_type, check, cache, callback).result()
+        self._executor.submit(self._update_items, items, method_name, item_type, check, cache, callback)
 
     @busy_effect
     def _update_items(self, items, method_name, item_type, check, cache, callback):
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
-        self._something_happened.emit(_Event.UPDATE_ITEMS, (items, errors, item_type, cache, callback))
-
-    def _update_items_event(self, items, errors, item_type, cache, callback):
-        cascading_items_by_type = {item_type: self._db_mngr.make_items_from_db_items(self._db_map, item_type, items)}
         cascading_ids_by_type = self._db_map.cascading_ids(cache=cache, **{item_type: {x["id"] for x in items}})
         del cascading_ids_by_type[item_type]
-        for cascading_item_type, ids in cascading_ids_by_type.items():
-            items = self._db_mngr.make_items_from_ids(self._db_map, cascading_item_type, ids)
-            if items:
-                cascading_items_by_type[cascading_item_type] = items
+        cascading_items_by_type = {item_type: self._db_mngr.make_items_from_db_items(self._db_map, item_type, items)}
+        for cascading_item_type, cascading_ids in cascading_ids_by_type.items():
+            cascading_items = self._db_mngr.make_items_from_ids(self._db_map, cascading_item_type, cascading_ids)
+            if cascading_items:
+                cascading_items_by_type[cascading_item_type] = cascading_items
+        self._something_happened.emit(_Event.UPDATE_ITEMS, (cascading_items_by_type, errors, item_type, callback))
+
+    def _update_items_event(self, cascading_items_by_type, errors, item_type, callback):
         for cascading_item_type, cascading_items in cascading_items_by_type.items():
             for parent in {x for x in self._parents if x.fetch_item_type == cascading_item_type}:
                 children = [x for x in cascading_items if parent.accepts_item(x, self._db_map)]
                 parent.handle_items_updated({self._db_map: children})
+        self._update_special_refs(item_type, {x["id"] for x in cascading_items_by_type[item_type]})
         if callback is not None:
             callback({self._db_map: cascading_items_by_type[item_type]})
         if errors:
@@ -445,6 +459,7 @@ class SpineDBWorker(QObject):
 
     def _remove_items_event(self, ids_per_type, errors, callback):
         items_per_type = {}
+        all_cascading_ids_by_type = []
         for item_type, ids in ids_per_type.items():
             if not ids:
                 continue
@@ -452,7 +467,11 @@ class SpineDBWorker(QObject):
             for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
                 children = [x for x in items if parent.accepts_item(x, self._db_map)]
                 parent.handle_items_removed({self._db_map: children})
+            cascading_ids_by_type = self._db_mngr.special_cascading_ids(self._db_map, item_type, ids)
+            all_cascading_ids_by_type.append(cascading_ids_by_type)
         self._db_mngr.uncache_removed_items({self._db_map: ids_per_type})
+        for cascading_ids_by_type in all_cascading_ids_by_type:
+            self._do_update_special_refs(cascading_ids_by_type, fill_missing=False)
         if callback is not None:
             callback({self._db_map: items_per_type})
         if errors:
