@@ -19,7 +19,7 @@ A tree model for parameter_value lists.
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine, FetchParent, ItemTypeFetchParent, bisect_chunks
+from spinetoolbox.helpers import CharIconEngine, FetchParent, ItemTypeFetchParent, FlexibleFetchParent, bisect_chunks
 
 
 class StandardTreeItem(TreeItem):
@@ -137,50 +137,13 @@ class SortChildrenMixin:
         return True
 
 
-class CallbackFetchParent(ItemTypeFetchParent):
-    def __init__(
-        self,
-        fetch_item_type,
-        handle_items_added=None,
-        handle_items_removed=None,
-        handle_items_updated=None,
-        filter_query=None,
-        accepts_item=None,
-    ):
-        super().__init__(fetch_item_type)
-        self._filter_query = filter_query if filter_query is not None else lambda qry, *args: qry
-        self._accepts_item = accepts_item if accepts_item is not None else lambda *args: True
-        self._handle_items_added = handle_items_added if handle_items_added is not None else lambda db_map_data: None
-        self._handle_items_removed = (
-            handle_items_removed if handle_items_removed is not None else lambda db_map_data: None
-        )
-        self._handle_items_updated = (
-            handle_items_updated if handle_items_updated is not None else lambda db_map_data: None
-        )
-
-    def handle_items_added(self, db_map_data):
-        self._handle_items_added(db_map_data)
-
-    def handle_items_removed(self, db_map_data):
-        self._handle_items_removed(db_map_data)
-
-    def handle_items_updated(self, db_map_data):
-        self._handle_items_updated(db_map_data)
-
-    def filter_query(self, query, subquery, db_map):
-        return self._filter_query(query, subquery, db_map)
-
-    def accepts_item(self, item, db_map):
-        return self._accepts_item(item, db_map)
-
-
 class FetchMoreMixin:
     # FIXME: Use parent for calls to fetch_more can_fetch_more
     # and also insert items from db map cache in case they were already fetched
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._natural_fetch_parent = CallbackFetchParent(
+        self._natural_fetch_parent = FlexibleFetchParent(
             self.fetch_item_type,
             handle_items_added=self.handle_items_added,
             handle_items_removed=self.handle_items_removed,

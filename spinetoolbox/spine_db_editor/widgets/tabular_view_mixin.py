@@ -51,6 +51,12 @@ class TabularViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._pivot_table_models = {
+            self._PARAMETER_VALUE: ParameterValuePivotTableModel(self),
+            self._RELATIONSHIP: RelationshipPivotTableModel(self),
+            self._INDEX_EXPANSION: IndexExpansionPivotTableModel(self),
+            self._SCENARIO_ALTERNATIVE: ScenarioAlternativePivotTableModel(self),
+        }
         self.current_class_type = None
         self.current_class_id = {}  # Mapping from db_map to class_id
         self.current_class_name = None
@@ -504,12 +510,7 @@ class TabularViewMixin:
         """Reloads pivot table."""
         if not self._can_build_pivot_table():
             return
-        self.pivot_table_model = {
-            self._PARAMETER_VALUE: ParameterValuePivotTableModel,
-            self._RELATIONSHIP: RelationshipPivotTableModel,
-            self._INDEX_EXPANSION: IndexExpansionPivotTableModel,
-            self._SCENARIO_ALTERNATIVE: ScenarioAlternativePivotTableModel,
-        }[self.current_input_type](self)
+        self.pivot_table_model = self._pivot_table_models[self.current_input_type]
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
         delegate = self.pivot_table_model.make_delegate(self)
         self.ui.pivot_table.setItemDelegate(delegate)
@@ -731,15 +732,14 @@ class TabularViewMixin:
         """
         return list(dict.fromkeys(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])).keys())
 
-    # TODO: Move this to the models?
-    @staticmethod
-    def refresh_table_view(table_view):
-        top_left = table_view.indexAt(table_view.rect().topLeft())
-        bottom_right = table_view.indexAt(table_view.rect().bottomRight())
-        if not bottom_right.isValid():
-            model = table_view.model()
-            bottom_right = table_view.model().index(model.rowCount() - 1, model.columnCount() - 1)
-        table_view.model().dataChanged.emit(top_left, bottom_right)
+    def refresh_views(self):
+        for table_view in (self.ui.pivot_table, self.ui.frozen_table):
+            top_left = table_view.indexAt(table_view.rect().topLeft())
+            bottom_right = table_view.indexAt(table_view.rect().bottomRight())
+            if not bottom_right.isValid():
+                model = table_view.model()
+                bottom_right = table_view.model().index(model.rowCount() - 1, model.columnCount() - 1)
+            table_view.model().dataChanged.emit(top_left, bottom_right)
 
     @Slot(str)
     def update_filter_menus(self, action):
