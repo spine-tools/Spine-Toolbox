@@ -71,11 +71,6 @@ class RelationshipTreeRootItem(EntityRootItem):
 class EntityClassItem(MultiDBTreeItem):
     """An entity_class item."""
 
-    def __init__(self, *args, **kwargs):
-        """Overridden method to declare group_child_count attribute."""
-        super().__init__(*args, **kwargs)
-        self._group_child_count = 0
-
     @property
     def display_icon(self):
         """Returns class icon."""
@@ -98,19 +93,6 @@ class EntityClassItem(MultiDBTreeItem):
             if not self.has_children():
                 return QBrush(Qt.gray)
         return super().data(column, role)
-
-    def remove_children(self, position, count):
-        """
-        Overriden method to keep the group child count up to date.
-        """
-        if not super().remove_children(position, count):
-            return False
-        first_group_child = position
-        last_group_child = min(self._group_child_count - 1, position + count - 1)
-        removed_child_count = last_group_child - first_group_child + 1
-        if removed_child_count > 0:
-            self._group_child_count -= removed_child_count
-        return True
 
     def filter_query(self, query, subquery, db_map):
         return query.filter(subquery.c.class_id == self.db_map_id(db_map))

@@ -463,7 +463,9 @@ class SpineDBWorker(QObject):
         for item_type, ids in ids_per_type.items():
             if not ids:
                 continue
-            items = items_per_type[item_type] = [self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids]
+            items = items_per_type[item_type] = [
+                x for x in (self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids) if x
+            ]
             for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
                 children = [x for x in items if parent.accepts_item(x, self._db_map)]
                 parent.handle_items_removed({self._db_map: children})

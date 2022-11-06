@@ -256,11 +256,6 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         if self.can_fetch_more():
             self.fetch_more()
 
-    def get_children_ids(self):
-        for db_map, ids in self._child_map.items():
-            for id_ in ids:
-                yield (db_map, id_)
-
     def handle_items_added(self, db_map_data):
         db_map_ids = {db_map: [x["id"] for x in data] for db_map, data in db_map_data.items()}
         self.append_children_by_id(db_map_ids)

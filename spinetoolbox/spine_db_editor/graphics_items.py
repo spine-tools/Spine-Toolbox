@@ -475,7 +475,7 @@ class ObjectItem(EntityItem):
             self.label_item.setPlainText(name)
             return True
         current_name = self.label_item.toPlainText()
-        self.db_map_ids = tuple(db_map_ids_by_name.get(current_name, ()))
+        self._db_map_ids = tuple(db_map_ids_by_name.get(current_name, ()))
         return False
 
     def _make_tool_tip(self):

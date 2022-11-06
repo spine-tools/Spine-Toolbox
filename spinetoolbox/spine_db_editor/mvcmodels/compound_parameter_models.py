@@ -406,7 +406,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
                 self._add_parameter_data(db_map, entity_class_id, ids_committed, committed=True)
                 self._add_parameter_data(db_map, entity_class_id, ids_uncommitted, committed=False)
                 self._do_add_data_to_filter_menus(db_map, class_items)
-        self.empty_model.receive_parameter_data_added(db_map_data)
+        self.empty_model.handle_items_added(db_map_data)
 
     def _get_insert_position(self, model):
         if model.committed:
@@ -639,15 +639,6 @@ class CompoundParameterValueMixin:
         model.set_filter_entity_ids(self._filter_entity_ids)
         model.set_filter_alternative_ids(self._filter_alternative_ids)
         return model
-
-    def receive_alternatives_updated(self, db_map_data):
-        """Updated alternative column
-
-        Args:
-            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
-        """
-        # FIXME: This is never called now
-        self._emit_data_changed_for_column("alternative_id")
 
 
 class CompoundObjectParameterDefinitionModel(

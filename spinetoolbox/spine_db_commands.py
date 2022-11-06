@@ -64,32 +64,39 @@ class SpineDBMacro(AgedUndoCommand):
     """A command that just runs a series of SpineDBCommand's one after another, *waiting* for each one to finish
     before starting the next."""
 
-    def __init__(self, children, parent=None):
+    def __init__(self, cmd_iter, parent=None):
         super().__init__(parent=parent)
-        self._children = children
+        self._cmd_iter = cmd_iter
+        self._reverse_cmd_iter = None
+        self._cmds = []
+        self._completed_once = False
 
     def redo(self):
         super().redo()
-        child_iter = iter(self._children)
-        self._redo_next(child_iter)
+        if self._completed_once:
+            self._cmd_iter = iter(self._cmds)
+        self._redo_next()
 
-    def _redo_next(self, child_iter):
-        child = next(child_iter, None)
+    def _redo_next(self):
+        child = next(self._cmd_iter, None)
         if child is None:
+            self._completed_once = True
             return
-        child.redo_complete_callback = lambda *args: self._redo_next(child_iter)
+        if not self._completed_once:
+            self._cmds.append(child)
+        child.redo_complete_callback = lambda *args: self._redo_next()
         child.redo()
 
     def undo(self):
         super().undo()
-        child_iter = reversed(self._children)
-        self._undo_next(child_iter)
+        self._reverse_cmd_iter = reversed(self._cmds)
+        self._undo_next()
 
-    def _undo_next(self, child_iter):
-        child = next(child_iter, None)
+    def _undo_next(self):
+        child = next(self._reverse_cmd_iter, None)
         if child is None:
             return
-        child.undo_complete_callback = lambda *args: self._undo_next(child_iter)
+        child.undo_complete_callback = lambda *args: self._undo_next()
         child.undo()
 
 

@@ -770,7 +770,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def _receive_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        # FIXME
+        # FIXME MM
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self._changelog.append(msg)

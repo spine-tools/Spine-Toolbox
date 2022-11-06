@@ -18,7 +18,7 @@ The SpineDBManager class
 
 import json
 import os
-from PySide2.QtCore import Qt, QObject, Signal, QMutex
+from PySide2.QtCore import Qt, QObject, Signal, Slot, QMutex
 from PySide2.QtWidgets import QMessageBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont, QWindow
 from sqlalchemy.engine.url import URL
@@ -69,13 +69,7 @@ class SpineDBManager(QObject):
     session_committed = Signal(set, object)
     session_rolled_back = Signal(set)
     # Added
-    scenarios_added = Signal(dict)
-    entity_groups_added = Signal(dict)
-    # Updated
-    objects_updated = Signal(dict)
-    relationships_updated = Signal(dict)
-    parameter_definitions_updated = Signal(dict)
-    parameter_values_updated = Signal(dict)
+    scenarios_added = Signal(dict)  # FIXME MM
     # Closing
     waiting_for_fetcher = Signal()
     fetcher_waiting_over = Signal()
@@ -98,14 +92,47 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self._cache = {}
         self._icon_mngr = {}
-        self.connect_signals()
+        self._connect_signals()
 
-    def connect_signals(self):
-        """Connects signals."""
-        # Refresh
-        self.entity_groups_added.connect(self._cascade_refresh_objects_by_group)
-        self.entity_groups_added.connect(self._cascade_refresh_relationships_by_group)
+    def _connect_signals(self):
+        self.session_refreshed.connect(self.receive_session_refreshed)
+        self.session_committed.connect(self.receive_session_committed)
+        self.session_rolled_back.connect(self.receive_session_rolled_back)
+        self.error_msg.connect(self.receive_error_msg)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
+
+    @Slot(object)
+    def receive_error_msg(self, db_map_error_log):
+        for db_map, error_log in db_map_error_log.items():
+            for listener in self.listeners.get(db_map, ()):
+                listener.receive_error_msg({db_map: error_log})
+
+    @Slot(set)
+    def receive_session_refreshed(self, db_maps):
+        for db_map in db_maps:
+            for listener in self.listeners.get(db_map, ()):
+                try:
+                    listener.receive_session_refreshed(db_map)
+                except AttributeError:
+                    pass
+
+    @Slot(set, object)
+    def receive_session_committed(self, db_maps, cookie):
+        for db_map in db_maps:
+            for listener in self.listeners.get(db_map, ()):
+                try:
+                    listener.receive_session_committed(db_map, cookie)
+                except AttributeError:
+                    pass
+
+    @Slot(set)
+    def receive_session_rolled_back(self, db_maps):
+        for db_map in db_maps:
+            for listener in self.listeners.get(db_map, ()):
+                try:
+                    listener.receive_session_rolled_back(db_map)
+                except AttributeError:
+                    pass
 
     def _new_item_from_id(self, db_map, item_type, id_, fill_missing=True):
         cache = self._cache.get(db_map, {})
@@ -147,6 +174,10 @@ class SpineDBManager(QObject):
             for item in self.get_items(db_map, "parameter_definition"):
                 if item["list_value_id"] in ids:
                     cascading_ids.setdefault("parameter_definition", set()).add(item["id"])
+        elif item_type == "entity_group":
+            cascading_ids["object"] = {
+                x["group_id"] for x in (self.get_item(db_map, "entity_group", id_) for id_ in ids) if x
+            }
         return cascading_ids
 
     def _get_worker(self, db_map):
@@ -898,21 +929,20 @@ class SpineDBManager(QObject):
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
                 db_map_error_log.setdefault(db_map, []).append(msg)
                 continue
-            child_cmds = []
-            for item_type, (to_add, to_update, import_error_log) in data_for_import:
-                db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
-                if to_add:
-                    add_cmd = AddItemsCommand(self, db_map, to_add, item_type, check=False)
-                    child_cmds.append(add_cmd)
-                if to_update:
-                    upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, check=False)
-                    child_cmds.append(upd_cmd)
-            if child_cmds:
-                macro = SpineDBMacro(child_cmds)
-                macro.setText(command_text)
-                self.undo_stack[db_map].push(macro)
+            cmd_iter = self._import_data_cmds(db_map, data_for_import, db_map_error_log)
+            macro = SpineDBMacro(cmd_iter)
+            macro.setText(command_text)
+            self.undo_stack[db_map].push(macro)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
+
+    def _import_data_cmds(self, db_map, data_for_import, db_map_error_log):
+        for item_type, (to_add, to_update, import_error_log) in data_for_import:
+            db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
+            if to_add:
+                yield AddItemsCommand(self, db_map, to_add, item_type, check=False)
+            if to_update:
+                yield UpdateItemsCommand(self, db_map, to_update, item_type, check=False)
 
     def add_items(self, db_map_data, method_name, item_type, readd=False, check=True, callback=None):
         for db_map, data in db_map_data.items():
@@ -1308,7 +1338,7 @@ class SpineDBManager(QObject):
                 add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative")
                 child_cmds.append(add_cmd)
             if child_cmds:
-                macro = SpineDBMacro(child_cmds)
+                macro = SpineDBMacro(iter(child_cmds))
                 macro.setText(f"set scenario alternatives in {db_map.codename}")
                 self.undo_stack[db_map].push(macro)
 
@@ -1481,22 +1511,6 @@ class SpineDBManager(QObject):
                 if item["scenario_id"] in ids:
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
-
-    def _cascade_refresh_objects_by_group(self, db_map_data):
-        self._cascade_refresh_entities_by_group(db_map_data, "object", self.objects_updated)
-
-    def _cascade_refresh_relationships_by_group(self, db_map_data):
-        self._cascade_refresh_entities_by_group(db_map_data, "relationship", self.relationships_updated)
-
-    def _cascade_refresh_entities_by_group(self, db_map_data, item_type, updated_signal):
-        db_map_entity_data = {}
-        for db_map, data in db_map_data.items():
-            for item in data:
-                entity = self.get_item(db_map, item_type, item["group_id"])
-                if entity:
-                    entity["group_id"] = item["group_id"]
-                    db_map_entity_data.setdefault(db_map, []).append(entity)
-        updated_signal.emit(db_map_entity_data)
 
     def duplicate_scenario(self, scen_data, dup_name, db_map):
         data = self._get_data_for_export(scen_data)

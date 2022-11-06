@@ -19,7 +19,7 @@ Provides pivot table models for the Tabular View.
 from PySide2.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, FlexibleFetchParent, ItemTypeFetchParent
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, FlexibleFetchParent
 from .pivot_model import PivotModel
 from ...mvcmodels.shared import PARSED_ROLE
 from ...config import PIVOT_TABLE_HEADER_COLOR
@@ -55,6 +55,10 @@ class PivotTableModelBase(QAbstractTableModel):
         self.columnsInserted.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.fetch_more_columns))
         self.modelAboutToBeReset.connect(self.reset_data_count)
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
+
+    def reset_fetch_parents(self):
+        for parent in self._fetch_parents():
+            parent.reset_fetching(None)
 
     def _fetch_parents(self):
         """Yields fetch parents for this model.
@@ -164,12 +168,6 @@ class PivotTableModelBase(QAbstractTableModel):
             self.endInsertColumns()
         self._emit_all_data_changed()
 
-    def _emit_all_data_changed(self):
-        top_left = self.index(self.headerRowCount(), self.headerColumnCount())
-        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
-        self.dataChanged.emit(top_left, bottom_right)
-        self.model_data_changed.emit()
-
     def remove_from_model(self, data):
         if not data:
             return
@@ -184,6 +182,13 @@ class PivotTableModelBase(QAbstractTableModel):
             self.beginRemoveColumns(QModelIndex(), first, first + column_count - 1)
             self._data_column_count -= column_count
             self.endRemoveColumns()
+        self._emit_all_data_changed()
+
+    def _emit_all_data_changed(self):
+        top_left = self.index(self.headerRowCount(), self.headerColumnCount())
+        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
+        self.dataChanged.emit(top_left, bottom_right)
+        self.model_data_changed.emit()
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         self.beginResetModel()
