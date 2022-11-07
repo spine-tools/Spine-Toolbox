@@ -215,6 +215,7 @@ class SpecificationEditorWindowBase(QMainWindow):
             self.focusWidget().clearFocus()
         if not self._undo_stack.isClean() and not prompt_to_save_changes(self, self._toolbox.qsettings(), self._save):
             return False
+        self._change_notifier.tear_down()
         self._undo_stack.cleanChanged.disconnect(self._update_window_modified)
         save_ui(self, self._app_settings, self.settings_group)
         return True

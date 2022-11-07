@@ -25,7 +25,11 @@ from spinetoolbox.helpers import color_from_index
 class Notification(QFrame):
     """Custom pop-up notification widget with fade-in and fade-out effect."""
 
-    def __init__(self, parent, txt, anim_duration=500, life_span=None, word_wrap=True, corner=Qt.TopRightCorner):
+    _FADE_IN_OUT_DURATION = 500
+
+    def __init__(
+        self, parent, txt, anim_duration=_FADE_IN_OUT_DURATION, life_span=None, word_wrap=True, corner=Qt.TopRightCorner
+    ):
         """
 
         Args:
@@ -194,6 +198,8 @@ class LinkNotification(Notification):
 
 
 class ChangeNotifier(QObject):
+    _ANIMATION_LIFE_SPAN = 5000
+
     def __init__(self, parent, undo_stack, settings, settings_key, corner=Qt.BottomRightCorner):
         """
         Args:
@@ -201,6 +207,7 @@ class ChangeNotifier(QObject):
             undo_stack (QUndoStack)
             settings (QSettings)
             settings_key (str)
+            corner (int)
         """
         super().__init__(undo_stack)
         self._undo_stack = undo_stack
@@ -238,10 +245,14 @@ class ChangeNotifier(QObject):
         self._notification = ButtonNotification(
             self._parent,
             notification_text,
-            life_span=5000,
+            life_span=self._ANIMATION_LIFE_SPAN,
             word_wrap=False,
             corner=self._corner,
             button_text=button_text,
             button_slot=button_slot,
         )
         self._notification.show()
+
+    def tear_down(self):
+        """Tears down the notifier."""
+        self._undo_stack.indexChanged.disconnect(self._push_notification)
