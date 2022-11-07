@@ -19,7 +19,7 @@ A tree model for parameter_value lists.
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine, FetchParent, ItemTypeFetchParent, FlexibleFetchParent, bisect_chunks
+from spinetoolbox.helpers import CharIconEngine, FlexibleFetchParent, bisect_chunks
 
 
 class StandardTreeItem(TreeItem):

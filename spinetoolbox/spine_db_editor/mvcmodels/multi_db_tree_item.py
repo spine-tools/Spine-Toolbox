@@ -130,13 +130,11 @@ class MultiDBTreeItem(FetchParent, TreeItem):
                 removed_rows.append(row)
         for row, count in reversed(rows_to_row_count_tuples(removed_rows)):
             self.remove_children(row, count)
-        changed_rows = []
         for row, child in enumerate(self.children):
             child._deep_refresh_children()
-            changed_rows.append(row)
-        if changed_rows:
-            top_row = changed_rows[0]
-            bottom_row = changed_rows[-1]
+        if self.children:
+            top_row = 0
+            bottom_row = self.child_count() - 1
             top_index = self.children[top_row].index().sibling(top_row, 1)
             bottom_index = self.children[bottom_row].index().sibling(bottom_row, 1)
             self.model.dataChanged.emit(top_index, bottom_index)
@@ -339,7 +337,9 @@ class MultiDBTreeItem(FetchParent, TreeItem):
                 db_map = child.first_db_map
                 new_child = child.deep_take_db_map(db_map)
                 new_children.append(new_child)
-            if child.display_id in display_ids[:row] + display_ids[row + 1 :]:
+            if child.display_id in display_ids[:row] + display_ids[row + 1 :] or (
+                child.is_group() and not child.has_members_item
+            ):
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
                 self.remove_children(row, 1)
@@ -348,7 +348,7 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         self._merge_children(new_children)
         top_left = self.model.index(0, 0, self.index())
         bottom_right = self.model.index(self.child_count() - 1, 0, self.index())
-        self.model.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+        self.model.dataChanged.emit(top_left, bottom_right)
 
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.

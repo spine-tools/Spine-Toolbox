@@ -214,12 +214,7 @@ class EntityItem(MultiDBTreeItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._has_members_item = False
-
-    @property
-    def members_item(self):
-        self._fetch_members_item()
-        return self.child(0)
+        self.has_members_item = False
 
     @property
     def display_icon(self):
@@ -239,11 +234,11 @@ class EntityItem(MultiDBTreeItem):
         return False
 
     def _can_fetch_members_item(self):
-        return self.is_group() and not self._has_members_item
+        return self.is_group() and not self.has_members_item
 
     def _fetch_members_item(self):
         if self._can_fetch_members_item():
-            self._has_members_item = True
+            self.has_members_item = True
             # Insert members item. Note that we pass the db_map_ids of the parent object class item
             self.insert_children(0, [MemberObjectClassItem(self.model, self.parent_item.db_map_ids.copy())])
 
