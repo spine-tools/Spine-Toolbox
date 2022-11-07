@@ -90,7 +90,10 @@ class ScenarioGenerator(QWidget):
             self._insert_base_alternative(scenario_alternatives)
             if operation_label == self._TYPE_LABELS[0]:
                 _ensure_unique(scenario_alternatives)
-        generated_scenario_names = [scenario_prefix + str(count) for count in range(1, len(scenario_alternatives) + 1)]
+        suffix = _suffix(len(scenario_alternatives))
+        generated_scenario_names = [
+            scenario_prefix + suffix.format(count) for count in range(1, len(scenario_alternatives) + 1)
+        ]
         scenario_items = self._db_editor.scenario_items(self._db_map)
         existing_scenario_names = {item.name for item in scenario_items}
         resolution = self._check_existing_scenarios(generated_scenario_names, existing_scenario_names)
@@ -232,3 +235,16 @@ def _find_base_alternative(names):
         return names[0] if names else ""
     else:
         return names[base_index]
+
+
+def _suffix(item_count):
+    """Returns a formattable string with enough zero padding to hold item_count digits.
+
+    Args:
+        item_count (int): maximum number of items
+
+    Returns:
+        str: string in the form '{:0n}' where n is the number of digits in item_count
+    """
+    digit_count = len(str(item_count))
+    return f"{{:0{digit_count}}}"
