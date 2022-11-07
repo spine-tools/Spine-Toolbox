@@ -71,6 +71,7 @@ class SpineDBWorker(QObject):
         self._db_url = db_url
         self._db_map = None
         self._current_fetch_token = 0
+        self._removed_ids = {}
         self._query_has_elements_by_key = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
@@ -112,6 +113,7 @@ class SpineDBWorker(QObject):
         self._current_fetch_token += 1
         self._fetched_item_types.clear()
         self._query_has_elements_by_key.clear()
+        self._removed_ids.clear()
 
     def _reset_fetching_if_required(self, parent):
         """Sets fetch parent's token or resets the parent if fetch tokens don't match.
@@ -223,15 +225,22 @@ class SpineDBWorker(QObject):
     def _fetch_more(self, parent):
         iterator = self._get_iterator(parent)
         chunk = next(iterator, [])
-        self._something_happened.emit(_Event.FETCH, (parent, chunk))
+        if chunk:
+            more_available = True
+            removed_ids = self._removed_ids.get(parent.fetch_item_type)
+            if removed_ids is not None:
+                chunk = [item for item in chunk if item["id"] not in removed_ids]
+        else:
+            more_available = False
+        self._something_happened.emit(_Event.FETCH, (parent, chunk, more_available))
 
-    def _fetch_event(self, parent, chunk):
+    def _fetch_event(self, parent, chunk, more_available):
         # Mark parent as unbusy, but after emitting the 'added' signal below otherwise we have an infinite fetch loop
         QTimer.singleShot(0, lambda: parent.set_busy_fetching(False))
         if chunk:
             signal = self._db_mngr.added_signals[parent.fetch_item_type]
             signal.emit({self._db_map: chunk})
-        elif parent.query is not None:
+        elif not more_available and parent.query is not None:
             parent.set_fetched(True)
 
     def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
@@ -358,7 +367,7 @@ class SpineDBWorker(QObject):
             method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
             item_type (str): item type
             signal_name (str) : signal attribute of SpineDBManager to emit if successful
-            check (bool): Whether or not to check integrity
+            check (bool): Whether to check integrity
             cache (dict): Cache
         """
         self._executor.submit(self._add_or_update_items, items, method_name, item_type, signal_name, check, cache)
@@ -367,6 +376,7 @@ class SpineDBWorker(QObject):
     def _add_or_update_items(self, items, method_name, item_type, signal_name, check, cache):
         items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
+        self._discard_removed_ids(item_type, items)
         self._something_happened.emit(_Event.ADD_OR_UPDATE_ITEMS, (items, errors, signal_name))
 
     def _add_or_update_items_event(self, items, errors, signal_name):
@@ -390,11 +400,26 @@ class SpineDBWorker(QObject):
     def _readd_items(self, items, method_name, item_type, signal_name, cache):
         getattr(self._db_map, method_name)(*items, readd=True, cache=cache)
         items = [self._db_map.db_to_cache(cache, item_type, item) for item in items]
+        self._discard_removed_ids(item_type, items)
         self._something_happened.emit(_Event.READD_ITEMS, (items, signal_name))
 
     def _readd_items_event(self, items, signal_name):
         signal = getattr(self._db_mngr, signal_name)
         signal.emit({self._db_map: items})
+
+    def _discard_removed_ids(self, item_type, items):
+        """Discards added item ids from removed ids cache.
+
+        Args:
+            item_type (str): item type
+            list of dict: added cache items
+        """
+        for item in items:
+            try:
+                removed_ids = self._removed_ids[item_type]
+            except KeyError:
+                continue
+            removed_ids.discard(item["id"])
 
     def remove_items(self, ids_per_type):
         """Removes items from database.
@@ -411,6 +436,10 @@ class SpineDBWorker(QObject):
             errors = []
         except SpineDBAPIError as err:
             errors = [err]
+        if not errors:
+            for item_type, ids in ids_per_type.items():
+                removed_ids = self._removed_ids.setdefault(item_type, set())
+                removed_ids |= ids
         self._something_happened.emit(_Event.REMOVE_ITEMS, (ids_per_type, errors))
 
     def _remove_items_event(self, ids_per_type, errors):
@@ -470,6 +499,8 @@ class SpineDBWorker(QObject):
             errors = []
         except SpineDBAPIError as e:
             errors = [e.msg]
+        if not errors:
+            self._removed_ids.clear()
         self._something_happened.emit(_Event.ROLLBACK_SESSION, (errors, undo_stack))
 
     def _rollback_session_event(self, errors, undo_stack):

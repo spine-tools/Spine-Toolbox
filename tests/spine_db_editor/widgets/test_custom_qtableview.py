@@ -10,11 +10,15 @@
 ######################################################################################################################
 
 """Unit tests for DB editor's custom ``QTableView`` classes."""
+import itertools
+import os
 import unittest
+from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide2.QtCore import QItemSelectionModel, QModelIndex
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QMessageBox
 
+from spinedb_api import DatabaseMapping, import_functions
 from spinetoolbox.helpers import signal_waiter, ItemTypeFetchParent
 from tests.spine_db_editor.widgets.helpers import add_object, add_object_class, TestBase, EditorDelegateMocking
 
@@ -105,11 +109,11 @@ class TestParameterTableView(TestBase):
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.columnCount(), 6)
         expected = [
-            ["an_object_class", "object_1", "Base", "value_1", "database"],
-            ["an_object_class", "object_2", "Base", "value_2", "database"],
+            ["an_object_class", "object_1", "a_parameter", "Base", "value_1", "database"],
+            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", "database"],
             [None, None, None, None, None, "database"],
         ]
-        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
         selection_model = table_view.selectionModel()
         selection_model.select(model.index(0, 0), QItemSelectionModel.ClearAndSelect)
@@ -118,10 +122,10 @@ class TestParameterTableView(TestBase):
             waiter.wait()
         self.assertFalse(model.canFetchMore(QModelIndex()))
         expected = [
-            ["an_object_class", "object_2", "Base", "value_2", "database"],
+            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", "database"],
             [None, None, None, None, None, "database"],
         ]
-        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_receiving_uncommitted_but_existing_value_does_not_create_duplicate_entry(self):
@@ -147,10 +151,10 @@ class TestParameterTableView(TestBase):
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         expected = [
-            ["an_object_class", "an_object", "Base", "value_1", "database"],
+            ["an_object_class", "an_object", "a_parameter", "Base", "value_1", "database"],
             [None, None, None, None, None, "database"],
         ]
-        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
         fetch_parent = ItemTypeFetchParent("parameter_value")
         with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
@@ -160,7 +164,7 @@ class TestParameterTableView(TestBase):
             waiter.wait()
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
-        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=1)
@@ -204,7 +208,7 @@ class TestParameterTableView(TestBase):
             ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", "database"],
             [None, None, None, None, None, "database"],
         ]
-        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
         self._commit_changes_to_database("Add test data.")
         with signal_waiter(self._db_mngr.session_refreshed) as waiter:
@@ -218,7 +222,130 @@ class TestParameterTableView(TestBase):
             ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", "database"],
             [None, None, None, None, None, "database"],
         ]
-        for row, column in zip(range(model.rowCount()), range(model.columnCount())):
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
+            self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+
+class TestParameterTableWithExistingData(TestBase):
+    _CHUNK_SIZE = 100  # This has to be large enough, so the chunk won't 'fit' into the table view.
+
+    @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=_CHUNK_SIZE)
+    def setUp(self):
+        self._temp_dir = TemporaryDirectory()
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
+        db_map = DatabaseMapping(url, create=True)
+        import_functions.import_object_classes(db_map, ("object_class",))
+        self._n_objects = 12
+        object_data = (("object_class", f"object_{n}") for n in range(self._n_objects))
+        import_functions.import_objects(db_map, object_data)
+        self._n_parameters = 12
+        parameter_definition_data = (("object_class", f"parameter_{n}") for n in range(self._n_parameters))
+        import_functions.import_object_parameters(db_map, parameter_definition_data)
+        parameter_value_data = (
+            ("object_class", f"object_{object_n}", f"parameter_{parameter_n}", "a_value")
+            for object_n, parameter_n in itertools.product(range(self._n_objects), range(self._n_parameters))
+        )
+        import_functions.import_object_parameter_values(db_map, parameter_value_data)
+        db_map.commit_session("Add test data.")
+        db_map.connection.close()
+        self._common_setup(url, create=False)
+        model = self._db_editor.ui.tableView_object_parameter_value.model()
+        while model.rowCount() != self._CHUNK_SIZE + 1:
+            # Wait for fetching to finish.
+            QApplication.processEvents()
+
+    def tearDown(self):
+        self._common_tear_down()
+        self._temp_dir.cleanup()
+
+    def test_purging_value_data_removes_all_rows(self):
+        table_view = self._db_editor.ui.tableView_object_parameter_value
+        model = table_view.model()
+        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
+            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+            waiter.wait()
+        self.assertEqual(model.rowCount(), 1)
+
+    def test_purging_value_data_leaves_empty_rows_intact(self):
+        table_view = self._db_editor.ui.tableView_object_parameter_value
+        model = table_view.model()
+        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        delegate_mock = EditorDelegateMocking()
+        _set_row_data(
+            table_view, model, model.rowCount() - 1, ["object_class", "object_1", "parameter_1", "Base"], delegate_mock
+        )
+        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
+            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+            waiter.wait()
+        self.assertEqual(model.rowCount(), 2)
+        expected = [
+            ["object_class", "object_1", "parameter_1", "Base", None, "database"],
+            [None, None, None, None, None, "database"],
+        ]
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
+            self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+    def test_removing_fetched_rows_allows_still_fetching_more(self):
+        table_view = self._db_editor.ui.tableView_object_parameter_value
+        model = table_view.model()
+        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
+            n_values = self._n_parameters * self._n_objects
+            self._db_mngr.remove_items({self._db_map: {"parameter_value": {i for i in range(1, n_values, 2)}}})
+            waiter.wait()
+        self.assertEqual(model.rowCount(), self._CHUNK_SIZE / 2 + 1)
+
+    def test_undoing_purge(self):
+        table_view = self._db_editor.ui.tableView_object_parameter_value
+        model = table_view.model()
+        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
+            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+            waiter.wait()
+        self.assertEqual(model.rowCount(), 1)
+        self._db_editor.undo_action.trigger()
+        while model.rowCount() != self._n_objects * self._n_parameters + 1:
+            # Wait for fetching to finish.
+            QApplication.processEvents()
+        expected = sorted(
+            [
+                ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", "database"]
+                for object_n, parameter_n in itertools.product(range(self._n_objects), range(self._n_parameters))
+            ],
+            key=lambda x: (x[1], x[2]),
+        )
+        expected.append([None, None, None, None, None, "database"])
+        self.assertEqual(model.rowCount(), 145)
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
+            self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+    def test_rolling_back_purge(self):
+        table_view = self._db_editor.ui.tableView_object_parameter_value
+        model = table_view.model()
+        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
+            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+            waiter.wait()
+        self.assertEqual(model.rowCount(), 1)
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as roll_back_dialog:
+            roll_back_dialog.Ok = QMessageBox.Ok
+            instance = roll_back_dialog.return_value
+            instance.exec_.return_value = QMessageBox.Ok
+            self._db_editor.ui.actionRollback.trigger()
+        while model.rowCount() != self._n_objects * self._n_parameters + 1:
+            # Wait for fetching to finish.
+            QApplication.processEvents()
+        expected = sorted(
+            [
+                ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", "database"]
+                for object_n, parameter_n in itertools.product(range(self._n_objects), range(self._n_parameters))
+            ],
+            key=lambda x: (x[1], x[2]),
+        )
+        expected.append([None, None, None, None, None, "database"])
+        self.assertEqual(model.rowCount(), 145)
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
