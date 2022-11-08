@@ -328,6 +328,8 @@ class ActionsWithProject(QObject):
             settings["engineSettings/remoteExecutionEnabled"] = "false"
         selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
         deselected = {name for name_list in self._args.deselect for name in name_list} if self._args.deselect else None
+        executed_items = set()
+        skipped_items = set()
         for dag in dags:
             item_names_in_dag = set(dag.nodes)
             if not nx.is_directed_acyclic_graph(dag):
@@ -341,8 +343,10 @@ class ActionsWithProject(QObject):
                 and (deselected is None or item_name not in deselected)
                 for item_name in item_names_in_dag
             }
+            skipped_items |= {name for name, selected in execution_permits.items() if not selected}
             if all(not permitted for permitted in execution_permits.values()):
                 continue
+            executed_items |= {name for name, selected in execution_permits.items() if selected}
             engine_data = {
                 "items": item_dicts_in_dag,
                 "specifications": self._specification_dicts,
@@ -368,8 +372,8 @@ class ActionsWithProject(QObject):
                     if data == str(SpineEngineState.FAILED):
                         return Status.ERROR
                     break
-        selected_invalid = selected - item_names_in_dag if selected is not None else None
-        deselected_invalid = deselected - item_names_in_dag if deselected is not None else None
+        selected_invalid = selected - executed_items if selected is not None else None
+        deselected_invalid = deselected - skipped_items if deselected is not None else None
         if selected_invalid:
             self._logger.msg_warning.emit(
                 f"The following selected items don't exist in the project: {', '.join(selected_invalid)}"
