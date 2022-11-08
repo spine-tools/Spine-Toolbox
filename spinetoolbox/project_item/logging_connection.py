@@ -189,9 +189,10 @@ class LoggingConnection(LogMixin, HeadlessConnection):
 
     def _get_db_map(self, url):
         if url not in self._db_maps:
-            self._db_maps[url] = db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox)
+            db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox)
             if db_map is None:
                 return None
+            self._db_maps[url] = db_map
             self._toolbox.db_mngr.register_listener(self, db_map)
             self._fetch_more_if_possible()
         return self._db_maps[url]
@@ -314,7 +315,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         Args:
             resource (str): Resource label
             filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
-            online (dict): mapping from scenario/tool id to online flag
+            online (dict): mapping from scenario/tool name to online flag
         """
         enabled = {filter_name for filter_name, is_on in online.items() if is_on}
         disabled = {filter_name for filter_name, is_on in online.items() if not is_on}
