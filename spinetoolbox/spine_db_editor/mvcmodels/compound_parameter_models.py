@@ -324,8 +324,8 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         Args:
             model (SingleParameterModel, EmptyParameterModel)
 
-        Returns:
-            list: tuples (model, row number) for each accepted row
+        Yields:
+            tuple: (model, row number) for each accepted row
         """
         if not self.filter_accepts_model(model):
             return ()
@@ -355,7 +355,8 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             ids = {x["id"] for x in data}
             for model in self._models_with_db_map(db_map):
                 if model.entity_class_id in ids:
-                    self.sub_models.remove(model)
+                    i = self.sub_models.index(model)
+                    self.sub_models.pop(i).deleteLater()
         self._do_refresh()
         self.layoutChanged.emit()
 

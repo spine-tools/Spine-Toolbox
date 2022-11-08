@@ -342,9 +342,7 @@ class SpineDBManager(QObject):
                 items = [item for item in (self._pop_item(db_map, item_type, id_) for id_ in ids) if item]
                 if items:
                     db_map_data[db_map] = items
-                    try:
-                        worker = self._get_worker(db_map)
-                    except KeyError:
+                    if db_map not in self._workers:
                         continue
             if db_map_data:
                 typed_db_map_data[item_type] = db_map_data
