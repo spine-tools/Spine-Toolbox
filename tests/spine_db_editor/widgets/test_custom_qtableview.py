@@ -86,22 +86,16 @@ class TestParameterTableView(TestBase):
         delegate_mock = EditorDelegateMocking()
         delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 0), "an_object_class")
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
-            delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
-            waiter.wait()
+        delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
         _set_row_data(table_view, model, 0, ["an_object_class", "object_1", "a_parameter", "Base"], delegate_mock)
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            delegate_mock.write_to_index(table_view, model.index(0, 4), "value_1")
-            waiter.wait()
+        delegate_mock.write_to_index(table_view, model.index(0, 4), "value_1")
         _set_row_data(table_view, model, 1, ["an_object_class", "object_2", "a_parameter", "Base"], delegate_mock)
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            delegate_mock.write_to_index(table_view, model.index(1, 4), "value_2")
-            waiter.wait()
+        delegate_mock.write_to_index(table_view, model.index(1, 4), "value_2")
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.columnCount(), 6)
         expected = [
@@ -113,9 +107,7 @@ class TestParameterTableView(TestBase):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
         selection_model = table_view.selectionModel()
         selection_model.select(model.index(0, 0), QItemSelectionModel.ClearAndSelect)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            table_view.remove_selected()
-            waiter.wait()
+        table_view.remove_selected()
         self.assertFalse(model.canFetchMore(QModelIndex()))
         expected = [
             ["an_object_class", "object_2", "Base", "value_2", "database"],
@@ -133,17 +125,13 @@ class TestParameterTableView(TestBase):
         delegate_mock = EditorDelegateMocking()
         delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 0), "an_object_class")
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
-            delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
-            waiter.wait()
+        delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
         _set_row_data(table_view, model, 0, ["an_object_class", "an_object", "a_parameter", "Base"], delegate_mock)
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            delegate_mock.write_to_index(table_view, model.index(0, 4), "value_1")
-            waiter.wait()
+        delegate_mock.write_to_index(table_view, model.index(0, 4), "value_1")
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         expected = [
@@ -153,11 +141,9 @@ class TestParameterTableView(TestBase):
         for row, column in zip(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
         fetch_parent = ItemTypeFetchParent("parameter_value")
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            while self._db_mngr.can_fetch_more(self._db_map, fetch_parent):
-                self._db_mngr.fetch_more(self._db_map, fetch_parent)
-                QApplication.processEvents()
-            waiter.wait()
+        while self._db_mngr.can_fetch_more(self._db_map, fetch_parent):
+            self._db_mngr.fetch_more(self._db_map, fetch_parent)
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         for row, column in zip(range(model.rowCount()), range(model.columnCount())):
@@ -175,9 +161,7 @@ class TestParameterTableView(TestBase):
         definition_model = definition_table_view.model()
         delegate_mock = EditorDelegateMocking()
         _set_row_data(definition_table_view, definition_model, 0, ["object_1_class", "parameter_1"], delegate_mock)
-        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
-            _set_row_data(definition_table_view, definition_model, 1, ["object_2_class", "parameter_2"], delegate_mock)
-            waiter.wait()
+        _set_row_data(definition_table_view, definition_model, 1, ["object_2_class", "parameter_2"], delegate_mock)
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
@@ -187,15 +171,13 @@ class TestParameterTableView(TestBase):
         _set_row_data(
             table_view, model, 1, ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value"], delegate_mock
         )
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            _set_row_data(
-                table_view,
-                model,
-                2,
-                ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value"],
-                delegate_mock,
-            )
-            waiter.wait()
+        _set_row_data(
+            table_view,
+            model,
+            2,
+            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value"],
+            delegate_mock,
+        )
         self.assertEqual(model.rowCount(), 4)
         self.assertEqual(model.columnCount(), 6)
         expected = [

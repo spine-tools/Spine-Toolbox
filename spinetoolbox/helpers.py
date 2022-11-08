@@ -1525,7 +1525,7 @@ class ItemTypeFetchParent(FetchParent):
         return self._fetch_item_type
 
     def handle_items_added(self, db_map_data):
-        raise NotImplementedError()
+        raise NotImplementedError(self.fetch_item_type)
 
     def handle_items_removed(self, db_map_data):
         raise NotImplementedError(self.fetch_item_type)
@@ -1553,19 +1553,16 @@ class FlexibleFetchParent(ItemTypeFetchParent):
 
     def handle_items_added(self, db_map_data):
         if self._handle_items_added is None:
-            super().handle_items_added(db_map_data)
             return
         self._handle_items_added(db_map_data)
 
     def handle_items_removed(self, db_map_data):
         if self._handle_items_removed is None:
-            super().handle_items_removed(db_map_data)
             return
         self._handle_items_removed(db_map_data)
 
     def handle_items_updated(self, db_map_data):
         if self._handle_items_updated is None:
-            super().handle_items_updated(db_map_data)
             return
         self._handle_items_updated(db_map_data)
 

@@ -21,14 +21,13 @@ from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import Com
 
 class TestSpineDBEditorRemoveMixin:
     def test_remove_object_classes_from_object_tree_model(self):
-        """Test that object classes are removed from the object tree model.
-        """
+        """Test that object classes are removed from the object tree model."""
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
         self.assertEqual(root_item.child_count(), 2)
-        self.db_mngr.object_classes_removed.emit({self.mock_db_map: [self.fish_class]})
+        self.db_mngr.remove_items({self.mock_db_map: {"object_class": {self.fish_class["id"]}}})
         dog_item = root_item.child(0)
         self.assertEqual(root_item.child_count(), 1)
         self.assertEqual(dog_item.display_data, "dog")
@@ -42,7 +41,7 @@ class TestSpineDBEditorRemoveMixin:
         root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(1)
         self.assertEqual(fish_item.child_count(), 1)
-        self.db_mngr.objects_removed.emit({self.mock_db_map: [self.nemo_object]})
+        self.db_mngr.remove_items({self.mock_db_map: {"object": {self.nemo_object["id"]}}})
         self.assertEqual(fish_item.child_count(), 0)
 
     def test_remove_relationship_classes_from_object_tree_model(self):
@@ -56,7 +55,7 @@ class TestSpineDBEditorRemoveMixin:
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
         self.assertEqual(pluto_item.child_count(), 2)
-        self.db_mngr.relationship_classes_removed.emit({self.mock_db_map: [self.fish_dog_class]})
+        self.db_mngr.remove_items({self.mock_db_map: {"relationship_class": {self.fish_dog_class["id"]}}})
         self.assertEqual(pluto_item.child_count(), 1)
 
     def test_remove_relationships_from_object_tree_model(self):
@@ -75,18 +74,20 @@ class TestSpineDBEditorRemoveMixin:
         self.assertEqual(nemo_fish_dog_item.child_count(), 2)
         self.assertEqual(relationships[0], "pluto")
         self.assertEqual(relationships[1], "scooby")
-        self.db_mngr.relationships_removed.emit({self.mock_db_map: [self.nemo_pluto_rel]})
+        self.db_mngr.remove_items({self.mock_db_map: {"relationship": {self.nemo_pluto_rel["id"]}}})
         self.assertEqual(nemo_fish_dog_item.child_count(), 1)
 
     def test_remove_object_parameter_definitions_from_model(self):
         """Test that object parameter definitions are removed from the model."""
         model = self.spine_db_editor.object_parameter_definition_model
         model.init_model()
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.fetch_object_tree_model()
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_definitions_removed.emit({self.mock_db_map: [self.water_parameter]})
+            self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.water_parameter["id"]}}})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -100,11 +101,17 @@ class TestSpineDBEditorRemoveMixin:
         """Test that object parameter definitions are removed from the model."""
         model = self.spine_db_editor.relationship_parameter_definition_model
         model.init_model()
+        if model.canFetchMore(None):
+            model.fetchMore(None)
+        self.put_mock_object_classes_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
+        self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
         self.fetch_object_tree_model()
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_definitions_removed.emit({self.mock_db_map: [self.relative_speed_parameter]})
+            self.db_mngr.remove_items(
+                {self.mock_db_map: {"parameter_definition": {self.relative_speed_parameter["id"]}}}
+            )
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -119,10 +126,12 @@ class TestSpineDBEditorRemoveMixin:
         model = self.spine_db_editor.object_parameter_value_model
         model.init_model()
         self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_objects_in_db_mngr()
+        self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
         self.fetch_object_tree_model()
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_values_removed.emit({self.mock_db_map: [self.nemo_water]})
+            self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_water["id"]}}})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -139,11 +148,9 @@ class TestSpineDBEditorRemoveMixin:
         """Test that relationship parameter values are removed from the model."""
         model = self.spine_db_editor.relationship_parameter_value_model
         model.init_model()
-        self.put_mock_relationship_classes_in_db_mngr()
-        self.put_mock_relationship_parameter_values_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.put_mock_dataset_in_db_mngr()
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_values_removed.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
+            self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_pluto_relative_speed["id"]}}})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):

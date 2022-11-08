@@ -65,16 +65,27 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         self.assertEqual(data, expected)
 
     def test_add_alternatives(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
         model = AlternativeScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
-        model.add_alternatives({self._db_map: [{"id": 2}]})
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
         data = self._model_data_to_dict(model)
         expected = [
             [
                 {
                     "test_db": [
-                        [{"alternative": [["alternative_1", ""], ["Type new alternative name here...", ""]]}, None],
+                        [
+                            {
+                                "alternative": [
+                                    ["Base", "Base alternative"],
+                                    ["alternative_1", ""],
+                                    ["Type new alternative name here...", ""],
+                                ]
+                            },
+                            None,
+                        ],
                         [{"scenario": [["Type new scenario name here...", ""]]}, None],
                     ]
                 },
@@ -88,20 +99,29 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         self.assertTrue(model.setData(index, "perse"))
 
     def test_add_alternatives_with_scenario_alternative(self):
+        model = AlternativeScenarioModel(self._db_editor, self._db_mngr, self._db_map)
+        model.build_tree()
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
         self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1"}]})
         self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
-        model = AlternativeScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        model.add_alternatives({self._db_map: [{"id": 2}]})
-        model.add_scenarios({self._db_map: [{"id": 1}]})
-        model.update_scenarios({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
         data = self._model_data_to_dict(model)
         expected = [
             [
                 {
                     'test_db': [
-                        [{'alternative': [['alternative_1', ''], ['Type new alternative name here...', '']]}, None],
+                        [
+                            {
+                                'alternative': [
+                                    ["Base", "Base alternative"],
+                                    ['alternative_1', ''],
+                                    ['Type new alternative name here...', ''],
+                                ]
+                            },
+                            None,
+                        ],
                         [
                             {
                                 'scenario': [
@@ -142,15 +162,25 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
         model = AlternativeScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
-        model.add_alternatives({self._db_map: [{"id": 2}]})
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
         self._db_mngr.update_alternatives({self._db_map: [{"id": 2, "name": "renamed"}]})
-        model.update_alternatives({self._db_map: [{"id": 2}]})
         data = self._model_data_to_dict(model)
         expected = [
             [
                 {
                     "test_db": [
-                        [{"alternative": [["renamed", ""], ["Type new alternative name here...", ""]]}, None],
+                        [
+                            {
+                                "alternative": [
+                                    ["Base", "Base alternative"],
+                                    ["renamed", ""],
+                                    ["Type new alternative name here...", ""],
+                                ]
+                            },
+                            None,
+                        ],
                         [{"scenario": [["Type new scenario name here...", ""]]}, None],
                     ]
                 },
@@ -165,17 +195,27 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
         model = AlternativeScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
-        model.add_alternatives({self._db_map: [{"id": 2}]})
-        model.add_scenarios({self._db_map: [{"id": 1}]})
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
         self._db_mngr.update_alternatives({self._db_map: [{"id": 2, "name": "renamed"}]})
-        model.update_alternatives({self._db_map: [{"id": 2}]})
-        model.update_scenarios({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
+        self._db_mngr.update_alternatives({self._db_map: [{"id": 2}]})
+        self._db_mngr.update_scenarios({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
         data = self._model_data_to_dict(model)
         expected = [
             [
                 {
                     'test_db': [
-                        [{'alternative': [['renamed', ''], ['Type new alternative name here...', '']]}, None],
+                        [
+                            {
+                                'alternative': [
+                                    ["Base", "Base alternative"],
+                                    ['renamed', ''],
+                                    ['Type new alternative name here...', ''],
+                                ]
+                            },
+                            None,
+                        ],
                         [
                             {
                                 'scenario': [
@@ -212,14 +252,19 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
         model = AlternativeScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
-        model.add_alternatives({self._db_map: [{"id": 2}]})
-        model.remove_alternatives({self._db_map: [{"id": 2}]})
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
+        self._db_mngr.remove_items({self._db_map: {"alternative": {2}}})
         data = self._model_data_to_dict(model)
         expected = [
             [
                 {
                     "test_db": [
-                        [{"alternative": [["Type new alternative name here...", ""]]}, None],
+                        [
+                            {"alternative": [["Base", "Base alternative"], ["Type new alternative name here...", ""]]},
+                            None,
+                        ],
                         [{"scenario": [["Type new scenario name here...", ""]]}, None],
                     ]
                 },

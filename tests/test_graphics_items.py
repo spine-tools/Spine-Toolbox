@@ -29,7 +29,7 @@ from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.helpers import signal_waiter
-from tests.mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project
+from tests.mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project, TestSpineDBManager
 
 
 class TestProjectItemIcon(unittest.TestCase):
@@ -156,6 +156,7 @@ class TestLink(unittest.TestCase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
+        self._toolbox.db_mngr = TestSpineDBManager(MagicMock(), None)
         source_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
         source_item_icon.update_name_item("source icon")
         destination_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
@@ -182,10 +183,8 @@ class TestLink(unittest.TestCase):
             [database_resource("provider", url, "my_database", filterable=True)]
         )
         self._link.connection.refresh_resource_filter_model()
-        with signal_waiter(self._toolbox.db_mngr.scenarios_added) as waiter:
-            waiter.wait()
         filter_model = self._link.connection.resource_filter_model
-        self.assertEqual(filter_model.rowCount(), 1)
+        self.assertEqual(filter_model.rowCount(), 2)
         self.assertEqual(filter_model.columnCount(), 1)
         index = filter_model.index(0, 0)
         self.assertEqual(index.data(), "my_database")
@@ -214,10 +213,8 @@ class TestLink(unittest.TestCase):
             [database_resource("provider", url, "my_database", filterable=True)]
         )
         self._link.connection.refresh_resource_filter_model()
-        with signal_waiter(self._toolbox.db_mngr.tools_added) as waiter:
-            waiter.wait()
         filter_model = self._link.connection.resource_filter_model
-        self.assertEqual(filter_model.rowCount(), 1)
+        self.assertEqual(filter_model.rowCount(), 2)
         self.assertEqual(filter_model.columnCount(), 1)
         index = filter_model.index(0, 0)
         self.assertEqual(index.data(), "my_database")
@@ -244,8 +241,6 @@ class TestLink(unittest.TestCase):
         db_map.connection.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url, filterable=True)])
         self._link.connection.refresh_resource_filter_model()
-        with signal_waiter(self._toolbox.db_mngr.scenarios_added) as waiter:
-            waiter.wait()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {1: True})
         self.assertEqual(self._link.connection.disabled_filter_names(url, "scenario_filter"), set())
@@ -258,8 +253,6 @@ class TestLink(unittest.TestCase):
         db_map.connection.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url, filterable=True)])
         self._link.connection.refresh_resource_filter_model()
-        with signal_waiter(self._toolbox.db_mngr.tools_added) as waiter:
-            waiter.wait()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "tool_filter", {1: True})
         self.assertEqual(self._link.connection.disabled_filter_names(url, "tool_filter"), set())

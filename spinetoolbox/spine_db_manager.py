@@ -112,7 +112,7 @@ class SpineDBManager(QObject):
         for db_map in db_maps:
             for listener in self.listeners.get(db_map, ()):
                 try:
-                    listener.receive_session_refreshed(db_map)
+                    listener.receive_session_refreshed([db_map])
                 except AttributeError:
                     pass
 
@@ -121,7 +121,7 @@ class SpineDBManager(QObject):
         for db_map in db_maps:
             for listener in self.listeners.get(db_map, ()):
                 try:
-                    listener.receive_session_committed(db_map, cookie)
+                    listener.receive_session_committed([db_map], cookie)
                 except AttributeError:
                     pass
 
@@ -130,7 +130,7 @@ class SpineDBManager(QObject):
         for db_map in db_maps:
             for listener in self.listeners.get(db_map, ()):
                 try:
-                    listener.receive_session_rolled_back(db_map)
+                    listener.receive_session_rolled_back([db_map])
                 except AttributeError:
                     pass
 
@@ -165,9 +165,9 @@ class SpineDBManager(QObject):
                 if item["parameter_value_list_id"] in ids:
                     cascading_ids.setdefault("feature", set()).add(item["id"])
         elif item_type == "list_value":
-            for item in self.get_items(db_map, "parameter_value_list"):
-                if ids.intersection({int(id_) for id_ in item["value_id_list"].split(",")}):
-                    cascading_ids.setdefault("parameter_value_list", set()).add(item["id"])
+            cascading_ids["parameter_value_list"] = {
+                self.get_item(db_map, "list_value", id_)["parameter_value_list_id"] for id_ in ids
+            }
             for item in self.get_items(db_map, "parameter_value"):
                 if item["list_value_id"] in ids:
                     cascading_ids.setdefault("parameter_value", set()).add(item["id"])

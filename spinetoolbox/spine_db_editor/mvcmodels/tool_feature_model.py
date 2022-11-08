@@ -69,7 +69,7 @@ class ToolFeatureModel(TreeModelBase):
         parameter_value_list = self.db_mngr.get_item(
             db_map, "parameter_value_list", parameter_value_list_id, only_visible=False
         )
-        value_index_list = [int(ind) for ind in parameter_value_list.get("value_index_list", "").split(",")]
+        value_index_list = [int(ind) for ind in parameter_value_list["value_index_list"].split(",")]
         display_value_list = self.db_mngr.get_parameter_value_list(
             db_map, parameter_value_list_id, role=Qt.DisplayRole, only_visible=False
         )

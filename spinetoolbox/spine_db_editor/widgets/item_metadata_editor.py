@@ -69,7 +69,7 @@ class ItemMetadataEditor:
         Args:
             db_maps (Iterable of DiffDatabaseMapping): database mappings
         """
-        return  # FIXME MM
+        # FIXME MM
         for db_map in db_maps:
             self._db_mngr.get_db_map_cache(db_map, {"entity_metadata", "parameter_value_metadata"})
 

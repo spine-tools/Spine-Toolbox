@@ -160,7 +160,10 @@ class FetchMoreMixin:
         yield self._natural_fetch_parent
 
     def can_fetch_more(self):
-        return any(self.db_mngr.can_fetch_more(self.db_map, parent) for parent in self._fetch_parents())
+        result = False
+        for parent in self._fetch_parents():
+            result |= self.db_mngr.can_fetch_more(self.db_map, parent)
+        return result
 
     def fetch_more(self):
         for parent in self._fetch_parents():

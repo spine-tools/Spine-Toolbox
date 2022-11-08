@@ -387,9 +387,9 @@ class SpineDBWorker(QObject):
         self._executor.submit(self._add_items, items, method_name, item_type, readd, check, cache, callback)
 
     @busy_effect
-    def _add_items(self, items, method_name, item_type, readd, check, cache, callback):
+    def _add_items(self, orig_items, method_name, item_type, readd, check, cache, callback):
         items, errors = getattr(self._db_map, method_name)(
-            *items, check=check, readd=readd, return_items=True, cache=cache
+            *orig_items, check=check, readd=readd, return_items=True, cache=cache
         )
         items = self._db_mngr.make_items_from_db_items(self._db_map, item_type, items)
         self._something_happened.emit(_Event.ADD_ITEMS, (item_type, items, errors, callback))
@@ -418,8 +418,8 @@ class SpineDBWorker(QObject):
         self._executor.submit(self._update_items, items, method_name, item_type, check, cache, callback)
 
     @busy_effect
-    def _update_items(self, items, method_name, item_type, check, cache, callback):
-        items, errors = getattr(self._db_map, method_name)(*items, check=check, return_items=True, cache=cache)
+    def _update_items(self, orig_items, method_name, item_type, check, cache, callback):
+        items, errors = getattr(self._db_map, method_name)(*orig_items, check=check, return_items=True, cache=cache)
         cascading_ids_by_type = self._db_map.cascading_ids(cache=cache, **{item_type: {x["id"] for x in items}})
         del cascading_ids_by_type[item_type]
         cascading_items_by_type = {item_type: self._db_mngr.make_items_from_db_items(self._db_map, item_type, items)}

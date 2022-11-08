@@ -29,6 +29,7 @@ from .test_SpineDBEditorAdd import TestSpineDBEditorAddMixin
 from .test_SpineDBEditorUpdate import TestSpineDBEditorUpdateMixin
 from .test_SpineDBEditorRemove import TestSpineDBEditorRemoveMixin
 from .test_SpineDBEditorFilter import TestSpineDBEditorFilterMixin
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBEditor(
@@ -70,7 +71,7 @@ class TestSpineDBEditor(
 
     @staticmethod
     def _object_parameter_definition(*args):
-        d = dict(zip(["id", "object_class_id", "object_class_name", "parameter_name"], args))
+        d = dict(zip(["id", "object_class_id", "object_class_name", "name"], args))
         d.update({"default_value": None, "default_type": None})
         return d
 
@@ -84,7 +85,7 @@ class TestSpineDBEditor(
                     "relationship_class_name",
                     "object_class_id_list",
                     "object_class_name_list",
-                    "parameter_name",
+                    "name",
                 ],
                 args,
             )
@@ -102,9 +103,9 @@ class TestSpineDBEditor(
                     "object_class_name",
                     "object_id",
                     "object_name",
-                    "parameter_id",
+                    "parameter_definition_id",
                     "parameter_name",
-                    "alternative_name",
+                    "alternative_id",
                     "value",
                     "type",
                 ],
@@ -127,9 +128,9 @@ class TestSpineDBEditor(
                     "relationship_id",
                     "object_id_list",
                     "object_name_list",
-                    "parameter_id",
+                    "parameter_definition_id",
                     "parameter_name",
-                    "alternative_name",
+                    "alternative_id",
                     "value",
                     "type",
                 ],
@@ -153,15 +154,15 @@ class TestSpineDBEditor(
         cls.fish_dog_class = cls._relationship_class(
             3,
             "fish__dog",
-            str(cls.fish_class["id"]) + "," + str(cls.dog_class["id"]),
-            cls.fish_class["name"] + "," + cls.dog_class["name"],
+            [cls.fish_class["id"], cls.dog_class["id"]],
+            [cls.fish_class["name"], cls.dog_class["name"]],
             None,
         )
         cls.dog_fish_class = cls._relationship_class(
             4,
             "dog__fish",
-            str(cls.dog_class["id"]) + "," + str(cls.fish_class["id"]),
-            cls.dog_class["name"] + "," + cls.fish_class["name"],
+            [cls.dog_class["id"], cls.fish_class["id"]],
+            [cls.dog_class["name"], cls.fish_class["name"]],
             None,
         )
         cls.nemo_object = cls._object(1, cls.fish_class["id"], cls.fish_class["name"], 'nemo', 'The lost one.')
@@ -172,30 +173,30 @@ class TestSpineDBEditor(
             cls.dog_fish_class["id"],
             "dog__fish_pluto__nemo",
             cls.dog_fish_class["name"],
-            str(cls.dog_class["id"]) + "," + str(cls.fish_class["id"]),
-            cls.dog_class["name"] + "," + cls.fish_class["name"],
-            str(cls.pluto_object["id"]) + "," + str(cls.nemo_object["id"]),
-            cls.pluto_object["name"] + "," + cls.nemo_object["name"],
+            [cls.dog_class["id"], cls.fish_class["id"]],
+            [cls.dog_class["name"], cls.fish_class["name"]],
+            [cls.pluto_object["id"], cls.nemo_object["id"]],
+            [cls.pluto_object["name"], cls.nemo_object["name"]],
         )
         cls.nemo_pluto_rel = cls._relationship(
             5,
             cls.fish_dog_class["id"],
             "fish__dog_nemo__pluto",
             cls.fish_dog_class["name"],
-            str(cls.fish_class["id"]) + "," + str(cls.dog_class["id"]),
-            cls.fish_class["name"] + "," + cls.dog_class["name"],
-            str(cls.nemo_object["id"]) + "," + str(cls.pluto_object["id"]),
-            cls.nemo_object["name"] + "," + cls.pluto_object["name"],
+            [cls.fish_class["id"], cls.dog_class["id"]],
+            [cls.fish_class["name"], cls.dog_class["name"]],
+            [cls.nemo_object["id"], cls.pluto_object["id"]],
+            [cls.nemo_object["name"], cls.pluto_object["name"]],
         )
         cls.nemo_scooby_rel = cls._relationship(
             6,
             cls.fish_dog_class["id"],
             "fish__dog_nemo__scooby",
             cls.fish_dog_class["name"],
-            str(cls.fish_class["id"]) + "," + str(cls.dog_class["id"]),
-            cls.fish_class["name"] + "," + cls.dog_class["name"],
-            str(cls.nemo_object["id"]) + "," + str(cls.scooby_object["id"]),
-            cls.nemo_object["name"] + "," + cls.scooby_object["name"],
+            [cls.fish_class["id"], cls.dog_class["id"]],
+            [cls.fish_class["name"], cls.dog_class["name"]],
+            [cls.nemo_object["id"], cls.scooby_object["id"]],
+            [cls.nemo_object["name"], cls.scooby_object["name"]],
         )
         cls.water_parameter = cls._object_parameter_definition(1, cls.fish_class["id"], cls.fish_class["name"], "water")
         cls.breed_parameter = cls._object_parameter_definition(2, cls.dog_class["id"], cls.dog_class["name"], "breed")
@@ -222,8 +223,8 @@ class TestSpineDBEditor(
             cls.nemo_object["id"],
             cls.nemo_object["name"],
             cls.water_parameter["id"],
-            cls.water_parameter["parameter_name"],
-            "Base",
+            cls.water_parameter["name"],
+            1,
             b'"salt"',
             None,
         )
@@ -234,8 +235,8 @@ class TestSpineDBEditor(
             cls.pluto_object["id"],
             cls.pluto_object["name"],
             cls.breed_parameter["id"],
-            cls.breed_parameter["parameter_name"],
-            "Base",
+            cls.breed_parameter["name"],
+            1,
             b'"bloodhound"',
             None,
         )
@@ -246,8 +247,8 @@ class TestSpineDBEditor(
             cls.scooby_object["id"],
             cls.scooby_object["name"],
             cls.breed_parameter["id"],
-            cls.breed_parameter["parameter_name"],
-            "Base",
+            cls.breed_parameter["name"],
+            1,
             b'"great dane"',
             None,
         )
@@ -261,8 +262,8 @@ class TestSpineDBEditor(
             cls.nemo_pluto_rel["object_id_list"],
             cls.nemo_pluto_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
-            cls.relative_speed_parameter["parameter_name"],
-            "Base",
+            cls.relative_speed_parameter["name"],
+            1,
             b"-1",
             None,
         )
@@ -276,8 +277,8 @@ class TestSpineDBEditor(
             cls.nemo_scooby_rel["object_id_list"],
             cls.nemo_scooby_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
-            cls.relative_speed_parameter["parameter_name"],
-            "Base",
+            cls.relative_speed_parameter["name"],
+            1,
             b"5",
             None,
         )
@@ -291,8 +292,8 @@ class TestSpineDBEditor(
             cls.pluto_nemo_rel["object_id_list"],
             cls.pluto_nemo_rel["object_name_list"],
             cls.combined_mojo_parameter["id"],
-            cls.combined_mojo_parameter["parameter_name"],
-            "Base",
+            cls.combined_mojo_parameter["name"],
+            1,
             b"100",
             None,
         )
@@ -304,7 +305,7 @@ class TestSpineDBEditor(
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self.db_mngr = SpineDBManager(mock_settings, None)
+            self.db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
             self.spine_db_editor = SpineDBEditor(self.db_mngr, {"sqlite://": "database"})
@@ -329,40 +330,40 @@ class TestSpineDBEditor(
     def put_mock_object_classes_in_db_mngr(self):
         """Put fish and dog object classes in the db mngr."""
         object_classes = [self.fish_class, self.dog_class]
-        self.db_mngr.object_classes_added.emit({self.mock_db_map: object_classes})
+        self.db_mngr.add_object_classes({self.mock_db_map: object_classes})
 
     def put_mock_objects_in_db_mngr(self):
         """Put nemo, pluto and scooby objects in the db mngr."""
         objects = [self.nemo_object, self.pluto_object, self.scooby_object]
-        self.db_mngr.objects_added.emit({self.mock_db_map: objects})
+        self.db_mngr.add_objects({self.mock_db_map: objects})
 
     def put_mock_relationship_classes_in_db_mngr(self):
         """Put dog__fish and fish__dog relationship classes in the db mngr."""
         relationship_classes = [self.fish_dog_class, self.dog_fish_class]
-        self.db_mngr.relationship_classes_added.emit({self.mock_db_map: relationship_classes})
+        self.db_mngr.add_relationship_classes({self.mock_db_map: relationship_classes})
 
     def put_mock_relationships_in_db_mngr(self):
         """Put pluto_nemo, nemo_pluto and nemo_scooby relationships in the db mngr."""
         relationships = [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]
-        self.db_mngr.relationships_added.emit({self.mock_db_map: relationships})
+        self.db_mngr.add_relationships({self.mock_db_map: relationships})
 
     def put_mock_object_parameter_definitions_in_db_mngr(self):
         """Put water and breed object parameter definitions in the db mngr."""
         parameter_definitions = [self.water_parameter, self.breed_parameter]
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_definitions_added.emit({self.mock_db_map: parameter_definitions})
+            self.db_mngr.add_parameter_definitions({self.mock_db_map: parameter_definitions})
 
     def put_mock_relationship_parameter_definitions_in_db_mngr(self):
         """Put relative speed and combined mojo relationship parameter definitions in the db mngr."""
         parameter_definitions = [self.relative_speed_parameter, self.combined_mojo_parameter]
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_definitions_added.emit({self.mock_db_map: parameter_definitions})
+            self.db_mngr.add_parameter_definitions({self.mock_db_map: parameter_definitions})
 
     def put_mock_object_parameter_values_in_db_mngr(self):
         """Put some object parameter values in the db mngr."""
         parameter_values = [self.nemo_water, self.pluto_breed, self.scooby_breed]
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_values_added.emit({self.mock_db_map: parameter_values})
+            self.db_mngr.add_parameter_values({self.mock_db_map: parameter_values})
 
     def put_mock_relationship_parameter_values_in_db_mngr(self):
         """Put some relationship parameter values in the db mngr."""
@@ -372,7 +373,7 @@ class TestSpineDBEditor(
             self.pluto_nemo_combined_mojo,
         ]
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_values_added.emit({self.mock_db_map: parameter_values})
+            self.db_mngr.add_parameter_values({self.mock_db_map: parameter_values})
 
     def put_mock_dataset_in_db_mngr(self):
         """Put mock dataset in the db mngr."""

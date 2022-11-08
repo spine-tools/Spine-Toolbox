@@ -241,7 +241,10 @@ class MultiDBTreeItem(FetchParent, TreeItem):
     def can_fetch_more(self):
         if self.fetch_item_type is None:
             return False
-        return any(self.db_mngr.can_fetch_more(db_map, self) for db_map in self.db_maps)
+        result = False
+        for db_map in self.db_maps:
+            result |= self.db_mngr.can_fetch_more(db_map, self)
+        return result
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
@@ -338,7 +341,7 @@ class MultiDBTreeItem(FetchParent, TreeItem):
                 new_child = child.deep_take_db_map(db_map)
                 new_children.append(new_child)
             if child.display_id in display_ids[:row] + display_ids[row + 1 :] or (
-                child.is_group() and not child.has_members_item
+                hasattr(child, "is_group") and child.is_group() and not child.has_members_item
             ):
                 # Take the child and put it in the list to be merged
                 new_children.append(child)

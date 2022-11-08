@@ -222,20 +222,14 @@ class TestAddOrUpdateItems(unittest.TestCase):
         db_map.commit_session("Add test data.")
         db_map.connection.close()
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger)
-        with signal_waiter(self._db_mngr.object_classes_added) as waiter:
-            self._db_mngr.fetch_more(db_map, ItemTypeFetchParent("object_class"))
-            waiter.wait()
+        self._db_mngr.fetch_more(db_map, ItemTypeFetchParent("object_class"))
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger)
-        with signal_waiter(self._db_mngr.objects_added) as waiter:
-            self._db_mngr.fetch_more(db_map, ItemTypeFetchParent("object"))
-            waiter.wait()
+        self._db_mngr.fetch_more(db_map, ItemTypeFetchParent("object"))
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
-        with signal_waiter(self._db_mngr.entity_metadata_added) as waiter:
-            self._db_mngr.add_or_update_items(
-                db_map_data, "add_entity_metadata", "entity_metadata", "entity_metadata_added"
-            )
-            waiter.wait()
-            self.assertEqual(waiter.args, ({db_map: [{"id": 1, "entity_id": 1, "metadata_id": 1, "commit_id": None}]},))
+        self._db_mngr.add_or_update_items(
+            db_map_data, "add_entity_metadata", "entity_metadata", "entity_metadata_added"
+        )
+        self.assertEqual(waiter.args, ({db_map: [{"id": 1, "entity_id": 1, "metadata_id": 1, "commit_id": None}]},))
 
 
 if __name__ == '__main__':
