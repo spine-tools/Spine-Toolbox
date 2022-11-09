@@ -39,7 +39,7 @@ from spinetoolbox.plotting import (
     PlottingError,
     convert_indexed_value_to_tree,
     TreeNode,
-    turn_nodes_to_xy_data,
+    turn_node_to_xy_data,
     XYData,
     reduce_indexes,
     combine_data_with_same_indexes,
@@ -593,7 +593,7 @@ class TestTurnNodesToXYData(unittest.TestCase):
     def test_shallow_tree(self):
         node = TreeNode("my_index")
         node.content = {1: 1.1, 2: 2.2}
-        xy_data = list(turn_nodes_to_xy_data(node))
+        xy_data = list(turn_node_to_xy_data(node))
         expected = [XYData([1, 2], [1.1, 2.2], "my_index", "", [], [])]
         self.assertEqual(xy_data, expected)
 
@@ -604,7 +604,7 @@ class TestTurnNodesToXYData(unittest.TestCase):
         node2.content = {3: 3.3, 4: 4.4}
         root = TreeNode("root_index")
         root.content = {"a": node1, "b": node2}
-        xy_data = list(turn_nodes_to_xy_data(root))
+        xy_data = list(turn_node_to_xy_data(root))
         expected = [
             XYData([1, 2], [1.1, 2.2], "index_1", "", ["a"], ["root_index"]),
             XYData([3, 4], [3.3, 4.4], "index_2", "", ["b"], ["root_index"]),
@@ -616,7 +616,7 @@ class TestTurnNodesToXYData(unittest.TestCase):
         node1.content = {1: 1.1, 2: 2.2}
         root = TreeNode("root_index")
         root.content = {"a": node1, 3: 3.3, 4: 4.4}
-        xy_data = list(turn_nodes_to_xy_data(root))
+        xy_data = list(turn_node_to_xy_data(root))
         expected = [
             XYData([1, 2], [1.1, 2.2], "index_1", "", ["a"], ["root_index"]),
             XYData([3, 4], [3.3, 4.4], "root_index", "", [], []),
