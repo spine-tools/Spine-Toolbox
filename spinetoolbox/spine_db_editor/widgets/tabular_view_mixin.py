@@ -121,7 +121,7 @@ class TabularViewMixin:
                 menu.remove_items_from_filter_list(list(previous - index_values.keys()))
         self.reload_frozen_table()
 
-    def _must_reload(self, item_type, db_map_data):
+    def _needs_to_update_headers(self, item_type, db_map_data):
         for db_map in self.db_maps:
             items = db_map_data.get(db_map)
             if not items:
@@ -156,7 +156,7 @@ class TabularViewMixin:
     def _reload_pivot_table_if_needed(self, item_type, db_map_data):
         if not self.pivot_table_model:
             return
-        if self._must_reload(item_type, db_map_data):
+        if self._needs_to_update_headers(item_type, db_map_data):
             self.do_reload_pivot_table()
 
     @Slot()
