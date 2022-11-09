@@ -18,7 +18,6 @@ QUndoCommand subclasses for modifying the db.
 
 import time
 from PySide2.QtWidgets import QUndoCommand, QUndoStack
-from spinetoolbox.helpers import separate_metadata_and_item_metadata
 
 
 class AgedUndoStack(QUndoStack):
@@ -103,87 +102,6 @@ class SpineDBMacro(AgedUndoCommand):
 class SpineDBCommand(AgedUndoCommand):
     """Base class for all commands that modify a Spine DB."""
 
-    _add_command_name = {
-        "object_class": "add object classes",
-        "object": "add objects",
-        "relationship_class": "add relationship classes",
-        "relationship": "add relationships",
-        "entity_group": "add entity groups",
-        "parameter_definition": "add parameter definitions",
-        "parameter_value": "add parameter values",
-        "parameter_value_list": "add parameter value lists",
-        "list_value": "add parameter value list values",
-        "alternative": "add alternative",
-        "scenario": "add scenario",
-        "feature": "add feature",
-        "tool": "add tool",
-        "tool_feature": "add tool features",
-        "tool_feature_method": "add tool feature methods",
-        "metadata": "add metadata",
-        "entity_metadata": "add entity metadata",
-        "parameter_value_metadata": "add parameter value metadata",
-    }
-    _update_command_name = {
-        "object_class": "update object classes",
-        "object": "update objects",
-        "relationship_class": "update relationship classes",
-        "relationship": "update relationships",
-        "parameter_definition": "update parameter definitions",
-        "parameter_value": "update parameter values",
-        "parameter_value_list": "update parameter value lists",
-        "list_value": "update parameter value list values",
-        "alternative": "update alternatives",
-        "scenario": "update scenarios",
-        "feature": "update features",
-        "tool": "update tools",
-        "tool_feature": "update tool features",
-        "tool_feature_method": "update tool feature methods",
-        "metadata": "update metadata",
-        "entity_metadata": "update entity metadata",
-        "parameter_value_metadata": "update parameter value metadata",
-    }
-    _add_method_name = {
-        "object_class": "add_object_classes",
-        "object": "add_objects",
-        "relationship_class": "add_wide_relationship_classes",
-        "relationship": "add_wide_relationships",
-        "entity_group": "add_entity_groups",
-        "parameter_definition": "add_parameter_definitions",
-        "parameter_value": "add_parameter_values",
-        "parameter_value_list": "add_parameter_value_lists",
-        "list_value": "add_list_values",
-        "alternative": "add_alternatives",
-        "scenario": "add_scenarios",
-        "scenario_alternative": "add_scenario_alternatives",
-        "feature": "add_features",
-        "tool": "add_tools",
-        "tool_feature": "add_tool_features",
-        "tool_feature_method": "add_tool_feature_methods",
-        "metadata": "add_metadata",
-        "entity_metadata": "add_ext_entity_metadata",
-        "parameter_value_metadata": "add_ext_parameter_value_metadata",
-    }
-    _update_method_name = {
-        "object_class": "update_object_classes",
-        "object": "update_objects",
-        "relationship_class": "update_wide_relationship_classes",
-        "relationship": "update_wide_relationships",
-        "parameter_definition": "update_parameter_definitions",
-        "parameter_value": "update_parameter_values",
-        "parameter_value_list": "update_parameter_value_lists",
-        "list_value": "update_list_values",
-        "alternative": "update_alternatives",
-        "scenario": "update_scenarios",
-        "scenario_alternative": "update_scenario_alternatives",
-        "feature": "update_features",
-        "tool": "update_tools",
-        "tool_feature": "update_tool_features",
-        "tool_feature_method": "update_tool_feature_methods",
-        "metadata": "update_metadata",
-        "entity_metadata": "update_ext_entity_metadata",
-        "parameter_value_metadata": "update_ext_parameter_value_metadata",
-    }
-
     def __init__(self, db_mngr, db_map, parent=None):
         """
         Args:
@@ -222,6 +140,27 @@ class SpineDBCommand(AgedUndoCommand):
 
 
 class AddItemsCommand(SpineDBCommand):
+    _add_command_name = {
+        "object_class": "add object classes",
+        "object": "add objects",
+        "relationship_class": "add relationship classes",
+        "relationship": "add relationships",
+        "entity_group": "add entity groups",
+        "parameter_definition": "add parameter definitions",
+        "parameter_value": "add parameter values",
+        "parameter_value_list": "add parameter value lists",
+        "list_value": "add parameter value list values",
+        "alternative": "add alternative",
+        "scenario": "add scenario",
+        "feature": "add feature",
+        "tool": "add tool",
+        "tool_feature": "add tool features",
+        "tool_feature_method": "add tool feature methods",
+        "metadata": "add metadata",
+        "entity_metadata": "add entity metadata",
+        "parameter_value_metadata": "add parameter value metadata",
+    }
+
     def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
         """
         Args:
@@ -236,7 +175,6 @@ class AddItemsCommand(SpineDBCommand):
             self.setObsolete(True)
         self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
-        self.method_name = self._add_method_name[item_type]
         self.undo_db_map_typed_ids = None
         self._readd = False
         self._check = check
@@ -246,7 +184,6 @@ class AddItemsCommand(SpineDBCommand):
         super().redo()
         self.db_mngr.add_items(
             self.redo_db_map_data,
-            self.method_name,
             self.item_type,
             readd=self._readd,
             check=self._check,
@@ -262,8 +199,6 @@ class AddItemsCommand(SpineDBCommand):
         if self.db_map not in db_map_data:
             self.setObsolete(True)
             return
-        if self.item_type == "entity_metadata" or self.item_type == "parameter_value_metadata":
-            db_map_data, _ = separate_metadata_and_item_metadata(db_map_data)
         self.redo_db_map_data = {
             db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
         }
@@ -277,6 +212,26 @@ class AddItemsCommand(SpineDBCommand):
 
 
 class UpdateItemsCommand(SpineDBCommand):
+    _update_command_name = {
+        "object_class": "update object classes",
+        "object": "update objects",
+        "relationship_class": "update relationship classes",
+        "relationship": "update relationships",
+        "parameter_definition": "update parameter definitions",
+        "parameter_value": "update parameter values",
+        "parameter_value_list": "update parameter value lists",
+        "list_value": "update parameter value list values",
+        "alternative": "update alternatives",
+        "scenario": "update scenarios",
+        "feature": "update features",
+        "tool": "update tools",
+        "tool_feature": "update tool features",
+        "tool_feature_method": "update tool feature methods",
+        "metadata": "update metadata",
+        "entity_metadata": "update entity metadata",
+        "parameter_value_metadata": "update parameter value metadata",
+    }
+
     def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
         """
         Args:
@@ -296,7 +251,6 @@ class UpdateItemsCommand(SpineDBCommand):
         self.redo_db_map_data = {db_map: redo_data}
         self.undo_db_map_data = {db_map: undo_data}
         self.item_type = item_type
-        self.method_name = self._update_method_name[item_type]
         self._check = check
         self.setText(self._update_command_name.get(item_type, "update item") + f" in '{db_map.codename}'")
 
@@ -304,7 +258,6 @@ class UpdateItemsCommand(SpineDBCommand):
         super().redo()
         self.db_mngr.update_items(
             self.redo_db_map_data,
-            self.method_name,
             self.item_type,
             check=self._check,
             callback=self.handle_redo_complete,
@@ -313,7 +266,7 @@ class UpdateItemsCommand(SpineDBCommand):
     def undo(self):
         super().undo()
         self.db_mngr.update_items(
-            self.undo_db_map_data, self.method_name, self.item_type, check=False, callback=self.handle_undo_complete
+            self.undo_db_map_data, self.item_type, check=False, callback=self.handle_undo_complete
         )
 
     def _handle_first_redo_complete(self, db_map_data):
@@ -359,10 +312,8 @@ class RemoveItemsCommand(SpineDBCommand):
             self.handle_undo_complete(None)
             return
         data = self.undo_typed_data[item_type]
-        method_name = self._add_method_name[item_type]
         self.db_mngr.add_items(
             {self.db_map: data},
-            method_name,
             item_type,
             readd=True,
             callback=lambda _db_map_data: self._undo_next(item_type_iter),

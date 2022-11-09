@@ -52,7 +52,7 @@ from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import SpineDBMacro, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, busy_effect, separate_metadata_and_item_metadata
+from .helpers import get_upgrade_db_promt_text, busy_effect
 
 
 @busy_effect
@@ -68,6 +68,27 @@ class SpineDBManager(QObject):
     session_refreshed = Signal(set)
     session_committed = Signal(set, object)
     session_rolled_back = Signal(set)
+    # Data changed signals - not connected to any slot at the moment - but might come in handy.
+    items_added = Signal(str, dict)
+    """Emitted whenever items are added to a DB.
+
+    Args:
+        str: item type, such as "object_class"
+        dict: mapping DiffDatabaseMapping to list of added dict-items.
+    """
+    items_updated = Signal(str, dict)
+    """Emitted whenever items are updated in a DB.
+
+    Args:
+        str: item type, such as "object_class"
+        dict: mapping DiffDatabaseMapping to list of updated dict-items.
+    """
+    items_removed = Signal(dict)
+    """Emitted whenever items are removed from a DB.
+
+    Args:
+        dict: mapping DiffDatabaseMapping to string item type to list of removed dict-items.
+    """
     # Added
     scenarios_added = Signal(dict)  # FIXME MM
     # Closing
@@ -234,16 +255,9 @@ class SpineDBManager(QObject):
         """
         if item_type in ("object_class", "relationship_class"):
             self.update_icons(db_map_data)
-        if item_type not in ("entity_metadata", "parameter_value_metadata"):
-            for db_map, items in db_map_data.items():
-                for item in items:
-                    self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
-        else:
-            item_metadata_items, metadata_items = separate_metadata_and_item_metadata(db_map_data)
-            self.cache_items("metadata", metadata_items)
-            for db_map, items in item_metadata_items.items():
-                for item in items:
-                    self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
+        for db_map, items in db_map_data.items():
+            for item in items:
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
 
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
@@ -539,7 +553,7 @@ class SpineDBManager(QObject):
         """
 
         def has_listeners(db_map):
-            return self.db_map_listeners(db_map) - {listener}
+            return bool(self.db_map_listeners(db_map) - {listener})
 
         return [db_map for db_map in db_maps if not has_listeners(db_map) and self.is_dirty(db_map)]
 
@@ -944,7 +958,7 @@ class SpineDBManager(QObject):
             if to_update:
                 yield UpdateItemsCommand(self, db_map, to_update, item_type, check=False)
 
-    def add_items(self, db_map_data, method_name, item_type, readd=False, check=True, callback=None):
+    def add_items(self, db_map_data, item_type, readd=False, check=True, callback=None):
         for db_map, data in db_map_data.items():
             try:
                 worker = self._get_worker(db_map)
@@ -952,9 +966,9 @@ class SpineDBManager(QObject):
                 # We're closing the kiosk.
                 continue
             cache = self.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
-            worker.add_items(data, method_name, item_type, readd, check, cache, callback)
+            worker.add_items(data, item_type, readd, check, cache, callback)
 
-    def update_items(self, db_map_data, method_name, item_type, check=True, callback=None):
+    def update_items(self, db_map_data, item_type, check=True, callback=None):
         for db_map, data in db_map_data.items():
             try:
                 worker = self._get_worker(db_map)
@@ -962,7 +976,7 @@ class SpineDBManager(QObject):
                 # We're closing the kiosk.
                 continue
             cache = self.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
-            worker.update_items(data, method_name, item_type, check, cache, callback)
+            worker.update_items(data, item_type, check, cache, callback)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.

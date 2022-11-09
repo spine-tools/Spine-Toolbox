@@ -33,7 +33,7 @@ from spinedb_api import (
 from spinedb_api.parameter_value import join_value_and_type
 from spinedb_api import import_functions
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.helpers import ItemTypeFetchParent, signal_waiter
+from spinetoolbox.helpers import ItemTypeFetchParent
 
 
 class TestParameterValueFormatting(unittest.TestCase):
@@ -206,13 +206,15 @@ class TestAddOrUpdateItems(unittest.TestCase):
     def test_add_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
         db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._db_mngr.add_or_update_items(db_map_data, "add_metadata", "metadata", "metadata_added")
-            waiter.wait()
+
+        def callback(db_map_data):
             self.assertEqual(
-                waiter.args,
-                ({db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": None}]},),
+                db_map_data,
+                {db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": None}]},
             )
+
+        self._db_mngr.add_items(db_map_data, "add_metadata", "metadata", callback=callback)
+        qApp.processEvents()
 
     def test_add_object_metadata(self):
         db_map = DatabaseMapping(self._db_url, create=True)
@@ -226,10 +228,15 @@ class TestAddOrUpdateItems(unittest.TestCase):
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger)
         self._db_mngr.fetch_more(db_map, ItemTypeFetchParent("object"))
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
-        self._db_mngr.add_or_update_items(
-            db_map_data, "add_entity_metadata", "entity_metadata", "entity_metadata_added"
-        )
-        self.assertEqual(waiter.args, ({db_map: [{"id": 1, "entity_id": 1, "metadata_id": 1, "commit_id": None}]},))
+
+        def callback(db_map_data):
+            self.assertEqual(
+                db_map_data,
+                {db_map: [{'entity_id': 1, 'metadata_id': 1, 'commit_id': None, 'id': 1}]},
+            )
+
+        self._db_mngr.add_items(db_map_data, "add_entity_metadata", "entity_metadata", callback=callback)
+        qApp.processEvents()
 
 
 if __name__ == '__main__':

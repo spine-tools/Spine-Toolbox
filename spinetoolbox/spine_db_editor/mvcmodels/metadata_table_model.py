@@ -17,7 +17,7 @@ Contains :class:`MetadataTableModel` and associated functionality.
 """
 from enum import IntEnum, unique
 from PySide2.QtCore import QModelIndex, Qt
-from spinetoolbox.helpers import rows_to_row_count_tuples, FetchParent
+from spinetoolbox.helpers import rows_to_row_count_tuples, FlexibleFetchParent
 from .metadata_table_model_base import Column, FLAGS_FIXED, FLAGS_EDITABLE, MetadataTableModelBase
 
 
@@ -28,7 +28,7 @@ class ExtraColumn(IntEnum):
     ID = Column.max() + 1
 
 
-class MetadataTableModel(MetadataTableModelBase, FetchParent):
+class MetadataTableModel(MetadataTableModelBase):
     """Model for metadata."""
 
     _ITEM_NAME_KEY = "name"
@@ -42,6 +42,12 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
             parent (QObject): parent object
         """
         super().__init__(db_mngr, db_maps, parent)
+        self._metadata_fetch_parent = FlexibleFetchParent(
+            "metadata",
+            handle_items_added=self.add_metadata,
+            handle_items_removed=self.remove_metadata,
+            handle_items_updated=self.update_metadata,
+        )
 
     @staticmethod
     def _make_hidden_adder_columns():
@@ -56,7 +62,7 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
         """See base class"""
         self._db_mngr.update_metadata({db_map: [{"id": id_, "name": name, "value": value}]})
 
-    def roll_back(self, db_maps):
+    def rollback(self, db_maps):
         """Rolls back changes in database.
 
         Args:
@@ -88,16 +94,8 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
             return FLAGS_FIXED
         return FLAGS_EDITABLE
 
-    @property
-    def fetch_item_type(self):
-        return "metadata"
-
-    def canFetchMore(self, _):
-        return any(self._db_mngr.can_fetch_more(db_map, self) for db_map in self._db_maps)
-
-    def fetchMore(self, _):
-        for db_map in self._db_maps:
-            self._db_mngr.fetch_more(db_map, self)
+    def _fetch_parents(self):
+        yield self._metadata_fetch_parent
 
     @staticmethod
     def _ids_from_added_item(item):
@@ -127,7 +125,7 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
         Args:
             db_map_data (dict): updated metadata items keyed by database mapping
         """
-        for db_map, items in db_map_data.items():
+        for items in db_map_data.values():
             items_by_id = {item["id"]: item for item in items}
             updated_rows = []
             for row_index, row in enumerate(self._data):
@@ -161,6 +159,11 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
         Args:
             db_map_data (dict): changed items keyed by database mapping
         """
+        # FIXME MM
+        # This was called after updating entity metadata with the metadata half of separate_metadata_and_item_metadata
+        # Why???
+        # Maybe it is enough to modify update_metadata to finish by adding all input items that weren't found in the
+        # table?
         existing_ids = {}
         for row in self._data:
             id_ = row[ExtraColumn.ID]

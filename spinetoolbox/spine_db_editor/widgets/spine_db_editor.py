@@ -39,7 +39,6 @@ from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xls
 from spinedb_api.helpers import vacuum
 from .custom_menus import MainMenu
 from .commit_viewer import CommitViewer
-from .item_metadata_editor import ItemMetadataEditor
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
@@ -47,6 +46,7 @@ from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .url_toolbar import UrlToolBar
 from .metadata_editor import MetadataEditor
+from .item_metadata_editor import ItemMetadataEditor
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
@@ -1156,48 +1156,10 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 
-    def receive_metadata_added(self, db_map_data):
-        super().receive_metadata_added(db_map_data)
-        self._metadata_editor.add_metadata(db_map_data)
-
-    def receive_entity_metadata_added(self, db_map_data):
-        super().receive_entity_metadata_added(db_map_data)
-        self._item_metadata_editor.add_item_metadata(db_map_data)
-
-    def receive_parameter_value_metadata_added(self, db_map_data):
-        super().receive_parameter_value_metadata_added(db_map_data)
-        self._item_metadata_editor.add_item_metadata(db_map_data)
-
-    def receive_metadata_updated(self, db_map_data):
-        super().receive_metadata_updated(db_map_data)
-        self._metadata_editor.update_metadata(db_map_data)
-        self._item_metadata_editor.update_metadata(db_map_data)
-
-    def receive_entity_metadata_updated(self, db_map_data):
-        super().receive_entity_metadata_updated(db_map_data)
-        self._item_metadata_editor.update_item_metadata(db_map_data)
-
-    def receive_parameter_value_metadata_updated(self, db_map_data):
-        super().receive_parameter_value_metadata_updated(db_map_data)
-        self._item_metadata_editor.update_item_metadata(db_map_data)
-
-    def receive_metadata_removed(self, db_map_data):
-        super().receive_metadata_removed(db_map_data)
-        self._metadata_editor.remove_metadata(db_map_data)
-        self._item_metadata_editor.remove_metadata(db_map_data)
-
-    def receive_entity_metadata_removed(self, db_map_data):
-        super().receive_entity_metadata_removed(db_map_data)
-        self._item_metadata_editor.remove_item_metadata(db_map_data)
-
-    def receive_parameter_value_metadata_removed(self, db_map_data):
-        super().receive_parameter_value_metadata_removed(db_map_data)
-        self._item_metadata_editor.remove_item_metadata(db_map_data)
-
     def receive_session_rolled_back(self, db_maps):
         super().receive_session_rolled_back(db_maps)
-        self._metadata_editor.roll_back(db_maps)
-        self._item_metadata_editor.roll_back(db_maps)
+        self._metadata_editor.rollback(db_maps)
+        self._item_metadata_editor.rollback(db_maps)
 
     def tear_down(self):
         if not super().tear_down():

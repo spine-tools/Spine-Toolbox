@@ -17,7 +17,6 @@ Contains machinery to deal with item metadata editor.
 """
 from PySide2.QtCore import Slot, QModelIndex
 
-from spinetoolbox.helpers import separate_metadata_and_item_metadata
 from ..mvcmodels.entity_tree_item import ObjectItem, MemberObjectItem, RelationshipItem
 from ..mvcmodels.item_metadata_table_model import ItemMetadataTableModel
 
@@ -60,18 +59,7 @@ class ItemMetadataEditor:
         Args:
             db_maps (Iterable of DiffDatabaseMapping): database mappings
         """
-        self._cache_item_metadata(db_maps)
         self._item_metadata_table_model.set_db_maps(db_maps)
-
-    def _cache_item_metadata(self, db_maps):
-        """Caches item metadata into DB manager's cache.
-
-        Args:
-            db_maps (Iterable of DiffDatabaseMapping): database mappings
-        """
-        # FIXME MM
-        for db_map in db_maps:
-            self._db_mngr.get_db_map_cache(db_map, {"entity_metadata", "parameter_value_metadata"})
 
     @Slot(QModelIndex, QModelIndex)
     def _reload_entity_metadata(self, current_index, previous_index):
@@ -110,56 +98,10 @@ class ItemMetadataEditor:
         self._item_metadata_table_model.set_parameter_value_ids(db_map_ids)
         self._item_metadata_table_view.setEnabled(True)
 
-    def add_item_metadata(self, db_map_data):
-        """Adds new item metadata records to the model and updates metadata model if required.
-
-        Args:
-            db_map_data (dict): added records keyed by database mapping
-        """
-        item_metadata_db_map_data, metadata_db_map_data = separate_metadata_and_item_metadata(db_map_data)
-        if metadata_db_map_data:
-            self._metadata_editor.add_metadata(metadata_db_map_data)
-        self._item_metadata_table_model.add_item_metadata(item_metadata_db_map_data)
-
-    def update_item_metadata(self, db_map_data):
-        """Updates item metadata.
-
-        Args:
-            db_map_data (dict): updated metadata records
-        """
-        item_metadata_db_map_data, metadata_db_map_data = separate_metadata_and_item_metadata(db_map_data)
-        if metadata_db_map_data:
-            self._metadata_editor.add_and_update_metadata(metadata_db_map_data)
-        self._item_metadata_table_model.update_item_metadata(item_metadata_db_map_data)
-
-    def remove_item_metadata(self, db_map_data):
-        """Removes item metadata records from the model.
-
-        Args:
-            db_map_data (dict): added records keyed by database mapping
-        """
-        self._item_metadata_table_model.remove_item_metadata(db_map_data)
-
-    def update_metadata(self, db_map_data):
-        """Updates metadata.
-
-        Args:
-            db_map_data (dict): updated metadata records
-        """
-        self._item_metadata_table_model.update_metadata(db_map_data)
-
-    def remove_metadata(self, db_map_data):
-        """Removes entries corresponding to removed metadata from the model.
-
-        Args:
-            db_map_data (dict): removed metadata records
-        """
-        self._item_metadata_table_model.remove_metadata(db_map_data)
-
-    def roll_back(self, db_maps):
+    def rollback(self, db_maps):
         """Rolls back database changes.
 
         Args:
             db_maps (Iterable of DiffDatabaseMapping): rolled back databases
         """
-        self._item_metadata_table_model.roll_back(db_maps)
+        self._item_metadata_table_model.rollback(db_maps)

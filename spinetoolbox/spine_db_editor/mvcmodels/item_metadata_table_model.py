@@ -19,7 +19,7 @@ from enum import auto, Enum, IntEnum, unique
 
 from PySide2.QtCore import QModelIndex
 
-from spinetoolbox.helpers import rows_to_row_count_tuples
+from spinetoolbox.helpers import rows_to_row_count_tuples, FlexibleFetchParent
 from .metadata_table_model_base import Column, FLAGS_EDITABLE, FLAGS_FIXED, MetadataTableModelBase
 
 
@@ -55,6 +55,22 @@ class ItemMetadataTableModel(MetadataTableModelBase):
         super().__init__(db_mngr, db_maps, parent)
         self._item_type = None
         self._item_ids = {}
+        self._entity_metadata_fetch_parent = FlexibleFetchParent(
+            "entity_metadata",
+            handle_items_added=self.add_item_metadata,
+            handle_items_removed=self.remove_item_metadata,
+            handle_items_updated=self.update_item_metadata,
+        )
+        self._parameter_value_metadata_fetch_parent = FlexibleFetchParent(
+            "parameter_value_metadata",
+            handle_items_added=self.add_item_metadata,
+            handle_items_removed=self.remove_item_metadata,
+            handle_items_updated=self.update_item_metadata,
+        )
+
+    def _fetch_parents(self):
+        yield self._entity_metadata_fetch_parent
+        yield self._parameter_value_metadata_fetch_parent
 
     def clear(self):
         """Clears the model."""
@@ -142,7 +158,7 @@ class ItemMetadataTableModel(MetadataTableModelBase):
                 {db_map: [{"id": id_, "metadata_name": name, "metadata_value": value}]}
             )
 
-    def roll_back(self, db_maps):
+    def rollback(self, db_maps):
         """Rolls back changes in database.
 
         Args:
@@ -239,19 +255,3 @@ class ItemMetadataTableModel(MetadataTableModelBase):
             db_map_data (dict): removed items keyed by database mapping
         """
         self._remove_data(db_map_data, ExtraColumn.ITEM_METADATA_ID)
-
-    def update_metadata(self, db_map_data):
-        """Updates metadata.
-
-        Args:
-            db_map_data (dict): updated items keyed by database mapping
-        """
-        self._update_data(db_map_data, ExtraColumn.METADATA_ID)
-
-    def remove_metadata(self, db_map_data):
-        """Removes entries that correspond to removed metadata.
-
-        Args:
-            db_map_data (dict): removed items keyed by database mapping
-        """
-        self._remove_data(db_map_data, ExtraColumn.METADATA_ID)

@@ -68,19 +68,17 @@ class PivotTableModelBase(QAbstractTableModel):
         """
         raise NotImplementedError()
 
-    def _can_fetch_more_parent(self, parent):
-        return any(self.db_mngr.can_fetch_more(db_map, parent) for db_map in self._parent.db_maps)
+    def canFetchMore(self, _):
+        result = False
+        for fetch_parent in self._fetch_parents():
+            for db_map in self._parent.db_maps:
+                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
+        return result
 
-    def canFetchMore(self, _parent):
-        return any(self._can_fetch_more_parent(parent) for parent in self._fetch_parents())
-
-    def _fetch_more_parent(self, parent):
-        for db_map in self._parent.db_maps:
-            self.db_mngr.fetch_more(db_map, parent)
-
-    def fetchMore(self, _parent):
+    def fetchMore(self, _):
         for parent in self._fetch_parents():
-            self._fetch_more_parent(parent)
+            for db_map in self._parent.db_maps:
+                self.db_mngr.fetch_more(db_map, parent)
 
     @property
     def item_type(self):

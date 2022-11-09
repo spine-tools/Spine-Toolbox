@@ -21,8 +21,6 @@ from unittest import mock
 from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtCore import QModelIndex, QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.helpers import signal_waiter
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_SpineDBEditorAdd import TestSpineDBEditorAddMixin
@@ -426,7 +424,7 @@ class TestClosingDBEditors(unittest.TestCase):
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = SpineDBManager(mock_settings, None)
+            self._db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
 
@@ -461,9 +459,7 @@ class TestClosingDBEditors(unittest.TestCase):
 
     def test_editor_asks_for_confirmation_even_when_non_editor_listeners_are_connected(self):
         editor = self._make_db_editor()
-        with signal_waiter(self._db_mngr.object_classes_added) as waiter:
-            self._db_mngr.add_object_classes({self._db_map: [{"name": "my_object_class"}]})
-            waiter.wait()
+        self._db_mngr.add_object_classes({self._db_map: [{"name": "my_object_class"}]})
         self.assertTrue(self._db_mngr.dirty(self._db_map))
         non_editor_listener = object()
         self._db_mngr.register_listener(non_editor_listener, self._db_map)
@@ -473,6 +469,7 @@ class TestClosingDBEditors(unittest.TestCase):
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
         ) as commit_changes:
             commit_changes.return_value = QMessageBox.Discard
+            print("CLOSE")
             editor.close()
             commit_changes.assert_called_once()
 
