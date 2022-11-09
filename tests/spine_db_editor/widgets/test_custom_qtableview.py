@@ -19,7 +19,7 @@ from PySide2.QtCore import QItemSelectionModel, QModelIndex
 from PySide2.QtWidgets import QApplication, QMessageBox
 
 from spinedb_api import DatabaseMapping, import_functions
-from spinetoolbox.helpers import signal_waiter, ItemTypeFetchParent
+from spinetoolbox.helpers import signal_waiter
 from tests.spine_db_editor.widgets.helpers import add_object, add_object_class, TestBase, EditorDelegateMocking
 
 
@@ -235,9 +235,7 @@ class TestParameterTableWithExistingData(TestBase):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-            waiter.wait()
+        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
 
     def test_purging_value_data_leaves_empty_rows_intact(self):
@@ -248,9 +246,7 @@ class TestParameterTableWithExistingData(TestBase):
         _set_row_data(
             table_view, model, model.rowCount() - 1, ["object_class", "object_1", "parameter_1", "Base"], delegate_mock
         )
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-            waiter.wait()
+        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 2)
         expected = [
             ["object_class", "object_1", "parameter_1", "Base", None, "database"],
@@ -263,19 +259,15 @@ class TestParameterTableWithExistingData(TestBase):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            n_values = self._n_parameters * self._n_objects
-            self._db_mngr.remove_items({self._db_map: {"parameter_value": {i for i in range(1, n_values, 2)}}})
-            waiter.wait()
+        n_values = self._n_parameters * self._n_objects
+        self._db_mngr.remove_items({self._db_map: {"parameter_value": set(range(1, n_values, 2))}})
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE / 2 + 1)
 
     def test_undoing_purge(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-            waiter.wait()
+        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
         self._db_editor.undo_action.trigger()
         while model.rowCount() != self._n_objects * self._n_parameters + 1:
@@ -297,9 +289,7 @@ class TestParameterTableWithExistingData(TestBase):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-            waiter.wait()
+        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as roll_back_dialog:
             roll_back_dialog.Ok = QMessageBox.Ok

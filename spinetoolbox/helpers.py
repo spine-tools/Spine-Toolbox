@@ -1259,9 +1259,15 @@ class SignalWaiter(QObject):
         self._triggered = True
         self.args = args
 
-    def wait(self):
-        """Wait for signal to be received."""
-        while not self._triggered:
+    def wait(self, condition=lambda args: True):
+        """Wait for signal to be received.
+
+        Args:
+            condition (function): receiving the self.args and returning whether to stop waiting.
+        """
+        while True:
+            if self._triggered and condition(self.args):
+                break
             QApplication.processEvents()
 
 

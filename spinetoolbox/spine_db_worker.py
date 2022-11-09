@@ -236,7 +236,7 @@ class SpineDBWorker(QObject):
             more_available = False
         self._something_happened.emit(_Event.FETCH, (parent, chunk, more_available))
 
-    def _fetch_event(self, parent, chunk):
+    def _fetch_event(self, parent, chunk, more_available):
         if chunk:
             db_map_data = {self._db_map: chunk}
             self._db_mngr.cache_items(parent.fetch_item_type, db_map_data)

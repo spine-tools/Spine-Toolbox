@@ -120,9 +120,9 @@ class ScenarioGenerator(QWidget):
             scenario_alternatives (list of list): alternative items for each scenario
         """
         if new_scenarios:
-            with signal_waiter(self._db_editor.db_mngr.scenarios_added) as waiter:
+            with signal_waiter(self._db_editor.db_mngr.items_added) as waiter:
                 self._db_editor.db_mngr.add_scenarios({self._db_map: [{"name": name} for name in new_scenarios]})
-                waiter.wait()
+                waiter.wait(lambda args: waiter.args[0] == "scenario")
         searchable_scenario_names = set(scenarios_to_modify)
         scenario_definitions_by_id = dict()
         alternative_iter = iter(scenario_alternatives)

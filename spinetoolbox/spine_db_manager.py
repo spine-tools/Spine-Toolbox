@@ -68,7 +68,7 @@ class SpineDBManager(QObject):
     session_refreshed = Signal(set)
     session_committed = Signal(set, object)
     session_rolled_back = Signal(set)
-    # Data changed signals - not connected to any slot at the moment - but might come in handy.
+    # Data changed signals
     items_added = Signal(str, dict)
     """Emitted whenever items are added to a DB.
 
@@ -89,8 +89,6 @@ class SpineDBManager(QObject):
     Args:
         dict: mapping DiffDatabaseMapping to string item type to list of removed dict-items.
     """
-    # Added
-    scenarios_added = Signal(dict)  # FIXME MM
     # Closing
     waiting_for_fetcher = Signal()
     fetcher_waiting_over = Signal()
