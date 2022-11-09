@@ -72,6 +72,7 @@ class SpineDBWorker(QObject):
         self._db_url = db_url
         self._db_map = None
         self._current_fetch_token = 0
+        self._removed_ids = {}
         self._query_has_elements_by_key = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
@@ -113,6 +114,7 @@ class SpineDBWorker(QObject):
         self._current_fetch_token += 1
         self._fetched_item_types.clear()
         self._query_has_elements_by_key.clear()
+        self._removed_ids.clear()
 
     def _reset_fetching_if_required(self, parent):
         """Sets fetch parent's token or resets the parent if fetch tokens don't match.
@@ -225,14 +227,21 @@ class SpineDBWorker(QObject):
     def _fetch_more(self, parent):
         iterator = self._get_iterator(parent)
         chunk = next(iterator, [])
-        self._something_happened.emit(_Event.FETCH, (parent, chunk))
+        if chunk:
+            more_available = True
+            removed_ids = self._removed_ids.get(parent.fetch_item_type)
+            if removed_ids is not None:
+                chunk = [item for item in chunk if item["id"] not in removed_ids]
+        else:
+            more_available = False
+        self._something_happened.emit(_Event.FETCH, (parent, chunk, more_available))
 
     def _fetch_event(self, parent, chunk):
         if chunk:
             db_map_data = {self._db_map: chunk}
             self._db_mngr.cache_items(parent.fetch_item_type, db_map_data)
             parent.handle_items_added(db_map_data)
-        elif parent.query is not None:
+        elif not more_available and parent.query is not None:
             parent.set_fetched(True)
         parent.set_busy_fetching(False)
 
@@ -384,6 +393,20 @@ class SpineDBWorker(QObject):
         else:
             yield item_type, items
 
+    def _discard_removed_ids(self, item_type, items):
+        """Discards added item ids from removed ids cache.
+
+        Args:
+            item_type (str): item type
+            list of dict: added cache items
+        """
+        for item in items:
+            try:
+                removed_ids = self._removed_ids[item_type]
+            except KeyError:
+                continue
+            removed_ids.discard(item["id"])
+
     def add_items(self, items, item_type, readd, check, cache, callback):
         """Adds items to db.
 
@@ -391,7 +414,7 @@ class SpineDBWorker(QObject):
             items (dict): lists of items to add or update
             item_type (str): item type
             readd (bool) : Whether to re-add items that were previously removed
-            check (bool): Whether or not to check integrity
+            check (bool): Whether to check integrity
             cache (dict): Cache
             callback (None or function): something to call with the result
         """
@@ -423,6 +446,7 @@ class SpineDBWorker(QObject):
         items, errors = getattr(self._db_map, method_name)(
             *orig_items, check=check, readd=readd, return_items=True, cache=cache
         )
+        self._discard_removed_ids(item_type, items)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
@@ -521,7 +545,11 @@ class SpineDBWorker(QObject):
             errors = []
         except SpineDBAPIError as err:
             errors = [err]
-        if errors:
+        if not errors:
+            for item_type, ids in ids_per_type.items():
+                removed_ids = self._removed_ids.setdefault(item_type, set())
+                removed_ids |= ids
+        else:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         self._something_happened.emit(_Event.REMOVE_ITEMS, (ids_per_type, errors, callback))
 
@@ -599,6 +627,8 @@ class SpineDBWorker(QObject):
             errors = []
         except SpineDBAPIError as e:
             errors = [e.msg]
+        if not errors:
+            self._removed_ids.clear()
         self._something_happened.emit(_Event.ROLLBACK_SESSION, (errors, undo_stack))
 
     def _rollback_session_event(self, errors, undo_stack):

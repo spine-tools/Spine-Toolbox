@@ -449,7 +449,11 @@ class SpineDBManager(QObject):
                 db_map.codename = codename
             return db_map
         worker = SpineDBWorker(self, url)
-        db_map = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
+        try:
+            db_map = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
+        except Exception as error:
+            worker.clean_up()
+            raise error
         self._workers[db_map] = worker
         self._db_maps[url] = db_map
         self.db_map_locks[db_map] = QMutex(QMutex.Recursive)

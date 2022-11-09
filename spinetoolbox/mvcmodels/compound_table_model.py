@@ -119,9 +119,15 @@ class CompoundTableModel(MinimalTableModel):
         """Recomputes the row and inverse row maps."""
         self._row_map.clear()
         self._inv_row_map.clear()
+        useful_sub_models = []
         for model in self.sub_models:
+            if model.rowCount() == 0:
+                model.deleteLater()
+                continue
+            useful_sub_models.append(model)
             row_map = self._row_map_for_model(model)
             self._append_row_map(row_map)
+        self.sub_models = useful_sub_models
         self.refreshed.emit()
 
     def _append_row_map(self, row_map):

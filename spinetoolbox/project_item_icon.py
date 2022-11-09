@@ -504,20 +504,7 @@ class ConnectorButton(QGraphicsPathItem):
             event.accept()
             return
         self._parent.select_item()
-        if self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true":
-            self._start_link(event)
-
-    def mouseReleaseEvent(self, event):
-        """Connector button mouse release event.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        if (
-            self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false"
-            and self.isUnderMouse()
-        ):
-            self._start_link(event)
+        self._start_link(event)
 
     def _start_link(self, event):
         scene = self.scene()

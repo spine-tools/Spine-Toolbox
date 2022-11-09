@@ -94,7 +94,7 @@ class ParameterTableHeaderSection:
 
 
 def convert_indexed_value_to_tree(value):
-    """Converts Maps to tree nodes recursively.
+    """Converts indexed values to tree nodes recursively.
 
     Args:
         value (IndexedValue): value to convert
@@ -118,7 +118,7 @@ def convert_indexed_value_to_tree(value):
     return d
 
 
-def turn_nodes_to_xy_data(root_node, index_names=None, indexes=None):
+def turn_node_to_xy_data(root_node, index_names=None, indexes=None):
     """Constructs plottable data and indexes recursively.
 
     Args:
@@ -139,7 +139,7 @@ def turn_nodes_to_xy_data(root_node, index_names=None, indexes=None):
     for index, sub_node in root_node.content.items():
         if isinstance(sub_node, TreeNode):
             current_indexes = indexes + [index]
-            yield from turn_nodes_to_xy_data(sub_node, current_index_names, current_indexes)
+            yield from turn_node_to_xy_data(sub_node, current_index_names, current_indexes)
         else:
             x.append(index)
             y.append(sub_node)
@@ -387,7 +387,7 @@ def plot_parameter_table_selection(model, model_indexes, table_header_sections, 
             index = model.index(row, index_column).data()
             node = _set_default_node(node, index, header_data(index_columns[i + 1]))
         node.content[model.index(row, index_columns[-1]).data()] = leaf_content
-    data_list = list(turn_nodes_to_xy_data(root_node))
+    data_list = list(turn_node_to_xy_data(root_node))
     return plot_data(data_list, plot_widget)
 
 
@@ -420,7 +420,7 @@ def plot_value_editor_table_selection(model, model_indexes, plot_widget=None):
         for i, index in enumerate(indexes[:-1]):
             node = _set_default_node(node, index, header_columns[i + 1])
         node.content[indexes[-1]] = leaf_content
-    data_list = list(turn_nodes_to_xy_data(root_node))
+    data_list = list(turn_node_to_xy_data(root_node))
     return plot_data(data_list, plot_widget)
 
 
@@ -464,7 +464,7 @@ def plot_pivot_table_selection(model, model_indexes, plot_widget=None):
         for i, index in enumerate(indexes[:-1]):
             node = _set_default_node(node, index, index_names[i])
         node.content[indexes[-1]] = leaf_content
-    data_list = list(turn_nodes_to_xy_data(root_node))
+    data_list = list(turn_node_to_xy_data(root_node))
     return plot_data(data_list, plot_widget)
 
 
@@ -503,7 +503,7 @@ def plot_db_mngr_items(items, db_maps, plot_widget=None):
         for i, index in enumerate(indexes[:-1]):
             node = _set_default_node(node, index, index_names[i])
         node.content[indexes[-1]] = leaf_content
-    data_list = list(turn_nodes_to_xy_data(root_node))
+    data_list = list(turn_node_to_xy_data(root_node))
     return plot_data(data_list, plot_widget)
 
 

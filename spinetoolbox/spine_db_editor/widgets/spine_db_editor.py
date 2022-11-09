@@ -164,8 +164,7 @@ class SpineDBEditorBase(QMainWindow):
             self.save_window_state()
         self.db_maps = []
         self._changelog.clear()
-        while self._change_notifiers:
-            self._change_notifiers.pop(0).deleteLater()
+        self._purge_change_notifiers()
         for url, codename in db_url_codenames.items():
             db_map = self.db_mngr.get_db_map(url, self, codename=codename, create=create)
             if db_map is not None:
@@ -813,6 +812,7 @@ class SpineDBEditorBase(QMainWindow):
                 commit_msg = self._get_commit_msg(db_names)
                 if not commit_msg:
                     return False
+        self._purge_change_notifiers()
         self._torn_down = True
         self.db_mngr.unregister_listener(self, *self.db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg)
         return True
@@ -883,6 +883,13 @@ class SpineDBEditorBase(QMainWindow):
         message_box.button(QMessageBox.Ok).setText("Rollback")
         answer = message_box.exec_()
         return answer == QMessageBox.Ok
+
+    def _purge_change_notifiers(self):
+        """Tears down change notifiers."""
+        while self._change_notifiers:
+            notifier = self._change_notifiers.pop(0)
+            notifier.tear_down()
+            notifier.deleteLater()
 
     def closeEvent(self, event):
         """Handle close window.

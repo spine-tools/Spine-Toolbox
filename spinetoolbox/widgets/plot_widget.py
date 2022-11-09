@@ -19,6 +19,9 @@ A Qt widget showing a toolbar and a matplotlib plotting canvas.
 import itertools
 import io
 import csv
+from datetime import datetime
+
+import numpy
 import numpy as np
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
 from PySide2.QtCore import QMetaObject, Qt
@@ -85,15 +88,15 @@ class PlotWidget(QWidget):
             if len(xy_data.data_index) == max_index_count:
                 if header_of_agreeable_width is None:
                     header_of_agreeable_width = xy_data.index_names + [xy_data.x_label, xy_data.y_label]
-                rows += [xy_data.data_index + [x, y] for x, y in zip(xy_data.x, xy_data.y)]
+                rows += [xy_data.data_index + _pack_xy(x, y) for x, y in zip(xy_data.x, xy_data.y)]
             else:
                 n = max_index_count - len(xy_data.data_index)
-                rows += [xy_data.data_index + [x, y] + n * [None] for x, y in zip(xy_data.x, xy_data.y)]
+                rows += [xy_data.data_index + _pack_xy(x, y) + n * [None] for x, y in zip(xy_data.x, xy_data.y)]
         rows.insert(0, header_of_agreeable_width)
         return rows
 
     @busy_effect
-    def copy_plot_data(self, parent=None, document_name=""):
+    def copy_plot_data(self):
         """Copies plot data to clipboard."""
         rows = self._get_plot_data()
         with io.StringIO() as output:
@@ -103,16 +106,12 @@ class PlotWidget(QWidget):
             QApplication.clipboard().setText(output.getvalue())
 
     @busy_effect
-    def show_plot_data(self, parent=None, document_name=""):
+    def show_plot_data(self):
         """Opens a separate window that shows the plot data."""
-        if parent is None:
-            parent = self
         rows = self._get_plot_data()
         widget = _PlotDataWidget(rows, self)
         widget.setWindowFlag(Qt.Window, True)
         title = "Plot data"
-        if document_name:
-            title += f"\t-- {document_name} --"
         widget.setWindowTitle(title)
         widget.show()
 
@@ -188,3 +187,18 @@ def prepare_plot_in_window_menu(menu):
     window_names = list(plot_windows.keys())
     for name in sorted(window_names):
         menu.addAction(name)
+
+
+def _pack_xy(x, y):
+    """Converts x and y to exportable data types and packs them in an array.
+
+    Args:
+        x (Any): x coordinate
+        y (Any): y coordinate
+
+    Returns:
+        list: list of two elements, x and y
+    """
+    if isinstance(x, numpy.datetime64):
+        x = str(x)
+    return [x, y]
