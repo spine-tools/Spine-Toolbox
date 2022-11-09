@@ -97,6 +97,67 @@ class TabularViewMixin:
         self.pivot_action_group.triggered.connect(self._handle_pivot_action_triggered)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
+        self.db_mngr.items_updated.connect(self._reload_pivot_table_if_needed)
+
+    def refresh_views(self):
+        for table_view in (self.ui.pivot_table, self.ui.frozen_table):
+            top_left = table_view.indexAt(table_view.rect().topLeft())
+            bottom_right = table_view.indexAt(table_view.rect().bottomRight())
+            if not bottom_right.isValid():
+                model = table_view.model()
+                bottom_right = table_view.model().index(model.rowCount() - 1, model.columnCount() - 1)
+            table_view.model().dataChanged.emit(top_left, bottom_right)
+
+    # FIXME MM: this should be called after modifications
+    @Slot(str)
+    def update_filter_menus(self, action):
+        for identifier, menu in self.filter_menus.items():
+            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
+            index_values.pop(None, None)
+            if action == "add":
+                menu.add_items_to_filter_list(list(index_values.keys()))
+            elif action == "remove":
+                previous = menu._filter._filter_model._data_set
+                menu.remove_items_from_filter_list(list(previous - index_values.keys()))
+        self.reload_frozen_table()
+
+    def _must_reload(self, item_type, db_map_data):
+        for db_map in self.db_maps:
+            items = db_map_data.get(db_map)
+            if not items:
+                continue
+            if self.current_input_type in (self._PARAMETER_VALUE, self._INDEX_EXPANSION):
+                if item_type in ("object_class", "relationship_class"):
+                    for item in items:
+                        if item["id"] == self.current_class_id.get(db_map):
+                            return True
+                    if item_type == "object_class":
+                        object_class_id_list = {
+                            db_map_class_id.get(db_map) for db_map_class_id in self.current_object_class_id_list
+                        }
+                        for item in items:
+                            if item["id"] in object_class_id_list:
+                                return True
+            elif self.current_input_type == self._RELATIONSHIP:
+                if item_type == "relationship_class":
+                    for item in items:
+                        if item["id"] == self.current_class_id.get(db_map):
+                            return True
+                elif item_type == "object_class":
+                    object_class_id_list = {
+                        db_map_class_id.get(db_map) for db_map_class_id in self.current_object_class_id_list
+                    }
+                    for item in items:
+                        if item["id"] in object_class_id_list:
+                            return True
+        return False
+
+    @Slot(str, dict)
+    def _reload_pivot_table_if_needed(self, item_type, db_map_data):
+        if not self.pivot_table_model:
+            return
+        if self._must_reload(item_type, db_map_data):
+            self.do_reload_pivot_table()
 
     @Slot()
     def _connect_pivot_table_header_signals(self):
@@ -732,67 +793,6 @@ class TabularViewMixin:
             list(tuple(list(int)))
         """
         return list(dict.fromkeys(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])).keys())
-
-    def refresh_views(self):
-        for table_view in (self.ui.pivot_table, self.ui.frozen_table):
-            top_left = table_view.indexAt(table_view.rect().topLeft())
-            bottom_right = table_view.indexAt(table_view.rect().bottomRight())
-            if not bottom_right.isValid():
-                model = table_view.model()
-                bottom_right = table_view.model().index(model.rowCount() - 1, model.columnCount() - 1)
-            table_view.model().dataChanged.emit(top_left, bottom_right)
-
-    # FIXME MM: this should be called after modifications
-    @Slot(str)
-    def update_filter_menus(self, action):
-        for identifier, menu in self.filter_menus.items():
-            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
-            index_values.pop(None, None)
-            if action == "add":
-                menu.add_items_to_filter_list(list(index_values.keys()))
-            elif action == "remove":
-                previous = menu._filter._filter_model._data_set
-                menu.remove_items_from_filter_list(list(previous - index_values.keys()))
-        self.reload_frozen_table()
-
-    def receive_db_map_data_updated(self, db_map_data, get_class_id):
-        if not self.pivot_table_model:
-            return
-        for db_map, items in db_map_data.items():
-            for item in items:
-                if get_class_id(item) == self.current_class_id.get(db_map):
-                    self.refresh_table_view(self.ui.pivot_table)
-                    self.refresh_table_view(self.ui.frozen_table)
-                    self.make_pivot_headers()
-                    return
-
-    def receive_classes_updated(self, db_map_data):
-        if not self.pivot_table_model:
-            return
-        for db_map, items in db_map_data.items():
-            for item in items:
-                if item["id"] == self.current_class_id.get(db_map):
-                    self.do_reload_pivot_table()
-                    return
-
-    def receive_classes_removed(self, db_map_data):
-        if not self.pivot_table_model:
-            return
-        for db_map, items in db_map_data.items():
-            for item in items:
-                if item["id"] == self.current_class_id.get(db_map):
-                    self.current_class_type = None
-                    self.current_class_id = {}
-                    self.clear_pivot_table()
-                    return
-
-    def receive_alternatives_updated(self, db_map_data):
-        """Reacts to alternatives updated event."""
-        super().receive_alternatives_updated(db_map_data)
-        if self.pivot_table_model:
-            self.refresh_table_view(self.ui.pivot_table)
-            self.refresh_table_view(self.ui.frozen_table)
-            self.make_pivot_headers()
 
     def receive_session_rolled_back(self, db_maps):
         """Reacts to session rolled back event."""
