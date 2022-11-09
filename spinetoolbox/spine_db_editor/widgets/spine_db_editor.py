@@ -814,14 +814,14 @@ class SpineDBEditorBase(QMainWindow):
         Returns:
             bool: True if editor is ready to close, False otherwise
         """
-        needs_committing = self.db_mngr.dirty_and_without_editors(self, *self.db_maps)
+        dirty_db_maps = self.db_mngr.dirty_and_without_editors(self, *self.db_maps)
         commit_dirty = False
         commit_msg = ""
-        if needs_committing:
+        if dirty_db_maps:
             answer = self._prompt_to_commit_changes()
             if answer == QMessageBox.Cancel:
                 return False
-            db_names = ", ".join([db_map.codename for db_map in needs_committing])
+            db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
             if answer == QMessageBox.Save:
                 commit_dirty = True
                 commit_msg = self._get_commit_msg(db_names)
@@ -829,7 +829,9 @@ class SpineDBEditorBase(QMainWindow):
                     return False
         self._purge_change_notifiers()
         self._torn_down = True
-        self.db_mngr.unregister_listener(self, *self.db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg)
+        self.db_mngr.unregister_listener(
+            self, *self.db_maps, dirty_db_maps=dirty_db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg
+        )
         return True
 
     def _prompt_to_commit_changes(self):

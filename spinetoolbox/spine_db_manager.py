@@ -494,7 +494,7 @@ class SpineDBManager(QObject):
             except AttributeError:
                 pass
 
-    def unregister_listener(self, listener, *db_maps, commit_dirty=False, commit_msg=""):
+    def unregister_listener(self, listener, *db_maps, dirty_db_maps=None, commit_dirty=False, commit_msg=""):
         """Unregisters given listener from given db_map signals.
         If any of the db_maps becomes an orphan and is dirty, prompts user to commit or rollback.
 
@@ -511,7 +511,6 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
             except AttributeError:
                 pass
-        dirty_db_maps = self.dirty_and_without_editors(listener, *db_maps)
         if dirty_db_maps:
             if commit_dirty:
                 self.commit_session(commit_msg, *dirty_db_maps)
@@ -554,10 +553,13 @@ class SpineDBManager(QObject):
             list of DiffDatabaseMapping: mappings that are dirty and don't have editors
         """
 
-        def has_listeners(db_map):
-            return bool(self.db_map_listeners(db_map) - {listener})
+        def has_editors(db_map):
+            return any(
+                hasattr(x, "is_db_map_editor") and x.is_db_map_editor()
+                for x in self.db_map_listeners(db_map) - {listener}
+            )
 
-        return [db_map for db_map in db_maps if not has_listeners(db_map) and self.is_dirty(db_map)]
+        return [db_map for db_map in self.dirty(*db_maps) if not has_editors(db_map)]
 
     def clean_up(self):
         while self._workers:

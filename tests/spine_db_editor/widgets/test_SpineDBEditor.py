@@ -469,7 +469,6 @@ class TestClosingDBEditors(unittest.TestCase):
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
         ) as commit_changes:
             commit_changes.return_value = QMessageBox.Discard
-            print("CLOSE")
             editor.close()
             commit_changes.assert_called_once()
 
