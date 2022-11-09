@@ -1404,6 +1404,7 @@ class SpineDBManager(QObject):
                 d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
         return d
 
+    # TODO: Get rid of all the find_cascading_* methods and use DatabaseMappingBase.cascading_ids()?
     def find_cascading_relationship_classes(self, db_map_ids, only_visible=True):
         """Finds and returns cascading relationship classes for the given object_class ids."""
         db_map_cascading_data = dict()

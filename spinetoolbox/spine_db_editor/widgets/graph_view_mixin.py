@@ -103,13 +103,21 @@ class GraphViewMixin:
         self.ui.treeView_relationship.tree_selection_changed.connect(self.rebuild_graph)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
         self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
+        self.db_mngr.items_added.connect(self._refresh_icons)
+        self.db_mngr.items_updated.connect(self._refresh_icons)
 
-    # FIXME MM
-    def _handle_object_classes_updated(self, db_map_data):
-        self.refresh_icons(db_map_data)
+    def _refresh_icons(self, item_type, db_map_data):
+        """Runs when entity classes are added or updated in the db. Refreshes icons of entities in graph.
 
-    def _handle_relationship_classes_updated(self, db_map_data):
-        self.refresh_icons(db_map_data)
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        if item_type not in ("object_class", "relationship_class"):
+            return
+        updated_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
+        for item in self.ui.graphicsView.items():
+            if isinstance(item, EntityItem) and (item.first_db_map, item.entity_class_id) in updated_ids:
+                item.refresh_icon()
 
     def _handle_objects_added(self, db_map_data):
         """Runs when objects are added to the db.
@@ -248,17 +256,6 @@ class GraphViewMixin:
         for item in removed_items:
             item.setVisible(False)
         self.scene = scene
-
-    def refresh_icons(self, db_map_data):
-        """Runs when entity classes are updated in the db. Refreshes icons of entities in graph.
-
-        Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
-        """
-        updated_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
-        for item in self.ui.graphicsView.items():
-            if isinstance(item, EntityItem) and (item.db_map, item.entity_class_id) in updated_ids:
-                item.refresh_icon()
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):

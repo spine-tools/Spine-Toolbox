@@ -152,30 +152,3 @@ class MetadataTableModel(MetadataTableModelBase):
             db_map_data (dict): removed items keyed by database mapping
         """
         self._remove_data(db_map_data, ExtraColumn.ID)
-
-    def add_and_update_metadata(self, db_map_data):
-        """Adds and updates metadata after changes in database.
-
-        Args:
-            db_map_data (dict): changed items keyed by database mapping
-        """
-        # FIXME MM
-        # This was called after updating entity metadata with the metadata half of separate_metadata_and_item_metadata
-        # Why???
-        # Maybe it is enough to modify update_metadata to finish by adding all input items that weren't found in the
-        # table?
-        existing_ids = {}
-        for row in self._data:
-            id_ = row[ExtraColumn.ID]
-            if id_ is not None:
-                existing_ids.setdefault(row[Column.DB_MAP], set()).add(id_)
-        updated = {}
-        added = {}
-        for db_map, items in db_map_data.items():
-            for item in items:
-                if item["id"] in existing_ids[db_map]:
-                    updated.setdefault(db_map, []).append(item)
-                else:
-                    added.setdefault(db_map, []).append(item)
-        self.update_metadata(updated)
-        self.add_metadata(added)

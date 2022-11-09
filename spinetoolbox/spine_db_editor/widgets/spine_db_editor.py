@@ -352,6 +352,9 @@ class SpineDBEditorBase(QMainWindow):
         # Message signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.err_msg.showMessage)
+        self.db_mngr.items_added.connect(self._handle_items_added)
+        self.db_mngr.items_updated.connect(self._handle_items_updated)
+        self.db_mngr.items_removed.connect(self._handle_items_removed)
         # Menu actions
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
@@ -767,13 +770,25 @@ class SpineDBEditorBase(QMainWindow):
         """Update export enabled."""
         # TODO: check if db_mngr has any cache or something like that
 
-    def _receive_items_changed(self, action, item_type, db_map_data):
+    def _log_items_change(self, msg):
         """Enables or disables actions and informs the user about what just happened."""
-        # FIXME MM
-        count = sum(len(data) for data in db_map_data.values())
-        msg = f"Successfully {action} {count} {item_type} item(s)"
         self._changelog.append(msg)
         self._update_export_enabled()
+
+    def _handle_items_added(self, item_type, db_map_data):
+        count = sum(len(data) for data in db_map_data.values())
+        msg = f"Successfully added {count} {item_type} item(s)"
+        self._log_items_change(msg)
+
+    def _handle_items_updated(self, item_type, db_map_data):
+        count = sum(len(data) for data in db_map_data.values())
+        msg = f"Successfully updated {count} {item_type} item(s)"
+        self._log_items_change(msg)
+
+    def _handle_items_removed(self, db_map_typed_data):
+        count = sum(len(data) for typed_data in db_map_typed_data.values() for data in typed_data.values())
+        msg = f"Successfully removed {count} item(s)"
+        self._log_items_change(msg)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
