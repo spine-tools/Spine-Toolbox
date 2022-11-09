@@ -15,7 +15,7 @@ from unittest import mock
 from PySide2.QtCore import QItemSelectionModel, QModelIndex
 from PySide2.QtWidgets import QApplication
 
-from spinetoolbox.helpers import signal_waiter, ItemTypeFetchParent
+from spinetoolbox.helpers import signal_waiter
 from tests.spine_db_editor.widgets.helpers import add_object, add_object_class, TestBase, EditorDelegateMocking
 
 
@@ -140,10 +140,6 @@ class TestParameterTableView(TestBase):
         ]
         for row, column in zip(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
-        fetch_parent = ItemTypeFetchParent("parameter_value")
-        while self._db_mngr.can_fetch_more(self._db_map, fetch_parent):
-            self._db_mngr.fetch_more(self._db_map, fetch_parent)
-            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         for row, column in zip(range(model.rowCount()), range(model.columnCount())):
