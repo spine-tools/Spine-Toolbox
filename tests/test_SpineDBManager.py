@@ -18,7 +18,7 @@ Unit tests for the spine_db_manager module.
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import (
@@ -30,7 +30,7 @@ from spinedb_api import (
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
 )
-from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api.parameter_value import join_value_and_type, from_database
 from spinedb_api import import_functions
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -45,7 +45,7 @@ class TestParameterValueFormatting(unittest.TestCase):
 
     def setUp(self):
         self.db_mngr = SpineDBManager(None, None)
-        self.db_mngr.get_item = Mock()
+        self.db_mngr.get_item = MagicMock()
 
     def tearDown(self):
         self.db_mngr.close_all_sessions()
@@ -54,7 +54,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         QApplication.processEvents()
 
     def get_value(self, role):
-        mock_db_map = Mock()
+        mock_db_map = MagicMock()
         id_ = 0
         return self.db_mngr.get_value(mock_db_map, "parameter_value", id_, role)
 
@@ -230,6 +230,45 @@ class TestAddItems(unittest.TestCase):
 
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
         self._db_mngr.add_items(db_map_data, "add_entity_metadata", "entity_metadata", callback=callback)
+
+
+class TestImportData(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        mock_settings = MagicMock()
+        mock_settings.value.side_effect = lambda *args, **kwargs: 0
+        self._db_mngr = SpineDBManager(mock_settings, None)
+        logger = MagicMock()
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.connection.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+
+    def test_import_parameter_value_lists(self):
+        with signal_waiter(self._db_mngr.parameter_value_lists_added) as waiter:
+            self._db_mngr.import_data(
+                {self._db_map: {"parameter_value_lists": [["list_1", "first value"], ["list_1", "second value"]]}}
+            )
+            waiter.wait()
+        value_lists = self._db_mngr.get_items(self._db_map, "parameter_value_list")
+        list_values = self._db_mngr.get_items(self._db_map, "list_value")
+        self.assertEqual(len(value_lists), 1)
+        value_list = value_lists[0]
+        index_to_id = dict(
+            zip(map(int, value_list["value_id_list"].split(",")), map(int, value_list["value_index_list"].split(",")))
+        )
+        values = len(index_to_id) * [None]
+        for row in list_values:
+            value = from_database(row["value"], row["type"])
+            values[index_to_id[row["id"]]] = value
+        self.assertEqual(values, ["first value", "second value"])
 
 
 if __name__ == '__main__':
