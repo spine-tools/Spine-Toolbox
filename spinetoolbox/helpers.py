@@ -1395,6 +1395,16 @@ def save_ui(window, app_settings, settings_group):
 
 
 def bisect_chunks(current_data, new_data, key=None):
+    """Finds insertion points for chunks of data using binary search.
+
+    Args:
+        current_data (list): sorted list where to insert new data
+        new_data (list): data to insert
+        key (Callable, optional): sort key
+
+    Returns:
+        tuple: sorted chunk of new data, insertion position
+    """
     if key is not None:
         current_data = [key(x) for x in current_data]
     else:
