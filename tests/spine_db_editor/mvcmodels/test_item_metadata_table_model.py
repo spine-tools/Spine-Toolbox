@@ -278,7 +278,20 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
             self._model.removeRows(0, 1)
             waiter.wait()
         self.assertEqual(
-            change_listener.removed_items, {self._db_map: [{"entity_id": 1, "id": 1, "metadata_id": 1, "commit_id": 2}]}
+            change_listener.removed_items,
+            {
+                self._db_map: [
+                    {
+                        "entity_id": 1,
+                        "id": 1,
+                        "metadata_id": 1,
+                        "metadata_name": "source",
+                        "commit_id": 2,
+                        "entity_name": "my_object",
+                        "metadata_value": "Fountain of objects",
+                    }
+                ]
+            },
         )
         self._model.remove_item_metadata(change_listener.removed_items)
         self.assertEqual(self._model.rowCount(), 1)
@@ -292,7 +305,21 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
             waiter.wait()
         self.assertEqual(
             change_listener.removed_items,
-            {self._db_map: [{"parameter_value_id": 1, "id": 1, "metadata_id": 3, "commit_id": 2}]},
+            {
+                self._db_map: [
+                    {
+                        "parameter_value_id": 1,
+                        "id": 1,
+                        "metadata_id": 3,
+                        "commit_id": 2,
+                        "entity_name": "my_object",
+                        "metadata_name": "source",
+                        "metadata_value": "Fountain of object values",
+                        "parameter_name": "object_parameter",
+                        "alternative_name": "Base",
+                    }
+                ]
+            },
         )
         self._model.remove_item_metadata(change_listener.removed_items)
         self.assertEqual(self._model.rowCount(), 1)
