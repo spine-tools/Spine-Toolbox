@@ -39,7 +39,11 @@ from spinedb_api import (
 )
 from .helpers import first_non_null
 from .mvcmodels.shared import PARSED_ROLE
+from .widgets.plot_canvas import LegendPosition
 from .widgets.plot_widget import PlotWidget
+
+
+LEGEND_PLACEMENT_THRESHOLD = 8
 
 
 _BASE_SETTINGS = {"alpha": 0.7}
@@ -248,7 +252,11 @@ def plot_data(data_list, plot_widget=None):
         a PlotWidget object
     """
     if plot_widget is None:
-        plot_widget = PlotWidget()
+        plot_widget = PlotWidget(
+            legend_axes_position=LegendPosition.BOTTOM
+            if len(data_list) < LEGEND_PLACEMENT_THRESHOLD
+            else LegendPosition.RIGHT
+        )
         needs_redraw = False
     else:
         needs_redraw = True

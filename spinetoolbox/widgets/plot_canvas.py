@@ -15,26 +15,40 @@ A Qt widget to use as a matplotlib backend.
 :author: A. Soininen (VTT)
 :date:   3.6.2019
 """
-
+from enum import auto, Enum, unique
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PySide2 import QtWidgets
 
 
+@unique
+class LegendPosition(Enum):
+    BOTTOM = auto()
+    RIGHT = auto()
+
+
 class PlotCanvas(FigureCanvasQTAgg):
     """A widget for plotting with matplotlib."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, legend_axes_position=LegendPosition.BOTTOM):
         """
         Args:
-            parent (QWidget): a parent widget
+            legend_axes_position (LegendPosition): legend axes position relative to plot axes
+            parent (QWidget, optional): a parent widget
         """
-        width = 7.0  # inches
-        height = 4.0  # inches
+        width = 7.0 + (0.0 if legend_axes_position == LegendPosition.BOTTOM else 6.0)  # inches
+        height = 5.0  # inches
         fig = Figure(figsize=(width, height), tight_layout=True)
-        grid_spec = fig.add_gridspec(2, 1, height_ratios=[1, 0])
-        self._axes = fig.add_subplot(grid_spec[0, 0])
-        self._legend_axes = fig.add_subplot(grid_spec[1, 0])
+        if legend_axes_position == LegendPosition.BOTTOM:
+            grid_spec = fig.add_gridspec(2, 1, height_ratios=[1, 0])
+            self._axes = fig.add_subplot(grid_spec[0, 0])
+            self._legend_axes = fig.add_subplot(grid_spec[1, 0])
+        elif legend_axes_position == LegendPosition.RIGHT:
+            grid_spec = fig.add_gridspec(1, 2, width_ratios=[1, 0])
+            self._axes = fig.add_subplot(grid_spec[0, 0])
+            self._legend_axes = fig.add_subplot(grid_spec[0, 1])
+        else:
+            raise RuntimeError(f"unknown legend position {legend_axes_position}")
         self._legend_axes.axis("off")
         super().__init__(fig)
         self.setParent(parent)
