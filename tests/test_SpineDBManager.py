@@ -33,6 +33,7 @@ from spinedb_api import (
 from spinedb_api.parameter_value import join_value_and_type, from_database
 from spinedb_api import import_functions
 from spinetoolbox.spine_db_manager import SpineDBManager
+from spinetoolbox.helpers import signal_waiter
 
 
 class TestParameterValueFormatting(unittest.TestCase):
@@ -252,11 +253,11 @@ class TestImportData(unittest.TestCase):
         self._db_mngr.clean_up()
 
     def test_import_parameter_value_lists(self):
-        with signal_waiter(self._db_mngr.parameter_value_lists_added) as waiter:
+        with signal_waiter(self._db_mngr.items_added) as waiter:
             self._db_mngr.import_data(
                 {self._db_map: {"parameter_value_lists": [["list_1", "first value"], ["list_1", "second value"]]}}
             )
-            waiter.wait()
+            waiter.wait(lambda args: args[0] == "list_value")
         value_lists = self._db_mngr.get_items(self._db_map, "parameter_value_list")
         list_values = self._db_mngr.get_items(self._db_map, "list_value")
         self.assertEqual(len(value_lists), 1)

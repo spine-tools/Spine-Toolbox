@@ -67,7 +67,7 @@ class SpineDBWorker(QObject):
 
     def __init__(self, db_mngr, db_url):
         super().__init__()
-        self._parents = set()
+        self._parents_by_type = {}
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
@@ -136,7 +136,7 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if more data is available, False otherwise
         """
-        self._parents.add(parent)
+        self._parents_by_type.setdefault(parent.fetch_item_type, set()).add(parent)
         self._reset_fetching_if_required(parent)
         if parent.is_fetched or parent.is_busy_fetching:
             return False
@@ -368,6 +368,19 @@ class SpineDBWorker(QObject):
         sq = self._db_map.ext_parameter_value_metadata_sq
         return self._db_map.query(sq).filter(sq.c.parameter_value_id == parameter_value_id).all()
 
+    def _call_in_parents(self, method_name, item_type, items):
+        to_remove = set()
+        for parent in self._parents_by_type.get(item_type, ()):
+            children = [x for x in items if parent.accepts_item(x, self._db_map)]
+            method = getattr(parent, method_name)
+            try:
+                method({self._db_map: children})
+            except Exception:
+                # FIXME of course, we need a better method here
+                to_remove.add(parent)
+        for parent in to_remove:
+            self._parents_by_type.get(parent.fetch_item_type).remove(parent)
+
     def _update_special_refs(self, item_type, ids):
         cascading_ids_by_type = self._db_mngr.special_cascading_ids(self._db_map, item_type, ids)
         self._do_update_special_refs(cascading_ids_by_type)
@@ -377,9 +390,7 @@ class SpineDBWorker(QObject):
             cascading_items = self._db_mngr.make_items_from_ids(
                 self._db_map, cascading_item_type, cascading_ids, fill_missing=fill_missing
             )
-            for parent in {x for x in self._parents if x.fetch_item_type == cascading_item_type}:
-                children = [x for x in cascading_items if parent.accepts_item(x, self._db_map)]
-                parent.handle_items_updated({self._db_map: children})
+            self._call_in_parents("handle_items_updated", cascading_item_type, cascading_items)
 
     def _split_items_by_type(self, item_type, items):
         if item_type in ("parameter_value_metadata", "entity_metadata"):
@@ -456,9 +467,7 @@ class SpineDBWorker(QObject):
             )
 
     def _add_items_event(self, item_type, items, callback):
-        for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
-            children = [x for x in items if parent.accepts_item(x, self._db_map)]
-            parent.handle_items_added({self._db_map: children})
+        self._call_in_parents("handle_items_added", item_type, items)
         self._update_special_refs(item_type, {x["id"] for x in items})
         db_map_data = {self._db_map: items}
         if callback is not None:
@@ -521,9 +530,7 @@ class SpineDBWorker(QObject):
 
     def _update_items_event(self, cascading_items_by_type, item_type, callback):
         for cascading_item_type, cascading_items in cascading_items_by_type.items():
-            for parent in {x for x in self._parents if x.fetch_item_type == cascading_item_type}:
-                children = [x for x in cascading_items if parent.accepts_item(x, self._db_map)]
-                parent.handle_items_updated({self._db_map: children})
+            self._call_in_parents("handle_items_updated", cascading_item_type, cascading_items)
         self._update_special_refs(item_type, {x["id"] for x in cascading_items_by_type[item_type]})
         db_map_data = {self._db_map: cascading_items_by_type[item_type]}
         if callback is not None:
@@ -555,20 +562,15 @@ class SpineDBWorker(QObject):
 
     def _remove_items_event(self, ids_per_type, errors, callback):
         items_per_type = {}
-        all_cascading_ids_by_type = []
         for item_type, ids in ids_per_type.items():
             if not ids:
                 continue
             items = items_per_type[item_type] = [
                 x for x in (self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids) if x
             ]
-            for parent in {x for x in self._parents if x.fetch_item_type == item_type}:
-                children = [x for x in items if parent.accepts_item(x, self._db_map)]
-                parent.handle_items_removed({self._db_map: children})
             cascading_ids_by_type = self._db_mngr.special_cascading_ids(self._db_map, item_type, ids)
-            all_cascading_ids_by_type.append(cascading_ids_by_type)
-        self._db_mngr.uncache_removed_items({self._db_map: ids_per_type})
-        for cascading_ids_by_type in all_cascading_ids_by_type:
+            self._db_mngr.uncache_removed_items({self._db_map: {item_type: ids}})
+            self._call_in_parents("handle_items_removed", item_type, items)
             self._do_update_special_refs(cascading_ids_by_type, fill_missing=False)
         db_map_typed_data = {self._db_map: items_per_type}
         if callback is not None:
