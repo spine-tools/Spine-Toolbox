@@ -35,9 +35,7 @@ class ItemMetadataEditor:
         self._db_mngr = db_mngr
         self._metadata_editor = metadata_editor
         self._item_metadata_table_view = item_metadata_table_view
-        self._item_metadata_table_model = ItemMetadataTableModel(
-            db_mngr, db_editor.db_maps, self._item_metadata_table_view
-        )
+        self._item_metadata_table_model = ItemMetadataTableModel(db_mngr, db_editor.db_maps, db_editor)
         self._item_metadata_table_view.set_models(self._item_metadata_table_model, metadata_editor.metadata_model())
         self._item_metadata_table_view.setModel(self._item_metadata_table_model)
         self._item_metadata_table_view.connect_spine_db_editor(db_editor)

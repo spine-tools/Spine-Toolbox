@@ -162,7 +162,7 @@ class FetchMoreMixin:
     def can_fetch_more(self):
         result = False
         for parent in self._fetch_parents():
-            result |= self.db_mngr.can_fetch_more(self.db_map, parent)
+            result |= self.db_mngr.can_fetch_more(self.db_map, parent, listener=self.model.db_editor)
         return result
 
     def fetch_more(self):

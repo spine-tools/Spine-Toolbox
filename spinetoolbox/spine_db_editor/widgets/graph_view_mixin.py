@@ -354,7 +354,7 @@ class GraphViewMixin:
         """
         for fetch_parent in (self._object_fetch_parent, self._relationship_fetch_parent):
             for db_map in self.db_maps:
-                if self.db_mngr.can_fetch_more(db_map, fetch_parent):
+                if self.db_mngr.can_fetch_more(db_map, fetch_parent, listener=self):
                     self.db_mngr.fetch_more(db_map, fetch_parent)
         if "root" in self.selected_tree_inds:
             return (

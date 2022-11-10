@@ -45,14 +45,14 @@ class ItemMetadataTableModel(MetadataTableModelBase):
     _ITEM_NAME_KEY = "metadata_name"
     _ITEM_VALUE_KEY = "metadata_value"
 
-    def __init__(self, db_mngr, db_maps, parent=None):
+    def __init__(self, db_mngr, db_maps, db_editor):
         """
         Args:
             db_mngr (SpineDBManager): database manager
             db_maps (Iterable of DatabaseMappingBase): database maps
-            parent (QObject): parent object
+            db_editor (SpineDBEditor): DB editor
         """
-        super().__init__(db_mngr, db_maps, parent)
+        super().__init__(db_mngr, db_maps, db_editor)
         self._item_type = None
         self._item_ids = {}
         self._entity_metadata_fetch_parent = FlexibleFetchParent(

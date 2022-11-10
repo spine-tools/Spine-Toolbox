@@ -219,7 +219,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
                         handle_items_updated=lambda _: self._receive_data_changed(),
                     ),
                 )
-                if self._toolbox.db_mngr.can_fetch_more(db_map, fetch_parent):
+                if self._toolbox.db_mngr.can_fetch_more(db_map, fetch_parent, listener=self):
                     self._toolbox.db_mngr.fetch_more(db_map, fetch_parent)
 
     def _receive_data_changed(self):

@@ -38,14 +38,14 @@ class PivotTableModelBase(QAbstractTableModel):
 
     model_data_changed = Signal()
 
-    def __init__(self, parent):
+    def __init__(self, db_editor):
         """
         Args:
-            parent (SpineDBEditor)
+            db_editor (SpineDBEditor)
         """
-        super().__init__(parent)
-        self._parent = parent
-        self.db_mngr = parent.db_mngr
+        super().__init__(db_editor)
+        self._parent = db_editor
+        self.db_mngr = db_editor.db_mngr
         self.model = PivotModel()
         self.top_left_headers = {}
         self._plot_x_column = None
@@ -72,7 +72,7 @@ class PivotTableModelBase(QAbstractTableModel):
         result = False
         for fetch_parent in self._fetch_parents():
             for db_map in self._parent.db_maps:
-                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
+                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent, listener=self._parent)
         return result
 
     def fetchMore(self, _):

@@ -22,14 +22,15 @@ from .tree_item_utility import StandardTreeItem
 class TreeModelBase(MinimalTreeModel):
     """A base model to display items in a tree view."""
 
-    def __init__(self, parent, db_mngr, *db_maps):
+    def __init__(self, db_editor, db_mngr, *db_maps):
         """
         Args:
-            parent (SpineDBEditor)
+            db_editor (SpineDBEditor)
             db_mngr (SpineDBManager)
             *db_maps: DiffDatabaseMapping instances
         """
-        super().__init__(parent)
+        super().__init__(db_editor)
+        self.db_editor = db_editor
         self.db_mngr = db_mngr
         self.db_maps = db_maps
 

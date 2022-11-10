@@ -66,7 +66,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         return self.item_type
 
     def canFetchMore(self, _parent):
-        return any(self.db_mngr.can_fetch_more(db_map, self) for db_map in self.db_maps)
+        return any(self.db_mngr.can_fetch_more(db_map, self, listener=self._parent) for db_map in self.db_maps)
 
     def fetchMore(self, _parent):
         for db_map in self.db_maps:

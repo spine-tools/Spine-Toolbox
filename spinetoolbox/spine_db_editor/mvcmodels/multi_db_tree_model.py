@@ -22,15 +22,16 @@ from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 class MultiDBTreeModel(MinimalTreeModel):
     """Base class for all tree models in Spine db editor."""
 
-    def __init__(self, parent, db_mngr, *db_maps):
+    def __init__(self, db_editor, db_mngr, *db_maps):
         """Init class.
 
         Args:
-            parent (SpineDBEditor)
+            db_editor (SpineDBEditor)
             db_mngr (SpineDBManager): A manager for the given db_maps
             db_maps (iter): DiffDatabaseMapping instances
         """
-        super().__init__(parent)
+        super().__init__(db_editor)
+        self.db_editor = db_editor
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._root_item = None

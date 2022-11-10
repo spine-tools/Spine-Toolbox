@@ -48,14 +48,15 @@ class MetadataTableModelBase(QAbstractTableModel):
     _ITEM_NAME_KEY = None
     _ITEM_VALUE_KEY = None
 
-    def __init__(self, db_mngr, db_maps, parent=None):
+    def __init__(self, db_mngr, db_maps, db_editor):
         """
         Args:
             db_mngr (SpineDBManager): database manager
             db_maps (Iterable of DatabaseMappingBase): database maps
-            parent (QObject): parent object
+            db_editor (SpineDBEditor): DB editor
         """
-        super().__init__(parent)
+        super().__init__(db_editor)
+        self._db_editor = db_editor
         self._db_mngr = db_mngr
         self._data = []
         self._db_maps = db_maps
@@ -109,7 +110,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         result = False
         for fetch_parent in self._fetch_parents():
             for db_map in self._db_maps:
-                result |= self._db_mngr.can_fetch_more(db_map, fetch_parent)
+                result |= self._db_mngr.can_fetch_more(db_map, fetch_parent, listener=self._db_editor)
         return result
 
     def fetchMore(self, _):

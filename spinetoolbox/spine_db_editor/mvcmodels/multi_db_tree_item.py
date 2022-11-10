@@ -243,7 +243,7 @@ class MultiDBTreeItem(FetchParent, TreeItem):
             return False
         result = False
         for db_map in self.db_maps:
-            result |= self.db_mngr.can_fetch_more(db_map, self)
+            result |= self.db_mngr.can_fetch_more(db_map, self, listener=self.model.db_editor)
         return result
 
     def fetch_more(self):

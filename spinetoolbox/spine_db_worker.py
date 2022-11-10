@@ -368,18 +368,25 @@ class SpineDBWorker(QObject):
         sq = self._db_map.ext_parameter_value_metadata_sq
         return self._db_map.query(sq).filter(sq.c.parameter_value_id == parameter_value_id).all()
 
+    def remove_parents(self, parents):
+        """Remove given parents. Removed parents don't get updated whenever items are added/updated/removed.
+
+        Args:
+            parents (Iterable)
+        """
+        for parent in parents:
+            self._parents_by_type.get(parent.fetch_item_type).remove(parent)
+
     def _call_in_parents(self, method_name, item_type, items):
+        # TODO: Probably we want to handle RunTimeError set changed size during iteration
+        # which may happen when removing parents above?
         to_remove = set()
         for parent in self._parents_by_type.get(item_type, ()):
             children = [x for x in items if parent.accepts_item(x, self._db_map)]
             if not children:
                 continue
             method = getattr(parent, method_name)
-            try:
-                method({self._db_map: children})
-            except Exception:
-                # FIXME of course, we need a better method here
-                to_remove.add(parent)
+            method({self._db_map: children})
         for parent in to_remove:
             self._parents_by_type.get(parent.fetch_item_type).remove(parent)
 
