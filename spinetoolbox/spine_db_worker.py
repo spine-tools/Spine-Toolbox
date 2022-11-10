@@ -372,6 +372,8 @@ class SpineDBWorker(QObject):
         to_remove = set()
         for parent in self._parents_by_type.get(item_type, ()):
             children = [x for x in items if parent.accepts_item(x, self._db_map)]
+            if not children:
+                continue
             method = getattr(parent, method_name)
             try:
                 method({self._db_map: children})

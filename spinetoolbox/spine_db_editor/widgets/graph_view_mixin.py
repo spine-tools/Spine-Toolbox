@@ -80,12 +80,16 @@ class GraphViewMixin:
             handle_items_added=self._handle_objects_added,
             handle_items_removed=self._handle_objects_removed,
             handle_items_updated=self._handle_objects_updated,
+            filter_query=self._filter_query,
+            accepts_item=self._accepts_item,
         )
         self._relationship_fetch_parent = FlexibleFetchParent(
             "relationship",
             handle_items_added=self._handle_relationships_added,
             handle_items_removed=self._handle_relationships_removed,
             handle_items_updated=self._handle_relationships_updated,
+            filter_query=self._filter_query,
+            accepts_item=self._accepts_item,
         )
 
     @Slot(bool)
@@ -118,6 +122,22 @@ class GraphViewMixin:
         for item in self.ui.graphicsView.items():
             if isinstance(item, EntityItem) and (item.first_db_map, item.entity_class_id) in updated_ids:
                 item.refresh_icon()
+
+    def _selected_class_ids(self, db_map):
+        for item_type in ("object_class", "relationship_class"):
+            for index in self.selected_tree_inds.get(item_type, {}):
+                item = index.model().item_from_index(index)
+                id_ = item.db_map_ids.get(db_map)
+                if id_:
+                    yield id_
+
+    def _filter_query(self, query, sq, db_map):
+        class_ids = set(self._selected_class_ids(db_map))
+        return query.filter(db_map.in_(sq.c.class_id, class_ids))
+
+    def _accepts_item(self, item, db_map):
+        class_ids = set(self._selected_class_ids(db_map))
+        return item["class_id"] in class_ids
 
     def _handle_objects_added(self, db_map_data):
         """Runs when objects are added to the db.
