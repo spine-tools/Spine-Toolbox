@@ -309,7 +309,9 @@ class TestSpineDBManager(SpineDBManager):
     def fetch_all(self, db_map):
         worker = self._get_worker(db_map)
         for item_type in db_map.ITEM_TYPES:
-            worker.fetch_more(FlexibleFetchParent(item_type))
+            parent = FlexibleFetchParent(item_type)
+            if worker.can_fetch_more(parent):
+                worker.fetch_more(parent)
             qApp.processEvents()
 
     def get_db_map(self, *args, **kwargs):

@@ -47,7 +47,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         for item_type in DatabaseMapping.ITEM_TYPES:
             fetcher = ItemTypeFetchParent(item_type)
             fetcher.handle_items_added = MagicMock()
-            self._db_mngr.fetch_more(self._db_map, fetcher)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_not_called()
 
     def _import_data(self, **data):
@@ -58,7 +59,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._import_data(alternatives=("alt",))
         fetcher = ItemTypeFetchParent("alternative")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call(
             {
                 self._db_map: [
@@ -85,7 +87,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("scenario")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "scenario", 1), item)
 
@@ -105,7 +108,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("scenario_alternative")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "scenario_alternative", 1), item)
 
@@ -122,7 +126,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("object_class")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertIsInstance(self._db_mngr.entity_class_icon(self._db_map, "object_class", 1), QIcon)
         self.assertEqual(self._db_mngr.get_item(self._db_map, "object_class", 1), item)
@@ -140,7 +145,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("object")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "object", 1), item)
 
@@ -157,7 +163,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("relationship_class")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "relationship_class", 2), item)
 
@@ -181,7 +188,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("relationship")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "relationship", 2), item)
 
@@ -202,7 +210,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("entity_group")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "entity_group", 1), item)
 
@@ -229,7 +238,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("parameter_definition")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_definition", 1), item)
 
@@ -268,7 +278,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("parameter_value")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value", 1), item)
 
@@ -277,13 +288,15 @@ class TestSpineDBFetcher(unittest.TestCase):
         item = {'id': 1, 'name': 'value_list', 'value_index_list': '0', 'value_id_list': '1', 'commit_id': 2}
         fetcher = ItemTypeFetchParent("parameter_value_list")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value_list", 1), item)
         item = {'id': 1, 'parameter_value_list_id': 1, 'index': 0, 'value': b'[2.3]', 'type': None, 'commit_id': 2}
         fetcher = ItemTypeFetchParent("list_value")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "list_value", 1), item)
 
@@ -307,7 +320,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("feature")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "feature", 1), item)
 
@@ -316,7 +330,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         item = {'id': 1, 'name': 'tool', 'description': None, 'commit_id': 2}
         fetcher = ItemTypeFetchParent("tool")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "tool", 1), item)
 
@@ -345,7 +360,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("tool_feature")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "tool_feature", 1), item)
 
@@ -377,7 +393,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         }
         fetcher = ItemTypeFetchParent("tool_feature_method")
         fetcher.handle_items_added = MagicMock()
-        self._db_mngr.fetch_more(self._db_map, fetcher)
+        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "tool_feature_method", 1), item)
 

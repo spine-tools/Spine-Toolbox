@@ -77,7 +77,8 @@ class MetadataTableModel(MetadataTableModelBase):
             self.beginRemoveRows(QModelIndex(), first, last)
             self._data = self._data[:first] + self._data[last + 1 :]
             self.endRemoveRows()
-        self.fetchMore(QModelIndex())
+        if self.canFetchMore(QModelIndex()):
+            self.fetchMore(QModelIndex())
 
     def _database_table_name(self):
         """See base class"""

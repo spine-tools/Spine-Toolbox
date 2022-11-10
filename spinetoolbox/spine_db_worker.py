@@ -220,7 +220,9 @@ class SpineDBWorker(QObject):
             parent (FetchParent): fetch parent
         """
         if parent not in self._parents_by_type.get(parent.fetch_item_type, set()):
-            raise RuntimeError(f"attempting to fetch parent {parent} before calling ``can_fetch_more()``")
+            raise RuntimeError(
+                f"attempting to fetch unregistered parent {parent} - did you forget to call ``can_fetch_more()``"
+            )
         self._reset_fetching_if_required(parent)
         parent.set_busy_fetching(True)
         self._executor.submit(self._fetch_more, parent)

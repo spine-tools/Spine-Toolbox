@@ -33,7 +33,6 @@ from spinedb_api import (
     TimePattern,
     Array,
 )
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.plotting import (
     PlottingError,
@@ -129,7 +128,8 @@ class TestPlotPivotTableSelection(TestBase):
         self.assertEqual(self._db_editor.current_input_type, self._db_editor._PARAMETER_VALUE)
         self._select_object_class_in_tree_view()
         self._db_editor.do_reload_pivot_table()
-        self._db_editor.pivot_table_model.fetchMore(QModelIndex())
+        if self._db_editor.pivot_table_model.canFetchMore(QModelIndex()):
+            self._db_editor.pivot_table_model.fetchMore(QModelIndex())
         model = self._db_editor.pivot_table_proxy
         object_count = max(len(x) for x in values.values())
         while model.rowCount() != 2 + object_count + 1:
