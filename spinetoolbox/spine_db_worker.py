@@ -128,7 +128,8 @@ class SpineDBWorker(QObject):
             parent.reset_fetching(self._current_fetch_token)
 
     def can_fetch_more(self, parent):
-        """Returns whether more data can be fetches for parent.
+        """Returns whether more data can be fetched for parent.
+        Also, registers the parent to notify it of DB modifications later on.
 
         Args:
             parent (FetchParent): fetch parent
@@ -218,6 +219,8 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): fetch parent
         """
+        if parent not in self._parents_by_type.get(parent.fetch_item_type, set()):
+            raise RuntimeError(f"attempting to fetch parent {parent} before calling ``can_fetch_more()``")
         self._reset_fetching_if_required(parent)
         parent.set_busy_fetching(True)
         self._executor.submit(self._fetch_more, parent)

@@ -1459,8 +1459,10 @@ class FetchParent:
 
     # pylint: disable=no-self-use
     def accepts_item(self, item, db_map):
-        """Returns whether or not a given item is a children of this parent.
-        Used when modifying data, to update the parents after the changes.
+        """Called by the associated SpineDBWorker whenever items are added/updated/removed.
+        Returns whether this parent should react to that modification.
+        The SpineDBWorker will call one or more of ``handle_items_added()``, ``handle_items_updated()``,
+        or ``handle_items_removed()`` with all the items that pass this test.
 
         Args:
             item (dict): The item
@@ -1512,12 +1514,33 @@ class FetchParent:
         self.fetch_status_change()
 
     def handle_items_added(self, db_map_data):
+        """
+        Called by SpineDBWorker when items are added to the DB.
+
+        Args:
+            db_map_data (dict): Mapping DiffDatabaseMapping instances to list of dict-items for which
+                ``accepts_item()`` returns True.
+        """
         raise NotImplementedError(self.fetch_item_type)
 
     def handle_items_removed(self, db_map_data):
+        """
+        Called by SpineDBWorker when items are removed from the DB.
+
+        Args:
+            db_map_data (dict): Mapping DiffDatabaseMapping instances to list of dict-items for which
+                ``accepts_item()`` returns True.
+        """
         raise NotImplementedError(self.fetch_item_type)
 
     def handle_items_updated(self, db_map_data):
+        """
+        Called by SpineDBWorker when items are updated in the DB.
+
+        Args:
+            db_map_data (dict): Mapping DiffDatabaseMapping instances to list of dict-items for which
+                ``accepts_item()`` returns True.
+        """
         raise NotImplementedError(self.fetch_item_type)
 
 
