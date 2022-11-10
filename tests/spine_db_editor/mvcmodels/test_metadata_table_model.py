@@ -41,7 +41,7 @@ class TestMetadataTableModel(unittest.TestCase):
         logger = mock.MagicMock()
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
         QApplication.processEvents()
-        self._model = MetadataTableModel(self._db_mngr, [self._db_map])
+        self._model = MetadataTableModel(self._db_mngr, [self._db_map], None)
         if self._model.canFetchMore(QModelIndex()):
             self._model.fetchMore(QModelIndex())
 
