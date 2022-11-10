@@ -218,7 +218,7 @@ class SpineDBManager(QObject):
             db_map (DiffDatabaseMapping)
             parent (FetchParent): The object that requests the fetching and that might want to react to further DB
                 modifications.
-            listener (object): The object that owns the parent.
+            listener (object): The object that owns the fetch parent.
                 Must have been registered for given db_map using ``register_listener()``.
                 Calling ``unregister_listener()`` at a later stage will also cause the fetch parent to stop
                 reacting to DB modifications.

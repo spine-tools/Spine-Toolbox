@@ -129,7 +129,7 @@ class SpineDBWorker(QObject):
 
     def can_fetch_more(self, parent):
         """Returns whether more data can be fetched for parent.
-        Also, registers the parent to notify it of DB modifications later on.
+        Also, registers the parent to notify it of any relevant DB modifications later on.
 
         Args:
             parent (FetchParent): fetch parent
