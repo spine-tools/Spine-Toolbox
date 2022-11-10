@@ -48,6 +48,7 @@ from spinetoolbox.plotting import (
     raise_if_incompatible_x,
     plot_pivot_table_selection,
     LEGEND_PLACEMENT_THRESHOLD,
+    add_row_to_exception,
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 
@@ -808,6 +809,20 @@ class TestRaiseIfIncompatibleX(unittest.TestCase):
             ),
         ]
         self.assertRaises(PlottingError, raise_if_incompatible_x, data_list)
+
+
+class TestAddRowToException(unittest.TestCase):
+    def test_exception_message_formatted_correctly(self):
+        row = 23
+
+        def display_row(r):
+            self.assertEqual(r, row)
+            return 99
+
+        with self.assertRaises(PlottingError) as context_manager:
+            with add_row_to_exception(row, display_row):
+                raise PlottingError("detailed error message")
+        self.assertEqual(str(context_manager.exception), "Failed to plot row 99: detailed error message")
 
 
 class MultiSignalWaiter(QObject):

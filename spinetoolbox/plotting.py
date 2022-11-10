@@ -55,19 +55,6 @@ _TIME_SERIES_PLOT_SETTINGS = {"where": "post"}
 class PlottingError(Exception):
     """An exception signalling failure in plotting."""
 
-    def __init__(self, message):
-        """
-        Args:
-            message (str): an error message
-        """
-        super().__init__()
-        self._message = message
-
-    @property
-    def message(self):
-        """str: the error message."""
-        return self._message
-
 
 @dataclass(frozen=True)
 class XYData:

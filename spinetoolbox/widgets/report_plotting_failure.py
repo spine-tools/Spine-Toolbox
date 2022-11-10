@@ -20,5 +20,10 @@ from PySide2.QtWidgets import QMessageBox
 
 
 def report_plotting_failure(error, parent_widget):
-    """Reports a PlottingError exception to the user."""
-    QMessageBox.warning(parent_widget, "Plotting Failed", error.message)
+    """Reports a PlottingError exception to the user.
+
+    Args:
+        error (PlottingError): exception to report
+        parent_widget (QWidget): parent widget
+    """
+    QMessageBox.warning(parent_widget, "Plotting Failed", str(error))
