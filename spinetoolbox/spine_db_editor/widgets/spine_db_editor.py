@@ -39,7 +39,6 @@ from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xls
 from spinedb_api.helpers import vacuum
 from .custom_menus import MainMenu
 from .commit_viewer import CommitViewer
-from .item_metadata_editor import ItemMetadataEditor
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
@@ -47,6 +46,7 @@ from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .url_toolbar import UrlToolBar
 from .metadata_editor import MetadataEditor
+from .item_metadata_editor import ItemMetadataEditor
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
@@ -352,6 +352,9 @@ class SpineDBEditorBase(QMainWindow):
         # Message signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.err_msg.showMessage)
+        self.db_mngr.items_added.connect(self._handle_items_added)
+        self.db_mngr.items_updated.connect(self._handle_items_updated)
+        self.db_mngr.items_removed.connect(self._handle_items_removed)
         # Menu actions
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
@@ -767,171 +770,25 @@ class SpineDBEditorBase(QMainWindow):
         """Update export enabled."""
         # TODO: check if db_mngr has any cache or something like that
 
-    def _receive_items_changed(self, action, item_type, db_map_data):
+    def _log_items_change(self, msg):
         """Enables or disables actions and informs the user about what just happened."""
-        count = sum(len(data) for data in db_map_data.values())
-        msg = f"Successfully {action} {count} {item_type} item(s)"
         self._changelog.append(msg)
         self._update_export_enabled()
 
-    def receive_scenarios_added(self, db_map_data):
-        self._receive_items_changed("added", "scenario", db_map_data)
+    def _handle_items_added(self, item_type, db_map_data):
+        count = sum(len(data) for data in db_map_data.values())
+        msg = f"Successfully added {count} {item_type} item(s)"
+        self._log_items_change(msg)
 
-    def receive_alternatives_added(self, db_map_data):
-        self._receive_items_changed("added", "alternative", db_map_data)
+    def _handle_items_updated(self, item_type, db_map_data):
+        count = sum(len(data) for data in db_map_data.values())
+        msg = f"Successfully updated {count} {item_type} item(s)"
+        self._log_items_change(msg)
 
-    def receive_object_classes_added(self, db_map_data):
-        self._receive_items_changed("added", "object_class", db_map_data)
-
-    def receive_objects_added(self, db_map_data):
-        self._receive_items_changed("added", "object", db_map_data)
-
-    def receive_relationship_classes_added(self, db_map_data):
-        self._receive_items_changed("added", "relationship_class", db_map_data)
-
-    def receive_relationships_added(self, db_map_data):
-        self._receive_items_changed("added", "relationship", db_map_data)
-
-    def receive_entity_groups_added(self, db_map_data):
-        self._receive_items_changed("added", "entity_group", db_map_data)
-
-    def receive_parameter_definitions_added(self, db_map_data):
-        self._receive_items_changed("added", "parameter_definition", db_map_data)
-
-    def receive_parameter_values_added(self, db_map_data):
-        self._receive_items_changed("added", "parameter_value", db_map_data)
-
-    def receive_parameter_value_lists_added(self, db_map_data):
-        self._receive_items_changed("added", "parameter_value_list", db_map_data)
-
-    def receive_list_values_added(self, db_map_data):
-        self._receive_items_changed("added", "list_value", db_map_data)
-
-    def receive_features_added(self, db_map_data):
-        self._receive_items_changed("added", "feature", db_map_data)
-
-    def receive_tools_added(self, db_map_data):
-        self._receive_items_changed("added", "tool", db_map_data)
-
-    def receive_tool_features_added(self, db_map_data):
-        self._receive_items_changed("added", "tool_feature", db_map_data)
-
-    def receive_tool_feature_methods_added(self, db_map_data):
-        self._receive_items_changed("added", "tool_feature_method", db_map_data)
-
-    def receive_metadata_added(self, db_map_data):
-        self._receive_items_changed("added", "metadata", db_map_data)
-
-    def receive_entity_metadata_added(self, db_map_data):
-        self._receive_items_changed("added", "entity_metadata", db_map_data)
-
-    def receive_parameter_value_metadata_added(self, db_map_data):
-        self._receive_items_changed("added", "parameter_value_metadata", db_map_data)
-
-    def receive_scenarios_updated(self, db_map_data):
-        self._receive_items_changed("updated", "scenario", db_map_data)
-
-    def receive_alternatives_updated(self, db_map_data):
-        self._receive_items_changed("updated", "alternative", db_map_data)
-
-    def receive_object_classes_updated(self, db_map_data):
-        self._receive_items_changed("updated", "object_class", db_map_data)
-
-    def receive_objects_updated(self, db_map_data):
-        self._receive_items_changed("updated", "object", db_map_data)
-
-    def receive_relationship_classes_updated(self, db_map_data):
-        self._receive_items_changed("updated", "relationship_class", db_map_data)
-
-    def receive_relationships_updated(self, db_map_data):
-        self._receive_items_changed("updated", "relationship", db_map_data)
-
-    def receive_parameter_definitions_updated(self, db_map_data):
-        self._receive_items_changed("updated", "parameter_definition", db_map_data)
-
-    def receive_parameter_values_updated(self, db_map_data):
-        self._receive_items_changed("updated", "parameter_value", db_map_data)
-
-    def receive_parameter_value_lists_updated(self, db_map_data):
-        self._receive_items_changed("updated", "parameter_value_list", db_map_data)
-
-    def receive_list_values_updated(self, db_map_data):
-        self._receive_items_changed("updated", "list_value", db_map_data)
-
-    def receive_features_updated(self, db_map_data):
-        self._receive_items_changed("updated", "feature", db_map_data)
-
-    def receive_tools_updated(self, db_map_data):
-        self._receive_items_changed("updated", "tool", db_map_data)
-
-    def receive_tool_features_updated(self, db_map_data):
-        self._receive_items_changed("updated", "tool_feature", db_map_data)
-
-    def receive_tool_feature_methods_updated(self, db_map_data):
-        self._receive_items_changed("updated", "tool_feature_method", db_map_data)
-
-    def receive_metadata_updated(self, db_map_data):
-        self._receive_items_changed("updated", "metadata", db_map_data)
-
-    def receive_entity_metadata_updated(self, db_map_data):
-        self._receive_items_changed("updated", "entity_metadata", db_map_data)
-
-    def receive_parameter_value_metadata_updated(self, db_map_data):
-        self._receive_items_changed("updated", "parameter_value_metadata", db_map_data)
-
-    def receive_scenarios_removed(self, db_map_data):
-        self._receive_items_changed("removed", "scenarios", db_map_data)
-
-    def receive_alternatives_removed(self, db_map_data):
-        self._receive_items_changed("removed", "alternatives", db_map_data)
-
-    def receive_object_classes_removed(self, db_map_data):
-        self._receive_items_changed("removed", "object_class", db_map_data)
-
-    def receive_objects_removed(self, db_map_data):
-        self._receive_items_changed("removed", "object", db_map_data)
-
-    def receive_relationship_classes_removed(self, db_map_data):
-        self._receive_items_changed("removed", "relationship_class", db_map_data)
-
-    def receive_relationships_removed(self, db_map_data):
-        self._receive_items_changed("removed", "relationship", db_map_data)
-
-    def receive_entity_groups_removed(self, db_map_data):
-        self._receive_items_changed("removed", "entity_group", db_map_data)
-
-    def receive_parameter_definitions_removed(self, db_map_data):
-        self._receive_items_changed("removed", "parameter_definition", db_map_data)
-
-    def receive_parameter_values_removed(self, db_map_data):
-        self._receive_items_changed("removed", "parameter_value", db_map_data)
-
-    def receive_parameter_value_lists_removed(self, db_map_data):
-        self._receive_items_changed("removed", "parameter_value_list", db_map_data)
-
-    def receive_list_values_removed(self, db_map_data):
-        self._receive_items_changed("removed", "list_value", db_map_data)
-
-    def receive_features_removed(self, db_map_data):
-        self._receive_items_changed("removed", "feature", db_map_data)
-
-    def receive_tools_removed(self, db_map_data):
-        self._receive_items_changed("removed", "tool", db_map_data)
-
-    def receive_tool_features_removed(self, db_map_data):
-        self._receive_items_changed("removed", "tool_feature", db_map_data)
-
-    def receive_tool_feature_methods_removed(self, db_map_data):
-        self._receive_items_changed("removed", "tool_feature_method", db_map_data)
-
-    def receive_metadata_removed(self, db_map_data):
-        self._receive_items_changed("removed", "metadata", db_map_data)
-
-    def receive_entity_metadata_removed(self, db_map_data):
-        self._receive_items_changed("removed", "entity_metadata", db_map_data)
-
-    def receive_parameter_value_metadata_removed(self, db_map_data):
-        self._receive_items_changed("removed", "parameter_value_metadata", db_map_data)
+    def _handle_items_removed(self, db_map_typed_data):
+        count = sum(len(data) for typed_data in db_map_typed_data.values() for data in typed_data.values())
+        msg = f"Successfully removed {count} item(s)"
+        self._log_items_change(msg)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -957,14 +814,14 @@ class SpineDBEditorBase(QMainWindow):
         Returns:
             bool: True if editor is ready to close, False otherwise
         """
-        needs_committing = self.db_mngr.dirty_and_without_editors(self, *self.db_maps)
+        dirty_db_maps = self.db_mngr.dirty_and_without_editors(self, *self.db_maps)
         commit_dirty = False
         commit_msg = ""
-        if needs_committing:
+        if dirty_db_maps:
             answer = self._prompt_to_commit_changes()
             if answer == QMessageBox.Cancel:
                 return False
-            db_names = ", ".join([db_map.codename for db_map in needs_committing])
+            db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
             if answer == QMessageBox.Save:
                 commit_dirty = True
                 commit_msg = self._get_commit_msg(db_names)
@@ -972,7 +829,9 @@ class SpineDBEditorBase(QMainWindow):
                     return False
         self._purge_change_notifiers()
         self._torn_down = True
-        self.db_mngr.unregister_listener(self, *self.db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg)
+        self.db_mngr.unregister_listener(
+            self, *self.db_maps, dirty_db_maps=dirty_db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg
+        )
         return True
 
     def _prompt_to_commit_changes(self):
@@ -1321,48 +1180,10 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 
-    def receive_metadata_added(self, db_map_data):
-        super().receive_metadata_added(db_map_data)
-        self._metadata_editor.add_metadata(db_map_data)
-
-    def receive_entity_metadata_added(self, db_map_data):
-        super().receive_entity_metadata_added(db_map_data)
-        self._item_metadata_editor.add_item_metadata(db_map_data)
-
-    def receive_parameter_value_metadata_added(self, db_map_data):
-        super().receive_parameter_value_metadata_added(db_map_data)
-        self._item_metadata_editor.add_item_metadata(db_map_data)
-
-    def receive_metadata_updated(self, db_map_data):
-        super().receive_metadata_updated(db_map_data)
-        self._metadata_editor.update_metadata(db_map_data)
-        self._item_metadata_editor.update_metadata(db_map_data)
-
-    def receive_entity_metadata_updated(self, db_map_data):
-        super().receive_entity_metadata_updated(db_map_data)
-        self._item_metadata_editor.update_item_metadata(db_map_data)
-
-    def receive_parameter_value_metadata_updated(self, db_map_data):
-        super().receive_parameter_value_metadata_updated(db_map_data)
-        self._item_metadata_editor.update_item_metadata(db_map_data)
-
-    def receive_metadata_removed(self, db_map_data):
-        super().receive_metadata_removed(db_map_data)
-        self._metadata_editor.remove_metadata(db_map_data)
-        self._item_metadata_editor.remove_metadata(db_map_data)
-
-    def receive_entity_metadata_removed(self, db_map_data):
-        super().receive_entity_metadata_removed(db_map_data)
-        self._item_metadata_editor.remove_item_metadata(db_map_data)
-
-    def receive_parameter_value_metadata_removed(self, db_map_data):
-        super().receive_parameter_value_metadata_removed(db_map_data)
-        self._item_metadata_editor.remove_item_metadata(db_map_data)
-
     def receive_session_rolled_back(self, db_maps):
         super().receive_session_rolled_back(db_maps)
-        self._metadata_editor.roll_back(db_maps)
-        self._item_metadata_editor.roll_back(db_maps)
+        self._metadata_editor.rollback(db_maps)
+        self._item_metadata_editor.rollback(db_maps)
 
     def tear_down(self):
         if not super().tear_down():

@@ -1259,9 +1259,15 @@ class SignalWaiter(QObject):
         self._triggered = True
         self.args = args
 
-    def wait(self):
-        """Wait for signal to be received."""
-        while not self._triggered:
+    def wait(self, condition=lambda args: True):
+        """Wait for signal to be received.
+
+        Args:
+            condition (function): receiving the self.args and returning whether to stop waiting.
+        """
+        while True:
+            if self._triggered and condition(self.args):
+                break
             QApplication.processEvents()
 
 
@@ -1451,6 +1457,22 @@ class FetchParent:
         """
         return query
 
+    # pylint: disable=no-self-use
+    def accepts_item(self, item, db_map):
+        """Called by the associated SpineDBWorker whenever items are added/updated/removed.
+        Returns whether this parent should react to that modification.
+        The SpineDBWorker will call one or more of ``handle_items_added()``, ``handle_items_updated()``,
+        or ``handle_items_removed()`` with all the items that pass this test.
+
+        Args:
+            item (dict): The item
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            bool
+        """
+        return True
+
     def fetch_status_change(self):
         """Called when fetch status changes."""
 
@@ -1491,6 +1513,36 @@ class FetchParent:
         self.query_initialized = FetchParent.Init.UNINITIALIZED
         self.fetch_status_change()
 
+    def handle_items_added(self, db_map_data):
+        """
+        Called by SpineDBWorker when items are added to the DB.
+
+        Args:
+            db_map_data (dict): Mapping DiffDatabaseMapping instances to list of dict-items for which
+                ``accepts_item()`` returns True.
+        """
+        raise NotImplementedError(self.fetch_item_type)
+
+    def handle_items_removed(self, db_map_data):
+        """
+        Called by SpineDBWorker when items are removed from the DB.
+
+        Args:
+            db_map_data (dict): Mapping DiffDatabaseMapping instances to list of dict-items for which
+                ``accepts_item()`` returns True.
+        """
+        raise NotImplementedError(self.fetch_item_type)
+
+    def handle_items_updated(self, db_map_data):
+        """
+        Called by SpineDBWorker when items are updated in the DB.
+
+        Args:
+            db_map_data (dict): Mapping DiffDatabaseMapping instances to list of dict-items for which
+                ``accepts_item()`` returns True.
+        """
+        raise NotImplementedError(self.fetch_item_type)
+
 
 class ItemTypeFetchParent(FetchParent):
     def __init__(self, fetch_item_type):
@@ -1500,6 +1552,58 @@ class ItemTypeFetchParent(FetchParent):
     @property
     def fetch_item_type(self):
         return self._fetch_item_type
+
+    def handle_items_added(self, db_map_data):
+        raise NotImplementedError(self.fetch_item_type)
+
+    def handle_items_removed(self, db_map_data):
+        raise NotImplementedError(self.fetch_item_type)
+
+    def handle_items_updated(self, db_map_data):
+        raise NotImplementedError(self.fetch_item_type)
+
+
+class FlexibleFetchParent(ItemTypeFetchParent):
+    def __init__(
+        self,
+        fetch_item_type,
+        handle_items_added=None,
+        handle_items_removed=None,
+        handle_items_updated=None,
+        filter_query=None,
+        accepts_item=None,
+    ):
+        super().__init__(fetch_item_type)
+        self._filter_query = filter_query
+        self._accepts_item = accepts_item
+        self._handle_items_added = handle_items_added
+        self._handle_items_removed = handle_items_removed
+        self._handle_items_updated = handle_items_updated
+
+    def handle_items_added(self, db_map_data):
+        if self._handle_items_added is None:
+            return
+        self._handle_items_added(db_map_data)
+
+    def handle_items_removed(self, db_map_data):
+        if self._handle_items_removed is None:
+            return
+        self._handle_items_removed(db_map_data)
+
+    def handle_items_updated(self, db_map_data):
+        if self._handle_items_updated is None:
+            return
+        self._handle_items_updated(db_map_data)
+
+    def filter_query(self, query, subquery, db_map):
+        if self._filter_query is None:
+            return super().filter_query(query, subquery, db_map)
+        return self._filter_query(query, subquery, db_map)
+
+    def accepts_item(self, item, db_map):
+        if self._accepts_item is None:
+            return super().accepts_item(item, db_map)
+        return self._accepts_item(item, db_map)
 
 
 def load_project_dict(project_config_dir, logger):

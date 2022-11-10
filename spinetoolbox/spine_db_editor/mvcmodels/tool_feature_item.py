@@ -16,13 +16,13 @@ Classes to represent tool and feature items in a tree.
 :date:    1.9.2020
 """
 from PySide2.QtCore import Qt
+from ...helpers import FlexibleFetchParent
 from .tree_item_utility import (
     GrayIfLastMixin,
     EditableMixin,
     EmptyChildRootItem,
     LeafItem,
     StandardTreeItem,
-    ListValueFetchParent,
 )
 
 _FEATURE_ICON = "\uf5bc"  # splotch
@@ -48,6 +48,9 @@ class FeatureRootItem(EmptyChildRootItem):
     def empty_child(self):
         return FeatureLeafItem()
 
+    def _make_child(self, id_):
+        return FeatureLeafItem(id_)
+
 
 class ToolRootItem(EmptyChildRootItem):
     """A tool root item."""
@@ -66,6 +69,9 @@ class ToolRootItem(EmptyChildRootItem):
 
     def empty_child(self):
         return ToolLeafItem()
+
+    def _make_child(self, id_):
+        return ToolLeafItem(id_)
 
 
 class FeatureLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
@@ -187,6 +193,15 @@ class ToolFeatureRootItem(EmptyChildRootItem):
     def empty_child(self):
         return ToolFeatureLeafItem()
 
+    def _make_child(self, id_):
+        return ToolFeatureLeafItem(id_)
+
+    def filter_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.tool_id == self.parent_item.id)
+
+    def accepts_item(self, item, db_map):
+        return item["tool_id"] == self.parent_item.id
+
 
 class ToolFeatureLeafItem(GrayIfLastMixin, LeafItem):
     """A tool feature leaf item."""
@@ -275,16 +290,11 @@ class ToolFeatureMethodRootItem(EmptyChildRootItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._list_value_fetch_parent = None
-
-    def _do_finalize(self):
-        super()._do_finalize()
-        parameter_value_list_id = self.parent_item.item_data["parameter_value_list_id"]
-        self._list_value_fetch_parent = ListValueFetchParent(parameter_value_list_id)
+        self._list_value_fetch_parent = FlexibleFetchParent("list_value", filter_query=self._filter_list_value_query)
 
     def _fetch_parents(self):
-        yield from super()._fetch_parents()
         yield self._list_value_fetch_parent
+        yield from super()._fetch_parents()
 
     @property
     def item_type(self):
@@ -300,6 +310,18 @@ class ToolFeatureMethodRootItem(EmptyChildRootItem):
 
     def empty_child(self):
         return ToolFeatureMethodLeafItem()
+
+    def _make_child(self, id_):
+        return ToolFeatureMethodLeafItem(id_)
+
+    def filter_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.tool_feature_id == self.parent_item.id)
+
+    def accepts_item(self, item, db_map):
+        return item["tool_feature_id"] == self.parent_item.id
+
+    def _filter_list_value_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.parameter_value_list_id == self.parent_item.item_data["parameter_value_list_id"])
 
 
 class ToolFeatureMethodLeafItem(GrayIfLastMixin, LeafItem):

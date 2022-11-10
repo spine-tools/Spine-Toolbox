@@ -18,7 +18,7 @@ Unit tests for the item metadata table model.
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import QModelIndex, Qt
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import (
     DatabaseMapping,
@@ -36,10 +36,9 @@ from spinedb_api import (
     import_relationship_parameters,
     import_relationships,
 )
-from spinetoolbox.helpers import separate_metadata_and_item_metadata, signal_waiter
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.mvcmodels.item_metadata_table_model import ItemMetadataTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
@@ -88,12 +87,14 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         db_map.connection.close()
         mock_settings = mock.Mock()
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
-        self._db_mngr = SpineDBManager(mock_settings, None)
+        self._db_mngr = TestSpineDBManager(mock_settings, None)
         logger = mock.MagicMock()
         self._db_map = self._db_mngr.get_db_map(self._url, logger, codename="database")
         QApplication.processEvents()
         self._db_mngr.get_db_map_cache(self._db_map, {"entity_metadata", "parameter_value_metadata"})
-        self._model = ItemMetadataTableModel(self._db_mngr, [self._db_map])
+        self._model = ItemMetadataTableModel(self._db_mngr, [self._db_map], None)
+        if self._model.canFetchMore(None):
+            self._model.fetchMore(None)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -103,8 +104,8 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._model.deleteLater()
         self._temp_dir.cleanup()
 
-    def test_model_is_initially_empty(self):
-        self.assertEqual(self._model.rowCount(), 1)
+    def test_model_is_initially_fetched(self):
+        self.assertEqual(self._model.rowCount(), 5)
         self.assertEqual(self._model.columnCount(), 3)
         self.assertEqual(self._model.headerData(Column.NAME, Qt.Horizontal), "name")
         self.assertEqual(self._model.headerData(Column.VALUE, Qt.Horizontal), "value")
@@ -151,18 +152,14 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
 
     def test_roll_back_after_item_metadata_update(self):
         self._model.set_entity_ids({self._db_map: 1})
-        with signal_waiter(self._db_mngr.entity_metadata_updated) as waiter:
-            index = self._model.index(0, Column.VALUE)
-            self.assertTrue(self._model.setData(index, "Magician's hat"))
-            waiter.wait()
+        index = self._model.index(0, Column.VALUE)
+        self.assertTrue(self._model.setData(index, "Magician's hat"))
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Magician's hat")
         self._assert_empty_last_row()
-        with signal_waiter(self._db_mngr.session_rolled_back) as waiter:
-            self._db_mngr.rollback_session(self._db_map)
-            waiter.wait()
-        self._model.roll_back([self._db_map])
+        self._db_mngr.rollback_session(self._db_map)
+        self._model.rollback([self._db_map])
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of objects")
@@ -170,15 +167,8 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
 
     def test_update_relationship_parameter_value_metadata(self):
         self._model.set_parameter_value_ids({self._db_map: 2})
-        change_listener = _ItemMetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.parameter_value_metadata_updated) as waiter:
-            index = self._model.index(0, Column.VALUE)
-            self.assertTrue(self._model.setData(index, "Magician's hat"))
-            waiter.wait()
-        self.assertEqual(
-            change_listener.updated_items, {self._db_map: [{"id": 4, "name": "source", "value": "Magician's hat"}]}
-        )
+        index = self._model.index(0, Column.VALUE)
+        self.assertTrue(self._model.setData(index, "Magician's hat"))
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Magician's hat")
@@ -186,15 +176,8 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
 
     def test_update_relationship_metadata(self):
         self._model.set_entity_ids({self._db_map: 2})
-        change_listener = _ItemMetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.entity_metadata_updated) as waiter:
-            index = self._model.index(0, Column.VALUE)
-            self.assertTrue(self._model.setData(index, "Magician's hat"))
-            waiter.wait()
-        self.assertEqual(
-            change_listener.updated_items, {self._db_map: [{"id": 2, "name": "source", "value": "Magician's hat"}]}
-        )
+        index = self._model.index(0, Column.VALUE)
+        self.assertTrue(self._model.setData(index, "Magician's hat"))
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Magician's hat")
@@ -202,32 +185,23 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
 
     def test_add_relationship_parameter_value_metadata(self):
         self._model.set_parameter_value_ids({self._db_map: 2})
-        change_listener = _ItemMetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
         index = self._model.index(1, Column.NAME)
         self.assertTrue(self._model.setData(index, "author"))
-        with signal_waiter(self._db_mngr.parameter_value_metadata_added) as waiter:
-            index = self._model.index(1, Column.VALUE)
-            self.assertTrue(self._model.setData(index, "Anonymous"))
-            waiter.wait()
-        self.assertEqual(
-            change_listener.added_items,
-            {
-                self._db_map: [
-                    {"id": 5, "name": "author", "value": "Anonymous", "commit_id": None},
-                    {
-                        "id": 3,
-                        "metadata_id": 5,
-                        "metadata_name": "author",
-                        "metadata_value": "Anonymous",
-                        "parameter_value_id": 2,
-                        "commit_id": None,
-                    },
-                ]
-            },
-        )
-        item_metadata_items, _ = separate_metadata_and_item_metadata(change_listener.added_items)
-        self._model.add_item_metadata(item_metadata_items)
+        index = self._model.index(1, Column.VALUE)
+        self.assertTrue(self._model.setData(index, "Anonymous"))
+        db_map_item_metadata = {
+            self._db_map: [
+                {
+                    "id": 3,
+                    "metadata_id": 5,
+                    "metadata_name": "author",
+                    "metadata_value": "Anonymous",
+                    "parameter_value_id": 2,
+                    "commit_id": None,
+                },
+            ]
+        }
+        self._db_mngr.add_parameter_value_metadata(db_map_item_metadata)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of relationship values")
@@ -237,32 +211,23 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
 
     def test_add_relationship_metadata(self):
         self._model.set_entity_ids({self._db_map: 2})
-        change_listener = _ItemMetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
         index = self._model.index(1, Column.NAME)
         self.assertTrue(self._model.setData(index, "author"))
-        with signal_waiter(self._db_mngr.entity_metadata_added) as waiter:
-            index = self._model.index(1, Column.VALUE)
-            self.assertTrue(self._model.setData(index, "Anonymous"))
-            waiter.wait()
-        self.assertEqual(
-            change_listener.added_items,
-            {
-                self._db_map: [
-                    {"id": 5, "name": "author", "value": "Anonymous", "commit_id": None},
-                    {
-                        "id": 3,
-                        "metadata_id": 5,
-                        "metadata_name": "author",
-                        "metadata_value": "Anonymous",
-                        "entity_id": 2,
-                        "commit_id": None,
-                    },
-                ]
-            },
-        )
-        item_metadata_items, _ = separate_metadata_and_item_metadata(change_listener.added_items)
-        self._model.add_item_metadata(item_metadata_items)
+        index = self._model.index(1, Column.VALUE)
+        self.assertTrue(self._model.setData(index, "Anonymous"))
+        db_map_item_metadata = {
+            self._db_map: [
+                {
+                    "id": 3,
+                    "metadata_id": 5,
+                    "metadata_name": "author",
+                    "metadata_value": "Anonymous",
+                    "entity_id": 2,
+                    "commit_id": None,
+                },
+            ]
+        }
+        self._db_mngr.add_entity_metadata(db_map_item_metadata)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of relationships")
@@ -272,81 +237,13 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
 
     def test_remove_object_metadata_row(self):
         self._model.set_entity_ids({self._db_map: 1})
-        change_listener = _ItemMetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.entity_metadata_removed) as waiter:
-            self._model.removeRows(0, 1)
-            waiter.wait()
-        self.assertEqual(
-            change_listener.removed_items,
-            {
-                self._db_map: [
-                    {
-                        "entity_id": 1,
-                        "id": 1,
-                        "metadata_id": 1,
-                        "metadata_name": "source",
-                        "commit_id": 2,
-                        "entity_name": "my_object",
-                        "metadata_value": "Fountain of objects",
-                    }
-                ]
-            },
-        )
-        self._model.remove_item_metadata(change_listener.removed_items)
+        self._model.removeRows(0, 1)
         self.assertEqual(self._model.rowCount(), 1)
 
     def test_remove_object_parameter_value_metadata_row(self):
         self._model.set_parameter_value_ids({self._db_map: 1})
-        change_listener = _ItemMetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.parameter_value_metadata_removed) as waiter:
-            self._model.removeRows(0, 1)
-            waiter.wait()
-        self.assertEqual(
-            change_listener.removed_items,
-            {
-                self._db_map: [
-                    {
-                        "parameter_value_id": 1,
-                        "id": 1,
-                        "metadata_id": 3,
-                        "commit_id": 2,
-                        "entity_name": "my_object",
-                        "metadata_name": "source",
-                        "metadata_value": "Fountain of object values",
-                        "parameter_name": "object_parameter",
-                        "alternative_name": "Base",
-                    }
-                ]
-            },
-        )
-        self._model.remove_item_metadata(change_listener.removed_items)
+        self._model.removeRows(0, 1)
         self.assertEqual(self._model.rowCount(), 1)
-
-
-class _ItemMetadataChangeListener:
-    added_items = None
-    updated_items = None
-    removed_items = None
-
-    def receive_entity_metadata_added(self, db_map_data):
-        self.added_items = db_map_data
-
-    def receive_parameter_value_metadata_added(self, db_map_data):
-        self.added_items = db_map_data
-
-    def receive_entity_metadata_updated(self, db_map_data):
-        self.updated_items = db_map_data
-
-    def receive_parameter_value_metadata_updated(self, db_map_data):
-        self.updated_items = db_map_data
-
-    def receive_entity_metadata_removed(self, db_map_data):
-        self.removed_items = db_map_data
-
-    def receive_parameter_value_metadata_removed(self, db_map_data):
-        self.removed_items = db_map_data
 
 
 if __name__ == '__main__':

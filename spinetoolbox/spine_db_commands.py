@@ -18,7 +18,6 @@ QUndoCommand subclasses for modifying the db.
 
 import time
 from PySide2.QtWidgets import QUndoCommand, QUndoStack
-from spinetoolbox.helpers import signal_waiter, separate_metadata_and_item_metadata
 
 
 class AgedUndoStack(QUndoStack):
@@ -60,7 +59,87 @@ class AgedUndoCommand(QUndoCommand):
         return self._age
 
 
+class SpineDBMacro(AgedUndoCommand):
+    """A command that just runs a series of SpineDBCommand's one after another, *waiting* for each one to finish
+    before starting the next."""
+
+    def __init__(self, cmd_iter, parent=None):
+        super().__init__(parent=parent)
+        self._cmd_iter = cmd_iter
+        self._reverse_cmd_iter = None
+        self._cmds = []
+        self._completed_once = False
+
+    def redo(self):
+        super().redo()
+        if self._completed_once:
+            self._cmd_iter = iter(self._cmds)
+        self._redo_next()
+
+    def _redo_next(self):
+        child = next(self._cmd_iter, None)
+        if child is None:
+            self._completed_once = True
+            return
+        if not self._completed_once:
+            self._cmds.append(child)
+        child.redo_complete_callback = lambda *args: self._redo_next()
+        child.redo()
+
+    def undo(self):
+        super().undo()
+        self._reverse_cmd_iter = reversed(self._cmds)
+        self._undo_next()
+
+    def _undo_next(self):
+        child = next(self._reverse_cmd_iter, None)
+        if child is None:
+            return
+        child.undo_complete_callback = lambda *args: self._undo_next()
+        child.undo()
+
+
 class SpineDBCommand(AgedUndoCommand):
+    """Base class for all commands that modify a Spine DB."""
+
+    def __init__(self, db_mngr, db_map, parent=None):
+        """
+        Args:
+            db_mngr (SpineDBManager): SpineDBManager instance
+            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            parent (QUndoCommand, optional): The parent command, used for defining macros.
+        """
+        super().__init__(parent=parent)
+        self.db_mngr = db_mngr
+        self.db_map = db_map
+        self._done_once = False
+        self.redo_complete_callback = lambda *args: None
+        self.undo_complete_callback = lambda *args: None
+
+    def handle_undo_complete(self, data):
+        """Calls the undo complete callback with the data from undo().
+        Subclasses need to pass this as the callback to the function that modifies the db in undo()."""
+        self.undo_complete_callback(data)
+
+    def handle_redo_complete(self, data):
+        """Calls the redo complete callback with the data from redo().
+        Subclasses need to pass this as the callback to the function that modifies the db in redo()."""
+        self.redo_complete_callback(data)
+        if self._done_once:
+            return
+        self._done_once = True
+        self._handle_first_redo_complete(data)
+
+    def _handle_first_redo_complete(self, _):
+        """Reimplement in subclasses to do stuff with the data from running redo() the first time."""
+        raise NotImplementedError()
+
+    def _undo_item(self, db_map, item_type, id_):
+        undo_item = self.db_mngr.get_item(db_map, item_type, id_, only_visible=True)
+        return db_map.cache_to_db(item_type, undo_item)
+
+
+class AddItemsCommand(SpineDBCommand):
     _add_command_name = {
         "object_class": "add object classes",
         "object": "add objects",
@@ -81,6 +160,58 @@ class SpineDBCommand(AgedUndoCommand):
         "entity_metadata": "add entity metadata",
         "parameter_value_metadata": "add parameter value metadata",
     }
+
+    def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
+        """
+        Args:
+            db_mngr (SpineDBManager): SpineDBManager instance
+            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            data (list): list of dict-items to add
+            item_type (str): the item type
+            parent (QUndoCommand, optional): The parent command, used for defining macros.
+        """
+        super().__init__(db_mngr, db_map, parent=parent)
+        if not data:
+            self.setObsolete(True)
+        self.redo_db_map_data = {db_map: data}
+        self.item_type = item_type
+        self.undo_db_map_typed_ids = None
+        self._readd = False
+        self._check = check
+        self.setText(self._add_command_name.get(item_type, "add item") + f" to '{db_map.codename}'")
+
+    def redo(self):
+        super().redo()
+        self.db_mngr.add_items(
+            self.redo_db_map_data,
+            self.item_type,
+            readd=self._readd,
+            check=self._check,
+            callback=self.handle_redo_complete,
+        )
+
+    def undo(self):
+        super().undo()
+        self.db_mngr.do_remove_items(self.undo_db_map_typed_ids, callback=self.handle_undo_complete)
+        self._readd = True
+
+    def _handle_first_redo_complete(self, db_map_data):
+        if self.db_map not in db_map_data:
+            self.setObsolete(True)
+            return
+        self.redo_db_map_data = {
+            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
+        }
+        self.undo_db_map_typed_ids = {
+            db_map: db_map.cascading_ids(
+                cache=self.db_mngr.get_db_map_cache(db_map, {self.item_type}, only_descendants=True),
+                **{self.item_type: {x["id"] for x in data}},
+            )
+            for db_map, data in db_map_data.items()
+        }
+
+
+class UpdateItemsCommand(SpineDBCommand):
     _update_command_name = {
         "object_class": "update object classes",
         "object": "update objects",
@@ -100,194 +231,7 @@ class SpineDBCommand(AgedUndoCommand):
         "entity_metadata": "update entity metadata",
         "parameter_value_metadata": "update parameter value metadata",
     }
-    _add_method_name = {
-        "object_class": "add_object_classes",
-        "object": "add_objects",
-        "relationship_class": "add_wide_relationship_classes",
-        "relationship": "add_wide_relationships",
-        "entity_group": "add_entity_groups",
-        "parameter_definition": "add_parameter_definitions",
-        "parameter_value": "add_parameter_values",
-        "parameter_value_list": "add_parameter_value_lists",
-        "list_value": "add_list_values",
-        "alternative": "add_alternatives",
-        "scenario": "add_scenarios",
-        "scenario_alternative": "add_scenario_alternatives",
-        "feature": "add_features",
-        "tool": "add_tools",
-        "tool_feature": "add_tool_features",
-        "tool_feature_method": "add_tool_feature_methods",
-        "metadata": "add_metadata",
-        "entity_metadata": "add_ext_entity_metadata",
-        "parameter_value_metadata": "add_ext_parameter_value_metadata",
-    }
-    _update_method_name = {
-        "object_class": "update_object_classes",
-        "object": "update_objects",
-        "relationship_class": "update_wide_relationship_classes",
-        "relationship": "update_wide_relationships",
-        "parameter_definition": "update_parameter_definitions",
-        "parameter_value": "update_parameter_values",
-        "parameter_value_list": "update_parameter_value_lists",
-        "list_value": "update_list_values",
-        "alternative": "update_alternatives",
-        "scenario": "update_scenarios",
-        "scenario_alternative": "update_scenario_alternatives",
-        "feature": "update_features",
-        "tool": "update_tools",
-        "tool_feature": "update_tool_features",
-        "tool_feature_method": "update_tool_feature_methods",
-        "metadata": "update_metadata",
-        "entity_metadata": "update_ext_entity_metadata",
-        "parameter_value_metadata": "update_ext_parameter_value_metadata",
-    }
-    _added_signal_name = {
-        "object_class": "object_classes_added",
-        "object": "objects_added",
-        "relationship_class": "relationship_classes_added",
-        "relationship": "relationships_added",
-        "entity_group": "entity_groups_added",
-        "parameter_definition": "parameter_definitions_added",
-        "parameter_value": "parameter_values_added",
-        "parameter_value_list": "parameter_value_lists_added",
-        "list_value": "list_values_added",
-        "alternative": "alternatives_added",
-        "scenario": "scenarios_added",
-        "scenario_alternative": "scenario_alternatives_added",
-        "feature": "features_added",
-        "tool": "tools_added",
-        "tool_feature": "tool_features_added",
-        "tool_feature_method": "tool_feature_methods_added",
-        "metadata": "metadata_added",
-        "entity_metadata": "entity_metadata_added",
-        "parameter_value_metadata": "parameter_value_metadata_added",
-    }
-    _updated_signal_name = {
-        "object_class": "object_classes_updated",
-        "object": "objects_updated",
-        "relationship_class": "relationship_classes_updated",
-        "relationship": "relationships_updated",
-        "parameter_definition": "parameter_definitions_updated",
-        "parameter_value": "parameter_values_updated",
-        "parameter_value_list": "parameter_value_lists_updated",
-        "list_value": "list_values_updated",
-        "alternative": "alternatives_updated",
-        "scenario": "scenarios_updated",
-        "scenario_alternative": "scenario_alternatives_updated",
-        "feature": "features_updated",
-        "tool": "tools_updated",
-        "tool_feature": "tool_features_updated",
-        "tool_feature_method": "tool_feature_methods_updated",
-        "metadata": "metadata_updated",
-        "entity_metadata": "entity_metadata_updated",
-        "parameter_value_metadata": "parameter_value_metadata_updated",
-    }
 
-    def __init__(self, db_mngr, db_map, parent=None):
-        """
-        Args:
-            db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
-            parent (QUndoCommand, optional): The parent command, used for defining macros.
-        """
-        super().__init__(parent=parent)
-        self.db_mngr = db_mngr
-        self.db_map = db_map
-        self.completed_signal = None
-        self._done_once = False
-
-    @staticmethod
-    def redomethod(func):
-        """Returns a new redo method that determines if the command was completed.
-        The command is completed if calling the function triggers the ``completed_signal``.
-        Once the command is completed, we don't listen to the signal anymore
-        and we also silence the affected Spine db editors.
-        If the signal is not received, then the command is declared obsolete.
-        """
-
-        def redo(self):
-            super().redo()
-            with signal_waiter(self.completed_signal) as waiter:
-                func(self)
-                waiter.wait()
-                if not self._done_once:
-                    self.receive_items_changed(*waiter.args)
-                    self._done_once = True
-
-        return redo
-
-    @staticmethod
-    def undomethod(func):
-        """Returns a new undo method that silences the affected Spine db editors."""
-
-        def undo(self):
-            super().undo()
-            func(self)
-
-        return undo
-
-    def receive_items_changed(self, _):
-        raise NotImplementedError()
-
-
-class AddItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
-        """
-        Args:
-            db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
-            data (list): list of dict-items to add
-            item_type (str): the item type
-            parent (QUndoCommand, optional): The parent command, used for defining macros.
-        """
-        super().__init__(db_mngr, db_map, parent=parent)
-        if not data:
-            self.setObsolete(True)
-        self.redo_db_map_data = {db_map: data}
-        self.item_type = item_type
-        self.method_name = self._add_method_name[item_type]
-        self.completed_signal_name = self._added_signal_name[item_type]
-        self.completed_signal = getattr(db_mngr, self.completed_signal_name)
-        self.undo_db_map_typed_ids = None
-        self._readd = False
-        self._check = check
-        self.setText(self._add_command_name.get(item_type, "add item") + f" to '{db_map.codename}'")
-
-    @SpineDBCommand.redomethod
-    def redo(self):
-        self.db_mngr.add_or_update_items(
-            self.redo_db_map_data,
-            self.method_name,
-            self.item_type,
-            self.completed_signal_name,
-            readd=self._readd,
-            check=self._check,
-        )
-
-    @SpineDBCommand.undomethod
-    def undo(self):
-        self.db_mngr.do_remove_items(self.undo_db_map_typed_ids)
-        self._readd = True
-
-    def receive_items_changed(self, db_map_data):
-        if self.db_map not in db_map_data:
-            self.setObsolete(True)
-            return
-        if self.item_type == "entity_metadata" or self.item_type == "parameter_value_metadata":
-            db_map_data, _ = separate_metadata_and_item_metadata(db_map_data)
-        self.redo_db_map_data = {
-            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
-        }
-        self.undo_db_map_typed_ids = {
-            db_map: db_map.cascading_ids(
-                cache=self.db_mngr.get_db_map_cache(db_map, {self.item_type}, only_descendants=True),
-                **{self.item_type: {x["id"] for x in data}},
-            )
-            for db_map, data in db_map_data.items()
-        }
-
-
-class UpdateItemsCommand(SpineDBCommand):
     def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
         """
         Args:
@@ -300,36 +244,32 @@ class UpdateItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not data:
             self.setObsolete(True)
-        self.item_type = item_type
-        undo_data = [self._undo_item(db_map, item["id"]) for item in data]
+        undo_data = [self._undo_item(db_map, item_type, item["id"]) for item in data]
         redo_data = [{**undo_item, **item} for undo_item, item in zip(undo_data, data)]
         if undo_data == redo_data:
             self.setObsolete(True)
         self.redo_db_map_data = {db_map: redo_data}
         self.undo_db_map_data = {db_map: undo_data}
-        self.method_name = self._update_method_name[item_type]
-        self.completed_signal_name = self._updated_signal_name[item_type]
-        self.completed_signal = getattr(db_mngr, self.completed_signal_name)
+        self.item_type = item_type
         self._check = check
         self.setText(self._update_command_name.get(item_type, "update item") + f" in '{db_map.codename}'")
 
-    def _undo_item(self, db_map, id_):
-        undo_item = self.db_mngr.get_item(db_map, self.item_type, id_)
-        return db_map.cache_to_db(self.item_type, undo_item)
-
-    @SpineDBCommand.redomethod
     def redo(self):
-        self.db_mngr.add_or_update_items(
-            self.redo_db_map_data, self.method_name, self.item_type, self.completed_signal_name, check=self._check
+        super().redo()
+        self.db_mngr.update_items(
+            self.redo_db_map_data,
+            self.item_type,
+            check=self._check,
+            callback=self.handle_redo_complete,
         )
 
-    @SpineDBCommand.undomethod
     def undo(self):
-        self.db_mngr.add_or_update_items(
-            self.undo_db_map_data, self.method_name, self.item_type, self.completed_signal_name, check=False
+        super().undo()
+        self.db_mngr.update_items(
+            self.undo_db_map_data, self.item_type, check=False, callback=self.handle_undo_complete
         )
 
-    def receive_items_changed(self, db_map_data):
+    def _handle_first_redo_complete(self, db_map_data):
         if not db_map_data.get(self.db_map):
             self.setObsolete(True)
             return
@@ -351,35 +291,43 @@ class RemoveItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not any(typed_data.values()):
             self.setObsolete(True)
-        typed_data = db_map.cascading_ids(
+        self.redo_typed_data = db_map.cascading_ids(
             cache=self.db_mngr.get_db_map_cache(db_map, set(typed_data), only_descendants=True), **typed_data
         )
-        self.redo_db_map_typed_data = {db_map: typed_data}
-        self.undo_typed_db_map_data = {}
+        self.undo_typed_data = {}
         self.setText(f"remove items from '{db_map.codename}'")
-        self.completed_signal = self.db_mngr.items_removed_from_cache
 
-    @SpineDBCommand.redomethod
     def redo(self):
-        self.db_mngr.do_remove_items(self.redo_db_map_typed_data)
+        super().redo()
+        self.db_mngr.do_remove_items({self.db_map: self.redo_typed_data}, callback=self.handle_redo_complete)
 
-    @SpineDBCommand.undomethod
     def undo(self):
-        for item_type in reversed(list(self.undo_typed_db_map_data.keys())):
-            db_map_data = self.undo_typed_db_map_data[item_type]
-            method_name = self._add_method_name[item_type]
-            emit_signal_name = self._added_signal_name[item_type]
-            with signal_waiter(getattr(self.db_mngr, emit_signal_name)) as waiter:
-                self.db_mngr.add_or_update_items(db_map_data, method_name, item_type, emit_signal_name, readd=True)
-                waiter.wait()
+        super().undo()
+        item_type_iter = iter(list(self.undo_typed_data))
+        self._undo_next(item_type_iter)
 
-    def receive_items_changed(self, typed_db_map_data):
-        if not any(db_map_data.get(self.db_map) for db_map_data in typed_db_map_data.values()):
-            self.setObsolete(True)
+    def _undo_next(self, item_type_iter):
+        item_type = next(item_type_iter, None)
+        if item_type is None:
+            self.handle_undo_complete(None)
             return
-        self.undo_typed_db_map_data = {
-            item_type: {
-                self.db_map: [self.db_map.cache_to_db(item_type, item) for item in db_map_data.get(self.db_map, [])]
-            }
-            for item_type, db_map_data in typed_db_map_data.items()
-        }
+        data = self.undo_typed_data[item_type]
+        self.db_mngr.add_items(
+            {self.db_map: data},
+            item_type,
+            readd=True,
+            callback=lambda _db_map_data: self._undo_next(item_type_iter),
+        )
+
+    def _handle_first_redo_complete(self, db_map_typed_items):
+        for item_type, items in db_map_typed_items.get(self.db_map, {}).items():
+            if item_type not in self.db_map.ITEM_TYPES:
+                continue
+            undo_items = []
+            for item in items:
+                undo_item = self.db_map.cache_to_db(item_type, item)
+                undo_items.append(undo_item)
+            if undo_items:
+                self.undo_typed_data[item_type] = undo_items
+        if not self.undo_typed_data:
+            self.setObsolete(True)

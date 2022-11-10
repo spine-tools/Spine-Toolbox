@@ -17,7 +17,7 @@ Base classes to represent items from multiple databases in a tree.
 """
 from operator import attrgetter
 
-from PySide2.QtCore import Qt, QTimer
+from PySide2.QtCore import Qt
 from ...helpers import rows_to_row_count_tuples, bisect_chunks, FetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
 
@@ -130,13 +130,11 @@ class MultiDBTreeItem(FetchParent, TreeItem):
                 removed_rows.append(row)
         for row, count in reversed(rows_to_row_count_tuples(removed_rows)):
             self.remove_children(row, count)
-        changed_rows = []
         for row, child in enumerate(self.children):
             child._deep_refresh_children()
-            changed_rows.append(row)
-        if changed_rows:
-            top_row = changed_rows[0]
-            bottom_row = changed_rows[-1]
+        if self.children:
+            top_row = 0
+            bottom_row = self.child_count() - 1
             top_index = self.children[top_row].index().sibling(top_row, 1)
             bottom_index = self.children[bottom_row].index().sibling(bottom_row, 1)
             self.model.dataChanged.emit(top_index, bottom_index)
@@ -243,7 +241,10 @@ class MultiDBTreeItem(FetchParent, TreeItem):
     def can_fetch_more(self):
         if self.fetch_item_type is None:
             return False
-        return any(self.db_mngr.can_fetch_more(db_map, self) for db_map in self.db_maps)
+        result = False
+        for db_map in self.db_maps:
+            result |= self.db_mngr.can_fetch_more(db_map, self, listener=self.model.db_editor)
+        return result
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
@@ -256,10 +257,17 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         if self.can_fetch_more():
             self.fetch_more()
 
-    def get_children_ids(self):
-        for db_map, ids in self._child_map.items():
-            for id_ in ids:
-                yield (db_map, id_)
+    def handle_items_added(self, db_map_data):
+        db_map_ids = {db_map: [x["id"] for x in data] for db_map, data in db_map_data.items()}
+        self.append_children_by_id(db_map_ids)
+
+    def handle_items_removed(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self.remove_children_by_id(db_map_ids)
+
+    def handle_items_updated(self, db_map_data):
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self.update_children_by_id(db_map_ids)
 
     def append_children_by_id(self, db_map_ids):
         """
@@ -332,7 +340,9 @@ class MultiDBTreeItem(FetchParent, TreeItem):
                 db_map = child.first_db_map
                 new_child = child.deep_take_db_map(db_map)
                 new_children.append(new_child)
-            if child.display_id in display_ids[:row] + display_ids[row + 1 :]:
+            if child.display_id in display_ids[:row] + display_ids[row + 1 :] or (
+                hasattr(child, "is_group") and child.is_group() and not child.has_members_item
+            ):
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
                 self.remove_children(row, 1)
@@ -341,7 +351,7 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         self._merge_children(new_children)
         top_left = self.model.index(0, 0, self.index())
         bottom_right = self.model.index(self.child_count() - 1, 0, self.index())
-        self.model.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+        self.model.dataChanged.emit(top_left, bottom_right)
 
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.

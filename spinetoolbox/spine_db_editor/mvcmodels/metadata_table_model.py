@@ -17,7 +17,7 @@ Contains :class:`MetadataTableModel` and associated functionality.
 """
 from enum import IntEnum, unique
 from PySide2.QtCore import QModelIndex, Qt
-from spinetoolbox.helpers import rows_to_row_count_tuples, FetchParent
+from spinetoolbox.helpers import rows_to_row_count_tuples, FlexibleFetchParent
 from .metadata_table_model_base import Column, FLAGS_FIXED, FLAGS_EDITABLE, MetadataTableModelBase
 
 
@@ -28,20 +28,26 @@ class ExtraColumn(IntEnum):
     ID = Column.max() + 1
 
 
-class MetadataTableModel(MetadataTableModelBase, FetchParent):
+class MetadataTableModel(MetadataTableModelBase):
     """Model for metadata."""
 
     _ITEM_NAME_KEY = "name"
     _ITEM_VALUE_KEY = "value"
 
-    def __init__(self, db_mngr, db_maps, parent=None):
+    def __init__(self, db_mngr, db_maps, db_editor):
         """
         Args:
             db_mngr (SpineDBManager): database manager
             db_maps (Iterable of DatabaseMappingBase): database maps
-            parent (QObject): parent object
+            db_editor (SpineDBEditor): DB editor
         """
-        super().__init__(db_mngr, db_maps, parent)
+        super().__init__(db_mngr, db_maps, db_editor)
+        self._metadata_fetch_parent = FlexibleFetchParent(
+            "metadata",
+            handle_items_added=self.add_metadata,
+            handle_items_removed=self.remove_metadata,
+            handle_items_updated=self.update_metadata,
+        )
 
     @staticmethod
     def _make_hidden_adder_columns():
@@ -56,7 +62,7 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
         """See base class"""
         self._db_mngr.update_metadata({db_map: [{"id": id_, "name": name, "value": value}]})
 
-    def roll_back(self, db_maps):
+    def rollback(self, db_maps):
         """Rolls back changes in database.
 
         Args:
@@ -71,7 +77,8 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
             self.beginRemoveRows(QModelIndex(), first, last)
             self._data = self._data[:first] + self._data[last + 1 :]
             self.endRemoveRows()
-        self.fetchMore(QModelIndex())
+        if self.canFetchMore(QModelIndex()):
+            self.fetchMore(QModelIndex())
 
     def _database_table_name(self):
         """See base class"""
@@ -88,16 +95,8 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
             return FLAGS_FIXED
         return FLAGS_EDITABLE
 
-    @property
-    def fetch_item_type(self):
-        return "metadata"
-
-    def canFetchMore(self, _):
-        return any(self._db_mngr.can_fetch_more(db_map, self) for db_map in self._db_maps)
-
-    def fetchMore(self, _):
-        for db_map in self._db_maps:
-            self._db_mngr.fetch_more(db_map, self)
+    def _fetch_parents(self):
+        yield self._metadata_fetch_parent
 
     @staticmethod
     def _ids_from_added_item(item):
@@ -127,7 +126,7 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
         Args:
             db_map_data (dict): updated metadata items keyed by database mapping
         """
-        for db_map, items in db_map_data.items():
+        for items in db_map_data.values():
             items_by_id = {item["id"]: item for item in items}
             updated_rows = []
             for row_index, row in enumerate(self._data):
@@ -154,25 +153,3 @@ class MetadataTableModel(MetadataTableModelBase, FetchParent):
             db_map_data (dict): removed items keyed by database mapping
         """
         self._remove_data(db_map_data, ExtraColumn.ID)
-
-    def add_and_update_metadata(self, db_map_data):
-        """Adds and updates metadata after changes in database.
-
-        Args:
-            db_map_data (dict): changed items keyed by database mapping
-        """
-        existing_ids = {}
-        for row in self._data:
-            id_ = row[ExtraColumn.ID]
-            if id_ is not None:
-                existing_ids.setdefault(row[Column.DB_MAP], set()).add(id_)
-        updated = {}
-        added = {}
-        for db_map, items in db_map_data.items():
-            for item in items:
-                if item["id"] in existing_ids[db_map]:
-                    updated.setdefault(db_map, []).append(item)
-                else:
-                    added.setdefault(db_map, []).append(item)
-        self.update_metadata(updated)
-        self.add_metadata(added)

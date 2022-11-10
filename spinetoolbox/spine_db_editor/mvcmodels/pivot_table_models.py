@@ -19,7 +19,7 @@ Provides pivot table models for the Tabular View.
 from PySide2.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, FlexibleFetchParent
 from .pivot_model import PivotModel
 from ...mvcmodels.shared import PARSED_ROLE
 from ...config import PIVOT_TABLE_HEADER_COLOR
@@ -28,35 +28,6 @@ from ..widgets.custom_delegates import (
     ParameterPivotTableDelegate,
     ScenarioAlternativeTableDelegate,
 )
-from ...helpers import ItemTypeFetchParent
-
-
-class _ParameterFetchParent(ItemTypeFetchParent):
-    def __init__(self, fetch_item_type, parent):
-        super().__init__(fetch_item_type)
-        self._parent = parent
-
-    def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.entity_class_id == self._parent.current_class_id.get(db_map))
-
-
-class _EntityFetchParent(ItemTypeFetchParent):
-    def __init__(self, fetch_item_type, parent):
-        super().__init__(fetch_item_type)
-        self._parent = parent
-
-    def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.class_id == self._parent.current_class_id.get(db_map))
-
-
-class _MemberObjectFetchParent(ItemTypeFetchParent):
-    def __init__(self, fetch_item_type, parent):
-        super().__init__(fetch_item_type)
-        self._parent = parent
-
-    def filter_query(self, query, subquery, db_map):
-        object_class_id_list = {x[db_map] for x in self._parent.current_object_class_id_list}
-        return query.filter(db_map.in_(subquery.c.class_id, object_class_id_list))
 
 
 class PivotTableModelBase(QAbstractTableModel):
@@ -67,14 +38,14 @@ class PivotTableModelBase(QAbstractTableModel):
 
     model_data_changed = Signal()
 
-    def __init__(self, parent):
+    def __init__(self, db_editor):
         """
         Args:
-            parent (SpineDBEditor)
+            db_editor (SpineDBEditor)
         """
-        super().__init__(parent)
-        self._parent = parent
-        self.db_mngr = parent.db_mngr
+        super().__init__(db_editor)
+        self._parent = db_editor
+        self.db_mngr = db_editor.db_mngr
         self.model = PivotModel()
         self.top_left_headers = {}
         self._plot_x_column = None
@@ -85,6 +56,10 @@ class PivotTableModelBase(QAbstractTableModel):
         self.modelAboutToBeReset.connect(self.reset_data_count)
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
+    def reset_fetch_parents(self):
+        for parent in self._fetch_parents():
+            parent.reset_fetching(None)
+
     def _fetch_parents(self):
         """Yields fetch parents for this model.
 
@@ -93,19 +68,17 @@ class PivotTableModelBase(QAbstractTableModel):
         """
         raise NotImplementedError()
 
-    def _can_fetch_more_parent(self, parent):
-        return any(self.db_mngr.can_fetch_more(db_map, parent) for db_map in self._parent.db_maps)
+    def canFetchMore(self, _):
+        result = False
+        for fetch_parent in self._fetch_parents():
+            for db_map in self._parent.db_maps:
+                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent, listener=self._parent)
+        return result
 
-    def canFetchMore(self, _parent):
-        return any(self._can_fetch_more_parent(parent) for parent in self._fetch_parents())
-
-    def _fetch_more_parent(self, parent):
-        for db_map in self._parent.db_maps:
-            self.db_mngr.fetch_more(db_map, parent)
-
-    def fetchMore(self, _parent):
+    def fetchMore(self, _):
         for parent in self._fetch_parents():
-            self._fetch_more_parent(parent)
+            for db_map in self._parent.db_maps:
+                self.db_mngr.fetch_more(db_map, parent)
 
     @property
     def item_type(self):
@@ -193,12 +166,6 @@ class PivotTableModelBase(QAbstractTableModel):
             self.endInsertColumns()
         self._emit_all_data_changed()
 
-    def _emit_all_data_changed(self):
-        top_left = self.index(self.headerRowCount(), self.headerColumnCount())
-        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
-        self.dataChanged.emit(top_left, bottom_right)
-        self.model_data_changed.emit()
-
     def remove_from_model(self, data):
         if not data:
             return
@@ -213,6 +180,13 @@ class PivotTableModelBase(QAbstractTableModel):
             self.beginRemoveColumns(QModelIndex(), first, first + column_count - 1)
             self._data_column_count -= column_count
             self.endRemoveColumns()
+        self._emit_all_data_changed()
+
+    def _emit_all_data_changed(self):
+        top_left = self.index(self.headerRowCount(), self.headerColumnCount())
+        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
+        self.dataChanged.emit(top_left, bottom_right)
+        self.model_data_changed.emit()
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         self.beginResetModel()
@@ -553,30 +527,6 @@ class PivotTableModelBase(QAbstractTableModel):
             names_by_top_left_id.setdefault(top_left_id, set()).add(value)
         return any(self.top_left_headers[id_].add_data(names) for id_, names in names_by_top_left_id.items())
 
-    def receive_data_added_or_removed(self, db_map_data, action):
-        {"add": self.add_to_model, "remove": self.remove_from_model}[action](db_map_data)
-
-    def receive_objects_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_relationships_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_alternatives_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_parameter_values_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_scenarios_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_scenarios_updated(self, db_map_data):  # pylint: disable=no-self-use
-        return False
-
 
 class TopLeftHeaderItem:
     """Base class for all 'top left pivot headers'.
@@ -777,11 +727,102 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._object_fetch_parent = _EntityFetchParent("object", self._parent)
-        self._relationship_fetch_parent = _EntityFetchParent("relationship", self._parent)
-        self._parameter_value_fetch_parent = _ParameterFetchParent("parameter_value", self._parent)
-        self._parameter_definition_fetch_parent = _ParameterFetchParent("parameter_definition", self._parent)
-        self._alternative_fetch_parent = ItemTypeFetchParent("alternative")
+        self._object_fetch_parent = FlexibleFetchParent(
+            "object",
+            handle_items_added=self._handle_entities_added,
+            handle_items_removed=self._handle_entities_removed,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+            filter_query=self._filter_entity_query,
+            accepts_item=self._accepts_entity_item,
+        )
+        self._relationship_fetch_parent = FlexibleFetchParent(
+            "relationship",
+            handle_items_added=self._handle_entities_added,
+            handle_items_removed=self._handle_entities_removed,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+            filter_query=self._filter_entity_query,
+            accepts_item=self._accepts_entity_item,
+        )
+        self._parameter_definition_fetch_parent = FlexibleFetchParent(
+            "parameter_definition",
+            handle_items_added=self._handle_parameter_definitions_added,
+            handle_items_removed=self._handle_parameter_definitions_removed,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+            filter_query=self._filter_parameter_query,
+            accepts_item=self._accepts_parameter_item,
+        )
+        self._parameter_value_fetch_parent = FlexibleFetchParent(
+            "parameter_value",
+            handle_items_added=self._handle_parameter_values_added,
+            handle_items_removed=self._handle_parameter_values_removed,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+            filter_query=self._filter_parameter_query,
+            accepts_item=self._accepts_parameter_item,
+        )
+        self._alternative_fetch_parent = FlexibleFetchParent(
+            "alternative",
+            handle_items_added=self._handle_alternatives_added,
+            handle_items_removed=self._handle_alternatives_removed,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+        )
+
+    def _filter_entity_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.class_id == self._parent.current_class_id.get(db_map))
+
+    def _accepts_entity_item(self, item, db_map):
+        return item["class_id"] == self._parent.current_class_id.get(db_map)
+
+    def _filter_parameter_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.entity_class_id == self._parent.current_class_id.get(db_map))
+
+    def _accepts_parameter_item(self, item, db_map):
+        return item["entity_class_id"] == self._parent.current_class_id.get(db_map)
+
+    def _handle_entities_added(self, db_map_data):
+        data = self._load_empty_parameter_value_data(db_map_entities=db_map_data)
+        self.add_to_model(data)
+
+    def _handle_entities_removed(self, db_map_data):
+        data = self._load_empty_parameter_value_data(db_map_entities=db_map_data)
+        self.remove_from_model(data)
+
+    def _handle_parameter_definitions_added(self, db_map_data):
+        db_map_parameter_ids = {
+            db_map: {(db_map, x["id"]) for x in parameters} for db_map, parameters in db_map_data.items()
+        }
+        data = self._load_empty_parameter_value_data(db_map_parameter_ids=db_map_parameter_ids)
+        self.add_to_model(data)
+
+    def _handle_parameter_definitions_removed(self, db_map_data):
+        db_map_parameter_ids = {
+            db_map: {(db_map, x["id"]) for x in parameters} for db_map, parameters in db_map_data.items()
+        }
+        data = self._load_empty_parameter_value_data(db_map_parameter_ids=db_map_parameter_ids)
+        self.remove_from_model(data)
+
+    def _handle_parameter_values_added(self, db_map_data):
+        data = self._load_full_parameter_value_data(db_map_parameter_values=db_map_data, action="add")
+        self.add_to_model(data)
+
+    def _handle_parameter_values_removed(self, db_map_data):
+        data = self._load_full_parameter_value_data(db_map_parameter_values=db_map_data, action="remove")
+        self.remove_from_model(data)
+
+    def _handle_alternatives_added(self, db_map_data):
+        db_map_alternative_ids = {db_map: [(db_map, a["id"]) for a in items] for db_map, items in db_map_data.items()}
+        data = self._load_empty_parameter_value_data(db_map_alternative_ids=db_map_alternative_ids)
+        self.add_to_model(data)
+
+    def _handle_alternatives_removed(self, db_map_data):
+        db_map_alternative_ids = {db_map: [(db_map, a["id"]) for a in items] for db_map, items in db_map_data.items()}
+        data = self._load_empty_parameter_value_data(db_map_alternative_ids=db_map_alternative_ids)
+        self.remove_from_model(data)
+
+    def _load_empty_parameter_value_data(self, *args, **kwargs):
+        return self._parent.load_empty_parameter_value_data(*args, **kwargs)
+
+    def _load_full_parameter_value_data(self, *args, **kwargs):
+        return self._parent.load_full_parameter_value_data(*args, **kwargs)
 
     @property
     def item_type(self):
@@ -1017,76 +1058,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             {db_map: [self._parameter_value_to_update(id_, header_ids, join_value_and_type(*value_type_tup))]}
         )
 
-    def receive_objects_added_or_removed(self, db_map_data, action):
-        if self._parent.current_class_type != "object_class":
-            return False
-        db_map_entities = {
-            db_map: [x for x in items if x["class_id"] == self._parent.current_class_id.get(db_map)]
-            for db_map, items in db_map_data.items()
-        }
-        if not any(db_map_entities.values()):
-            return False
-        data = self._load_empty_parameter_value_data(db_map_entities=db_map_entities)
-        self.receive_data_added_or_removed(data, action)
-        return True
-
-    def receive_relationships_added_or_removed(self, db_map_data, action):
-        if self._parent.current_class_type != "relationship_class":
-            return False
-        db_map_entities = {
-            db_map: [x for x in items if x["class_id"] == self._parent.current_class_id.get(db_map)]
-            for db_map, items in db_map_data.items()
-        }
-        if not any(db_map_entities.values()):
-            return False
-        data = self._load_empty_parameter_value_data(db_map_entities=db_map_entities)
-        self.receive_data_added_or_removed(data, action)
-        return True
-
-    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):
-        db_map_parameter_ids = {
-            db_map: {
-                (db_map, x["id"])
-                for x in parameters
-                if (x.get("object_class_id") or x.get("relationship_class_id"))
-                == self._parent.current_class_id.get(db_map)
-            }
-            for db_map, parameters in db_map_data.items()
-        }
-        if not any(db_map_parameter_ids.values()):
-            return False
-        data = self._load_empty_parameter_value_data(db_map_parameter_ids=db_map_parameter_ids)
-        self.receive_data_added_or_removed(data, action)
-        return True
-
-    def receive_alternatives_added_or_removed(self, db_map_data, action):
-        db_map_alternative_ids = {db_map: [(db_map, a["id"]) for a in items] for db_map, items in db_map_data.items()}
-        data = self._load_empty_parameter_value_data(db_map_alternative_ids=db_map_alternative_ids)
-        self.receive_data_added_or_removed(data, action)
-        return True
-
-    def receive_parameter_values_added_or_removed(self, db_map_data, action):
-        db_map_parameter_values = {
-            db_map: [
-                x
-                for x in parameter_values
-                if (x.get("object_class_id") or x.get("relationship_class_id"))
-                == self._parent.current_class_id.get(db_map)
-            ]
-            for db_map, parameter_values in db_map_data.items()
-        }
-        if not any(db_map_parameter_values.values()):
-            return False
-        data = self._load_full_parameter_value_data(db_map_parameter_values=db_map_parameter_values, action=action)
-        self.receive_data_added_or_removed(data, action)
-        return True
-
-    def _load_empty_parameter_value_data(self, *args, **kwargs):
-        return self._parent.load_empty_parameter_value_data(*args, **kwargs)
-
-    def _load_full_parameter_value_data(self, *args, **kwargs):
-        return self._parent.load_full_parameter_value_data(*args, **kwargs)
-
 
 class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
     """A model for the pivot table in parameter index expansion input type."""
@@ -1179,8 +1150,60 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._relationship_fetch_parent = _EntityFetchParent("relationship", self._parent)
-        self._object_fetch_parent = _MemberObjectFetchParent("object", self._parent)
+        self._relationship_fetch_parent = FlexibleFetchParent(
+            "relationship",
+            handle_items_added=self._handle_relationships_added,
+            handle_items_removed=self._handle_relationships_removed,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+            filter_query=self._filter_relationship_query,
+            accepts_item=self._accepts_relationship_item,
+        )
+        self._object_fetch_parent = FlexibleFetchParent(
+            "object",
+            handle_items_added=self._handle_objects_added,
+            handle_items_removed=self._handle_objects_removed,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+            filter_query=self._filter_object_query,
+            accepts_item=self._accepts_object_item,
+        )
+
+    def _filter_relationship_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.class_id == self._parent.current_class_id.get(db_map))
+
+    def _accepts_relationship_item(self, item, db_map):
+        return item["class_id"] == self._parent.current_class_id.get(db_map)
+
+    def _filter_object_query(self, query, subquery, db_map):
+        object_class_id_list = {x[db_map] for x in self._parent.current_object_class_id_list}
+        return query.filter(db_map.in_(subquery.c.class_id, object_class_id_list))
+
+    def _accepts_object_item(self, item, db_map):
+        object_class_id_list = {x[db_map] for x in self._parent.current_object_class_id_list}
+        return item["class_id"] in object_class_id_list
+
+    def _handle_relationships_added(self, db_map_data):
+        data = self._parent.load_full_relationship_data(db_map_relationships=db_map_data, action="add")
+        self.update_model(data)
+
+    def _handle_relationships_removed(self, db_map_data):
+        data = self._parent.load_full_relationship_data(db_map_relationships=db_map_data, action="remove")
+        self.update_model(data)
+
+    def _load_empty_relationship_data(self, db_map_data):
+        db_map_class_objects = dict()
+        for db_map, items in db_map_data.items():
+            class_objects = db_map_class_objects[db_map] = dict()
+            for item in items:
+                class_objects.setdefault(item["class_id"], []).append(item)
+        return self._parent.load_empty_relationship_data(db_map_class_objects=db_map_class_objects)
+
+    def _handle_objects_added(self, db_map_data):
+        data = self._load_empty_relationship_data(db_map_data)
+        self.add_to_model(data)
+
+    def _handle_objects_removed(self, db_map_data):
+        data = self._load_empty_relationship_data(db_map_data)
+        self.remove_from_model(data)
 
     @property
     def item_type(self):
@@ -1257,27 +1280,6 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             self.db_mngr.remove_items(to_remove)
         return True
 
-    def receive_objects_added_or_removed(self, db_map_data, action):
-        db_map_class_objects = dict()
-        for db_map, items in db_map_data.items():
-            class_objects = db_map_class_objects[db_map] = dict()
-            for item in items:
-                class_objects.setdefault(item["class_id"], []).append(item)
-        data = self._parent.load_empty_relationship_data(db_map_class_objects=db_map_class_objects)
-        self.receive_data_added_or_removed(data, action)
-        return True
-
-    def receive_relationships_added_or_removed(self, db_map_data, action):
-        db_map_relationships = {
-            db_map: [x for x in items if x["class_id"] == self._parent.current_class_id.get(db_map)]
-            for db_map, items in db_map_data.items()
-        }
-        if not any(db_map_relationships.values()):
-            return False
-        data = self._parent.load_full_relationship_data(db_map_relationships=db_map_relationships, action=action)
-        self.update_model(data)
-        return True
-
 
 class ScenarioAlternativePivotTableModel(PivotTableModelBase):
     """A model for the pivot table in scenario alternative input type."""
@@ -1288,9 +1290,44 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._scenario_fetch_parent = ItemTypeFetchParent("scenario")
-        self._alternative_fetch_parent = ItemTypeFetchParent("alternative")
-        self._scenario_alternative_fetch_parent = ItemTypeFetchParent("scenario_alternative")
+        self._scenario_fetch_parent = FlexibleFetchParent(
+            "scenario",
+            handle_items_added=self._handle_scenarios_added,
+            handle_items_removed=self._handle_scenarios_removed,
+            handle_items_updated=self._handle_scenarios_updated,
+        )
+        self._alternative_fetch_parent = FlexibleFetchParent(
+            "alternative",
+            handle_items_added=self._handle_alternatives_added,
+            handle_items_removed=self._handle_alternatives_removed,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+        )
+        self._scenario_alternative_fetch_parent = FlexibleFetchParent(
+            "scenario_alternative",
+            handle_items_added=lambda _: self._parent.refresh_views(),
+            handle_items_removed=lambda _: self._parent.refresh_views(),
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+        )
+
+    def _handle_scenarios_added(self, db_map_data):
+        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
+        self.add_to_model(data)
+
+    def _handle_scenarios_removed(self, db_map_data):
+        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
+        self.remove_from_model(data)
+
+    def _handle_alternatives_added(self, db_map_data):
+        data = self._parent.load_scenario_alternative_data(db_map_alternatives=db_map_data)
+        self.add_to_model(data)
+
+    def _handle_alternatives_removed(self, db_map_data):
+        data = self._parent.load_scenario_alternative_data(db_map_alternatives=db_map_data)
+        self.remove_from_model(data)
+
+    def _handle_scenarios_updated(self, db_map_data):
+        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
+        self.update_model(data)
 
     @property
     def item_type(self):
@@ -1368,21 +1405,6 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             db_map_items.setdefault(db_map, []).append(db_item)
         self.db_mngr.set_scenario_alternatives(db_map_items)
         return True
-
-    def receive_scenarios_updated(self, db_map_data):
-        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
-        self.update_model(data)
-        return True
-
-    def receive_alternatives_added_or_removed(self, db_map_data, action):
-        data = self._parent.load_scenario_alternative_data(db_map_alternatives=db_map_data)
-        self.receive_data_added_or_removed(data, action)
-        return True
-
-    def receive_scenarios_added_or_removed(self, db_map_data, action):
-        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
-        self.receive_data_added_or_removed(data, action)
-        return False
 
 
 class PivotTableSortFilterProxy(QSortFilterProxyModel):

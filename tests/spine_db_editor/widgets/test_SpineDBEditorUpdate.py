@@ -29,7 +29,7 @@ class TestSpineDBEditorUpdateMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
         self.fish_class = self._object_class(1, "octopus", "An octopus.", 1, None)
-        self.db_mngr.object_classes_updated.emit({self.mock_db_map: [self.fish_class]})
+        self.db_mngr.update_object_classes({self.mock_db_map: [self.fish_class]})
         root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(1)
         self.assertEqual(fish_item.item_type, "object_class")
@@ -44,7 +44,7 @@ class TestSpineDBEditorUpdateMixin:
         self.nemo_object = self._object(
             1, self.fish_class["id"], self.fish_class["name"], 'dory', 'The one that forgets.'
         )
-        self.db_mngr.objects_updated.emit({self.mock_db_map: [self.nemo_object]})
+        self.db_mngr.update_objects({self.mock_db_map: [self.nemo_object]})
         root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(1)
         nemo_item = fish_item.child(0)
@@ -58,10 +58,8 @@ class TestSpineDBEditorUpdateMixin:
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.fetch_object_tree_model()
-        self.fish_dog_class = self._relationship_class(
-            3, "octopus__dog", str(self.fish_class["id"]) + "," + str(self.dog_class["id"]), "octopus,dog", None
-        )
-        self.db_mngr.relationship_classes_updated.emit({self.mock_db_map: [self.fish_dog_class]})
+        self.fish_dog_class = {"id": 3, "name": "octopus__dog"}
+        self.db_mngr.update_relationship_classes({self.mock_db_map: [self.fish_dog_class]})
         root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
@@ -73,12 +71,14 @@ class TestSpineDBEditorUpdateMixin:
         """Test that object parameter definitions are updated in the model."""
         model = self.spine_db_editor.object_parameter_definition_model
         model.init_model()
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.fetch_object_tree_model()
         self.water_parameter = self._object_parameter_definition(1, self.fish_class["id"], "fish", "fire")
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_definitions_updated.emit({self.mock_db_map: [self.water_parameter]})
+            self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.water_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -91,19 +91,23 @@ class TestSpineDBEditorUpdateMixin:
         """Test that object parameter definitions are updated in the model."""
         model = self.spine_db_editor.relationship_parameter_definition_model
         model.init_model()
+        if model.canFetchMore(None):
+            model.fetchMore(None)
+        self.put_mock_object_classes_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
+        self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
         self.fetch_object_tree_model()
         self.relative_speed_parameter = self._relationship_parameter_definition(
             3,
             self.fish_dog_class["id"],
             "fish__dog",
-            str(self.fish_class["id"]) + "," + str(self.dog_class["id"]),
-            "fish,dog",
+            [self.fish_class["id"], self.dog_class["id"]],
+            ["fish", "dog"],
             "each_others_opinion",
         )
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_definitions_updated.emit({self.mock_db_map: [self.relative_speed_parameter]})
+            self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.relative_speed_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -116,7 +120,11 @@ class TestSpineDBEditorUpdateMixin:
         """Test that object parameter values are updated in the model."""
         model = self.spine_db_editor.object_parameter_value_model
         model.init_model()
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_objects_in_db_mngr()
+        self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
         self.fetch_object_tree_model()
         self.nemo_water = self._object_parameter_value(
@@ -127,12 +135,12 @@ class TestSpineDBEditorUpdateMixin:
             "nemo",
             self.water_parameter["id"],
             "water",
-            "Base",
+            1,
             b'"pepper"',
             None,
         )
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_values_updated.emit({self.mock_db_map: [self.nemo_water]})
+            self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_water]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -149,9 +157,9 @@ class TestSpineDBEditorUpdateMixin:
         """Test that relationship parameter values are updated in the model."""
         model = self.spine_db_editor.relationship_parameter_value_model
         model.init_model()
-        self.put_mock_relationship_classes_in_db_mngr()
-        self.put_mock_relationship_parameter_values_in_db_mngr()
-        self.fetch_object_tree_model()
+        if model.canFetchMore(None):
+            model.fetchMore(None)
+        self.put_mock_dataset_in_db_mngr()
         self.nemo_pluto_relative_speed = self._relationship_parameter_value(
             4,
             self.fish_dog_class["id"],
@@ -163,12 +171,12 @@ class TestSpineDBEditorUpdateMixin:
             "nemo,pluto",
             self.relative_speed_parameter["id"],
             "relative_speed",
-            "Base",
+            1,
             b"100",
             None,
         )
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.parameter_values_updated.emit({self.mock_db_map: [self.nemo_pluto_relative_speed]})
+            self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_pluto_relative_speed]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):

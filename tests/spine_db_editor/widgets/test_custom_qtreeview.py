@@ -44,7 +44,6 @@ from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
     EditRelationshipClassesDialog,
     EditRelationshipsDialog,
 )
-from spinetoolbox.helpers import signal_waiter
 from tests.spine_db_editor.widgets.helpers import (
     EditorDelegateMocking,
     add_entity_tree_item,
@@ -64,9 +63,7 @@ class _ParameterValueListEdits:
         root_index = model.index(0, 0)
         empty_name_row = model.rowCount(root_index) - 1
         empty_name_index = model.index(empty_name_row, 0, root_index)
-        with signal_waiter(db_mngr.parameter_value_lists_added) as waiter:
-            self.view_editor.write_to_index(self._view, empty_name_index, list_name)
-            waiter.wait()
+        self.view_editor.write_to_index(self._view, empty_name_index, list_name)
         new_name_row = model.rowCount(root_index) - 2
         return model.index(new_name_row, 0, root_index)
 
@@ -78,9 +75,7 @@ class _ParameterValueListEdits:
             if list_index.data() == list_name:
                 last_row = model.rowCount(list_index) - 1
                 empty_value_index = model.index(last_row, 0, list_index)
-                with signal_waiter(db_mngr.list_values_added) as waiter:
-                    self.view_editor.write_to_index(self._view, empty_value_index, value)
-                    waiter.wait()
+                self.view_editor.write_to_index(self._view, empty_value_index, value)
                 return model.index(last_row, 0, list_index)
         raise RuntimeError(f"{list_name} not found.")
 
@@ -277,9 +272,7 @@ class TestObjectTreeViewWithExistingData(TestBase):
         root_index = model.index(0, 0)
         class_index = model.index(0, 0, root_index)
         view.setCurrentIndex(class_index)
-        with signal_waiter(self._db_mngr.object_classes_updated) as waiter:
-            self._rename_object_class("renamed_class")
-            waiter.wait()
+        self._rename_object_class("renamed_class")
         class_index = model.index(0, 0, root_index)
         self.assertEqual(class_index.data(), "renamed_class")
         self._commit_changes_to_database("Rename object class.")
@@ -300,9 +293,7 @@ class TestObjectTreeViewWithExistingData(TestBase):
             QApplication.processEvents()
         object_index = model.index(0, 0, class_index)
         view.setCurrentIndex(object_index)
-        with signal_waiter(self._db_mngr.objects_updated) as waiter:
-            self._rename_object("renamed_object")
-            waiter.wait()
+        self._rename_object("renamed_object")
         object_index = model.index(0, 0, class_index)
         self.assertEqual(object_index.data(), "renamed_object")
         self._commit_changes_to_database("Rename object.")
@@ -316,9 +307,7 @@ class TestObjectTreeViewWithExistingData(TestBase):
         root_index = model.index(0, 0)
         class_index = model.index(0, 0, root_index)
         view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.ClearAndSelect)
-        with signal_waiter(self._db_mngr.object_classes_removed) as waiter:
-            _remove_object_class(view)
-            waiter.wait()
+        _remove_object_class(view)
         self.assertEqual(model.rowCount(root_index), 0)
         self._commit_changes_to_database("Remove object class.")
         data = self._db_mngr.query(self._db_map, "object_class_sq")
@@ -337,9 +326,7 @@ class TestObjectTreeViewWithExistingData(TestBase):
             QApplication.processEvents()
         object_index = model.index(0, 0, class_index)
         view.selectionModel().setCurrentIndex(object_index, QItemSelectionModel.ClearAndSelect)
-        with signal_waiter(self._db_mngr.objects_removed) as waiter:
-            _remove_object(view)
-            waiter.wait()
+        _remove_object(view)
         self.assertEqual(model.rowCount(class_index), 1)
         object_index = model.index(0, 0, class_index)
         self.assertEqual(object_index.data(), "object_2")
@@ -509,9 +496,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
         view.setCurrentIndex(class_index)
-        with signal_waiter(self._db_mngr.relationship_classes_updated) as waiter:
-            self._rename_relationship_class("renamed_class")
-            waiter.wait()
+        self._rename_relationship_class("renamed_class")
         class_index = model.index(0, 0, root_index)
         self.assertEqual(class_index.data(), "renamed_class")
         self._commit_changes_to_database("Rename relationship class.")
@@ -532,9 +517,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
             QApplication.processEvents()
         relationship_index = model.index(0, 0, class_index)
         view.setCurrentIndex(relationship_index)
-        with signal_waiter(self._db_mngr.relationships_updated) as waiter:
-            self._rename_relationship("renamed_relationship")
-            waiter.wait()
+        self._rename_relationship("renamed_relationship")
         self._commit_changes_to_database("Rename relationship.")
         data = self._db_mngr.query(self._db_map, "wide_relationship_sq")
         self.assertEqual(len(data), 2)
@@ -554,9 +537,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
             QApplication.processEvents()
         relationship_index = model.index(0, 0, class_index)
         view.setCurrentIndex(relationship_index)
-        with signal_waiter(self._db_mngr.relationships_updated) as waiter:
-            _edit_entity_tree_item({0: "object_12"}, view, "Edit...", EditRelationshipsDialog)
-            waiter.wait()
+        _edit_entity_tree_item({0: "object_12"}, view, "Edit...", EditRelationshipsDialog)
         self.assertEqual(relationship_index.data(), "object_12 ǀ object_21")
         self._commit_changes_to_database("Change relationship's objects.")
         data = self._db_mngr.query(self._db_map, "wide_relationship_sq")
@@ -573,9 +554,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
         view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.ClearAndSelect)
-        with signal_waiter(self._db_mngr.relationship_classes_removed) as waiter:
-            self._remove_relationship_class()
-            waiter.wait()
+        self._remove_relationship_class()
         self.assertEqual(model.rowCount(root_index), 0)
         self._commit_changes_to_database("Remove relationship class.")
         data = self._db_mngr.query(self._db_map, "wide_relationship_class_sq")
@@ -594,9 +573,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
             QApplication.processEvents()
         relationship_index = model.index(0, 0, class_index)
         view.selectionModel().setCurrentIndex(relationship_index, QItemSelectionModel.ClearAndSelect)
-        with signal_waiter(self._db_mngr.relationships_removed) as waiter:
-            self._remove_relationship()
-            waiter.wait()
+        self._remove_relationship()
         self.assertEqual(model.rowCount(class_index), 1)
         self._commit_changes_to_database("Remove relationship.")
         data = self._db_mngr.query(self._db_map, "wide_relationship_sq")
@@ -721,15 +698,11 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
         view = self._db_editor.ui.treeView_parameter_value_list
         model = view.model()
         value_index1 = model.index(0, 0, list_name_index)
-        with signal_waiter(self._db_mngr.list_values_added) as waiter:
-            self._edits.view_editor.write_to_index(view, value_index1, "value_1")
-            waiter.wait()
+        self._edits.view_editor.write_to_index(view, value_index1, "value_1")
         self.assertEqual(model.index(0, 0, list_name_index).data(), "value_1")
         self.assertEqual(model.rowCount(list_name_index), 2)
         value_index2 = model.index(1, 0, list_name_index)
-        with signal_waiter(self._db_mngr.list_values_added) as waiter:
-            self._edits.view_editor.write_to_index(view, value_index2, "value_2")
-            waiter.wait()
+        self._edits.view_editor.write_to_index(view, value_index2, "value_2")
         while model.rowCount(list_name_index) != 3:
             QApplication.processEvents()
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
@@ -789,9 +762,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         list_name_index = model.index(0, 0, root_index)
         value_index = model.index(0, 0, list_name_index)
         view.selectionModel().setCurrentIndex(value_index, QItemSelectionModel.ClearAndSelect)
-        with signal_waiter(self._db_mngr.list_values_removed) as waiter:
-            view.remove_selected()
-            waiter.wait()
+        view.remove_selected()
         root_index = model.index(0, 0)
         self.assertEqual(model.rowCount(root_index), 2)
         list_name_index = model.index(0, 0, root_index)
@@ -815,9 +786,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
         view.selectionModel().setCurrentIndex(list_name_index, QItemSelectionModel.ClearAndSelect)
-        with signal_waiter(self._db_mngr.parameter_value_lists_removed) as waiter:
-            view.remove_selected()
-            waiter.wait()
+        view.remove_selected()
         root_index = model.index(0, 0)
         self.assertEqual(model.rowCount(root_index), 1)
         list_name_index = model.index(0, 0, root_index)
@@ -833,9 +802,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
         value_index1 = model.index(0, 0, list_name_index)
-        with signal_waiter(self._db_mngr.list_values_updated) as waiter:
-            self._edits.view_editor.write_to_index(view, value_index1, "new_value")
-            waiter.wait()
+        self._edits.view_editor.write_to_index(view, value_index1, "new_value")
         self.assertEqual(model.index(0, 0, list_name_index).data(), "new_value")
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
         self._commit_changes_to_database("Update parameter value list value.")
@@ -852,9 +819,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         model = view.model()
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
-        with signal_waiter(self._db_mngr.parameter_value_lists_updated) as waiter:
-            self._edits.view_editor.write_to_index(view, list_name_index, "new_list_name")
-            waiter.wait()
+        self._edits.view_editor.write_to_index(view, list_name_index, "new_list_name")
         self.assertEqual(model.rowCount(root_index), 2)
         list_name_index = model.index(0, 0, root_index)
         self.assertEqual(list_name_index.data(), "new_list_name")
@@ -948,6 +913,9 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         self._add_tool_feature()
         view = self._db_editor.ui.treeView_tool_feature
         model = view.model()
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
         db_index = model.index(0, 0)
         tool_root_index = model.index(1, 0, db_index)
         tool_index = model.index(0, 0, tool_root_index)
@@ -972,6 +940,9 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         self._add_tool_feature()
         view = self._db_editor.ui.treeView_tool_feature
         model = view.model()
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
         db_index = model.index(0, 0)
         tool_root_index = model.index(1, 0, db_index)
         tool_index = model.index(0, 0, tool_root_index)
@@ -980,9 +951,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         method_root_index = model.index(1, 0, tool_feature_index)
         method_index = model.index(0, 0, method_root_index)
         view_edit = EditorDelegateMocking()
-        with signal_waiter(self._db_mngr.tool_feature_methods_added) as waiter:
-            view_edit.write_to_index(view, method_index, "2.3")
-            waiter.wait()
+        view_edit.write_to_index(view, method_index, "2.3")
         method_root_index = model.index(1, 0, tool_feature_index)
         self.assertEqual(model.rowCount(method_root_index), 2)
         method_index = model.index(0, 0, method_root_index)
@@ -996,9 +965,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         object_tree_view = self._db_editor.ui.treeView_object
         add_object_class(object_tree_view, "my_object_class")
         object_parameter_definition_view = self._db_editor.ui.tableView_object_parameter_definition
-        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
-            _append_table_row(object_parameter_definition_view, ["my_object_class", "my_parameter", "my_value_list"])
-            waiter.wait()
+        _append_table_row(object_parameter_definition_view, ["my_object_class", "my_parameter", "my_value_list"])
 
     def _add_feature(self):
         view = self._db_editor.ui.treeView_tool_feature
@@ -1007,9 +974,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         feature_root_index = model.index(0, 0, db_index)
         feature_index = model.index(0, 0, feature_root_index)
         view_edit = EditorDelegateMocking()
-        with signal_waiter(self._db_mngr.features_added) as waiter:
-            view_edit.write_to_index(view, feature_index, "my_object_class/my_parameter")
-            waiter.wait()
+        view_edit.write_to_index(view, feature_index, "my_object_class/my_parameter")
 
     def _add_tool(self):
         view = self._db_editor.ui.treeView_tool_feature
@@ -1018,9 +983,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         tool_root_index = model.index(1, 0, db_index)
         tool_index = model.index(0, 0, tool_root_index)
         view_edit = EditorDelegateMocking()
-        with signal_waiter(self._db_mngr.tools_added) as waiter:
-            view_edit.write_to_index(view, tool_index, "my_tool")
-            waiter.wait()
+        view_edit.write_to_index(view, tool_index, "my_tool")
 
     def _add_tool_feature(self):
         view = self._db_editor.ui.treeView_tool_feature
@@ -1031,9 +994,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         tool_feature_root_index = model.index(0, 0, tool_index)
         tool_feature_index = model.index(0, 0, tool_feature_root_index)
         view_edit = EditorDelegateMocking()
-        with signal_waiter(self._db_mngr.tool_features_added) as waiter:
-            view_edit.write_to_index(view, tool_feature_index, "my_object_class/my_parameter")
-            waiter.wait()
+        view_edit.write_to_index(view, tool_feature_index, "my_object_class/my_parameter")
 
 
 class TestToolFeatureTreeViewWithExistingData(TestBase):
@@ -1110,8 +1071,6 @@ class TestToolFeatureTreeViewWithExistingData(TestBase):
         model.fetchMore(list_name_index2)
         while model.rowCount(list_name_index2) != 2:
             QApplication.processEvents()
-        with signal_waiter(self._db_mngr.parameter_value_lists_updated) as waiter:
-            waiter.wait()
 
     def tearDown(self):
         self._common_tear_down()
@@ -1144,8 +1103,8 @@ class TestToolFeatureTreeViewWithExistingData(TestBase):
         self.assertEqual(model.index(1, 0, tool_feature_index).data(), "tool_feature_method")
         method_root_index = model.index(1, 0, tool_feature_index)
         self.assertEqual(model.rowCount(method_root_index), 3)
-        self.assertEqual(model.index(0, 0, method_root_index).data(), "5.0")
-        self.assertEqual(model.index(1, 0, method_root_index).data(), "2.3")
+        self.assertEqual(model.index(0, 0, method_root_index).data(), "2.3")
+        self.assertEqual(model.index(1, 0, method_root_index).data(), "5.0")
         self.assertEqual(model.index(2, 0, method_root_index).data(), "Enter new method here...")
         tool_feature_index = model.index(1, 0, tool_feature_root_index)
         self.assertEqual(model.rowCount(tool_feature_index), 2)
@@ -1168,8 +1127,8 @@ class TestToolFeatureTreeViewWithExistingData(TestBase):
         self.assertEqual(model.index(1, 0, tool_feature_index).data(), "tool_feature_method")
         method_root_index = model.index(1, 0, tool_feature_index)
         self.assertEqual(model.rowCount(method_root_index), 3)
-        self.assertEqual(model.index(0, 0, method_root_index).data(), "5.0")
-        self.assertEqual(model.index(1, 0, method_root_index).data(), "2.3")
+        self.assertEqual(model.index(0, 0, method_root_index).data(), "2.3")
+        self.assertEqual(model.index(1, 0, method_root_index).data(), "5.0")
         self.assertEqual(model.index(2, 0, method_root_index).data(), "Enter new method here...")
         tool_feature_index = model.index(1, 0, tool_feature_root_index)
         self.assertEqual(model.rowCount(tool_feature_index), 2)

@@ -33,7 +33,6 @@ from spinedb_api import (
     TimePattern,
     Array,
 )
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.plotting import (
     PlottingError,
@@ -48,6 +47,7 @@ from spinetoolbox.plotting import (
     plot_pivot_table_selection,
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from .mock_helpers import TestSpineDBManager
 
 
 class TestBase(unittest.TestCase):
@@ -62,7 +62,7 @@ class TestBase(unittest.TestCase):
         ):
             mock_settings = Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = SpineDBManager(mock_settings, None)
+            self._db_mngr = TestSpineDBManager(mock_settings, None)
             logger = MagicMock()
             self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test database", create=True)
             self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test database"})
@@ -107,9 +107,7 @@ class TestBase(unittest.TestCase):
             for param_i, values_and_types in enumerate(db_values.values())
             for i, (db_value, type_) in enumerate(values_and_types)
         ]
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            self._db_mngr.add_parameter_values({self._db_map: value_items})
-            waiter.wait()
+        self._db_mngr.add_parameter_values({self._db_map: value_items})
 
     def _select_object_class_in_tree_view(self):
         object_tree_model = self._db_editor.ui.treeView_object.model()
@@ -130,7 +128,8 @@ class TestPlotPivotTableSelection(TestBase):
         self.assertEqual(self._db_editor.current_input_type, self._db_editor._PARAMETER_VALUE)
         self._select_object_class_in_tree_view()
         self._db_editor.do_reload_pivot_table()
-        self._db_editor.pivot_table_model.fetchMore(QModelIndex())
+        if self._db_editor.pivot_table_model.canFetchMore(QModelIndex()):
+            self._db_editor.pivot_table_model.fetchMore(QModelIndex())
         model = self._db_editor.pivot_table_proxy
         object_count = max(len(x) for x in values.values())
         while model.rowCount() != 2 + object_count + 1:

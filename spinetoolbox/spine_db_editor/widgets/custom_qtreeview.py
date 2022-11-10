@@ -672,9 +672,8 @@ class ParameterValueListTreeView(ItemTreeView):
                     continue
                 if list_item in items:
                     db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].add(list_item.id)
-                    removed_value_item_ids = {x.id for x in list_item.children[:-1]}
-                else:
-                    removed_value_item_ids = {x.id for x in list_item.children[:-1] if x in items}
+                    continue
+                removed_value_item_ids = {x.id for x in list_item.children[:-1] if x in items}
                 db_map_typed_data_to_rm[db_item.db_map]["list_value"].update(removed_value_item_ids)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()

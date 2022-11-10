@@ -19,7 +19,7 @@ from PySide2.QtCore import QItemSelectionModel, QModelIndex
 from PySide2.QtWidgets import QApplication, QMessageBox
 
 from spinedb_api import DatabaseMapping, import_functions
-from spinetoolbox.helpers import signal_waiter, ItemTypeFetchParent
+from spinetoolbox.helpers import signal_waiter
 from tests.spine_db_editor.widgets.helpers import add_object, add_object_class, TestBase, EditorDelegateMocking
 
 
@@ -85,22 +85,16 @@ class TestParameterTableView(TestBase):
         delegate_mock = EditorDelegateMocking()
         delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 0), "an_object_class")
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
-            delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
-            waiter.wait()
+        delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
         _set_row_data(table_view, model, 0, ["an_object_class", "object_1", "a_parameter", "Base"], delegate_mock)
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            delegate_mock.write_to_index(table_view, model.index(0, 4), "value_1")
-            waiter.wait()
+        delegate_mock.write_to_index(table_view, model.index(0, 4), "value_1")
         _set_row_data(table_view, model, 1, ["an_object_class", "object_2", "a_parameter", "Base"], delegate_mock)
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            delegate_mock.write_to_index(table_view, model.index(1, 4), "value_2")
-            waiter.wait()
+        delegate_mock.write_to_index(table_view, model.index(1, 4), "value_2")
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.columnCount(), 6)
         expected = [
@@ -112,9 +106,7 @@ class TestParameterTableView(TestBase):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
         selection_model = table_view.selectionModel()
         selection_model.select(model.index(0, 0), QItemSelectionModel.ClearAndSelect)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            table_view.remove_selected()
-            waiter.wait()
+        table_view.remove_selected()
         self.assertFalse(model.canFetchMore(QModelIndex()))
         expected = [
             ["an_object_class", "object_2", "a_parameter", "Base", "value_2", "database"],
@@ -132,17 +124,13 @@ class TestParameterTableView(TestBase):
         delegate_mock = EditorDelegateMocking()
         delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 0), "an_object_class")
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
-            delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
-            waiter.wait()
+        delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
         _set_row_data(table_view, model, 0, ["an_object_class", "an_object", "a_parameter", "Base"], delegate_mock)
         delegate_mock.reset()
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            delegate_mock.write_to_index(table_view, model.index(0, 4), "value_1")
-            waiter.wait()
+        delegate_mock.write_to_index(table_view, model.index(0, 4), "value_1")
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         expected = [
@@ -151,12 +139,6 @@ class TestParameterTableView(TestBase):
         ]
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
-        fetch_parent = ItemTypeFetchParent("parameter_value")
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            while self._db_mngr.can_fetch_more(self._db_map, fetch_parent):
-                self._db_mngr.fetch_more(self._db_map, fetch_parent)
-                QApplication.processEvents()
-            waiter.wait()
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
@@ -174,9 +156,7 @@ class TestParameterTableView(TestBase):
         definition_model = definition_table_view.model()
         delegate_mock = EditorDelegateMocking()
         _set_row_data(definition_table_view, definition_model, 0, ["object_1_class", "parameter_1"], delegate_mock)
-        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
-            _set_row_data(definition_table_view, definition_model, 1, ["object_2_class", "parameter_2"], delegate_mock)
-            waiter.wait()
+        _set_row_data(definition_table_view, definition_model, 1, ["object_2_class", "parameter_2"], delegate_mock)
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
@@ -186,15 +166,13 @@ class TestParameterTableView(TestBase):
         _set_row_data(
             table_view, model, 1, ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value"], delegate_mock
         )
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            _set_row_data(
-                table_view,
-                model,
-                2,
-                ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value"],
-                delegate_mock,
-            )
-            waiter.wait()
+        _set_row_data(
+            table_view,
+            model,
+            2,
+            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value"],
+            delegate_mock,
+        )
         self.assertEqual(model.rowCount(), 4)
         self.assertEqual(model.columnCount(), 6)
         expected = [
@@ -257,9 +235,7 @@ class TestParameterTableWithExistingData(TestBase):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-            waiter.wait()
+        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
 
     def test_purging_value_data_leaves_empty_rows_intact(self):
@@ -270,9 +246,7 @@ class TestParameterTableWithExistingData(TestBase):
         _set_row_data(
             table_view, model, model.rowCount() - 1, ["object_class", "object_1", "parameter_1", "Base"], delegate_mock
         )
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-            waiter.wait()
+        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 2)
         expected = [
             ["object_class", "object_1", "parameter_1", "Base", None, "database"],
@@ -285,19 +259,15 @@ class TestParameterTableWithExistingData(TestBase):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            n_values = self._n_parameters * self._n_objects
-            self._db_mngr.remove_items({self._db_map: {"parameter_value": {i for i in range(1, n_values, 2)}}})
-            waiter.wait()
+        n_values = self._n_parameters * self._n_objects
+        self._db_mngr.remove_items({self._db_map: {"parameter_value": set(range(1, n_values, 2))}})
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE / 2 + 1)
 
     def test_undoing_purge(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-            waiter.wait()
+        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
         self._db_editor.undo_action.trigger()
         while model.rowCount() != self._n_objects * self._n_parameters + 1:
@@ -319,9 +289,7 @@ class TestParameterTableWithExistingData(TestBase):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        with signal_waiter(self._db_mngr.parameter_values_removed) as waiter:
-            self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-            waiter.wait()
+        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as roll_back_dialog:
             roll_back_dialog.Ok = QMessageBox.Ok

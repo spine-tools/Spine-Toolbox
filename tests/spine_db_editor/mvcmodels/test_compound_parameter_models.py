@@ -38,12 +38,13 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
-            "spinetoolbox.spine_db_manager.QMessageBox"
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
@@ -71,9 +72,8 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         model.init_model()
         self._db_mngr.add_object_classes({self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "object_class_id": 1}]})
-        self._db_mngr.fetch_all(self._db_map)
-        definition_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [1]}, "parameter_definition")
-        model.receive_parameter_data_added(definition_data)
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
@@ -91,12 +91,13 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
-            "spinetoolbox.spine_db_manager.QMessageBox"
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
@@ -123,12 +124,12 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
     def test_data_for_single_parameter_definition(self):
         model = CompoundRelationshipParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self._db_mngr.add_object_classes({self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_relationship_classes({self._db_map: [{"name": "rc", "object_class_id_list": [1]}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "relationship_class_id": 2}]})
         self._db_mngr.fetch_all(self._db_map)
-        definition_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [2]}, "parameter_definition")
-        model.receive_parameter_data_added(definition_data)
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 7)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
@@ -146,13 +147,14 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
         self._db_mngr.fetch_all(self._db_map)
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
-            "spinetoolbox.spine_db_manager.QMessageBox"
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
@@ -178,6 +180,8 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
     def test_data_for_single_parameter(self):
         model = CompoundObjectParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self._db_mngr.add_object_classes({self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "object_class_id": 1}]})
         self._db_mngr.add_objects({self._db_map: [{"name": "o", "class_id": 1}]})
@@ -195,8 +199,6 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
                 ]
             }
         )
-        value_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [1]}, "parameter_value")
-        model.receive_parameter_data_added(value_data)
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
@@ -214,13 +216,14 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
         self._db_mngr.fetch_all(self._db_map)
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
-            "spinetoolbox.spine_db_manager.QMessageBox"
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
@@ -246,6 +249,8 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
     def test_data_for_single_parameter(self):
         model = CompoundRelationshipParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self._db_mngr.add_object_classes({self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_objects({self._db_map: [{"name": "o", "class_id": 1}]})
         self._db_mngr.add_relationship_classes({self._db_map: [{"name": "rc", "object_class_id_list": [1]}]})
@@ -265,8 +270,6 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
                 ]
             }
         )
-        value_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [2]}, "parameter_value")
-        model.receive_parameter_data_added(value_data)
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]

@@ -100,10 +100,10 @@ class EmptyParameterModel(EmptyRowModel):
         return super().data(index, role)
 
     def _make_unique_id(self, item):
-        """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
+        """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
         return (item.get(self.entity_class_name_key), item.get("parameter_name"))
 
-    def receive_parameter_data_added(self, db_map_data):
+    def handle_items_added(self, db_map_data):
         """Runs when parameter definitions or values are added.
         Finds and removes model items that were successfully added to the db."""
         added_ids = set()
@@ -252,7 +252,7 @@ class EmptyParameterValueModel(
         return {"object": "name", "relationship": "object_name_list"}[self.entity_type]
 
     def _make_unique_id(self, item):
-        """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
+        """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
         return (*super()._make_unique_id(item), item.get(self.entity_name_key), item.get("alternative_name"))
 
     def add_items_to_db(self, db_map_data):

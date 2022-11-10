@@ -17,11 +17,10 @@ Classes and functions that can be shared among unit test modules.
 """
 from contextlib import contextmanager
 from unittest import mock
-from concurrent.futures import Executor
 
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.helpers import ItemTypeFetchParent
+from spinetoolbox.helpers import FlexibleFetchParent
 from spinetoolbox.ui_main import ToolboxUI
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -309,8 +308,10 @@ class MockInstantQProcess(mock.Mock):
 class TestSpineDBManager(SpineDBManager):
     def fetch_all(self, db_map):
         worker = self._get_worker(db_map)
-        for item_type in self.added_signals:
-            worker.fetch_more(ItemTypeFetchParent(item_type))
+        for item_type in db_map.ITEM_TYPES:
+            parent = FlexibleFetchParent(item_type)
+            if worker.can_fetch_more(parent):
+                worker.fetch_more(parent)
             qApp.processEvents()
 
     def get_db_map(self, *args, **kwargs):

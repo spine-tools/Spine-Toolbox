@@ -23,9 +23,9 @@ from unittest import mock
 from PySide2.QtCore import QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.helpers import signal_waiter
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestMetadataTableModel(unittest.TestCase):
@@ -37,12 +37,13 @@ class TestMetadataTableModel(unittest.TestCase):
     def setUp(self):
         mock_settings = mock.Mock()
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
-        self._db_mngr = SpineDBManager(mock_settings, None)
+        self._db_mngr = TestSpineDBManager(mock_settings, None)
         logger = mock.MagicMock()
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
         QApplication.processEvents()
-        self._model = MetadataTableModel(self._db_mngr, [self._db_map])
-        self._model.fetchMore(QModelIndex())
+        self._model = MetadataTableModel(self._db_mngr, [self._db_map], None)
+        if self._model.canFetchMore(QModelIndex()):
+            self._model.fetchMore(QModelIndex())
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -61,7 +62,7 @@ class TestMetadataTableModel(unittest.TestCase):
 
     def test_add_metadata_from_database_to_empty_model(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        self._model.add_metadata(db_map_data)
+        self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -70,17 +71,9 @@ class TestMetadataTableModel(unittest.TestCase):
 
     def test_updating_metadata_in_database_updates_existing_row(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
-        change_listener = _MetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._db_mngr.add_metadata(db_map_data)
-            waiter.wait()
-        self._model.add_metadata(change_listener.added_items)
-        with signal_waiter(self._db_mngr.metadata_updated) as waiter:
-            index = self._model.index(0, Column.VALUE)
-            self.assertTrue(self._model.setData(index, "Prof. T. Est"))
-            waiter.wait()
-        self._model.update_metadata(change_listener.updated_items)
+        self._db_mngr.add_metadata(db_map_data)
+        index = self._model.index(0, Column.VALUE)
+        self.assertTrue(self._model.setData(index, "Prof. T. Est"))
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Prof. T. Est")
@@ -89,9 +82,10 @@ class TestMetadataTableModel(unittest.TestCase):
 
     def test_remove_metadata_removes_the_row(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        self._model.add_metadata(db_map_data)
+        db_map_typed_ids = {self._db_map: {"metadata": {1}}}
+        self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
-        self._model.remove_metadata(db_map_data)
+        self._db_mngr.remove_items(db_map_typed_ids)
         self.assertEqual(self._model.rowCount(), 1)
         self._assert_empty_last_row()
 
@@ -99,25 +93,13 @@ class TestMetadataTableModel(unittest.TestCase):
         index = self._model.index(0, Column.NAME)
         self._model.setData(index, "author")
         index = self._model.index(0, Column.VALUE)
-        listener = _MetadataChangeListener()
-        self._db_mngr.register_listener(listener, self._db_map)
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self.assertTrue(self._model.setData(index, "Anonymous"))
-            waiter.wait()
-        self.assertEqual(self._model.rowCount(), 1)
-        self.assertEqual(
-            listener.added_items, {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1, "commit_id": None}]}
-        )
+        self.assertTrue(self._model.setData(index, "Anonymous"))
+        self.assertEqual(self._model.rowCount(), 2)
         self._assert_empty_last_row()
 
     def test_adding_data_to_another_database(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        change_listener = _MetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._db_mngr.add_metadata(db_map_data)
-            waiter.wait()
-        self._model.add_metadata(change_listener.added_items)
+        self._db_mngr.add_metadata(db_map_data)
         logger = mock.MagicMock()
         with TemporaryDirectory() as temp_dir:
             database_path = Path(temp_dir, "db.sqlite")
@@ -125,16 +107,14 @@ class TestMetadataTableModel(unittest.TestCase):
             try:
                 db_map_2 = self._db_mngr.get_db_map(url, logger, codename="2nd database", create=True)
                 self._model.set_db_maps([self._db_map, db_map_2])
-                self._db_mngr.register_listener(change_listener, db_map_2)
+                if self._model.canFetchMore(None):
+                    self._model.fetchMore(None)
                 index = self._model.index(1, Column.DB_MAP)
                 self.assertTrue(self._model.setData(index, "2nd database"))
                 index = self._model.index(1, Column.NAME)
                 self.assertTrue(self._model.setData(index, "title"))
                 index = self._model.index(1, Column.VALUE)
-                with signal_waiter(self._db_mngr.metadata_added) as waiter:
-                    self.assertTrue(self._model.setData(index, "My precious."))
-                    waiter.wait()
-                self._model.add_metadata(change_listener.added_items)
+                self.assertTrue(self._model.setData(index, "My precious."))
             finally:
                 self._db_mngr.close_session(url)
         self.assertEqual(self._model.rowCount(), 3)
@@ -148,20 +128,11 @@ class TestMetadataTableModel(unittest.TestCase):
 
     def test_add_and_update_via_adding_entity_metadata(self):
         db_map_data = {self._db_map: [{"name": "object class"}]}
-        with signal_waiter(self._db_mngr.object_classes_added) as waiter:
-            self._db_mngr.add_object_classes(db_map_data)
-            waiter.wait()
+        self._db_mngr.add_object_classes(db_map_data)
         db_map_data = {self._db_map: [{"object_class": "object class", "name": "object"}]}
-        with signal_waiter(self._db_mngr.objects_added) as waiter:
-            self._db_mngr.add_objects(db_map_data)
-            waiter.wait()
+        self._db_mngr.add_objects(db_map_data)
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
-        change_listener = _MetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._db_mngr.add_metadata(db_map_data)
-            waiter.wait()
-        self._model.add_metadata(change_listener.added_items)
+        self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -173,10 +144,7 @@ class TestMetadataTableModel(unittest.TestCase):
                 {"entity_name": "object", "metadata_name": "source", "metadata_value": "The Internet"},
             ]
         }
-        with signal_waiter(self._db_mngr.entity_metadata_added) as waiter:
-            self._db_mngr.add_entity_metadata(db_map_data)
-            waiter.wait()
-        self._model.add_and_update_metadata(change_listener.added_entity_metadata_items)
+        self._db_mngr.add_entity_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -195,7 +163,7 @@ class TestMetadataTableModel(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_insert_rows_to_beginning_and_middle_and_end(self):
-        self._model.add_metadata(
+        self._db_mngr.add_metadata(
             {
                 self._db_map: [
                     {"name": "name_1", "value": "value_1", "id": 1},
@@ -222,7 +190,7 @@ class TestMetadataTableModel(unittest.TestCase):
 
     def test_insert_rows_after_adder_row_extends_normal_rows_instead(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        self._model.add_metadata(db_map_data)
+        self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self._model.insertRows(2, 1)
         self.assertEqual(self._model.rowCount(), 3)
@@ -240,20 +208,9 @@ class TestMetadataTableModel(unittest.TestCase):
 
     def test_remove_rows_also_from_database(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        change_listener = _MetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._db_mngr.add_metadata(db_map_data)
-            waiter.wait()
-        self._model.add_metadata(change_listener.added_items)
-        with signal_waiter(self._db_mngr.metadata_removed) as waiter:
-            self.assertTrue(self._model.removeRows(0, 1))
-            waiter.wait()
-        self.assertEqual(self._model.rowCount(), 2)
-        self.assertEqual(
-            change_listener.removed_items,
-            {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1, "commit_id": None}]},
-        )
+        self._db_mngr.add_metadata(db_map_data)
+        self.assertTrue(self._model.removeRows(0, 1))
+        self.assertEqual(self._model.rowCount(), 1)
         self._assert_empty_last_row()
 
     def test_add_metadata_using_batch_set_data(self):
@@ -261,20 +218,7 @@ class TestMetadataTableModel(unittest.TestCase):
         self.assertEqual(self._model.rowCount(), 3)
         indexes = [self._model.index(row, column) for row, column in itertools.product(range(2), range(2))]
         data = ["title", "My precious.", "source", "The Internet"]
-        change_listener = _MetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._model.batch_set_data(indexes, data)
-            waiter.wait()
-        self.assertEqual(
-            change_listener.added_items,
-            {
-                self._db_map: [
-                    {"name": "title", "value": "My precious.", "id": 1, "commit_id": None},
-                    {"name": "source", "value": "The Internet", "id": 2, "commit_id": None},
-                ]
-            },
-        )
+        self._model.batch_set_data(indexes, data)
         expected_rows = [["title", "My precious.", "database"], ["source", "The Internet", "database"]]
         for row, expected in enumerate(expected_rows):
             self.assertEqual(self._model.index(row, Column.NAME).data(), expected[Column.NAME])
@@ -284,21 +228,10 @@ class TestMetadataTableModel(unittest.TestCase):
 
     def test_update_metadata_using_batch_set_data(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        change_listener = _MetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._db_mngr.add_metadata(db_map_data)
-            waiter.wait()
-        self._model.add_metadata(change_listener.added_items)
+        self._db_mngr.add_metadata(db_map_data)
         indexes = [self._model.index(0, Column.NAME), self._model.index(0, Column.VALUE)]
         data = ["title", "My precious."]
-        with signal_waiter(self._db_mngr.metadata_updated) as waiter:
-            self._model.batch_set_data(indexes, data)
-            waiter.wait()
-        self.assertEqual(
-            change_listener.updated_items,
-            {self._db_map: [{"name": "title", "value": "My precious.", "id": 1, "commit_id": None}]},
-        )
+        self._model.batch_set_data(indexes, data)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "title")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "My precious.")
@@ -320,22 +253,15 @@ class TestMetadataTableModel(unittest.TestCase):
 
     def test_roll_back(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
-        change_listener = _MetadataChangeListener()
-        self._db_mngr.register_listener(change_listener, self._db_map)
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._db_mngr.add_metadata(db_map_data)
-            waiter.wait()
-        self._model.add_metadata(change_listener.added_items)
+        self._db_mngr.add_metadata(db_map_data)
         with signal_waiter(self._db_mngr.session_committed) as waiter:
             self._db_mngr.commit_session("Add test data.", self._db_map)
             waiter.wait()
         index = self._model.index(1, Column.NAME)
         self.assertTrue(self._model.setData(index, "title"))
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            index = self._model.index(1, Column.VALUE)
-            self.assertTrue(self._model.setData(index, "My precious."))
-            waiter.wait()
-        self._model.add_metadata(change_listener.added_items)
+        index = self._model.index(1, Column.VALUE)
+        self.assertTrue(self._model.setData(index, "My precious."))
+        self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -347,10 +273,8 @@ class TestMetadataTableModel(unittest.TestCase):
         with signal_waiter(self._db_mngr.session_rolled_back) as waiter:
             self._db_mngr.rollback_session(self._db_map)
             waiter.wait()
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._model.roll_back([self._db_map])
-            waiter.wait()
-        self._model.add_metadata(change_listener.added_items)
+        self._model.rollback([self._db_map])
+        self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -362,25 +286,6 @@ class TestMetadataTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(row, Column.NAME).data(), "")
         self.assertEqual(self._model.index(row, Column.VALUE).data(), "")
         self.assertEqual(self._model.index(row, Column.DB_MAP).data(), "database")
-
-
-class _MetadataChangeListener:
-    added_items = None
-    updated_items = None
-    removed_items = None
-    added_entity_metadata_items = None
-
-    def receive_metadata_added(self, db_map_data):
-        self.added_items = db_map_data
-
-    def receive_metadata_updated(self, db_map_data):
-        self.updated_items = db_map_data
-
-    def receive_metadata_removed(self, db_map_data):
-        self.removed_items = db_map_data
-
-    def receive_entity_metadata_added(self, db_map_data):
-        self.added_entity_metadata_items = db_map_data
 
 
 if __name__ == '__main__':

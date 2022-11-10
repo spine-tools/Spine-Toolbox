@@ -16,7 +16,7 @@ from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spine_engine.project_item.connection import ResourceConvertingConnection, Jump, ConnectionBase
 from ..log_mixin import LogMixin
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
-from ..helpers import busy_effect, ItemTypeFetchParent
+from ..helpers import busy_effect, FlexibleFetchParent
 
 
 class HeadlessConnection(ResourceConvertingConnection):
@@ -211,33 +211,21 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         for db_map in self._db_maps.values():
             for item_type in ("scenario", "tool"):
                 fetch_parent = self._fetch_parents.setdefault(db_map, {}).setdefault(
-                    item_type, ItemTypeFetchParent(item_type)
+                    item_type,
+                    FlexibleFetchParent(
+                        item_type,
+                        handle_items_added=lambda _: self._receive_data_changed(),
+                        handle_items_removed=lambda _: self._receive_data_changed(),
+                        handle_items_updated=lambda _: self._receive_data_changed(),
+                    ),
                 )
-                if self._toolbox.db_mngr.can_fetch_more(db_map, fetch_parent):
+                if self._toolbox.db_mngr.can_fetch_more(db_map, fetch_parent, listener=self):
                     self._toolbox.db_mngr.fetch_more(db_map, fetch_parent)
 
     def _receive_data_changed(self):
         self.link.update_icons()
         self.refresh_resource_filter_model()
         self._fetch_more_if_possible()
-
-    def receive_scenarios_added(self, _db_map_data):
-        self._receive_data_changed()
-
-    def receive_scenarios_removed(self, _db_map_data):
-        self._receive_data_changed()
-
-    def receive_scenarios_updated(self, _db_map_data):
-        self._receive_data_changed()
-
-    def receive_tools_added(self, _db_map_data):
-        self._receive_data_changed()
-
-    def receive_tools_removed(self, _db_map_data):
-        self._receive_data_changed()
-
-    def receive_tools_updated(self, _db_map_data):
-        self._receive_data_changed()
 
     def receive_session_committed(self, db_maps, cookie):
         self._receive_data_changed()

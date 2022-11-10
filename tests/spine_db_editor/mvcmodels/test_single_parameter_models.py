@@ -15,13 +15,11 @@ from PySide2.QtWidgets import QApplication
 
 from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE
-from spinetoolbox.helpers import signal_waiter
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.mvcmodels.single_parameter_models import (
     SingleParameterModel,
     SingleObjectParameterValueModel,
 )
-from tests.mock_helpers import q_object
+from tests.mock_helpers import q_object, TestSpineDBManager
 
 OBJECT_PARAMETER_VALUE_HEADER = [
     "object_class_name",
@@ -64,7 +62,7 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        self._db_mngr = SpineDBManager(None, None)
+        self._db_mngr = TestSpineDBManager(None, None)
         self._logger = MagicMock()
         self._db_map = self._db_mngr.get_db_map("sqlite:///", self._logger, codename="Test database", create=True)
 
@@ -74,35 +72,29 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
         self._db_mngr.deleteLater()
 
     def test_data_db_map_role(self):
-        with signal_waiter(self._db_mngr.object_classes_added) as waiter:
-            self._db_mngr.add_object_classes({self._db_map: [{"name": "my_class"}]})
-            waiter.wait()
-        with signal_waiter(self._db_mngr.parameter_definitions_added) as waiter:
-            self._db_mngr.add_parameter_definitions({self._db_map: [{"entity_class_id": 1, "name": "my_parameter"}]})
-            waiter.wait()
-        with signal_waiter(self._db_mngr.objects_added) as waiter:
-            self._db_mngr.add_objects({self._db_map: [{"class_id": 1, "name": "my_object"}]})
-            waiter.wait()
-        with signal_waiter(self._db_mngr.parameter_values_added) as waiter:
-            value, type_ = to_database(2.3)
-            self._db_mngr.add_parameter_values(
-                {
-                    self._db_map: [
-                        {
-                            "entity_class_id": 1,
-                            "entity_id": 1,
-                            "parameter_definition_id": 1,
-                            "value": value,
-                            "type": type_,
-                            "alternative_id": 1,
-                        }
-                    ]
-                }
-            )
-            waiter.wait()
+        self._db_mngr.add_object_classes({self._db_map: [{"name": "my_class"}]})
+        self._db_mngr.add_parameter_definitions({self._db_map: [{"entity_class_id": 1, "name": "my_parameter"}]})
+        self._db_mngr.add_objects({self._db_map: [{"class_id": 1, "name": "my_object"}]})
+        value, type_ = to_database(2.3)
+        self._db_mngr.add_parameter_values(
+            {
+                self._db_map: [
+                    {
+                        "entity_class_id": 1,
+                        "entity_id": 1,
+                        "parameter_definition_id": 1,
+                        "value": value,
+                        "type": type_,
+                        "alternative_id": 1,
+                    }
+                ]
+            }
+        )
         with q_object(
             SingleObjectParameterValueModel(OBJECT_PARAMETER_VALUE_HEADER, self._db_mngr, self._db_map, 1, True, False)
         ) as model:
+            if model.canFetchMore(None):
+                model.fetchMore(None)
             model.add_rows([1])
             self.assertEqual(model.index(0, 0).data(DB_MAP_ROLE), self._db_map)
 

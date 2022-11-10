@@ -14,7 +14,6 @@ import unittest
 
 from PySide2.QtCore import Qt
 
-from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.scenario_generator import ScenarioGenerator
 from .helpers import TestBase
 
@@ -27,9 +26,7 @@ class TestScenarioGenerator(TestBase):
         self._common_tear_down()
 
     def test_alternative_list_contains_alternatives(self):
-        with signal_waiter(self._db_mngr.alternatives_added) as waiter:
-            self._db_mngr.add_alternatives({self._db_map: [{"name": "alt1"}]})
-            waiter.wait()
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alt1"}]})
         alternatives = self._db_mngr.get_items(self._db_map, "alternative")
         scenario_generator = ScenarioGenerator(self._db_editor, self._db_map, alternatives, self._db_editor)
         list_widget = scenario_generator._ui.alternative_list
@@ -40,9 +37,7 @@ class TestScenarioGenerator(TestBase):
 
     def test_zero_padding_in_generated_scenario_names(self):
         db_map_items = [{"name": f"alt{n}"} for n in range(13)]
-        with signal_waiter(self._db_mngr.alternatives_added) as waiter:
-            self._db_mngr.add_alternatives({self._db_map: db_map_items})
-            waiter.wait()
+        self._db_mngr.add_alternatives({self._db_map: db_map_items})
         alternatives = self._db_mngr.get_items(self._db_map, "alternative")
         scenario_generator = ScenarioGenerator(self._db_editor, self._db_map, alternatives, self._db_editor)
         scenario_generator._ui.scenario_prefix_edit.setText("S_")

@@ -66,7 +66,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         return self.item_type
 
     def canFetchMore(self, _parent):
-        return any(self.db_mngr.can_fetch_more(db_map, self) for db_map in self.db_maps)
+        return any(self.db_mngr.can_fetch_more(db_map, self, listener=self._parent) for db_map in self.db_maps)
 
     def fetchMore(self, _parent):
         for db_map in self.db_maps:
@@ -76,6 +76,9 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         return query.filter(getattr(subquery.c, self.entity_class_id_key).isnot(None)).order_by(
             subquery.c.entity_class_name
         )
+
+    def accepts_item(self, item, db_map):
+        return item[self.entity_class_id_key] is not None
 
     def _make_header(self):
         raise NotImplementedError()
@@ -377,7 +380,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             d.setdefault(entity_class_id, list()).append(item)
         return d
 
-    def receive_parameter_data_added(self, db_map_data):
+    def handle_items_added(self, db_map_data):
         """Runs when either parameter definitions or values are added to the dbs.
         Adds necessary sub-models and initializes them with data.
         Also notifies the empty model so it can remove rows that are already in.
@@ -404,7 +407,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
                 self._add_parameter_data(db_map, entity_class_id, ids_committed, committed=True)
                 self._add_parameter_data(db_map, entity_class_id, ids_uncommitted, committed=False)
                 self._do_add_data_to_filter_menus(db_map, class_items)
-        self.empty_model.receive_parameter_data_added(db_map_data)
+        self.empty_model.handle_items_added(db_map_data)
 
     def _get_insert_position(self, model):
         if model.committed:
@@ -439,7 +442,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         model = self._create_single_model(db_map, entity_class_id, committed)
         model.reset_model(ids)
 
-    def receive_parameter_data_updated(self, db_map_data):
+    def handle_items_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated in the dbs.
         Emits dataChanged so the parameter_name column is refreshed.
 
@@ -454,7 +457,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         # NOTE: parameter_definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names are. Why?
 
-    def receive_parameter_data_removed(self, db_map_data):
+    def handle_items_removed(self, db_map_data):
         """Runs when either parameter definitions or values are removed from the dbs.
         Removes the affected rows from the corresponding single models.
 
@@ -637,14 +640,6 @@ class CompoundParameterValueMixin:
         model.set_filter_entity_ids(self._filter_entity_ids)
         model.set_filter_alternative_ids(self._filter_alternative_ids)
         return model
-
-    def receive_alternatives_updated(self, db_map_data):
-        """Updated alternative column
-
-        Args:
-            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
-        """
-        self._emit_data_changed_for_column("alternative_id")
 
 
 class CompoundObjectParameterDefinitionModel(

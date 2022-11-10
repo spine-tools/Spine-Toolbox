@@ -71,11 +71,6 @@ class RelationshipTreeRootItem(EntityRootItem):
 class EntityClassItem(MultiDBTreeItem):
     """An entity_class item."""
 
-    def __init__(self, *args, **kwargs):
-        """Overridden method to declare group_child_count attribute."""
-        super().__init__(*args, **kwargs)
-        self._group_child_count = 0
-
     @property
     def display_icon(self):
         """Returns class icon."""
@@ -99,21 +94,11 @@ class EntityClassItem(MultiDBTreeItem):
                 return QBrush(Qt.gray)
         return super().data(column, role)
 
-    def remove_children(self, position, count):
-        """
-        Overriden method to keep the group child count up to date.
-        """
-        if not super().remove_children(position, count):
-            return False
-        first_group_child = position
-        last_group_child = min(self._group_child_count - 1, position + count - 1)
-        removed_child_count = last_group_child - first_group_child + 1
-        if removed_child_count > 0:
-            self._group_child_count -= removed_child_count
-        return True
-
     def filter_query(self, query, subquery, db_map):
         return query.filter(subquery.c.class_id == self.db_map_id(db_map))
+
+    def accepts_item(self, item, db_map):
+        return item["class_id"] == self.db_map_id(db_map)
 
     def set_data(self, column, value, role):
         """See base class."""
@@ -167,6 +152,12 @@ class ObjectRelationshipClassItem(RelationshipClassItem):
         query = query.filter(db_map.in_(subquery.c.id, ids))
         return super().filter_query(query, subquery, db_map)
 
+    def accepts_item(self, item, db_map):
+        if not super().accepts_item(item, db_map):
+            return False
+        object_id = self.parent_item.db_map_id(db_map)
+        return str(object_id) in item["object_id_list"].split(",")
+
 
 class MemberObjectClassItem(ObjectClassItem):
     """A member object class item."""
@@ -197,6 +188,9 @@ class MemberObjectClassItem(ObjectClassItem):
         query = query.filter(subquery.c.group_id == self.parent_item.db_map_id(db_map))
         return super().filter_query(query, subquery, db_map)
 
+    def accepts_item(self, item, db_map):
+        return super().accepts_item(item, db_map) and item["group_id"] == self.parent_item.db_map_id(db_map)
+
     @property
     def child_item_class(self):
         """Returns MemberObjectItem."""
@@ -220,12 +214,7 @@ class EntityItem(MultiDBTreeItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._has_members_item = False
-
-    @property
-    def members_item(self):
-        self._fetch_members_item()
-        return self.child(0)
+        self.has_members_item = False
 
     @property
     def display_icon(self):
@@ -245,11 +234,11 @@ class EntityItem(MultiDBTreeItem):
         return False
 
     def _can_fetch_members_item(self):
-        return self.is_group() and not self._has_members_item
+        return self.is_group() and not self.has_members_item
 
     def _fetch_members_item(self):
         if self._can_fetch_members_item():
-            self._has_members_item = True
+            self.has_members_item = True
             # Insert members item. Note that we pass the db_map_ids of the parent object class item
             self.insert_children(0, [MemberObjectClassItem(self.model, self.parent_item.db_map_ids.copy())])
 
@@ -283,6 +272,12 @@ class ObjectItem(EntityItem):
         object_class_id = self.db_map_data_field(db_map, 'class_id')
         ids = set(x.id for x in db_map.query(db_map.relationship_class_sq).filter_by(object_class_id=object_class_id))
         return query.filter(db_map.in_(subquery.c.id, ids))
+
+    def accepts_item(self, item, db_map):
+        if not super().accepts_item(item, db_map):
+            return False
+        object_class_id = self.db_map_data_field(db_map, 'class_id')
+        return str(object_class_id) in item["object_class_id_list"].split(",")
 
 
 class MemberObjectItem(ObjectItem):

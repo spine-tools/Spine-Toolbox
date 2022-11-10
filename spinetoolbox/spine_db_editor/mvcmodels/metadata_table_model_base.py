@@ -48,14 +48,15 @@ class MetadataTableModelBase(QAbstractTableModel):
     _ITEM_NAME_KEY = None
     _ITEM_VALUE_KEY = None
 
-    def __init__(self, db_mngr, db_maps, parent=None):
+    def __init__(self, db_mngr, db_maps, db_editor):
         """
         Args:
             db_mngr (SpineDBManager): database manager
             db_maps (Iterable of DatabaseMappingBase): database maps
-            parent (QObject): parent object
+            db_editor (SpineDBEditor): DB editor
         """
-        super().__init__(parent)
+        super().__init__(db_editor)
+        self._db_editor = db_editor
         self._db_mngr = db_mngr
         self._data = []
         self._db_maps = db_maps
@@ -96,6 +97,26 @@ class MetadataTableModelBase(QAbstractTableModel):
         default_db_map = next(iter(db_maps)) if db_maps else None
         self._adder_row = self._make_adder_row(default_db_map)
         self.endResetModel()
+
+    def _fetch_parents(self):
+        """Yields fetch parents for this model.
+
+        Yields:
+            FetchParent
+        """
+        raise NotImplementedError()
+
+    def canFetchMore(self, _):
+        result = False
+        for fetch_parent in self._fetch_parents():
+            for db_map in self._db_maps:
+                result |= self._db_mngr.can_fetch_more(db_map, fetch_parent, listener=self._db_editor)
+        return result
+
+    def fetchMore(self, _):
+        for parent in self._fetch_parents():
+            for db_map in self._db_maps:
+                self._db_mngr.fetch_more(db_map, parent)
 
     def rowCount(self, parent=QModelIndex()):
         return len(self._data) + 1
@@ -282,13 +303,13 @@ class MetadataTableModelBase(QAbstractTableModel):
         """
         raise NotImplementedError()
 
-    def removeRows(self, row, count, parent=QModelIndex()):
-        if row == len(self._data):
+    def removeRows(self, first, count, parent=QModelIndex()):
+        if first == len(self._data):
             return False
-        count = min(count, len(self._data) - row)
+        count = min(count, len(self._data) - first)
         ids_to_remove = {}
         table_name = self._database_table_name()
-        for i, row in enumerate(self._data[row : row + count]):
+        for i, row in enumerate(self._data[first : first + count]):
             id_to_remove = self._row_id(row)
             if id_to_remove is not None:
                 ids_to_remove.setdefault(row[Column.DB_MAP], {}).setdefault(table_name, set()).add(id_to_remove)
@@ -377,7 +398,7 @@ class MetadataTableModelBase(QAbstractTableModel):
             db_map_data (dict): updated items keyed by database mapping
             id_column (int): column that contains item ids
         """
-        for db_map, items in db_map_data.items():
+        for items in db_map_data.values():
             items_by_id = {item["id"]: item for item in items}
             updated_rows = []
             for row_index, row in enumerate(self._data):
@@ -407,7 +428,7 @@ class MetadataTableModelBase(QAbstractTableModel):
             db_map_data (dict): removed items keyed by database mapping
             id_column (int): column that contains item ids
         """
-        for db_map, items in db_map_data.items():
+        for items in db_map_data.values():
             ids_to_remove = {item["id"] for item in items}
             removed_rows = []
             for row_index, row in enumerate(self._data):

@@ -19,7 +19,7 @@ A tree model for parameter_value lists.
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine, FetchParent, ItemTypeFetchParent, bisect_chunks
+from spinetoolbox.helpers import CharIconEngine, FlexibleFetchParent, bisect_chunks
 
 
 class StandardTreeItem(TreeItem):
@@ -124,11 +124,14 @@ class EmptyChildMixin:
         self.append_children([empty_child])
 
 
-class SortsChildrenMixin:
+class SortChildrenMixin:
+    def _children_sort_key(self, child):
+        return child.data(0)
+
     def insert_children_sorted(self, children):
         for child in children:
             child.parent_item = self
-        for chunk, pos in bisect_chunks(self.non_empty_children, children, key=lambda x: x.data(0)):
+        for chunk, pos in bisect_chunks(self.non_empty_children, children, key=self._children_sort_key):
             if not super().insert_children(pos, chunk):
                 return False
         return True
@@ -140,7 +143,14 @@ class FetchMoreMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._natural_fetch_parent = ItemTypeFetchParent(self.fetch_item_type)
+        self._natural_fetch_parent = FlexibleFetchParent(
+            self.fetch_item_type,
+            handle_items_added=self.handle_items_added,
+            handle_items_removed=self.handle_items_removed,
+            handle_items_updated=self.handle_items_updated,
+            filter_query=self.filter_query,
+            accepts_item=self.accepts_item,
+        )
 
     @property
     def fetch_item_type(self):
@@ -150,14 +160,69 @@ class FetchMoreMixin:
         yield self._natural_fetch_parent
 
     def can_fetch_more(self):
-        return any(self.db_mngr.can_fetch_more(self.db_map, parent) for parent in self._fetch_parents())
+        result = False
+        for parent in self._fetch_parents():
+            result |= self.db_mngr.can_fetch_more(self.db_map, parent, listener=self.model.db_editor)
+        return result
 
     def fetch_more(self):
         for parent in self._fetch_parents():
             self.db_mngr.fetch_more(self.db_map, parent)
 
+    def _make_child(self, id_):
+        raise NotImplementedError()
 
-class StandardDBItem(SortsChildrenMixin, StandardTreeItem):
+    # pylint: disable=no-self-use
+    def filter_query(self, query, subquery, db_map):
+        return query
+
+    def accepts_item(self, item, db_map):
+        return True
+
+    def handle_items_added(self, db_map_data):
+        """Inserts items at right positions. Items with commit_id are kept sorted.
+        Items without a commit_id are put at the end.
+
+        Args:
+            db_map_data (dict): mapping db_map to list of dict corresponding to db items
+        """
+        db_items = db_map_data.get(self.db_map, [])
+        ids_committed = []
+        ids_uncommitted = []
+        for item in db_items:
+            if item["id"] in self.children_ids:
+                continue
+            ids = ids_committed if item.get("commit_id") is not None else ids_uncommitted
+            ids.append(item["id"])
+        children_committed = [self._make_child(id_) for id_ in ids_committed]
+        children_uncommitted = [self._make_child(id_) for id_ in ids_uncommitted]
+        self.insert_children_sorted(children_committed)
+        self.insert_children(len(self.non_empty_children), children_uncommitted)
+
+    def handle_items_removed(self, db_map_data):
+        ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        removed_rows = []
+        for row, leaf_item in enumerate(self.children):
+            if leaf_item.id and leaf_item.id in ids:
+                removed_rows.append(row)
+        for row in sorted(removed_rows, reverse=True):
+            self.remove_children(row, 1)
+
+    def handle_items_updated(self, db_map_data):
+        leaf_items = {leaf_item.id: leaf_item for leaf_item in self.children if leaf_item.id}
+        ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        for id_ in set(ids).intersection(leaf_items):
+            leaf_item = leaf_items[id_]
+            leaf_item.handle_updated_in_db()
+            index = self.model.index_from_item(leaf_item)
+            self.model.dataChanged.emit(index, index)
+            if leaf_item.children:
+                top_left = self.model.index_from_item(leaf_item.child(0))
+                bottom_right = self.model.index_from_item(leaf_item.child(-1))
+                self.model.dataChanged.emit(top_left, bottom_right)
+
+
+class StandardDBItem(SortChildrenMixin, StandardTreeItem):
     """An item representing a db."""
 
     def __init__(self, db_map):
@@ -184,7 +249,7 @@ class StandardDBItem(SortsChildrenMixin, StandardTreeItem):
             return self.db_map.codename
 
 
-class RootItem(SortsChildrenMixin, BoldTextMixin, FetchMoreMixin, StandardTreeItem):
+class RootItem(SortChildrenMixin, BoldTextMixin, FetchMoreMixin, StandardTreeItem):
     """A root item."""
 
     @property
@@ -274,16 +339,3 @@ class LeafItem(StandardTreeItem):
 
     def can_fetch_more(self):
         return False
-
-
-class ListValueFetchParent(FetchParent):
-    def __init__(self, parameter_value_list_id):
-        super().__init__()
-        self._parameter_value_list_id = parameter_value_list_id
-
-    @property
-    def fetch_item_type(self):
-        return "list_value"
-
-    def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.parameter_value_list_id == self._parameter_value_list_id)

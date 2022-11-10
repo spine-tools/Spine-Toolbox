@@ -40,6 +40,9 @@ class AlternativeRootItem(EmptyChildRootItem):
     def empty_child(self):
         return AlternativeLeafItem()
 
+    def _make_child(self, id_):
+        return AlternativeLeafItem(id_)
+
 
 class ScenarioRootItem(EmptyChildRootItem):
     """A scenario root item."""
@@ -58,6 +61,9 @@ class ScenarioRootItem(EmptyChildRootItem):
 
     def empty_child(self):
         return ScenarioLeafItem()
+
+    def _make_child(self, id_):
+        return ScenarioLeafItem(id_)
 
 
 class AlternativeLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
@@ -179,6 +185,18 @@ class ScenarioAlternativeRootItem(EmptyChildRootItem):
         elif curr_alt_count > alt_count:
             removed_count = curr_alt_count - alt_count
             self.remove_children(alt_count, removed_count)
+
+    def handle_items_added(self, _db_map_data):
+        self.update_alternative_id_list()
+
+    def handle_items_removed(self, _db_map_data):
+        self.update_alternative_id_list()
+
+    def handle_items_updated(self, _db_map_data):
+        self.update_alternative_id_list()
+
+    def _make_child(self, id_):
+        """Not needed - we don't quite add childrens here, but rather update them in update_alternative_id_list."""
 
 
 class ScenarioAlternativeLeafItem(GrayIfLastMixin, LeafItem):

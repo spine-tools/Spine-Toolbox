@@ -33,7 +33,7 @@ from spinedb_api import (
 from spinedb_api.parameter_value import join_value_and_type, from_database
 from spinedb_api import import_functions
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.helpers import ItemTypeFetchParent, signal_waiter
+from spinetoolbox.helpers import signal_waiter
 
 
 class TestParameterValueFormatting(unittest.TestCase):
@@ -176,7 +176,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         self.assertTrue(formatted.startswith('Could not decode the value'))
 
 
-class TestAddOrUpdateItems(unittest.TestCase):
+class TestAddItems(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -205,14 +205,15 @@ class TestAddOrUpdateItems(unittest.TestCase):
 
     def test_add_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
-        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
-        with signal_waiter(self._db_mngr.metadata_added) as waiter:
-            self._db_mngr.add_or_update_items(db_map_data, "add_metadata", "metadata", "metadata_added")
-            waiter.wait()
+
+        def callback(db_map_data):
             self.assertEqual(
-                waiter.args,
-                ({db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": None}]},),
+                db_map_data,
+                {db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": None}]},
             )
+
+        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
+        self._db_mngr.add_items(db_map_data, "add_metadata", "metadata", callback=callback)
 
     def test_add_object_metadata(self):
         db_map = DatabaseMapping(self._db_url, create=True)
@@ -221,21 +222,15 @@ class TestAddOrUpdateItems(unittest.TestCase):
         import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        db_map = self._db_mngr.get_db_map(self._db_url, self._logger)
-        with signal_waiter(self._db_mngr.object_classes_added) as waiter:
-            self._db_mngr.fetch_more(db_map, ItemTypeFetchParent("object_class"))
-            waiter.wait()
-        db_map = self._db_mngr.get_db_map(self._db_url, self._logger)
-        with signal_waiter(self._db_mngr.objects_added) as waiter:
-            self._db_mngr.fetch_more(db_map, ItemTypeFetchParent("object"))
-            waiter.wait()
-        db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
-        with signal_waiter(self._db_mngr.entity_metadata_added) as waiter:
-            self._db_mngr.add_or_update_items(
-                db_map_data, "add_entity_metadata", "entity_metadata", "entity_metadata_added"
+
+        def callback(db_map_data):
+            self.assertEqual(
+                db_map_data,
+                {db_map: [{'entity_id': 1, 'metadata_id': 1, 'commit_id': None, 'id': 1}]},
             )
-            waiter.wait()
-            self.assertEqual(waiter.args, ({db_map: [{"id": 1, "entity_id": 1, "metadata_id": 1, "commit_id": None}]},))
+
+        db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
+        self._db_mngr.add_items(db_map_data, "add_entity_metadata", "entity_metadata", callback=callback)
 
 
 class TestImportData(unittest.TestCase):
@@ -258,11 +253,11 @@ class TestImportData(unittest.TestCase):
         self._db_mngr.clean_up()
 
     def test_import_parameter_value_lists(self):
-        with signal_waiter(self._db_mngr.parameter_value_lists_added) as waiter:
+        with signal_waiter(self._db_mngr.items_added) as waiter:
             self._db_mngr.import_data(
                 {self._db_map: {"parameter_value_lists": [["list_1", "first value"], ["list_1", "second value"]]}}
             )
-            waiter.wait()
+            waiter.wait(lambda args: args[0] == "list_value")
         value_lists = self._db_mngr.get_items(self._db_map, "parameter_value_list")
         list_values = self._db_mngr.get_items(self._db_map, "list_value")
         self.assertEqual(len(value_lists), 1)

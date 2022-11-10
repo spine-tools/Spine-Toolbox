@@ -21,6 +21,7 @@ from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog, AddObjectsDialog
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.widgets.custom_editors import SearchBarEditor
+from ...mock_helpers import TestSpineDBManager
 
 
 class EditorDelegateMocking:
@@ -132,7 +133,7 @@ class TestBase(unittest.TestCase):
         ):
             mock_settings = mock.MagicMock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = SpineDBManager(mock_settings, None)
+            self._db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=create)
             self._db_editor = SpineDBEditor(self._db_mngr, {url: "database"})
