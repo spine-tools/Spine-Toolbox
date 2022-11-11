@@ -801,6 +801,19 @@ class SpineDBManager(QObject):
             tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
         return tool_tip_data
 
+    def _format_list_value(self, db_map, item_type, value, list_value_id):
+        list_value = self.get_item(db_map, "list_value", list_value_id)
+        if not list_value:
+            return value
+        index = list_value["index"]
+        formatted_value = "[" + str(index) + "] " + value
+        if item_type != "list_value":
+            value_list_name = self.get_item(db_map, "parameter_value_list", list_value["parameter_value_list_id"])[
+                "name"
+            ]
+            formatted_value = value_list_name + formatted_value
+        return formatted_value
+
     def get_value(self, db_map, item_type, id_, role=Qt.DisplayRole):
         """Returns the value or default value of a parameter.
 
@@ -821,15 +834,16 @@ class SpineDBManager(QObject):
             "list_value": ("value", "type"),
             "parameter_definition": ("default_value", "default_type"),
         }[item_type]
+        list_value_id = id_ if item_type == "list_value" else item["list_value_id"]
         complex_types = {"array": "Array", "time_series": "Time series", "time_pattern": "Time pattern", "map": "Map"}
         if role == Qt.DisplayRole and item[type_field] in complex_types:
-            return complex_types[item[type_field]]
+            return self._format_list_value(db_map, item_type, complex_types[item[type_field]], list_value_id)
         if role == Qt.EditRole:
             return join_value_and_type(item[value_field], item[type_field])
         key = "parsed_value"
         if key not in item:
             item[key] = self._parse_value(item[value_field], item[type_field])
-        return self._format_value(item[key], role)
+        return self._format_value(item[key], role=role)
 
     def get_value_from_data(self, data, role=Qt.DisplayRole):
         """Returns the value or default value of a parameter directly from data.
@@ -845,7 +859,7 @@ class SpineDBManager(QObject):
         if data is None:
             return None
         parsed_value = self._parse_value(*split_value_and_type(data))
-        return self._format_value(parsed_value, role)
+        return self._format_value(parsed_value, role=role)
 
     @staticmethod
     def _parse_value(db_value, value_type=None):
