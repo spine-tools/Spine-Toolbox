@@ -16,6 +16,8 @@ Contains base class for metadata table models associated functionality.
 :date:   25.4.2022
 """
 from enum import IntEnum, unique
+from operator import itemgetter
+
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 from spinetoolbox.helpers import rows_to_row_count_tuples
 from .colors import FIXED_FIELD_COLOR
@@ -447,14 +449,11 @@ class MetadataTableModelBase(QAbstractTableModel):
         if not self._data or column < 0:
             return
 
-        def string_sort_key(row):
-            return row[column]
-
         def db_map_sort_key(row):
             db_map = row[Column.DB_MAP]
             return db_map.codename if db_map is not None else ""
 
-        sort_key = string_sort_key if column != Column.DB_MAP else db_map_sort_key
+        sort_key = itemgetter(column) if column != Column.DB_MAP else db_map_sort_key
         self._data.sort(key=sort_key, reverse=order == Qt.DescendingOrder)
         top_left = self.index(0, 0)
         bottom_right = self.index(len(self._data) - 1, Column.DB_MAP)

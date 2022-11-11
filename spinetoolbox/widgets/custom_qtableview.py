@@ -23,6 +23,8 @@ import locale
 from contextlib import contextmanager
 from numbers import Number
 import re
+from operator import methodcaller
+
 from PySide2.QtWidgets import QTableView, QApplication, QAction
 from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence, QIcon
@@ -611,7 +613,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
             return False
         model = self.model()
         selected_indexes = [i for i in selection_model.selectedIndexes() if not model.is_expanse_row(i.row())]
-        selected_indexes.sort(key=lambda index: index.row())
+        selected_indexes.sort(key=methodcaller("row"))
         values = [index.data() for index in selected_indexes]
         with system_lc_numeric():
             with io.StringIO() as output:

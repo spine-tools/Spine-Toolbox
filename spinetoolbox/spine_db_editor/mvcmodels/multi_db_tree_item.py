@@ -227,7 +227,7 @@ class MultiDBTreeItem(FetchParent, TreeItem):
 
     @property
     def _children_sort_key(self):
-        return lambda item: item.display_id
+        return attrgetter("display_id")
 
     def fetch_status_change(self):
         """Notifies the view that the model's layout has changed.
