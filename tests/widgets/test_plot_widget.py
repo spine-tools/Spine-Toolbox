@@ -15,10 +15,12 @@ import unittest
 from itertools import product
 from unittest import mock
 
+from matplotlib.gridspec import GridSpec
 from PySide2.QtWidgets import QApplication
 
 from spinedb_api.parameter_value import TimeSeriesFixedResolution
 from spinetoolbox.plotting import plot_data, TreeNode, turn_node_to_xy_data, convert_indexed_value_to_tree
+from spinetoolbox.widgets.plot_canvas import LegendPosition
 from spinetoolbox.widgets.plot_widget import PlotWidget, _PlotDataWidget
 
 
@@ -63,6 +65,16 @@ class TestPlotWidget(unittest.TestCase):
         ]
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+    def test_legend_axes_placement_bottom(self):
+        plot_widget = PlotWidget(legend_axes_position=LegendPosition.BOTTOM)
+        self.assertEqual(
+            repr(plot_widget.canvas.legend_axes.get_gridspec()), repr(GridSpec(2, 1, height_ratios=[1, 0]))
+        )
+
+    def test_legend_axes_placement_right(self):
+        plot_widget = PlotWidget(legend_axes_position=LegendPosition.RIGHT)
+        self.assertEqual(repr(plot_widget.canvas.legend_axes.get_gridspec()), repr(GridSpec(1, 2, width_ratios=[1, 0])))
 
 
 if __name__ == '__main__':

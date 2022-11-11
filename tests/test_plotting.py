@@ -23,6 +23,7 @@ from unittest.mock import Mock, MagicMock, patch
 import numpy
 from PySide2.QtCore import QModelIndex, QItemSelectionModel, QObject
 from PySide2.QtWidgets import QApplication, QMessageBox
+from matplotlib.gridspec import GridSpec
 
 from spinedb_api import (
     DateTime,
@@ -45,6 +46,8 @@ from spinetoolbox.plotting import (
     plot_data,
     raise_if_incompatible_x,
     plot_pivot_table_selection,
+    LEGEND_PLACEMENT_THRESHOLD,
+    add_row_to_exception,
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from .mock_helpers import TestSpineDBManager
@@ -748,8 +751,8 @@ class TestPlotData(unittest.TestCase):
 
     def test_we_find_unsqueezed_index_no_matter_what(self):
         data = [
-            XYData(x=['t1', 't2'], y=[13.0, 7.0], x_label='x', y_label='', data_index=['A1'], index_names=['x']),
-            XYData(x=['B1', 'B2'], y=[-13.0, -7.0], x_label='x', y_label='', data_index=[], index_names=[]),
+            XYData(x=["t1", "t2"], y=[13.0, 7.0], x_label="x", y_label="", data_index=["A1"], index_names=["x"]),
+            XYData(x=["B1", "B2"], y=[-13.0, -7.0], x_label="x", y_label="", data_index=[], index_names=[]),
         ]
         plot_widget = plot_data(data)
         self.assertEqual(plot_widget.canvas.axes.get_title(), "")
@@ -764,6 +767,24 @@ class TestPlotData(unittest.TestCase):
         self.assertEqual(list(lines[0].get_ydata(orig=True)), [13.0, 7.0])
         self.assertEqual(list(lines[1].get_xdata(orig=True)), ["B1", "B2"])
         self.assertEqual(list(lines[1].get_ydata(orig=True)), [-13.0, -7.0])
+
+    def test_legend_placement_below_threshold(self):
+        data = [
+            XYData(x=["x"], y=[1.0], x_label="x", y_label="", data_index=[], index_names=[])
+            for _ in range(LEGEND_PLACEMENT_THRESHOLD - 1)
+        ]
+        plot_widget = plot_data(data)
+        self.assertEqual(
+            repr(plot_widget.canvas.legend_axes.get_gridspec()), repr(GridSpec(2, 1, height_ratios=[1, 0]))
+        )
+
+    def test_legend_placement_above_threshold(self):
+        data = [
+            XYData(x=["x"], y=[1.0], x_label="x", y_label="", data_index=[], index_names=[])
+            for _ in range(LEGEND_PLACEMENT_THRESHOLD)
+        ]
+        plot_widget = plot_data(data)
+        self.assertEqual(repr(plot_widget.canvas.legend_axes.get_gridspec()), repr(GridSpec(1, 2, width_ratios=[1, 0])))
 
 
 class TestRaiseIfIncompatibleX(unittest.TestCase):
@@ -787,6 +808,20 @@ class TestRaiseIfIncompatibleX(unittest.TestCase):
             ),
         ]
         self.assertRaises(PlottingError, raise_if_incompatible_x, data_list)
+
+
+class TestAddRowToException(unittest.TestCase):
+    def test_exception_message_formatted_correctly(self):
+        row = 23
+
+        def display_row(r):
+            self.assertEqual(r, row)
+            return 99
+
+        with self.assertRaises(PlottingError) as context_manager:
+            with add_row_to_exception(row, display_row):
+                raise PlottingError("detailed error message")
+        self.assertEqual(str(context_manager.exception), "Failed to plot row 99: detailed error message")
 
 
 class MultiSignalWaiter(QObject):
