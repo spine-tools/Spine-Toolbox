@@ -152,7 +152,12 @@ class TestEngineClient(unittest.TestCase):
         self.assertFalse(should_be_false)
         client.close()
 
-    def test_upload_project(self):
+    @mock.patch(
+        "spine_engine.server.project_extractor_service.ProjectExtractorService.INTERNAL_PROJECT_DIR",
+        new_callable=mock.PropertyMock,
+    )
+    def test_upload_project(self, mock_proj_dir):
+        mock_proj_dir.return_value = self._temp_dir.name
         project_zip_fpath = os.path.join(str(Path(__file__).parent), "helloworld.zip")
         client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
         job_id = client.upload_project("Hello World", project_zip_fpath)
