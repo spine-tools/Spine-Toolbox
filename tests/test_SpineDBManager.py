@@ -217,8 +217,7 @@ class TestAddItems(unittest.TestCase):
 
         def callback(db_map_data):
             self.assertEqual(
-                db_map_data,
-                {db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": None}]},
+                db_map_data, {db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": None}]}
             )
 
         db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
@@ -233,10 +232,7 @@ class TestAddItems(unittest.TestCase):
         db_map.connection.close()
 
         def callback(db_map_data):
-            self.assertEqual(
-                db_map_data,
-                {db_map: [{'entity_id': 1, 'metadata_id': 1, 'commit_id': None, 'id': 1}]},
-            )
+            self.assertEqual(db_map_data, {db_map: [{'entity_id': 1, 'metadata_id': 1, 'commit_id': None, 'id': 1}]})
 
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
         self._db_mngr.add_items(db_map_data, "add_entity_metadata", "entity_metadata", callback=callback)

@@ -257,10 +257,7 @@ class UpdateItemsCommand(SpineDBCommand):
     def redo(self):
         super().redo()
         self.db_mngr.update_items(
-            self.redo_db_map_data,
-            self.item_type,
-            check=self._check,
-            callback=self.handle_redo_complete,
+            self.redo_db_map_data, self.item_type, check=self._check, callback=self.handle_redo_complete
         )
 
     def undo(self):
@@ -313,10 +310,7 @@ class RemoveItemsCommand(SpineDBCommand):
             return
         data = self.undo_typed_data[item_type]
         self.db_mngr.add_items(
-            {self.db_map: data},
-            item_type,
-            readd=True,
-            callback=lambda _db_map_data: self._undo_next(item_type_iter),
+            {self.db_map: data}, item_type, readd=True, callback=lambda _db_map_data: self._undo_next(item_type_iter)
         )
 
     def _handle_first_redo_complete(self, db_map_typed_items):

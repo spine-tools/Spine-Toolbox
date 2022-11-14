@@ -67,7 +67,7 @@ class TestSpineDBFetcher(unittest.TestCase):
                     {'id': 1, 'name': 'Base', 'description': 'Base alternative', 'commit_id': 1},
                     {'id': 2, 'name': 'alt', 'description': None, 'commit_id': 2},
                 ]
-            },
+            }
         )
         self.assertEqual(
             self._db_mngr.get_item(self._db_map, "alternative", 2),

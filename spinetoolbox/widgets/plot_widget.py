@@ -113,10 +113,13 @@ class PlotWidget(QWidget):
         widget.setWindowTitle(title)
         widget.show()
 
-    def add_legend(self):
-        """Adds a legend to the plot's legend axes."""
-        h, l = self.canvas.axes.get_legend_handles_labels()
-        self.canvas.legend_axes.legend(h, l, loc="upper center")
+    def add_legend(self, handles):
+        """Adds a legend to the plot's legend axes.
+
+        Args:
+            handles (list): legend handles
+        """
+        self.canvas.legend_axes.legend(handles=handles, loc="upper center")
 
     def use_as_window(self, parent_window, document_name):
         """

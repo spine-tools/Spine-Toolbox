@@ -50,7 +50,7 @@ from spinetoolbox.plotting import (
     add_row_to_exception,
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from .mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager
 
 
 class TestBase(unittest.TestCase):
@@ -152,7 +152,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | floats")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "floats")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o2", "o3"])
@@ -175,7 +175,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o2", "o3"])
@@ -201,7 +201,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | series | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "series")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o2", "o3"])
@@ -234,7 +234,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | floats")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "floats")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o3"])
@@ -256,7 +256,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o2", "o3"])
@@ -271,7 +271,7 @@ class TestPlotPivotTableSelection(TestBase):
         finally:
             plot_widget.deleteLater()
 
-    def test_multiple_columns_selected(self):
+    def test_multiple_columns_selected_plots_on_two_y_axes(self):
         self._fill_pivot({"ints": [-3, -1, 2], "floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
         selected_indexes = [model.index(row, column) for column in range(1, 3) for row in range(2, 5)]
@@ -279,22 +279,30 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "floats")
+            self.assertTrue(plot_widget.canvas.has_twinned_axes())
+            twinned = plot_widget.canvas.twinned_axes()
+            self.assertEqual(len(twinned), 1)
+            self.assertEqual(twinned[0].get_ylabel(), "ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(
                 legend_texts, ["ints | o1", "ints | o2", "ints | o3", "floats | o1", "floats | o2", "floats | o3"]
             )
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 6)
-            for i in range(6):
+            self.assertEqual(len(lines), 3)
+            for i in range(3):
+                self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1])
+            self.assertEqual(list(lines[1].get_ydata(orig=True)), [1.2])
+            self.assertEqual(list(lines[2].get_ydata(orig=True)), [1.3])
+            lines = twinned[0].get_lines()
+            self.assertEqual(len(lines), 3)
+            for i in range(3):
                 self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
             self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
             self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
             self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
-            self.assertEqual(list(lines[3].get_ydata(orig=True)), [1.1])
-            self.assertEqual(list(lines[4].get_ydata(orig=True)), [1.2])
-            self.assertEqual(list(lines[5].get_ydata(orig=True)), [1.3])
         finally:
             plot_widget.deleteLater()
 
@@ -307,7 +315,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "floats")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o2", "o3"])
@@ -332,7 +340,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o2", "o3"])
@@ -360,7 +368,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | series | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "series")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o2"])
@@ -402,7 +410,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | maps | o1 | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
             self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
             lines = plot_widget.canvas.axes.get_lines()
             self.assertEqual(len(lines), 1)
@@ -432,7 +440,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | maps | o1 | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["a", "b"])
@@ -492,7 +500,7 @@ class TestPlotPivotTableSelection(TestBase):
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | maps | o1 | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(
@@ -595,7 +603,7 @@ class TestTurnNodesToXYData(unittest.TestCase):
     def test_shallow_tree(self):
         node = TreeNode("my_index")
         node.content = {1: 1.1, 2: 2.2}
-        xy_data = list(turn_node_to_xy_data(node))
+        xy_data = list(turn_node_to_xy_data(node, None))
         expected = [XYData([1, 2], [1.1, 2.2], "my_index", "", [], [])]
         self.assertEqual(xy_data, expected)
 
@@ -606,7 +614,7 @@ class TestTurnNodesToXYData(unittest.TestCase):
         node2.content = {3: 3.3, 4: 4.4}
         root = TreeNode("root_index")
         root.content = {"a": node1, "b": node2}
-        xy_data = list(turn_node_to_xy_data(root))
+        xy_data = list(turn_node_to_xy_data(root, None))
         expected = [
             XYData([1, 2], [1.1, 2.2], "index_1", "", ["a"], ["root_index"]),
             XYData([3, 4], [3.3, 4.4], "index_2", "", ["b"], ["root_index"]),
@@ -618,10 +626,31 @@ class TestTurnNodesToXYData(unittest.TestCase):
         node1.content = {1: 1.1, 2: 2.2}
         root = TreeNode("root_index")
         root.content = {"a": node1, 3: 3.3, 4: 4.4}
-        xy_data = list(turn_node_to_xy_data(root))
+        xy_data = list(turn_node_to_xy_data(root, None))
         expected = [
             XYData([1, 2], [1.1, 2.2], "index_1", "", ["a"], ["root_index"]),
             XYData([3, 4], [3.3, 4.4], "root_index", "", [], []),
+        ]
+        self.assertEqual(xy_data, expected)
+
+    def test_take_index_as_y_label(self):
+        node1 = TreeNode("index_1")
+        node1.content = {1: 1.1, 2: 2.2}
+        node2 = TreeNode("index_2")
+        node2.content = {3: 3.3, 4: 4.4}
+        node3 = TreeNode("index_3")
+        node3.content = {5: 5.5, 6: 6.6}
+        label_node1 = TreeNode("Y label 1")
+        label_node1.content = {"to the top": node1, "upwards": node2}
+        label_node2 = TreeNode("Y label 2")
+        label_node2.content = {"ascent": node3}
+        root = TreeNode("root_index")
+        root.content = {"a": label_node1, "b": label_node2}
+        xy_data = list(turn_node_to_xy_data(root, 1))
+        expected = [
+            XYData([1, 2], [1.1, 2.2], "index_1", "to the top", ["a", "to the top"], ["root_index", "Y label 1"]),
+            XYData([3, 4], [3.3, 4.4], "index_2", "upwards", ["a", "upwards"], ["root_index", "Y label 1"]),
+            XYData([5, 6], [5.5, 6.6], "index_3", "ascent", ["b", "ascent"], ["root_index", "Y label 2"]),
         ]
         self.assertEqual(xy_data, expected)
 
@@ -726,24 +755,24 @@ class TestPlotData(unittest.TestCase):
         self.assertEqual(len(plot_widget.canvas.axes.lines), 0)
 
     def test_single_plot(self):
-        data = [XYData([-11, -22], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"])]
+        data = [XYData([-11, -22], [1.1, 2.2], "x_index", "y", ["index_1"], ["index name"])]
         plot_widget = plot_data(data)
         lines = plot_widget.canvas.axes.lines
         self.assertEqual(plot_widget.canvas.axes.get_title(), "index_1")
         self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x_index")
-        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "y")
         self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
         self.assertEqual(len(lines), 1)
         self.assertEqual(list(lines[0].get_xdata(orig=True)), [-11, -22])
         self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 2.2])
 
     def test_two_plots_with_shared_and_individual_indexes(self):
-        data = [XYData([-11, -22], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"])]
+        data = [XYData([-11, -22], [1.1, 2.2], "x_index", "y", ["index_1"], ["index name"])]
         plot_widget = plot_data(data)
         lines = plot_widget.canvas.axes.lines
         self.assertEqual(plot_widget.canvas.axes.get_title(), "index_1")
         self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x_index")
-        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "y")
         self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
         self.assertEqual(len(lines), 1)
         self.assertEqual(list(lines[0].get_xdata(orig=True)), [-11, -22])
@@ -751,13 +780,13 @@ class TestPlotData(unittest.TestCase):
 
     def test_we_find_unsqueezed_index_no_matter_what(self):
         data = [
-            XYData(x=["t1", "t2"], y=[13.0, 7.0], x_label="x", y_label="", data_index=["A1"], index_names=["x"]),
-            XYData(x=["B1", "B2"], y=[-13.0, -7.0], x_label="x", y_label="", data_index=[], index_names=[]),
+            XYData(x=["t1", "t2"], y=[13.0, 7.0], x_label="x", y_label="y", data_index=["A1"], index_names=["idx"]),
+            XYData(x=["B1", "B2"], y=[-13.0, -7.0], x_label="x", y_label="y", data_index=[], index_names=[]),
         ]
         plot_widget = plot_data(data)
         self.assertEqual(plot_widget.canvas.axes.get_title(), "")
         self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
-        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "y")
         legend = plot_widget.canvas.legend_axes.get_legend()
         legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
         self.assertEqual(legend_texts, ["<root> | A1", "<root>"])
@@ -767,6 +796,36 @@ class TestPlotData(unittest.TestCase):
         self.assertEqual(list(lines[0].get_ydata(orig=True)), [13.0, 7.0])
         self.assertEqual(list(lines[1].get_xdata(orig=True)), ["B1", "B2"])
         self.assertEqual(list(lines[1].get_ydata(orig=True)), [-13.0, -7.0])
+
+    def test_y_axis_is_not_labeled_when_more_than_two_labels_are_possible(self):
+        data = [
+            XYData(x=["t1", "t2"], y=[1.1, 2.2], x_label="x", y_label="y", data_index=["A1"], index_names=["idx"]),
+            XYData(
+                x=["t1", "t2"],
+                y=[3.3, 4.4],
+                x_label="x",
+                y_label="z",
+                data_index=["B1", "b1"],
+                index_names=["jdx", "kdx"],
+            ),
+            XYData(x=["t1", "t2"], y=[5.5, 6.6], x_label="x", y_label="a", data_index=[], index_names=[]),
+        ]
+        plot_widget = plot_data(data)
+        self.assertFalse(plot_widget.canvas.has_twinned_axes())
+        self.assertEqual(plot_widget.canvas.axes.get_title(), "")
+        self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
+        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "")
+        legend = plot_widget.canvas.legend_axes.get_legend()
+        legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+        self.assertEqual(legend_texts, ["<root> | A1", "<root> | B1 | b1", "<root>"])
+        lines = plot_widget.canvas.axes.lines
+        self.assertEqual(len(lines), 3)
+        self.assertEqual(list(lines[0].get_xdata(orig=True)), ["t1", "t2"])
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 2.2])
+        self.assertEqual(list(lines[1].get_xdata(orig=True)), ["t1", "t2"])
+        self.assertEqual(list(lines[1].get_ydata(orig=True)), [3.3, 4.4])
+        self.assertEqual(list(lines[2].get_xdata(orig=True)), ["t1", "t2"])
+        self.assertEqual(list(lines[2].get_ydata(orig=True)), [5.5, 6.6])
 
     def test_legend_placement_below_threshold(self):
         data = [

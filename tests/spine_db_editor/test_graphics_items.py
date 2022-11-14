@@ -47,7 +47,7 @@ class TestRelationshipItem(unittest.TestCase):
         self._db_mngr.add_object_classes({self._db_map: [{"name": "oc", "id": 1}]})
         self._db_mngr.add_objects({self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
         self._db_mngr.add_relationship_classes(
-            {self._db_map: [{"name": "rc", "id": 2, "object_class_id_list": [1], "object_class_name_list": "oc"}]},
+            {self._db_map: [{"name": "rc", "id": 2, "object_class_id_list": [1], "object_class_name_list": "oc"}]}
         )
         self._db_mngr.add_relationships(
             {
@@ -61,7 +61,7 @@ class TestRelationshipItem(unittest.TestCase):
                         "object_name_list": ["o"],
                     }
                 ]
-            },
+            }
         )
         with mock.patch.object(RelationshipItem, "refresh_icon"):
             self._item = RelationshipItem(self._spine_db_editor, 0.0, 0.0, 0, ((self._db_map, 2),))

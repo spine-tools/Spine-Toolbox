@@ -109,11 +109,12 @@ def convert_indexed_value_to_tree(value):
     return d
 
 
-def turn_node_to_xy_data(root_node, index_names=None, indexes=None):
+def turn_node_to_xy_data(root_node, y_label_position, index_names=None, indexes=None):
     """Constructs plottable data and indexes recursively.
 
     Args:
         root_node (TreeNode): root node
+        y_label_position (int, optional): position of y label in indexes
         index_names (list of str, optional): list of current index names
         indexes (list): list of current indexes
 
@@ -130,13 +131,13 @@ def turn_node_to_xy_data(root_node, index_names=None, indexes=None):
     for index, sub_node in root_node.content.items():
         if isinstance(sub_node, TreeNode):
             current_indexes = indexes + [index]
-            yield from turn_node_to_xy_data(sub_node, current_index_names, current_indexes)
+            yield from turn_node_to_xy_data(sub_node, y_label_position, current_index_names, current_indexes)
         else:
             x.append(index)
             y.append(sub_node)
     if x:
         x_label = current_index_names[-1]
-        y_label = ""
+        y_label = indexes[y_label_position] if y_label_position is not None else ""
         yield XYData(x, y, x_label, y_label, indexes, current_index_names[:-1])
 
 
@@ -261,21 +262,72 @@ def plot_data(data_list, plot_widget=None):
     if needs_redraw:
         _clear_plot(plot_widget)
     _limit_string_x_tick_labels(squeezed_data, plot_widget)
-    plot = _make_plot_function(squeezed_data, plot_widget)
-    for data in squeezed_data:
-        plot_label = " | ".join(map(str, data.data_index))
-        x = _make_x_plottable(data.x)
-        plot(x, data.y, label=plot_label)
+    y_labels = sorted({xy_data.y_label for xy_data in data_list})
+    if len(y_labels) == 1:
+        legend_handles = _plot_single_y_axis(squeezed_data, y_labels[0], plot_widget)
+    elif len(y_labels) == 2:
+        legend_handles = _plot_double_y_axis(squeezed_data, y_labels, plot_widget)
+    else:
+        legend_handles = _plot_single_y_axis(squeezed_data, "", plot_widget)
     plot_widget.canvas.axes.set_xlabel(squeezed_data[0].x_label)
-    plot_widget.canvas.axes.set_ylabel(squeezed_data[0].y_label)
     plot_title = " | ".join(map(str, common_indexes))
     plot_widget.canvas.axes.set_title(plot_title)
     if len(squeezed_data) > 1:
-        plot_widget.add_legend()
+        plot_widget.add_legend(legend_handles)
     if needs_redraw:
         plot_widget.canvas.draw()
     plot_widget.original_xy_data = all_data
     return plot_widget
+
+
+def _plot_single_y_axis(data_list, y_label, plot_widget):
+    """Plots all data on single y-axis.
+
+    Args:
+        data_list (list of XYData): data to plot
+        y_label (str): y-axis label
+        plot_widget (PlotWidget): plot widget
+
+    Returns:
+        list: legend handles
+    """
+    legend_handles = []
+    plot = _make_plot_function(data_list, plot_widget.canvas.axes)
+    for data in data_list:
+        plot_label = " | ".join(map(str, data.data_index))
+        x = _make_x_plottable(data.x)
+        handles = plot(x, data.y, label=plot_label)
+        legend_handles += handles
+    plot_widget.canvas.axes.set_ylabel(y_label)
+    return legend_handles
+
+
+def _plot_double_y_axis(data_list, y_labels, plot_widget):
+    """Plots all data on two y-axes.
+
+    Args:
+        data_list (list of XYData): data to plot
+        y_labels (list of str): y-axis labels
+        plot_widget (PlotWidget): plot widget
+
+    Returns:
+        list: legend handles
+    """
+    legend_handles = []
+    left_label = y_labels[0]
+    right_label = y_labels[1]
+    plot_left = _make_plot_function(data_list, plot_widget.canvas.axes)
+    right_axes = plot_widget.canvas.axes.twinx()
+    plot_right = _make_plot_function(data_list, right_axes)
+    for data in data_list:
+        plot_label = " | ".join(map(str, data.data_index))
+        x = _make_x_plottable(data.x)
+        plot = plot_left if data.y_label == left_label else plot_right
+        handles = plot(x, data.y, label=plot_label)
+        legend_handles += handles
+    plot_widget.canvas.axes.set_ylabel(left_label)
+    right_axes.set_ylabel(right_label)
+    return legend_handles
 
 
 def _make_x_plottable(xs):
@@ -292,11 +344,12 @@ def _make_x_plottable(xs):
     return xs
 
 
-def _make_plot_function(data_list, plot_widget):
+def _make_plot_function(data_list, axes):
     """Decides plot method and default keyword arguments based on XYData.
 
     Args:
         data_list (list of XYData): data to plot
+        axes (Axes): plot axes
 
     Returns:
         Callable: plot method
@@ -304,8 +357,8 @@ def _make_plot_function(data_list, plot_widget):
     if data_list:
         x = data_list[0].x
         if x and isinstance(x[0], np.datetime64):
-            return functools.partial(plot_widget.canvas.axes.step, **_TIME_SERIES_PLOT_SETTINGS, **_BASE_SETTINGS)
-    return functools.partial(plot_widget.canvas.axes.plot, **_SCATTER_PLOT_SETTINGS, **_BASE_SETTINGS)
+            return functools.partial(axes.step, **_TIME_SERIES_PLOT_SETTINGS, **_BASE_SETTINGS)
+    return functools.partial(axes.plot, **_SCATTER_PLOT_SETTINGS, **_BASE_SETTINGS)
 
 
 def _clear_plot(plot_widget):
@@ -382,7 +435,8 @@ def plot_parameter_table_selection(model, model_indexes, table_header_sections, 
             index = model.index(row, index_column).data()
             node = _set_default_node(node, index, header_data(index_columns[i + 1]))
         node.content[model.index(row, index_columns[-1]).data()] = leaf_content
-    data_list = list(turn_node_to_xy_data(root_node))
+    y_label_position = index_columns.index(header_columns["parameter_name"])
+    data_list = list(turn_node_to_xy_data(root_node, y_label_position))
     return plot_data(data_list, plot_widget)
 
 
@@ -415,7 +469,7 @@ def plot_value_editor_table_selection(model, model_indexes, plot_widget=None):
         for i, index in enumerate(indexes[:-1]):
             node = _set_default_node(node, index, header_columns[i + 1])
         node.content[indexes[-1]] = leaf_content
-    data_list = list(turn_node_to_xy_data(root_node))
+    data_list = list(turn_node_to_xy_data(root_node, None))
     return plot_data(data_list, plot_widget)
 
 
@@ -459,7 +513,7 @@ def plot_pivot_table_selection(model, model_indexes, plot_widget=None):
         for i, index in enumerate(indexes[:-1]):
             node = _set_default_node(node, index, index_names[i])
         node.content[indexes[-1]] = leaf_content
-    data_list = list(turn_node_to_xy_data(root_node))
+    data_list = list(turn_node_to_xy_data(root_node, 1))
     return plot_data(data_list, plot_widget)
 
 
@@ -498,7 +552,7 @@ def plot_db_mngr_items(items, db_maps, plot_widget=None):
         for i, index in enumerate(indexes[:-1]):
             node = _set_default_node(node, index, index_names[i])
         node.content[indexes[-1]] = leaf_content
-    data_list = list(turn_node_to_xy_data(root_node))
+    data_list = list(turn_node_to_xy_data(root_node, 1))
     return plot_data(data_list, plot_widget)
 
 
