@@ -64,3 +64,23 @@ class PlotCanvas(FigureCanvasQTAgg):
     def legend_axes(self):
         """:obj:`matplotlib.axes.Axes`: figure's legend axes"""
         return self._legend_axes
+
+    def has_twinned_axes(self):
+        """Checks whether the axes have been twinned.
+
+        Returns:
+            bool: True if axes have been twinned, False otherwise
+        """
+        siblings = self._axes.get_shared_x_axes().get_siblings(self._axes)
+        if len(siblings) > 1:
+            return any(ax.bbox.bounds == self._axes.bbox.bounds for ax in siblings if ax is not self._axes)
+        return False
+
+    def twinned_axes(self):
+        """Returns twinned axes.
+
+        Returns:
+            list of Axes: twinned axes
+        """
+        siblings = self._axes.get_shared_x_axes().get_siblings(self._axes)
+        return [ax for ax in siblings if ax is not self._axes and ax.bbox.bounds == self._axes.bbox.bounds]

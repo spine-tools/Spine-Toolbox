@@ -43,7 +43,7 @@ class TestPlotWidget(unittest.TestCase):
         value_node = convert_indexed_value_to_tree(time_series)
         root_node = TreeNode("root index")
         root_node.content["first"] = value_node
-        data_list = list(turn_node_to_xy_data(root_node))
+        data_list = list(turn_node_to_xy_data(root_node, None))
         plot_data(data_list, self._plot_widget)
         with mock.patch.object(_PlotDataWidget, "show") as show_method:
             self._plot_widget.show_plot_data()

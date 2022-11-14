@@ -198,7 +198,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
                     "metadata_value": "Anonymous",
                     "parameter_value_id": 2,
                     "commit_id": None,
-                },
+                }
             ]
         }
         self._db_mngr.add_parameter_value_metadata(db_map_item_metadata)
@@ -224,7 +224,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
                     "metadata_value": "Anonymous",
                     "entity_id": 2,
                     "commit_id": None,
-                },
+                }
             ]
         }
         self._db_mngr.add_entity_metadata(db_map_item_metadata)
