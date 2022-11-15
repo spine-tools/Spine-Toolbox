@@ -1471,6 +1471,8 @@ class FetchParent:
     def accepts_item(self, item, db_map):
         """Called by the associated SpineDBWorker whenever items are added/updated/removed.
         Returns whether this parent should react to that modification.
+        It should be consistent with ``filter_query()`` of course.
+
         The SpineDBWorker will call one or more of ``handle_items_added()``, ``handle_items_updated()``,
         or ``handle_items_removed()`` with all the items that pass this test.
 

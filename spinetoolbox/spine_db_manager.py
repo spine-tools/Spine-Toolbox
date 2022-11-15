@@ -1672,38 +1672,6 @@ class SpineDBManager(QObject):
         finally:
             db_map.connection.close()
 
-    def get_entity_metadata(self, db_map, entity_id):
-        """Returns metadata records for given entity.
-
-        Args:
-            db_map (DiffDatabaseMapping): database mapping
-            entity_id (int): entity id
-
-        Returns:
-            list of namedtuple: entity metadata records
-        """
-        try:
-            worker = self._get_worker(db_map)
-        except KeyError:
-            return []
-        return worker.get_entity_metadata(entity_id)
-
-    def get_parameter_value_metadata(self, db_map, parameter_value_id):
-        """Returns metadata records for given parameter value.
-
-        Args:
-            db_map (DiffDatabaseMapping): database mapping
-            parameter_value_id (int): parameter value id
-
-        Returns:
-            list of namedtuple: parameter value metadata records
-        """
-        try:
-            worker = self._get_worker(db_map)
-        except KeyError:
-            return []
-        return worker.get_parameter_value_metadata(parameter_value_id)
-
     def get_items_for_commit(self, db_map, commit_id):
         try:
             worker = self._get_worker(db_map)

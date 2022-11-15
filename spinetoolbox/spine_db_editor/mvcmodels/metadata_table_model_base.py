@@ -216,7 +216,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         available_codenames = {db_map.codename: db_map for db_map in self._db_maps}
         reserved = self._reserved_metadata()
         for index, value in zip(indexes, values):
-            if not (self.flags(index) & Qt.ItemIsEditable):
+            if not self.flags(index) & Qt.ItemIsEditable:
                 continue
             if value is None:
                 value = ""
