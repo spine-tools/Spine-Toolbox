@@ -19,7 +19,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QSettings
 from PySide2.QtWidgets import QApplication
 from spinedb_api import (
     DatabaseMapping,
@@ -275,6 +275,47 @@ class TestImportData(unittest.TestCase):
             value = from_database(row["value"], row["type"])
             values[index_to_id[row["id"]]] = value
         self.assertEqual(values, ["first value", "second value"])
+
+
+class TestOpenDBEditor(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        self._temp_dir = TemporaryDirectory()
+        db_path = Path(self._temp_dir.name, "db.sqlite")
+        self._db_url = "sqlite:///" + str(db_path)
+        self._db_mngr = SpineDBManager(QSettings(), None)
+        self._logger = MagicMock()
+
+    def test_open_db_editor(self):
+        editors = list(self._db_mngr.get_all_multi_spine_db_editors())
+        self.assertFalse(editors)
+        self._db_mngr.open_db_editor({self._db_url: "test"})
+        editors = list(self._db_mngr.get_all_multi_spine_db_editors())
+        self.assertEqual(len(editors), 1)
+        self._db_mngr.open_db_editor({self._db_url: "test"})
+        editors = list(self._db_mngr.get_all_multi_spine_db_editors())
+        self.assertEqual(len(editors), 1)
+        self._db_mngr.open_db_editor({self._db_url: "not_the_same"})
+        editor = editors[0]
+        self.assertEqual(editor.tab_widget.count(), 2)
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
+        # Database connection may still be open. Retry cleanup until it succeeds.
+        running = True
+        while running:
+            QApplication.processEvents()
+            try:
+                self._temp_dir.cleanup()
+            except NotADirectoryError:
+                pass
+            else:
+                running = False
 
 
 if __name__ == '__main__':
