@@ -236,7 +236,7 @@ class SpineDBWorker(QObject):
 
     def _fetch_event(self, parent, chunk):
         if chunk:
-            removed_ids = self._removed_ids.get(parent.fetch_item_type)
+            removed_ids = self._removed_ids.get(parent.fetch_item_type, ())
             db_map_data = {self._db_map: [item for item in chunk if item["id"] not in removed_ids]}
             self._db_mngr.cache_items(parent.fetch_item_type, db_map_data)
             parent.handle_items_added(db_map_data)
