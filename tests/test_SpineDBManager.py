@@ -300,8 +300,11 @@ class TestOpenDBEditor(unittest.TestCase):
         editors = list(self._db_mngr.get_all_multi_spine_db_editors())
         self.assertEqual(len(editors), 1)
         self._db_mngr.open_db_editor({self._db_url: "not_the_same"})
+        self.assertEqual(len(editors), 1)
         editor = editors[0]
         self.assertEqual(editor.tab_widget.count(), 2)
+        for editor in self._db_mngr.get_all_multi_spine_db_editors():
+            editor.close()
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
