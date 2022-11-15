@@ -232,21 +232,15 @@ class SpineDBWorker(QObject):
     def _fetch_more(self, parent):
         iterator = self._get_iterator(parent)
         chunk = next(iterator, [])
-        if chunk:
-            more_available = True
-            removed_ids = self._removed_ids.get(parent.fetch_item_type)
-            if removed_ids is not None:
-                chunk = [item for item in chunk if item["id"] not in removed_ids]
-        else:
-            more_available = False
-        self._something_happened.emit(_Event.FETCH, (parent, chunk, more_available))
+        self._something_happened.emit(_Event.FETCH, (parent, chunk))
 
-    def _fetch_event(self, parent, chunk, more_available):
+    def _fetch_event(self, parent, chunk):
         if chunk:
-            db_map_data = {self._db_map: chunk}
+            removed_ids = self._removed_ids.get(parent.fetch_item_type)
+            db_map_data = {self._db_map: [item for item in chunk if item["id"] not in removed_ids]}
             self._db_mngr.cache_items(parent.fetch_item_type, db_map_data)
             parent.handle_items_added(db_map_data)
-        elif not more_available and parent.query is not None:
+        elif parent.query is not None:
             parent.set_fetched(True)
         parent.set_busy_fetching(False)
 
