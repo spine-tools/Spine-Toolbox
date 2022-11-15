@@ -380,8 +380,8 @@ class SpineDBEditorBase(QMainWindow):
         msg += "</ul>"
         self.msg.emit(msg)
 
-    @Slot(int)
-    def update_undo_redo_actions(self, index):
+    @Slot(bool)
+    def update_undo_redo_actions(self, _):
         undo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].undo_age)
         redo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].redo_age)
         new_undo_action = self.db_mngr.undo_action[undo_db_map]
@@ -399,7 +399,7 @@ class SpineDBEditorBase(QMainWindow):
                 self.ui.actionRedo.triggered.disconnect(self.redo_action.triggered)
             self.ui.actionRedo.triggered.connect(new_redo_action.triggered)
             self.redo_action = new_redo_action
-        QTimer.singleShot(0, self._refresh_undo_redo_actions)
+        self._refresh_undo_redo_actions()
 
     @Slot()
     def _refresh_undo_redo_actions(self):

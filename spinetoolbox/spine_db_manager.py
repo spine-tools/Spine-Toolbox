@@ -512,7 +512,8 @@ class SpineDBManager(QObject):
             self.add_db_map_listener(db_map, listener)
             stack = self.undo_stack[db_map]
             try:
-                stack.indexChanged.connect(listener.update_undo_redo_actions)
+                stack.canRedoChanged.connect(listener.update_undo_redo_actions)
+                stack.canUndoChanged.connect(listener.update_undo_redo_actions)
                 stack.cleanChanged.connect(listener.update_commit_enabled)
             except AttributeError:
                 pass
@@ -536,7 +537,8 @@ class SpineDBManager(QObject):
                 pass
             self.remove_db_map_listener(db_map, listener)
             try:
-                self.undo_stack[db_map].indexChanged.disconnect(listener.update_undo_redo_actions)
+                self.undo_stack[db_map].canRedoChanged.disconnect(listener.update_undo_redo_actions)
+                self.undo_stack[db_map].canUndoChanged.disconnect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
             except AttributeError:
                 pass
