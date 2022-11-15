@@ -327,52 +327,6 @@ class SpineDBWorker(QObject):
         if not self._db_map.connection.closed:
             self._db_map.connection.close()
 
-    def get_entity_metadata(self, entity_id):
-        """Queries metadata records for a single entity synchronously.
-
-        Args:
-            entity_id (int): entity id
-
-        Returns:
-            list of namedtuple: entity metadata records
-        """
-        return self._executor.submit(self._get_entity_metadata, entity_id).result()
-
-    def _get_entity_metadata(self, entity_id):
-        """Queries metadata records for a single entity.
-
-        Args:
-            entity_id (int): entity id
-
-        Returns:
-            list of namedtuple: entity metadata records
-        """
-        sq = self._db_map.ext_entity_metadata_sq
-        return self._db_map.query(sq).filter(sq.c.entity_id == entity_id).all()
-
-    def get_parameter_value_metadata(self, parameter_value_id):
-        """Queries metadata records for a single parameter value synchronously.
-
-        Args:
-            parameter_value_id (int): parameter value id
-
-        Returns:
-            list of namedtuple: parameter value metadata records
-        """
-        return self._executor.submit(self._get_parameter_value_metadata, parameter_value_id).result()
-
-    def _get_parameter_value_metadata(self, parameter_value_id):
-        """Queries metadata records for a single parameter value.
-
-        Args:
-            parameter_value_id (int): parameter value id
-
-        Returns:
-            list of namedtuple: parameter value metadata records
-        """
-        sq = self._db_map.ext_parameter_value_metadata_sq
-        return self._db_map.query(sq).filter(sq.c.parameter_value_id == parameter_value_id).all()
-
     def remove_parents(self, parents):
         """Remove given parents. Removed parents don't get updated whenever items are added/updated/removed.
 

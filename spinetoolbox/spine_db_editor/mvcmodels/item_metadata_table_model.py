@@ -60,12 +60,16 @@ class ItemMetadataTableModel(MetadataTableModelBase):
             handle_items_added=self.add_item_metadata,
             handle_items_removed=self.remove_item_metadata,
             handle_items_updated=self.update_item_metadata,
+            filter_query=self._filter_entity_metadata_query,
+            accepts_item=self._accepts_entity_metadata_item,
         )
         self._parameter_value_metadata_fetch_parent = FlexibleFetchParent(
             "parameter_value_metadata",
             handle_items_added=self.add_item_metadata,
             handle_items_removed=self.remove_item_metadata,
             handle_items_updated=self.update_item_metadata,
+            filter_query=self._filter_parameter_value_metadata_query,
+            accepts_item=self._accepts_parameter_value_metadata_item,
         )
 
     def _fetch_parents(self):
@@ -85,16 +89,34 @@ class ItemMetadataTableModel(MetadataTableModelBase):
         """See base class."""
         return [None, None]
 
+    def _filter_entity_metadata_query(self, query, subquery, db_map):
+        if self._item_type != ItemType.ENTITY:
+            return query.filter(False)
+        return query.filter_by(entity_id=self._item_ids.get(db_map))
+
+    def _accepts_entity_metadata_item(self, item, db_map):
+        if self._item_type != ItemType.ENTITY:
+            return False
+        return item["entity_id"] == self._item_ids.get(db_map)
+
+    def _filter_parameter_value_metadata_query(self, query, subquery, db_map):
+        if self._item_type != ItemType.VALUE:
+            return query.filter(False)
+        return query.filter_by(parameter_value_id=self._item_ids.get(db_map))
+
+    def _accepts_parameter_value_metadata_item(self, item, db_map):
+        if self._item_type != ItemType.VALUE:
+            return False
+        return item["parameter_value_id"] == self._item_ids.get(db_map)
+
     def set_entity_ids(self, db_map_ids):
         """Sets the model to show metadata from given entity.
 
         Args:
             db_map_ids (dict): mapping from database mapping to entity's id in that database
         """
-        metadata = {
-            db_map: self._db_mngr.get_entity_metadata(db_map, entity_id) for db_map, entity_id in db_map_ids.items()
-        }
-        self._reset_metadata(ItemType.ENTITY, db_map_ids, metadata)
+        self._reset_metadata(ItemType.ENTITY, db_map_ids)
+        self._reset_fetch_parents()
 
     def set_parameter_value_ids(self, db_map_ids):
         """Sets the model to show metadata from given parameter value.
@@ -102,18 +124,15 @@ class ItemMetadataTableModel(MetadataTableModelBase):
         Args:
             db_map_ids (dict): mapping from database mapping to value's id in that database
         """
-        metadata = {
-            db_map: self._db_mngr.get_parameter_value_metadata(db_map, id_) for db_map, id_ in db_map_ids.items()
-        }
-        self._reset_metadata(ItemType.VALUE, db_map_ids, metadata)
+        self._reset_metadata(ItemType.VALUE, db_map_ids)
+        self._reset_fetch_parents()
 
-    def _reset_metadata(self, item_type, db_map_ids, metadata):
+    def _reset_metadata(self, item_type, db_map_ids):
         """Resets model.
 
         Args:
             item_type (ItemType): current item type
             db_map_ids (dict): mapping from database mapping to value's id in that database
-            metadata (dict): mapping from database mapping to metadata records
         """
         self.beginResetModel()
         self._item_type = item_type
@@ -121,19 +140,14 @@ class ItemMetadataTableModel(MetadataTableModelBase):
         self._db_maps = set(db_map_ids.keys())
         default_db_map = next(iter(self._db_maps)) if self._db_maps else None
         self._adder_row = self._make_adder_row(default_db_map)
-        self._data = [
-            [record.metadata_name, record.metadata_value, db_map, record.id, record.metadata_id]
-            for db_map, records in metadata.items()
-            for record in records
-        ]
-        if db_map_ids:
-            db_map = next(iter(db_map_ids))
-        elif self._db_maps:
-            db_map = next(iter(self._db_maps))
-        else:
-            db_map = None
-        self._adder_row = self._make_adder_row(db_map)
+        self._data = []
         self.endResetModel()
+
+    def _reset_fetch_parents(self):
+        for parent in self._fetch_parents():
+            parent.reset_fetching(None)
+        if self.canFetchMore(None):
+            self.fetchMore(None)
 
     def _add_data_to_db_mngr(self, name, value, db_map):
         """See base class."""
@@ -158,41 +172,16 @@ class ItemMetadataTableModel(MetadataTableModelBase):
                 {db_map: [{"id": id_, "metadata_name": name, "metadata_value": value}]}
             )
 
-    def rollback(self, db_maps):
+    def rollback(self, _db_maps):
         """Rolls back changes in database.
 
         Args:
             db_maps (Iterable of DiffDatabaseMapping): database mappings that have been rolled back
         """
-        spans = rows_to_row_count_tuples(
-            i for db_map in db_maps for i, row in enumerate(self._data) if row[Column.DB_MAP] == db_map
-        )
-        for span in spans:
-            first = span[0]
-            last = span[0] + span[1] - 1
-            self.beginRemoveRows(QModelIndex(), first, last)
-            self._data = self._data[:first] + self._data[last + 1 :]
-            self.endRemoveRows()
-        if self._item_type == ItemType.ENTITY:
-            get_item_metadata = self._db_mngr.get_entity_metadata
-        else:
-            get_item_metadata = self._db_mngr.get_parameter_value_metadata
-        metadata = {}
-        for db_map in db_maps:
-            id_ = self._item_ids.get(db_map)
-            if id_ is None:
-                continue
-            metadata.update({db_map: get_item_metadata(db_map, id_)})
-        if not metadata:
-            return
-        rolled_back_data = [
-            [record.metadata_name, record.metadata_value, db_map, record.id, record.metadata_id]
-            for db_map, records in metadata.items()
-            for record in records
-        ]
-        self.beginInsertRows(QModelIndex(), len(self._data), len(self._data) + len(rolled_back_data) - 1)
-        self._data += rolled_back_data
-        self.endInsertRows()
+        self.beginResetModel()
+        self._data = []
+        self.endResetModel()
+        self._reset_fetch_parents()
 
     def flags(self, index):
         row = index.row()

@@ -172,6 +172,18 @@ class SpineDBManager(QObject):
         return items
 
     def special_cascading_ids(self, db_map, item_type, ids):
+        """Returns a dictionary mapping item type to a set of ids for given db_map, item_type, and ids.
+        The returned ids correspond to items that have a reference to the input ids,
+        but it is not a foreign key - so they are not returned by ``DiffDatabaseMapping.cascading_ids``.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str)
+            ids (Iterable of int)
+
+        Returns:
+            dict
+        """
         cascading_ids = {}
         if item_type == "scenario_alternative":
             cascading_ids["scenario"] = {
@@ -1437,26 +1449,13 @@ class SpineDBManager(QObject):
                 d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
         return d
 
-    # TODO: Get rid of all the find_cascading_* methods and use DatabaseMappingBase.cascading_ids()?
     def find_cascading_relationship_classes(self, db_map_ids, only_visible=True):
         """Finds and returns cascading relationship classes for the given object_class ids."""
         db_map_cascading_data = dict()
         for db_map, object_class_ids in db_map_ids.items():
-            object_class_names = {
-                id_: self.get_item(db_map, "object_class", id_, only_visible=only_visible)["name"]
-                for id_ in object_class_ids
-            }
             for item in self.get_items(db_map, "relationship_class", only_visible=only_visible):
-                object_class_id_list = [int(id_) for id_ in item["object_class_id_list"].split(",")]
-                object_class_name_list = item["object_class_name_list"].split(",")
-                dirty = False
-                for k, id_ in enumerate(object_class_id_list):
-                    name = object_class_names.get(id_)
-                    if name is not None:
-                        dirty = True
-                        object_class_name_list[k] = name
-                if dirty:
-                    item["object_class_name_list"] = ",".join(object_class_name_list)
+                object_class_id_list = {int(id_) for id_ in item["object_class_id_list"].split(",")}
+                if object_class_id_list & set(object_class_ids):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
@@ -1464,20 +1463,9 @@ class SpineDBManager(QObject):
         """Finds and returns cascading relationships for the given object ids."""
         db_map_cascading_data = dict()
         for db_map, object_ids in db_map_ids.items():
-            object_names = {
-                id_: self.get_item(db_map, "object", id_, only_visible=only_visible)["name"] for id_ in object_ids
-            }
             for item in self.get_items(db_map, "relationship", only_visible=only_visible):
-                object_id_list = [int(id_) for id_ in item["object_id_list"].split(",")]
-                object_name_list = item["object_name_list"].split(",")
-                dirty = False
-                for k, id_ in enumerate(object_id_list):
-                    name = object_names.get(id_)
-                    if name is not None:
-                        dirty = True
-                        object_name_list[k] = name
-                if dirty:
-                    item["object_name_list"] = ",".join(object_name_list)
+                object_id_list = {int(id_) for id_ in item["object_id_list"].split(",")}
+                if object_id_list & set(object_ids):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
@@ -1485,23 +1473,8 @@ class SpineDBManager(QObject):
         """Finds and returns cascading parameter definitions or values for the given entity_class ids."""
         db_map_cascading_data = dict()
         for db_map, entity_class_ids in db_map_ids.items():
-            object_class_names = {
-                id_: self.get_item(db_map, "object_class", id_, only_visible=only_visible).get("name")
-                for id_ in entity_class_ids
-            }
-            relationship_classes = {
-                id_: self.get_item(db_map, "relationship_class", id_, only_visible=only_visible)
-                for id_ in entity_class_ids
-            }
             for item in self.get_items(db_map, item_type, only_visible=only_visible):
-                object_class_name = object_class_names.get(item["entity_class_id"])
-                relationship_class = relationship_classes.get(item["entity_class_id"])
-                if object_class_name is not None:
-                    item["object_class_name"] = object_class_name
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
-                elif relationship_class:
-                    item["relationship_class_name"] = relationship_class["name"]
-                    item["object_class_name_list"] = relationship_class["object_class_name_list"]
+                if item["entity_class_id"] in entity_class_ids:
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
@@ -1509,21 +1482,8 @@ class SpineDBManager(QObject):
         """Finds and returns cascading parameter values for the given entity ids."""
         db_map_cascading_data = dict()
         for db_map, entity_ids in db_map_ids.items():
-            object_names = {
-                id_: self.get_item(db_map, "object", id_, only_visible=only_visible).get("name") for id_ in entity_ids
-            }
-            relationships = {
-                id_: self.get_item(db_map, "relationship", id_, only_visible=only_visible) for id_ in entity_ids
-            }
             for item in self.get_items(db_map, "parameter_value", only_visible=only_visible):
-                object_name = object_names.get(item["entity_id"])
-                relationship = relationships.get(item["entity_id"])
-                if object_name is not None:
-                    item["object_name"] = object_name
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
-                elif relationship:
-                    item["object_name_list"] = relationship["object_name_list"]
-                    item["object_id_list"] = relationship["object_id_list"]
+                if item["entity_id"] in entity_ids:
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
@@ -1531,27 +1491,10 @@ class SpineDBManager(QObject):
         """Finds and returns cascading parameter values for the given parameter_definition ids."""
         db_map_cascading_data = dict()
         for db_map, param_def_ids in db_map_ids.items():
-            parameter_names = {
-                id_: self.get_item(db_map, "parameter_definition", id_, only_visible=only_visible)["parameter_name"]
-                for id_ in param_def_ids
-            }
             for item in self.get_items(db_map, "parameter_value", only_visible=only_visible):
-                parameter_name = parameter_names.get(item["parameter_id"])
-                if parameter_name is not None:
-                    item["parameter_name"] = parameter_name
+                if item["parameter_id"] in param_def_ids:
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
-
-    def find_groups_by_entity(self, db_map_ids, only_visible=True):
-        """Finds and returns groups for the given entity ids."""
-        db_map_group_data = dict()
-        for db_map, entity_ids in db_map_ids.items():
-            db_map_group_data[db_map] = [
-                item
-                for item in self.get_items(db_map, "entity_group", only_visible=only_visible)
-                if item["entity_id"] in entity_ids
-            ]
-        return db_map_group_data
 
     def find_cascading_scenario_alternatives_by_scenario(self, db_map_ids, only_visible=True):
         """Finds and returns cascading scenario alternatives for the given scenario ids."""
@@ -1561,6 +1504,15 @@ class SpineDBManager(QObject):
                 if item["scenario_id"] in ids:
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
+
+    def find_groups_by_entity(self, db_map_ids, only_visible=True):
+        """Finds and returns groups for the given entity ids."""
+        db_map_group_data = dict()
+        for db_map, entity_ids in db_map_ids.items():
+            for item in self.get_items(db_map, "entity_group", only_visible=only_visible):
+                if item["entity_id"] in entity_ids:
+                    db_map_group_data.setdefault(db_map, []).append(item)
+        return db_map_group_data
 
     def duplicate_scenario(self, scen_data, dup_name, db_map):
         data = self._get_data_for_export(scen_data)
@@ -1671,38 +1623,6 @@ class SpineDBManager(QObject):
             caller.file_exported.emit(file_path)
         finally:
             db_map.connection.close()
-
-    def get_entity_metadata(self, db_map, entity_id):
-        """Returns metadata records for given entity.
-
-        Args:
-            db_map (DiffDatabaseMapping): database mapping
-            entity_id (int): entity id
-
-        Returns:
-            list of namedtuple: entity metadata records
-        """
-        try:
-            worker = self._get_worker(db_map)
-        except KeyError:
-            return []
-        return worker.get_entity_metadata(entity_id)
-
-    def get_parameter_value_metadata(self, db_map, parameter_value_id):
-        """Returns metadata records for given parameter value.
-
-        Args:
-            db_map (DiffDatabaseMapping): database mapping
-            parameter_value_id (int): parameter value id
-
-        Returns:
-            list of namedtuple: parameter value metadata records
-        """
-        try:
-            worker = self._get_worker(db_map)
-        except KeyError:
-            return []
-        return worker.get_parameter_value_metadata(parameter_value_id)
 
     def get_items_for_commit(self, db_map, commit_id):
         try:

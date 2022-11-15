@@ -104,8 +104,8 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._model.deleteLater()
         self._temp_dir.cleanup()
 
-    def test_model_is_initially_fetched(self):
-        self.assertEqual(self._model.rowCount(), 5)
+    def test_model_is_initially_empty(self):
+        self.assertEqual(self._model.rowCount(), 1)
         self.assertEqual(self._model.columnCount(), 3)
         self.assertEqual(self._model.headerData(Column.NAME, Qt.Horizontal), "name")
         self.assertEqual(self._model.headerData(Column.VALUE, Qt.Horizontal), "value")
