@@ -216,7 +216,7 @@ class SpineDBWorker(QObject):
             item_type (str)
 
         Returns:
-            bool: True if new items where fetched from the DB, False otherwise.
+            bool: True if new items were fetched from the DB, False otherwise.
         """
         if item_type not in self._query_iterators:
             try:
@@ -238,7 +238,7 @@ class SpineDBWorker(QObject):
         return True
 
     def _register_fetch_parent(self, parent):
-        """Registers the given parent and start setting its will_have_children property.
+        """Registers the given parent and starts checking whether it will have children if fetched.
 
         Args:
             parent (FetchParent)
@@ -247,7 +247,7 @@ class SpineDBWorker(QObject):
         self._update_parents_will_have_children(parent.fetch_item_type)
 
     def _update_parents_will_have_children(self, item_type):
-        """Schedules and update of the will_have_children property for all parents associated to given type.
+        """Schedules an restart of the process that checks whether parents associated to given type will have children.
 
         Args:
             item_type (str)
@@ -256,6 +256,14 @@ class SpineDBWorker(QObject):
 
     def _do_update_parents_will_have_children(self, item_type):
         """Updates the will_have_children property for all parents associated to given type.
+
+        The algorithm is as follows:
+        - Iterate the cache and check whether the relevant parents accept the item.
+        - If yes, then set will_have_children to True for all of them and forget about them.
+        - If the cache is finished, then advance the query and repeat until either
+          there are no more parents left to check, or the query is completed.
+        - In the latter case set will_have_children to False for all remaining parents.
+        - If at any moment the set of parents associated to given type is mutated, quit so we can start over.
 
         Args:
             item_type (str)
