@@ -1433,6 +1433,9 @@ class FetchParent:
     _busy = False
     iterator = None
     will_have_children = None
+    """Whether this parent will have children if fetched.
+    None means we don't know yet. Set to a boolean value whenever we find out.
+    """
 
     @property
     def fetch_item_type(self):
@@ -1446,12 +1449,11 @@ class FetchParent:
 
     # pylint: disable=no-self-use
     def accepts_item(self, item, db_map):
-        """Called by the associated SpineDBWorker whenever items are added/updated/removed.
-        Returns whether this parent should react to that modification.
-        It should be consistent with ``filter_query()`` of course.
+        """Called by the associated SpineDBWorker whenever items are fetched and also added/updated/removed.
+        Returns whether this parent should accept that item as a children.
 
-        The SpineDBWorker will call one or more of ``handle_items_added()``, ``handle_items_updated()``,
-        or ``handle_items_removed()`` with all the items that pass this test.
+        In case of modifications, the SpineDBWorker will call one or more of ``handle_items_added()``,
+        ``handle_items_updated()``, or ``handle_items_removed()`` with all the items that pass this test.
 
         Args:
             item (dict): The item
@@ -1559,11 +1561,9 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         handle_items_added=None,
         handle_items_removed=None,
         handle_items_updated=None,
-        filter_query=None,
         accepts_item=None,
     ):
         super().__init__(fetch_item_type)
-        self._filter_query = filter_query
         self._accepts_item = accepts_item
         self._handle_items_added = handle_items_added
         self._handle_items_removed = handle_items_removed
@@ -1583,11 +1583,6 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         if self._handle_items_updated is None:
             return
         self._handle_items_updated(db_map_data)
-
-    def filter_query(self, query, subquery, db_map):
-        if self._filter_query is None:
-            return super().filter_query(query, subquery, db_map)
-        return self._filter_query(query, subquery, db_map)
 
     def accepts_item(self, item, db_map):
         if self._accepts_item is None:

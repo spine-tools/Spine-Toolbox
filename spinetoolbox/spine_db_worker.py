@@ -78,6 +78,12 @@ def _by_chunks(it):
 
 class _CacheIterator:
     def __init__(self, worker, parent):
+        """An iterable that yields items from given worker to given parent.
+
+        Args:
+            worker (SpineDBWorker): the worker that provides the items.
+            parent (FetchParent): the parent that requests the items.
+        """
         self._worker = worker
         self._parent = parent
         self._iter_position = 0
@@ -86,6 +92,12 @@ class _CacheIterator:
         self._iter_position = position
 
     def _next_chunk(self):
+        """Produces the next chunk of items by iterating the worker's cache.
+        If nothing found, then schedules a progression of the worker's query so more items can be found in the future.
+
+        Yields:
+            dict
+        """
         k = 0
         for item in self._worker.iterate_cache(self._parent, self._iter_position, self._set_iter_position):
             yield item
@@ -172,9 +184,23 @@ class SpineDBWorker(QObject):
             parent.reset_fetching(self._current_fetch_token)
 
     def advance_query_iterator(self, parent):
+        """Schedules a progression of the DB query that fetches items for given parent.
+        Called whenever the parent has fetched everything from the cache already, so more items are needed.
+
+        Args:
+            parent (FetchParent)
+        """
         self._executor.submit(self._advance_query_iterator, parent)
 
     def _advance_query_iterator(self, parent):
+        """Advances the DB query that fetches items for given parent.
+        If the query yields new items, then notifies the main thread to fetch the parent again so the new items
+        can be processed.
+        Otherwise sets the parent as fully fetched.
+
+        Args:
+            parent (FetchParent)
+        """
         if self._do_advance_query_iterator(parent.fetch_item_type):
             self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
         else:
@@ -184,6 +210,14 @@ class SpineDBWorker(QObject):
     @busy_effect
     @_db_map_lock
     def _do_advance_query_iterator(self, item_type):
+        """Advances the DB query that fetches items of given type and caches the results.
+
+        Args:
+            item_type (str)
+
+        Returns:
+            bool: True if new items where fetched from the DB, False otherwise.
+        """
         if item_type not in self._query_iterators:
             try:
                 sq_name = self._db_map.cache_sqs[item_type]
@@ -204,13 +238,28 @@ class SpineDBWorker(QObject):
         return True
 
     def _register_fetch_parent(self, parent):
+        """Registers the given parent and start setting its will_have_children property.
+
+        Args:
+            parent (FetchParent)
+        """
         self._parents_by_type.setdefault(parent.fetch_item_type, set()).add(parent)
         self._update_parents_will_have_children(parent.fetch_item_type)
 
     def _update_parents_will_have_children(self, item_type):
+        """Schedules and update of the will_have_children property for all parents associated to given type.
+
+        Args:
+            item_type (str)
+        """
         self._executor.submit(self._do_update_parents_will_have_children, item_type)
 
     def _do_update_parents_will_have_children(self, item_type):
+        """Updates the will_have_children property for all parents associated to given type.
+
+        Args:
+            item_type (str)
+        """
         parents = self._parents_by_type.get(item_type, ())
         position = 0
         while True:
@@ -241,11 +290,30 @@ class SpineDBWorker(QObject):
                 break
 
     def _get_cache_iterator(self, parent):
+        """Initializes and returns the cache iterator for given parent.
+
+        Args:
+            parent (FetchParent)
+
+        Returns:
+            _CacheIterator
+        """
         if parent.iterator is None:
             parent.iterator = _CacheIterator(self, parent)
         return parent.iterator
 
     def iterate_cache(self, parent, position, set_position):
+        """Iterates the cache for given parent starting at given position.
+
+        Args:
+            parent (FetchParent): the parent that requests the items.
+            position (int): initial position.
+            set_position (function): a function to call with the new position everytime we iterate.
+                This is so the caller (_CacheIterator) knows where to start the next time it needs items.
+
+        Yields:
+            dict: The next item from cache that passes the parent's filter.
+        """
         item_type = parent.fetch_item_type
         removed_ids = self._removed_ids.get(item_type, ())
         for id_ in self._fetched_ids.get(item_type, [])[position:]:
