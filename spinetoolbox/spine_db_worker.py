@@ -247,7 +247,7 @@ class SpineDBWorker(QObject):
         self._update_parents_will_have_children(parent.fetch_item_type)
 
     def _update_parents_will_have_children(self, item_type):
-        """Schedules an restart of the process that checks whether parents associated to given type will have children.
+        """Schedules a restart of the process that checks whether parents associated to given type will have children.
 
         Args:
             item_type (str)
@@ -316,7 +316,7 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): the parent that requests the items.
             position (int): initial position.
-            set_position (function): a function to call with the new position everytime we iterate.
+            set_position (function): a function to call with the new position every time we iterate.
                 This is so the caller (_CacheIterator) knows where to start the next time it needs items.
 
         Yields:
