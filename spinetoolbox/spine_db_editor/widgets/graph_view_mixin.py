@@ -80,7 +80,6 @@ class GraphViewMixin:
             handle_items_added=self._handle_objects_added,
             handle_items_removed=self._handle_objects_removed,
             handle_items_updated=self._handle_objects_updated,
-            filter_query=self._filter_query,
             accepts_item=self._accepts_item,
         )
         self._relationship_fetch_parent = FlexibleFetchParent(
@@ -88,7 +87,6 @@ class GraphViewMixin:
             handle_items_added=self._handle_relationships_added,
             handle_items_removed=self._handle_relationships_removed,
             handle_items_updated=self._handle_relationships_updated,
-            filter_query=self._filter_query,
             accepts_item=self._accepts_item,
         )
 
@@ -130,10 +128,6 @@ class GraphViewMixin:
                 id_ = item.db_map_ids.get(db_map)
                 if id_:
                     yield id_
-
-    def _filter_query(self, query, sq, db_map):
-        class_ids = set(self._selected_class_ids(db_map))
-        return query.filter(db_map.in_(sq.c.class_id, class_ids))
 
     def _accepts_item(self, item, db_map):
         class_ids = set(self._selected_class_ids(db_map))

@@ -55,10 +55,10 @@ class TestSpineDBEditorAddMixin:
     def test_add_relationship_classes_to_object_tree_model(self):
         """Test that relationship classes are added to the object tree model."""
         self.spine_db_editor.init_models()
+        self.fetch_object_tree_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item, fish_item = root_item.children
         nemo_item = fish_item.child(0)
@@ -114,13 +114,13 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_object_parameter_definitions_to_model(self):
         """Test that object parameter definitions are added to the model."""
+        model = self.spine_db_editor.object_parameter_definition_model
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
         with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_object_parameter_definitions_in_db_mngr()
-        model = self.spine_db_editor.object_parameter_definition_model
-        if model.canFetchMore(None):
-            model.fetchMore(None)
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -132,14 +132,14 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_relationship_parameter_definitions_to_model(self):
         """Test that relationship parameter definitions are added to the model."""
+        model = self.spine_db_editor.relationship_parameter_definition_model
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_relationship_parameter_definitions_in_db_mngr()
-        model = self.spine_db_editor.relationship_parameter_definition_model
-        if model.canFetchMore(None):
-            model.fetchMore(None)
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -151,15 +151,15 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_object_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
+        model = self.spine_db_editor.object_parameter_value_model
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_object_parameter_values_in_db_mngr()
-        model = self.spine_db_editor.object_parameter_value_model
-        if model.canFetchMore(None):
-            model.fetchMore(None)
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -176,6 +176,9 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_relationship_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
+        model = self.spine_db_editor.relationship_parameter_value_model
+        if model.canFetchMore(None):
+            model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
@@ -185,9 +188,6 @@ class TestSpineDBEditorAddMixin:
         with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_relationship_parameter_values_in_db_mngr()
-        model = self.spine_db_editor.relationship_parameter_value_model
-        if model.canFetchMore(None):
-            model.fetchMore(None)
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):

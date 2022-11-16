@@ -60,7 +60,6 @@ class ItemMetadataTableModel(MetadataTableModelBase):
             handle_items_added=self.add_item_metadata,
             handle_items_removed=self.remove_item_metadata,
             handle_items_updated=self.update_item_metadata,
-            filter_query=self._filter_entity_metadata_query,
             accepts_item=self._accepts_entity_metadata_item,
         )
         self._parameter_value_metadata_fetch_parent = FlexibleFetchParent(
@@ -68,7 +67,6 @@ class ItemMetadataTableModel(MetadataTableModelBase):
             handle_items_added=self.add_item_metadata,
             handle_items_removed=self.remove_item_metadata,
             handle_items_updated=self.update_item_metadata,
-            filter_query=self._filter_parameter_value_metadata_query,
             accepts_item=self._accepts_parameter_value_metadata_item,
         )
 
@@ -89,20 +87,10 @@ class ItemMetadataTableModel(MetadataTableModelBase):
         """See base class."""
         return [None, None]
 
-    def _filter_entity_metadata_query(self, query, subquery, db_map):
-        if self._item_type != ItemType.ENTITY:
-            return query.filter(False)
-        return query.filter_by(entity_id=self._item_ids.get(db_map))
-
     def _accepts_entity_metadata_item(self, item, db_map):
         if self._item_type != ItemType.ENTITY:
             return False
         return item["entity_id"] == self._item_ids.get(db_map)
-
-    def _filter_parameter_value_metadata_query(self, query, subquery, db_map):
-        if self._item_type != ItemType.VALUE:
-            return query.filter(False)
-        return query.filter_by(parameter_value_id=self._item_ids.get(db_map))
 
     def _accepts_parameter_value_metadata_item(self, item, db_map):
         if self._item_type != ItemType.VALUE:

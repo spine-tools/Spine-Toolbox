@@ -148,7 +148,6 @@ class FetchMoreMixin:
             handle_items_added=self.handle_items_added,
             handle_items_removed=self.handle_items_removed,
             handle_items_updated=self.handle_items_updated,
-            filter_query=self.filter_query,
             accepts_item=self.accepts_item,
         )
 
@@ -171,10 +170,6 @@ class FetchMoreMixin:
 
     def _make_child(self, id_):
         raise NotImplementedError()
-
-    # pylint: disable=no-self-use
-    def filter_query(self, query, subquery, db_map):
-        return query
 
     def accepts_item(self, item, db_map):
         return True

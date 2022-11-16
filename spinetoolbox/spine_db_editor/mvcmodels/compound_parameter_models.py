@@ -72,11 +72,6 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         for db_map in self.db_maps:
             self.db_mngr.fetch_more(db_map, self)
 
-    def filter_query(self, query, subquery, db_map):
-        return query.filter(getattr(subquery.c, self.entity_class_id_key).isnot(None)).order_by(
-            subquery.c.entity_class_name
-        )
-
     def accepts_item(self, item, db_map):
         return item[self.entity_class_id_key] is not None
 

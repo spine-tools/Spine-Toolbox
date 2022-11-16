@@ -229,9 +229,9 @@ class MultiDBTreeItem(FetchParent, TreeItem):
     def _children_sort_key(self):
         return attrgetter("display_id")
 
-    def fetch_status_change(self):
+    def will_have_children_change(self):
         """Notifies the view that the model's layout has changed.
-        This triggers a repaint so this item may be painted gray if no children."""
+        This triggers a repaint so this item will be painted gray if no children."""
         self.model.layoutChanged.emit()
 
     @property

@@ -732,7 +732,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_entities_added,
             handle_items_removed=self._handle_entities_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            filter_query=self._filter_entity_query,
             accepts_item=self._accepts_entity_item,
         )
         self._relationship_fetch_parent = FlexibleFetchParent(
@@ -740,7 +739,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_entities_added,
             handle_items_removed=self._handle_entities_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            filter_query=self._filter_entity_query,
             accepts_item=self._accepts_entity_item,
         )
         self._parameter_definition_fetch_parent = FlexibleFetchParent(
@@ -748,7 +746,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_parameter_definitions_added,
             handle_items_removed=self._handle_parameter_definitions_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            filter_query=self._filter_parameter_query,
             accepts_item=self._accepts_parameter_item,
         )
         self._parameter_value_fetch_parent = FlexibleFetchParent(
@@ -756,7 +753,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_parameter_values_added,
             handle_items_removed=self._handle_parameter_values_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            filter_query=self._filter_parameter_query,
             accepts_item=self._accepts_parameter_item,
         )
         self._alternative_fetch_parent = FlexibleFetchParent(
@@ -766,14 +762,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_updated=lambda _: self._parent.refresh_views(),
         )
 
-    def _filter_entity_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.class_id == self._parent.current_class_id.get(db_map))
-
     def _accepts_entity_item(self, item, db_map):
         return item["class_id"] == self._parent.current_class_id.get(db_map)
-
-    def _filter_parameter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.entity_class_id == self._parent.current_class_id.get(db_map))
 
     def _accepts_parameter_item(self, item, db_map):
         return item["entity_class_id"] == self._parent.current_class_id.get(db_map)
@@ -1155,7 +1145,6 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_relationships_added,
             handle_items_removed=self._handle_relationships_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            filter_query=self._filter_relationship_query,
             accepts_item=self._accepts_relationship_item,
         )
         self._object_fetch_parent = FlexibleFetchParent(
@@ -1163,19 +1152,11 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_objects_added,
             handle_items_removed=self._handle_objects_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            filter_query=self._filter_object_query,
             accepts_item=self._accepts_object_item,
         )
 
-    def _filter_relationship_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.class_id == self._parent.current_class_id.get(db_map))
-
     def _accepts_relationship_item(self, item, db_map):
         return item["class_id"] == self._parent.current_class_id.get(db_map)
-
-    def _filter_object_query(self, query, subquery, db_map):
-        object_class_id_list = {x[db_map] for x in self._parent.current_object_class_id_list}
-        return query.filter(db_map.in_(subquery.c.class_id, object_class_id_list))
 
     def _accepts_object_item(self, item, db_map):
         object_class_id_list = {x[db_map] for x in self._parent.current_object_class_id_list}
