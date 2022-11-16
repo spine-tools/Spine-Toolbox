@@ -1428,20 +1428,11 @@ def bisect_chunks(current_data, new_data, key=None):
 
 
 class FetchParent:
-    @unique
-    class Init(Enum):
-        UNINITIALIZED = auto()
-        IN_PROGRESS = auto()
-        FINISHED = auto()
-        FAILED = auto()
-
     fetch_token = None
-    _is_fetched = False
-    _is_busy_fetching = False
-    query = None
-    query_key = None
-    query_iterator = None
-    query_initialized = Init.UNINITIALIZED
+    _fetched = False
+    _busy = False
+    iterator = None
+    will_have_children = None
 
     @property
     def fetch_item_type(self):
@@ -1452,20 +1443,6 @@ class FetchParent:
             str
         """
         raise NotImplementedError()
-
-    # pylint: disable=no-self-use
-    def filter_query(self, query, subquery, db_map):
-        """Filters the initial query created using the ``fetch_item_type`` property.
-
-        Args:
-            query (Query): The query
-            subquery (Alias): The source of the query
-            db_map (DiffDatabaseMapping)
-
-        Returns:
-            Query
-        """
-        return query
 
     # pylint: disable=no-self-use
     def accepts_item(self, item, db_map):
@@ -1485,12 +1462,12 @@ class FetchParent:
         """
         return True
 
-    def fetch_status_change(self):
-        """Called when fetch status changes."""
+    def will_have_children_change(self):
+        """Called when the will_have_children property changes."""
 
     @property
     def is_fetched(self):
-        return self._is_fetched
+        return self._fetched
 
     def set_fetched(self, fetched):
         """Sets the fetched status.
@@ -1498,19 +1475,19 @@ class FetchParent:
         Args:
             fetched (bool): whether parent has been fetched completely
         """
-        self._is_fetched = fetched
+        self._fetched = fetched
 
     @property
-    def is_busy_fetching(self):
-        return self._is_busy_fetching
+    def is_busy(self):
+        return self._busy
 
-    def set_busy_fetching(self, busy):
+    def set_busy(self, busy):
         """Sets the busy status.
 
         Args:
-            busy (bool): whether the parent is busy
+            busy (bool): whether parent is busy fetching
         """
-        self._is_busy_fetching = busy
+        self._busy = busy
 
     def reset_fetching(self, fetch_token):
         """Resets fetch parent as if nothing was ever fetched.
@@ -1519,11 +1496,11 @@ class FetchParent:
             fetch_token (object): current fetch token
         """
         self.fetch_token = fetch_token
-        self._is_fetched = False
-        self.query = None
-        self.query_iterator = None
-        self.query_initialized = FetchParent.Init.UNINITIALIZED
-        self.fetch_status_change()
+        self._fetched = False
+        self._busy = False
+        self.iterator = None
+        self.will_have_children = None
+        self.will_have_children_change()
 
     def handle_items_added(self, db_map_data):
         """

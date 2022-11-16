@@ -57,10 +57,10 @@ class TestSpineDBEditorFilterMixin:
 
     def test_filter_parameter_tables_per_object_class(self):
         """Test that parameter tables are filtered when selecting object classes in the object tree."""
-        self.put_mock_dataset_in_db_mngr()
         for model in self._filtered_fields:
             if model.canFetchMore(None):
                 model.fetchMore(None)
+        self.put_mock_dataset_in_db_mngr()
         root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(1)
         fish_index = self.spine_db_editor.object_tree_model.index_from_item(fish_item)
@@ -77,10 +77,10 @@ class TestSpineDBEditorFilterMixin:
 
     def test_filter_parameter_tables_per_object(self):
         """Test that parameter tables are filtered when selecting objects in the object tree."""
-        self.put_mock_dataset_in_db_mngr()
         for model in self._filtered_fields:
             if model.canFetchMore(None):
                 model.fetchMore(None)
+        self.put_mock_dataset_in_db_mngr()
         root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
@@ -98,10 +98,10 @@ class TestSpineDBEditorFilterMixin:
 
     def test_filter_parameter_tables_per_relationship_class(self):
         """Test that parameter tables are filtered when selecting relationship classes in the object tree."""
-        self.put_mock_dataset_in_db_mngr()
         for model in self._filtered_fields:
             if model.canFetchMore(None):
                 model.fetchMore(None)
+        self.put_mock_dataset_in_db_mngr()
         root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
@@ -120,10 +120,10 @@ class TestSpineDBEditorFilterMixin:
 
     def test_filter_parameter_tables_per_relationship(self):
         """Test that parameter tables are filtered when selecting relationships in the object tree."""
-        self.put_mock_dataset_in_db_mngr()
         for model in self._filtered_fields:
             if model.canFetchMore(None):
                 model.fetchMore(None)
+        self.put_mock_dataset_in_db_mngr()
         root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
