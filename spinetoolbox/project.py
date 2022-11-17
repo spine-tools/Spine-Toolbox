@@ -1443,8 +1443,7 @@ class SpineToolboxProject(MetaObject):
         return job_id
 
     def finalize_remote_execution(self):
-        """Sends a request to server to remove the project folder. Also,
-        removes the zipped project file from client."""
+        """Sends a request to server to remove the project directory and removes the project ZIP file from client."""
         if not self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
             return
         host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
@@ -1455,15 +1454,13 @@ class SpineToolboxProject(MetaObject):
                 f"Server is not responding. {e}. " f"Check settings in <b>File->Settings->Engine</b>."
             )
             return
-        response = engine_client.remove_project_from_server(self.job_id)
-        self._logger.msg.emit(f"remove_project_from_server response:{response}")
+        engine_client.remove_project_from_server(self.job_id)
         engine_client.close()
-        # Remove the uploaded project ZIP file
         project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
         if not os.path.isfile(project_zip_file):
             return
         try:
-            os.remove(project_zip_file)
+            os.remove(project_zip_file)  # Remove the uploaded project ZIP file
         except OSError:
             self._logger.msg_warning.emit(f"[OSError] Removing ZIP file {project_zip_file} failed. "
                                           f"Please remove it manually.")
