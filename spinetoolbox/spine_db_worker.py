@@ -243,8 +243,10 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent)
         """
-        self._parents_by_type.setdefault(parent.fetch_item_type, set()).add(parent)
-        self._update_parents_will_have_children(parent.fetch_item_type)
+        parents = self._parents_by_type.setdefault(parent.fetch_item_type, set())
+        if parent not in parents:
+            parents.add(parent)
+            self._update_parents_will_have_children(parent.fetch_item_type)
 
     def _update_parents_will_have_children(self, item_type):
         """Schedules a restart of the process that checks whether parents associated to given type will have children.
@@ -294,7 +296,7 @@ class SpineDBWorker(QObject):
             if not self._do_advance_query_iterator(item_type):
                 for parent in parents_to_check:
                     parent.will_have_children = False
-                    self._something_happened.emit(_Event.WILL_HAVE_CHILDREN_CHANGE, (parent,))
+                self._something_happened.emit(_Event.WILL_HAVE_CHILDREN_CHANGE, (parents_to_check,))
                 break
 
     def _get_cache_iterator(self, parent):
@@ -348,8 +350,9 @@ class SpineDBWorker(QObject):
         return parent.will_have_children is not False and not parent.is_fetched and not parent.is_busy
 
     @staticmethod
-    def _will_have_children_change_event(parent):
-        parent.will_have_children_change()
+    def _will_have_children_change_event(parents):
+        for parent in parents:
+            parent.will_have_children_change()
 
     def fetch_more(self, parent):
         """Fetches items from the database.
