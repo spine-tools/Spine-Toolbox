@@ -82,9 +82,6 @@ class ListItem(
     def _make_child(self, id_):
         return ValueItem(id_)
 
-    def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.parameter_value_list_id == self.id)
-
     def accepts_item(self, item, db_map):
         return item["parameter_value_list_id"] == self.id
 

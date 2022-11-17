@@ -329,21 +329,25 @@ class TestSpineDBEditor(
         """Put fish and dog object classes in the db mngr."""
         object_classes = [self.fish_class, self.dog_class]
         self.db_mngr.add_object_classes({self.mock_db_map: object_classes})
+        self.fetch_object_tree_model()
 
     def put_mock_objects_in_db_mngr(self):
         """Put nemo, pluto and scooby objects in the db mngr."""
         objects = [self.nemo_object, self.pluto_object, self.scooby_object]
         self.db_mngr.add_objects({self.mock_db_map: objects})
+        self.fetch_object_tree_model()
 
     def put_mock_relationship_classes_in_db_mngr(self):
         """Put dog__fish and fish__dog relationship classes in the db mngr."""
         relationship_classes = [self.fish_dog_class, self.dog_fish_class]
         self.db_mngr.add_relationship_classes({self.mock_db_map: relationship_classes})
+        self.fetch_object_tree_model()
 
     def put_mock_relationships_in_db_mngr(self):
         """Put pluto_nemo, nemo_pluto and nemo_scooby relationships in the db mngr."""
         relationships = [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]
         self.db_mngr.add_relationships({self.mock_db_map: relationships})
+        self.fetch_object_tree_model()
 
     def put_mock_object_parameter_definitions_in_db_mngr(self):
         """Put water and breed object parameter definitions in the db mngr."""
@@ -383,7 +387,6 @@ class TestSpineDBEditor(
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
         self.put_mock_relationship_parameter_values_in_db_mngr()
-        self.fetch_object_tree_model()
 
     def fetch_object_tree_model(self):
         for item in self.spine_db_editor.object_tree_model.visit_all():

@@ -20,14 +20,14 @@ import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, Signal, Slot
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
-from .helpers import busy_effect, separate_metadata_and_item_metadata, FetchParent
+from .helpers import busy_effect, separate_metadata_and_item_metadata
 from .qthread_pool_executor import QtBasedThreadPoolExecutor
 
 
 @unique
 class _Event(Enum):
-    FETCH = auto()
-    FETCH_STATUS_CHANGE = auto()
+    MORE_AVAILABLE = auto()
+    WILL_HAVE_CHILDREN_CHANGE = auto()
     ADD_ITEMS = auto()
     UPDATE_ITEMS = auto()
     REMOVE_ITEMS = auto()
@@ -60,6 +60,60 @@ def _db_map_lock(func):
     return new_function
 
 
+def _by_chunks(it):
+    """
+    Iterate given iterator by chunks.
+
+    Args:
+        it (Iterable)
+    Yields:
+        list: chunk of items
+    """
+    while True:
+        chunk = list(itertools.islice(it, _CHUNK_SIZE))
+        yield chunk
+        if not chunk:
+            break
+
+
+class _CacheIterator:
+    def __init__(self, worker, parent):
+        """An iterable that yields items from given worker to given parent.
+
+        Args:
+            worker (SpineDBWorker): the worker that provides the items.
+            parent (FetchParent): the parent that requests the items.
+        """
+        self._worker = worker
+        self._parent = parent
+        self._iter_position = 0
+
+    def _set_iter_position(self, position):
+        self._iter_position = position
+
+    def _next_chunk(self):
+        """Produces the next chunk of items by iterating the worker's cache.
+        If nothing found, then schedules a progression of the worker's query so more items can be found in the future.
+
+        Yields:
+            dict
+        """
+        k = 0
+        for item in self._worker.iterate_cache(self._parent, self._iter_position, self._set_iter_position):
+            yield item
+            k += 1
+            if k == _CHUNK_SIZE:
+                return
+        if not self._parent.is_fetched and k == 0:
+            self._worker.advance_query_iterator(self._parent)
+
+    def __next__(self):
+        return list(self._next_chunk())
+
+    def __iter__(self):
+        return self
+
+
 class SpineDBWorker(QObject):
     """Does all the communication with a certain DB for SpineDBManager, in a non-GUI thread."""
 
@@ -71,9 +125,10 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
+        self._query_iterators = {}
+        self._fetched_ids = {}
         self._current_fetch_token = 0
         self._removed_ids = {}
-        self._query_has_elements_by_key = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
@@ -86,8 +141,8 @@ class SpineDBWorker(QObject):
     @Slot(object, tuple)
     def _handle_something_happened(self, event, args):
         {
-            _Event.FETCH: self._fetch_event,
-            _Event.FETCH_STATUS_CHANGE: self._fetch_status_change_event,
+            _Event.MORE_AVAILABLE: self._more_available_event,
+            _Event.WILL_HAVE_CHILDREN_CHANGE: self._will_have_children_change_event,
             _Event.ADD_ITEMS: self._add_items_event,
             _Event.UPDATE_ITEMS: self._update_items_event,
             _Event.REMOVE_ITEMS: self._remove_items_event,
@@ -112,8 +167,9 @@ class SpineDBWorker(QObject):
     def reset_queries(self):
         """Resets queries and clears caches."""
         self._current_fetch_token += 1
+        self._fetched_ids.clear()
         self._fetched_item_types.clear()
-        self._query_has_elements_by_key.clear()
+        self._query_iterators.clear()
         self._removed_ids.clear()
 
     def _reset_fetching_if_required(self, parent):
@@ -127,6 +183,156 @@ class SpineDBWorker(QObject):
         elif parent.fetch_token != self._current_fetch_token:
             parent.reset_fetching(self._current_fetch_token)
 
+    def advance_query_iterator(self, parent):
+        """Schedules a progression of the DB query that fetches items for given parent.
+        Called whenever the parent has fetched everything from the cache already, so more items are needed.
+
+        Args:
+            parent (FetchParent)
+        """
+        self._executor.submit(self._advance_query_iterator, parent)
+
+    def _advance_query_iterator(self, parent):
+        """Advances the DB query that fetches items for given parent.
+        If the query yields new items, then notifies the main thread to fetch the parent again so the new items
+        can be processed.
+        Otherwise sets the parent as fully fetched.
+
+        Args:
+            parent (FetchParent)
+        """
+        if self._do_advance_query_iterator(parent.fetch_item_type):
+            self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
+        else:
+            parent.set_fetched(True)
+            parent.set_busy(False)
+
+    @busy_effect
+    @_db_map_lock
+    def _do_advance_query_iterator(self, item_type):
+        """Advances the DB query that fetches items of given type and caches the results.
+
+        Args:
+            item_type (str)
+
+        Returns:
+            bool: True if new items were fetched from the DB, False otherwise.
+        """
+        if item_type not in self._query_iterators:
+            try:
+                sq_name = self._db_map.cache_sqs[item_type]
+            except KeyError:
+                return False
+            query = self._db_map.query(getattr(self._db_map, sq_name))
+            self._query_iterators[item_type] = _by_chunks(
+                x._asdict() for x in query.yield_per(_CHUNK_SIZE).enable_eagerloads(False)
+            )
+        iterator = self._query_iterators[item_type]
+        chunk = next(iterator, None)
+        if chunk is None:
+            self._fetched_item_types.add(item_type)
+            return False
+        self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
+        self._db_mngr.cache_items(item_type, {self._db_map: chunk})
+        self._populate_commit_cache(item_type, chunk)
+        return True
+
+    def _register_fetch_parent(self, parent):
+        """Registers the given parent and starts checking whether it will have children if fetched.
+
+        Args:
+            parent (FetchParent)
+        """
+        self._parents_by_type.setdefault(parent.fetch_item_type, set()).add(parent)
+        self._update_parents_will_have_children(parent.fetch_item_type)
+
+    def _update_parents_will_have_children(self, item_type):
+        """Schedules a restart of the process that checks whether parents associated to given type will have children.
+
+        Args:
+            item_type (str)
+        """
+        self._executor.submit(self._do_update_parents_will_have_children, item_type)
+
+    def _do_update_parents_will_have_children(self, item_type):
+        """Updates the will_have_children property for all parents associated to given type.
+
+        The algorithm is as follows:
+        - Iterate the cache and check whether the relevant parents accept the item.
+        - If yes, then set will_have_children to True for all of them and forget about them.
+        - If the cache is finished, then advance the query and repeat until either
+          there are no more parents left to check, or the query is completed.
+        - In the latter case set will_have_children to False for all remaining parents.
+        - If at any moment the set of parents associated to given type is mutated, quit so we can start over.
+
+        Args:
+            item_type (str)
+        """
+        parents = self._parents_by_type.get(item_type, ())
+        position = 0
+        while True:
+            parents_to_check = {parent for parent in parents if parent.will_have_children is None}
+            if not parents_to_check:
+                break
+            removed_ids = self._removed_ids.get(item_type, ())
+            for id_ in self._fetched_ids.get(item_type, [])[position:]:
+                if self._parents_by_type.get(item_type, ()) != parents:
+                    # New parents registered - we need to start over
+                    return
+                position += 1
+                if id_ in removed_ids:
+                    continue
+                item = self._db_mngr.get_item(self._db_map, item_type, id_)
+                for parent in parents_to_check.copy():
+                    if parent.accepts_item(item, self._db_map):
+                        parent.will_have_children = True
+                        parents_to_check.remove(parent)
+                if not parents_to_check:
+                    return
+            if not parents_to_check:
+                break
+            if not self._do_advance_query_iterator(item_type):
+                for parent in parents_to_check:
+                    parent.will_have_children = False
+                    self._something_happened.emit(_Event.WILL_HAVE_CHILDREN_CHANGE, (parent,))
+                break
+
+    def _get_cache_iterator(self, parent):
+        """Initializes and returns the cache iterator for given parent.
+
+        Args:
+            parent (FetchParent)
+
+        Returns:
+            _CacheIterator
+        """
+        if parent.iterator is None:
+            parent.iterator = _CacheIterator(self, parent)
+        return parent.iterator
+
+    def iterate_cache(self, parent, position, set_position):
+        """Iterates the cache for given parent starting at given position.
+
+        Args:
+            parent (FetchParent): the parent that requests the items.
+            position (int): initial position.
+            set_position (function): a function to call with the new position every time we iterate.
+                This is so the caller (_CacheIterator) knows where to start the next time it needs items.
+
+        Yields:
+            dict: The next item from cache that passes the parent's filter.
+        """
+        item_type = parent.fetch_item_type
+        removed_ids = self._removed_ids.get(item_type, ())
+        for id_ in self._fetched_ids.get(item_type, [])[position:]:
+            position += 1
+            set_position(position)
+            if id_ in removed_ids:
+                continue
+            item = self._db_mngr.get_item(self._db_map, item_type, id_)
+            if parent.accepts_item(item, self._db_map):
+                yield item
+
     def can_fetch_more(self, parent):
         """Returns whether more data can be fetched for parent.
         Also, registers the parent to notify it of any relevant DB modifications later on.
@@ -137,81 +343,13 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if more data is available, False otherwise
         """
-        self._parents_by_type.setdefault(parent.fetch_item_type, set()).add(parent)
         self._reset_fetching_if_required(parent)
-        if parent.is_fetched or parent.is_busy_fetching:
-            return False
-        if parent.query_initialized == FetchParent.Init.UNINITIALIZED:
-            parent.query_initialized = FetchParent.Init.IN_PROGRESS
-            self._executor.submit(self._init_query, parent)
-            return True
-        if parent.query_initialized == FetchParent.Init.IN_PROGRESS:
-            return True
-        if parent.query_initialized == FetchParent.Init.FAILED:
-            return False
-        return self._query_has_elements(parent)
-
-    @busy_effect
-    def _init_query(self, parent):
-        """Initializes query for parent.
-
-        Args:
-            parent (FetchParent): fetch parent
-        """
-        lock = self._db_mngr.db_map_locks.get(self._db_map)
-        if lock is None or not lock.tryLock():
-            parent.query_initialized = FetchParent.Init.FAILED
-            return
-        try:
-            self._setdefault_query(parent)
-            if not self._query_has_elements(parent):
-                parent.set_fetched(True)
-                self._something_happened.emit(_Event.FETCH_STATUS_CHANGE, (parent,))
-        finally:
-            parent.query_initialized = FetchParent.Init.FINISHED
-            lock.unlock()
+        self._register_fetch_parent(parent)
+        return parent.will_have_children is not False and not parent.is_fetched and not parent.is_busy
 
     @staticmethod
-    def _fetch_status_change_event(parent):
-        parent.fetch_status_change()
-
-    def _setdefault_query(self, parent):
-        """Creates a query for parent. Stores both the query and whether it has elements.
-
-        Args:
-            parent (FetchParent): fetch parent
-        """
-        if parent.query is None:
-            parent.query = self._make_query_for_parent(parent)
-            self._setdefault_query_key(parent)
-            if parent.query_key not in self._query_has_elements_by_key:
-                self._query_has_elements_by_key[parent.query_key] = bool(parent.query.first())
-        return parent.query
-
-    def _query_has_elements(self, parent):
-        """Checks whether query has something to return.
-
-        Args:
-            parent (FetchParent): fetch parent
-
-        Returns:
-            bool: True if query will give records, False otherwise
-        """
-        return self._query_has_elements_by_key[self._setdefault_query_key(parent)]
-
-    @staticmethod
-    def _setdefault_query_key(parent):
-        """Returns parent's query key or creates and sets a new one if it doesn't exist.
-
-        Args:
-            parent (FetchParent): fetch parent
-
-        Returns:
-            str: query key
-        """
-        if parent.query_key is None:
-            parent.query_key = str(parent.query.statement.compile(compile_kwargs={"literal_binds": True}))
-        return parent.query_key
+    def _will_have_children_change_event(parent):
+        parent.will_have_children_change()
 
     def fetch_more(self, parent):
         """Fetches items from the database.
@@ -219,36 +357,20 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): fetch parent
         """
-        if parent not in self._parents_by_type.get(parent.fetch_item_type, set()):
+        if parent not in self._parents_by_type.get(parent.fetch_item_type, ()):
             raise RuntimeError(
                 f"attempting to fetch unregistered parent {parent} - did you forget to call ``can_fetch_more()``"
             )
         self._reset_fetching_if_required(parent)
-        parent.set_busy_fetching(True)
-        self._executor.submit(self._fetch_more, parent)
-
-    @busy_effect
-    @_db_map_lock
-    def _fetch_more(self, parent):
-        iterator = self._get_iterator(parent)
-        chunk = next(iterator, [])
+        parent.set_busy(True)
+        iterator = self._get_cache_iterator(parent)
+        chunk = next(iterator, None)
         if chunk:
-            more_available = True
-            removed_ids = self._removed_ids.get(parent.fetch_item_type)
-            if removed_ids is not None:
-                chunk = [item for item in chunk if item["id"] not in removed_ids]
-        else:
-            more_available = False
-        self._something_happened.emit(_Event.FETCH, (parent, chunk, more_available))
+            parent.handle_items_added({self._db_map: chunk})
+            parent.set_busy(False)
 
-    def _fetch_event(self, parent, chunk, more_available):
-        if chunk:
-            db_map_data = {self._db_map: chunk}
-            self._db_mngr.cache_items(parent.fetch_item_type, db_map_data)
-            parent.handle_items_added(db_map_data)
-        elif not more_available and parent.query is not None:
-            parent.set_fetched(True)
-        parent.set_busy_fetching(False)
+    def _more_available_event(self, parent):
+        self.fetch_more(parent)
 
     def fetch_all(self, fetch_item_types=None, only_descendants=False, include_ancestors=False):
         if fetch_item_types is None:
@@ -266,51 +388,14 @@ class SpineDBWorker(QObject):
                 for ancestor in self._db_map.ancestor_tablenames.get(item_type, ())
             }
         fetch_item_types -= self._fetched_item_types
-        if not fetch_item_types:
-            # FIXME: Needed? QCoreApplication.processEvents()
-            return
-        _ = self._executor.submit(self._fetch_all, fetch_item_types).result()
+        if fetch_item_types:
+            _ = self._executor.submit(self._fetch_all, fetch_item_types).result()
 
     @busy_effect
-    @_db_map_lock
     def _fetch_all(self, item_types):
         for item_type in item_types:
-            query, _ = self._make_query_for_item_type(item_type)
-            if query is None:
-                continue
-            for chunk in _make_iterator(query):
-                self._populate_commit_cache(item_type, chunk)
-                self._db_mngr.cache_items(item_type, {self._db_map: chunk})
-            self._fetched_item_types.add(item_type)
-
-    def _make_query_for_parent(self, parent):
-        """Makes a database query for given item type.
-
-        Args:
-            parent (object): the object that requests the fetching
-
-        Returns:
-            Query: database query
-        """
-        query, subquery = self._make_query_for_item_type(parent.fetch_item_type)
-        return parent.filter_query(query, subquery, self._db_map)
-
-    def _make_query_for_item_type(self, item_type):
-        try:
-            subquery_name = self._db_map.cache_sqs[item_type]
-        except KeyError:
-            return None, None
-        subquery = getattr(self._db_map, subquery_name)
-        query = self._db_map.query(subquery)
-        return query, subquery
-
-    def _get_iterator(self, parent):
-        if parent.query_iterator is None:
-            # For some reason queries that haven't been iterated before don't
-            # keep up with deleted items. Reset the query here as a workaround.
-            parent.query = self._make_query_for_parent(parent)
-            parent.query_iterator = _make_iterator(self._setdefault_query(parent))
-        return parent.query_iterator
+            while self._do_advance_query_iterator(item_type):
+                pass
 
     def _populate_commit_cache(self, item_type, items):
         if item_type == "commit":
@@ -339,15 +424,12 @@ class SpineDBWorker(QObject):
     def _call_in_parents(self, method_name, item_type, items):
         # TODO: Probably we want to handle RunTimeError set changed size during iteration
         # which may happen when removing parents above?
-        to_remove = set()
         for parent in self._parents_by_type.get(item_type, ()):
             children = [x for x in items if parent.accepts_item(x, self._db_map)]
             if not children:
                 continue
             method = getattr(parent, method_name)
             method({self._db_map: children})
-        for parent in to_remove:
-            self._parents_by_type.get(parent.fetch_item_type).remove(parent)
 
     def _update_special_refs(self, item_type, ids):
         cascading_ids_by_type = self._db_mngr.special_cascading_ids(self._db_map, item_type, ids)
@@ -607,20 +689,3 @@ class SpineDBWorker(QObject):
             self._db_mngr.error_msg.emit({self._db_map: errors})
         else:
             self._db_mngr.session_rolled_back.emit({self._db_map})
-
-
-def _make_iterator(query):
-    """Runs the given query and yields results by chunks of given size.
-
-    Args:
-        query (Query): the query
-
-    Yields:
-        list: chunk of items
-    """
-    it = (x._asdict() for x in query.yield_per(_CHUNK_SIZE).enable_eagerloads(False))
-    while True:
-        chunk = list(itertools.islice(it, _CHUNK_SIZE))
-        yield chunk
-        if not chunk:
-            break

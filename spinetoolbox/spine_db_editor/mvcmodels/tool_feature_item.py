@@ -190,9 +190,6 @@ class ToolFeatureRootItem(EmptyChildRootItem):
     def _make_child(self, id_):
         return ToolFeatureLeafItem(id_)
 
-    def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.tool_id == self.parent_item.id)
-
     def accepts_item(self, item, db_map):
         return item["tool_id"] == self.parent_item.id
 
@@ -284,7 +281,7 @@ class ToolFeatureMethodRootItem(EmptyChildRootItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._list_value_fetch_parent = FlexibleFetchParent("list_value", filter_query=self._filter_list_value_query)
+        self._list_value_fetch_parent = FlexibleFetchParent("list_value", accepts_item=self._accepts_list_value_item)
 
     def _fetch_parents(self):
         yield self._list_value_fetch_parent
@@ -308,14 +305,11 @@ class ToolFeatureMethodRootItem(EmptyChildRootItem):
     def _make_child(self, id_):
         return ToolFeatureMethodLeafItem(id_)
 
-    def filter_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.tool_feature_id == self.parent_item.id)
-
     def accepts_item(self, item, db_map):
         return item["tool_feature_id"] == self.parent_item.id
 
-    def _filter_list_value_query(self, query, subquery, db_map):
-        return query.filter(subquery.c.parameter_value_list_id == self.parent_item.item_data["parameter_value_list_id"])
+    def _accepts_list_value_item(self, item, db_map):
+        return item["parameter_value_list_id"] == self.parent_item.item_data["parameter_value_list_id"]
 
 
 class ToolFeatureMethodLeafItem(GrayIfLastMixin, LeafItem):

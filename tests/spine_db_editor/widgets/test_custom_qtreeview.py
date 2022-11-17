@@ -908,14 +908,14 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
 
     def test_add_tool_feature(self):
         self._add_parameter_with_value_list()
-        self._add_feature()
-        self._add_tool()
-        self._add_tool_feature()
         view = self._db_editor.ui.treeView_tool_feature
         model = view.model()
         for item in model.visit_all():
             if item.can_fetch_more():
                 item.fetch_more()
+        self._add_feature()
+        self._add_tool()
+        self._add_tool_feature()
         db_index = model.index(0, 0)
         tool_root_index = model.index(1, 0, db_index)
         tool_index = model.index(0, 0, tool_root_index)
@@ -975,6 +975,9 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         feature_index = model.index(0, 0, feature_root_index)
         view_edit = EditorDelegateMocking()
         view_edit.write_to_index(view, feature_index, "my_object_class/my_parameter")
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
 
     def _add_tool(self):
         view = self._db_editor.ui.treeView_tool_feature
@@ -984,6 +987,9 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         tool_index = model.index(0, 0, tool_root_index)
         view_edit = EditorDelegateMocking()
         view_edit.write_to_index(view, tool_index, "my_tool")
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
 
     def _add_tool_feature(self):
         view = self._db_editor.ui.treeView_tool_feature
@@ -995,6 +1001,9 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
         tool_feature_index = model.index(0, 0, tool_feature_root_index)
         view_edit = EditorDelegateMocking()
         view_edit.write_to_index(view, tool_feature_index, "my_object_class/my_parameter")
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
 
 
 class TestToolFeatureTreeViewWithExistingData(TestBase):

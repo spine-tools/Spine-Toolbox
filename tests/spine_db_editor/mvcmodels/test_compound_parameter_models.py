@@ -70,10 +70,10 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
     def test_data_for_single_parameter_definition(self):
         model = CompoundObjectParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "object_class_id": 1}]})
         if model.canFetchMore(None):
             model.fetchMore(None)
+        self._db_mngr.add_object_classes({self._db_map: [{"name": "oc"}]})
+        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "object_class_id": 1}]})
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
