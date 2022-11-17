@@ -250,7 +250,7 @@ class EngineClient:
         return response[-1]
 
     def remove_project_from_server(self, job_id):
-        """Removes a project directory from server.
+        """Sends a request to remove a project directory from server.
 
         Args:
             job_id (str): Job Id for finding the project directory on server
