@@ -249,6 +249,20 @@ class EngineClient:
         response = self.dealer_socket.recv_multipart()
         return response[-1]
 
+    def remove_project_from_server(self, job_id):
+        """Sends a request to remove a project directory from server.
+
+        Args:
+            job_id (str): Job Id for finding the project directory on server
+
+        Returns:
+            str: Message from server
+        """
+        req = ServerMessage("remove_project", job_id, "")
+        self.dealer_socket.send_multipart([req.to_bytes()])
+        response = self.dealer_socket.recv_multipart()
+        return response[-1]
+
     def send_is_complete(self, persistent_key, cmd):
         """Sends a request to process is_complete(cmd) in persistent manager on server and returns the response."""
         data = persistent_key, "is_complete", cmd

@@ -165,6 +165,15 @@ class TestEngineClient(unittest.TestCase):
         self.assertTrue(len(job_id) == 32)
         client.close()
 
+    def test_remove_project_from_server(self):
+        project_zip_fpath = os.path.join(str(Path(__file__).parent), "helloworld.zip")
+        client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
+        job_id = client.upload_project("Hello World", project_zip_fpath)
+        self.assertTrue(isinstance(job_id, str))
+        self.assertTrue(len(job_id) == 32)
+        client.remove_project_from_server(job_id)
+        client.close()
+
     # def test_start_execution(self):
     #     project_zip_fpath = os.path.join(str(Path(__file__).parent), "helloworld.zip")
     #     client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
