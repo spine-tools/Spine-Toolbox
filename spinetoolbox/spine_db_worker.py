@@ -201,11 +201,10 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent)
         """
-        if self._do_advance_query_iterator(parent.fetch_item_type):
-            self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
-        else:
+        if not self._do_advance_query_iterator(parent.fetch_item_type):
             parent.set_fetched(True)
             parent.set_busy(False)
+        self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
 
     @busy_effect
     @_db_map_lock
@@ -228,8 +227,8 @@ class SpineDBWorker(QObject):
                 x._asdict() for x in query.yield_per(_CHUNK_SIZE).enable_eagerloads(False)
             )
         iterator = self._query_iterators[item_type]
-        chunk = next(iterator, None)
-        if chunk is None:
+        chunk = next(iterator, [])
+        if not chunk:
             self._fetched_item_types.add(item_type)
             return False
         self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
