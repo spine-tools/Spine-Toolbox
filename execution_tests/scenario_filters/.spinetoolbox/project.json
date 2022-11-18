@@ -1,7 +1,6 @@
 {
     "project": {
-        "version": 8,
-        "name": "scenario_filters",
+        "version": 9,
         "description": "Test project to test scenario filtering in a Tool project item.",
         "specifications": {
             "Importer": [
