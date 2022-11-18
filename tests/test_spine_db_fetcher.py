@@ -19,7 +19,7 @@ import unittest
 from unittest.mock import MagicMock
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.helpers import ItemTypeFetchParent
+from spinetoolbox.fetch_parent import ItemTypeFetchParent
 from spinedb_api import DatabaseMapping
 from spinedb_api.import_functions import import_data
 from tests.mock_helpers import TestSpineDBManager

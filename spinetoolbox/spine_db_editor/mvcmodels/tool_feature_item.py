@@ -16,7 +16,7 @@ Classes to represent tool and feature items in a tree.
 :date:    1.9.2020
 """
 from PySide2.QtCore import Qt
-from ...helpers import FlexibleFetchParent
+from ...fetch_parent import FlexibleFetchParent
 from .tree_item_utility import GrayIfLastMixin, EditableMixin, EmptyChildRootItem, LeafItem, StandardTreeItem
 
 _FEATURE_ICON = "\uf5bc"  # splotch
