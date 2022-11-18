@@ -109,6 +109,16 @@ class TestProjectUpgrader(unittest.TestCase):
         p["items"] = dict()
         self.assertFalse(project_upgrader.is_valid(5, p))
 
+    def test_is_valid_v9(self):
+        p = make_v9_project_dict()
+        project_upgrader = ProjectUpgrader(self.toolbox)
+        self.assertTrue(project_upgrader.is_valid(9, p))
+        # Test that an invalid v9 project dict is not valid
+        p = dict()
+        p["project"] = dict()
+        p["items"] = dict()
+        self.assertFalse(project_upgrader.is_valid(9, p))
+
     def test_upgrade_v1_to_v2(self):
         pu = ProjectUpgrader(self.toolbox)
         proj_v1 = make_v1_project_dict()
@@ -266,7 +276,7 @@ class TestProjectUpgrader(unittest.TestCase):
 
     def test_upgrade_with_too_recent_project_version(self):
         """Tests that projects with too recent versions are not opened."""
-        project_dict = make_v3_project_dict()
+        project_dict = make_v9_project_dict()
         project_dict["project"]["version"] = LATEST_PROJECT_VERSION + 1
         pu = ProjectUpgrader(self.toolbox)
         self.assertFalse(pu.upgrade(project_dict, project_dir=""))
@@ -909,6 +919,21 @@ def make_v5_project_dict():
                 "cancel_on_error": true
             }
         }
+    }
+    """
+    return json.loads(p)
+
+
+def make_v9_project_dict():
+    p = """
+    {
+        "project": {
+            "version": 9,
+            "description": "",
+            "specifications": {},
+            "connections": []
+        },
+        "items": {}
     }
     """
     return json.loads(p)

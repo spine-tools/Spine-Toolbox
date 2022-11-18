@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   they will all be selected when opening a project for the first time after this change.
   If this is not desired, the scenarios/tools need to be deselected manually
   before saving the project on disk.
+- Project name is now the project directory name and cannot be changed unless by moving the project to another 
+  directory manually or by using the File -> Save project as... menu item.
 
 ### Deprecated
 - Gimlet project items are deprecated and will be removed in the future.

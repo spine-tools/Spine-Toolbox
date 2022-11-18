@@ -35,7 +35,7 @@
      <x>0</x>
      <y>0</y>
      <width>1006</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -54,7 +54,7 @@
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
     <addaction name="actionClose"/>
-    <addaction name="actionRename_project"/>
+    <addaction name="actionSet_description"/>
     <addaction name="separator"/>
     <addaction name="actionNew_DB_editor"/>
     <addaction name="separator"/>
@@ -913,16 +913,16 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Close current project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
-  <action name="actionRename_project">
+  <action name="actionSet_description">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/exchange-alt.svg</normaloff>:/icons/menu_icons/exchange-alt.svg</iconset>
    </property>
    <property name="text">
-    <string>Rename project...</string>
+    <string>Set project description...</string>
    </property>
    <property name="toolTip">
-    <string>Rename project</string>
+    <string>Modify or set project description</string>
    </property>
   </action>
   <action name="actionExecute_project">

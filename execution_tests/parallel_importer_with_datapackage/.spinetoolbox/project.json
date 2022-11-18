@@ -1,7 +1,6 @@
 {
     "project": {
-        "version": 8,
-        "name": "parallel_importer_with_datapackage",
+        "version": 9,
         "description": "",
         "specifications": {
             "Tool": [

@@ -503,11 +503,10 @@ class TestSpineToolboxProject(unittest.TestCase):
                 "items": {"test item": {"type": "Tester", "a": {"c": 2}}},
                 "project": {
                     "connections": [],
-                    "description": "Project for unit tests.",
+                    "description": "",
                     "jumps": [],
-                    "name": "UnitTest Project",
                     "specifications": {},
-                    "version": 8,
+                    "version": 9,
                 },
             },
         )

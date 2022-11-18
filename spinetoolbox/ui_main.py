@@ -66,7 +66,7 @@ from .mvcmodels.project_tree_item import CategoryProjectTreeItem, RootProjectTre
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
-from .widgets.rename_project_dialog import RenameProjectDialog
+from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import RecentProjectsPopupMenu
@@ -274,7 +274,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
-        self.ui.actionRename_project.triggered.connect(self.rename_project)
+        self.ui.actionSet_description.triggered.connect(self.set_project_description)
         self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.close)
@@ -490,23 +490,20 @@ class ToolboxUI(QMainWindow):
         # Check if directory is empty and/or a project directory
         if not self.overwrite_check(project_dir):
             return
-        _, project_name = os.path.split(project_dir)
-        self.create_project(project_name, "", project_dir)
+        self.create_project(project_dir)
 
-    def create_project(self, name, description, location):
+    def create_project(self, proj_dir):
         """Creates new project and sets it active.
 
         Args:
-            name (str): Project name
-            description (str): Project description
-            location (str): Path to project directory
+            proj_dir (str): Path to project directory
         """
         if self._project is not None:
             if not self.close_project():
                 return
         self.undo_stack.clear()
         self._project = SpineToolboxProject(
-            self, name, description, location, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
+            self, proj_dir, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
         )
         self.project_item_model.connect_to_project(self._project)
         self.specification_model.connect_to_project(self._project)
@@ -518,7 +515,7 @@ class ToolboxUI(QMainWindow):
         # Update recentProjects
         self.update_recent_projects()
         # Update recentProjectStorages
-        OpenProjectDialog.update_recents(os.path.abspath(os.path.join(location, os.path.pardir)), self.qsettings())
+        OpenProjectDialog.update_recents(os.path.abspath(os.path.join(proj_dir, os.path.pardir)), self.qsettings())
         self.save_project()
         self._plugin_manager.reload_plugins_with_local_data()
         self.msg.emit(f"New project <b>{self._project.name}</b> is now open")
@@ -568,7 +565,7 @@ class ToolboxUI(QMainWindow):
         # Create project
         self.undo_stack.clear()
         self._project = SpineToolboxProject(
-            self, "", "", project_dir, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
+            self, project_dir, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
         )
         self.project_item_model.connect_to_project(self._project)
         self.specification_model.connect_to_project(self._project)
@@ -604,7 +601,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setDisabled(True)
         self.ui.actionClose.setDisabled(True)
-        self.ui.actionRename_project.setDisabled(True)
+        self.ui.actionSet_description.setDisabled(True)
         self.ui.actionExecute_project.setDisabled(True)
         self.ui.actionExecute_selection.setDisabled(True)
         self.ui.actionStop_execution.setDisabled(True)
@@ -618,7 +615,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setEnabled(True)
         self.ui.actionSave_As.setEnabled(True)
         self.ui.actionClose.setEnabled(True)
-        self.ui.actionRename_project.setEnabled(True)
+        self.ui.actionSet_description.setEnabled(True)
         self._unset_execution_in_progress()
 
     def refresh_toolbars(self):
@@ -709,23 +706,12 @@ class ToolboxUI(QMainWindow):
         return True
 
     @Slot(bool)
-    def rename_project(self, _=False):
-        """Opens a dialog where the user can enter a new name for the project."""
+    def set_project_description(self, _=False):
+        """Opens a dialog where the user can enter a new description for the project."""
         if not self._project:
             return
-        dialog = RenameProjectDialog(self, self._project)
+        dialog = SetDescriptionDialog(self, self._project)
         dialog.show()
-
-    @Slot(str)
-    def _update_project_name(self, new_name):
-        """Updates window title and recent projects.
-
-        Args:
-            new_name (str): project's new name
-        """
-        self.update_window_title()
-        self.remove_path_from_recent_projects(self._project.project_dir)
-        self.update_recent_projects()
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and add them to the model."""
@@ -1315,7 +1301,7 @@ class ToolboxUI(QMainWindow):
         self.resizeDocks(docks, [0.6 * width, 0.4 * width], Qt.Vertical)
 
     def _add_actions(self):
-        """Sets adds actions to the main window."""
+        """Adds actions to the main window."""
         self.addAction(self.ui.actionExecute_project)
         self.addAction(self.ui.actionExecute_selection)
         self.addAction(self.ui.actionStop_execution)
@@ -1887,6 +1873,18 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("appSettings/recentProjects", updated_recents)
         self._qsettings.sync()  # Commit change immediately
 
+    def clear_recent_projects(self):
+        """Clears recent projects list in File->Open recent menu."""
+        msg = "Are you sure?"
+        title = "Clear recent projects?"
+        message_box = QMessageBox(QMessageBox.Question, title, msg, QMessageBox.Yes | QMessageBox.No, parent=self)
+        answer = message_box.exec_()
+        if answer == QMessageBox.No:
+            return
+        self._qsettings.remove("appSettings/recentProjects")
+        self._qsettings.remove("appSettings/recentProjectStorages")
+        self._qsettings.sync()
+
     def update_recent_projects(self):
         """Adds a new entry to QSettings variable that remembers twenty most recent project paths."""
         recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
@@ -2120,7 +2118,6 @@ class ToolboxUI(QMainWindow):
 
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
-        self._project.renamed.connect(self._update_project_name)
         self._project.project_execution_about_to_start.connect(self._set_execution_in_progress)
         self._project.project_execution_finished.connect(self._unset_execution_in_progress)
         self._project.item_added.connect(self.set_icon_and_properties_ui)
