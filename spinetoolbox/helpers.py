@@ -63,7 +63,6 @@ from .config import (
     PROJECT_LOCAL_DATA_FILENAME,
     SPECIFICATION_LOCAL_DATA_FILENAME,
 )
-from .fetch_parent import *  # FIXME
 
 if os.name == "nt":
     import ctypes
