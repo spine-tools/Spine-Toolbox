@@ -19,7 +19,8 @@ from enum import auto, Enum, IntEnum, unique
 
 from PySide2.QtCore import QModelIndex
 
-from spinetoolbox.helpers import rows_to_row_count_tuples, FlexibleFetchParent
+from spinetoolbox.helpers import rows_to_row_count_tuples
+from spinetoolbox.fetch_parent import FlexibleFetchParent
 from .metadata_table_model_base import Column, FLAGS_EDITABLE, FLAGS_FIXED, MetadataTableModelBase
 
 

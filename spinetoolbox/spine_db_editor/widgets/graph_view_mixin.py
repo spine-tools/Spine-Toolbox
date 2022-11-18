@@ -23,7 +23,8 @@ from PySide2.QtCore import Slot, QTimer, QThreadPool
 from PySide2.QtWidgets import QHBoxLayout
 from spinedb_api import from_database
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ...helpers import get_save_file_name_in_last_dir, FlexibleFetchParent
+from ...helpers import get_save_file_name_in_last_dir
+from ...fetch_parent import FlexibleFetchParent
 from ..graphics_items import (
     EntityItem,
     ObjectItem,
@@ -80,14 +81,14 @@ class GraphViewMixin:
             handle_items_added=self._handle_objects_added,
             handle_items_removed=self._handle_objects_removed,
             handle_items_updated=self._handle_objects_updated,
-            accepts_item=self._accepts_item,
+            accepts_item=self._accepts_object_item,
         )
         self._relationship_fetch_parent = FlexibleFetchParent(
             "relationship",
             handle_items_added=self._handle_relationships_added,
             handle_items_removed=self._handle_relationships_removed,
             handle_items_updated=self._handle_relationships_updated,
-            accepts_item=self._accepts_item,
+            accepts_item=self._accepts_relationship_item,
         )
 
     @Slot(bool)
@@ -121,17 +122,29 @@ class GraphViewMixin:
             if isinstance(item, EntityItem) and (item.first_db_map, item.entity_class_id) in updated_ids:
                 item.refresh_icon()
 
-    def _selected_class_ids(self, db_map):
-        for item_type in ("object_class", "relationship_class"):
-            for index in self.selected_tree_inds.get(item_type, {}):
-                item = index.model().item_from_index(index)
-                id_ = item.db_map_ids.get(db_map)
-                if id_:
-                    yield id_
+    def _selected_class_ids(self, db_map, item_type):
+        for index in self.selected_tree_inds.get(item_type, {}):
+            item = index.model().item_from_index(index)
+            id_ = item.db_map_ids.get(db_map)
+            if id_:
+                yield id_
 
-    def _accepts_item(self, item, db_map):
-        class_ids = set(self._selected_class_ids(db_map))
+    def _accepts_object_item(self, item, db_map):
+        class_ids = set(self._selected_class_ids(db_map, "object_class"))
+        if not class_ids:
+            return not any(self._selected_class_ids(db_map, "relationship_class"))
         return item["class_id"] in class_ids
+
+    def _accepts_relationship_item(self, item, db_map):
+        rel_class_ids = set(self._selected_class_ids(db_map, "relationship_class"))
+        obj_class_ids = set(self._selected_class_ids(db_map, "object_class"))
+        if self.ui.graphicsView.auto_expand_objects:
+            for id_ in item["object_class_id_list"].split(","):
+                if int(id_) in obj_class_ids:
+                    return True
+        if not rel_class_ids:
+            return not any(obj_class_ids)
+        return item["class_id"] in rel_class_ids
 
     def _handle_objects_added(self, db_map_data):
         """Runs when objects are added to the db.

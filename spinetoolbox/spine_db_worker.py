@@ -76,44 +76,6 @@ def _by_chunks(it):
             break
 
 
-class _CacheIterator:
-    def __init__(self, worker, parent):
-        """An iterable that yields items from given worker to given parent.
-
-        Args:
-            worker (SpineDBWorker): the worker that provides the items.
-            parent (FetchParent): the parent that requests the items.
-        """
-        self._worker = worker
-        self._parent = parent
-        self._iter_position = 0
-
-    def _set_iter_position(self, position):
-        self._iter_position = position
-
-    def _next_chunk(self):
-        """Produces the next chunk of items by iterating the worker's cache.
-        If nothing found, then schedules a progression of the worker's query so more items can be found in the future.
-
-        Yields:
-            dict
-        """
-        k = 0
-        for item in self._worker.iterate_cache(self._parent, self._iter_position, self._set_iter_position):
-            yield item
-            k += 1
-            if k == _CHUNK_SIZE:
-                return
-        if not self._parent.is_fetched and k == 0:
-            self._worker.advance_query_iterator(self._parent)
-
-    def __next__(self):
-        return list(self._next_chunk())
-
-    def __iter__(self):
-        return self
-
-
 class SpineDBWorker(QObject):
     """Does all the communication with a certain DB for SpineDBManager, in a non-GUI thread."""
 
@@ -125,7 +87,7 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._query_iterators = {}
+        self._queries = {}
         self._fetched_ids = {}
         self._current_fetch_token = 0
         self._removed_ids = {}
@@ -169,7 +131,7 @@ class SpineDBWorker(QObject):
         self._current_fetch_token += 1
         self._fetched_ids.clear()
         self._fetched_item_types.clear()
-        self._query_iterators.clear()
+        self._queries.clear()
         self._removed_ids.clear()
 
     def _reset_fetching_if_required(self, parent):
@@ -183,16 +145,16 @@ class SpineDBWorker(QObject):
         elif parent.fetch_token != self._current_fetch_token:
             parent.reset_fetching(self._current_fetch_token)
 
-    def advance_query_iterator(self, parent):
+    def advance_query(self, parent):
         """Schedules a progression of the DB query that fetches items for given parent.
         Called whenever the parent has fetched everything from the cache already, so more items are needed.
 
         Args:
             parent (FetchParent)
         """
-        self._executor.submit(self._advance_query_iterator, parent)
+        self._executor.submit(self._advance_query, parent)
 
-    def _advance_query_iterator(self, parent):
+    def _advance_query(self, parent):
         """Advances the DB query that fetches items for given parent.
         If the query yields new items, then notifies the main thread to fetch the parent again so the new items
         can be processed.
@@ -201,14 +163,16 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent)
         """
-        if not self._do_advance_query_iterator(parent.fetch_item_type):
+        self._do_advance_query(parent.fetch_item_type)
+        if parent.position < len(self._fetched_ids.get(parent.fetch_item_type, ())):
+            self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
+        else:
             parent.set_fetched(True)
             parent.set_busy(False)
-        self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
 
     @busy_effect
     @_db_map_lock
-    def _do_advance_query_iterator(self, item_type):
+    def _do_advance_query(self, item_type):
         """Advances the DB query that fetches items of given type and caches the results.
 
         Args:
@@ -217,17 +181,17 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if new items were fetched from the DB, False otherwise.
         """
-        if item_type not in self._query_iterators:
+        if item_type not in self._queries:
             try:
                 sq_name = self._db_map.cache_sqs[item_type]
             except KeyError:
                 return False
             query = self._db_map.query(getattr(self._db_map, sq_name))
-            self._query_iterators[item_type] = _by_chunks(
+            self._queries[item_type] = _by_chunks(
                 x._asdict() for x in query.yield_per(_CHUNK_SIZE).enable_eagerloads(False)
             )
-        iterator = self._query_iterators[item_type]
-        chunk = next(iterator, [])
+        query = self._queries[item_type]
+        chunk = next(query, [])
         if not chunk:
             self._fetched_item_types.add(item_type)
             return False
@@ -256,7 +220,7 @@ class SpineDBWorker(QObject):
         self._executor.submit(self._do_update_parents_will_have_children, item_type)
 
     def _do_update_parents_will_have_children(self, item_type):
-        """Updates the will_have_children property for all parents associated to given type.
+        """Updates the ``will_have_children`` property for all parents associated to given type.
 
         The algorithm is as follows:
         - Iterate the cache and check whether the relevant parents accept the item.
@@ -292,42 +256,26 @@ class SpineDBWorker(QObject):
                     return
             if not parents_to_check:
                 break
-            if not self._do_advance_query_iterator(item_type):
+            self._do_advance_query(item_type)
+            if position == len(self._fetched_ids.get(item_type, ())):
                 for parent in parents_to_check:
                     parent.will_have_children = False
                 self._something_happened.emit(_Event.WILL_HAVE_CHILDREN_CHANGE, (parents_to_check,))
                 break
 
-    def _get_cache_iterator(self, parent):
-        """Initializes and returns the cache iterator for given parent.
-
-        Args:
-            parent (FetchParent)
-
-        Returns:
-            _CacheIterator
-        """
-        if parent.iterator is None:
-            parent.iterator = _CacheIterator(self, parent)
-        return parent.iterator
-
-    def iterate_cache(self, parent, position, set_position):
-        """Iterates the cache for given parent starting at given position.
+    def iterate_cache(self, parent):
+        """Iterates the cache for given parent while updating its ``position`` property.
 
         Args:
             parent (FetchParent): the parent that requests the items.
-            position (int): initial position.
-            set_position (function): a function to call with the new position every time we iterate.
-                This is so the caller (_CacheIterator) knows where to start the next time it needs items.
 
         Yields:
             dict: The next item from cache that passes the parent's filter.
         """
         item_type = parent.fetch_item_type
         removed_ids = self._removed_ids.get(item_type, ())
-        for id_ in self._fetched_ids.get(item_type, [])[position:]:
-            position += 1
-            set_position(position)
+        for id_ in self._fetched_ids.get(item_type, [])[parent.position :]:
+            parent.position += 1
             if id_ in removed_ids:
                 continue
             item = self._db_mngr.get_item(self._db_map, item_type, id_)
@@ -364,9 +312,9 @@ class SpineDBWorker(QObject):
                 f"attempting to fetch unregistered parent {parent} - did you forget to call ``can_fetch_more()``"
             )
         self._reset_fetching_if_required(parent)
+        parent.bind_worker(self)
         parent.set_busy(True)
-        iterator = self._get_cache_iterator(parent)
-        chunk = next(iterator, None)
+        chunk = next(parent, None)
         if chunk:
             parent.handle_items_added({self._db_map: chunk})
             parent.set_busy(False)
@@ -396,7 +344,7 @@ class SpineDBWorker(QObject):
     @busy_effect
     def _fetch_all(self, item_types):
         for item_type in item_types:
-            while self._do_advance_query_iterator(item_type):
+            while self._do_advance_query(item_type):
                 pass
 
     def _populate_commit_cache(self, item_type, items):

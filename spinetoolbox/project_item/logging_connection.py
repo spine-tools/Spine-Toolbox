@@ -16,7 +16,8 @@ from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spine_engine.project_item.connection import ResourceConvertingConnection, Jump, ConnectionBase
 from ..log_mixin import LogMixin
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
-from ..helpers import busy_effect, FlexibleFetchParent
+from ..helpers import busy_effect
+from ..fetch_parent import FlexibleFetchParent
 
 
 class HeadlessConnection(ResourceConvertingConnection):

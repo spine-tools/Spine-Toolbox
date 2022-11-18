@@ -20,7 +20,7 @@ from unittest import mock
 
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.helpers import FlexibleFetchParent
+from spinetoolbox.fetch_parent import FlexibleFetchParent
 from spinetoolbox.ui_main import ToolboxUI
 from spinetoolbox.spine_db_manager import SpineDBManager
 
