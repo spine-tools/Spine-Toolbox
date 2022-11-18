@@ -66,7 +66,7 @@ from .mvcmodels.project_tree_item import CategoryProjectTreeItem, RootProjectTre
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
-from .widgets.rename_project_dialog import SetDescriptionDialog
+from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import RecentProjectsPopupMenu
