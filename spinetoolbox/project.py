@@ -1462,8 +1462,9 @@ class SpineToolboxProject(MetaObject):
         try:
             os.remove(project_zip_file)  # Remove the uploaded project ZIP file
         except OSError:
-            self._logger.msg_warning.emit(f"[OSError] Removing ZIP file {project_zip_file} failed. "
-                                          f"Please remove it manually.")
+            self._logger.msg_warning.emit(
+                f"[OSError] Removing ZIP file {project_zip_file} failed. " f"Please remove it manually."
+            )
 
     def tear_down(self):
         """Cleans up project."""
