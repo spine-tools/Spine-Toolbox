@@ -55,7 +55,7 @@ from .config import (
     SPECIFICATION_LOCAL_DATA_FILENAME,
     PROJECT_ZIP_FILENAME,
 )
-from .project_commands import SetProjectNameAndDescriptionCommand
+from .project_commands import SetProjectDescriptionCommand
 from .spine_engine_worker import SpineEngineWorker
 
 
@@ -70,8 +70,6 @@ class ItemNameStatus(Enum):
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
-    renamed = Signal(str)
-    """Emitted after project has been renamed."""
     project_about_to_be_torn_down = Signal()
     """Emitted before project is being torn down."""
     project_execution_about_to_start = Signal()
@@ -105,18 +103,17 @@ class SpineToolboxProject(MetaObject):
     specification_saved = Signal(str, str)
     """Emitted after a specification has been saved."""
 
-    def __init__(self, toolbox, name, description, p_dir, plugin_specs, settings, logger):
+    def __init__(self, toolbox, p_dir, plugin_specs, settings, logger):
         """
         Args:
             toolbox (ToolboxUI): toolbox of this project
-            name (str): Project name
-            description (str): Project description
             p_dir (str): Project directory
             plugin_specs (Iterable of ProjectItemSpecification): specifications available as plugins
             settings (QSettings): Toolbox settings
             logger (LoggerInterface): a logger instance
         """
-        super().__init__(name, description)
+        _, name = os.path.split(p_dir)
+        super().__init__(name, "")
         self._toolbox = toolbox
         self._project_items = dict()
         self._specifications = dict(enumerate(plugin_specs))
@@ -166,20 +163,8 @@ class SpineToolboxProject(MetaObject):
                 return False
         return True
 
-    def call_set_name_and_description(self, name, description):
-        self._toolbox.undo_stack.push(SetProjectNameAndDescriptionCommand(self, name, description))
-
-    def set_name(self, name):
-        """Changes project name.
-
-        Args:
-            name (str): New project name
-        """
-        if name == self.name:
-            return
-        super().set_name(name)
-        self._logger.msg.emit(f"Project name changed to <b>{self.name}</b>")
-        self.renamed.emit(name)
+    def call_set_description(self, description):
+        self._toolbox.undo_stack.push(SetProjectDescriptionCommand(self, description))
 
     def set_description(self, description):
         if description == self.description:
@@ -199,7 +184,6 @@ class SpineToolboxProject(MetaObject):
         serialized_spec_paths = self._save_all_specifications(local_path)
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
-            "name": self.name,
             "description": self.description,
             "specifications": serialized_spec_paths,
             "connections": [connection.to_dict() for connection in self._connections],
@@ -295,7 +279,6 @@ class SpineToolboxProject(MetaObject):
         local_data_dict = load_local_project_data(self.config_dir, self._logger)
         self._merge_local_data_to_project_info(local_data_dict, project_info)
         # Parse project info
-        self.set_name(project_info["project"]["name"])
         self.set_description(project_info["project"]["description"])
         spec_paths_per_type = project_info["project"]["specifications"]
         deserialized_paths = [

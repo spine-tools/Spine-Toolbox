@@ -10,16 +10,15 @@
 ######################################################################################################################
 
 """
-A widget for editing project name and description
+A widget for editing project description
 """
 
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QDialog, QFormLayout, QLabel, QLineEdit, QPlainTextEdit, QDialogButtonBox
-from ..project_commands import SetProjectNameAndDescriptionCommand
+from PySide2.QtWidgets import QDialog, QFormLayout, QLabel, QPlainTextEdit, QDialogButtonBox
 
 
-class RenameProjectDialog(QDialog):
-    """Rename project dialog."""
+class SetDescriptionDialog(QDialog):
+    """Dialog for setting a description for a project."""
 
     def __init__(self, toolbox, project):
         """
@@ -32,37 +31,30 @@ class RenameProjectDialog(QDialog):
         self._project = project
         self._toolbox = toolbox
         layout = QFormLayout(self)
-        self._name_le = QLineEdit(self)
-        self._name_le.setText(self._project.name)
-        self._description_le = QPlainTextEdit(self)
-        self._description_le.setPlainText(self._project.description)
+        self._name_label = QLabel(self)
+        self._name_label.setText(self._project.name)
+        self._description_te = QPlainTextEdit(self)
+        self._description_te.setPlainText(self._project.description)
         button_box = QDialogButtonBox(self)
         button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        layout.addRow("Project name", self._name_le)
-        layout.addRow("Description", self._description_le)
+        layout.addRow("Project name", self._name_label)
+        layout.addRow("Description", self._description_te)
         layout.addRow(button_box)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         self._ok_button = button_box.button(QDialogButtonBox.Ok)
         self._ok_button.setEnabled(False)
-        self._name_le.textChanged.connect(self._set_ok_enabled)
-        self._description_le.textChanged.connect(self._set_ok_enabled)
+        self._description_te.textChanged.connect(self._set_ok_enabled)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     @property
-    def name(self):
-        return self._name_le.text().strip()
-
-    @property
     def description(self):
-        return self._description_le.toPlainText().strip()
+        return self._description_te.toPlainText().strip()
 
     @Slot()
     def _set_ok_enabled(self):
-        self._ok_button.setEnabled(
-            bool(self.name) and (self.description != self._project.description or self.name != self._project.name)
-        )
+        self._ok_button.setEnabled(self.description != self._project.description)
 
     def accept(self):
         super().accept()
-        self._project.call_set_name_and_description(self.name, self.description)
+        self._project.call_set_description(self.description)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017-2021 Spine project consortium
+# Copyright (C) 2017-2022 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -160,11 +160,11 @@ class Ui_MainWindow(object):
         icon14 = QIcon()
         icon14.addFile(u":/icons/menu_icons/door-closed.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionClose.setIcon(icon14)
-        self.actionRename_project = QAction(MainWindow)
-        self.actionRename_project.setObjectName(u"actionRename_project")
+        self.actionSet_description = QAction(MainWindow)
+        self.actionSet_description.setObjectName(u"actionSet_description")
         icon15 = QIcon()
         icon15.addFile(u":/icons/menu_icons/exchange-alt.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionRename_project.setIcon(icon15)
+        self.actionSet_description.setIcon(icon15)
         self.actionExecute_project = QAction(MainWindow)
         self.actionExecute_project.setObjectName(u"actionExecute_project")
         icon16 = QIcon()
@@ -189,7 +189,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1006, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1006, 21))
         self.menubar.setNativeMenuBar(False)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
@@ -390,7 +390,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSave_As)
         self.menuFile.addAction(self.actionClose)
-        self.menuFile.addAction(self.actionRename_project)
+        self.menuFile.addAction(self.actionSet_description)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionNew_DB_editor)
         self.menuFile.addSeparator()
@@ -611,9 +611,9 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionClose.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Close current project</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.actionRename_project.setText(QCoreApplication.translate("MainWindow", u"Rename project...", None))
+        self.actionSet_description.setText(QCoreApplication.translate("MainWindow", u"Set project description...", None))
 #if QT_CONFIG(tooltip)
-        self.actionRename_project.setToolTip(QCoreApplication.translate("MainWindow", u"Rename project", None))
+        self.actionSet_description.setToolTip(QCoreApplication.translate("MainWindow", u"Modify or set project description", None))
 #endif // QT_CONFIG(tooltip)
         self.actionExecute_project.setText(QCoreApplication.translate("MainWindow", u"Project", None))
 #if QT_CONFIG(shortcut)

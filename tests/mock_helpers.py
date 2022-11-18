@@ -40,7 +40,7 @@ def create_project(toolbox, project_dir):
     with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
         "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
     ):
-        toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
+        toolbox.create_project(project_dir)
 
 
 def create_toolboxui_with_project(project_dir):
@@ -57,7 +57,7 @@ def create_toolboxui_with_project(project_dir):
     ):
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
-        toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
+        toolbox.create_project(project_dir)
     return toolbox
 
 
