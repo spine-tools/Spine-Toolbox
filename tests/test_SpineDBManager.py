@@ -221,7 +221,7 @@ class TestAddItems(unittest.TestCase):
             )
 
         db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
-        self._db_mngr.add_items(db_map_data, "add_metadata", "metadata", callback=callback)
+        self._db_mngr.add_items(db_map_data, "metadata", callback=callback)
 
     def test_add_object_metadata(self):
         db_map = DatabaseMapping(self._db_url, create=True)
@@ -235,7 +235,7 @@ class TestAddItems(unittest.TestCase):
             self.assertEqual(db_map_data, {db_map: [{'entity_id': 1, 'metadata_id': 1, 'commit_id': None, 'id': 1}]})
 
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
-        self._db_mngr.add_items(db_map_data, "add_entity_metadata", "entity_metadata", callback=callback)
+        self._db_mngr.add_items(db_map_data, "entity_metadata", callback=callback)
 
 
 class TestImportData(unittest.TestCase):

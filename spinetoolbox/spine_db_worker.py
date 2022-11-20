@@ -29,10 +29,6 @@ class _Event(Enum):
     MORE_AVAILABLE = auto()
     WILL_HAVE_CHILDREN_CHANGE = auto()
     ADD_ITEMS = auto()
-    UPDATE_ITEMS = auto()
-    REMOVE_ITEMS = auto()
-    COMMIT_SESSION = auto()
-    ROLLBACK_SESSION = auto()
 
 
 _CHUNK_SIZE = 1000
@@ -87,10 +83,12 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
+        self._committing = False
+        self._current_fetch_token = 0
         self._queries = {}
         self._fetched_ids = {}
-        self._current_fetch_token = 0
         self._removed_ids = {}
+        self._fake_ids = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
@@ -106,10 +104,6 @@ class SpineDBWorker(QObject):
             _Event.MORE_AVAILABLE: self._more_available_event,
             _Event.WILL_HAVE_CHILDREN_CHANGE: self._will_have_children_change_event,
             _Event.ADD_ITEMS: self._add_items_event,
-            _Event.UPDATE_ITEMS: self._update_items_event,
-            _Event.REMOVE_ITEMS: self._remove_items_event,
-            _Event.COMMIT_SESSION: self._commit_session_event,
-            _Event.ROLLBACK_SESSION: self._rollback_session_event,
         }[event](*args)
 
     def query(self, sq_name):
@@ -223,12 +217,13 @@ class SpineDBWorker(QObject):
         """Updates the ``will_have_children`` property for all parents associated to given type.
 
         The algorithm is as follows:
-        - Iterate the cache and check whether the relevant parents accept the item.
-        - If yes, then set will_have_children to True for all of them and forget about them.
-        - If the cache is finished, then advance the query and repeat until either
-          there are no more parents left to check, or the query is completed.
-        - In the latter case set will_have_children to False for all remaining parents.
-        - If at any moment the set of parents associated to given type is mutated, quit so we can start over.
+        1. Initialize the list parents to check (those with will_have_children equal to None)
+        2. Obtain the next item of given type from cache.
+        3. Check if the unchecked parents accept the item. Set will_have_children to True if any of them do
+           and remove them from the list to check.
+        4. If there are no more items in cache, advance the query and if it brings more items, go back to 2.
+        5. If the query is completed, set will_have_children to False for all parents remaining to check and quit.
+        6. If at any moment the set of parents associated to given type is mutated, quit so we can start over.
 
         Args:
             item_type (str)
@@ -418,21 +413,18 @@ class SpineDBWorker(QObject):
                 continue
             removed_ids.discard(item["id"])
 
-    def add_items(self, items, item_type, readd, check, cache, callback):
+    @busy_effect
+    def add_items(self, orig_items, item_type, readd, check, cache, callback):
         """Adds items to db.
 
         Args:
-            items (dict): lists of items to add or update
+            orig_items (dict): lists of items to add or update
             item_type (str): item type
             readd (bool) : Whether to re-add items that were previously removed
             check (bool): Whether to check integrity
             cache (dict): Cache
             callback (None or function): something to call with the result
         """
-        self._executor.submit(self._add_items, items, item_type, readd, check, cache, callback)
-
-    @busy_effect
-    def _add_items(self, orig_items, item_type, readd, check, cache, callback):
         method_name = {
             "object_class": "add_object_classes",
             "object": "add_objects",
@@ -454,9 +446,20 @@ class SpineDBWorker(QObject):
             "entity_metadata": "add_ext_entity_metadata",
             "parameter_value_metadata": "add_ext_parameter_value_metadata",
         }[item_type]
-        items, errors = getattr(self._db_map, method_name)(
-            *orig_items, check=check, readd=readd, return_items=True, cache=cache
-        )
+        with self._db_map.override_committing(self._committing):
+            items, errors = getattr(self._db_map, method_name)(*orig_items, check=check, return_items=True, cache=cache)
+        if self._committing:
+            with self._db_map.override_committing(self._committing):
+                getattr(self._db_map, method_name)(*orig_items, check=False, readd=True, cache=cache)
+            return
+        self._executor.submit(self._add_items, method_name, orig_items, item_type, readd, check, cache, callback)
+
+    @busy_effect
+    def _add_items(self, method_name, orig_items, item_type, readd, check, cache, callback):
+        with self._db_map.override_committing(self._committing):
+            items, errors = getattr(self._db_map, method_name)(
+                *orig_items, check=check, readd=readd, return_items=True, cache=cache
+            )
         self._discard_removed_ids(item_type, items)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
@@ -474,20 +477,17 @@ class SpineDBWorker(QObject):
             callback(db_map_data)
         self._db_mngr.items_added.emit(item_type, db_map_data)
 
-    def update_items(self, items, item_type, check, cache, callback):
+    @busy_effect
+    def update_items(self, orig_items, item_type, check, cache, callback):
         """Updates items in db.
 
         Args:
-            items (dict): lists of items to add or update
+            orig_items (dict): lists of items to add or update
             item_type (str): item type
             check (bool): Whether or not to check integrity
             cache (dict): Cache
             callback (None or function): something to call with the result
         """
-        self._executor.submit(self._update_items, items, item_type, check, cache, callback)
-
-    @busy_effect
-    def _update_items(self, orig_items, item_type, check, cache, callback):
         method_name = {
             "object_class": "update_object_classes",
             "object": "update_objects",
@@ -508,34 +508,28 @@ class SpineDBWorker(QObject):
             "entity_metadata": "update_ext_entity_metadata",
             "parameter_value_metadata": "update_ext_parameter_value_metadata",
         }[item_type]
-        items, errors = getattr(self._db_map, method_name)(*orig_items, check=check, return_items=True, cache=cache)
+        with self._db_map.override_committing(self._committing):
+            items, errors = getattr(self._db_map, method_name)(*orig_items, check=check, return_items=True, cache=cache)
+        if self._committing:
+            return
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
+            actual_items = self._db_mngr.make_items_from_db_items(self._db_map, actual_item_type, actual_items)
+            self._call_in_parents("handle_items_updated", actual_item_type, actual_items)
             cascading_ids_by_type = self._db_map.cascading_ids(
                 cache=cache, **{actual_item_type: {x["id"] for x in actual_items}}
             )
             del cascading_ids_by_type[actual_item_type]
-            cascading_items_by_type = {
-                actual_item_type: self._db_mngr.make_items_from_db_items(self._db_map, actual_item_type, actual_items)
-            }
             for cascading_item_type, cascading_ids in cascading_ids_by_type.items():
                 cascading_items = self._db_mngr.make_items_from_ids(self._db_map, cascading_item_type, cascading_ids)
                 if cascading_items:
-                    cascading_items_by_type[cascading_item_type] = cascading_items
-            self._something_happened.emit(
-                _Event.UPDATE_ITEMS,
-                (cascading_items_by_type, actual_item_type, callback if item_type == actual_item_type else None),
-            )
-
-    def _update_items_event(self, cascading_items_by_type, item_type, callback):
-        for cascading_item_type, cascading_items in cascading_items_by_type.items():
-            self._call_in_parents("handle_items_updated", cascading_item_type, cascading_items)
-        self._update_special_refs(item_type, {x["id"] for x in cascading_items_by_type[item_type]})
-        db_map_data = {self._db_map: cascading_items_by_type[item_type]}
-        if callback is not None:
-            callback(db_map_data)
-        self._db_mngr.items_updated.emit(item_type, db_map_data)
+                    self._call_in_parents("handle_items_updated", cascading_item_type, cascading_items)
+            self._update_special_refs(actual_item_type, {x["id"] for x in actual_items})
+            db_map_data = {self._db_map: actual_items}
+            if item_type == actual_item_type and callback is not None:
+                callback(db_map_data)
+            self._db_mngr.items_updated.emit(actual_item_type, db_map_data)
 
     def remove_items(self, ids_per_type, callback):
         """Removes items from database.
@@ -543,24 +537,20 @@ class SpineDBWorker(QObject):
         Args:
             ids_per_type (dict): lists of items to remove keyed by item type (str)
         """
-        self._executor.submit(self._remove_items, ids_per_type, callback)
-
-    @busy_effect
-    def _remove_items(self, ids_per_type, callback):
-        try:
-            self._db_map.remove_items(**ids_per_type)
-            errors = []
-        except SpineDBAPIError as err:
-            errors = [err]
+        with self._db_map.override_committing(self._committing):
+            try:
+                self._db_map.remove_items(**ids_per_type)
+                errors = []
+            except SpineDBAPIError as err:
+                errors = [err]
+        if self._committing:
+            return
         if not errors:
             for item_type, ids in ids_per_type.items():
                 removed_ids = self._removed_ids.setdefault(item_type, set())
                 removed_ids |= ids
         else:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        self._something_happened.emit(_Event.REMOVE_ITEMS, (ids_per_type, errors, callback))
-
-    def _remove_items_event(self, ids_per_type, errors, callback):
         items_per_type = {}
         for item_type, ids in ids_per_type.items():
             if not ids:
@@ -597,14 +587,16 @@ class SpineDBWorker(QObject):
             undo_stack (AgedUndoStack): undo stack that outlive the DB manager
             cookie (Any): a cookie to include in session_committed signal
         """
+        self._committing = True
+        for i in range(undo_stack.index()):
+            cmd = undo_stack.command(i)
+            cmd.redo()
+        self._committing = False
         try:
             self._db_map.commit_session(commit_msg)
             errors = []
         except SpineDBAPIError as e:
             errors = [e.msg]
-        self._something_happened.emit(_Event.COMMIT_SESSION, (errors, undo_stack, cookie))
-
-    def _commit_session_event(self, errors, undo_stack, cookie):
         undo_stack.setClean()
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
@@ -612,28 +604,25 @@ class SpineDBWorker(QObject):
             self._db_mngr.session_committed.emit({self._db_map}, cookie)
 
     def rollback_session(self):
-        """Initiates rollback session action for given database maps in the worker thread."""
+        """Initiates rollback session in the worker thread."""
         # Make sure that the worker thread has a reference to undo stacks even if they get deleted
         # in the GUI thread.
         undo_stack = self._db_mngr.undo_stack[self._db_map]
         self._executor.submit(self._rollback_session, undo_stack)
 
     def _rollback_session(self, undo_stack):
-        """Rolls back session for given database maps.
+        """Rolls back session.
 
         Args:
             undo_stack (AgedUndoStack): undo stack that outlive the DB manager
         """
         try:
-            self._db_map.rollback_session()
+            self._db_map.reset_session()
             errors = []
         except SpineDBAPIError as e:
             errors = [e.msg]
         if not errors:
             self._removed_ids.clear()
-        self._something_happened.emit(_Event.ROLLBACK_SESSION, (errors, undo_stack))
-
-    def _rollback_session_event(self, errors, undo_stack):
         undo_stack.setClean()
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
