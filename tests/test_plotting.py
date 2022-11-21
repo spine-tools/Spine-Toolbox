@@ -778,6 +778,41 @@ class TestPlotData(unittest.TestCase):
         self.assertEqual(list(lines[0].get_xdata(orig=True)), [-11, -22])
         self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 2.2])
 
+    def test_two_time_series_plots(self):
+        data = [
+            XYData(
+                [numpy.datetime64("2022-11-18T16:00:00"), numpy.datetime64("2022-11-18T17:00:00")],
+                [1.1, 2.2],
+                "time",
+                "y",
+                ["index_1"],
+                ["index name"],
+            ),
+            XYData(
+                [numpy.datetime64("2022-11-18T16:00:00"), numpy.datetime64("2022-11-18T17:00:00")],
+                [3.3, 4.4],
+                "time",
+                "y",
+                ["index_2"],
+                ["index name"],
+            ),
+        ]
+        plot_widget = plot_data(data)
+        self.assertFalse(plot_widget.canvas.has_twinned_axes())
+        self.assertEqual(plot_widget.canvas.axes.get_title(), "")
+        self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "time")
+        self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "y")
+        legend = plot_widget.canvas.legend_axes.get_legend()
+        legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
+        self.assertEqual(legend_texts, ["index_1", "index_2"])
+        lines = plot_widget.canvas.axes.lines
+        self.assertEqual(len(lines), 2)
+        expected_x = [numpy.datetime64("2022-11-18T16:00:00"), numpy.datetime64("2022-11-18T17:00:00")]
+        self.assertEqual(list(lines[0].get_xdata(orig=True)), expected_x)
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 2.2])
+        self.assertEqual(list(lines[1].get_xdata(orig=True)), expected_x)
+        self.assertEqual(list(lines[1].get_ydata(orig=True)), [3.3, 4.4])
+
     def test_we_find_unsqueezed_index_no_matter_what(self):
         data = [
             XYData(x=["t1", "t2"], y=[13.0, 7.0], x_label="x", y_label="y", data_index=["A1"], index_names=["idx"]),

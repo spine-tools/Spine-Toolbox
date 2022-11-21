@@ -57,12 +57,8 @@ class TestPlotWidget(unittest.TestCase):
             self.fail("missing plot data widget")
         model = data_widget._model
         self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.columnCount(), 3)
-        expected = [
-            ["root index", "t", ""],
-            ["first", "2022-11-08T16:00:00", 1.1],
-            ["first", "2022-11-08T19:00:00", 2.2],
-        ]
+        self.assertEqual(model.columnCount(), 2)
+        expected = [["indexes", "first"], ["2022-11-08T16:00:00", "1.1"], ["2022-11-08T19:00:00", "2.2"]]
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 

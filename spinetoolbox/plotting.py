@@ -15,6 +15,7 @@ Functions for plotting on PlotWidget.
 :author: A. Soininen (VTT)
 :date:   9.7.2019
 """
+import datetime
 from enum import auto, Enum, unique
 import math
 from contextlib import contextmanager
@@ -245,14 +246,14 @@ def _always_single_y_axis(plot_type):
     return plot_type in (PlotType.STACKED_LINE,)
 
 
-def plot_data(data_list, plot_widget=None, plot_type=PlotType.SCATTER_LINE):
+def plot_data(data_list, plot_widget=None, plot_type=None):
     """
     Returns a plot widget with plots of the given data.
 
     Args:
         data_list (list of XYData): data to plot
         plot_widget (PlotWidget, optional): an existing plot widget to draw into or None to create a new widget
-        plot_type (PlotType): plot type
+        plot_type (PlotType, optional): plot type
 
     Returns:
         a PlotWidget object
@@ -279,6 +280,8 @@ def plot_data(data_list, plot_widget=None, plot_type=PlotType.SCATTER_LINE):
     raise_if_incompatible_x(squeezed_data)
     if needs_redraw:
         _clear_plot(plot_widget)
+    if plot_type is None:
+        plot_type = PlotType.SCATTER_LINE if not isinstance(squeezed_data[0].x[0], np.datetime64) else PlotType.LINE
     _limit_string_x_tick_labels(squeezed_data, plot_widget)
     y_labels = sorted({xy_data.y_label for xy_data in data_list})
     if len(y_labels) == 1 or _always_single_y_axis(plot_type):
@@ -313,7 +316,7 @@ def _plot_single_y_axis(data_list, y_label, plot_widget, plot_type):
     if plot_type == PlotType.STACKED_LINE:
         return _plot_stacked_line(data_list, y_label, plot_widget)
     legend_handles = []
-    plot = _make_plot_function(plot_type, plot_widget.canvas.axes)
+    plot = _make_plot_function(plot_type, type(data_list[0].x[0]), plot_widget.canvas.axes)
     for data in data_list:
         plot_label = " | ".join(map(str, data.data_index))
         x = _make_x_plottable(data.x)
@@ -361,9 +364,10 @@ def _plot_double_y_axis(data_list, y_labels, plot_widget, plot_type):
     legend_handles = []
     left_label = y_labels[0]
     right_label = y_labels[1]
-    plot_left = _make_plot_function(plot_type, plot_widget.canvas.axes)
+    x_data_type = type(data_list[0].x[0])
+    plot_left = _make_plot_function(plot_type, x_data_type, plot_widget.canvas.axes)
     right_axes = plot_widget.canvas.axes.twinx()
-    plot_right = _make_plot_function(plot_type, right_axes)
+    plot_right = _make_plot_function(plot_type, x_data_type, right_axes)
     for data in data_list:
         plot_label = " | ".join(map(str, data.data_index))
         x = _make_x_plottable(data.x)
@@ -402,27 +406,40 @@ class _PlotStackedBars:
         return self._axes.bar(x, height, bottom=bottom, **_BASE_SETTINGS, **kwargs)
 
 
-def _make_plot_function(plot_type, axes):
+def _make_plot_function(plot_type, x_data_type, axes):
     """Decides plot method and default keyword arguments based on XYData.
 
     Args:
         plot_type (PlotType): plot type
+        x_data_type (Type): data type of x-axis
         axes (Axes): plot axes
 
     Returns:
         Callable: plot method
     """
     if plot_type == PlotType.SCATTER:
-        return functools.partial(axes.plot, **_SCATTER_PLOT_SETTINGS, **_BASE_SETTINGS)
+        return functools.partial(_plot_or_step(x_data_type, axes), **_SCATTER_PLOT_SETTINGS, **_BASE_SETTINGS)
     if plot_type == PlotType.SCATTER_LINE:
-        return functools.partial(axes.plot, **_SCATTER_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
+        return functools.partial(_plot_or_step(x_data_type, axes), **_SCATTER_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
     if plot_type == PlotType.LINE:
-        return functools.partial(axes.plot, **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
+        return functools.partial(_plot_or_step(x_data_type, axes), **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
     if plot_type == PlotType.BAR:
         return functools.partial(axes.bar, **_BASE_SETTINGS)
     if plot_type == PlotType.STACKED_BAR:
         return _PlotStackedBars(axes)
     raise RuntimeError(f"Unknown plot type '{plot_type}'")
+
+
+def _plot_or_step(x_data_type, axes):
+    """Makes choice between Axes.plot() and Axes.step().
+
+    Args:
+        x_data_type (Type): data type of x-axis
+        axes (Axes): plot axes
+    """
+    if x_data_type in (np.datetime64, datetime.datetime, datetime.date, datetime.time):
+        return axes.step
+    return axes.plot
 
 
 def _clear_plot(plot_widget):
