@@ -217,7 +217,7 @@ class TestAddItems(unittest.TestCase):
 
         def callback(db_map_data):
             self.assertEqual(
-                db_map_data, {db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": None}]}
+                db_map_data, {db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": 2}]}
             )
 
         db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
@@ -249,20 +249,25 @@ class TestImportData(unittest.TestCase):
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
         self._db_mngr = SpineDBManager(mock_settings, None)
         logger = MagicMock()
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+        self._temp_dir = TemporaryDirectory()
+        url = "sqlite:///" + self._temp_dir.name + "/db.sqlite"
+        self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=True)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         while not self._db_map.connection.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
+        self._temp_dir.cleanup()
 
     def test_import_parameter_value_lists(self):
-        with signal_waiter(self._db_mngr.items_added) as waiter:
+        with signal_waiter(
+            self._db_mngr.items_added, condition=lambda item_type, _: item_type == "list_value"
+        ) as waiter:
             self._db_mngr.import_data(
                 {self._db_map: {"parameter_value_lists": [["list_1", "first value"], ["list_1", "second value"]]}}
             )
-            waiter.wait(lambda args: args[0] == "list_value")
+            waiter.wait()
         value_lists = self._db_mngr.get_items(self._db_map, "parameter_value_list")
         list_values = self._db_mngr.get_items(self._db_map, "list_value")
         self.assertEqual(len(value_lists), 1)

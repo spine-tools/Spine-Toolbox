@@ -19,7 +19,7 @@ from functools import wraps
 import itertools
 from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, Signal, Slot
-from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
+from spinedb_api import DatabaseMapping, SpineDBAPIError
 from .helpers import busy_effect, separate_metadata_and_item_metadata
 from .qthread_pool_executor import QtBasedThreadPoolExecutor
 
@@ -28,7 +28,6 @@ from .qthread_pool_executor import QtBasedThreadPoolExecutor
 class _Event(Enum):
     MORE_AVAILABLE = auto()
     WILL_HAVE_CHILDREN_CHANGE = auto()
-    ADD_ITEMS = auto()
 
 
 _CHUNK_SIZE = 1000
@@ -88,7 +87,6 @@ class SpineDBWorker(QObject):
         self._queries = {}
         self._fetched_ids = {}
         self._removed_ids = {}
-        self._fake_ids = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
@@ -103,7 +101,6 @@ class SpineDBWorker(QObject):
         {
             _Event.MORE_AVAILABLE: self._more_available_event,
             _Event.WILL_HAVE_CHILDREN_CHANGE: self._will_have_children_change_event,
-            _Event.ADD_ITEMS: self._add_items_event,
         }[event](*args)
 
     def query(self, sq_name):
@@ -117,7 +114,7 @@ class SpineDBWorker(QObject):
         return self._executor.submit(self._get_db_map, *args, **kwargs).result()
 
     def _get_db_map(self, *args, **kwargs):
-        self._db_map = DiffDatabaseMapping(self._db_url, *args, **kwargs)
+        self._db_map = DatabaseMapping(self._db_url, *args, **kwargs)
         return self._db_map
 
     def reset_queries(self):
@@ -446,36 +443,25 @@ class SpineDBWorker(QObject):
             "entity_metadata": "add_ext_entity_metadata",
             "parameter_value_metadata": "add_ext_parameter_value_metadata",
         }[item_type]
-        with self._db_map.override_committing(self._committing):
-            items, errors = getattr(self._db_map, method_name)(*orig_items, check=check, return_items=True, cache=cache)
-        if self._committing:
-            with self._db_map.override_committing(self._committing):
-                getattr(self._db_map, method_name)(*orig_items, check=False, readd=True, cache=cache)
-            return
-        self._executor.submit(self._add_items, method_name, orig_items, item_type, readd, check, cache, callback)
-
-    @busy_effect
-    def _add_items(self, method_name, orig_items, item_type, readd, check, cache, callback):
+        check &= not self._committing
+        readd |= self._committing
         with self._db_map.override_committing(self._committing):
             items, errors = getattr(self._db_map, method_name)(
                 *orig_items, check=check, readd=readd, return_items=True, cache=cache
             )
+        if self._committing:
+            return
         self._discard_removed_ids(item_type, items)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
             actual_items = self._db_mngr.make_items_from_db_items(self._db_map, actual_item_type, actual_items)
-            self._something_happened.emit(
-                _Event.ADD_ITEMS, (actual_item_type, actual_items, callback if item_type == actual_item_type else None)
-            )
-
-    def _add_items_event(self, item_type, items, callback):
-        self._call_in_parents("handle_items_added", item_type, items)
-        self._update_special_refs(item_type, {x["id"] for x in items})
-        db_map_data = {self._db_map: items}
-        if callback is not None:
-            callback(db_map_data)
-        self._db_mngr.items_added.emit(item_type, db_map_data)
+            self._call_in_parents("handle_items_added", actual_item_type, actual_items)
+            self._update_special_refs(actual_item_type, {x["id"] for x in actual_items})
+            db_map_data = {self._db_map: actual_items}
+            if item_type == actual_item_type and callback is not None:
+                callback(db_map_data)
+            self._db_mngr.items_added.emit(actual_item_type, db_map_data)
 
     @busy_effect
     def update_items(self, orig_items, item_type, check, cache, callback):
@@ -508,6 +494,7 @@ class SpineDBWorker(QObject):
             "entity_metadata": "update_ext_entity_metadata",
             "parameter_value_metadata": "update_ext_parameter_value_metadata",
         }[item_type]
+        check &= not self._committing
         with self._db_map.override_committing(self._committing):
             items, errors = getattr(self._db_map, method_name)(*orig_items, check=check, return_items=True, cache=cache)
         if self._committing:
@@ -531,6 +518,7 @@ class SpineDBWorker(QObject):
                 callback(db_map_data)
             self._db_mngr.items_updated.emit(actual_item_type, db_map_data)
 
+    @busy_effect
     def remove_items(self, ids_per_type, callback):
         """Removes items from database.
 
