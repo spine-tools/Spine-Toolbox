@@ -32,10 +32,20 @@ class TestPlainParameterValueEditor(unittest.TestCase):
         value = editor.value()
         self.assertEqual(value, "")
 
-    def test_value_access(self):
+    def test_boolean_value_access(self):
         editor = PlainParameterValueEditor()
         editor.set_value(True)
         self.assertEqual(editor.value(), True)
+
+    def test_numeric_value_access(self):
+        editor = PlainParameterValueEditor()
+        editor.set_value(2.3)
+        self.assertEqual(editor.value(), 2.3)
+
+    def test_string_value_access(self):
+        editor = PlainParameterValueEditor()
+        editor.set_value("2022")
+        self.assertEqual(editor.value(), "2022")
 
 
 if __name__ == '__main__':
