@@ -22,14 +22,13 @@ from spinetoolbox.helpers import try_number_from_string
 
 
 class PlainParameterValueEditor(QWidget):
-    """
-    A widget to edit float or boolean type parameter values.
-
-    Attributes:
-        parent_widget (QWidget): a parent widget
-    """
+    """A widget to edit float or boolean type parameter values."""
 
     def __init__(self, parent_widget=None):
+        """
+        Args:
+            parent_widget (QWidget): a parent widget
+        """
         # pylint: disable=import-outside-toplevel
         from ..ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
 
@@ -38,12 +37,19 @@ class PlainParameterValueEditor(QWidget):
         self._ui.setupUi(self)
         self._ui.value_edit.setEnabled(False)
         self._ui.radioButton_number_or_string.toggled.connect(self._set_number_or_string_enabled)
+        self._ui.radioButton_string.toggled.connect(self._set_string_enabled)
 
     @Slot(bool)
     def _set_number_or_string_enabled(self, on):
         self._ui.value_edit.setEnabled(on)
         if on:
             self._ui.value_edit.setFocus()
+
+    @Slot(bool)
+    def _set_string_enabled(self, on):
+        self._ui.string_value_edit.setEnabled(on)
+        if on:
+            self._ui.string_value_edit.setFocus()
 
     def set_value(self, value):
         """Sets the value to be edited in this widget."""
@@ -53,9 +59,12 @@ class PlainParameterValueEditor(QWidget):
             self._ui.radioButton_true.setChecked(True)
         elif value is False:
             self._ui.radioButton_false.setChecked(True)
+        elif isinstance(value, str) and value:
+            self._ui.string_value_edit.setText(str(value))
+            self._ui.radioButton_string.setChecked(True)
         else:
-            self._ui.radioButton_number_or_string.setChecked(True)
             self._ui.value_edit.setText(str(value))
+            self._ui.radioButton_number_or_string.setChecked(True)
 
     def value(self):
         """Returns the value currently being edited."""
@@ -65,4 +74,6 @@ class PlainParameterValueEditor(QWidget):
             return True
         if self._ui.radioButton_false.isChecked():
             return False
+        if self._ui.radioButton_string.isChecked():
+            return self._ui.string_value_edit.text()
         return try_number_from_string(self._ui.value_edit.text())
