@@ -139,8 +139,8 @@ class GraphViewMixin:
         rel_class_ids = set(self._selected_class_ids(db_map, "relationship_class"))
         obj_class_ids = set(self._selected_class_ids(db_map, "object_class"))
         if self.ui.graphicsView.auto_expand_objects:
-            for id_ in item["object_class_id_list"].split(","):
-                if int(id_) in obj_class_ids:
+            for id_ in item["object_class_id_list"]:
+                if id_ in obj_class_ids:
                     return True
         if not rel_class_ids:
             return not any(obj_class_ids)
@@ -404,7 +404,7 @@ class GraphViewMixin:
             (db_map, x)
             for db_map in self.db_maps
             for x in self.db_mngr.get_items(db_map, "relationship", only_visible=False)
-            if cond([(db_map, int(id_)) in db_map_object_ids for id_ in x["object_id_list"].split(",")])
+            if cond(((db_map, id_) in db_map_object_ids for id_ in x["object_id_list"]))
         ] + [(db_map, self.db_mngr.get_item(db_map, "relationship", id_)) for db_map, id_ in db_map_relationship_ids]
 
     def _update_graph_data(self):
@@ -427,9 +427,7 @@ class GraphViewMixin:
             if (db_map, relationship["id"]) in pruned_db_map_entity_ids:
                 continue
             db_map_object_id_list = [
-                (db_map, id_)
-                for id_ in (int(x) for x in relationship["object_id_list"].split(","))
-                if (db_map, id_) not in pruned_db_map_entity_ids
+                (db_map, id_) for id_ in relationship["object_id_list"] if (db_map, id_) not in pruned_db_map_entity_ids
             ]
             if len(db_map_object_id_list) < 2 or len(db_map_object_id_list) > max_rel_dim:
                 continue

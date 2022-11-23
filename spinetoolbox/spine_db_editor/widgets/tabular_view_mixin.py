@@ -181,8 +181,8 @@ class TabularViewMixin:
         current_object_class_id_list = [{} for _ in self.current_object_class_name_list]
         for db_map, class_id in self.current_class_id.items():
             relationship_class = self.db_mngr.get_item(db_map, "relationship_class", class_id)
-            for k, id_ in enumerate(relationship_class["object_class_id_list"].split(",")):
-                current_object_class_id_list[k][db_map] = int(id_)
+            for k, id_ in enumerate(relationship_class["object_class_id_list"]):
+                current_object_class_id_list[k][db_map] = id_
         return current_object_class_id_list
 
     @property
@@ -191,7 +191,7 @@ class TabularViewMixin:
         if self.current_class_type == "object_class":
             return [self.db_mngr.get_item(db_map, "object_class", class_id)["name"]]
         relationship_class = self.db_mngr.get_item(db_map, "relationship_class", class_id)
-        return fix_name_ambiguity(relationship_class["object_class_name_list"].split(","))
+        return fix_name_ambiguity(relationship_class["object_class_name_list"])
 
     @property
     def current_object_class_ids(self):
@@ -337,7 +337,7 @@ class TabularViewMixin:
             db_map_relationships = self._get_db_map_entities()
         get_id = self._make_get_id(action)
         return {
-            tuple((db_map, int(id_)) for id_ in rel["object_id_list"].split(',')) + (db_map,): get_id(db_map, rel)
+            tuple((db_map, id_) for id_ in rel["object_id_list"]) + (db_map,): get_id(db_map, rel)
             for db_map, relationships in db_map_relationships.items()
             for rel in relationships
         }
@@ -439,7 +439,7 @@ class TabularViewMixin:
             }
         if self.current_class_type == "relationship_class":
             db_map_entity_ids = {
-                db_map: [tuple((db_map, int(id_)) for id_ in e["object_id_list"].split(',')) for e in entities]
+                db_map: [tuple((db_map, id_) for id_ in e["object_id_list"]) for e in entities]
                 for db_map, entities in db_map_entities.items()
             }
         else:
@@ -482,7 +482,7 @@ class TabularViewMixin:
                 for x in items
             }
         return {
-            tuple((db_map, int(id_)) for id_ in x["object_id_list"].split(','))
+            tuple((db_map, id_) for id_ in x["object_id_list"])
             + ((db_map, x["parameter_id"]), (db_map, x["alternative_id"]), db_map): get_id(db_map, x)
             for db_map, items in db_map_parameter_values.items()
             for x in items

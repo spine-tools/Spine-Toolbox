@@ -951,7 +951,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         )
 
     def _relationship_parameter_value_to_add(self, db_map, header_ids, value_and_type, rel_id_lookup):
-        object_id_list = ",".join([str(id_) for id_ in header_ids[:-2]])
+        object_id_list = tuple(id_ for id_ in header_ids[:-2])
         relationship_id = rel_id_lookup[db_map, object_id_list]
         value, value_type = split_value_and_type(value_and_type)
         return dict(
@@ -1375,15 +1375,20 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         db_map_items = {}
         for (db_map, scen_id), alt_ids_to_add in to_add.items():
             alt_ids_to_remove = to_remove.pop((db_map, scen_id), [])
-            alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
-            alternative_id_list = alternative_id_list + alt_ids_to_add
-            alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alt_ids_to_remove]
-            db_item = {"id": scen_id, "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list])}
+            alternative_id_list = [
+                id_
+                for id_ in list(self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)) + alt_ids_to_add
+                if id_ not in alt_ids_to_remove
+            ]
+            db_item = {"id": scen_id, "alternative_id_list": alternative_id_list}
             db_map_items.setdefault(db_map, []).append(db_item)
         for (db_map, scen_id), alt_ids_to_remove in to_remove.items():
-            alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
-            alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alt_ids_to_remove]
-            db_item = {"id": scen_id, "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list])}
+            alternative_id_list = [
+                id_
+                for id_ in self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
+                if id_ not in alt_ids_to_remove
+            ]
+            db_item = {"id": scen_id, "alternative_id_list": alternative_id_list}
             db_map_items.setdefault(db_map, []).append(db_item)
         self.db_mngr.set_scenario_alternatives(db_map_items)
         return True

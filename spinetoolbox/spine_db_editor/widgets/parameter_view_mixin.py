@@ -100,8 +100,7 @@ class ParameterViewMixin:
         object_class_id_list = relationship_class.get("object_class_id_list")
         object_class_names = []
         object_names_lists = []
-        for id_ in object_class_id_list.split(","):
-            id_ = int(id_)
+        for id_ in object_class_id_list:
             object_class_name = self.db_mngr.get_item(db_map, "object_class", id_, only_visible=False).get("name")
             object_names_list = [
                 x["name"]

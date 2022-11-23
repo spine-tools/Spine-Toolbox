@@ -391,7 +391,7 @@ class RelationshipItem(EntityItem):
             return None
         return (
             f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
-            f"""{self.object_name_list.replace(",", DB_ITEM_SEPARATOR)}<br>"""
+            f"""{DB_ITEM_SEPARATOR.join(self.object_name_list)}<br>"""
             f"""@{self.display_database}</p></html>"""
         )
 
@@ -540,7 +540,7 @@ class ObjectItem(EntityItem):
         for db_map, rel_clss in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).items():
             for rel_cls in rel_clss:
                 rel_cls = rel_cls.copy()
-                rel_cls["object_class_id_list"] = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
+                rel_cls["object_class_id_list"] = list(rel_cls["object_class_id_list"])
                 rel_cls["relationship_ids"] = relationship_ids_per_class.get((db_map, rel_cls["id"]), set())
                 self._db_map_relationship_class_lists.setdefault(rel_cls["name"], []).append((db_map, rel_cls))
 
@@ -769,7 +769,6 @@ class CrossHairsRelationshipItem(RelationshipItem):
         object_class_name_list = [
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         ]
-        object_class_name_list = ",".join(object_class_name_list)
         renderer = self.db_mngr.get_icon_mngr(self.first_db_map).relationship_class_renderer(
             None, object_class_name_list
         )

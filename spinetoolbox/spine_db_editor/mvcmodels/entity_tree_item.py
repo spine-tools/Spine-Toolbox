@@ -147,7 +147,7 @@ class ObjectRelationshipClassItem(RelationshipClassItem):
         if not super().accepts_item(item, db_map):
             return False
         object_id = self.parent_item.db_map_id(db_map)
-        return str(object_id) in item["object_id_list"].split(",")
+        return object_id in item["object_id_list"]
 
 
 class MemberObjectClassItem(ObjectClassItem):
@@ -259,7 +259,7 @@ class ObjectItem(EntityItem):
         if not super().accepts_item(item, db_map):
             return False
         object_class_id = self.db_map_data_field(db_map, 'class_id')
-        return str(object_class_id) in item["object_class_id_list"].split(",")
+        return object_class_id in item["object_class_id_list"]
 
 
 class MemberObjectItem(ObjectItem):
@@ -303,7 +303,7 @@ class RelationshipItem(EntityItem):
     def display_data(self):
         """ "Returns the name for display."""
         return DB_ITEM_SEPARATOR.join(
-            [x for x in self.object_name_list.split(",") if x != self.parent_item.parent_item.display_data]
+            [x for x in self.object_name_list if x != self.parent_item.parent_item.display_data]
         )
 
     @property
@@ -329,4 +329,4 @@ class RelationshipItem(EntityItem):
         grand_parent = self.parent_item.parent_item
         if grand_parent.item_type == "root":
             return True
-        return grand_parent.display_data in self.object_name_list.split(",")
+        return grand_parent.display_data in self.object_name_list

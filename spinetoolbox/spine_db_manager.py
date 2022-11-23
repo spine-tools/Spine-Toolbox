@@ -46,7 +46,7 @@ from spinedb_api import (
 from spinedb_api.parameter_value import load_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
-from spinedb_api.helpers import CacheItem
+from spinedb_api.db_cache import DBCache
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import SpineDBMacro, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
@@ -154,23 +154,6 @@ class SpineDBManager(QObject):
                 except AttributeError:
                     pass
 
-    def _new_item_from_id(self, db_map, item_type, id_, fill_missing=True):
-        cache = self._cache.get(db_map, {})
-        return db_map.get_updated_item(cache, item_type, id_, fill_missing=fill_missing)
-
-    def make_items_from_db_items(self, db_map, item_type, db_items):
-        cache = self._cache.get(db_map, {})
-        items = [db_map.db_to_cache(cache, item_type, item, fetch=False) for item in db_items]
-        self.cache_items(item_type, {db_map: items})
-        return items
-
-    def make_items_from_ids(self, db_map, item_type, ids, fill_missing=True):
-        items = list(
-            filter(None, (self._new_item_from_id(db_map, item_type, id_, fill_missing=fill_missing) for id_ in ids))
-        )
-        self.cache_items(item_type, {db_map: items})
-        return items
-
     def special_cascading_ids(self, db_map, item_type, ids):
         """Returns a dictionary mapping item type to a set of ids for given db_map, item_type, and ids.
         The returned ids correspond to items that have a reference to the input ids,
@@ -277,8 +260,13 @@ class SpineDBManager(QObject):
         if item_type in ("object_class", "relationship_class"):
             self.update_icons(db_map_data)
         for db_map, items in db_map_data.items():
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            db_cache = self._cache.setdefault(db_map, DBCache(worker))
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
+                db_cache.table_cache(item_type)[item["id"]] = item
 
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
@@ -968,9 +956,9 @@ class SpineDBManager(QObject):
 
     def get_scenario_alternative_id_list(self, db_map, scen_id, only_visible=True):
         scenario = self.get_item(db_map, "scenario", scen_id, only_visible=only_visible)
-        if scenario is None or not scenario["alternative_id_list"]:
+        if scenario is None:
             return []
-        return [int(id_) for id_ in scenario["alternative_id_list"].split(",")]
+        return scenario["alternative_id_list"]
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -1456,8 +1444,7 @@ class SpineDBManager(QObject):
         db_map_cascading_data = dict()
         for db_map, object_class_ids in db_map_ids.items():
             for item in self.get_items(db_map, "relationship_class", only_visible=only_visible):
-                object_class_id_list = {int(id_) for id_ in item["object_class_id_list"].split(",")}
-                if object_class_id_list & set(object_class_ids):
+                if set(item["object_class_id_list"]) & set(object_class_ids):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
@@ -1466,8 +1453,7 @@ class SpineDBManager(QObject):
         db_map_cascading_data = dict()
         for db_map, object_ids in db_map_ids.items():
             for item in self.get_items(db_map, "relationship", only_visible=only_visible):
-                object_id_list = {int(id_) for id_ in item["object_id_list"].split(",")}
-                if object_id_list & set(object_ids):
+                if set(item["object_id_list"]) & set(object_ids):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 

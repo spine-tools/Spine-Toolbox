@@ -246,11 +246,8 @@ class ScenarioAlternativeLeafItem(GrayIfLastMixin, LeafItem):
         if self.alternative_id:
             return False
         if column == 0:
-            alternative_id_list = self.parent_item.alternative_id_list
+            alternative_id_list = list(self.parent_item.alternative_id_list)
             alternative_id_list.append(value)
-            db_item = {
-                "id": self.parent_item.parent_item.id,
-                "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
-            }
+            db_item = {"id": self.parent_item.parent_item.id, "alternative_id_list": alternative_id_list}
             self.db_mngr.set_scenario_alternatives({self.db_map: [db_item]})
         return True

@@ -581,14 +581,14 @@ class AlternativeScenarioTreeView(ItemTreeView):
                 scen_alt_root_item = scen_item.scenario_alternative_root_item
                 if not scen_alt_root_item.non_empty_children:
                     continue
-                curr_alt_id_list = scen_alt_root_item.alternative_id_list
+                curr_alt_id_list = list(scen_alt_root_item.alternative_id_list)
                 new_alt_id_list = [
                     id_
                     for alt_item, id_ in zip(scen_alt_root_item.non_empty_children, curr_alt_id_list)
                     if alt_item not in items
                 ]
                 if new_alt_id_list != curr_alt_id_list:
-                    item = {"id": scen_item.id, "alternative_id_list": ",".join([str(id_) for id_ in new_alt_id_list])}
+                    item = {"id": scen_item.id, "alternative_id_list": new_alt_id_list}
                     db_map_scen_alt_data[db_item.db_map].append(item)
         self.model().db_mngr.set_scenario_alternatives(db_map_scen_alt_data)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)

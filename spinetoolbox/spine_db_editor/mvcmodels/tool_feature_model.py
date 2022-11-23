@@ -47,6 +47,10 @@ class ToolFeatureModel(TreeModelBase):
 
     @staticmethod
     def make_feature_name(entity_class_name, parameter_definition_name):
+        if entity_class_name is None:
+            entity_class_name = ""
+        if parameter_definition_name is None:
+            parameter_definition_name = ""
         return entity_class_name + "/" + parameter_definition_name
 
     def _begin_set_features(self, db_map):

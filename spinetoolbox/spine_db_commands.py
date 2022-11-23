@@ -134,10 +134,6 @@ class SpineDBCommand(AgedUndoCommand):
         """Reimplement in subclasses to do stuff with the data from running redo() the first time."""
         raise NotImplementedError()
 
-    def _undo_item(self, db_map, item_type, id_):
-        undo_item = self.db_mngr.get_item(db_map, item_type, id_, only_visible=True)
-        return db_map.cache_to_db(item_type, undo_item)
-
 
 class AddItemsCommand(SpineDBCommand):
     _add_command_name = {
@@ -199,9 +195,7 @@ class AddItemsCommand(SpineDBCommand):
         if self.db_map not in db_map_data:
             self.setObsolete(True)
             return
-        self.redo_db_map_data = {
-            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
-        }
+        self.redo_db_map_data = db_map_data
         self.undo_db_map_typed_ids = {
             db_map: db_map.cascading_ids(
                 cache=self.db_mngr.get_db_map_cache(db_map, {self.item_type}, only_descendants=True),
@@ -244,7 +238,7 @@ class UpdateItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not data:
             self.setObsolete(True)
-        undo_data = [self._undo_item(db_map, item_type, item["id"]) for item in data]
+        undo_data = [self.db_mngr.get_item(self.db_map, item_type, item["id"]).copy() for item in data]
         redo_data = [{**undo_item, **item} for undo_item, item in zip(undo_data, data)]
         if undo_data == redo_data:
             self.setObsolete(True)
@@ -270,9 +264,7 @@ class UpdateItemsCommand(SpineDBCommand):
         if not db_map_data.get(self.db_map):
             self.setObsolete(True)
             return
-        self.redo_db_map_data = {
-            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
-        }
+        self.redo_db_map_data = db_map_data
         self._check = False
 
 
@@ -319,13 +311,8 @@ class RemoveItemsCommand(SpineDBCommand):
 
     def _handle_first_redo_complete(self, db_map_typed_items):
         for item_type, items in db_map_typed_items.get(self.db_map, {}).items():
-            if item_type not in self.db_map.ITEM_TYPES:
+            if item_type not in self.db_map.ITEM_TYPES or not items:
                 continue
-            undo_items = []
-            for item in items:
-                undo_item = self.db_map.cache_to_db(item_type, item)
-                undo_items.append(undo_item)
-            if undo_items:
-                self.undo_typed_data[item_type] = undo_items
+            self.undo_typed_data[item_type] = items
         if not self.undo_typed_data:
             self.setObsolete(True)

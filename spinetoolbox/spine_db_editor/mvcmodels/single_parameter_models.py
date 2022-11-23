@@ -244,7 +244,7 @@ class SingleParameterModel(HalfSortedTableModel):
                     return description
             data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
-                data = data.replace(",", DB_ITEM_SEPARATOR)
+                data = DB_ITEM_SEPARATOR.join(data)
             return data
         if role == Qt.DecorationRole and field == self.entity_class_name_field:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)

@@ -134,7 +134,7 @@ class ScenarioGenerator(QWidget):
                 continue
             scenario_definitions_by_id[item.id] = [a["id"] for a in next(alternative_iter)]
         scenario_alternative_data = [
-            {"id": scenario_id, "alternative_id_list": ",".join(map(str, alternative_ids))}
+            {"id": scenario_id, "alternative_id_list": alternative_ids}
             for scenario_id, alternative_ids in scenario_definitions_by_id.items()
         ]
         self._db_editor.db_mngr.set_scenario_alternatives({self._db_map: scenario_alternative_data})
