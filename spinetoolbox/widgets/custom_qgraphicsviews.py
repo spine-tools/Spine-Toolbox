@@ -110,12 +110,12 @@ class CustomQGraphicsView(QGraphicsView):
         Args:
             event (QWheelEvent): Mouse wheel event
         """
-        if event.orientation() != Qt.Vertical:
+        if event.angleDelta().x() != 0:
             event.ignore()
             return
         event.accept()
         if self._use_smooth_zoom():
-            angle = event.delta() / 8
+            angle = event.angleDelta().y() / 8
             steps = angle / 15
             self._scheduled_transformations += steps
             if self._scheduled_transformations * steps < 0:
@@ -124,13 +124,15 @@ class CustomQGraphicsView(QGraphicsView):
                 self.time_line.deleteLater()
             self.time_line = QTimeLine(200, self)
             self.time_line.setUpdateInterval(20)
-            self.time_line.valueChanged.connect(lambda x, pos=event.pos(): self._handle_zoom_time_line_advanced(pos))
+            self.time_line.valueChanged.connect(
+                lambda x, pos=event.position().toPoint(): self._handle_zoom_time_line_advanced(pos)
+            )
             self.time_line.finished.connect(self._handle_transformation_time_line_finished)
             self.time_line.start()
         else:
             angle = event.angleDelta().y()
             factor = self._zoom_factor_base ** angle
-            self.gentle_zoom(factor, event.pos())
+            self.gentle_zoom(factor, event.position().toPoint())
             self._set_preferred_scene_rect()
 
     def resizeEvent(self, event):
