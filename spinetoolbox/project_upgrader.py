@@ -49,11 +49,10 @@ class ProjectUpgrader:
             dict: Latest version of the project info dictionary
         """
         v = project_dict["project"]["version"]
-        n = project_dict["project"]["name"]
         if v > LATEST_PROJECT_VERSION:
             # User is trying to load a more recent project than this version of Toolbox can handle
             self._toolbox.msg_warning.emit(
-                f"Opening project <b>{n}</b> failed. The project's version is {v}, while "
+                f"Opening project <b>{project_dir}</b> failed. The project's version is {v}, while "
                 f"this version of Spine Toolbox supports project versions up to and "
                 f"including {LATEST_PROJECT_VERSION}. To open this project, you should "
                 f"upgrade Spine Toolbox"
@@ -100,6 +99,8 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v6_to_v7(project_dict)
             elif v == 7:
                 project_dict = self.upgrade_v7_to_v8(project_dict)
+            elif v == 8:
+                project_dict = self.upgrade_v8_to_v9(project_dict)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -450,6 +451,27 @@ class ProjectUpgrader:
         return new
 
     @staticmethod
+    def upgrade_v8_to_v9(old):
+        """Upgrades version 8 project dictionary to version 9.
+
+        Changes:
+            1. Remove ["project"]["name"] key
+
+        Args:
+            old (dict): Version 8 project dictionary
+
+        Returns:
+            dict: Version 9 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 9
+        try:
+            new["project"].pop("name")
+        except KeyError:
+            pass
+        return new
+
+    @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
 
@@ -494,7 +516,9 @@ class ProjectUpgrader:
         if v == 1:
             return self.is_valid_v1(p)
         if 2 <= v <= 8:
-            return self.is_valid_v2_to_8(p, v)
+            return self.is_valid_v2_to_v8(p, v)
+        if v == 9:
+            return self.is_valid_v9(p)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -543,9 +567,9 @@ class ProjectUpgrader:
             return False
         return True
 
-    def is_valid_v2_to_8(self, p, v):
+    def is_valid_v2_to_v8(self, p, v):
         """Checks that the given project JSON dictionary contains
-        a valid version 2 to 6 Spine Toolbox project. Valid meaning, that
+        a valid version 2 to 8 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct
         type.
 
@@ -554,7 +578,7 @@ class ProjectUpgrader:
             v (int): Version
 
         Returns:
-            bool: True if project is a valid version 2 project, False if it is not
+            bool: True if project is a valid version 2 to version 8 project, False if it is not
         """
         if "project" not in p.keys():
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
@@ -588,6 +612,39 @@ class ProjectUpgrader:
         if not isinstance(project["connections"], list):
             self._toolbox.msg_error.emit("Invalid project.json file. 'connections' must be a list.")
             return False
+        return True
+
+    def is_valid_v9(self, p):
+        """Checks that the given project JSON dictionary contains
+        a valid version 9 Spine Toolbox project. Valid meaning, that
+        it contains all required keys and values are of the correct
+        type.
+
+        Args:
+            p (dict): Project information JSON
+
+        Returns:
+            bool: True if project is a valid version 9 project, False if it is not
+        """
+        if "project" not in p.keys():
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
+            return False
+        if "items" not in p.keys():
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'items' not found.")
+            return False
+        required_project_keys = ["version", "description", "specifications", "connections"]
+        project = p["project"]
+        items = p["items"]
+        if not isinstance(project, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'project' must be a dict.")
+            return False
+        if not isinstance(items, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'items' must be a dict.")
+            return False
+        for req_key in required_project_keys:
+            if req_key not in project:
+                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
+                return False
         return True
 
     def backup_project_file(self, project_dir, v):

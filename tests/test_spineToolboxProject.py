@@ -501,14 +501,7 @@ class TestSpineToolboxProject(unittest.TestCase):
             project_dict,
             {
                 "items": {"test item": {"type": "Tester", "a": {"c": 2}}},
-                "project": {
-                    "connections": [],
-                    "description": "Project for unit tests.",
-                    "jumps": [],
-                    "name": "UnitTest Project",
-                    "specifications": {},
-                    "version": 8,
-                },
+                "project": {"connections": [], "description": "", "jumps": [], "specifications": {}, "version": 9},
             },
         )
         with Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME).open() as fp:

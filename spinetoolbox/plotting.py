@@ -15,29 +15,23 @@ Functions for plotting on PlotWidget.
 :author: A. Soininen (VTT)
 :date:   9.7.2019
 """
+import datetime
+from enum import auto, Enum, unique
 import math
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 import functools
-from numbers import Number
 from operator import methodcaller, itemgetter
 from typing import Dict, List, Optional, Union
 
+from matplotlib.container import BarContainer
+from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide2.QtCore import Qt, QModelIndex
 
 from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
-from spinedb_api import (
-    Array,
-    convert_leaf_maps_to_specialized_containers,
-    IndexedValue,
-    Map,
-    ParameterValueFormatError,
-    TimeSeries,
-    DateTime,
-)
-from .helpers import first_non_null
+from spinedb_api import Array, IndexedValue, TimeSeries, DateTime
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_canvas import LegendPosition
 from .widgets.plot_widget import PlotWidget
@@ -46,10 +40,21 @@ from .widgets.plot_widget import PlotWidget
 LEGEND_PLACEMENT_THRESHOLD = 8
 
 
+@unique
+class PlotType(Enum):
+    SCATTER = auto()
+    SCATTER_LINE = auto()
+    LINE = auto()
+    STACKED_LINE = auto()
+    BAR = auto()
+    STACKED_BAR = auto()
+
+
 _BASE_SETTINGS = {"alpha": 0.7}
 _SCATTER_PLOT_SETTINGS = {"linestyle": "", "marker": "o"}
-_LINE_PLOT_SETTINGS = {"linestyle": "solid", "marker": "o"}
-_TIME_SERIES_PLOT_SETTINGS = {"where": "post"}
+_LINE_PLOT_SETTINGS = {"linestyle": "solid"}
+_SCATTER_LINE_PLOT_SETTINGS = dict(_SCATTER_PLOT_SETTINGS, **_LINE_PLOT_SETTINGS)
+_TIME_SERIES_PLOT_SETTINGS = dict(_LINE_PLOT_SETTINGS, where="post")
 
 
 class PlottingError(Exception):
@@ -229,13 +234,27 @@ def combine_data_with_same_indexes(data_list):
     return combined_data
 
 
-def plot_data(data_list, plot_widget=None):
+def _always_single_y_axis(plot_type):
+    """Returns True if a single y-axis should be used.
+
+    Args:
+        plot_type (PlotType): plot type
+
+    Returns:
+        bool: True if single y-axis is required, False otherwise
+    """
+    return plot_type in (PlotType.STACKED_LINE,)
+
+
+def plot_data(data_list, plot_widget=None, plot_type=None):
     """
     Returns a plot widget with plots of the given data.
 
     Args:
         data_list (list of XYData): data to plot
         plot_widget (PlotWidget, optional): an existing plot widget to draw into or None to create a new widget
+        plot_type (PlotType, optional): plot type
+
     Returns:
         a PlotWidget object
     """
@@ -261,14 +280,16 @@ def plot_data(data_list, plot_widget=None):
     raise_if_incompatible_x(squeezed_data)
     if needs_redraw:
         _clear_plot(plot_widget)
+    if plot_type is None:
+        plot_type = PlotType.SCATTER_LINE if not isinstance(squeezed_data[0].x[0], np.datetime64) else PlotType.LINE
     _limit_string_x_tick_labels(squeezed_data, plot_widget)
     y_labels = sorted({xy_data.y_label for xy_data in data_list})
-    if len(y_labels) == 1:
-        legend_handles = _plot_single_y_axis(squeezed_data, y_labels[0], plot_widget)
+    if len(y_labels) == 1 or _always_single_y_axis(plot_type):
+        legend_handles = _plot_single_y_axis(squeezed_data, y_labels[0], plot_widget, plot_type)
     elif len(y_labels) == 2:
-        legend_handles = _plot_double_y_axis(squeezed_data, y_labels, plot_widget)
+        legend_handles = _plot_double_y_axis(squeezed_data, y_labels, plot_widget, plot_type)
     else:
-        legend_handles = _plot_single_y_axis(squeezed_data, "", plot_widget)
+        legend_handles = _plot_single_y_axis(squeezed_data, "", plot_widget, plot_type)
     plot_widget.canvas.axes.set_xlabel(squeezed_data[0].x_label)
     plot_title = " | ".join(map(str, common_indexes))
     plot_widget.canvas.axes.set_title(plot_title)
@@ -280,8 +301,35 @@ def plot_data(data_list, plot_widget=None):
     return plot_widget
 
 
-def _plot_single_y_axis(data_list, y_label, plot_widget):
+def _plot_single_y_axis(data_list, y_label, plot_widget, plot_type):
     """Plots all data on single y-axis.
+
+    Args:
+        data_list (list of XYData): data to plot
+        y_label (str): y-axis label
+        plot_widget (PlotWidget): plot widget
+        plot_type (PlotType): plot type
+
+    Returns:
+        list: legend handles
+    """
+    if plot_type == PlotType.STACKED_LINE:
+        return _plot_stacked_line(data_list, y_label, plot_widget)
+    legend_handles = []
+    plot = _make_plot_function(plot_type, type(data_list[0].x[0]), plot_widget.canvas.axes)
+    for data in data_list:
+        plot_label = " | ".join(map(str, data.data_index))
+        x = _make_x_plottable(data.x)
+        handles = plot(x, data.y, label=plot_label)
+        if isinstance(handles, BarContainer):
+            handles = [Patch(color=handles.patches[0].get_facecolor(), label=plot_label)]
+        legend_handles += handles
+    plot_widget.canvas.axes.set_ylabel(y_label)
+    return legend_handles
+
+
+def _plot_stacked_line(data_list, y_label, plot_widget):
+    """Plots all data as stacked lines.
 
     Args:
         data_list (list of XYData): data to plot
@@ -291,24 +339,24 @@ def _plot_single_y_axis(data_list, y_label, plot_widget):
     Returns:
         list: legend handles
     """
-    legend_handles = []
-    plot = _make_plot_function(data_list, plot_widget.canvas.axes)
-    for data in data_list:
-        plot_label = " | ".join(map(str, data.data_index))
-        x = _make_x_plottable(data.x)
-        handles = plot(x, data.y, label=plot_label)
-        legend_handles += handles
+    if any(data.x != data_list[0].x for data in data_list[1:]):
+        raise PlottingError("Cannot stack plots when x-axes don't match.")
+    x = _make_x_plottable(data_list[0].x)
+    y = [data.y for data in data_list]
+    labels = [" | ".join(map(str, data.data_index)) for data in data_list]
+    handles = plot_widget.canvas.axes.stackplot(x, y, labels=labels, **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
     plot_widget.canvas.axes.set_ylabel(y_label)
-    return legend_handles
+    return handles
 
 
-def _plot_double_y_axis(data_list, y_labels, plot_widget):
+def _plot_double_y_axis(data_list, y_labels, plot_widget, plot_type):
     """Plots all data on two y-axes.
 
     Args:
         data_list (list of XYData): data to plot
         y_labels (list of str): y-axis labels
         plot_widget (PlotWidget): plot widget
+        plot_type (PlotType): plot type
 
     Returns:
         list: legend handles
@@ -316,9 +364,10 @@ def _plot_double_y_axis(data_list, y_labels, plot_widget):
     legend_handles = []
     left_label = y_labels[0]
     right_label = y_labels[1]
-    plot_left = _make_plot_function(data_list, plot_widget.canvas.axes)
+    x_data_type = type(data_list[0].x[0])
+    plot_left = _make_plot_function(plot_type, x_data_type, plot_widget.canvas.axes)
     right_axes = plot_widget.canvas.axes.twinx()
-    plot_right = _make_plot_function(data_list, right_axes)
+    plot_right = _make_plot_function(plot_type, x_data_type, right_axes)
     for data in data_list:
         plot_label = " | ".join(map(str, data.data_index))
         x = _make_x_plottable(data.x)
@@ -344,21 +393,53 @@ def _make_x_plottable(xs):
     return xs
 
 
-def _make_plot_function(data_list, axes):
+class _PlotStackedBars:
+    def __init__(self, axes):
+        self._axes = axes
+        self._cumulative_height = {}
+
+    def __call__(self, x, height, **kwargs):
+        bottom = [self._cumulative_height.get(key, 0.0) for key in x]
+        for key, h in zip(x, height):
+            cumulative = self._cumulative_height.get(key, 0.0)
+            self._cumulative_height[key] = cumulative + h
+        return self._axes.bar(x, height, bottom=bottom, **_BASE_SETTINGS, **kwargs)
+
+
+def _make_plot_function(plot_type, x_data_type, axes):
     """Decides plot method and default keyword arguments based on XYData.
 
     Args:
-        data_list (list of XYData): data to plot
+        plot_type (PlotType): plot type
+        x_data_type (Type): data type of x-axis
         axes (Axes): plot axes
 
     Returns:
         Callable: plot method
     """
-    if data_list:
-        x = data_list[0].x
-        if x and isinstance(x[0], np.datetime64):
-            return functools.partial(axes.step, **_TIME_SERIES_PLOT_SETTINGS, **_BASE_SETTINGS)
-    return functools.partial(axes.plot, **_SCATTER_PLOT_SETTINGS, **_BASE_SETTINGS)
+    if plot_type == PlotType.SCATTER:
+        return functools.partial(_plot_or_step(x_data_type, axes), **_SCATTER_PLOT_SETTINGS, **_BASE_SETTINGS)
+    if plot_type == PlotType.SCATTER_LINE:
+        return functools.partial(_plot_or_step(x_data_type, axes), **_SCATTER_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
+    if plot_type == PlotType.LINE:
+        return functools.partial(_plot_or_step(x_data_type, axes), **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
+    if plot_type == PlotType.BAR:
+        return functools.partial(axes.bar, **_BASE_SETTINGS)
+    if plot_type == PlotType.STACKED_BAR:
+        return _PlotStackedBars(axes)
+    raise RuntimeError(f"Unknown plot type '{plot_type}'")
+
+
+def _plot_or_step(x_data_type, axes):
+    """Makes choice between Axes.plot() and Axes.step().
+
+    Args:
+        x_data_type (Type): data type of x-axis
+        axes (Axes): plot axes
+    """
+    if x_data_type in (np.datetime64, datetime.datetime, datetime.date, datetime.time):
+        return axes.step
+    return axes.plot
 
 
 def _clear_plot(plot_widget):

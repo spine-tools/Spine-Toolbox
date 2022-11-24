@@ -1,7 +1,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.7%20|%203.8%20|%203.9-blue.svg)](https://www.python.org/downloads/release/python-379/)
+[![Python](https://img.shields.io/badge/python-3.7%20|%203.8%20|%203.9%20|%203.10-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/Spine-project/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/Spine-project/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
@@ -14,6 +14,7 @@ Spine Toolbox is an open source Python package to manage data, scenarios and wor
 - Python 3.7
 - Python 3.8
 - Python 3.9
+- Python 3.10 (requires Microsoft Visual C++ 14.0 or greater on Windows)
 
 Python 3.8.0 is not supported (use Python 3.8.1 or later).
 
@@ -43,24 +44,28 @@ and [from source files](#installation-from-sources-using-git).
 This works best for users that want to just use Spine Toolbox but also keep it 
 updated with new releases.
 
-1. If you don't yet have Python 3.7, 3.8, or 3.9, install the latest Python 3.9 release
+1. If you don't yet have Python installed, the recommended version is the latest **Python 3.9** release
    from [Python.org](https://www.python.org/downloads/release/python-3913/).
 
-2. Open a terminal (e.g., Command Prompt on Windows).
+2. Python 3.10 support is in experimental stage. If you want to try it out, please
+   install **Microsoft Visual C++ 14.0 or greater** on Windows. Get it with *Microsoft C++ 
+   Build Tools*: https://visualstudio.microsoft.com/visual-cpp-build-tools/.
 
-3. Get the latest version of `pip` (pip is a package manager for Python)
+3. Open a terminal (e.g., Command Prompt on Windows).
+
+4. Get the latest version of `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-4. Install [pipx](https://pypa.github.io/pipx/) (pipx allows to create an isolated 
+5. Install [pipx](https://pypa.github.io/pipx/) (pipx allows to create an isolated 
    environment for Spine Toolbox to avoid package conflicts with other Python tools)
 
         python -m pip install --user pipx
         python -m pipx ensurepath
 
-5. Restart the terminal or re-login for the changes of the latest command to take effect.
+6. Restart the terminal or re-login for the changes of the latest command to take effect.
 
-6. Choose which Toolbox version to install. Latest *release* version is installed using
+7. Choose which Toolbox version to install. Latest *release* version is installed using
 
         python -m pipx install spinetoolbox
 
@@ -95,10 +100,9 @@ run it, and follow the instructions to install Spine Toolbox.
 
 ### Installation from sources using Git
 
-This option is for the developers and other contributors who want to debug or 
-edit the Spine Toolbox source code.
-First, follow the instructions above to install Python and get the latest 
-version of pip.
+This option is for developers and other contributors who want to debug or 
+edit Spine Toolbox source code. First, follow the instructions above to 
+install Python and get the latest version of pip.
 
 1. Clone or download the source code from this repository.
    
@@ -136,7 +140,7 @@ is active.
 
 ### About requirements
 
-Python 3.7, 3.8, or 3.9 is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
+Python 3.7, 3.8, 3.9, or 3.10 is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
 
 See file `setup.cfg` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
@@ -162,7 +166,10 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 
 #### Installation fails
 
-Please make sure you are using Python 3.7, 3.8, or 3.9 to install the requirements.
+Please make sure you are using Python 3.7, 3.8, 3.9, or 3.10 to install the requirements.
+
+If you are on **Python 3.10**, please install **Microsoft Visual C++ 14.0 or greater** on Windows. 
+Get it with *Microsoft C++ Build Tools*: https://visualstudio.microsoft.com/visual-cpp-build-tools/.
 
 #### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 

@@ -17,9 +17,8 @@ Unit tests for the AboutWidget class.
 """
 
 import unittest
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QWidget
 from spinetoolbox.widgets.about_widget import AboutWidget
-from tests.mock_helpers import create_toolboxui, clean_up_toolbox
 
 
 class TestAboutWidget(unittest.TestCase):
@@ -29,22 +28,21 @@ class TestAboutWidget(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        self.toolbox = create_toolboxui()
         self._original_clip = QApplication.clipboard().text()
 
     def tearDown(self):
-        clean_up_toolbox(self.toolbox)
         QApplication.clipboard().setText(self._original_clip)
 
     def test_constructor(self):
-        w = AboutWidget(self.toolbox)
+        w = AboutWidget(QWidget())
         self.assertIsInstance(w, AboutWidget)
         w.close()
 
     def test_copy_to_clipboard(self):
-        w = AboutWidget(self.toolbox)
+        w = AboutWidget(QWidget())
         w.copy_to_clipboard(True)
         cb_contents = QApplication.clipboard().text()
+        # Note: clipboard tests may break if other apps (eg. VMs in Virtual Box) reserve the system clipboard
         self.assertTrue("Python" in cb_contents)
         w.close()
 

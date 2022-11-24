@@ -77,20 +77,20 @@ class PlotWidget(QWidget):
         Returns:
             list of list: data as table
         """
-        if not self.original_xy_data:
-            return []
-        max_index_count = max(len(xy_data.data_index) for xy_data in self.original_xy_data)
-        header_of_agreeable_width = None
-        rows = []
+        header = ["indexes"]
+        indexes = []
+        data_dicts = []
         for xy_data in self.original_xy_data:
-            if len(xy_data.data_index) == max_index_count:
-                if header_of_agreeable_width is None:
-                    header_of_agreeable_width = xy_data.index_names + [xy_data.x_label, xy_data.y_label]
-                rows += [xy_data.data_index + _pack_xy(x, y) for x, y in zip(xy_data.x, xy_data.y)]
-            else:
-                n = max_index_count - len(xy_data.data_index)
-                rows += [xy_data.data_index + _pack_xy(x, y) + n * [None] for x, y in zip(xy_data.x, xy_data.y)]
-        rows.insert(0, header_of_agreeable_width)
+            label = " | ".join(xy_data.data_index)
+            header.append(label)
+            indexes.append(xy_data.x)
+            data_dict = dict(zip(xy_data.x, xy_data.y))
+            data_dicts.append(data_dict)
+        all_indexes = numpy.unique(numpy.concatenate(indexes))
+        rows = [header]
+        for index in all_indexes:
+            row = [str(index)] + [str(data_dict.get(index, "")) for data_dict in data_dicts]
+            rows.append(row)
         return rows
 
     @busy_effect
@@ -188,18 +188,3 @@ def prepare_plot_in_window_menu(menu):
     window_names = list(plot_windows.keys())
     for name in sorted(window_names):
         menu.addAction(name)
-
-
-def _pack_xy(x, y):
-    """Converts x and y to exportable data types and packs them in an array.
-
-    Args:
-        x (Any): x coordinate
-        y (Any): y coordinate
-
-    Returns:
-        list: list of two elements, x and y
-    """
-    if isinstance(x, numpy.datetime64):
-        x = str(x)
-    return [x, y]

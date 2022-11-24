@@ -238,7 +238,7 @@ class TestToolboxUI(unittest.TestCase):
         ):
             self.toolbox.init_project(project_dir)
         self.assertIsNotNone(self.toolbox.project())
-        self.assertEqual(self.toolbox.project().name, "UnitTest Project")
+        self.assertEqual(self.toolbox.project().name, "Project Directory")
 
     def test_new_project(self):
         self._temp_dir = TemporaryDirectory()

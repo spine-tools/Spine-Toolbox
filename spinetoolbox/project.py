@@ -55,7 +55,7 @@ from .config import (
     SPECIFICATION_LOCAL_DATA_FILENAME,
     PROJECT_ZIP_FILENAME,
 )
-from .project_commands import SetProjectNameAndDescriptionCommand
+from .project_commands import SetProjectDescriptionCommand
 from .spine_engine_worker import SpineEngineWorker
 
 
@@ -70,8 +70,6 @@ class ItemNameStatus(Enum):
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
-    renamed = Signal(str)
-    """Emitted after project has been renamed."""
     project_about_to_be_torn_down = Signal()
     """Emitted before project is being torn down."""
     project_execution_about_to_start = Signal()
@@ -105,18 +103,17 @@ class SpineToolboxProject(MetaObject):
     specification_saved = Signal(str, str)
     """Emitted after a specification has been saved."""
 
-    def __init__(self, toolbox, name, description, p_dir, plugin_specs, settings, logger):
+    def __init__(self, toolbox, p_dir, plugin_specs, settings, logger):
         """
         Args:
             toolbox (ToolboxUI): toolbox of this project
-            name (str): Project name
-            description (str): Project description
             p_dir (str): Project directory
             plugin_specs (Iterable of ProjectItemSpecification): specifications available as plugins
             settings (QSettings): Toolbox settings
             logger (LoggerInterface): a logger instance
         """
-        super().__init__(name, description)
+        _, name = os.path.split(p_dir)
+        super().__init__(name, "")
         self._toolbox = toolbox
         self._project_items = dict()
         self._specifications = dict(enumerate(plugin_specs))
@@ -166,20 +163,8 @@ class SpineToolboxProject(MetaObject):
                 return False
         return True
 
-    def call_set_name_and_description(self, name, description):
-        self._toolbox.undo_stack.push(SetProjectNameAndDescriptionCommand(self, name, description))
-
-    def set_name(self, name):
-        """Changes project name.
-
-        Args:
-            name (str): New project name
-        """
-        if name == self.name:
-            return
-        super().set_name(name)
-        self._logger.msg.emit(f"Project name changed to <b>{self.name}</b>")
-        self.renamed.emit(name)
+    def call_set_description(self, description):
+        self._toolbox.undo_stack.push(SetProjectDescriptionCommand(self, description))
 
     def set_description(self, description):
         if description == self.description:
@@ -199,7 +184,6 @@ class SpineToolboxProject(MetaObject):
         serialized_spec_paths = self._save_all_specifications(local_path)
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
-            "name": self.name,
             "description": self.description,
             "specifications": serialized_spec_paths,
             "connections": [connection.to_dict() for connection in self._connections],
@@ -295,7 +279,6 @@ class SpineToolboxProject(MetaObject):
         local_data_dict = load_local_project_data(self.config_dir, self._logger)
         self._merge_local_data_to_project_info(local_data_dict, project_info)
         # Parse project info
-        self.set_name(project_info["project"]["name"])
         self.set_description(project_info["project"]["description"])
         spec_paths_per_type = project_info["project"]["specifications"]
         deserialized_paths = [
@@ -987,8 +970,8 @@ class SpineToolboxProject(MetaObject):
         if self._engine_workers:
             self._logger.msg_error.emit("Execution already in progress.")
             return
-        job_id = self.prepare_remote_execution()
-        if not job_id:
+        self.job_id = self.prepare_remote_execution()
+        if not self.job_id:
             self.project_execution_finished.emit()
             return
         settings = make_settings_dict_for_engine(self._settings)
@@ -996,7 +979,7 @@ class SpineToolboxProject(MetaObject):
         darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
-            worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings, job_id)
+            worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
             if worker is None:
                 continue
             self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
@@ -1012,7 +995,7 @@ class SpineToolboxProject(MetaObject):
         for worker in self._engine_workers:
             worker.start()
 
-    def create_engine_worker(self, dag, execution_permits, dag_identifier, settings, job_id):
+    def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
         """Creates and returns a SpineEngineWorker to execute given *validated* dag.
 
         Args:
@@ -1020,7 +1003,6 @@ class SpineToolboxProject(MetaObject):
             execution_permits (dict): mapping item names to a boolean indicating whether to execute it or skip it
             dag_identifier (str): A string identifying the dag, for logging
             settings (dict): project and app settings to send to the spine engine.
-            job_id (str): Job Id for remote execution
 
         Returns:
             SpineEngineWorker
@@ -1055,7 +1037,7 @@ class SpineToolboxProject(MetaObject):
             "settings": settings,
             "project_dir": self.project_dir.replace(os.sep, "/"),
         }
-        worker = SpineEngineWorker(data, dag, dag_identifier, items, connections, self._logger, job_id)
+        worker = SpineEngineWorker(data, dag, dag_identifier, items, connections, self._logger, self.job_id)
         return worker
 
     def _handle_engine_worker_finished(self, worker):
@@ -1079,11 +1061,8 @@ class SpineToolboxProject(MetaObject):
             for item, direction, state in finished_worker.successful_executions:
                 item.handle_execution_successful(direction, state)
             finished_worker.clean_up()
+        self.finalize_remote_execution()
         self._engine_workers.clear()
-        # We could remove the transmitted project zip-file here if we want
-        # ZipHandler.remove_file(
-        #     os.path.abspath(os.path.join(self._project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
-        # )
         self.project_execution_finished.emit()
 
     def execute_selected(self, names):
@@ -1422,17 +1401,19 @@ class SpineToolboxProject(MetaObject):
             return ""
         engine_client.set_start_time()  # Set start_time for upload operation
         # Archive the project into a zip-file
-        dest_dir = os.path.join(self.project_dir, os.pardir)  # Parent dir of project_dir TODO: Find a better dst
+        dest_dir = os.path.join(self.project_dir, os.pardir)  # Parent dir of project_dir
         self._logger.msg.emit(f"Squeezing project <b>{self.name}</b> into {PROJECT_ZIP_FILENAME}.zip")
         QCoreApplication.processEvents()
         try:
             ZipHandler.package(src_folder=self.project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
         except Exception as e:
             self._logger.msg_error.emit(f"{e}")
+            engine_client.close()
             return ""
         project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
         if not os.path.isfile(project_zip_file):
             self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
+            engine_client.close()
             return ""
         file_size = get_file_size(os.path.getsize(project_zip_file))
         self._logger.msg_warning.emit(f"Uploading project [{file_size}] ...")
@@ -1443,6 +1424,30 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit(f"Upload time: {t}. Job ID: <b>{job_id}</b>")
         engine_client.close()
         return job_id
+
+    def finalize_remote_execution(self):
+        """Sends a request to server to remove the project directory and removes the project ZIP file from client."""
+        if not self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
+            return
+        host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
+        try:
+            engine_client = EngineClient(host, port, sec_model, sec_folder)
+        except RemoteEngineInitFailed as e:
+            self._logger.msg_error.emit(
+                f"Server is not responding. {e}. " f"Check settings in <b>File->Settings->Engine</b>."
+            )
+            return
+        engine_client.remove_project_from_server(self.job_id)
+        engine_client.close()
+        project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
+        if not os.path.isfile(project_zip_file):
+            return
+        try:
+            os.remove(project_zip_file)  # Remove the uploaded project ZIP file
+        except OSError:
+            self._logger.msg_warning.emit(
+                f"[OSError] Removing ZIP file {project_zip_file} failed. " f"Please remove it manually."
+            )
 
     def tear_down(self):
         """Cleans up project."""

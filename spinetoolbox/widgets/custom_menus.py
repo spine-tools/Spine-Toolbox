@@ -84,7 +84,7 @@ class CustomPopupMenu(QMenu):
         super().__init__(parent=parent)
         self._parent = parent
 
-    def add_action(self, text, slot, enabled=True, tooltip=None):
+    def add_action(self, text, slot, enabled=True, tooltip=None, icon=None):
         """Adds an action to the popup menu.
 
         Args:
@@ -92,8 +92,12 @@ class CustomPopupMenu(QMenu):
             slot (method): Method to connect to action's triggered signal
             enabled (bool): Is action enabled?
             tooltip (str): Tool tip for the action
+            icon (QIcon): Action icon
         """
-        action = self.addAction(text, slot)
+        if icon is not None:
+            action = self.addAction(icon, text, slot)
+        else:
+            action = self.addAction(text, slot)
         action.setEnabled(enabled)
         if tooltip is not None:
             action.setToolTip(tooltip)
@@ -129,6 +133,17 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
         self._parent = parent
         self.setToolTipsVisible(True)
         self.add_recent_projects()
+        self.addSeparator()
+        self.add_action(
+            "Clear",
+            lambda checked=False: self.call_clear_recents(checked),
+            enabled=self.has_recents(),
+            icon=QIcon(":icons/trash-alt.svg"),
+        )
+
+    def has_recents(self):
+        """Returns True if recent projects available, False otherwise."""
+        return False if not self._parent.qsettings().value("appSettings/recentProjects", defaultValue=None) else True
 
     def add_recent_projects(self):
         """Reads the previous project names and paths from QSettings. Adds them to the QMenu as QActions."""
@@ -143,6 +158,16 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
                     lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath),
                     tooltip=filepath,
                 )
+
+    @Slot(bool)
+    def call_clear_recents(self, checked):
+        """Slot for Clear recents menu item.
+
+        Args:
+            checked (bool): Argument sent by triggered signal
+        """
+
+        self._parent.clear_recent_projects()
 
     @Slot(bool, str)
     def call_open_project(self, checked, p):

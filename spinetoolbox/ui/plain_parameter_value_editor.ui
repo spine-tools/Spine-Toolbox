@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>518</width>
-    <height>224</height>
+    <height>225</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,9 +34,19 @@
      <property name="checkable">
       <bool>false</bool>
      </property>
-     <layout class="QGridLayout" name="gridLayout">
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="radioButton_number_or_string">
+        <property name="text">
+         <string>number or string:</string>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="1">
        <widget class="QLineEdit" name="value_edit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="maximumSize">
          <size>
           <width>16777215</width>
@@ -45,31 +55,38 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QRadioButton" name="radioButton_number_or_string">
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="radioButton_string">
         <property name="text">
-         <string>number or string:</string>
+         <string>string:</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
+      <item row="2" column="0">
        <widget class="QRadioButton" name="radioButton_true">
         <property name="text">
          <string>true</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QRadioButton" name="radioButton_false">
         <property name="text">
          <string>false</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
+      <item row="4" column="0">
        <widget class="QRadioButton" name="radioButton_null">
         <property name="text">
          <string>null</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="string_value_edit">
+        <property name="enabled">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
