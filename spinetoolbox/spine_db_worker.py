@@ -459,7 +459,7 @@ class SpineDBWorker(QObject):
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
-            self._db_mngr.cache_items(actual_item_type, {self._db_map: actual_items})
+            actual_items = self._db_mngr.cache_items(actual_item_type, {self._db_map: actual_items})[self._db_map]
             self._call_in_parents("handle_items_added", actual_item_type, actual_items)
             self._update_special_refs(actual_item_type, {x["id"] for x in actual_items})
             db_map_data = {self._db_map: actual_items}
@@ -506,7 +506,7 @@ class SpineDBWorker(QObject):
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
-            self._db_mngr.cache_items(actual_item_type, {self._db_map: actual_items})
+            actual_items = self._db_mngr.cache_items(actual_item_type, {self._db_map: actual_items})[self._db_map]
             self._call_in_parents("handle_items_updated", actual_item_type, actual_items)
             cascading_ids_by_type = self._db_map.cascading_ids(
                 cache=cache, **{actual_item_type: {x["id"] for x in actual_items}}

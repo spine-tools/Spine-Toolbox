@@ -306,6 +306,7 @@ class MockInstantQProcess(mock.Mock):
 
 
 class TestSpineDBManager(SpineDBManager):
+    # FIXME: Needed?
     def fetch_all(self, db_map):
         worker = self._get_worker(db_map)
         for item_type in db_map.ITEM_TYPES:

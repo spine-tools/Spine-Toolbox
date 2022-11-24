@@ -17,7 +17,6 @@ Single models for parameter definitions and values (as 'for a single entity').
 """
 
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QGuiApplication
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
@@ -402,7 +401,7 @@ class SingleParameterValueMixin(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return item[self.entity_name_key], item["parameter_name"], item["alternative_name"]
+        return item[self.entity_name_key] or "", item["parameter_name"] or "", item["alternative_name"] or ""
 
     def set_filter_entity_ids(self, db_map_class_entity_ids):
         if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:

@@ -272,9 +272,7 @@ class TestImportData(unittest.TestCase):
         list_values = self._db_mngr.get_items(self._db_map, "list_value")
         self.assertEqual(len(value_lists), 1)
         value_list = value_lists[0]
-        index_to_id = dict(
-            zip(map(int, value_list["value_id_list"].split(",")), map(int, value_list["value_index_list"].split(",")))
-        )
+        index_to_id = dict(zip(value_list["value_id_list"], value_list["value_index_list"]))
         values = len(index_to_id) * [None]
         for row in list_values:
             value = from_database(row["value"], row["type"])

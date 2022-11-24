@@ -257,6 +257,7 @@ class SpineDBManager(QObject):
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
+        new_db_map_data = {}
         if item_type in ("object_class", "relationship_class"):
             self.update_icons(db_map_data)
         for db_map, items in db_map_data.items():
@@ -264,9 +265,10 @@ class SpineDBManager(QObject):
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            db_cache = self._cache.setdefault(db_map, DBCache(worker))
-            for item in items:
-                db_cache.table_cache(item_type)[item["id"]] = item
+            db_cache = self._cache.setdefault(db_map, DBCache(worker.do_advance_query))
+            table_cache = db_cache.table_cache(item_type)
+            new_db_map_data[db_map] = [table_cache.add_item(item) for item in items]
+        return new_db_map_data
 
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
@@ -294,7 +296,7 @@ class SpineDBManager(QObject):
         worker.fetch_all(
             fetch_item_types=fetch_item_types, only_descendants=only_descendants, include_ancestors=include_ancestors
         )
-        return self._cache.setdefault(db_map, {})
+        return self._cache.setdefault(db_map, DBCache(worker.do_advance_query))
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.

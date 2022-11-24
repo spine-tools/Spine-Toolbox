@@ -97,6 +97,7 @@ class QtBasedThreadPoolExecutor:
         self._threads = set()
         self._requests = QtBasedQueue()
         self._semafore = QSemaphore()
+        self._shutdown = False
 
     def submit(self, fn, *args, **kwargs):
         future = QtBasedFuture()
@@ -118,7 +119,7 @@ class QtBasedThreadPoolExecutor:
     def _do_work(self):
         while True:
             request = self._requests.get()
-            if request is None:
+            if self._shutdown:
                 break
             future, fn, args, kwargs = request
             try:
@@ -129,6 +130,7 @@ class QtBasedThreadPoolExecutor:
             self._semafore.release()
 
     def shutdown(self):
+        self._shutdown = True
         for _ in self._threads:
             self._requests.put(None)
         while self._threads:

@@ -85,8 +85,10 @@ class FeatureLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
         item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
         if not item_data:
             return {}
-        name = self.model.make_feature_name(item_data["entity_class_name"], item_data["parameter_definition_name"])
-        return dict(name=name, **item_data)
+        item_data["name"] = self.model.make_feature_name(
+            item_data["entity_class_name"], item_data["parameter_definition_name"]
+        )
+        return item_data
 
     @property
     def tool_tip(self):
@@ -209,10 +211,10 @@ class ToolFeatureLeafItem(GrayIfLastMixin, LeafItem):
         if not item_data:
             return {}
         feature_data = self.db_mngr.get_item(self.db_map, "feature", item_data["feature_id"])
-        name = self.model.make_feature_name(
+        item_data["name"] = self.model.make_feature_name(
             feature_data["entity_class_name"], feature_data["parameter_definition_name"]
         )
-        return dict(name=name, **item_data)
+        return item_data
 
     def _do_finalize(self):
         if not self.id:
@@ -330,10 +332,10 @@ class ToolFeatureMethodLeafItem(GrayIfLastMixin, LeafItem):
         item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
         if not item_data:
             return {}
-        name = self.db_mngr.get_value_list_item(
+        item_data["name"] = self.db_mngr.get_value_list_item(
             self.db_map, item_data["parameter_value_list_id"], item_data["method_index"]
         )
-        return dict(name=name, **item_data)
+        return item_data
 
     def _make_item_data(self):
         return {"name": "Enter new method here...", "description": ""}

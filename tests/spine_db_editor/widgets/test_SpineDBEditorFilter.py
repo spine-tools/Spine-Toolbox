@@ -92,7 +92,7 @@ class TestSpineDBEditorFilterMixin:
             self.spine_db_editor.object_parameter_definition_model: [('fish',)],
             self.spine_db_editor.object_parameter_value_model: [('fish', 'nemo'), ('dog', 'scooby')],
             self.spine_db_editor.relationship_parameter_definition_model: [],
-            self.spine_db_editor.relationship_parameter_value_model: [('fish__dog', 'nemo,scooby')],
+            self.spine_db_editor.relationship_parameter_value_model: [('fish__dog', ('nemo', 'scooby'))],
         }
         self._assert_filter(filtered_values)
 
@@ -114,7 +114,7 @@ class TestSpineDBEditorFilterMixin:
             self.spine_db_editor.object_parameter_definition_model: [],
             self.spine_db_editor.object_parameter_value_model: [],
             self.spine_db_editor.relationship_parameter_definition_model: [('dog__fish',)],
-            self.spine_db_editor.relationship_parameter_value_model: [('dog__fish', 'pluto,nemo')],
+            self.spine_db_editor.relationship_parameter_value_model: [('dog__fish', ('pluto', 'nemo'))],
         }
         self._assert_filter(filtered_values)
 
@@ -138,8 +138,8 @@ class TestSpineDBEditorFilterMixin:
             self.spine_db_editor.object_parameter_value_model: [],
             self.spine_db_editor.relationship_parameter_definition_model: [('dog__fish',)],
             self.spine_db_editor.relationship_parameter_value_model: [
-                ('fish__dog', 'nemo,scooby'),
-                ('dog__fish', 'pluto,nemo'),
+                ('fish__dog', ('nemo', 'scooby')),
+                ('dog__fish', ('pluto', 'nemo')),
             ],
         }
         self._assert_filter(filtered_values)

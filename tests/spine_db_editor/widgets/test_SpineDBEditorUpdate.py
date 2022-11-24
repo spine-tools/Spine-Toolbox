@@ -187,4 +187,4 @@ class TestSpineDBEditorUpdateMixin:
                     model.index(row, h("value")).data(),
                 )
             )
-        self.assertTrue(("nemo,pluto", "relative_speed", "100.0") in parameters)
+        self.assertTrue((("nemo", "pluto"), "relative_speed", "100.0") in parameters)

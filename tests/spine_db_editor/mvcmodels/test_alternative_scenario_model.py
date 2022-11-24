@@ -107,7 +107,7 @@ class TestAlternativeScenarioModel(unittest.TestCase):
                 item.fetch_more()
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
         self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1"}]})
-        self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
+        self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": 1, "alternative_id_list": [2]}]})
         data = self._model_data_to_dict(model)
         expected = [
             [
@@ -198,10 +198,10 @@ class TestAlternativeScenarioModel(unittest.TestCase):
                 item.fetch_more()
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
         self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1"}]})
-        self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
+        self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": 1, "alternative_id_list": [2]}]})
         self._db_mngr.update_alternatives({self._db_map: [{"id": 2, "name": "renamed"}]})
         self._db_mngr.update_alternatives({self._db_map: [{"id": 2}]})
-        self._db_mngr.update_scenarios({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
+        self._db_mngr.update_scenarios({self._db_map: [{"id": 1, "alternative_id_list": [2]}]})
         data = self._model_data_to_dict(model)
         expected = [
             [

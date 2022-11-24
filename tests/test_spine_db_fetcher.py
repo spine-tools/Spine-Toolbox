@@ -76,15 +76,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_scenarios(self):
         self._import_data(scenarios=("scenario",))
-        item = {
-            'id': 1,
-            'name': 'scenario',
-            'description': None,
-            'active': False,
-            'alternative_id_list': None,
-            'alternative_name_list': None,
-            'commit_id': 2,
-        }
+        item = {'id': 1, 'name': 'scenario', 'description': None, 'active': False, 'commit_id': 2}
         fetcher = ItemTypeFetchParent("scenario")
         fetcher.handle_items_added = MagicMock()
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
@@ -94,18 +86,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_scenario_alternatives(self):
         self._import_data(alternatives=("alt",), scenarios=("scenario",), scenario_alternatives=(("scenario", "alt"),))
-        item = {
-            'id': 1,
-            'scenario_id': 1,
-            'scenario_name': 'scenario',
-            'alternative_id': 2,
-            'alternative_name': 'alt',
-            'rank': 1,
-            'before_alternative_id': None,
-            'before_rank': None,
-            'before_alternative_name': None,
-            'commit_id': 2,
-        }
+        item = {'id': 1, 'scenario_id': 1, 'alternative_id': 2, 'rank': 1, 'commit_id': 2}
         fetcher = ItemTypeFetchParent("scenario_alternative")
         fetcher.handle_items_added = MagicMock()
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
@@ -134,15 +115,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_objects(self):
         self._import_data(object_classes=("oc",), objects=(("oc", "obj"),))
-        item = {
-            'id': 1,
-            'class_id': 1,
-            'class_name': 'oc',
-            'name': 'obj',
-            'description': None,
-            'group_id': None,
-            'commit_id': 2,
-        }
+        item = {'id': 1, 'class_id': 1, 'name': 'obj', 'description': None, 'commit_id': 2}
         fetcher = ItemTypeFetchParent("object")
         fetcher.handle_items_added = MagicMock()
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
@@ -156,7 +129,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'id': 2,
             'name': 'rc',
             'description': None,
-            'object_class_id_list': '1',
+            'object_class_id_list': (1,),
             'object_class_name_list': 'oc',
             'display_icon': None,
             'commit_id': 2,
@@ -180,9 +153,9 @@ class TestSpineDBFetcher(unittest.TestCase):
             'name': 'rc_obj',
             'class_id': 2,
             'class_name': 'rc',
-            'object_id_list': '1',
+            'object_id_list': (1,),
             'object_name_list': 'obj',
-            'object_class_id_list': '1',
+            'object_class_id_list': (1,),
             'object_class_name_list': 'oc',
             'commit_id': 2,
         }
@@ -197,17 +170,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._import_data(
             object_classes=("oc",), objects=(("oc", "obj"), ("oc", "group")), object_groups=(("oc", "group", "obj"),)
         )
-        item = {
-            'id': 1,
-            'class_id': 1,
-            'group_id': 2,
-            'member_id': 1,
-            'class_name': 'oc',
-            'group_name': 'group',
-            'member_name': 'obj',
-            'object_class_id': 1,
-            'relationship_class_id': None,
-        }
+        item = {'id': 1, 'entity_class_id': 1, 'entity_id': 2, 'member_id': 1}
         fetcher = ItemTypeFetchParent("entity_group")
         fetcher.handle_items_added = MagicMock()
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
@@ -222,14 +185,8 @@ class TestSpineDBFetcher(unittest.TestCase):
             'entity_class_id': 1,
             'object_class_id': 1,
             'relationship_class_id': None,
-            'entity_class_name': 'oc',
-            'object_class_name': 'oc',
-            'relationship_class_name': None,
-            'object_class_id_list': None,
-            'object_class_name_list': None,
-            'parameter_name': 'param',
-            'value_list_id': None,
-            'value_list_name': None,
+            'name': 'param',
+            'parameter_value_list_id': None,
             'default_value': None,
             'default_type': None,
             'list_value_id': None,
@@ -255,22 +212,11 @@ class TestSpineDBFetcher(unittest.TestCase):
             'entity_class_id': 1,
             'object_class_id': 1,
             'relationship_class_id': None,
-            'entity_class_name': 'oc',
-            'object_class_name': 'oc',
-            'relationship_class_name': None,
-            'object_class_id_list': None,
-            'object_class_name_list': None,
             'entity_id': 1,
-            'entity_name': 'obj',
             'object_id': 1,
             'relationship_id': None,
-            'object_name': 'obj',
-            'object_id_list': None,
-            'object_name_list': None,
-            'parameter_id': 1,
-            'parameter_name': 'param',
+            'parameter_definition_id': 1,
             'alternative_id': 1,
-            'alternative_name': 'Base',
             'value': b'2.3',
             'type': None,
             'list_value_id': None,
@@ -285,7 +231,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_parameter_value_lists(self):
         self._import_data(parameter_value_lists=(("value_list", (2.3,)),))
-        item = {'id': 1, 'name': 'value_list', 'value_index_list': '0', 'value_id_list': '1', 'commit_id': 2}
+        item = {'id': 1, 'name': 'value_list', 'commit_id': 2}
         fetcher = ItemTypeFetchParent("parameter_value_list")
         fetcher.handle_items_added = MagicMock()
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
@@ -309,12 +255,8 @@ class TestSpineDBFetcher(unittest.TestCase):
         )
         item = {
             'id': 1,
-            'entity_class_id': 1,
-            'entity_class_name': 'oc',
             'parameter_definition_id': 1,
-            'parameter_definition_name': 'param',
             'parameter_value_list_id': 1,
-            'parameter_value_list_name': 'value_list',
             'description': None,
             'commit_id': 2,
         }
@@ -344,20 +286,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             tools=("tool",),
             tool_features=(("tool", "oc", "param"),),
         )
-        item = {
-            'id': 1,
-            'tool_id': 1,
-            'tool_name': 'tool',
-            'feature_id': 1,
-            'entity_class_id': 1,
-            'entity_class_name': 'oc',
-            'parameter_definition_id': 1,
-            'parameter_definition_name': 'param',
-            'parameter_value_list_id': 1,
-            'parameter_value_list_name': 'value_list',
-            'required': False,
-            'commit_id': 2,
-        }
+        item = {'id': 1, 'tool_id': 1, 'feature_id': 1, 'parameter_value_list_id': 1, 'required': False, 'commit_id': 2}
         fetcher = ItemTypeFetchParent("tool_feature")
         fetcher.handle_items_added = MagicMock()
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
@@ -375,22 +304,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             tool_features=(("tool", "oc", "param"),),
             tool_feature_methods=(("tool", "oc", "param", "m"),),
         )
-        item = {
-            'id': 1,
-            'tool_feature_id': 1,
-            'tool_id': 1,
-            'tool_name': 'tool',
-            'feature_id': 1,
-            'entity_class_id': 1,
-            'entity_class_name': 'oc',
-            'parameter_definition_id': 1,
-            'parameter_definition_name': 'param',
-            'parameter_value_list_id': 1,
-            'parameter_value_list_name': 'value_list',
-            'method_index': 0,
-            'method': b'"m"',
-            'commit_id': 2,
-        }
+        item = {'id': 1, 'tool_feature_id': 1, 'parameter_value_list_id': 1, 'method_index': 0, 'commit_id': 2}
         fetcher = ItemTypeFetchParent("tool_feature_method")
         fetcher.handle_items_added = MagicMock()
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):

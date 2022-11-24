@@ -280,13 +280,9 @@ class RemoveItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not any(typed_data.values()):
             self.setObsolete(True)
-        self.redo_typed_data = {
-            item_type: ids
-            for item_type, ids in self.db_map.cascading_ids(
-                cache=self.db_mngr.get_db_map_cache(db_map, set(typed_data), only_descendants=True), **typed_data
-            ).items()
-            if item_type in self.db_map.ITEM_TYPES
-        }
+        self.redo_typed_data = self.db_map.cascading_ids(
+            cache=self.db_mngr.get_db_map_cache(db_map, set(typed_data), only_descendants=True), **typed_data
+        )
         self.undo_typed_data = {}
         self.setText(f"remove items from '{db_map.codename}'")
 
