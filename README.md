@@ -1,7 +1,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.7%20|%203.8%20|%203.9%20|%203.10%20|%203.11-blue.svg)](https://www.python.org/downloads/release/python-379/)
+[![Python](https://img.shields.io/badge/python-3.8%20|%203.9%20|%203.10%20|%203.11-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/Spine-project/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/Spine-project/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
@@ -11,7 +11,6 @@ Spine Toolbox is an open source Python package to manage data, scenarios and wor
 
 ## Programming language
 
-- Python 3.7
 - Python 3.8
 - Python 3.9
 - Python 3.10 (requires Microsoft Visual C++ 14.0 or greater on Windows)
@@ -141,7 +140,7 @@ is active.
 
 ### About requirements
 
-Python 3.7-3.11 is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
+Python 3.8.1-3.11 is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
 
 See file `setup.cfg` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
@@ -167,7 +166,7 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 
 #### Installation fails
 
-Please make sure you are using Python 3.7, 3.8, 3.9, 3.10, or 3.11 to install the requirements.
+Please make sure you are using Python 3.8, 3.9, 3.10, or 3.11 to install the requirements.
 
 If you are on **Python 3.10 or 3.11**, please install **Microsoft Visual C++ 14.0 or greater** on Windows. 
 Get it with *Microsoft C++ Build Tools*: https://visualstudio.microsoft.com/visual-cpp-build-tools/.
