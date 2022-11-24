@@ -22,9 +22,9 @@ from collections import namedtuple
 from itertools import combinations, takewhile
 import json
 from pathlib import Path
-from PySide2.QtCore import QAbstractItemModel, QFileInfo, QModelIndex, Qt, Signal, QMimeData
-from PySide2.QtWidgets import QFileIconProvider
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QPixmap, QPainter, QIcon, QColor
+from PySide6.QtCore import QAbstractItemModel, QFileInfo, QModelIndex, Qt, Signal, QMimeData
+from PySide6.QtWidgets import QFileIconProvider
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QPainter, QIcon, QColor
 from spine_engine.project_item.project_item_resource import extract_packs, CmdLineArg, LabelArg
 
 

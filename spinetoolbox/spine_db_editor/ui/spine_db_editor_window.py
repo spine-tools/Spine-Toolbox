@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
-# Copyright (C) 2017-2021 Spine project consortium
+# Copyright (C) 2017-2022 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -13,30 +13,28 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 6.4.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDockWidget, QFrame,
+    QGraphicsView, QHBoxLayout, QHeaderView, QMainWindow,
+    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
 
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
-from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ObjectTreeView
-from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ParameterValueListTreeView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import FrozenTableView
-from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import RelationshipTreeView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import PivotTableView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import ObjectParameterValueTableView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import ObjectParameterDefinitionTableView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipParameterDefinitionTableView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipParameterValueTableView
-from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import AlternativeScenarioTreeView
-from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ToolFeatureTreeView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import MetadataTableView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import ItemMetadataTableView
-
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (FrozenTableView, ItemMetadataTableView, MetadataTableView, ObjectParameterDefinitionTableView,
+    ObjectParameterValueTableView, PivotTableView, RelationshipParameterDefinitionTableView, RelationshipParameterValueTableView)
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeScenarioTreeView, ObjectTreeView, ParameterValueListTreeView, RelationshipTreeView,
+    ToolFeatureTreeView)
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindow(object):
@@ -254,7 +252,6 @@ class Ui_MainWindow(object):
         self.tableView_object_parameter_value.setSizePolicy(sizePolicy1)
         font = QFont()
         font.setBold(False)
-        font.setWeight(50)
         self.tableView_object_parameter_value.setFont(font)
         self.tableView_object_parameter_value.setMouseTracking(True)
         self.tableView_object_parameter_value.setContextMenuPolicy(Qt.DefaultContextMenu)
@@ -329,7 +326,7 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_relationship_parameter_definition)
         self.dockWidget_object_tree = QDockWidget(MainWindow)
         self.dockWidget_object_tree.setObjectName(u"dockWidget_object_tree")
-        self.dockWidget_object_tree.setFeatures(QDockWidget.AllDockWidgetFeatures)
+        self.dockWidget_object_tree.setFeatures(QDockWidget.DockWidgetClosable|QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
         self.dockWidget_object_tree.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.dockWidgetContents_6 = QWidget()
         self.dockWidgetContents_6.setObjectName(u"dockWidgetContents_6")

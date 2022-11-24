@@ -17,9 +17,9 @@ Contains the GraphLayoutGeneratorRunnable class.
 """
 
 import numpy as np
-from PySide2.QtCore import Signal, Slot, QObject, Qt, QRunnable
-from PySide2.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout, QHBoxLayout
-from PySide2.QtGui import QPainter, QColor
+from PySide6.QtCore import Signal, Slot, QObject, Qt, QRunnable
+from PySide6.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout, QHBoxLayout
+from PySide6.QtGui import QPainter, QColor
 from spinedb_api.graph_layout_generator import GraphLayoutGenerator
 from spinetoolbox.helpers import busy_effect
 

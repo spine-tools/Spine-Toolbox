@@ -16,7 +16,7 @@ Link properties widget.
 :date:   27.11.2020
 """
 
-from PySide2.QtCore import Slot
+from PySide6.QtCore import Slot
 from .properties_widget import PropertiesWidgetBase
 from .custom_qwidgets import PurgeSettingsDialog
 from ..project_commands import SetConnectionOptionsCommand

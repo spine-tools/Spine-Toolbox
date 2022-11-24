@@ -17,8 +17,9 @@ Classes for custom QDialogs to add edit and remove database items.
 """
 
 from functools import reduce
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout, QAction
-from PySide2.QtCore import Slot, Qt, QModelIndex
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
+from PySide6.QtCore import Slot, Qt, QModelIndex
+from PySide6.QtGui import QAction
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
 from ...helpers import busy_effect, preferred_row_height

@@ -16,12 +16,11 @@ Custom QWidgets for Filtering and Zooming.
 :date:   4.12.2018
 """
 
-from PySide2.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QMenu,
-    QAction,
     QStyle,
     QToolBar,
     QStyleOptionMenuItem,
@@ -34,12 +33,11 @@ from PySide2.QtWidgets import (
     QWizardPage,
     QToolButton,
     QPushButton,
-    QUndoStack,
     QSpinBox,
     QDialog,
 )
-from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
-from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont, QIntValidator, QKeySequence
+from PySide6.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
+from PySide6.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont, QIntValidator, QKeySequence, QAction, QUndoStack
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from .select_database_items import SelectDatabaseItems
 from ..helpers import format_log_message

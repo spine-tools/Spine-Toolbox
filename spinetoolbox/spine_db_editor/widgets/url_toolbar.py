@@ -15,11 +15,10 @@ Contains the UrlToolBar class and helpers.
 :author: M. Marin (KTH)
 :date:   13.5.2020
 """
-from PySide2.QtWidgets import (
+from PySide6.QtWidgets import (
     QToolBar,
     QLineEdit,
     QMenu,
-    QAction,
     QWidget,
     QDialog,
     QHBoxLayout,
@@ -28,9 +27,10 @@ from PySide2.QtWidgets import (
     QLabel,
     QTreeWidget,
     QTreeWidgetItem,
+    QToolButton,
 )
-from PySide2.QtGui import QIcon, QKeySequence
-from PySide2.QtCore import QSize, Qt, Signal, Slot
+from PySide6.QtGui import QIcon, QKeySequence, QAction
+from PySide6.QtCore import QSize, Qt, Signal, Slot
 from spinedb_api.filters.tools import (
     SCENARIO_FILTER_TYPE,
     TOOL_FILTER_TYPE,
@@ -56,7 +56,7 @@ class UrlToolBar(QToolBar):
             QIcon(CharIconEngine("\uf061")), "Go forward", db_editor.load_next_urls
         )
         self.reload_action = self.addAction(QIcon(CharIconEngine("\uf021")), "Reload", db_editor.refresh_session)
-        self.reload_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_R))
+        self.reload_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_R))
         self._go_back_action.setEnabled(False)
         self._go_forward_action.setEnabled(False)
         self.reload_action.setEnabled(False)
@@ -69,7 +69,7 @@ class UrlToolBar(QToolBar):
         self.addWidget(self._line_edit)
         toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
         self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (Ctrl+ESC)")
-        self.show_toolbox_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Escape))
+        self.show_toolbox_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Escape))
         self.setMovable(False)
         self.setIconSize(QSize(20, 20))
 
@@ -129,10 +129,10 @@ class UrlToolBar(QToolBar):
         menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "")
         menu_action.setMenu(menu)
         menu_button = self.widgetForAction(menu_action)
-        menu_button.setPopupMode(menu_button.InstantPopup)
+        menu_button.setPopupMode(QToolButton.InstantPopup)
         action = QAction(self)
         action.triggered.connect(menu_button.showMenu)
-        keys = [QKeySequence(Qt.ALT + Qt.Key_F), QKeySequence(Qt.ALT + Qt.Key_E)]
+        keys = [QKeySequence(Qt.ALT | Qt.Key_F), QKeySequence(Qt.ALT | Qt.Key_E)]
         action.setShortcuts(keys)
         keys_str = ", ".join([key.toString() for key in keys])
         menu_button.setToolTip(f"<p>Customize and control Spine DB Editor ({keys_str})</p>")

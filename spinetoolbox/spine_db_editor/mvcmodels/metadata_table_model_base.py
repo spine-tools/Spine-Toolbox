@@ -18,7 +18,7 @@ Contains base class for metadata table models associated functionality.
 from enum import IntEnum, unique
 from operator import itemgetter
 
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 from spinetoolbox.helpers import rows_to_row_count_tuples
 from .colors import FIXED_FIELD_COLOR
 

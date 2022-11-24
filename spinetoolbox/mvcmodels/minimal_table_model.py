@@ -16,7 +16,7 @@ Contains a minimal table model.
 :date:   20.5.2018
 """
 
-from PySide2.QtCore import Qt, QModelIndex, QAbstractTableModel
+from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
 class MinimalTableModel(QAbstractTableModel):

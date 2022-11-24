@@ -17,7 +17,7 @@ Classes for custom QDialogs to add items to databases.
 """
 
 from itertools import product
-from PySide2.QtWidgets import (
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
     QGridLayout,
@@ -36,8 +36,8 @@ from PySide2.QtWidgets import (
     QSplitter,
     QDialogButtonBox,
 )
-from PySide2.QtCore import Slot, Qt, QSize, QModelIndex
-from PySide2.QtGui import QIcon
+from PySide6.QtCore import Slot, Qt, QSize, QModelIndex
+from PySide6.QtGui import QIcon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel

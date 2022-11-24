@@ -15,7 +15,7 @@ An editor dialog for Array elements.
 :author: A. Soininen (VTT)
 :date:   10.11.2020
 """
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from .duration_editor import DurationEditor
 from .datetime_editor import DatetimeEditor
 from .parameter_value_editor_base import ParameterValueEditorBase, ValueType

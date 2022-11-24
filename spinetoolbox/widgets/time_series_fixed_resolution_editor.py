@@ -17,8 +17,8 @@ Contains logic for the fixed step time series editor widget.
 """
 
 from datetime import datetime
-from PySide2.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
-from PySide2.QtWidgets import QCalendarWidget, QWidget
+from PySide6.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
+from PySide6.QtWidgets import QCalendarWidget, QWidget
 
 from spinedb_api import (
     duration_to_relativedelta,

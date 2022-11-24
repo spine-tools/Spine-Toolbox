@@ -20,7 +20,7 @@ from enum import IntEnum, unique
 import json
 import pathlib
 import sys
-from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 import networkx as nx
 
 from spine_engine import SpineEngineState

@@ -16,9 +16,9 @@ Contains TabularViewHeaderWidget class.
 :date:   2.12.2019
 """
 
-from PySide2.QtCore import Qt, QMimeData, Signal
-from PySide2.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout
-from PySide2.QtGui import QDrag
+from PySide6.QtCore import Qt, QMimeData, Signal
+from PySide6.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout
+from PySide6.QtGui import QDrag
 from ...config import PIVOT_TABLE_HEADER_COLOR
 
 

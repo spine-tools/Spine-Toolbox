@@ -17,8 +17,8 @@ Unit tests for Database editor's ``graphics_items`` module.
 """
 import unittest
 from unittest import mock
-from PySide2.QtCore import QPointF
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QPointF
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.graphics_items import RelationshipItem
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from ..mock_helpers import TestSpineDBManager

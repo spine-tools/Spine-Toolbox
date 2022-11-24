@@ -21,8 +21,8 @@ from contextlib import contextmanager
 from unittest.mock import Mock, MagicMock, patch
 
 import numpy
-from PySide2.QtCore import QModelIndex, QItemSelectionModel, QObject
-from PySide2.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QModelIndex, QItemSelectionModel, QObject
+from PySide6.QtWidgets import QApplication, QMessageBox
 from matplotlib.gridspec import GridSpec
 
 from spinedb_api import (

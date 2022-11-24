@@ -18,8 +18,8 @@ Unit tests for ``spine_engine_worker`` module.
 import time
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtCore import QObject, Slot
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Slot
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_engine_worker import SpineEngineWorker
 
 

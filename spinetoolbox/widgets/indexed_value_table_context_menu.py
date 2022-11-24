@@ -17,8 +17,9 @@ Context menus for parameter value editor widgets.
 """
 from operator import itemgetter
 
-from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QInputDialog, QMenu, QAction
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QInputDialog, QMenu
+from PySide6.QtGui import QAction
 from spinetoolbox.plotting import PlottingError, plot_value_editor_table_selection
 from spinetoolbox.widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from spinetoolbox.widgets.report_plotting_failure import report_plotting_failure

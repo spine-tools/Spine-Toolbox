@@ -16,7 +16,7 @@ Class for a custom QComboBox.
 :date:   16.10.2020
 """
 
-from PySide2.QtWidgets import QComboBox
+from PySide6.QtWidgets import QComboBox
 
 
 class CustomQComboBox(QComboBox):

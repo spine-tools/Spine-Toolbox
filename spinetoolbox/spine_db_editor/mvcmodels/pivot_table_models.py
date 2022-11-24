@@ -16,8 +16,8 @@ Provides pivot table models for the Tabular View.
 :date:   1.11.2018
 """
 
-from PySide2.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
-from PySide2.QtGui import QColor, QFont
+from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
+from PySide6.QtGui import QColor, QFont
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier
 from spinetoolbox.fetch_parent import FlexibleFetchParent

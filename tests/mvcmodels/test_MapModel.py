@@ -17,8 +17,8 @@ Unit tests for MapModel class.
 """
 
 import unittest
-from PySide2.QtCore import QObject, Qt
-from PySide2.QtGui import QColor
+from PySide6.QtCore import QObject, Qt
+from PySide6.QtGui import QColor
 from spinedb_api import Array, DateTime, Duration, Map, ParameterValueFormatError
 from spinetoolbox.mvcmodels.map_model import MapModel, empty
 

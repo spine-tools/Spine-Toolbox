@@ -21,7 +21,7 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from ...mock_helpers import TestSpineDBManager
 

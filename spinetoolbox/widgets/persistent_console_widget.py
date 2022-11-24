@@ -15,9 +15,9 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Qt, Slot, QTimer, Signal, QRect, QSize
-from PySide2.QtWidgets import QPlainTextEdit, QSizePolicy
-from PySide2.QtGui import (
+from PySide6.QtCore import Qt, Slot, QTimer, Signal, QRect, QSize
+from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy
+from PySide6.QtGui import (
     QFontDatabase,
     QTextCharFormat,
     QFont,

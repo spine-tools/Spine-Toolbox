@@ -18,8 +18,8 @@ Unit tests for SpineDBEditor classes.
 
 import unittest
 from unittest import mock
-from PySide2.QtWidgets import QApplication, QMessageBox
-from PySide2.QtCore import QModelIndex, QItemSelectionModel
+from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QModelIndex, QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel

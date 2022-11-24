@@ -18,7 +18,7 @@ Unit tests for the TreeViewFormUpdateMixin.
 
 import unittest
 from unittest import mock
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 
 

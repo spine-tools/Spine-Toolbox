@@ -18,9 +18,9 @@ The SpineDBManager class
 
 import json
 import os
-from PySide2.QtCore import Qt, QObject, Signal, Slot, QMutex
-from PySide2.QtWidgets import QMessageBox, QWidget
-from PySide2.QtGui import QFontMetrics, QFont, QWindow
+from PySide6.QtCore import Qt, QObject, Signal, Slot, QRecursiveMutex
+from PySide6.QtWidgets import QMessageBox, QWidget
+from PySide6.QtGui import QFontMetrics, QFont, QWindow
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
     is_empty,
@@ -477,7 +477,7 @@ class SpineDBManager(QObject):
             raise error
         self._workers[db_map] = worker
         self._db_maps[url] = db_map
-        self.db_map_locks[db_map] = QMutex(QMutex.Recursive)
+        self.db_map_locks[db_map] = QRecursiveMutex()  # TODO: Plain QMutex() would be faster here. Can we use it?
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
         self.undo_action[db_map] = stack.createUndoAction(self)
         self.redo_action[db_map] = stack.createRedoAction(self)

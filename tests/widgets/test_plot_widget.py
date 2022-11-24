@@ -16,7 +16,7 @@ from itertools import product
 from unittest import mock
 
 from matplotlib.gridspec import GridSpec
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from spinedb_api.parameter_value import TimeSeriesFixedResolution
 from spinetoolbox.plotting import plot_data, TreeNode, turn_node_to_xy_data, convert_indexed_value_to_tree

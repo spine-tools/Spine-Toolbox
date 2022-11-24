@@ -25,9 +25,9 @@ from numbers import Number
 import re
 from operator import methodcaller
 
-from PySide2.QtWidgets import QTableView, QApplication, QAction
-from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
-from PySide2.QtGui import QKeySequence, QIcon
+from PySide6.QtWidgets import QTableView, QApplication
+from PySide6.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
+from PySide6.QtGui import QKeySequence, QIcon, QAction
 from spinedb_api import (
     DateTime,
     Duration,
@@ -292,7 +292,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         """
         super().__init__(parent=parent)
         self._show_filter_menu_action = QAction(self)
-        self._show_filter_menu_action.setShortcut(Qt.ALT + Qt.Key_Down)
+        self._show_filter_menu_action.setShortcut(Qt.ALT | Qt.Key_Down)
         self._show_filter_menu_action.setShortcutContext(Qt.WidgetShortcut)
         self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
         self.addAction(self._show_filter_menu_action)

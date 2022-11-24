@@ -16,9 +16,9 @@ Contains PropertiesWidgetBase.
 :date: 20.01.2022
 """
 
-from PySide2.QtWidgets import QWidget, QAbstractItemView, QLineEdit, QHeaderView
-from PySide2.QtCore import Qt, QRect, QPoint, QEvent
-from PySide2.QtGui import QPainter, QPixmap, QColor
+from PySide6.QtWidgets import QWidget, QAbstractItemView, QLineEdit, QHeaderView
+from PySide6.QtCore import Qt, QRect, QPoint, QEvent
+from PySide6.QtGui import QPainter, QPixmap, QColor
 from ..helpers import fix_lightness_color
 
 

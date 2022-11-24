@@ -17,8 +17,8 @@ Unit tests for the TimeSeriesModelVariableResolution class.
 """
 
 import unittest
-from PySide2.QtCore import QObject, Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Qt
+from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 

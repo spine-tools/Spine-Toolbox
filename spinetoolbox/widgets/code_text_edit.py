@@ -20,9 +20,9 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtWidgets import QWidget, QPlainTextEdit, QPlainTextDocumentLayout
-from PySide2.QtGui import QColor, QFontMetrics, QFontDatabase, QPainter, QTextDocument
-from PySide2.QtCore import QSize, Slot, QRect, Qt
+from PySide6.QtWidgets import QWidget, QPlainTextEdit, QPlainTextDocumentLayout
+from PySide6.QtGui import QColor, QFontMetrics, QFontDatabase, QPainter, QTextDocument
+from PySide6.QtCore import QSize, Slot, QRect, Qt
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 
 

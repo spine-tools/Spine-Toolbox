@@ -19,8 +19,8 @@ Unit tests for CopyPasteTableView class.
 import locale
 import unittest
 from unittest.mock import patch
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, QItemSelectionModel, Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QItemSelectionModel, Qt
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
 
 

@@ -16,8 +16,8 @@ An editor widget for editing a map type parameter values.
 :date:   11.2.2020
 """
 
-from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
-from PySide2.QtWidgets import QWidget
+from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
+from PySide6.QtWidgets import QWidget
 
 from spinedb_api import Map
 from ..helpers import inquire_index_name

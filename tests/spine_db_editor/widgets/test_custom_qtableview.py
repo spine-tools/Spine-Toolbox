@@ -15,8 +15,8 @@ import os
 import unittest
 from tempfile import TemporaryDirectory
 from unittest import mock
-from PySide2.QtCore import QItemSelectionModel, QModelIndex
-from PySide2.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QItemSelectionModel, QModelIndex
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from spinedb_api import DatabaseMapping, import_functions
 from spinetoolbox.helpers import signal_waiter

@@ -17,9 +17,9 @@ Classes for custom QListView.
 """
 
 from textwrap import fill
-from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QMimeData
-from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine
-from PySide2.QtWidgets import QToolButton, QApplication, QToolBar, QWidgetAction
+from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QMimeData, QMargins
+from PySide6.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine
+from PySide6.QtWidgets import QToolButton, QApplication, QToolBar, QWidgetAction, QStyle
 from ..helpers import CharIconEngine, make_icon_background
 
 
@@ -212,8 +212,8 @@ class ProjectItemSpecArray(QToolBar):
         """
         super().__init__()
         self._extension_button = next(iter(self.findChildren(QToolButton)))
-        self._margin = 4
-        self.layout().setMargin(self._margin)
+        self._margins = QMargins(4, 4, 4, 4)
+        self.layout().setContentsMargins(self._margins)
         self._maximum_size = self.maximumSize()
         self._model = model
         self._toolbox = toolbox
@@ -336,11 +336,11 @@ class ProjectItemSpecArray(QToolBar):
         style = self.style()
         extension_extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
         if self.orientation() == Qt.Horizontal:
-            toolbar_size = self.width() - extension_extent - 2 * self._margin + 2
+            toolbar_size = self.width() - extension_extent - 2 * self._margins.left() + 2
             x, y = geom.right() + 1, geom.top()
             w, h = toolbar_size - geom.right(), geom.height()
         else:
-            toolbar_size = self.height() - extension_extent - 2 * self._margin + 2
+            toolbar_size = self.height() - extension_extent - 2 * self._margins.top() + 2
             x, y = geom.left(), geom.bottom() + 1
             w, h = geom.width(), toolbar_size - geom.bottom()
         return x, y, w, h
@@ -390,12 +390,12 @@ class ProjectItemSpecArray(QToolBar):
         for w in widgets:
             w.set_orientation(orientation)
         style = self.style()
-        extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
+        extent = style.pixelMetric(QStyle.PM_ToolBarExtensionExtent)
         down, right = "\uf0d7", "\uf0da"
         if orientation == Qt.Horizontal:
             icon = down if not self._visible else right
             width = extent
-            min_width = self._button_base_item.sizeHint().width() + extent + self._margin + spacing
+            min_width = self._button_base_item.sizeHint().width() + extent + self._margins.left() + spacing
             min_visible_width = min_width + self._button_new.sizeHint().width() - spacing
             if widgets:
                 min_visible_width += extent
@@ -411,7 +411,7 @@ class ProjectItemSpecArray(QToolBar):
             icon = right if not self._visible else down
             height = extent
             min_width = self._button_base_item.sizeHint().width()
-            min_height = self._button_base_item.sizeHint().height() + extent + self._margin + spacing
+            min_height = self._button_base_item.sizeHint().height() + extent + self._margins.top() + spacing
             min_visible_height = min_height + self._button_new.sizeHint().height() - spacing
             if widgets:
                 min_visible_height += extent

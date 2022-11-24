@@ -16,7 +16,7 @@ Unit tests for the ArrayModel class.
 :date:   9.4.2020
 """
 import unittest
-from PySide2.QtCore import QObject, Qt
+from PySide6.QtCore import QObject, Qt
 from spinedb_api import Array
 from spinetoolbox.mvcmodels.array_model import ArrayModel
 

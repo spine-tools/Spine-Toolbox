@@ -13,25 +13,34 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 6.4.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDockWidget, QFrame,
+    QGraphicsView, QHeaderView, QLabel, QMainWindow,
+    QMenu, QMenuBar, QSizePolicy, QSplitter,
+    QStatusBar, QTabWidget, QToolButton, QTreeView,
+    QVBoxLayout, QWidget)
 
-from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
-
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1006, 671)
+        MainWindow.resize(1006, 672)
         MainWindow.setDockNestingEnabled(True)
         self.actionQuit = QAction(MainWindow)
         self.actionQuit.setObjectName(u"actionQuit")
@@ -189,7 +198,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1006, 21))
+        self.menubar.setGeometry(QRect(0, 0, 1006, 22))
         self.menubar.setNativeMenuBar(False)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
@@ -222,7 +231,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.dockWidget_eventlog.sizePolicy().hasHeightForWidth())
         self.dockWidget_eventlog.setSizePolicy(sizePolicy)
         self.dockWidget_eventlog.setMinimumSize(QSize(174, 184))
-        self.dockWidget_eventlog.setFeatures(QDockWidget.AllDockWidgetFeatures)
+        self.dockWidget_eventlog.setFeatures(QDockWidget.DockWidgetClosable|QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
         self.dockWidgetContents = QWidget()
         self.dockWidgetContents.setObjectName(u"dockWidgetContents")
         sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -320,7 +329,6 @@ class Ui_MainWindow(object):
         self.dockWidget_console = QDockWidget(MainWindow)
         self.dockWidget_console.setObjectName(u"dockWidget_console")
         self.dockWidget_console.setFloating(False)
-        self.dockWidget_console.setFeatures(QDockWidget.AllDockWidgetFeatures)
         self.dockWidgetContents_console = QWidget()
         self.dockWidgetContents_console.setObjectName(u"dockWidgetContents_console")
         self.verticalLayout_6 = QVBoxLayout(self.dockWidgetContents_console)

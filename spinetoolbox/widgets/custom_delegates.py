@@ -16,8 +16,8 @@ Custom item delegates.
 :date:   1.9.2018
 """
 
-from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
-from PySide2.QtWidgets import (
+from PySide6.QtCore import Qt, Signal, QEvent, QPoint, QRect
+from PySide6.QtWidgets import (
     QComboBox,
     QStyledItemDelegate,
     QStyleOptionButton,

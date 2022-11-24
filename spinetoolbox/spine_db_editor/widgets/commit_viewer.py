@@ -16,7 +16,7 @@ Contains the CommitViewer class.
 :date:   26.11.2018
 """
 
-from PySide2.QtWidgets import (
+from PySide6.QtWidgets import (
     QMainWindow,
     QTabWidget,
     QWidget,
@@ -27,7 +27,7 @@ from PySide2.QtWidgets import (
     QSplitter,
     QLabel,
 )
-from PySide2.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Slot
 from spinetoolbox.helpers import restore_ui, save_ui, busy_effect
 
 

@@ -17,9 +17,9 @@ Provides the main() function.
 """
 import os
 import multiprocessing
-import PySide2
+import PySide6
 
-dirname = os.path.dirname(PySide2.__file__)
+dirname = os.path.dirname(PySide6.__file__)
 plugin_path = os.path.join(dirname, "plugins", "platforms")
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = plugin_path
 
@@ -27,8 +27,8 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = plugin_path
 from argparse import ArgumentParser
 import sys
 import logging
-from PySide2.QtGui import QFontDatabase
-from PySide2.QtWidgets import QApplication
+from PySide6.QtGui import QFontDatabase
+from PySide6.QtWidgets import QApplication
 
 # Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
 from . import resources_icons_rc  # pylint: disable=unused-import
@@ -49,8 +49,8 @@ def main():
         format='%(asctime)s %(levelname)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
     )
-    if not pyside2_version_check():
-        return 1
+    # if not pyside2_version_check():
+    #     return 1
     _add_pywin32_system32_to_path()
     parser = _make_argument_parser()
     args = parser.parse_args()

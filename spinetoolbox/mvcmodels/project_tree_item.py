@@ -18,7 +18,7 @@ Project Tree items.
 
 import logging
 import bisect
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from spinetoolbox.metaobject import MetaObject
 
 

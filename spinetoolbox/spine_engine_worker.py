@@ -15,8 +15,8 @@ Contains SpineEngineWorker.
 :date:   14.10.2020
 """
 import copy
-from PySide2.QtCore import Signal, Slot, QObject, QThread
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Signal, Slot, QObject, QThread
+from PySide6.QtWidgets import QMessageBox
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from .spine_engine_manager import make_engine_manager, LocalSpineEngineManager

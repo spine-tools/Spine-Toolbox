@@ -20,8 +20,8 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtCore import QModelIndex
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QModelIndex
+from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_manager import SpineDBManager

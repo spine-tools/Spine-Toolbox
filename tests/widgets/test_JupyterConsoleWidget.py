@@ -17,7 +17,7 @@ Unit tests for the SpineConsoleWidget.
 """
 
 import unittest
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.jupyter_console_widget import JupyterConsoleWidget
 from tests.mock_helpers import create_toolboxui, clean_up_toolbox
 

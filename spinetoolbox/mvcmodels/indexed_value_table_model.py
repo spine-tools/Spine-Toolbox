@@ -16,8 +16,8 @@ A model for indexed parameter values, used by the parameter_value editors.
 :date:   18.6.2019
 """
 
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide2.QtGui import QColor
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtGui import QColor
 
 EXPANSE_COLOR = QColor(245, 245, 245)
 

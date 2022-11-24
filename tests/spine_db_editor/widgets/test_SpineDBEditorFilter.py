@@ -16,7 +16,7 @@ Unit tests for the TreeViewFormFilterMixin class.
 :date:   6.12.2018
 """
 
-from PySide2.QtCore import Qt, QItemSelectionModel
+from PySide6.QtCore import Qt, QItemSelectionModel
 
 
 class TestSpineDBEditorFilterMixin:

@@ -30,11 +30,11 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import matplotlib
-from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
-from PySide2.QtCore import __version__ as qt_version
-from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
-from PySide2.QtGui import (
+from PySide6.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
+from PySide6.QtCore import __version__ as qt_version
+from PySide6.QtCore import __version_info__ as qt_version_info
+from PySide6.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
+from PySide6.QtGui import (
     QGuiApplication,
     QCursor,
     QImageReader,
@@ -239,22 +239,22 @@ def supported_img_formats():
 
 
 def pyside2_version_check():
-    """Check that PySide2 version is 5.14 or 5.15.
+    """Check that PySide6 version is 5.14 or 5.15.
     Version 5.15 is allowed but it is not promoted yet
     because user's may need to update their VC++ runtime
     libraries on Windows.
 
-    qt_version is the Qt version used to compile PySide2 as string. E.g. "5.14.2"
-    qt_version_info is a tuple with each version component of Qt used to compile PySide2. E.g. (5, 14, 2)
+    qt_version is the Qt version used to compile PySide6 as string. E.g. "5.14.2"
+    qt_version_info is a tuple with each version component of Qt used to compile PySide6. E.g. (5, 14, 2)
     """
     if not (qt_version_info[0] == 5 and qt_version_info[1] in (14, 15)):
         print(
             f"""Sorry for the inconvenience but,
 
-            Spine Toolbox does not support PySide2 version {qt_version}.
-            At the moment, supported PySide2 versions are 5.14 & 5.15.
+            Spine Toolbox does not support PySide6 version {qt_version}.
+            At the moment, supported PySide6 versions are 5.14 & 5.15.
 
-            To upgrade PySide2 to latest supported version, run
+            To upgrade PySide6 to latest supported version, run
 
                 pip install -r requirements.txt --upgrade
 

@@ -16,8 +16,8 @@ Classes to represent entities in a tree.
 :date:   11.3.2019
 """
 
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QFont, QBrush, QIcon
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont, QBrush, QIcon
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from .multi_db_tree_item import MultiDBTreeItem

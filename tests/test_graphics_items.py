@@ -19,9 +19,9 @@ import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch, MagicMock
-from PySide2.QtCore import QEvent, QPoint, Qt
-from PySide2.QtGui import QColor
-from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
+from PySide6.QtCore import QEvent, QPoint, Qt
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QApplication, QGraphicsSceneMouseEvent
 from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
 from spine_engine.project_item.project_item_resource import database_resource
 from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
@@ -104,20 +104,20 @@ class TestExclamationIcon(unittest.TestCase):
             QApplication()
 
     def test_no_notifications(self):
-        with patch("PySide2.QtWidgets.QToolTip.showText") as show_text:
+        with patch("PySide6.QtWidgets.QToolTip.showText") as show_text:
             icon = ExclamationIcon(None)
             icon.hoverEnterEvent(QGraphicsSceneMouseEvent())
             show_text.assert_not_called()
 
     def test_add_notification(self):
-        with patch("PySide2.QtWidgets.QToolTip.showText") as show_text:
+        with patch("PySide6.QtWidgets.QToolTip.showText") as show_text:
             icon = ExclamationIcon(None)
             icon.add_notification("Please note!")
             icon.hoverEnterEvent(QGraphicsSceneMouseEvent())
             show_text.assert_called_once_with(QPoint(0, 0), "<p>Please note!")
 
     def test_clear_notifications(self):
-        with patch("PySide2.QtWidgets.QToolTip.showText") as show_text:
+        with patch("PySide6.QtWidgets.QToolTip.showText") as show_text:
             icon = ExclamationIcon(None)
             icon.add_notification("Please note!")
             icon.clear_notifications()

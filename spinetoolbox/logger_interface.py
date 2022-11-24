@@ -16,7 +16,7 @@ A logger interface.
 :date:   16.1.2020
 """
 
-from PySide2.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal
 
 
 class LoggerInterface(QObject):

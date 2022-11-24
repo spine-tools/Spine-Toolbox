@@ -17,8 +17,8 @@ Unit tests for the models in ``custom_qwidgets`` module.
 """
 
 import unittest
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import DataToValueFilterWidget
 
 
@@ -42,7 +42,7 @@ class TestDataToValueFilterWidget(unittest.TestCase):
         data = [model.index(row, 0).data() for row in range(model.rowCount())]
         self.assertEqual(data, ["(Select all)", "(Empty)", "ei", "bii", "cii"])
         checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
-        self.assertEqual(checked, 5 * [Qt.Checked])
+        self.assertEqual(checked, 5 * [Qt.Checked.value])
         self.assertEqual(self._widget._filter_state, ["ei", "bii", "cii"])
         self.assertIsNone(self._widget._filter_empty_state)
 
@@ -51,7 +51,7 @@ class TestDataToValueFilterWidget(unittest.TestCase):
         self._widget._ui_list.clicked.emit(model.index(1, 0))
         model = self._widget._ui_list.model()
         checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
-        self.assertEqual(checked, [Qt.Unchecked, Qt.Unchecked, Qt.Checked, Qt.Checked, Qt.Checked])
+        self.assertEqual(checked, [Qt.Unchecked.value, Qt.Unchecked.value, Qt.Checked.value, Qt.Checked.value, Qt.Checked.value])
         self.assertTrue(self._widget.has_filter())
 
     def test_click_item(self):
@@ -59,7 +59,7 @@ class TestDataToValueFilterWidget(unittest.TestCase):
         self._widget._ui_list.clicked.emit(model.index(2, 0))
         model = self._widget._ui_list.model()
         checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
-        self.assertEqual(checked, [Qt.Unchecked, Qt.Checked, Qt.Unchecked, Qt.Checked, Qt.Checked])
+        self.assertEqual(checked, [Qt.Unchecked.value, Qt.Checked.value, Qt.Unchecked.value, Qt.Checked.value, Qt.Checked.value])
         self.assertTrue(self._widget.has_filter())
 
     def test_click_Select_All_item(self):
@@ -67,7 +67,7 @@ class TestDataToValueFilterWidget(unittest.TestCase):
         self._widget._ui_list.clicked.emit(model.index(0, 0))
         model = self._widget._ui_list.model()
         checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
-        self.assertEqual(checked, 5 * [Qt.Unchecked])
+        self.assertEqual(checked, 5 * [Qt.Unchecked.value])
         self.assertTrue(self._widget.has_filter())
 
     def test_save_state(self):

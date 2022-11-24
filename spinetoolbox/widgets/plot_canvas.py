@@ -18,7 +18,7 @@ A Qt widget to use as a matplotlib backend.
 from enum import auto, Enum, unique
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from PySide2 import QtWidgets
+from PySide6 import QtWidgets
 
 
 @unique

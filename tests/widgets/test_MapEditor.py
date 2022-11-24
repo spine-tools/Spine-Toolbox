@@ -17,7 +17,7 @@ Unit tests for the MapEditor widget.
 """
 
 import unittest
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinedb_api import Map
 from spinetoolbox.widgets.map_editor import MapEditor
 

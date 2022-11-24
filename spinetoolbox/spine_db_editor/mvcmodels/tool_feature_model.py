@@ -15,7 +15,7 @@ Models to represent tools and features in a tree.
 :date:    1.0.2020
 """
 import json
-from PySide2.QtCore import QMimeData, Qt
+from PySide6.QtCore import QMimeData, Qt
 from .tree_model_base import TreeModelBase
 from .tree_item_utility import StandardDBItem
 from .tool_feature_item import FeatureRootItem, ToolRootItem

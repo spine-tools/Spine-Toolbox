@@ -17,9 +17,9 @@ Class for a custom QTextBrowser for showing the logs and tool output.
 """
 
 from contextlib import contextmanager
-from PySide2.QtCore import Slot
-from PySide2.QtGui import QTextCursor, QFontDatabase, QTextBlockFormat, QTextFrameFormat, QBrush
-from PySide2.QtWidgets import QTextBrowser, QAction, QMenu
+from PySide6.QtCore import Slot
+from PySide6.QtGui import QTextCursor, QFontDatabase, QTextBlockFormat, QTextFrameFormat, QBrush, QAction
+from PySide6.QtWidgets import QTextBrowser, QMenu
 from ..config import TEXTBROWSER_SS
 from ..helpers import scrolling_to_bottom
 
@@ -54,7 +54,7 @@ class CustomQTextBrowser(QTextBrowser):
         self._frame_format.setBorder(1)
         self._selected_frame_format = QTextFrameFormat(self._frame_format)
         palette = self.palette()
-        self._selected_frame_format.setBackground(QBrush(palette.color(palette.Highlight).darker()))
+        # self._selected_frame_format.setBackground(QBrush(palette.color(palette.Highlight).darker()))
         self._executions_menu.aboutToShow.connect(self._populate_executions_menu)
         self._executions_menu.triggered.connect(self._select_execution)
 
@@ -76,7 +76,7 @@ class CustomQTextBrowser(QTextBrowser):
         """
         with scrolling_to_bottom(self):
             cursor = self.textCursor()
-            cursor.movePosition(cursor.End)
+            cursor.movePosition(QTextCursor.End)
             cursor.insertBlock()
             cursor.insertHtml(text)
 

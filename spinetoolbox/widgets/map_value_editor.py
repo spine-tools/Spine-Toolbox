@@ -15,7 +15,7 @@ An editor dialog for map indexes and values.
 :author: A. Soininen (VTT)
 :date:   2.11.2020
 """
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from .array_editor import ArrayEditor
 from .duration_editor import DurationEditor
 from .datetime_editor import DatetimeEditor

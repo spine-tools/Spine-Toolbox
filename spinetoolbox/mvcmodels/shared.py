@@ -16,7 +16,7 @@ Contains stuff that is used by more than one model
 :date:   23.3.2020
 """
 
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 
 PARSED_ROLE = Qt.UserRole
 DB_MAP_ROLE = Qt.UserRole + 1

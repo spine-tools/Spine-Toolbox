@@ -21,7 +21,7 @@ import shutil
 import os
 import json
 import copy
-from PySide2.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .helpers import home_dir

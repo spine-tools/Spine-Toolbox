@@ -17,8 +17,8 @@ A model for time patterns, used by the parameter_value editors.
 """
 
 import numpy as np
-from PySide2.QtCore import QModelIndex, Qt
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtWidgets import QMessageBox
 from spinedb_api import TimePattern, ParameterValueFormatError
 from .indexed_value_table_model import IndexedValueTableModel
 

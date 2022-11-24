@@ -19,8 +19,8 @@ from copy import deepcopy
 from numbers import Number
 from itertools import takewhile
 import numpy
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide2.QtGui import QColor, QFont
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtGui import QColor, QFont
 from spinedb_api import (
     Array,
     convert_leaf_maps_to_specialized_containers,

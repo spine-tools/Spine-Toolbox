@@ -17,9 +17,9 @@ A widget for presenting basic information about the application.
 """
 
 import os
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QComboBox, QStyle, QStylePainter, QStyleOptionComboBox, QDialog, QAbstractItemView
-from PySide2.QtGui import QValidator
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QComboBox, QStyle, QStylePainter, QStyleOptionComboBox, QDialog, QAbstractItemView
+from PySide6.QtGui import QValidator
 from .notification import Notification
 
 

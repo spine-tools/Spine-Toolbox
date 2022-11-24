@@ -16,8 +16,8 @@ Contains a dialog for generating scenarios from selected alternatives.
 :date:    7.9.2021
 """
 from enum import auto, Enum, unique
-from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QWidget, QMessageBox
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QWidget, QMessageBox
 
 from ...helpers import signal_waiter
 from ..scenario_generation import all_combinations, unique_alternatives

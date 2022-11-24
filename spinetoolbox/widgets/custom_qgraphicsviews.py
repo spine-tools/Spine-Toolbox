@@ -17,9 +17,9 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 """
 
 import math
-from PySide2.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
-from PySide2.QtGui import QCursor
-from PySide2.QtCore import Slot, Qt, QTimeLine, QRectF
+from PySide6.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
+from PySide6.QtGui import QCursor
+from PySide6.QtCore import Slot, Qt, QTimeLine, QRectF
 from spine_engine.project_item.connection import Connection
 from ..project_item_icon import ProjectItemIcon
 from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand

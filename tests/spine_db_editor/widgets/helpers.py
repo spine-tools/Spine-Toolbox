@@ -12,9 +12,9 @@
 from types import MethodType
 import unittest
 from unittest import mock
-from PySide2.QtCore import QEvent, Qt
-from PySide2.QtGui import QKeyEvent
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QEvent, Qt
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QApplication
 
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_manager import SpineDBManager
@@ -31,7 +31,7 @@ class EditorDelegateMocking:
         self._cell_editor = None
 
     def write_to_index(self, view, index, value):
-        delegate = view.itemDelegate(index)
+        delegate = view.itemDelegateForIndex(index)
         if self._cell_editor is None:
             original_create_editor = delegate.createEditor
 

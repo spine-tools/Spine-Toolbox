@@ -16,8 +16,8 @@ An editor widget for editing plain number database (relationship) parameter valu
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QWidget
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.helpers import try_number_from_string
 
 

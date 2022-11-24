@@ -18,8 +18,8 @@ Unit tests for the item metadata table model.
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DatabaseMapping,
     import_object_classes,

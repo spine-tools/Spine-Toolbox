@@ -16,8 +16,8 @@ Contains the ParameterViewMixin class.
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import Qt, Slot, QModelIndex
-from PySide2.QtWidgets import QHeaderView
+from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtWidgets import QHeaderView
 from .object_name_list_editor import ObjectNameListEditor
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,

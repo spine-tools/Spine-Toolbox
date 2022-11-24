@@ -28,7 +28,7 @@ from matplotlib.container import BarContainer
 from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from PySide2.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex
 
 from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
 from spinedb_api import Array, IndexedValue, TimeSeries, DateTime

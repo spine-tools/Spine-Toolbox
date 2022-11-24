@@ -15,7 +15,7 @@ Models to represent alternatives, scenarios and scenario alternatives in a tree.
 :date:    17.6.2020
 """
 import json
-from PySide2.QtCore import QMimeData, Qt
+from PySide6.QtCore import QMimeData, Qt
 from .tree_model_base import TreeModelBase
 from .tree_item_utility import StandardDBItem
 from .alternative_scenario_item import AlternativeRootItem, ScenarioRootItem

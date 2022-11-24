@@ -19,9 +19,9 @@ A widget for presenting basic information about the application.
 import os
 import sys
 import platform
-from PySide2.QtWidgets import QWidget, QApplication
-from PySide2.QtCore import Qt, QPoint, Slot
-from PySide2.QtGui import QTextCursor
+from PySide6.QtWidgets import QWidget, QApplication
+from PySide6.QtCore import Qt, QPoint, Slot
+from PySide6.QtGui import QTextCursor
 import spinetoolbox
 import spinedb_api
 import spine_engine

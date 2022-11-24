@@ -22,8 +22,8 @@ import csv
 
 import numpy
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
-from PySide2.QtCore import QMetaObject, Qt
-from PySide2.QtWidgets import QVBoxLayout, QWidget, QMenu, QApplication
+from PySide6.QtCore import QMetaObject, Qt
+from PySide6.QtWidgets import QVBoxLayout, QWidget, QMenu, QApplication
 from .plot_canvas import PlotCanvas, LegendPosition
 from .custom_qtableview import CopyPasteTableView
 from ..mvcmodels.minimal_table_model import MinimalTableModel

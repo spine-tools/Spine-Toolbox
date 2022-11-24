@@ -16,7 +16,7 @@ Qt-based thread pool executor.
 :date:   25.10.2022
 """
 import os
-from PySide2.QtCore import QMutex, QSemaphore, QThread
+from PySide6.QtCore import QMutex, QSemaphore, QThread
 
 
 class TimeOutError(Exception):

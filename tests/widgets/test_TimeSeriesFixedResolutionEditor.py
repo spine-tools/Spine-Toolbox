@@ -17,7 +17,7 @@ Unit tests for the TimeSeriesFixedResolutionEditor widget.
 """
 
 import unittest
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesFixedResolution
 from spinetoolbox.widgets.time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
 

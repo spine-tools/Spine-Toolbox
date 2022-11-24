@@ -16,7 +16,7 @@ Unit tests for the TreeViewFormAddMixin class.
 :date:   6.12.2018
 """
 from unittest import mock
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from spinetoolbox.spine_db_editor.mvcmodels.single_parameter_models import SingleParameterModel
 
 

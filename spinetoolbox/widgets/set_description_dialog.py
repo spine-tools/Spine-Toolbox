@@ -13,8 +13,8 @@
 A widget for editing project description
 """
 
-from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QDialog, QFormLayout, QLabel, QPlainTextEdit, QDialogButtonBox
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QDialog, QFormLayout, QLabel, QPlainTextEdit, QDialogButtonBox
 
 
 class SetDescriptionDialog(QDialog):

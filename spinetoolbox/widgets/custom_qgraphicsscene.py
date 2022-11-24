@@ -17,9 +17,9 @@ Custom QGraphicsScene used in the Design View.
 """
 
 import math
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEvent, QTimer
-from PySide2.QtWidgets import QGraphicsItem, QGraphicsScene
-from PySide2.QtGui import QColor, QPen, QBrush
+from PySide6.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEvent, QTimer
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
+from PySide6.QtGui import QColor, QPen, QBrush
 from ..project_item_icon import ProjectItemIcon
 from ..ui.resources.cat import Cat
 from ..link import JumpLink, JumpLinkDrawer, Link, ConnectionLinkDrawer

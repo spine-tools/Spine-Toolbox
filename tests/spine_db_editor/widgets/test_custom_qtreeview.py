@@ -19,8 +19,8 @@ import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import Qt, QItemSelectionModel
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QItemSelectionModel
+from PySide6.QtWidgets import QApplication
 
 from spinedb_api import (
     DatabaseMapping,

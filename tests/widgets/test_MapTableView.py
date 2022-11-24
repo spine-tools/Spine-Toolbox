@@ -20,8 +20,8 @@ import csv
 import locale
 from io import StringIO
 import unittest
-from PySide2.QtCore import QItemSelectionModel
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QItemSelectionModel
+from PySide6.QtWidgets import QApplication
 from spinedb_api import Map
 from spinetoolbox.mvcmodels.map_model import MapModel
 from spinetoolbox.widgets.custom_qtableview import MapTableView, system_lc_numeric

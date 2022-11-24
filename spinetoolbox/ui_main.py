@@ -25,7 +25,7 @@ import pathlib
 import tempfile
 from zipfile import ZipFile
 import numpy as np
-from PySide2.QtCore import (
+from PySide6.QtCore import (
     QByteArray,
     QItemSelection,
     QMimeData,
@@ -38,8 +38,8 @@ from PySide2.QtCore import (
     QUrl,
     QEvent,
 )
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow
-from PySide2.QtWidgets import (
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow, QAction, QUndoStack
+from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
     QErrorMessage,
@@ -49,8 +49,6 @@ from PySide2.QtWidgets import (
     QMessageBox,
     QCheckBox,
     QDockWidget,
-    QAction,
-    QUndoStack,
     QWidget,
     QLabel,
     QScrollArea,
@@ -443,7 +441,7 @@ class ToolboxUI(QMainWindow):
         )
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
-            if open_previous_project != Qt.Checked:  # 2: Qt.Checked, ie. open_previous_project==True
+            if open_previous_project != Qt.Checked.value:  # 2: Qt.Checked, ie. open_previous_project==True
                 self.msg.emit(welcome_msg)
                 return
             # Get previous project (directory)
@@ -1308,8 +1306,8 @@ class ToolboxUI(QMainWindow):
 
     def set_debug_qactions(self):
         """Sets shortcuts for QActions that may be needed in debugging."""
-        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
-        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_8))
+        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_0))
+        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_8))
         self.addAction(self.show_properties_tabbar)
         self.addAction(self.show_supported_img_formats)
 
@@ -1914,7 +1912,7 @@ class ToolboxUI(QMainWindow):
         """Method for handling application exit.
 
         Args:
-             event (QCloseEvent): PySide2 event
+             event (QCloseEvent): PySide6 event
         """
         # Show confirm exit message box
         exit_confirmed = self._perform_pre_exit_tasks()

@@ -15,7 +15,7 @@ Contains machinery to deal with item metadata editor.
 :author: A. Soininen (VTT)
 :date:   25.3.2022
 """
-from PySide2.QtCore import Slot, QModelIndex
+from PySide6.QtCore import Slot, QModelIndex
 
 from ..mvcmodels.entity_tree_item import ObjectItem, MemberObjectItem, RelationshipItem
 from ..mvcmodels.item_metadata_table_model import ItemMetadataTableModel

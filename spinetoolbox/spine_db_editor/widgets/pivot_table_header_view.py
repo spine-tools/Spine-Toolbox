@@ -16,8 +16,9 @@ Contains custom QHeaderView for the pivot table.
 :date:   2.12.2019
 """
 
-from PySide2.QtCore import Signal, Slot, Qt, QPoint
-from PySide2.QtWidgets import QHeaderView, QMenu, QAction
+from PySide6.QtCore import Signal, Slot, Qt, QPoint
+from PySide6.QtWidgets import QHeaderView, QMenu
+from PySide6.QtGui import QAction
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu

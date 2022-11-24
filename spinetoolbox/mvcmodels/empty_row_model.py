@@ -16,7 +16,7 @@ Contains a table model with an empty last row.
 :date:   20.5.2018
 """
 
-from PySide2.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtCore import Qt, Slot, QModelIndex
 from .minimal_table_model import MinimalTableModel
 
 

@@ -15,7 +15,7 @@ Classes to represent tool and feature items in a tree.
 :authors: M. Marin (KTH)
 :date:    1.9.2020
 """
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from ...fetch_parent import FlexibleFetchParent
 from .tree_item_utility import GrayIfLastMixin, EditableMixin, EmptyChildRootItem, LeafItem, StandardTreeItem
 

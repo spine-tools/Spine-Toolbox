@@ -16,7 +16,7 @@ Contains :class:`MetadataTableModel` and associated functionality.
 :date:   7.2.2022
 """
 from enum import IntEnum, unique
-from PySide2.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex, Qt
 from spinetoolbox.helpers import rows_to_row_count_tuples
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from .metadata_table_model_base import Column, FLAGS_FIXED, FLAGS_EDITABLE, MetadataTableModelBase

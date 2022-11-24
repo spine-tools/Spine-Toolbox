@@ -17,9 +17,9 @@ Contains a class for a widget that represents a 'Open Project Directory' dialog.
 """
 
 import os
-from PySide2.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QAction, QComboBox
-from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QModelIndex
-from PySide2.QtGui import QKeySequence, QValidator
+from PySide6.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QComboBox
+from PySide6.QtCore import Qt, Slot, QDir, QStandardPaths, QModelIndex
+from PySide6.QtGui import QKeySequence, QValidator, QAction
 from spinetoolbox.helpers import ProjectDirectoryIconProvider
 from spinetoolbox.widgets.notification import Notification
 from spinetoolbox.widgets.custom_menus import OpenProjectDialogComboBoxContextMenu

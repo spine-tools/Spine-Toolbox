@@ -16,8 +16,8 @@ Classes for custom QDialogs to add edit and remove database items.
 :date:   13.5.2018
 """
 
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QCheckBox
-from PySide2.QtCore import Slot, Qt, Signal
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QCheckBox
+from PySide6.QtCore import Slot, Qt, Signal
 from spinetoolbox.widgets.select_database_items import add_check_boxes, SelectDatabaseItems
 
 

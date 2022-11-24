@@ -17,8 +17,8 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 
-from PySide2.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
-from PySide2.QtWidgets import (
+from PySide6.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
+from PySide6.QtWidgets import (
     QLineEdit,
     QTableView,
     QStyledItemDelegate,
@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
     QStyle,
     QLabel,
 )
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QColor, QIcon, QPixmap, QPainter
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor, QIcon, QPixmap, QPainter
 from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
 
 
@@ -185,7 +185,7 @@ class SearchBarEditor(QTableView):
     def _handle_delegate_text_edited(self, text):
         """Filters model as the first row is being edited."""
         self._original_text = text
-        self.proxy_model.setFilterRegExp("^" + text)
+        self.proxy_model.setFilterRegularExpression("^" + text)
         self.proxy_model.setData(self.first_index, text)
         self.refit()
 

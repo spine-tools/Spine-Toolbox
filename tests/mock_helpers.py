@@ -18,7 +18,7 @@ Classes and functions that can be shared among unit test modules.
 from contextlib import contextmanager
 from unittest import mock
 
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from spinetoolbox.ui_main import ToolboxUI

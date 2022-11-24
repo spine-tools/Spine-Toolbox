@@ -16,9 +16,9 @@ Contains the MultiTabWindow and TabBarPlus classes.
 :date:   12.12.2020
 """
 
-from PySide2.QtWidgets import QMainWindow, QTabWidget, QWidget, QTabBar, QToolButton, QApplication, QMenu
-from PySide2.QtCore import Qt, Slot, QPoint, Signal, QEvent
-from PySide2.QtGui import QGuiApplication, QCursor, QIcon, QMouseEvent
+from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QTabBar, QToolButton, QApplication, QMenu
+from PySide6.QtCore import Qt, Slot, QPoint, Signal, QEvent
+from PySide6.QtGui import QGuiApplication, QCursor, QIcon, QMouseEvent
 from ..helpers import ensure_window_is_on_screen, CharIconEngine
 
 

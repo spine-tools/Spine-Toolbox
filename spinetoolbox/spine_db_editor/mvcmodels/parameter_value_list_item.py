@@ -16,8 +16,8 @@ Tree items for parameter_value lists.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QIcon
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from .tree_item_utility import (
     EmptyChildMixin,

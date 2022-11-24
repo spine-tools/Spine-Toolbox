@@ -23,7 +23,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 import venv
-from PySide2.QtWidgets import QApplication, QMessageBox, QWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from spine_engine.utils.helpers import resolve_julia_executable
 from spinetoolbox.widgets.kernel_editor import KernelEditor, KernelEditorBase
@@ -49,7 +49,7 @@ class TestKernelEditorBase(unittest.TestCase):
         cls._settings_widget.deleteLater()
 
     def test_is_package_installed(self):
-        self.assertTrue(KernelEditorBase.is_package_installed(sys.executable, "PySide2"))
+        self.assertTrue(KernelEditorBase.is_package_installed(sys.executable, "PySide6"))
         self.assertFalse(KernelEditorBase.is_package_installed(sys.executable, "nonexistenttestpackageXYZ"))
 
     def test_make_python_kernel(self):

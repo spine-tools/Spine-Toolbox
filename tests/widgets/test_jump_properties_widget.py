@@ -17,8 +17,8 @@ Unit tests for the jump properties widget.
 """
 from tempfile import TemporaryDirectory
 import unittest
-from PySide2.QtGui import QTextCursor
-from PySide2.QtWidgets import QApplication
+from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import QApplication
 from spine_items.data_connection.data_connection import DataConnection
 from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.widgets.jump_properties_widget import JumpPropertiesWidget

@@ -18,8 +18,8 @@ Unit tests for IndexedValueTableView class.
 
 import locale
 import unittest
-from PySide2.QtCore import QItemSelectionModel
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QItemSelectionModel
+from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView, system_lc_numeric

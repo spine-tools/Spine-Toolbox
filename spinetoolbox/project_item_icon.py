@@ -17,8 +17,8 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 import math
-from PySide2.QtCore import Qt, QPointF, QRectF, QLineF
-from PySide2.QtWidgets import (
+from PySide6.QtCore import Qt, QPointF, QRectF, QLineF
+from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
     QGraphicsSimpleTextItem,
@@ -30,7 +30,7 @@ from PySide2.QtWidgets import (
     QToolTip,
     QStyle,
 )
-from PySide2.QtGui import (
+from PySide6.QtGui import (
     QColor,
     QPen,
     QBrush,
@@ -41,7 +41,8 @@ from PySide2.QtGui import (
     QPainterPath,
     QRadialGradient,
 )
-from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from spine_engine.spine_engine import ItemExecutionFinishState
 from .project_commands import MoveIconCommand
 from .helpers import LinkType, fix_lightness_color
@@ -423,7 +424,7 @@ class ProjectItemIcon(QGraphicsPathItem):
 
     def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
-        selected = option.state & QStyle.State_Selected
+        selected = bool(option.state & QStyle.State_Selected)
         self._selection_halo.setVisible(selected)
         option.state &= ~QStyle.State_Selected
         super().paint(painter, option, widget)

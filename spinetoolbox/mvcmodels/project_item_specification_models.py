@@ -17,7 +17,7 @@ Contains a class for storing Tool specifications.
 """
 
 import bisect
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot, Signal
+from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot, Signal
 
 
 class ProjectItemSpecificationModel(QAbstractListModel):

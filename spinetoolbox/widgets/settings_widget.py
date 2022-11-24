@@ -17,9 +17,9 @@ Widget for controlling user settings.
 """
 
 import os
-from PySide2.QtWidgets import QWidget, QFileDialog, QColorDialog
-from PySide2.QtCore import Slot, Qt, QSize, QSettings
-from PySide2.QtGui import QPixmap, QIntValidator
+from PySide6.QtWidgets import QWidget, QFileDialog, QColorDialog
+from PySide6.QtCore import Slot, Qt, QSize, QSettings
+from PySide6.QtGui import QPixmap, QIntValidator
 from spine_engine.utils.helpers import (
     resolve_python_interpreter,
     resolve_julia_executable,
@@ -189,21 +189,21 @@ class SpineDBEditorSettingsMixin:
         """Get selections and save them to persistent memory."""
         if not super().save_settings():
             return False
-        commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
+        commit_at_exit = str(self.ui.checkBox_commit_at_exit.checkState().value)
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
-        sticky_selection = "true" if int(self.ui.checkBox_object_tree_sticky_selection.checkState()) else "false"
+        sticky_selection = "true" if self.ui.checkBox_object_tree_sticky_selection.checkState().value else "false"
         self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
-        smooth_zoom = "true" if int(self.ui.checkBox_smooth_entity_graph_zoom.checkState()) else "false"
+        smooth_zoom = "true" if self.ui.checkBox_smooth_entity_graph_zoom.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothEntityGraphZoom", smooth_zoom)
-        smooth_rotation = "true" if int(self.ui.checkBox_smooth_entity_graph_rotation.checkState()) else "false"
+        smooth_rotation = "true" if self.ui.checkBox_smooth_entity_graph_rotation.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothEntityGraphRotation", smooth_rotation)
-        relationship_items_follow = "true" if int(self.ui.checkBox_relationship_items_follow.checkState()) else "false"
+        relationship_items_follow = "true" if self.ui.checkBox_relationship_items_follow.checkState().value else "false"
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
-        auto_expand_objects = "true" if int(self.ui.checkBox_auto_expand_objects.checkState()) else "false"
+        auto_expand_objects = "true" if self.ui.checkBox_auto_expand_objects.checkState().value else "false"
         self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_objects)
-        merge_dbs = "true" if int(self.ui.checkBox_merge_dbs.checkState()) else "false"
+        merge_dbs = "true" if self.ui.checkBox_merge_dbs.checkState().value else "false"
         self._qsettings.setValue("appSettings/mergeDBs", merge_dbs)
-        db_editor_show_undo = str(int(self.ui.checkBox_db_editor_show_undo.checkState()))
+        db_editor_show_undo = str(self.ui.checkBox_db_editor_show_undo.checkState().value)
         self._qsettings.setValue("appSettings/dbEditorShowUndo", db_editor_show_undo)
         return True
 
@@ -697,31 +697,31 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         # checkBox check states are cast from integers to string for consistency
         if not super().save_settings():
             return False
-        open_prev_proj = str(int(self.ui.checkBox_open_previous_project.checkState()))
+        open_prev_proj = str(self.ui.checkBox_open_previous_project.checkState().value)
         self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)
-        exit_prompt = str(int(self.ui.checkBox_exit_prompt.checkState()))
+        exit_prompt = str(self.ui.checkBox_exit_prompt.checkState().value)
         self._qsettings.setValue("appSettings/showExitPrompt", exit_prompt)
-        save_at_exit = str(int(self.ui.checkBox_save_project_before_closing.checkState()))
+        save_at_exit = str(self.ui.checkBox_save_project_before_closing.checkState().value)
         self._qsettings.setValue("appSettings/saveAtExit", save_at_exit)
-        datetime = str(int(self.ui.checkBox_datetime.checkState()))
+        datetime = str(self.ui.checkBox_datetime.checkState().value)
         self._qsettings.setValue("appSettings/dateTime", datetime)
-        delete_data = str(int(self.ui.checkBox_delete_data.checkState()))
+        delete_data = str(self.ui.checkBox_delete_data.checkState().value)
         self._qsettings.setValue("appSettings/deleteData", delete_data)
-        custom_open_project_dial = "true" if int(self.ui.checkBox_custom_open_project_dialog.checkState()) else "false"
+        custom_open_project_dial = "true" if self.ui.checkBox_custom_open_project_dialog.checkState().value else "false"
         self._qsettings.setValue("appSettings/customOpenProjectDialog", custom_open_project_dial)
-        smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
+        smooth_zoom = "true" if self.ui.checkBox_use_smooth_zoom.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
-        color_toolbar_icons = "true" if int(self.ui.checkBox_color_toolbar_icons.checkState()) else "false"
+        color_toolbar_icons = "true" if self.ui.checkBox_color_toolbar_icons.checkState().value else "false"
         self._qsettings.setValue("appSettings/colorToolbarIcons", color_toolbar_icons)
-        color_properties_widgets = "true" if int(self.ui.checkBox_color_properties_widgets.checkState()) else "false"
+        color_properties_widgets = "true" if self.ui.checkBox_color_properties_widgets.checkState().value else "false"
         self._qsettings.setValue("appSettings/colorPropertiesWidgets", color_properties_widgets)
-        curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
+        curved_links = "true" if self.ui.checkBox_use_curved_links.checkState().value else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
-        drag_to_draw_links = "true" if int(self.ui.checkBox_drag_to_draw_links.checkState()) else "false"
+        drag_to_draw_links = "true" if self.ui.checkBox_drag_to_draw_links.checkState().value else "false"
         self._qsettings.setValue("appSettings/dragToDrawLinks", drag_to_draw_links)
-        rounded_items = "true" if int(self.ui.checkBox_use_rounded_items.checkState()) else "false"
+        rounded_items = "true" if self.ui.checkBox_use_rounded_items.checkState().value else "false"
         self._qsettings.setValue("appSettings/roundedItems", rounded_items)
-        prevent_overlapping = "true" if int(self.ui.checkBox_prevent_overlapping.checkState()) else "false"
+        prevent_overlapping = "true" if self.ui.checkBox_prevent_overlapping.checkState().value else "false"
         self._qsettings.setValue("appSettings/preventOverlapping", prevent_overlapping)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
         self._qsettings.setValue("appSettings/dataFlowAnimationDuration", data_flow_anim_dur)
@@ -733,9 +733,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             bg_choice = "solid"
         self._qsettings.setValue("appSettings/bgChoice", bg_choice)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
-        save_spec = str(int(self.ui.checkBox_save_spec_before_closing.checkState()))
+        save_spec = str(self.ui.checkBox_save_spec_before_closing.checkState().value)
         self._qsettings.setValue("appSettings/saveSpecBeforeClosing", save_spec)
-        spec_show_undo = str(int(self.ui.checkBox_spec_show_undo.checkState()))
+        spec_show_undo = str(self.ui.checkBox_spec_show_undo.checkState().value)
         self._qsettings.setValue("appSettings/specShowUndo", spec_show_undo)
         # GAMS
         gams_path = self.ui.lineEdit_gams_path.text().strip()
@@ -797,7 +797,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             bool: True if settings were stored successfully, False otherwise
         """
         # Remote execution settings
-        remote_exec = "true" if int(self.ui.checkBox_enable_remote_exec.checkState()) else "false"
+        remote_exec = "true" if self.ui.checkBox_enable_remote_exec.checkState().value else "false"
         self._qsettings.setValue("engineSettings/remoteExecutionEnabled", remote_exec)
         self._qsettings.setValue("engineSettings/remoteHost", self._remote_host)
         self._qsettings.setValue("engineSettings/remotePort", self.ui.spinBox_port.value())

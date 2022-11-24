@@ -15,8 +15,8 @@ Classes for custom QDialogs to add items to databases.
 :author: M. Marin (KTH)
 :date:   13.5.2018
 """
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QVBoxLayout,

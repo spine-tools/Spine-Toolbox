@@ -17,8 +17,8 @@ Unit tests for the MinimalTableModel class.
 """
 
 import unittest
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 
 

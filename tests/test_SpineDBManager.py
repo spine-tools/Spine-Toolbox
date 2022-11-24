@@ -19,8 +19,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtCore import Qt, QSettings
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QSettings
+from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DatabaseMapping,
     to_database,

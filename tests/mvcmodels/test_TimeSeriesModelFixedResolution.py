@@ -21,8 +21,8 @@ import dateutil.parser
 from dateutil.relativedelta import relativedelta
 import numpy as np
 import numpy.testing
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesFixedResolution
 from spinetoolbox.mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 

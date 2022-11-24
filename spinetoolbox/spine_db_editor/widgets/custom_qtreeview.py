@@ -16,9 +16,9 @@ Classes for custom QTreeView.
 :date:   25.4.2018
 """
 
-from PySide2.QtWidgets import QMenu
-from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
-from PySide2.QtGui import QMouseEvent, QIcon
+from PySide6.QtWidgets import QMenu
+from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
+from PySide6.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
 from .custom_delegates import ToolFeatureDelegate, AlternativeScenarioDelegate, ParameterValueListDelegate

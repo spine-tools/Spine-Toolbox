@@ -15,8 +15,8 @@ Contains ResourceFilterModel.
 :author: M. Marin (KTH)
 :date:   26.11.2020
 """
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QStandardItemModel, QStandardItem
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE

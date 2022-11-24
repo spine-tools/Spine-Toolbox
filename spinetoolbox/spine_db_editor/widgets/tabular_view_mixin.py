@@ -18,9 +18,8 @@ Contains TabularViewMixin class.
 
 from itertools import product
 from collections import namedtuple
-from PySide2.QtCore import Qt, Slot, QTimer
-from PySide2.QtWidgets import QActionGroup
-from PySide2.QtGui import QIcon
+from PySide6.QtCore import Qt, Slot, QTimer
+from PySide6.QtGui import QIcon, QActionGroup
 from spinedb_api.helpers import fix_name_ambiguity
 from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget

@@ -19,7 +19,7 @@ Unit tests for ProjectItem base class.
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.project_item.project_item import ProjectItem
 from ..mock_helpers import create_toolboxui_with_project, clean_up_toolbox
 

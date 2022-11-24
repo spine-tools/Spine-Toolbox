@@ -17,7 +17,7 @@ Unit tests for the DatetimeEditor widget.
 """
 
 import unittest
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinedb_api import DateTime
 from spinetoolbox.widgets.datetime_editor import DatetimeEditor
 

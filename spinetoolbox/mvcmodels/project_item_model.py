@@ -17,8 +17,8 @@ Contains a class for storing project items.
 """
 import logging
 from copy import copy
-from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel, Slot
-from PySide2.QtGui import QIcon, QFont
+from PySide6.QtCore import Qt, QModelIndex, QAbstractItemModel, Slot
+from PySide6.QtGui import QIcon, QFont
 
 from .project_tree_item import LeafProjectTreeItem
 

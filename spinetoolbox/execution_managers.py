@@ -17,7 +17,7 @@ Classes to manage tool instance execution in various forms.
 """
 
 import logging
-from PySide2.QtCore import QObject, QProcess, Slot, Signal
+from PySide6.QtCore import QObject, QProcess, Slot, Signal
 
 
 class ExecutionManager(QObject):
@@ -49,7 +49,7 @@ class ExecutionManager(QObject):
 
 
 class QProcessExecutionManager(ExecutionManager):
-    """Class to manage tool instance execution using a PySide2 QProcess."""
+    """Class to manage tool instance execution using a PySide6 QProcess."""
 
     def __init__(self, logger, program="", args=None, silent=False, semisilent=False):
         """Class constructor.

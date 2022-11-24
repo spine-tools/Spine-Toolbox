@@ -17,10 +17,10 @@ Classes for custom QGraphicsViews for the Entity graph view.
 """
 
 import sys
-from PySide2.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
-from PySide2.QtWidgets import QMenu
-from PySide2.QtGui import QCursor, QPainter, QIcon
-from PySide2.QtPrintSupport import QPrinter
+from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
+from PySide6.QtWidgets import QMenu
+from PySide6.QtGui import QCursor, QPainter, QIcon
+from PySide6.QtPrintSupport import QPrinter
 from ...helpers import CharIconEngine
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox

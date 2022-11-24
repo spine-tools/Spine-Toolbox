@@ -16,7 +16,7 @@ Contains FrozenTableModel class.
 :date:   24.9.2019
 """
 
-from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
+from PySide6.QtCore import Qt, QModelIndex, QAbstractItemModel
 
 
 class FrozenTableModel(QAbstractItemModel):

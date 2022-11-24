@@ -17,9 +17,9 @@ Contains the MultiSpineDBEditor class.
 """
 
 import os
-from PySide2.QtWidgets import QMessageBox, QMenu, QStatusBar, QToolButton
-from PySide2.QtCore import Slot, QPoint
-from PySide2.QtGui import QIcon, QFont
+from PySide6.QtWidgets import QMessageBox, QMenu, QStatusBar, QToolButton
+from PySide6.QtCore import Slot, QPoint
+from PySide6.QtGui import QIcon, QFont
 from .spine_db_editor import SpineDBEditor
 from .custom_qwidgets import ShootingLabel, OpenFileButton, OpenSQLiteFileButton
 from ...widgets.multi_tab_window import MultiTabWindow

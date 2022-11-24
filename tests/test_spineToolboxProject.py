@@ -21,8 +21,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import QVariantAnimation
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QVariantAnimation
+from PySide6.QtWidgets import QApplication
 
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.spine_engine import ItemExecutionFinishState

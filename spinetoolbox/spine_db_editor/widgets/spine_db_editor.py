@@ -19,8 +19,7 @@ Contains the SpineDBEditor class.
 import os
 import json
 from sqlalchemy.engine.url import URL
-from PySide2.QtWidgets import (
-    QAction,
+from PySide6.QtWidgets import (
     QMainWindow,
     QErrorMessage,
     QDockWidget,
@@ -31,9 +30,10 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QDialog,
     QInputDialog,
+    QToolButton,
 )
-from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
-from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
+from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
+from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QAction
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
@@ -301,7 +301,7 @@ class SpineDBEditorBase(QMainWindow):
         docks_menu = self._make_docks_menu()
         docks_menu_action.setMenu(docks_menu)
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
-        docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
+        docks_menu_button.setPopupMode(QToolButton.InstantPopup)
         session_action = ToolBarWidgetAction("Session", menu)
         session_action.tool_bar.addActions([self.ui.actionCommit, self.ui.actionRollback])
         session_action.tool_bar.addSeparator()

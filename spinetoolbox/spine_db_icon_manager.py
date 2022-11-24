@@ -16,10 +16,10 @@ Provides SpineDBIconManager.
 :date:   3.2.2021
 """
 
-from PySide2.QtCore import Qt, QPointF, QRectF, QBuffer
-from PySide2.QtWidgets import QGraphicsScene
-from PySide2.QtGui import QIcon, QFont, QTextOption, QPainter
-from PySide2.QtSvg import QSvgGenerator, QSvgRenderer
+from PySide6.QtCore import Qt, QPointF, QRectF, QBuffer
+from PySide6.QtWidgets import QGraphicsScene
+from PySide6.QtGui import QIcon, QFont, QTextOption, QPainter
+from PySide6.QtSvg import QSvgGenerator, QSvgRenderer
 from .helpers import TransparentIconEngine, interpret_icon_id
 
 

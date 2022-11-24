@@ -14,7 +14,7 @@
 import unittest
 from unittest import mock
 
-from PySide2.QtWidgets import QApplication, QDialogButtonBox
+from PySide6.QtWidgets import QApplication, QDialogButtonBox
 
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.mass_select_items_dialogs import MassRemoveItemsDialog

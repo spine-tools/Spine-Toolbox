@@ -16,9 +16,9 @@ Contains a notification widget.
 :date: 12.12.2019
 """
 
-from PySide2.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton
-from PySide2.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
-from PySide2.QtGui import QFont, QColor
+from PySide6.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton
+from PySide6.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
+from PySide6.QtGui import QFont, QColor
 from spinetoolbox.helpers import color_from_index
 
 
@@ -221,7 +221,7 @@ class ChangeNotifier(QObject):
 
     @Slot(int)
     def _push_notification(self, index):
-        if self._settings.value(self._settings_key, default="2") != "2":
+        if self._settings.value(self._settings_key, defaultValue="2") != "2":
             return
         if self._notification is not None:
             try:

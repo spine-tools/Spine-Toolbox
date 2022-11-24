@@ -15,7 +15,7 @@ Classes to represent alternative and scenario items in a tree.
 :authors: P. Vennström (VTT)
 :date:    17.6.2020
 """
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from .tree_item_utility import GrayIfLastMixin, EditableMixin, EmptyChildRootItem, LeafItem, StandardTreeItem
 
 _ALTERNATIVE_ICON = "\uf277"  # map-signs

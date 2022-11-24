@@ -19,8 +19,8 @@ Unit tests for the ParameterValueEditor widget.
 import unittest
 import dateutil.parser
 import numpy as np
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DateTime,
     Duration,

@@ -17,9 +17,9 @@ Custom QTableView classes that support copy-paste and the like.
 """
 from dataclasses import replace
 
-from PySide2.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint
-from PySide2.QtWidgets import QAction, QTableView, QHeaderView, QMenu
-from PySide2.QtGui import QKeySequence
+from PySide6.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint
+from PySide6.QtWidgets import QTableView, QHeaderView, QMenu
+from PySide6.QtGui import QKeySequence, QAction
 
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels.pivot_table_models import (
@@ -174,7 +174,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction("Clear all filters", self._spine_db_editor.clear_all_filters)
         self._menu.addSeparator()
         # Shortcuts
-        remove_rows_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
+        remove_rows_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Delete))
         remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
         self.addAction(remove_rows_action)
 
@@ -238,7 +238,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         selection = self.selectionModel().selection()
         rows = list()
         while not selection.isEmpty():
-            current = selection.takeFirst()
+            current = selection.takeAt(0)
             top = current.top()
             bottom = current.bottom()
             rows += range(top, bottom + 1)

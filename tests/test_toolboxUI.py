@@ -25,10 +25,10 @@ import os
 import sys
 
 import spinetoolbox.ui_main
-from PySide2.QtWidgets import QApplication, QMessageBox
-from PySide2.QtCore import Qt, QPoint, QItemSelectionModel, QPointF, QMimeData
-from PySide2.QtTest import QTest
-from PySide2.QtGui import QDropEvent
+from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import Qt, QPoint, QItemSelectionModel, QPointF, QMimeData
+from PySide6.QtTest import QTest
+from PySide6.QtGui import QDropEvent
 from spinetoolbox.project_item_icon import ProjectItemIcon
 from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
@@ -244,7 +244,7 @@ class TestToolboxUI(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
             "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.remove_directory_from_recents"
-        ), mock.patch("PySide2.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+        ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         self.assertIsNotNone(self.toolbox.project())
@@ -254,7 +254,7 @@ class TestToolboxUI(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
             "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.remove_directory_from_recents"
-        ), mock.patch("PySide2.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+        ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
@@ -592,7 +592,7 @@ class TestToolboxUI(unittest.TestCase):
         pos = QPoint(0, 0)
         event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
         with mock.patch(
-            'PySide2.QtWidgets.QGraphicsSceneDragDropEvent.source'
+            'PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source'
         ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
             self.toolbox, "show_add_project_item_form"
         ) as mock_show_add_project_item_form:
@@ -611,7 +611,7 @@ class TestToolboxUI(unittest.TestCase):
         pos = gv.mapFromScene(scene_pos)
         event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
         with mock.patch(
-            'PySide2.QtWidgets.QGraphicsSceneDragDropEvent.source'
+            'PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source'
         ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
             self.toolbox, "show_add_project_item_form"
         ) as mock_show_add_project_item_form:

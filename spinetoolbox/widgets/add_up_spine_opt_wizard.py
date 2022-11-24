@@ -17,7 +17,7 @@ Classes for custom QDialogs for julia setup.
 """
 
 from enum import IntEnum, auto
-from PySide2.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget,
     QWizard,
     QWizardPage,
@@ -30,8 +30,8 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QRadioButton,
 )
-from PySide2.QtCore import Slot, Qt
-from PySide2.QtGui import QCursor
+from PySide6.QtCore import Slot, Qt
+from PySide6.QtGui import QCursor
 from ..execution_managers import QProcessExecutionManager
 from ..config import REQUIRED_SPINE_OPT_VERSION
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser

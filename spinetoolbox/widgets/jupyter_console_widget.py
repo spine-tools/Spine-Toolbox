@@ -20,8 +20,9 @@ import logging
 import os
 import sys
 import subprocess
-from PySide2.QtCore import Slot, Qt
-from PySide2.QtWidgets import QAction, QApplication
+from PySide6.QtCore import Slot, Qt
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QAction
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import NoSuchKernel

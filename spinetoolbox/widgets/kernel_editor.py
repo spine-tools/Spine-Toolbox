@@ -19,9 +19,9 @@ import os
 import shutil
 import json
 import subprocess
-from PySide2.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QDialogButtonBox, QWidget
-from PySide2.QtCore import Slot, Qt, QModelIndex, QTimer, QItemSelection, QPoint
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QIcon
+from PySide6.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QDialogButtonBox, QWidget
+from PySide6.QtCore import Slot, Qt, QModelIndex, QTimer, QItemSelection, QPoint
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QIcon
 from jupyter_client.kernelspec import find_kernel_specs
 from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable
 from spinetoolbox.execution_managers import QProcessExecutionManager

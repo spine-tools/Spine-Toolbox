@@ -16,7 +16,7 @@ Contains FilterExecutionModel.
 :date:   26.11.2020
 """
 
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
+from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
 class FilterExecutionModel(QAbstractListModel):

@@ -17,8 +17,8 @@ An editor widget for editing datetime database (relationship) parameter values.
 """
 
 from datetime import datetime
-from PySide2.QtCore import QDate, QDateTime, QTime, Slot
-from PySide2.QtWidgets import QWidget
+from PySide6.QtCore import QDate, QDateTime, QTime, Slot
+from PySide6.QtWidgets import QWidget
 from spinedb_api import DateTime
 
 
