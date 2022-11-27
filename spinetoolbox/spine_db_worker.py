@@ -162,7 +162,8 @@ class SpineDBWorker(QObject):
             parent.set_busy(False)
 
     def do_advance_query(self, item_type):
-        self._executor.submit(self._do_advance_query, item_type)
+        if item_type not in self._fetched_item_types:
+            self._executor.submit(self._do_advance_query, item_type)
 
     @busy_effect
     @_db_map_lock
