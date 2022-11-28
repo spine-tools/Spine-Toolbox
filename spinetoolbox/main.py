@@ -68,7 +68,7 @@ def main():
     window.show()
     window.init_project(args.project)
     # Enter main event loop and wait until exit() is called
-    return_code = app.exec_()
+    return_code = app.exec()
     return return_code
 
 

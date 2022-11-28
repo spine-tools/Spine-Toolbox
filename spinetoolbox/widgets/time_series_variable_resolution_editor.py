@@ -72,7 +72,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
             position (QPoint): menu's position on the table
         """
         menu = IndexedValueTableContextMenu(self._ui.time_series_table, position)
-        menu.exec_(self._ui.time_series_table.mapToGlobal(position))
+        menu.exec(self._ui.time_series_table.mapToGlobal(position))
 
     def set_value(self, value):
         """Sets the time series being edited."""

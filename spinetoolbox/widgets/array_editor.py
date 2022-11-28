@@ -125,7 +125,7 @@ class ArrayEditor(QWidget):
             position (QPoint): menu's position on the table
         """
         menu = ArrayTableContextMenu(self, self._ui.array_table_view, position)
-        menu.exec_(self._ui.array_table_view.mapToGlobal(position))
+        menu.exec(self._ui.array_table_view.mapToGlobal(position))
 
     @Slot(QModelIndex, QModelIndex, list)
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):

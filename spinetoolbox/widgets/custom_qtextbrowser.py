@@ -92,7 +92,7 @@ class CustomQTextBrowser(QTextBrowser):
         menu = self.createStandardContextMenu()
         menu.addSeparator()
         menu.addAction(clear_action)
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
     def clear(self):
         super().clear()

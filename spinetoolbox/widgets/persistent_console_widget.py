@@ -707,7 +707,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
             else self.createStandardContextMenu()
         )
         self._extend_menu(menu)
-        menu.exec_(ev.globalPos())
+        menu.exec(ev.globalPos())
 
 
 # Translated from

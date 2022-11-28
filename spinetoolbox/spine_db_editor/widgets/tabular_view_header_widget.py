@@ -109,7 +109,7 @@ class TabularViewHeaderWidget(QFrame):
         pixmap = self.grab()
         drag.setPixmap(pixmap)
         drag.setHotSpot(pixmap.rect().center())
-        drag.exec_()
+        drag.exec()
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""

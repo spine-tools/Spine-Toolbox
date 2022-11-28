@@ -857,7 +857,7 @@ class ToolboxUI(QMainWindow):
                     QMessageBox.Question, "Overwrite?", msg1, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
                 )
                 box1.button(QMessageBox.Ok).setText("Overwrite")
-                answer1 = box1.exec_()
+                answer1 = box1.exec()
                 if answer1 != QMessageBox.Ok:
                     return False
             else:
@@ -869,7 +869,7 @@ class ToolboxUI(QMainWindow):
                     QMessageBox.Question, "Not empty", msg2, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
                 )
                 box2.button(QMessageBox.Ok).setText("Go ahead")
-                answer2 = box2.exec_()
+                answer2 = box2.exec()
                 if answer2 != QMessageBox.Ok:
                     return False
         return True
@@ -1084,11 +1084,11 @@ class ToolboxUI(QMainWindow):
         else:
             msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
         message_box = QMessageBox(
-            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.StandardButton.Ok | QMessageBox.Cancel, parent=self
+            QMessageBox.Icon.Question, "Remove All Items", msg, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
         )
         message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Items")
         answer = message_box.exec()
-        if answer != QMessageBox.Ok:
+        if answer != QMessageBox.StandardButton.Ok:
             return
         self.undo_stack.push(RemoveAllProjectItemsCommand(self._project, self.item_factories, delete_data=delete_data))
 
@@ -1179,7 +1179,7 @@ class ToolboxUI(QMainWindow):
             return
         item_factory = self.item_factories[spec.item_type]
         menu = item_factory.make_specification_menu(self, ind)
-        menu.exec_(global_pos)
+        menu.exec(global_pos)
         menu.deleteLater()
         menu = None
 
@@ -1686,7 +1686,7 @@ class ToolboxUI(QMainWindow):
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
-        menu.exec_(pos)
+        menu.exec(pos)
         menu.deleteLater()
 
     def show_link_context_menu(self, pos, link):
@@ -1700,7 +1700,7 @@ class ToolboxUI(QMainWindow):
         menu.addAction(self.ui.actionRemove)
         self.ui.actionRemove.setEnabled(True)
         menu.addAction(self.ui.actionTake_link)
-        action = menu.exec_(pos)
+        action = menu.exec(pos)
         if action is self.ui.actionTake_link:
             self.ui.graphicsView.take_link(link)
         self.refresh_edit_action_states()
@@ -1809,7 +1809,7 @@ class ToolboxUI(QMainWindow):
         chkbox = QCheckBox()
         chkbox.setText("Do not ask me again")
         msg.setCheckBox(chkbox)
-        answer = msg.exec_()  # Show message box
+        answer = msg.exec()  # Show message box
         if answer == QMessageBox.Ok:
             # Update conf file according to checkbox status
             if not chkbox.checkState():
@@ -1837,7 +1837,7 @@ class ToolboxUI(QMainWindow):
         chkbox = QCheckBox()
         chkbox.setText("Do not ask me again")
         msg.setCheckBox(chkbox)
-        answer = msg.exec_()
+        answer = msg.exec()
         if answer == QMessageBox.Cancel:
             return False
         if answer == QMessageBox.Save:
@@ -1876,7 +1876,7 @@ class ToolboxUI(QMainWindow):
         msg = "Are you sure?"
         title = "Clear recent projects?"
         message_box = QMessageBox(QMessageBox.Question, title, msg, QMessageBox.Yes | QMessageBox.No, parent=self)
-        answer = message_box.exec_()
+        answer = message_box.exec()
         if answer == QMessageBox.No:
             return
         self._qsettings.remove("appSettings/recentProjects")
@@ -2243,7 +2243,7 @@ class ToolboxUI(QMainWindow):
                 QMessageBox.Question, "Remove Item", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
             )
             message_box.button(QMessageBox.Ok).setText("Remove Item")
-            answer = message_box.exec_()
+            answer = message_box.exec()
             if answer != QMessageBox.Ok:
                 return
         self.undo_stack.beginMacro("remove items and links")

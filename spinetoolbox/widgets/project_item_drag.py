@@ -51,7 +51,7 @@ class ProjectItemDragMixin:
         self.pixmap = None
         self.mime_data = None
         self.drag_about_to_start.emit()
-        drag.exec_()
+        drag.exec()
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""

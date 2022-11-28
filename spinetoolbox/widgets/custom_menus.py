@@ -58,7 +58,7 @@ class CustomContextMenu(QMenu):
 
     def get_action(self):
         """Returns the clicked action, a string with a description."""
-        self.exec_(self.position)
+        self.exec(self.position)
         return self.option
 
 

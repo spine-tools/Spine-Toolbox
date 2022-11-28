@@ -201,7 +201,7 @@ class EntityTreeView(CopyTreeView):
             return
         self._context_item = self.model().item_from_index(index)
         self.update_actions_availability()
-        self._menu.exec_(event.globalPos())
+        self._menu.exec(event.globalPos())
 
     def mousePressEvent(self, event):
         """Overrides selection behaviour if the user has selected sticky selection in Settings.
@@ -419,7 +419,7 @@ class ItemTreeView(CopyTreeView):
             return
         item = index.model().item_from_index(index)
         self.update_actions_availability(item)
-        self._menu.exec_(event.globalPos())
+        self._menu.exec(event.globalPos())
 
     @Slot(QModelIndex, QModelIndex)
     def _refresh_copy_paste_actions(self, _, __):

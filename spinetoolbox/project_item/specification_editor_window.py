@@ -353,7 +353,7 @@ def prompt_to_save_changes(parent, settings, save_callback):
     chkbox = QCheckBox()
     chkbox.setText("Do not ask me again")
     msg.setCheckBox(chkbox)
-    answer = msg.exec_()
+    answer = msg.exec()
     if answer == QMessageBox.Cancel:
         return False
     if chkbox.checkState() == 2:

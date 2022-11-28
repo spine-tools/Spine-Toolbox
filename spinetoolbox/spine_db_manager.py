@@ -361,7 +361,7 @@ class SpineDBManager(QObject):
                 msg.setInformativeText("Do you want to overwrite it?")
                 msg.addButton("Overwrite", QMessageBox.AcceptRole)
                 msg.addButton("Cancel", QMessageBox.RejectRole)
-                ret = msg.exec_()  # Show message box
+                ret = msg.exec()  # Show message box
                 if ret != QMessageBox.AcceptRole:
                     return
             do_create_new_spine_database(url)
@@ -432,7 +432,7 @@ class SpineDBManager(QObject):
                 msg.setInformativeText(info_text)
                 msg.addButton(QMessageBox.Cancel)
                 msg.addButton("Upgrade", QMessageBox.YesRole)
-                ret = msg.exec_()  # Show message box
+                ret = msg.exec()  # Show message box
                 if ret == QMessageBox.Cancel:
                     return None
                 return self.get_db_map(url, logger, codename=codename, upgrade=True, create=create)

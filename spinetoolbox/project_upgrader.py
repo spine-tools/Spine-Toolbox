@@ -506,7 +506,7 @@ class ProjectUpgrader:
                 parent=self._toolbox,
             )
             message_box.button(QMessageBox.Ok).setText("Overwrite")
-            msgbox_answer = message_box.exec_()
+            msgbox_answer = message_box.exec()
             if msgbox_answer != QMessageBox.Ok:
                 return ""
         return answer  # New project directory

@@ -69,7 +69,7 @@ class PlotWidget(QWidget):
         menu = QMenu(self)
         menu.addAction("Show plot data...", self.show_plot_data)
         menu.addAction("Copy plot data", self.copy_plot_data)
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
     def _get_plot_data(self):
         """Gathers plot data into a table.
@@ -154,7 +154,7 @@ class _PlotDataView(CopyPasteTableView):
         menu = QMenu(self)
         menu.addAction("Select all", self.selectAll)
         menu.addAction("Copy", self.copy).setEnabled(self.can_copy())
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
 
 class _PlotDataWidget(QWidget):

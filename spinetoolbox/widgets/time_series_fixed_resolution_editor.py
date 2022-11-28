@@ -116,7 +116,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
             position (QPoint): menu's position in table view's coordinates
         """
         menu = IndexedValueTableContextMenu(self._ui.time_series_table, position)
-        menu.exec_(self._ui.time_series_table.mapToGlobal(position))
+        menu.exec(self._ui.time_series_table.mapToGlobal(position))
 
     @Slot(QDate)
     def _select_date(self, selected_date):

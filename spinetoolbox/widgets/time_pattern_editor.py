@@ -54,7 +54,7 @@ class TimePatternEditor(QWidget):
             position (QPoint): menu's position on the table
         """
         menu = IndexedValueTableContextMenu(self._ui.pattern_edit_table, position)
-        menu.exec_(self._ui.pattern_edit_table.mapToGlobal(position))
+        menu.exec(self._ui.pattern_edit_table.mapToGlobal(position))
 
     def set_value(self, value):
         """Sets the parameter_value to be edited."""

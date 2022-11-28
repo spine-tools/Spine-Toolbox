@@ -159,7 +159,7 @@ class ScenarioGenerator(QWidget):
         message_box.addButton("Overwrite", QMessageBox.DestructiveRole)
         keep_button = message_box.addButton("Keep existing", QMessageBox.AcceptRole)
         cancel_button = message_box.addButton(QMessageBox.Cancel)
-        message_box.exec_()
+        message_box.exec()
         clicked_button = message_box.clickedButton()
         if clicked_button is None or clicked_button is cancel_button:
             return _ScenarioNameResolution.CANCEL_OPERATION

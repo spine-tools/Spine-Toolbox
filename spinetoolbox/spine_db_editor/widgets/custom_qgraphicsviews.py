@@ -717,7 +717,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             return
         e.accept()
         self._context_menu_pos = self.mapToScene(e.pos())
-        self._menu.exec_(e.globalPos())
+        self._menu.exec(e.globalPos())
 
     def _compute_max_zoom(self):
         return sys.maxsize

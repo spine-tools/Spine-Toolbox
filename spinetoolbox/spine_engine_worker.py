@@ -75,7 +75,7 @@ def _handle_prompt_arrived(prompt, engine_mngr):
     )
     if info_text:
         box.setInformativeText(info_text)
-    answer = box.exec_()
+    answer = box.exec()
     accepted = answer == QMessageBox.Yes
     engine_mngr.answer_prompt(item_name, accepted)
 

@@ -164,7 +164,7 @@ def rename_dir(old_dir, new_dir, toolbox, box_title):
             QMessageBox.Question, box_title, msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=toolbox
         )
         box.button(QMessageBox.Ok).setText("Overwrite")
-        answer = box.exec_()
+        answer = box.exec()
         if answer != QMessageBox.Ok:
             return False
         shutil.rmtree(new_dir)

@@ -65,7 +65,7 @@ class MapEditor(QWidget):
             position (QPoint): menu's position
         """
         menu = MapTableContextMenu(self, self._ui.map_table_view, position)
-        menu.exec_(self._ui.map_table_view.mapToGlobal(position))
+        menu.exec(self._ui.map_table_view.mapToGlobal(position))
 
     def set_value(self, value):
         """Sets the parameter_value to be edited."""

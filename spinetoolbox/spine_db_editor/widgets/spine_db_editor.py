@@ -856,7 +856,7 @@ class SpineDBEditorBase(QMainWindow):
             chkbox = QCheckBox()
             chkbox.setText("Do not ask me again")
             msg.setCheckBox(chkbox)
-            answer = msg.exec_()
+            answer = msg.exec()
             if answer != QMessageBox.Cancel and chkbox.checkState() == 2:
                 # Save preference
                 preference = "2" if answer == QMessageBox.Save else "0"
@@ -876,7 +876,7 @@ class SpineDBEditorBase(QMainWindow):
             str: commit message
         """
         dialog = CommitDialog(self, db_names)
-        answer = dialog.exec_()
+        answer = dialog.exec()
         if answer == QDialog.Accepted:
             return dialog.commit_msg
 
@@ -898,7 +898,7 @@ class SpineDBEditorBase(QMainWindow):
             parent=self,
         )
         message_box.button(QMessageBox.Ok).setText("Rollback")
-        answer = message_box.exec_()
+        answer = message_box.exec()
         return answer == QMessageBox.Ok
 
     def _purge_change_notifiers(self):

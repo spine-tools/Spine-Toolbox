@@ -196,7 +196,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
             plot_in_window_menu.triggered.connect(self.plot_in_window)
             prepare_plot_in_window_menu(plot_in_window_menu)
             self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
-        self._menu.exec_(event.globalPos())
+        self._menu.exec(event.globalPos())
         if is_value:
             plot_in_window_menu.deleteLater()
 
@@ -502,7 +502,7 @@ class PivotTableView(CopyPasteTableView):
             """Shows the context menu."""
             self._refresh_selected_indexes()
             self._update_actions_availability()
-            self._menu.exec_(position)
+            self._menu.exec(position)
 
         def _to_selection_lists(self, index):
             """Caches given index to corresponding selected index list.
@@ -894,7 +894,7 @@ class PivotTableView(CopyPasteTableView):
             title = TitleWidgetAction("Pivot", self._spine_db_editor)
             pivot_menu.addAction(title)
             pivot_menu.addActions(self._spine_db_editor.pivot_action_group.actions())
-            pivot_menu.exec_(event.globalPos())
+            pivot_menu.exec(event.globalPos())
             return
         self._context.show_context_menu(event.globalPos())
 
@@ -1044,7 +1044,7 @@ class MetadataTableViewBase(CopyPasteTableView):
 
     def contextMenuEvent(self, event):
         menu_position = event.globalPos()
-        self._menu.exec_(menu_position)
+        self._menu.exec(menu_position)
 
     def _remove_selected(self):
         """Removes selected rows from view's model."""

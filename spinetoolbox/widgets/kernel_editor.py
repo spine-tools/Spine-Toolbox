@@ -147,7 +147,7 @@ class KernelEditorBase(QDialog):
                 QMessageBox.Question, "ipykernel Missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
             )
             message_box.button(QMessageBox.Ok).setText("Install ipykernel")
-            answer = message_box.exec_()
+            answer = message_box.exec()
             if answer == QMessageBox.Cancel:
                 return False
             # Install ipykernel
@@ -302,7 +302,7 @@ class KernelEditorBase(QDialog):
                 QMessageBox.Question, "IJulia missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
             )
             message_box.button(QMessageBox.Ok).setText("Install IJulia")
-            answer = message_box.exec_()
+            answer = message_box.exec()
             if answer == QMessageBox.Cancel:
                 return False
             self.start_ijulia_install_process(julia, project)
@@ -774,7 +774,7 @@ class KernelEditor(KernelEditorBase):
                 QMessageBox.Question, "Overwrite kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
             )
             message_box.button(QMessageBox.Ok).setText("Overwrite kernel")
-            answer = message_box.exec_()
+            answer = message_box.exec()
             if answer != QMessageBox.Ok:
                 return False
         return True
@@ -1001,7 +1001,7 @@ class KernelEditor(KernelEditorBase):
             QMessageBox.Question, "Remove kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
         )
         message_box.button(QMessageBox.Ok).setText("Remove kernel")
-        answer = message_box.exec_()
+        answer = message_box.exec()
         if answer != QMessageBox.Ok:
             return
         try:
@@ -1111,7 +1111,7 @@ class MiniKernelEditorBase(KernelEditorBase):
 
     def make_kernel(self):
         QTimer.singleShot(0, self._do_make_kernel)
-        self.exec_()
+        self.exec()
 
     def _do_make_kernel(self):
         raise NotImplementedError()
