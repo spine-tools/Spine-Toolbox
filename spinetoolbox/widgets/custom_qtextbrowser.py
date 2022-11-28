@@ -202,7 +202,7 @@ class CustomQTextBrowser(QTextBrowser):
             self._visible_timestamp = timestamp
         block_format = QTextBlockFormat()
         if not visible:
-            block_format.setLineHeight(0, QTextBlockFormat.FixedHeight)
+            block_format.setLineHeight(0, QTextBlockFormat.FixedHeight.value)
         frame_format = self._frame_format if visible else QTextFrameFormat()
         item_blocks = self._execution_blocks.get(timestamp, {})
         all_blocks = [block for blocks in item_blocks.values() for block in blocks]

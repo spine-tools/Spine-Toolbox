@@ -16,7 +16,7 @@ Classes for custom QTreeView.
 :date:   25.4.2018
 """
 
-from PySide6.QtWidgets import QMenu
+from PySide6.QtWidgets import QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
 from PySide6.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
@@ -98,7 +98,7 @@ class EntityTreeView(CopyTreeView):
     @Slot(QModelIndex, int, QEvent)
     def edit(self, index, trigger, event):
         """Edit all selected items."""
-        if trigger == self.EditKeyPressed:
+        if trigger == QAbstractItemView.EditTrigger.EditKeyPressed:
             self.edit_selected()
             return True
         return super().edit(index, trigger, event)

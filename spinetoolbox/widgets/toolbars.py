@@ -298,18 +298,18 @@ class MainToolBar(ToolBar):
         if self._drop_target_action is None:
             return
         painter = QPainter(self)
-        painter.drawLine(*self._drop_line())
+        painter.drawLine(*self._drop_line())  # Draw line from (x1, y1) to (x2, y2)
         painter.end()
 
     def _drop_line(self):
         widget = self.widgetForAction(self._drop_target_action)
         geom = widget.geometry()
-        margin = self.layout().margin()
+        margins = self.layout().contentsMargins()
         if self.orientation() == Qt.Horizontal:
             x = geom.left() - 1
-            return x, margin, x, self.height() - margin
+            return x, margins.left(), x, self.height() - margins.top()
         y = geom.top() - 1
-        return margin, y, self.width() - margin, y
+        return margins.top(), y, self.width() - margins.left(), y
 
     def icon_ordering(self):
         item_types = []

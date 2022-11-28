@@ -1084,10 +1084,10 @@ class ToolboxUI(QMainWindow):
         else:
             msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
         message_box = QMessageBox(
-            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.StandardButton.Ok | QMessageBox.Cancel, parent=self
         )
-        message_box.button(QMessageBox.Ok).setText("Remove Items")
-        answer = message_box.exec_()
+        message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Items")
+        answer = message_box.exec()
         if answer != QMessageBox.Ok:
             return
         self.undo_stack.push(RemoveAllProjectItemsCommand(self._project, self.item_factories, delete_data=delete_data))
@@ -1209,15 +1209,15 @@ class ToolboxUI(QMainWindow):
         specification = self.specification_model.specification(index.row())
         message = f"Remove Specification <b>{specification.name}</b> from Project?"
         message_box = QMessageBox(
-            QMessageBox.Question,
+            QMessageBox.Icon.Question,
             "Remove Specification",
             message,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
             parent=self,
         )
-        message_box.button(QMessageBox.Ok).setText("Remove Specification")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
+        message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Specification")
+        answer = message_box.exec()
+        if answer != QMessageBox.StandardButton.Ok:
             return
         self.undo_stack.push(RemoveSpecificationCommand(self._project, specification.name))
 

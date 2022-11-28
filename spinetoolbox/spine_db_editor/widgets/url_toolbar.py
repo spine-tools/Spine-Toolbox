@@ -85,7 +85,7 @@ class UrlToolBar(QToolBar):
         menu_action = self.addAction(QIcon(CharIconEngine("\uf1c0")), "")
         menu_action.setMenu(menu)
         menu_button = self.widgetForAction(menu_action)
-        menu_button.setPopupMode(menu_button.InstantPopup)
+        menu_button.setPopupMode(QToolButton.InstantPopup)
         menu_button.setToolTip("<p>Open URL from project</p>")
         menu.aboutToShow.connect(self._update_open_project_url_menu)
         menu.triggered.connect(self._open_ds_url)

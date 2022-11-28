@@ -18,7 +18,7 @@ Classes for custom QGraphicsViews for the Entity graph view.
 
 import sys
 from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
-from PySide6.QtWidgets import QMenu
+from PySide6.QtWidgets import QMenu, QGraphicsView
 from PySide6.QtGui import QCursor, QPainter, QIcon
 from PySide6.QtPrintSupport import QPrinter
 from ...helpers import CharIconEngine
@@ -645,7 +645,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if (
             not self.itemAt(event.pos())
             and (event.buttons() & Qt.LeftButton != 0)
-            and self.dragMode() != self.RubberBandDrag
+            and self.dragMode() != QGraphicsView.DragMode.RubberBandDrag
         ):
             if self._previous_mouse_pos is not None:
                 delta = event.pos() - self._previous_mouse_pos

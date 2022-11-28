@@ -35,7 +35,7 @@ class MainMenu(QMenu):
         if ev.type() == QEvent.ShortcutOverride and ev.modifiers() == Qt.NoModifier:
             actions = self.actions() + [a for child in self.findChildren(QWidget) for a in child.actions()]
             mnemonics = [QKeySequence.mnemonic(a.text()) for a in actions]
-            key_seq = QKeySequence(Qt.ALT | ev.key())
+            key_seq = QKeySequence(Qt.ALT | Qt.Key(ev.key()))
             if key_seq in mnemonics:
                 ev = QKeyEvent(QEvent.KeyPress, ev.key(), Qt.AltModifier)
                 qApp.postEvent(self, ev)  # pylint: disable=undefined-variable
