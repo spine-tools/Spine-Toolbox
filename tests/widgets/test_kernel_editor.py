@@ -67,7 +67,7 @@ class TestKernelEditorBase(unittest.TestCase):
             ), patch.object(KernelEditorBase, "_python_kernel_name", return_value=kernel_name), patch.object(
                 KernelEditorBase, "_python_kernel_display_name", return_value="Test kernel"
             ):
-                mock_message_box.exec_.return_value = QMessageBox.Ok
+                mock_message_box.exec.return_value = QMessageBox.Ok
                 editor = KernelEditorBase(self._settings_widget, "python")
                 self.assertTrue(editor.make_python_kernel())
                 while editor._install_package_process is not None:
@@ -95,7 +95,7 @@ class TestKernelEditorBase(unittest.TestCase):
         ), patch.object(KernelEditorBase, "_julia_executable", return_value=julia_exec), patch.object(
             KernelEditorBase, "_julia_project", return_value="@."
         ):
-            mock_message_box.exec_.return_value = QMessageBox.Ok
+            mock_message_box.exec.return_value = QMessageBox.Ok
             editor = KernelEditorBase(self._settings_widget, "julia")
             julia_project_dir = editor._julia_project()
             ijulia_installation_status = editor.is_ijulia_installed(julia_exec, julia_project_dir)

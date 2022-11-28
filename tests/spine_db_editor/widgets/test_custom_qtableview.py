@@ -294,7 +294,7 @@ class TestParameterTableWithExistingData(TestBase):
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as roll_back_dialog:
             roll_back_dialog.Ok = QMessageBox.Ok
             instance = roll_back_dialog.return_value
-            instance.exec_.return_value = QMessageBox.Ok
+            instance.exec.return_value = QMessageBox.Ok
             self._db_editor.ui.actionRollback.trigger()
         while model.rowCount() != self._n_objects * self._n_parameters + 1:
             # Wait for fetching to finish.
