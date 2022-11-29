@@ -16,18 +16,59 @@ The FetchParent and FlexibleFetchParent classes.
 :date:   18.11.2022
 """
 
+from PySide2.QtCore import QTimer, Slot
+from .helpers import busy_effect
+
 
 class FetchParent:
     _CHUNK_SIZE = 1000
-    _worker = None
-    _fetched = False
-    _busy = False
-    position = 0
-    fetch_token = None
-    will_have_children = None
-    """Whether this parent will have children if fetched.
-    None means we don't know yet. Set to a boolean value whenever we find out.
-    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._worker = None
+        self._fetched = False
+        self._busy = False
+        self.position = 0
+        self.fetch_token = None
+        self.will_have_children = None
+        """Whether this parent will have children if fetched.
+        None means we don't know yet. Set to a boolean value whenever we find out.
+        """
+        self._items_to_add = {}
+        self._items_to_update = {}
+        self._items_to_remove = {}
+        self._timer = QTimer()
+        self._timer.setSingleShot(True)
+        self._timer.setInterval(20)
+        self._timer.timeout.connect(self._apply_pending_changes)
+
+    @Slot()
+    def _do_apply_pending_changes(self):
+        self._apply_pending_changes()
+
+    @busy_effect
+    def _apply_pending_changes(self):
+        for db_map in list(self._items_to_add):
+            data = self._items_to_add.pop(db_map)
+            self.handle_items_added({db_map: data})
+        for db_map in list(self._items_to_update):
+            data = self._items_to_update.pop(db_map)
+            self.handle_items_updated({db_map: data})
+        for db_map in list(self._items_to_remove):
+            data = self._items_to_remove.pop(db_map)
+            self.handle_items_removed({db_map: data})
+
+    def add_item(self, db_map, item):
+        self._items_to_add.setdefault(db_map, []).append(item)
+        self._timer.start()
+
+    def update_item(self, db_map, item):
+        self._items_to_update.setdefault(db_map, []).append(item)
+        self._timer.start()
+
+    def remove_item(self, db_map, item):
+        self._items_to_remove.setdefault(db_map, []).append(item)
+        self._timer.start()
 
     @property
     def fetch_item_type(self):

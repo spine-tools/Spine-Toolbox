@@ -171,7 +171,7 @@ class AddItemsCommand(SpineDBCommand):
             self.setObsolete(True)
         self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
-        self.undo_db_map_typed_ids = None
+        self.undo_db_map_ids = None
         self._readd = False
         self._check = check
         self.setText(self._add_command_name.get(item_type, "add item") + f" to '{db_map.codename}'")
@@ -188,7 +188,7 @@ class AddItemsCommand(SpineDBCommand):
 
     def undo(self):
         super().undo()
-        self.db_mngr.do_remove_items(self.undo_db_map_typed_ids, callback=self.handle_undo_complete)
+        self.db_mngr.do_remove_items(self.item_type, self.undo_db_map_ids, callback=self.handle_undo_complete)
         self._readd = True
 
     def _handle_first_redo_complete(self, db_map_data):
@@ -196,13 +196,7 @@ class AddItemsCommand(SpineDBCommand):
             self.setObsolete(True)
             return
         self.redo_db_map_data = db_map_data
-        self.undo_db_map_typed_ids = {
-            db_map: db_map.cascading_ids(
-                cache=self.db_mngr.get_db_map_cache(db_map, {self.item_type}, only_descendants=True),
-                **{self.item_type: {x["id"] for x in data}},
-            )
-            for db_map, data in db_map_data.items()
-        }
+        self.undo_db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
 
 
 class UpdateItemsCommand(SpineDBCommand):
@@ -269,46 +263,30 @@ class UpdateItemsCommand(SpineDBCommand):
 
 
 class RemoveItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, typed_data, parent=None):
+    def __init__(self, db_mngr, db_map, ids, item_type, parent=None):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
             db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
-            typed_data (dict): lists of dict-items to remove keyed by string type
+            ids (set): set of ids to remove
+            item_type (str): the item type
             parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
         super().__init__(db_mngr, db_map, parent=parent)
-        if not any(typed_data.values()):
+        if not ids:
             self.setObsolete(True)
-        self.redo_typed_data = self.db_map.cascading_ids(
-            cache=self.db_mngr.get_db_map_cache(db_map, set(typed_data), only_descendants=True), **typed_data
-        )
-        self.undo_typed_data = {}
-        self.setText(f"remove items from '{db_map.codename}'")
+        self.redo_data = {db_map: ids}
+        self.undo_data = {}
+        self.item_type = item_type
+        self.setText(f"remove {item_type} items from '{db_map.codename}'")
 
     def redo(self):
         super().redo()
-        self.db_mngr.do_remove_items({self.db_map: self.redo_typed_data}, callback=self.handle_redo_complete)
+        self.db_mngr.do_remove_items(self.item_type, self.redo_data, callback=self.handle_redo_complete)
 
     def undo(self):
         super().undo()
-        item_type_iter = iter(list(self.undo_typed_data))
-        self._undo_next(item_type_iter)
+        self.db_mngr.add_items(self.undo_data, self.item_type, readd=True, callback=self.handle_undo_complete)
 
-    def _undo_next(self, item_type_iter):
-        item_type = next(item_type_iter, None)
-        if item_type is None:
-            self.handle_undo_complete(None)
-            return
-        data = self.undo_typed_data[item_type]
-        self.db_mngr.add_items(
-            {self.db_map: data}, item_type, readd=True, callback=lambda _db_map_data: self._undo_next(item_type_iter)
-        )
-
-    def _handle_first_redo_complete(self, db_map_typed_items):
-        for item_type, items in db_map_typed_items.get(self.db_map, {}).items():
-            if item_type not in self.db_map.ITEM_TYPES or not items:
-                continue
-            self.undo_typed_data[item_type] = items
-        if not self.undo_typed_data:
-            self.setObsolete(True)
+    def _handle_first_redo_complete(self, db_map_data):
+        self.undo_data = db_map_data

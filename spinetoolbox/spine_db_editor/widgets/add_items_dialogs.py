@@ -1023,6 +1023,6 @@ class ManageMembersDialog(ObjectGroupDialogBase):
         if items_to_add:
             AddItemsCommand(self.db_mngr, self.db_map, items_to_add, "entity_group", parent=macro)
         if ids_to_remove:
-            RemoveItemsCommand(self.db_mngr, self.db_map, {"entity_group": ids_to_remove}, parent=macro)
+            RemoveItemsCommand(self.db_mngr, self.db_map, ids_to_remove, "entity_group", parent=macro)
         self.db_mngr.undo_stack[self.db_map].push(macro)
         super().accept()
