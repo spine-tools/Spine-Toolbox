@@ -101,7 +101,7 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings = self.db_mngr.qsettings
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
-        self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.err_msg.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.silenced = False
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / preferred_row_height(self))

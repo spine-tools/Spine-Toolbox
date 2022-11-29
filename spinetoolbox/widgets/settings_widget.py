@@ -68,7 +68,7 @@ class SettingsWidgetBase(QWidget):
         self._qsettings = qsettings
         self.ui = Ui_SettingsForm()
         self.ui.setupUi(self)
-        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.CustomizeWindowHint)
         self.setStyleSheet(SETTINGS_SS)
         self._mouse_press_pos = None
         self._mouse_release_pos = None

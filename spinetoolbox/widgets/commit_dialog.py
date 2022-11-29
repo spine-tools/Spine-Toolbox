@@ -32,7 +32,7 @@ class CommitDialog(QDialog):
             db_names (Iterable of str): database names
         """
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setWindowModality(Qt.ApplicationModal)
         self.commit_msg = None
         self.setWindowTitle('Commit changes to {}'.format(",".join(db_names)))
@@ -46,8 +46,8 @@ class CommitDialog(QDialog):
         self.commit_msg_edit.setPlaceholderText('Commit message \t(press Ctrl+Enter to commit)')
         self.commit_msg_edit.addAction(self.action_accept)
         button_box = QDialogButtonBox()
-        button_box.addButton(QDialogButtonBox.Cancel)
-        self.commit_button = button_box.addButton('Commit', QDialogButtonBox.AcceptRole)
+        button_box.addButton(QDialogButtonBox.StandardButton.Cancel)
+        self.commit_button = button_box.addButton('Commit', QDialogButtonBox.ButtonRole.AcceptRole)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         form.addWidget(self.commit_msg_edit)

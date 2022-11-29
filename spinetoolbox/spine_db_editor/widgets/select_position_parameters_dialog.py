@@ -36,7 +36,7 @@ class SelectPositionParametersDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Select position parameters")
         button_box = QDialogButtonBox(self)
-        button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         layout = QVBoxLayout(self)
         self._table_widget = QTableWidget(1, 2, self)
         self._table_widget.setHorizontalHeaderLabels(["Position x", "Position y"])

@@ -51,7 +51,7 @@ class KernelEditorBase(QDialog):
             python_or_julia (str): kernel type; valid values: "julia", "python"
         """
         super().__init__(parent=parent)  # Inherits stylesheet from SettingsWindow
-        self.setWindowFlags(Qt.Window)
+        self.setWindowFlags(Qt.WindowType.Window)
         self.setup_dialog_style()
         # Class attributes
         self._parent = parent
@@ -635,7 +635,7 @@ class KernelEditor(KernelEditorBase):
         self._update_ok_button_enabled()
 
     def _update_ok_button_enabled(self):
-        self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(
+        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
             self.ui.tableView_kernel_list.selectionModel().hasSelection()
         )
 
@@ -1106,7 +1106,7 @@ class MiniKernelEditorBase(KernelEditorBase):
         self._cursors = {w: w.cursor() for w in self.findChildren(QWidget)}
         for widget in self._cursors:
             widget.setCursor(Qt.BusyCursor)
-        self.ui.buttonBox.button(QDialogButtonBox.Close).setVisible(False)
+        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(False)
 
     def _python_interpreter_name(self):
         return self.ui.lineEdit_python_interpreter.text()
@@ -1118,8 +1118,8 @@ class MiniKernelEditorBase(KernelEditorBase):
         return self.ui.lineEdit_julia_project.text()
 
     def _show_close_button(self, failed=False):
-        self.ui.buttonBox.button(QDialogButtonBox.Close).setVisible(True)
-        self.ui.buttonBox.button(QDialogButtonBox.Cancel).setVisible(False)
+        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
+        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
         for widget, cursor in self._cursors.items():
             widget.setCursor(cursor)
         msg = "Done" if not failed else "Failed"

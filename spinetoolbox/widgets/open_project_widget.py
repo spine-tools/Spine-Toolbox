@@ -45,7 +45,7 @@ class OpenProjectDialog(QDialog):
         self.combobox_context_menu = None
         # Ensure this dialog is garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         # QActions for keyboard shortcuts
         self.go_root_action = QAction(self)
         self.go_home_action = QAction(self)

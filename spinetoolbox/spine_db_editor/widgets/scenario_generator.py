@@ -50,8 +50,8 @@ class ScenarioGenerator(QWidget):
         self._alternatives = alternatives
         self._db_editor = spine_db_editor
         super().__init__(parent)
-        self.setWindowFlag(Qt.Window, True)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.Window, True)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self._ui = Ui_Form()
         self._ui.setupUi(self)

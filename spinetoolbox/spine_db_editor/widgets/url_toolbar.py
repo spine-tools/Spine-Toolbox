@@ -301,7 +301,7 @@ class _UrlFilterDialog(QDialog):
         super().__init__(parent=parent, f=Qt.Popup)
         outer_layout = QVBoxLayout(self)
         button_box = QDialogButtonBox(self)
-        self._filter_button = button_box.addButton("Update filters", QDialogButtonBox.AcceptRole)
+        self._filter_button = button_box.addButton("Update filters", QDialogButtonBox.ButtonRole.AcceptRole)
         self._db_list = _DBListWidget(db_mngr, db_maps, parent=self)
         self._orig_filtered_url_codenames = self._db_list.filtered_url_codenames()
         self._update_filter_enabled()

@@ -108,7 +108,7 @@ class PlotWidget(QWidget):
         """Opens a separate window that shows the plot data."""
         rows = self._get_plot_data()
         widget = _PlotDataWidget(rows, self)
-        widget.setWindowFlag(Qt.Window, True)
+        widget.setWindowFlag(Qt.WindowType.Window, True)
         title = "Plot data"
         widget.setWindowTitle(title)
         widget.show()
@@ -130,7 +130,7 @@ class PlotWidget(QWidget):
             document_name (str): a string to add to the window title
         """
         self.setParent(parent_window)
-        self.setWindowFlag(Qt.Window, True)
+        self.setWindowFlag(Qt.WindowType.Window, True)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         title = "Plot"
         if document_name:

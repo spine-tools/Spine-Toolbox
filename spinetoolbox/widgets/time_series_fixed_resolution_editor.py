@@ -91,7 +91,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.repeat_check_box.toggled.connect(self._model.set_repeat)
         self._calendar = QCalendarWidget(self)
         self._calendar.setMinimumDate(QDate(100, 1, 1))
-        self._calendar.setWindowFlags(Qt.Popup)
+        self._calendar.setWindowFlags(Qt.WindowType.Popup)
         self._calendar.activated.connect(self._select_date)
         for i in range(self._ui.splitter.count()):
             self._ui.splitter.setCollapsible(i, False)

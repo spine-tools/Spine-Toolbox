@@ -128,7 +128,7 @@ class FilterWidgetBase(QWidget):
         self._ui_edit = QLineEdit()
         self._ui_edit.setPlaceholderText('Search')
         self._ui_edit.setClearButtonEnabled(True)
-        self._ui_buttons = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self._ui_buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         self._ui_vertical_layout.addWidget(self._ui_edit)
         self._ui_vertical_layout.addWidget(self._ui_list)
         self._ui_vertical_layout.addWidget(self._ui_buttons)
@@ -143,8 +143,8 @@ class FilterWidgetBase(QWidget):
         self._ui_list.clicked.connect(self._filter_model._handle_index_clicked)
         self._search_timer.timeout.connect(self._filter_list)
         self._ui_edit.textChanged.connect(self._text_edited)
-        self._ui_buttons.button(QDialogButtonBox.Ok).clicked.connect(self._apply_filter)
-        self._ui_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self._cancel_filter)
+        self._ui_buttons.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self._apply_filter)
+        self._ui_buttons.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self._cancel_filter)
 
     def save_state(self):
         """Saves the state of the FilterCheckboxListModel."""
@@ -714,7 +714,7 @@ class PurgeSettingsDialog(QDialog):
 
         super().__init__(parent)
         self.setWindowTitle("Database purge settings")
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self._ui = Ui_Dialog()
         self._ui.setupUi(self)

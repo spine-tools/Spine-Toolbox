@@ -847,7 +847,7 @@ class ObjectGroupDialogBase(QDialog):
         vertical_button_layout.addWidget(self.remove_button)
         vertical_button_layout.addStretch()
         self.button_box = QDialogButtonBox(self)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         layout = QGridLayout(self)
         layout.addWidget(self.header_widget, 0, 0, 1, 3, Qt.AlignHCenter)
         layout.addWidget(self.non_members_tree, 1, 0)

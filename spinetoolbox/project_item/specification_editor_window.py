@@ -81,7 +81,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._ui = self._make_ui()
         self._ui.setupUi(self)
         self._ui_error = QErrorMessage(self)
-        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self._ui_error.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self._ui_error.setWindowTitle("Error")
         self.setWindowTitle(specification.name if specification else "")
         # Restore ui

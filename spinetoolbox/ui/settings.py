@@ -879,7 +879,7 @@ class Ui_SettingsForm(object):
         self.buttonBox = QDialogButtonBox(SettingsForm)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Cancel|QDialogButtonBox.StandardButton.Ok)
         self.buttonBox.setCenterButtons(False)
 
         self.verticalLayout_7.addWidget(self.buttonBox)

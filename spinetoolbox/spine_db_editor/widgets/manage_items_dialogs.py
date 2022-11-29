@@ -34,7 +34,7 @@ class ManageItemsDialogBase(QDialog):
             db_mngr (SpineDBManager)
         """
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.db_mngr = db_mngr
         self.table_view = self.make_table_view()
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
@@ -45,7 +45,7 @@ class ManageItemsDialogBase(QDialog):
         self._accept_action.setShortcut("Ctrl+Return")
         self.addAction(self._accept_action)
         self.button_box = QDialogButtonBox(self)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         layout = QGridLayout(self)
         layout.addWidget(self.table_view)
         layout.addWidget(self.button_box)

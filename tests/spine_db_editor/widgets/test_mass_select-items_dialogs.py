@@ -98,7 +98,7 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
         dialog._db_map_check_boxes[self._db_map].setChecked(True)
         dialog._item_check_boxes_widget._item_check_boxes["object"].setChecked(True)
         with signal_waiter(self._db_mngr.objects_removed) as waiter:
-            dialog._ui.button_box.button(QDialogButtonBox.Ok).click()
+            dialog._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).click()
             waiter.wait()
         self.assertEqual(self._db_mngr.get_items(self._db_map, "object"), [])
 

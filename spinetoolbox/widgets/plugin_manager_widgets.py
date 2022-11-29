@@ -40,7 +40,7 @@ class InstallPluginDialog(QDialog):
     def __init__(self, parent):
         """Initialize class"""
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setWindowTitle('Install plugin')
         QVBoxLayout(self)
         self._line_edit = QLineEdit(self)
@@ -54,15 +54,15 @@ class InstallPluginDialog(QDialog):
         self._timer = QTimer(self)
         self._timer.setInterval(200)
         self._button_box = QDialogButtonBox(self)
-        self._button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self._button_box.button(QDialogButtonBox.Ok).setEnabled(False)
+        self._button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
+        self._button_box.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
         self.layout().addWidget(self._line_edit)
         self.layout().addWidget(self._list_view)
         self.layout().addWidget(self._button_box)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setMinimumWidth(400)
-        self._button_box.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
-        self._button_box.button(QDialogButtonBox.Ok).clicked.connect(self._handle_ok_clicked)
+        self._button_box.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self.close)
+        self._button_box.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self._handle_ok_clicked)
         self._list_view.doubleClicked.connect(self._emit_item_selected)
         self._list_view.selectionModel().selectionChanged.connect(self._update_ok_button_enabled)
         self._line_edit.textEdited.connect(self._handle_search_text_changed)
@@ -94,7 +94,7 @@ class InstallPluginDialog(QDialog):
     @Slot("QItemSelection", "QItemSelection")
     def _update_ok_button_enabled(self, _selected, _deselected):
         on = self._list_view.selectionModel().hasSelection()
-        self._button_box.button(QDialogButtonBox.Ok).setEnabled(on)
+        self._button_box.button(QDialogButtonBox.StandardButton.Ok).setEnabled(on)
 
 
 class ManagePluginsDialog(QDialog):
@@ -104,19 +104,19 @@ class ManagePluginsDialog(QDialog):
     def __init__(self, parent):
         """Initialize class"""
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setWindowTitle('Manage plugins')
         QVBoxLayout(self)
         self._list_view = QListView(self)
         self._model = _ManagePluginsModel(self)
         self._list_view.setModel(self._model)
         self._button_box = QDialogButtonBox(self)
-        self._button_box.setStandardButtons(QDialogButtonBox.Close)
+        self._button_box.setStandardButtons(QDialogButtonBox.StandardButton.Close)
         self.layout().addWidget(self._list_view)
         self.layout().addWidget(self._button_box)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setMinimumWidth(400)
-        self._button_box.button(QDialogButtonBox.Close).clicked.connect(self.close)
+        self._button_box.button(QDialogButtonBox.StandardButton.Close).clicked.connect(self.close)
 
     def populate_list(self, names):
         for name, can_update in names:

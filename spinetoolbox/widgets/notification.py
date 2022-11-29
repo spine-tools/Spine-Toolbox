@@ -46,7 +46,7 @@ class Notification(QFrame):
             mspw = 60000 / 140  # Assume people can read ~140 words per minute
             life_span = mspw * word_count
         self.setFocusPolicy(Qt.NoFocus)
-        self.setWindowFlags(Qt.Popup)
+        self.setWindowFlags(Qt.WindowType.Popup)
         self.setParent(parent)
         self._parent = parent
         self._corner = corner

@@ -45,7 +45,7 @@ class AboutWidget(QWidget):
         self.ui = about.Ui_Form()
         self.ui.setupUi(self)
         self.ui.toolButton_copy_to_clipboard.clicked.connect(self.copy_to_clipboard)
-        self.setWindowFlags(Qt.Popup)
+        self.setWindowFlags(Qt.WindowType.Popup)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         full_version = (
