@@ -92,9 +92,8 @@ SETTINGS_SS = (
     "QSlider::sub-page:horizontal{background: transparent;}"
 )
 
-ICON_BACKGROUND = "qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
-
-ICON_TOOLBAR_SS = f"QToolBar{{spacing: 6px; background: {ICON_BACKGROUND}; padding: 3px; border-style: solid;}}"
+# ICON_BACKGROUND = "qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
+# ICON_TOOLBAR_SS = f"QToolBar{{spacing: 6px; background: {ICON_BACKGROUND}; padding: 3px; border-style: solid;}}"
 
 TEXTBROWSER_SS = (
     f"QTextBrowser {{background-color: {BG_COLOR}; border: 1px solid #32414B; color: {FG_COLOR}; border-radius: 2px;}}"
@@ -116,7 +115,7 @@ MAINWINDOW_SS = (
     "QToolButton:pressed{background-color: #f2f2f2;}"
     "QToolButton::menu-indicator{width: 0px;}"
     "QCheckBox{padding: 2px; spacing: 10px; outline-style: dashed; outline-width: 1px; outline-color: black;}"
-    "QComboBox:focus{border-color: black; border-width: 1px; border-style: ridge;}"
+    "QComboBox QAbstractItemView{border: 1px solid darkgray; selection-background-color: lightgray;}"
     "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}"
     "QTextEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}"
     "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
