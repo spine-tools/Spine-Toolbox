@@ -63,16 +63,16 @@ class MinimalTableModel(QAbstractTableModel):
         """Number of columns in the model."""
         return len(self.header) or len(next(iter(self._main_data), []))
 
-    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+    def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
         """Returns headers."""
-        if role != Qt.DisplayRole:
+        if role != Qt.ItemDataRole.DisplayRole:
             return None
-        if orientation == Qt.Horizontal:
+        if orientation == Qt.Orientation.Horizontal:
             try:
                 return self.header[section]
             except IndexError:
                 return None
-        if orientation == Qt.Vertical:
+        if orientation == Qt.Orientation.Vertical:
             return section + 1
 
     def set_horizontal_header_labels(self, labels):
@@ -80,7 +80,7 @@ class MinimalTableModel(QAbstractTableModel):
         if not labels:
             return
         self.header = labels
-        self.headerDataChanged.emit(Qt.Horizontal, 0, len(labels) - 1)
+        self.headerDataChanged.emit(Qt.Orientation.Horizontal, 0, len(labels) - 1)
 
     def insert_horizontal_header_labels(self, section, labels):
         """Insert horizontal header labels at the given section."""
@@ -91,16 +91,16 @@ class MinimalTableModel(QAbstractTableModel):
                 self.header.append(value)
             else:
                 self.header.insert(section + j, value)
-        self.headerDataChanged.emit(Qt.Horizontal, section, section + len(labels) - 1)
+        self.headerDataChanged.emit(Qt.Orientation.Horizontal, section, section + len(labels) - 1)
 
     def horizontal_header_labels(self):
         return self.header
 
-    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
+    def setHeaderData(self, section, orientation, value, role=Qt.ItemDataRole.EditRole):
         """Sets the data for the given role and section in the header
         with the specified orientation to the value supplied.
         """
-        if orientation != Qt.Horizontal or role != Qt.EditRole:
+        if orientation != Qt.Orientation.Horizontal or role != Qt.ItemDataRole.EditRole:
             return False
         try:
             self.header[section] = value
@@ -109,7 +109,7 @@ class MinimalTableModel(QAbstractTableModel):
         except IndexError:
             return False
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index.
 
         Args:
@@ -121,14 +121,14 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if not index.isValid():
             return None
-        if role not in (Qt.DisplayRole, Qt.EditRole):
+        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return None
         try:
             return self._main_data[index.row()][index.column()]
         except IndexError:
             return None
 
-    def row_data(self, row, role=Qt.DisplayRole):
+    def row_data(self, row, role=Qt.ItemDataRole.DisplayRole):
         """Returns the data stored under the given role for the given row.
 
         Args:
@@ -140,15 +140,15 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if not 0 <= row < self.rowCount():
             return None
-        if role not in (Qt.DisplayRole, Qt.EditRole):
+        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return None
         return self._main_data[row]
 
-    def setData(self, index, value, role=Qt.EditRole):
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         """Set data in model."""
         if not index.isValid():
             return False
-        if role not in (Qt.DisplayRole, Qt.EditRole):
+        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return False
         return self.batch_set_data([index], [value])
 
@@ -179,7 +179,7 @@ class MinimalTableModel(QAbstractTableModel):
         bottom = max(rows)
         left = min(columns)
         right = max(columns)
-        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.ItemDataRole.EditRole, Qt.ItemDataRole.DisplayRole])
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):

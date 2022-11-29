@@ -41,7 +41,7 @@ class TestDataToValueFilterWidget(unittest.TestCase):
         model = self._widget._ui_list.model()
         data = [model.index(row, 0).data() for row in range(model.rowCount())]
         self.assertEqual(data, ["(Select all)", "(Empty)", "ei", "bii", "cii"])
-        checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
+        checked = [model.index(row, 0).data(Qt.ItemDataRole.CheckStateRole) for row in range(model.rowCount())]
         self.assertEqual(checked, 5 * [Qt.Checked.value])
         self.assertEqual(self._widget._filter_state, ["ei", "bii", "cii"])
         self.assertIsNone(self._widget._filter_empty_state)
@@ -50,7 +50,7 @@ class TestDataToValueFilterWidget(unittest.TestCase):
         model = self._widget._ui_list.model()
         self._widget._ui_list.clicked.emit(model.index(1, 0))
         model = self._widget._ui_list.model()
-        checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
+        checked = [model.index(row, 0).data(Qt.ItemDataRole.CheckStateRole) for row in range(model.rowCount())]
         self.assertEqual(checked, [Qt.Unchecked.value, Qt.Unchecked.value, Qt.Checked.value, Qt.Checked.value, Qt.Checked.value])
         self.assertTrue(self._widget.has_filter())
 
@@ -58,7 +58,7 @@ class TestDataToValueFilterWidget(unittest.TestCase):
         model = self._widget._ui_list.model()
         self._widget._ui_list.clicked.emit(model.index(2, 0))
         model = self._widget._ui_list.model()
-        checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
+        checked = [model.index(row, 0).data(Qt.ItemDataRole.CheckStateRole) for row in range(model.rowCount())]
         self.assertEqual(checked, [Qt.Unchecked.value, Qt.Checked.value, Qt.Unchecked.value, Qt.Checked.value, Qt.Checked.value])
         self.assertTrue(self._widget.has_filter())
 
@@ -66,7 +66,7 @@ class TestDataToValueFilterWidget(unittest.TestCase):
         model = self._widget._ui_list.model()
         self._widget._ui_list.clicked.emit(model.index(0, 0))
         model = self._widget._ui_list.model()
-        checked = [model.index(row, 0).data(Qt.CheckStateRole) for row in range(model.rowCount())]
+        checked = [model.index(row, 0).data(Qt.ItemDataRole.CheckStateRole) for row in range(model.rowCount())]
         self.assertEqual(checked, 5 * [Qt.Unchecked.value])
         self.assertTrue(self._widget.has_filter())
 

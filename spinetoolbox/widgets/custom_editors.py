@@ -179,7 +179,7 @@ class SearchBarEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
-        return self.first_index.data(Qt.EditRole)
+        return self.first_index.data(Qt.ItemDataRole.EditRole)
 
     @Slot(str)
     def _handle_delegate_text_edited(self, text):
@@ -239,7 +239,7 @@ class SearchBarEditor(QTableView):
         index = self.indexAt(event.pos())
         if index.row() == 0:
             return
-        self.proxy_model.setData(self.first_index, index.data(Qt.EditRole))
+        self.proxy_model.setData(self.first_index, index.data(Qt.ItemDataRole.EditRole))
         self.data_committed.emit()
 
 
@@ -298,13 +298,13 @@ class CheckListEditor(QTableView):
 
     def _select_item(self, qitem, rank):
         if self._ranked:
-            qitem.setData(self._icons[rank], Qt.DecorationRole)
+            qitem.setData(self._icons[rank], Qt.ItemDataRole.DecorationRole)
         else:
             qitem.setCheckState(Qt.Checked)
 
     def _deselect_item(self, qitem, update_ranks=False):
         if self._ranked:
-            qitem.setData(self._blank_icon, Qt.DecorationRole)
+            qitem.setData(self._blank_icon, Qt.ItemDataRole.DecorationRole)
             if update_ranks:
                 for rank, item in enumerate(self._selected):
                     qitem = self._items[item]
@@ -333,7 +333,7 @@ class CheckListEditor(QTableView):
         for item in items:
             qitem = QStandardItem(item)
             qitem.setFlags(~Qt.ItemIsEditable)
-            qitem.setData(qApp.palette().window(), Qt.BackgroundRole)  # pylint: disable=undefined-variable
+            qitem.setData(qApp.palette().window(), Qt.ItemDataRole.BackgroundRole)  # pylint: disable=undefined-variable
             self._deselect_item(qitem)
             self._items[item] = qitem
             self.model.appendRow(qitem)

@@ -88,7 +88,7 @@ class InstallPluginDialog(QDialog):
     def _emit_item_selected(self, index):
         if not index.isValid():
             return
-        self.item_selected.emit(index.data(Qt.DisplayRole))
+        self.item_selected.emit(index.data(Qt.ItemDataRole.DisplayRole))
         self.close()
 
     @Slot("QItemSelection", "QItemSelection")
@@ -136,7 +136,7 @@ class ManagePluginsDialog(QDialog):
 
     def _emit_item_removed(self, plugin_name):
         for row in range(self._model.rowCount()):
-            if self._model.index(row, 0).data(Qt.DisplayRole) == plugin_name:
+            if self._model.index(row, 0).data(Qt.ItemDataRole.DisplayRole) == plugin_name:
                 self._model.removeRow(row)
                 break
         self.item_removed.emit(plugin_name)

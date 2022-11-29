@@ -40,7 +40,7 @@ class TestArrayModel(unittest.TestCase):
 
     def test_data_for_first_row_returns_none_with_empty_array(self):
         model = ArrayModel(self._parent)
-        roles = [Qt.DisplayRole, Qt.ToolTip]
+        roles = [Qt.ItemDataRole.DisplayRole, Qt.ToolTip]
         self.assertEqual(model.index(0, 0).data(), 1)
         index = model.index(0, 1)
         self.assertTrue(index.isValid())
@@ -51,7 +51,7 @@ class TestArrayModel(unittest.TestCase):
         model = ArrayModel(self._parent)
         index = model.index(0, 1)
         self.assertTrue(index.isValid())
-        self.assertEqual(model.data(index, Qt.EditRole), 0.0)
+        self.assertEqual(model.data(index, Qt.ItemDataRole.EditRole), 0.0)
 
     def test_insertRows_when_empty_array(self):
         model = ArrayModel(self._parent)
@@ -115,14 +115,14 @@ class TestArrayModel(unittest.TestCase):
     def test_index_type_is_in_header(self):
         model = ArrayModel(self._parent)
         model.reset(Array([5.0], index_name="index"))
-        self.assertEqual(model.headerData(0, Qt.Horizontal), "index")
+        self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "index")
 
     def test_set_index_type_via_header(self):
         model = ArrayModel(self._parent)
         model.reset(Array([5.0], index_name="index"))
-        self.assertEqual(model.headerData(0, Qt.Horizontal), "index")
-        self.assertTrue(model.setHeaderData(0, Qt.Horizontal, "new index"))
-        self.assertEqual(model.headerData(0, Qt.Horizontal), "new index")
+        self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "index")
+        self.assertTrue(model.setHeaderData(0, Qt.Orientation.Horizontal, "new index"))
+        self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "new index")
         self.assertEqual(model.array().index_name, "new index")
 
 

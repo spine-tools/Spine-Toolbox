@@ -86,16 +86,16 @@ class EmptyParameterModel(EmptyRowModel):
     def item_id(self, _row):  # pylint: disable=no-self-use
         return None
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == DB_MAP_ROLE:
             return self.db_map
         if self.header[index.column()] == self.value_field and role in (
-            Qt.DisplayRole,
-            Qt.ToolTipRole,
+            Qt.ItemDataRole.DisplayRole,
+            Qt.ItemDataRole.ToolTipRole,
             Qt.TextAlignmentRole,
             PARSED_ROLE,
         ):
-            data = super().data(index, role=Qt.EditRole)
+            data = super().data(index, role=Qt.ItemDataRole.EditRole)
             return self.db_mngr.get_value_from_data(data, role)
         return super().data(index, role)
 

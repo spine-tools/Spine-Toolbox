@@ -279,7 +279,7 @@ class MainToolBar(ToolBar):
             return
         while source.parent() != self:
             source = source.parent()
-        if self.orientation() == Qt.Horizontal:
+        if self.orientation() == Qt.Orientation.Horizontal:
             after = target.geometry().center().x() < event.pos().x()
         else:
             after = target.geometry().center().y() < event.pos().y()
@@ -305,7 +305,7 @@ class MainToolBar(ToolBar):
         widget = self.widgetForAction(self._drop_target_action)
         geom = widget.geometry()
         margins = self.layout().contentsMargins()
-        if self.orientation() == Qt.Horizontal:
+        if self.orientation() == Qt.Orientation.Horizontal:
             x = geom.left() - 1
             return x, margins.left(), x, self.height() - margins.top()
         y = geom.top() - 1

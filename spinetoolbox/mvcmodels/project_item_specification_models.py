@@ -108,16 +108,16 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         if not index.isValid() or self.rowCount() == 0:
             return None
         row = index.row()
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self._spec_names[row]
-        if role == Qt.ToolTipRole:
+        if role == Qt.ItemDataRole.ToolTipRole:
             if row >= self.rowCount():
                 return ""
             return (
                 "<p>Drag-and-drop this onto the Design View "
                 f"to create a new <b>{self._spec_names[row]}</b> item.</p>"
             )
-        if role == Qt.DecorationRole:
+        if role == Qt.ItemDataRole.DecorationRole:
             spec = self.specification(row)
             return self._icons[spec.item_type]
 

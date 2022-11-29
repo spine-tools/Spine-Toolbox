@@ -182,7 +182,7 @@ class CompoundTableModel(MinimalTableModel):
     def flags(self, index):
         return self.map_to_sub(index).flags()
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         return self.map_to_sub(index).data(role)
 
     def rowCount(self, parent=QModelIndex()):

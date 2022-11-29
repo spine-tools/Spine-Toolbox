@@ -37,7 +37,7 @@ class ParameterValueListModel(TreeModelBase):
         return 1
 
     def index_name(self, index):
-        return self.data(index.parent(), role=Qt.DisplayRole)
+        return self.data(index.parent(), role=Qt.ItemDataRole.DisplayRole)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,

@@ -46,13 +46,13 @@ class _MockParentModel(QAbstractTableModel):
     def columnCount(self, parent=QModelIndex()):
         return 2
 
-    def data(self, index, role=Qt.DisplayRole):
-        if role not in (Qt.DisplayRole, Qt.EditRole, Qt.UserRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.UserRole):
             return None
         return self._table[index.column()][index.row()]
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.EditRole:
             return False
         self._table[index.column()][index.row()] = value
         return True

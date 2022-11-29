@@ -44,7 +44,7 @@ class ArrayValueEditor(ParameterValueEditorBase):
         super().__init__(index, editors, parent)
         self._model = index.model()
         self.setWindowTitle("Edit array element")
-        self._select_editor(index.data(Qt.EditRole))
+        self._select_editor(index.data(Qt.ItemDataRole.EditRole))
 
     def _set_data(self, value):
         """See base class."""

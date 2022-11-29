@@ -126,16 +126,16 @@ class MetadataTableModelBase(QAbstractTableModel):
     def columnCount(self, parent=QModelIndex()):
         return len(self._HEADER)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         column = index.column()
         row = index.row()
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             if column == Column.DB_MAP:
                 db_map = self._data[row][column] if row < len(self._data) else self._adder_row[column]
                 return db_map.codename if db_map is not None else ""
             return self._data[row][column] if row < len(self._data) else self._adder_row[column]
         if (
-            role == Qt.BackgroundRole
+            role == Qt.ItemDataRole.BackgroundRole
             and column == Column.DB_MAP
             and row < len(self._data)
             and self._row_id(self._data[row]) is not None
@@ -164,8 +164,8 @@ class MetadataTableModelBase(QAbstractTableModel):
         """
         raise NotImplementedError()
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.EditRole:
             return False
         column = index.column()
         row = index.row()
@@ -182,7 +182,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         metadata_value = target_row[Column.VALUE]
         db_map = target_row[Column.DB_MAP]
         if not name or not metadata_value or db_map is None:
-            self.dataChanged.emit(index, index, [Qt.DisplayRole])
+            self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
             return True
         if reserved.get(db_map, {}).get(name) == metadata_value:
             target_row[column] = previous_value
@@ -199,7 +199,7 @@ class MetadataTableModelBase(QAbstractTableModel):
             self._adder_row = self._make_adder_row(db_map)
             top_left = self.index(data_length, 0)
             bottom_right = self.index(data_length, Column.DB_MAP)
-            self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+            self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
         return True
 
     def batch_set_data(self, indexes, values):
@@ -264,12 +264,12 @@ class MetadataTableModelBase(QAbstractTableModel):
         if rows:
             top_left = self.index(min(rows), min(columns))
             bottom_right = self.index(max(rows), max(columns))
-            self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+            self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
         if duplicates_found:
             self.msg_error.emit("Duplicate metadata names and values.")
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation != Qt.Horizontal or role != Qt.DisplayRole:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if orientation != Qt.Orientation.Horizontal or role != Qt.ItemDataRole.DisplayRole:
             return None
         return self._HEADER[section]
 
@@ -391,7 +391,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         if id_update_rows:
             top_left = self.index(min(id_update_rows), Column.DB_MAP)
             bottom_right = self.index(max(id_update_rows), Column.DB_MAP)
-            self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
+            self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.BackgroundRole])
 
     def _update_data(self, db_map_data, id_column):
         """Update data table after database update.
@@ -421,7 +421,7 @@ class MetadataTableModelBase(QAbstractTableModel):
             if updated_rows:
                 top_left = self.index(updated_rows[0], 0)
                 bottom_right = self.index(updated_rows[-1], Column.DB_MAP - 1)
-                self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
 
     def _remove_data(self, db_map_data, id_column):
         """Removes data from model after it has been removed from databases.
@@ -457,7 +457,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         self._data.sort(key=sort_key, reverse=order == Qt.DescendingOrder)
         top_left = self.index(0, 0)
         bottom_right = self.index(len(self._data) - 1, Column.DB_MAP)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole, Qt.BackgroundRole])
+        self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.BackgroundRole])
 
     def _find_db_map(self, codename):
         """Finds database mapping with given codename.

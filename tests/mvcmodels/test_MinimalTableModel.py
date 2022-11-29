@@ -79,7 +79,7 @@ class TestMinimalTableModel(unittest.TestCase):
         model.set_horizontal_header_labels(labels)
         for index, label in enumerate(labels):
             self.assertEqual(model.headerData(index), label)
-        self.assertEqual(model.headerData(5, orientation=Qt.Vertical), 5 + 1)
+        self.assertEqual(model.headerData(5, orientation=Qt.Orientation.Vertical), 5 + 1)
 
     def test_set_horizontal_header_labels(self):
         """Test the set_horizontal_header_labels() method of MinimalTableModel."""
@@ -103,11 +103,11 @@ class TestMinimalTableModel(unittest.TestCase):
         """Test the setHeaderData() method of MinimalTableModel."""
         model = MinimalTableModel()
         model.set_horizontal_header_labels(['a'])
-        self.assertTrue(model.setHeaderData(0, Qt.Horizontal, 'b'))
+        self.assertTrue(model.setHeaderData(0, Qt.Orientation.Horizontal, 'b'))
         self.assertEqual(model.horizontal_header_labels(), ['b'])
-        self.assertFalse(model.setHeaderData(0, Qt.Vertical, 'c'))
-        self.assertFalse(model.setHeaderData(0, Qt.Horizontal, 'd', role=Qt.ToolTipRole))
-        self.assertIsNone(model.headerData(0, role=Qt.ToolTipRole))
+        self.assertFalse(model.setHeaderData(0, Qt.Orientation.Vertical, 'c'))
+        self.assertFalse(model.setHeaderData(0, Qt.Orientation.Horizontal, 'd', role=Qt.ItemDataRole.ToolTipRole))
+        self.assertIsNone(model.headerData(0, role=Qt.ItemDataRole.ToolTipRole))
 
     def test_data(self):
         """Test the data() method of MinimalTableModel."""
@@ -154,8 +154,8 @@ class TestMinimalTableModel(unittest.TestCase):
         def _handle_data_changed(top_left, bottom_right, roles):
             self.assertEqual(top_left, indices[0])
             self.assertEqual(bottom_right, indices[-1])
-            self.assertTrue(Qt.EditRole in roles)
-            self.assertTrue(Qt.DisplayRole in roles)
+            self.assertTrue(Qt.ItemDataRole.EditRole in roles)
+            self.assertTrue(Qt.ItemDataRole.DisplayRole in roles)
 
         model.dataChanged.connect(_handle_data_changed)
         self.assertTrue(model.batch_set_data(indices, background))

@@ -62,7 +62,7 @@ class TestProjectItemModel(unittest.TestCase):
         self.assertTrue(category_index.isValid())
         self.assertEqual(category_index.row(), 0)
         self.assertEqual(category_index.column(), 0)
-        self.assertEqual(model.data(category_index, Qt.DisplayRole), "category")
+        self.assertEqual(model.data(category_index, Qt.ItemDataRole.DisplayRole), "category")
 
     def test_insert_item_leaf_item(self):
         root = RootProjectTreeItem()

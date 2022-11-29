@@ -38,26 +38,26 @@ class IndexedValueTableModel(QAbstractTableModel):
         """Returns the number of columns which is two."""
         return 2
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns the data at index for given role."""
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             row = index.row()
             if row == len(self._value):
                 return None
             if index.column() == 0:
                 return str(self._value.indexes[index.row()])
             return float(self._value.values[index.row()])
-        if role == Qt.BackgroundRole:
+        if role == Qt.ItemDataRole.BackgroundRole:
             if index.row() == len(self._value):
                 return EXPANSE_COLOR
             return None
         return None
 
-    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+    def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
         """Returns a header."""
-        if role != Qt.DisplayRole:
+        if role != Qt.ItemDataRole.DisplayRole:
             return None
-        if orientation == Qt.Vertical:
+        if orientation == Qt.Orientation.Vertical:
             return section + 1
         return (self._value.index_name, "Value")[section]
 
@@ -83,8 +83,8 @@ class IndexedValueTableModel(QAbstractTableModel):
         """Returns the number of rows."""
         return len(self._value) + 1
 
-    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
-        if role != Qt.EditRole or section != 0 or orientation != Qt.Horizontal or not value:
+    def setHeaderData(self, section, orientation, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.EditRole or section != 0 or orientation != Qt.Orientation.Horizontal or not value:
             return False
         self._value.index_name = value
         self.headerDataChanged.emit(orientation, section, section)

@@ -188,7 +188,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         if not index.isValid():
             return
         model = self.model()
-        is_value = model.headerData(index.column(), Qt.Horizontal) == self.value_column_header
+        is_value = model.headerData(index.column(), Qt.Orientation.Horizontal) == self.value_column_header
         self._open_in_editor_action.setEnabled(is_value)
         self._plot_action.setEnabled(is_value)
         if is_value:
@@ -604,8 +604,8 @@ class PivotTableView(CopyPasteTableView):
             self._remove_relationships_action = None
             self._plot_action = None
             self._plot_in_window_menu = None
-            horizontal_header = ParameterValuePivotHeaderView(Qt.Horizontal, "columns", view)
-            vertical_header = ParameterValuePivotHeaderView(Qt.Vertical, "rows", view)
+            horizontal_header = ParameterValuePivotHeaderView(Qt.Orientation.Horizontal, "columns", view)
+            vertical_header = ParameterValuePivotHeaderView(Qt.Orientation.Vertical, "rows", view)
             super().__init__(view, db_editor, horizontal_header, vertical_header)
             self._header_selection_lists["parameter"] = self._selected_parameter_indexes
 
@@ -738,8 +738,8 @@ class PivotTableView(CopyPasteTableView):
                 db_editor (SpineDBEditor): database editor
             """
             self._remove_objects_action = None
-            horizontal_header = PivotTableHeaderView(Qt.Horizontal, "columns", view)
-            vertical_header = PivotTableHeaderView(Qt.Vertical, "rows", view)
+            horizontal_header = PivotTableHeaderView(Qt.Orientation.Horizontal, "columns", view)
+            vertical_header = PivotTableHeaderView(Qt.Orientation.Vertical, "rows", view)
             super().__init__(view, db_editor, horizontal_header, vertical_header)
 
         def populate_context_menu(self):
@@ -769,9 +769,9 @@ class PivotTableView(CopyPasteTableView):
             self._toggle_alternatives_checked.triggered.connect(self._toggle_checked_state)
             self._remove_scenarios_action = None
             self._duplicate_scenario_action = None
-            horizontal_header = ScenarioAlternativePivotHeaderView(Qt.Horizontal, "columns", view)
+            horizontal_header = ScenarioAlternativePivotHeaderView(Qt.Orientation.Horizontal, "columns", view)
             horizontal_header.context_menu_requested.connect(self.show_context_menu)
-            vertical_header = ScenarioAlternativePivotHeaderView(Qt.Vertical, "rows", view)
+            vertical_header = ScenarioAlternativePivotHeaderView(Qt.Orientation.Vertical, "rows", view)
             vertical_header.context_menu_requested.connect(self.show_context_menu)
             super().__init__(view, db_editor, horizontal_header, vertical_header)
             self._header_selection_lists["scenario"] = self._selected_scenario_indexes

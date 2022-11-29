@@ -183,7 +183,7 @@ class TreeItem:
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
     # pylint: disable=no-self-use
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
         return None
 
@@ -310,14 +310,14 @@ class MinimalTreeModel(QAbstractItemModel):
         parent_item = self.item_from_index(parent)
         return parent_item.child_count()
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns the data stored under the given role for the index."""
         if not index.isValid():
             return None
         item = self.item_from_index(index)
         return item.data(index.column(), role)
 
-    def setData(self, index, value, role=Qt.EditRole):
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         """Sets data for given index and role.
         Returns True if successful; otherwise returns False.
         """

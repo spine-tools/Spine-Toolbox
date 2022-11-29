@@ -88,8 +88,8 @@ class ListItem(
     def _children_sort_key(self, child):
         return self.db_mngr.get_item(self.db_map, "list_value", child.id)["index"]
 
-    def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.DecorationRole:
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DecorationRole:
             engine = CharIconEngine("\uf022", 0)
             return QIcon(engine.pixmap())
         return super().data(column, role)
@@ -109,10 +109,10 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def item_type(self):
         return "list_value"
 
-    def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and not self.id:
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole and not self.id:
             return "Enter new list value here..."
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, PARSED_ROLE):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole, PARSED_ROLE):
             return self.db_mngr.get_value(self.db_map, self.item_type, self.id, role=role)
         return super().data(column, role)
 

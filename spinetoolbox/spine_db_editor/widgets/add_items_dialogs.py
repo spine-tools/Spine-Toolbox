@@ -385,7 +385,7 @@ class AddRelationshipClassesDialog(ShowIconColorEditorMixin, GetObjectClassesMix
 
     @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        if Qt.EditRole not in roles:
+        if Qt.ItemDataRole.EditRole not in roles:
             return
         top = top_left.row()
         left = top_left.column()
@@ -559,7 +559,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
 
     @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        if Qt.EditRole not in roles:
+        if Qt.ItemDataRole.EditRole not in roles:
             return
         header = self.model.horizontal_header_labels()
         top = top_left.row()

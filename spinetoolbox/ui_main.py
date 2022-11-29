@@ -1290,17 +1290,17 @@ class ToolboxUI(QMainWindow):
             dock.setMinimumSize(0, 0)
             dock.setVisible(True)
             dock.setFloating(False)
-        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_eventlog, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_eventlog, Qt.Orientation.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Orientation.Horizontal)
         self.ui.dockWidget_eventlog.raise_()
-        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Orientation.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Orientation.Horizontal)
         docks = (self.ui.dockWidget_project, self.ui.dockWidget_design_view, self.ui.dockWidget_item)
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.3 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.3 * width], Qt.Orientation.Horizontal)
         docks = (self.ui.dockWidget_project, self.ui.dockWidget_eventlog)
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.6 * width, 0.4 * width], Qt.Vertical)
+        self.resizeDocks(docks, [0.6 * width, 0.4 * width], Qt.Orientation.Vertical)
 
     def _add_actions(self):
         """Adds actions to the main window."""

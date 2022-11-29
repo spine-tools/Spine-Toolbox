@@ -337,7 +337,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
         self.splitter_console = QSplitter(self.dockWidgetContents_console)
         self.splitter_console.setObjectName(u"splitter_console")
-        self.splitter_console.setOrientation(Qt.Vertical)
+        self.splitter_console.setOrientation(Qt.Orientation.Vertical)
         self.listView_console_executions = QTreeView(self.splitter_console)
         self.listView_console_executions.setObjectName(u"listView_console_executions")
         sizePolicy1.setHeightForWidth(self.listView_console_executions.sizePolicy().hasHeightForWidth())

@@ -81,9 +81,9 @@ class EntityClassItem(MultiDBTreeItem):
             self.first_db_map, self.item_type, self.db_map_id(self.first_db_map), for_group=for_group
         )
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
-        if role == Qt.ToolTipRole:
+        if role == Qt.ItemDataRole.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
         if role == Qt.FontRole and column == 0:
             bold_font = QFont()
@@ -187,7 +187,7 @@ class MemberObjectClassItem(ObjectClassItem):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict()
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
         if role == Qt.FontRole and column == 0:
             bold_font = QFont()
@@ -211,8 +211,8 @@ class EntityItem(MultiDBTreeItem):
     def is_group(self):
         return any(self.db_map_data_field(db_map, "group_id") is not None for db_map in self.db_maps)
 
-    def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.ToolTipRole:
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
         return super().data(column, role)
 

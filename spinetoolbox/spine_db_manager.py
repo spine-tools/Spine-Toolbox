@@ -775,7 +775,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def display_data_from_parsed(parsed_data):
-        """Returns the value's database representation formatted for Qt.DisplayRole."""
+        """Returns the value's database representation formatted for Qt.ItemDataRole.DisplayRole."""
         if isinstance(parsed_data, TimeSeries):
             display_data = "Time series"
         elif isinstance(parsed_data, Map):
@@ -795,7 +795,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def tool_tip_data_from_parsed(parsed_data):
-        """Returns the value's database representation formatted for Qt.ToolTipRole."""
+        """Returns the value's database representation formatted for Qt.ItemDataRole.ToolTipRole."""
         if isinstance(parsed_data, TimeSeriesFixedResolution):
             resolution = [relativedelta_to_duration(r) for r in parsed_data.resolution]
             resolution = ', '.join(resolution)
@@ -828,7 +828,7 @@ class SpineDBManager(QObject):
             formatted_value = value_list_name + formatted_value
         return formatted_value
 
-    def get_value(self, db_map, item_type, id_, role=Qt.DisplayRole):
+    def get_value(self, db_map, item_type, id_, role=Qt.ItemDataRole.DisplayRole):
         """Returns the value or default value of a parameter.
 
         Args:
@@ -850,16 +850,16 @@ class SpineDBManager(QObject):
         }[item_type]
         list_value_id = id_ if item_type == "list_value" else item["list_value_id"]
         complex_types = {"array": "Array", "time_series": "Time series", "time_pattern": "Time pattern", "map": "Map"}
-        if role == Qt.DisplayRole and item[type_field] in complex_types:
+        if role == Qt.ItemDataRole.DisplayRole and item[type_field] in complex_types:
             return self._format_list_value(db_map, item_type, complex_types[item[type_field]], list_value_id)
-        if role == Qt.EditRole:
+        if role == Qt.ItemDataRole.EditRole:
             return join_value_and_type(item[value_field], item[type_field])
         key = "parsed_value"
         if key not in item:
             item[key] = self._parse_value(item[value_field], item[type_field])
         return self._format_value(item[key], role=role)
 
-    def get_value_from_data(self, data, role=Qt.DisplayRole):
+    def get_value_from_data(self, data, role=Qt.ItemDataRole.DisplayRole):
         """Returns the value or default value of a parameter directly from data.
         Used by ``EmptyParameterModel.data()``.
 
@@ -882,16 +882,16 @@ class SpineDBManager(QObject):
         except ParameterValueFormatError as error:
             return error
 
-    def _format_value(self, parsed_value, role=Qt.DisplayRole):
+    def _format_value(self, parsed_value, role=Qt.ItemDataRole.DisplayRole):
         """Formats the given value for the given role.
 
         Args:
             parsed_value (object): A python object as returned by spinedb_api.from_database
             role (int, optional)
         """
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self.display_data_from_parsed(parsed_value)
-        if role == Qt.ToolTipRole:
+        if role == Qt.ItemDataRole.ToolTipRole:
             return self.tool_tip_data_from_parsed(parsed_value)
         if role == Qt.TextAlignmentRole:
             if isinstance(parsed_value, str):
@@ -914,7 +914,7 @@ class SpineDBManager(QObject):
             return parsed_value.indexes
         return [""]
 
-    def get_value_index(self, db_map, item_type, id_, index, role=Qt.DisplayRole):
+    def get_value_index(self, db_map, item_type, id_, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns the value or default value of a parameter for a given index.
 
         Args:
@@ -927,17 +927,17 @@ class SpineDBManager(QObject):
         parsed_value = self.get_value(db_map, item_type, id_, role=PARSED_ROLE)
         if isinstance(parsed_value, IndexedValue):
             parsed_value = parsed_value.get_value(index)
-        if role == Qt.EditRole:
+        if role == Qt.ItemDataRole.EditRole:
             return join_value_and_type(*to_database(parsed_value))
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self.display_data_from_parsed(parsed_value)
-        if role == Qt.ToolTipRole:
+        if role == Qt.ItemDataRole.ToolTipRole:
             return self.tool_tip_data_from_parsed(parsed_value)
         if role == PARSED_ROLE:
             return parsed_value
         return None
 
-    def get_value_list_item(self, db_map, id_, index, role=Qt.DisplayRole, only_visible=True):
+    def get_value_list_item(self, db_map, id_, index, role=Qt.ItemDataRole.DisplayRole, only_visible=True):
         """Returns one value item of a parameter_value_list.
 
         Args:
@@ -951,7 +951,7 @@ class SpineDBManager(QObject):
         except IndexError:
             return None
 
-    def get_parameter_value_list(self, db_map, id_, role=Qt.DisplayRole, only_visible=True):
+    def get_parameter_value_list(self, db_map, id_, role=Qt.ItemDataRole.DisplayRole, only_visible=True):
         """Returns a parameter_value_list formatted for the given role.
 
         Args:

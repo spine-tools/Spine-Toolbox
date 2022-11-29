@@ -73,7 +73,7 @@ class NiceButton(QToolButton):
         super().setText(fill(text, width=12, break_long_words=False))
 
     def set_orientation(self, orientation):
-        if orientation == Qt.Horizontal:
+        if orientation == Qt.Orientation.Horizontal:
             self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         else:
             self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
@@ -283,7 +283,7 @@ class ProjectItemSpecArray(QToolBar):
         """
         actions_iter = (self._actions.get(spec.name) for spec in self._model.specifications())
         actions = [act for act in actions_iter if act is not None]
-        if self.orientation() == Qt.Horizontal:
+        if self.orientation() == Qt.Orientation.Horizontal:
             get_point = lambda ref_geom: (ref_geom.right() + 1, ref_geom.top())
         else:
             get_point = lambda ref_geom: (ref_geom.left(), ref_geom.bottom() + 1)
@@ -335,7 +335,7 @@ class ProjectItemSpecArray(QToolBar):
         geom = previous.geometry()
         style = self.style()
         extension_extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
-        if self.orientation() == Qt.Horizontal:
+        if self.orientation() == Qt.Orientation.Horizontal:
             toolbar_size = self.width() - extension_extent - 2 * self._margins.left() + 2
             x, y = geom.right() + 1, geom.top()
             w, h = toolbar_size - geom.right(), geom.height()
@@ -392,7 +392,7 @@ class ProjectItemSpecArray(QToolBar):
         style = self.style()
         extent = style.pixelMetric(QStyle.PM_ToolBarExtensionExtent)
         down, right = "\uf0d7", "\uf0da"
-        if orientation == Qt.Horizontal:
+        if orientation == Qt.Orientation.Horizontal:
             icon = down if not self._visible else right
             width = extent
             min_width = self._button_base_item.sizeHint().width() + extent + self._margins.left() + spacing
@@ -460,7 +460,7 @@ class ProjectItemSpecArray(QToolBar):
         self._update_button_geom()
 
     def _remove_spec(self, row):
-        spec_name = self._model.index(row, 0).data(Qt.DisplayRole)
+        spec_name = self._model.index(row, 0).data(Qt.ItemDataRole.DisplayRole)
         try:
             action = self._actions.pop(spec_name)
             self.removeAction(action)

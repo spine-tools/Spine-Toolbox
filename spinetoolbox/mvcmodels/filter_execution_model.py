@@ -30,15 +30,15 @@ class FilterExecutionModel(QAbstractListModel):
     def rowCount(self, parent=QModelIndex()):
         return len(self._filter_consoles)
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if section == 0 and orientation == Qt.Horizontal and role == Qt.DisplayRole:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if section == 0 and orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return "Executions"
         return None
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not self._filter_consoles or not index.isValid():
             return None
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return list(self._filter_consoles.keys())[index.row()]
         return None
 

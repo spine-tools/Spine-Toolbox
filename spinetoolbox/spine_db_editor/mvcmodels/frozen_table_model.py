@@ -73,7 +73,7 @@ class FrozenTableModel(QAbstractItemModel):
             return self._data[index.row()]
 
     def data(self, index, role):
-        if role in (Qt.DisplayRole, Qt.ToolTipRole):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole):
             header_id = self._data[index.row()][index.column()]
             if index.row() == 0:
                 return header_id
@@ -97,15 +97,15 @@ class FrozenTableModel(QAbstractItemModel):
                 db_map, id_ = header_id
                 item = self.db_mngr.get_item(db_map, "object", id_)
                 name = item.get("name")
-            if role == Qt.DisplayRole:
+            if role == Qt.ItemDataRole.DisplayRole:
                 return name
             description = item.get("description")
             if description in (None, ""):
                 description = name
             return description
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole:
             return None
         return super().headerData(section, orientation, role=role)
 

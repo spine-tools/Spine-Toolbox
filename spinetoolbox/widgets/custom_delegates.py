@@ -39,7 +39,7 @@ class ComboBoxDelegate(QStyledItemDelegate):
         return editor
 
     def paint(self, painter, option, index):
-        value = index.data(Qt.DisplayRole)
+        value = index.data(Qt.ItemDataRole.DisplayRole)
         style = QApplication.style()
         opt = QStyleOptionComboBox()
         opt.text = str(value)
@@ -48,13 +48,13 @@ class ComboBoxDelegate(QStyledItemDelegate):
         super().paint(painter, option, index)
 
     def setEditorData(self, editor, index):
-        value = index.data(Qt.DisplayRole)
+        value = index.data(Qt.ItemDataRole.DisplayRole)
         ind = self._items.get(value, -1)
         editor.setCurrentIndex(ind)
 
     def setModelData(self, editor, model, index):
         value = editor.currentText()
-        model.setData(index, value, Qt.EditRole)
+        model.setData(index, value, Qt.ItemDataRole.EditRole)
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
@@ -119,7 +119,7 @@ class CheckBoxDelegate(QStyledItemDelegate):
         if event.type() == QEvent.MouseButtonDblClick:
             return True
         if event.type() == QEvent.MouseButtonPress and self.get_checkbox_rect(option).contains(event.pos()):
-            self.data_committed.emit(index, not index.data(Qt.EditRole))
+            self.data_committed.emit(index, not index.data(Qt.ItemDataRole.EditRole))
             return True
         return False
 

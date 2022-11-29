@@ -164,9 +164,9 @@ class ProjectItemModel(QAbstractItemModel):
         if not index.isValid():
             return None
         item = index.internalPointer()
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return item.name
-        if role == Qt.DecorationRole:
+        if role == Qt.ItemDataRole.DecorationRole:
             if not hasattr(item, "project_item"):
                 # item is a CategoryProjectTreeItem or root
                 return None
@@ -223,7 +223,7 @@ class ProjectItemModel(QAbstractItemModel):
         for category in self.root().children():
             category_index = self.find_category(category.name)
             start_index = self.index(0, 0, category_index)
-            matching_index = self.match(start_index, Qt.DisplayRole, name, 1, Qt.MatchFixedString | Qt.MatchRecursive)
+            matching_index = self.match(start_index, Qt.ItemDataRole.DisplayRole, name, 1, Qt.MatchFixedString | Qt.MatchRecursive)
             if not matching_index:
                 pass  # no match in this category
             elif len(matching_index) == 1:

@@ -611,11 +611,11 @@ class TabularViewMixin:
         top_indexes, left_indexes = self.pivot_table_model.top_left_indexes()
         for index in left_indexes:
             proxy_index = self.pivot_table_proxy.mapFromSource(index)
-            widget = self.create_header_widget(proxy_index.data(Qt.DisplayRole), "columns")
+            widget = self.create_header_widget(proxy_index.data(Qt.ItemDataRole.DisplayRole), "columns")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
         for index in top_indexes:
             proxy_index = self.pivot_table_proxy.mapFromSource(index)
-            widget = self.create_header_widget(proxy_index.data(Qt.DisplayRole), "rows")
+            widget = self.create_header_widget(proxy_index.data(Qt.ItemDataRole.DisplayRole), "rows")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
         QTimer.singleShot(0, self._resize_pivot_header_columns)
 
@@ -633,7 +633,7 @@ class TabularViewMixin:
         """
         for column in range(self.frozen_table_model.columnCount()):
             index = self.frozen_table_model.index(0, column)
-            widget = self.create_header_widget(index.data(Qt.DisplayRole), "frozen", with_menu=False)
+            widget = self.create_header_widget(index.data(Qt.ItemDataRole.DisplayRole), "frozen", with_menu=False)
             self.ui.frozen_table.setIndexWidget(index, widget)
             column_width = self.ui.frozen_table.horizontalHeader().sectionSize(column)
             header_width = widget.size().width()
@@ -704,8 +704,8 @@ class TabularViewMixin:
             position (str): either "before", "after", or ""
         """
         top_indexes, left_indexes = self.pivot_table_model.top_left_indexes()
-        rows = [index.data(Qt.DisplayRole) for index in top_indexes]
-        columns = [index.data(Qt.DisplayRole) for index in left_indexes]
+        rows = [index.data(Qt.ItemDataRole.DisplayRole) for index in top_indexes]
+        columns = [index.data(Qt.ItemDataRole.DisplayRole) for index in left_indexes]
         frozen = self.frozen_table_model.headers
         dropped_list = {"columns": columns, "rows": rows, "frozen": frozen}[dropped.area]
         catcher_list = {"columns": columns, "rows": rows, "frozen": frozen}[catcher.area]

@@ -41,7 +41,7 @@ class TestSpineDBEditorFilterMixin:
     @staticmethod
     def _parameter_data(model, *fields):
         return [
-            tuple(model.index(row, model.header.index(field)).data(Qt.EditRole) for field in fields)
+            tuple(model.index(row, model.header.index(field)).data(Qt.ItemDataRole.EditRole) for field in fields)
             for row in range(model.rowCount())
         ]
 

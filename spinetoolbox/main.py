@@ -37,7 +37,7 @@ from spine_items import resources_icons_rc  # pylint: disable=unused-import
 from .ui_main import ToolboxUI
 from .version import __version__
 from .headless import headless_main, Status
-from .helpers import pyside2_version_check
+from .helpers import pyside6_version_check
 
 
 def main():
@@ -49,8 +49,8 @@ def main():
         format='%(asctime)s %(levelname)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
     )
-    # if not pyside2_version_check():
-    #     return 1
+    if not pyside6_version_check():
+        return 1
     _add_pywin32_system32_to_path()
     parser = _make_argument_parser()
     args = parser.parse_args()

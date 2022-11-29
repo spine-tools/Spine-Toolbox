@@ -21,7 +21,7 @@ from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
 from PySide6.QtWidgets import QWidget, QPlainTextEdit, QPlainTextDocumentLayout
-from PySide6.QtGui import QColor, QFontMetrics, QFontDatabase, QPainter, QTextDocument
+from PySide6.QtGui import QColor, QFontMetrics, QFontDatabase, QPainter
 from PySide6.QtCore import QSize, Slot, QRect, Qt
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 

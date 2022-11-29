@@ -68,7 +68,7 @@ class EmptyRowModel(MinimalTableModel):
         with any data other than the defaults."""
         if roles is None:
             roles = list()
-        if roles and Qt.EditRole not in roles:
+        if roles and Qt.ItemDataRole.EditRole not in roles:
             return
         last_row = self.rowCount() - 1
         for column in range(self.columnCount()):

@@ -145,7 +145,7 @@ class MetadataTableModel(MetadataTableModelBase):
             if updated_rows:
                 top_left = self.index(updated_rows[0], 0)
                 bottom_right = self.index(updated_rows[-1], Column.DB_MAP - 1)
-                self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
 
     def remove_metadata(self, db_map_data):
         """Removes metadata from model after it has been removed from databases.

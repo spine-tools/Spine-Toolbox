@@ -110,7 +110,7 @@ class ManageItemsDialog(ManageItemsDialogBase):
         """Update model data."""
         if data is None:
             return
-        self.model.setData(index, data, Qt.EditRole)
+        self.model.setData(index, data, Qt.ItemDataRole.EditRole)
 
     @Slot()
     def _handle_model_reset(self):
@@ -200,6 +200,6 @@ class ShowIconColorEditorMixin:
     @busy_effect
     def show_icon_color_editor(self, index):
         editor = IconColorEditor(self)
-        editor.set_data(index.data(Qt.DisplayRole))
+        editor.set_data(index.data(Qt.ItemDataRole.DisplayRole))
         editor.accepted.connect(lambda index=index, editor=editor: self.set_model_data(index, editor.data()))
         editor.show()

@@ -743,7 +743,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if event.modifiers() != Qt.ShiftModifier:
             super().wheelEvent(event)
             return
-        if event.orientation() != Qt.Vertical:
+        if event.orientation() != Qt.Orientation.Vertical:
             event.ignore()
             return
         event.accept()

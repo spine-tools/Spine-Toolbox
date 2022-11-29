@@ -125,7 +125,7 @@ class CopyPasteTableView(QTableView):
                     for j in range(rng.left(), rng.right() + 1):
                         if h_header.isSectionHidden(j):
                             continue
-                        data = self.model().index(i, j).data(Qt.EditRole)
+                        data = self.model().index(i, j).data(Qt.ItemDataRole.EditRole)
                         if data is not None:
                             try:
                                 number = float(data)
@@ -713,7 +713,7 @@ class MapTableView(CopyPasteTableView):
                     index = model.index(y, x)
                     if not selection.contains(index):
                         continue
-                    data = index.data(Qt.EditRole)
+                    data = index.data(Qt.ItemDataRole.EditRole)
                     try:
                         number = float(data)
                         str_data = locale.str(number)

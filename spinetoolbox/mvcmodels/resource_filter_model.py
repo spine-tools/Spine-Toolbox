@@ -52,7 +52,7 @@ class ResourceFilterModel(QStandardItemModel):
         def append_filter_items(parent_item, filters, filter_type, disabled):
             for name in filters[filter_type]:
                 filter_item = QStandardItem(name)
-                filter_item.setData(Qt.Checked if name not in disabled else Qt.Unchecked, Qt.CheckStateRole)
+                filter_item.setData(Qt.Checked if name not in disabled else Qt.Unchecked, Qt.ItemDataRole.CheckStateRole)
                 filter_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 parent_item.appendRow(filter_item)
 
@@ -73,7 +73,7 @@ class ResourceFilterModel(QStandardItemModel):
                     continue
                 filter_parent.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
                 select_all_item = QStandardItem(self._SELECT_ALL)
-                select_all_item.setData(False, Qt.CheckStateRole)
+                select_all_item.setData(False, Qt.ItemDataRole.CheckStateRole)
                 select_all_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 filter_parent.appendRow(select_all_item)
                 root_item.appendRow(filter_parent)
@@ -96,8 +96,8 @@ class ResourceFilterModel(QStandardItemModel):
                 filters.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = tool_names
         return filters
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.CheckStateRole:
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.CheckStateRole:
             return super().setData(index, value, role)
         self._change_filter_checked_state(index, value == Qt.Checked)
         return True
@@ -139,9 +139,9 @@ class ResourceFilterModel(QStandardItemModel):
             is_on = online.get(filter_item.text(), None)
             if is_on is not None:
                 checked = Qt.Checked if is_on else Qt.Unchecked
-                if filter_item.data(Qt.CheckStateRole) != checked:
-                    filter_item.setData(checked, Qt.CheckStateRole)
-                    self.dataChanged.emit(filter_item.index(), filter_item.index(), [Qt.CheckStateRole])
+                if filter_item.data(Qt.ItemDataRole.CheckStateRole) != checked:
+                    filter_item.setData(checked, Qt.ItemDataRole.CheckStateRole)
+                    self.dataChanged.emit(filter_item.index(), filter_item.index(), [Qt.ItemDataRole.CheckStateRole])
         self._set_all_selected_item(resource, filter_type_item, True)
 
     def _find_filter_type_item(self, resource, filter_type):
@@ -179,9 +179,9 @@ class ResourceFilterModel(QStandardItemModel):
                     all_online = False
                     break
         all_selected_item = filter_type_item.child(0)
-        all_selected = all_selected_item.data(Qt.CheckStateRole) == Qt.Checked
+        all_selected = all_selected_item.data(Qt.ItemDataRole.CheckStateRole) == Qt.Checked
         if all_selected != all_online:
             checked = Qt.Checked if all_online else Qt.Unchecked
-            all_selected_item.setData(checked, Qt.CheckStateRole)
+            all_selected_item.setData(checked, Qt.ItemDataRole.CheckStateRole)
             if emit_data_changed:
-                self.dataChanged.emit(all_selected_item.index(), all_selected_item.index(), [Qt.CheckStateRole])
+                self.dataChanged.emit(all_selected_item.index(), all_selected_item.index(), [Qt.ItemDataRole.CheckStateRole])

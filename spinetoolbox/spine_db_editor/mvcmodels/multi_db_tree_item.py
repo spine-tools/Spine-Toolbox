@@ -415,16 +415,16 @@ class MultiDBTreeItem(FetchParent, TreeItem):
                 if row != -1:
                     yield row
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
         if column == 0:
-            if role == Qt.DecorationRole:
+            if role == Qt.ItemDataRole.DecorationRole:
                 return self.display_icon
-            if role == Qt.DisplayRole:
+            if role == Qt.ItemDataRole.DisplayRole:
                 return self.display_data
-            if role == Qt.EditRole:
+            if role == Qt.ItemDataRole.EditRole:
                 return self.edit_data
-        if column and role == Qt.DisplayRole:
+        if column and role == Qt.ItemDataRole.DisplayRole:
             return self.display_database
 
     def default_parameter_data(self):

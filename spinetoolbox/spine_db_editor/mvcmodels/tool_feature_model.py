@@ -71,7 +71,7 @@ class ToolFeatureModel(TreeModelBase):
         )
         value_index_list = [int(ind) for ind in parameter_value_list["value_index_list"].split(",")]
         display_value_list = self.db_mngr.get_parameter_value_list(
-            db_map, parameter_value_list_id, role=Qt.DisplayRole, only_visible=False
+            db_map, parameter_value_list_id, role=Qt.ItemDataRole.DisplayRole, only_visible=False
         )
         self._db_map_feature_methods.setdefault(db_map, {})[parameter_value_list_id] = dict(
             zip(display_value_list, value_index_list)

@@ -53,18 +53,18 @@ class StandardTreeItem(TreeItem):
         engine = CharIconEngine(self.icon_code, 0)
         return QIcon(engine.pixmap())
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         if column != 0:
             return None
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return self.display_data
-        if role == Qt.DecorationRole:
+        if role == Qt.ItemDataRole.DecorationRole:
             return self.display_icon
-        if role == Qt.ToolTipRole:
+        if role == Qt.ItemDataRole.ToolTipRole:
             return self.tool_tip
         return super().data(column, role)
 
-    def set_data(self, column, value, role=Qt.DisplayRole):
+    def set_data(self, column, value, role=Qt.ItemDataRole.DisplayRole):
         return False
 
     @property
@@ -89,7 +89,7 @@ class EditableMixin:
 class GrayIfLastMixin:
     """Paints the item gray if it's the last."""
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ForegroundRole and self.child_number() == self.parent_item.child_count() - 1:
             gray_color = QGuiApplication.palette().text().color()
             gray_color.setAlpha(128)
@@ -101,7 +101,7 @@ class GrayIfLastMixin:
 class BoldTextMixin:
     """Bolds text."""
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.FontRole:
             bold_font = QFont()
             bold_font.setBold(True)
@@ -235,13 +235,13 @@ class StandardDBItem(SortChildrenMixin, StandardTreeItem):
     def item_type(self):
         return "db"
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Shows Spine icon for fun."""
         if column != 0:
             return None
-        if role == Qt.DecorationRole:
+        if role == Qt.ItemDataRole.DecorationRole:
             return QIcon(":/symbols/Spine_symbol.png")
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return self.db_map.codename
 
 
@@ -299,18 +299,18 @@ class LeafItem(StandardTreeItem):
         raise NotImplementedError()
 
     def header_data(self, column):
-        return self.model.headerData(column, Qt.Horizontal)
+        return self.model.headerData(column, Qt.Orientation.Horizontal)
 
-    def data(self, column, role=Qt.DisplayRole):
-        if role in (Qt.DisplayRole, Qt.EditRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             data = self.item_data.get(self.header_data(column))
             if data is None:
                 data = ""
             return data
         return super().data(column, role)
 
-    def set_data(self, column, value, role=Qt.EditRole):
-        if role != Qt.EditRole or value == self.data(column, role):
+    def set_data(self, column, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.EditRole or value == self.data(column, role):
             return False
         if self.id:
             db_item = self._make_item_to_update(column, value)

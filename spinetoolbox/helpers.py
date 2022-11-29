@@ -242,21 +242,18 @@ def supported_img_formats():
     logging.debug("Supported Image formats:\n%s", img_formats_str)
 
 
-def pyside2_version_check():
-    """Check that PySide6 version is 5.14 or 5.15.
-    Version 5.15 is allowed but it is not promoted yet
-    because user's may need to update their VC++ runtime
-    libraries on Windows.
+def pyside6_version_check():
+    """Check that PySide6 version is at least 6.4.
 
-    qt_version is the Qt version used to compile PySide6 as string. E.g. "5.14.2"
-    qt_version_info is a tuple with each version component of Qt used to compile PySide6. E.g. (5, 14, 2)
+    qt_version (str) is the Qt version used to compile PySide6. E.g. "6.4.1"
+    qt_version_info (tuple) contains each version component separately e.g. (6, 4, 1)
     """
-    if not (qt_version_info[0] == 5 and qt_version_info[1] in (14, 15)):
+    if not (qt_version_info[0] == 6 and qt_version_info[1] >= 4):
         print(
             f"""Sorry for the inconvenience but,
 
             Spine Toolbox does not support PySide6 version {qt_version}.
-            At the moment, supported PySide6 versions are 5.14 & 5.15.
+            At the moment, PySide6 version must be 6.4 or greater.
 
             To upgrade PySide6 to latest supported version, run
 
@@ -470,9 +467,9 @@ class IconListManager:
         Returns:
             Any: role-dependent model data
         """
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return None
-        if role != Qt.DecorationRole:
+        if role != Qt.ItemDataRole.DecorationRole:
             return QStandardItemModel.data(self.model, index, role)
         display_icon = index.data(Qt.UserRole)
         return object_icon(display_icon)
@@ -1338,12 +1335,12 @@ def inquire_index_name(model, column, title, parent_widget):
         title (str): input dialog's title
         parent_widget (QWidget): dialog's parent widget
     """
-    index_name = model.headerData(column, Qt.Horizontal)
+    index_name = model.headerData(column, Qt.Orientation.Horizontal)
     dialog_flags = Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
     new_name, ok = QInputDialog.getText(parent_widget, title, "Index name:", text=index_name, flags=dialog_flags)
     if not ok:
         return
-    model.setHeaderData(column, Qt.Horizontal, new_name)
+    model.setHeaderData(column, Qt.Orientation.Horizontal, new_name)
 
 
 def preferred_row_height(widget, factor=1.5):

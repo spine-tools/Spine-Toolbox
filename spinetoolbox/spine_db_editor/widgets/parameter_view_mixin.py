@@ -109,7 +109,7 @@ class ParameterViewMixin:
             ]
             object_class_names.append(object_class_name)
             object_names_lists.append(object_names_list)
-        object_name_list = index.data(Qt.EditRole)
+        object_name_list = index.data(Qt.ItemDataRole.EditRole)
         try:
             current_object_names = object_name_list.split(",")
         except AttributeError:

@@ -200,7 +200,7 @@ class TestLink(unittest.TestCase):
         scenario_item = scenario_title_item.child(1, 0)
         self.assertEqual(scenario_item.index().data(), "scenario")
         scenario_index = filter_model.indexFromItem(scenario_item)
-        filter_model.setData(scenario_index, Qt.Checked, role=Qt.CheckStateRole)
+        filter_model.setData(scenario_index, Qt.Checked, role=Qt.ItemDataRole.CheckStateRole)
         self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), set())
 
     def test_tool_filter_gets_added_to_filter_model(self):
@@ -230,7 +230,7 @@ class TestLink(unittest.TestCase):
         tool_item = tool_title_item.child(1, 0)
         self.assertEqual(tool_item.index().data(), "tool")
         tool_index = filter_model.indexFromItem(tool_item)
-        filter_model.setData(tool_index, Qt.Checked, role=Qt.CheckStateRole)
+        filter_model.setData(tool_index, Qt.Checked, role=Qt.ItemDataRole.CheckStateRole)
         self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), set())
 
     def test_toggle_scenario_filter(self):

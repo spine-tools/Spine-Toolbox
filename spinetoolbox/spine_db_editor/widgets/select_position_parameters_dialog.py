@@ -91,7 +91,7 @@ class ParameterNameDelegate(QStyledItemDelegate):
         """Returns editor."""
         editor = SearchBarEditor(self.parent(), parent)
         editor.set_data(
-            index.data(Qt.DisplayRole),
+            index.data(Qt.ItemDataRole.DisplayRole),
             {
                 x["parameter_name"]
                 for db_map in self.db_maps

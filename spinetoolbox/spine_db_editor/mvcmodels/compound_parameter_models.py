@@ -198,13 +198,13 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
     def _do_remove_data_from_filter_menus(self, db_map, db_items):
         self._modify_data_in_filter_menus("remove", db_map, db_items)
 
-    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+    def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""
         italic_font = QFont()
         italic_font.setItalic(True)
         if (
             role == Qt.FontRole
-            and orientation == Qt.Horizontal
+            and orientation == Qt.Orientation.Horizontal
             and self._auto_filter.get(self.header[section], {}) != {}
         ):
             return italic_font
@@ -485,7 +485,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             column = self.header.index(field)
         except ValueError:
             return
-        self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
+        self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.ItemDataRole.DisplayRole])
 
     def db_item(self, index):
         sub_index = self.map_to_sub(index)
@@ -555,7 +555,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         for column, rows in rows_per_column.items():
             field = self.headerData(column)
             menu = self._auto_filter_menus[field]
-            accepted_values = {self.index(row, column).data(Qt.EditRole) for row in rows}
+            accepted_values = {self.index(row, column).data(Qt.ItemDataRole.EditRole) for row in rows}
             menu.set_filter_accepted_values(accepted_values)
             menu._filter._apply_filter()
 
@@ -563,7 +563,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         for column, rows in rows_per_column.items():
             field = self.headerData(column)
             menu = self._auto_filter_menus[field]
-            rejected_values = {self.index(row, column).data(Qt.EditRole) for row in rows}
+            rejected_values = {self.index(row, column).data(Qt.ItemDataRole.EditRole) for row in rows}
             menu.set_filter_rejected_values(rejected_values)
             menu._filter._apply_filter()
 

@@ -182,7 +182,7 @@ class TestSpineDBEditorUpdateMixin:
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("object_name_list")).data(Qt.EditRole),
+                    model.index(row, h("object_name_list")).data(Qt.ItemDataRole.EditRole),
                     model.index(row, h("parameter_name")).data(),
                     model.index(row, h("value")).data(),
                 )

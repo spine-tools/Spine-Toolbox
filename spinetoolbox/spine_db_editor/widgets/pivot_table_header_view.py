@@ -34,7 +34,7 @@ class PivotTableHeaderView(QHeaderView):
     def __init__(self, orientation, area, pivot_table_view):
         """
         Args:
-            orientation (int): Qt.Horizontal or Qt.Vertical
+            orientation (int): Qt.Orientation.Horizontal or Qt.Orientation.Vertical
             area (str): which pivot area the header represents: "columns", "rows" or "frozen"
             pivot_table_view (PivotTableView): parent view
         """
@@ -67,14 +67,14 @@ class ParameterValuePivotHeaderView(PivotTableHeaderView):
     def __init__(self, orientation, area, pivot_table_view):
         """
         Args:
-            orientation (int): Qt.Horizontal or Qt.Vertical
+            orientation (int): Qt.Orientation.Horizontal or Qt.Orientation.Vertical
             area (str): which pivot area the header represents: "columns", "rows" or "frozen"
             pivot_table_view (PivotTableView): parent view
         """
         super().__init__(orientation, area, pivot_table_view)
         self._proxy_model = pivot_table_view.model()
         self._model_index = None
-        self.setContextMenuPolicy(Qt.DefaultContextMenu if orientation == Qt.Horizontal else Qt.NoContextMenu)
+        self.setContextMenuPolicy(Qt.DefaultContextMenu if orientation == Qt.Orientation.Horizontal else Qt.NoContextMenu)
         self._menu = QMenu(self)
         self._plot_action = self._menu.addAction("Plot single column", self._plot_column)
         self._add_to_plot_menu = self._menu.addMenu("Plot in window")

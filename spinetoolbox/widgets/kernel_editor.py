@@ -707,7 +707,7 @@ class KernelEditor(KernelEditorBase):
         name_column = self.find_column("Name")
         for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
             row_index = self.kernel_list_model.index(row, name_column, self.ui.tableView_kernel_list.rootIndex())
-            if k_name == row_index.data(Qt.DisplayRole):
+            if k_name == row_index.data(Qt.ItemDataRole.DisplayRole):
                 index = row_index
                 break
         self.ui.tableView_kernel_list.setCurrentIndex(index)
@@ -723,7 +723,7 @@ class KernelEditor(KernelEditorBase):
         """
         if not current.isValid():
             return
-        d = current.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        d = current.siblingAtColumn(self.find_column("Location")).data(Qt.ItemDataRole.DisplayRole)  # Location column
         kernel_json = os.path.join(d, "kernel.json")
         if not os.path.exists(kernel_json):
             self._logger.msg_error.emit(f"Path {kernel_json} does not exist")
@@ -748,7 +748,7 @@ class KernelEditor(KernelEditorBase):
             int: Column number or -1 if label not found
         """
         for column in range(self.kernel_list_model.columnCount()):
-            if self.kernel_list_model.headerData(column, Qt.Horizontal) == label:
+            if self.kernel_list_model.headerData(column, Qt.Orientation.Horizontal) == label:
                 return column
         return -1
 
@@ -763,10 +763,10 @@ class KernelEditor(KernelEditorBase):
         # Ask permission to overwrite if kernel name is taken
         for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
             row_index = self.kernel_list_model.index(row, 0, self.ui.tableView_kernel_list.rootIndex())
-            if kernel_name == row_index.siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole):  # Name column
+            if kernel_name == row_index.siblingAtColumn(self.find_column("Name")).data(Qt.ItemDataRole.DisplayRole):  # Name column
                 name_taken = True
             elif display_name == row_index.siblingAtColumn(self.find_column("Display Name")).data(
-                Qt.DisplayRole
+                Qt.ItemDataRole.DisplayRole
             ):  # Display name column
                 display_name_taken = True
         if display_name_taken:
@@ -958,7 +958,7 @@ class KernelEditor(KernelEditorBase):
         index = self.ui.tableView_kernel_list.currentIndex()
         if not index.isValid():
             return
-        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.ItemDataRole.DisplayRole)  # Location column
         kernel_json = os.path.join(d, "kernel.json")
         if not os.path.exists(kernel_json):
             msg = f"Path <br><br>{kernel_json}<br><br>does not exist.<br>Consider removing the kernel manually."
@@ -978,7 +978,7 @@ class KernelEditor(KernelEditorBase):
         index = self.ui.tableView_kernel_list.currentIndex()
         if not index.isValid():
             return
-        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.ItemDataRole.DisplayRole)  # Location column
         if not os.path.exists(d):
             msg = "Path does not exist. Consider removing the kernel manually."
             # noinspection PyCallByClass, PyArgumentList
@@ -999,8 +999,8 @@ class KernelEditor(KernelEditorBase):
         index = self.ui.tableView_kernel_list.currentIndex()
         if not index.isValid():
             return
-        name = index.siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole)  # Name column
-        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        name = index.siblingAtColumn(self.find_column("Name")).data(Qt.ItemDataRole.DisplayRole)  # Name column
+        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.ItemDataRole.DisplayRole)  # Location column
         if not os.path.exists(d):
             msg = "Path does not exist. Please remove it manually."
             # noinspection PyCallByClass, PyArgumentList
@@ -1082,7 +1082,7 @@ class KernelEditor(KernelEditorBase):
         if r == QDialog.Accepted:
             ind = self.ui.tableView_kernel_list.selectedIndexes()
             if len(ind) > 0:
-                self.selected_kernel = ind[0].siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole)
+                self.selected_kernel = ind[0].siblingAtColumn(self.find_column("Name")).data(Qt.ItemDataRole.DisplayRole)
         super().done(r)
 
     def closeEvent(self, event=None):
