@@ -485,7 +485,9 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             column = self.header.index(field)
         except ValueError:
             return
-        self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.ItemDataRole.DisplayRole])
+        self.dataChanged.emit(
+            self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.ItemDataRole.DisplayRole]
+        )
 
     def db_item(self, index):
         sub_index = self.map_to_sub(index)

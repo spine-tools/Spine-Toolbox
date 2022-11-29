@@ -763,7 +763,9 @@ class KernelEditor(KernelEditorBase):
         # Ask permission to overwrite if kernel name is taken
         for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
             row_index = self.kernel_list_model.index(row, 0, self.ui.tableView_kernel_list.rootIndex())
-            if kernel_name == row_index.siblingAtColumn(self.find_column("Name")).data(Qt.ItemDataRole.DisplayRole):  # Name column
+            if kernel_name == row_index.siblingAtColumn(self.find_column("Name")).data(
+                Qt.ItemDataRole.DisplayRole
+            ):  # Name column
                 name_taken = True
             elif display_name == row_index.siblingAtColumn(self.find_column("Display Name")).data(
                 Qt.ItemDataRole.DisplayRole
@@ -1082,7 +1084,9 @@ class KernelEditor(KernelEditorBase):
         if r == QDialog.Accepted:
             ind = self.ui.tableView_kernel_list.selectedIndexes()
             if len(ind) > 0:
-                self.selected_kernel = ind[0].siblingAtColumn(self.find_column("Name")).data(Qt.ItemDataRole.DisplayRole)
+                self.selected_kernel = (
+                    ind[0].siblingAtColumn(self.find_column("Name")).data(Qt.ItemDataRole.DisplayRole)
+                )
         super().done(r)
 
     def closeEvent(self, event=None):

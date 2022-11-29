@@ -1068,13 +1068,21 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
     def apply_stacked_style(self, checked=False):
         """Applies the stacked style, inspired in the former tree view."""
         self.begin_style_change()
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_alternative_scenario_tree, Qt.Orientation.Horizontal
+            self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Horizontal
         )
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_alternative_scenario_tree,
+            Qt.Orientation.Horizontal,
+        )
+        self.splitDockWidget(
+            self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
+        )
         # right-side
-        self.splitDockWidget(self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical
+        )
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_alternative_scenario_tree,
@@ -1085,7 +1093,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         # center
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Orientation.Vertical
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_relationship_parameter_value,
+            Qt.Orientation.Vertical,
         )
         self.tabify_and_raise(
             [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
@@ -1111,8 +1121,12 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Orientation.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Orientation.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_frozen_table, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
+        )
+        self.splitDockWidget(
+            self.ui.dockWidget_frozen_table, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
+        )
         self.splitDockWidget(
             self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_alternative_scenario_tree, Qt.Orientation.Vertical
         )
@@ -1140,7 +1154,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_entity_graph, self.ui.dockWidget_alternative_scenario_tree, Qt.Orientation.Horizontal
         )
         # right-side
-        self.splitDockWidget(self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical
+        )
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_alternative_scenario_tree,
@@ -1150,15 +1166,23 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         )
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         # left
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Orientation.Vertical
+            self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
+        )
+        self.splitDockWidget(
+            self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Vertical
+        )
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_relationship_parameter_value,
+            Qt.Orientation.Vertical,
         )
         self.splitDockWidget(
             self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
         )
-        self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
+        )
         self.tabify_and_raise(
             [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
         )

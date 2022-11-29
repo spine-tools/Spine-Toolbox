@@ -223,7 +223,9 @@ class ProjectItemModel(QAbstractItemModel):
         for category in self.root().children():
             category_index = self.find_category(category.name)
             start_index = self.index(0, 0, category_index)
-            matching_index = self.match(start_index, Qt.ItemDataRole.DisplayRole, name, 1, Qt.MatchFixedString | Qt.MatchRecursive)
+            matching_index = self.match(
+                start_index, Qt.ItemDataRole.DisplayRole, name, 1, Qt.MatchFixedString | Qt.MatchRecursive
+            )
             if not matching_index:
                 pass  # no match in this category
             elif len(matching_index) == 1:

@@ -112,9 +112,15 @@ class MapModel(QAbstractTableModel):
             right = max(right, column)
             self._rows[row][column] = empty
         if top <= bottom:
-            self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole])
             self.dataChanged.emit(
-                self.index(top, 0), self.index(bottom, self.columnCount() - 2), [Qt.ItemDataRole.BackgroundRole, Qt.FontRole]
+                self.index(top, left),
+                self.index(bottom, right),
+                [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole],
+            )
+            self.dataChanged.emit(
+                self.index(top, 0),
+                self.index(bottom, self.columnCount() - 2),
+                [Qt.ItemDataRole.BackgroundRole, Qt.FontRole],
             )
 
     def columnCount(self, index=QModelIndex()):
@@ -391,7 +397,9 @@ class MapModel(QAbstractTableModel):
             top_left = self.index(row_index, column_index + 1)
             if top_left.isValid():
                 bottom_right = self.index(row_index, len(row))
-                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole])
+                self.dataChanged.emit(
+                    top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole]
+                )
         else:
             row = self._rows[row_index]
         if column_index == len(row):

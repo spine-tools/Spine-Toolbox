@@ -68,7 +68,11 @@ class ArrayModel(QAbstractTableModel):
             self._data[row] = value
         top_left = self.index(top_row, 0)
         bottom_right = self.index(bottom_row, 0)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole])
+        self.dataChanged.emit(
+            top_left,
+            bottom_right,
+            [Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole],
+        )
 
     def columnCount(self, parent=QModelIndex()):
         """Returns 2."""
@@ -193,7 +197,9 @@ class ArrayModel(QAbstractTableModel):
             if len(self._data) == 1:
                 self._data.clear()
                 self.dataChanged.emit(
-                    self.index(0, 0), self.index(0, 0), [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.BackgroundRole]
+                    self.index(0, 0),
+                    self.index(0, 0),
+                    [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.BackgroundRole],
                 )
                 return False
         first_row = row if count < len(self._data) else 1
@@ -202,7 +208,9 @@ class ArrayModel(QAbstractTableModel):
         self.endRemoveRows()
         if not self._data:
             self.dataChanged.emit(
-                self.index(0, 0), self.index(0, 0), [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.BackgroundRole]
+                self.index(0, 0),
+                self.index(0, 0),
+                [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.BackgroundRole],
             )
         return True
 
@@ -264,6 +272,8 @@ class ArrayModel(QAbstractTableModel):
             if row == len(self._data):
                 self.insertRow(row)
             self._data[row] = value
-            self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.BackgroundRole])
+            self.dataChanged.emit(
+                index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.BackgroundRole]
+            )
             return True
         return False

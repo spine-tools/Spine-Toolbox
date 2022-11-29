@@ -52,7 +52,9 @@ class ResourceFilterModel(QStandardItemModel):
         def append_filter_items(parent_item, filters, filter_type, disabled):
             for name in filters[filter_type]:
                 filter_item = QStandardItem(name)
-                filter_item.setData(Qt.Checked if name not in disabled else Qt.Unchecked, Qt.ItemDataRole.CheckStateRole)
+                filter_item.setData(
+                    Qt.Checked if name not in disabled else Qt.Unchecked, Qt.ItemDataRole.CheckStateRole
+                )
                 filter_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 parent_item.appendRow(filter_item)
 
@@ -184,4 +186,6 @@ class ResourceFilterModel(QStandardItemModel):
             checked = Qt.Checked if all_online else Qt.Unchecked
             all_selected_item.setData(checked, Qt.ItemDataRole.CheckStateRole)
             if emit_data_changed:
-                self.dataChanged.emit(all_selected_item.index(), all_selected_item.index(), [Qt.ItemDataRole.CheckStateRole])
+                self.dataChanged.emit(
+                    all_selected_item.index(), all_selected_item.index(), [Qt.ItemDataRole.CheckStateRole]
+                )
