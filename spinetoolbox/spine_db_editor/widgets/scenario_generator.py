@@ -150,15 +150,15 @@ class ScenarioGenerator(QWidget):
         if all(name not in existing_scenario_names for name in proposed_scenario_names):
             return _ScenarioNameResolution.NO_CONFLICT
         message_box = QMessageBox(
-            QMessageBox.Warning,
+            QMessageBox.Icon.Warning,
             "Scenarios already in database",
             "One or more scenarios that are about to be generated already exist in the database.",
-            QMessageBox.NoButton,
+            QMessageBox.StandardButton.NoButton,
             self,
         )
-        message_box.addButton("Overwrite", QMessageBox.DestructiveRole)
-        keep_button = message_box.addButton("Keep existing", QMessageBox.AcceptRole)
-        cancel_button = message_box.addButton(QMessageBox.Cancel)
+        message_box.addButton("Overwrite", QMessageBox.ButtonRole.DestructiveRole)
+        keep_button = message_box.addButton("Keep existing", QMessageBox.ButtonRole.AcceptRole)
+        cancel_button = message_box.addButton(QMessageBox.StandardButton.Cancel)
         message_box.exec()
         clicked_button = message_box.clickedButton()
         if clicked_button is None or clicked_button is cancel_button:

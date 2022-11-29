@@ -37,7 +37,17 @@ from PySide6.QtWidgets import (
     QDialog,
 )
 from PySide6.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
-from PySide6.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont, QIntValidator, QKeySequence, QAction, QUndoStack
+from PySide6.QtGui import (
+    QPainter,
+    QFontMetrics,
+    QKeyEvent,
+    QFontDatabase,
+    QFont,
+    QIntValidator,
+    QKeySequence,
+    QAction,
+    QUndoStack,
+)
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from .select_database_items import SelectDatabaseItems
 from ..helpers import format_log_message

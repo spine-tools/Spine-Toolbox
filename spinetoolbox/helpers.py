@@ -161,11 +161,15 @@ def rename_dir(old_dir, new_dir, toolbox, box_title):
     if os.path.exists(new_dir):
         msg = "Directory <b>{0}</b> already exists.<br/><br/>Would you like to overwrite its contents?".format(new_dir)
         box = QMessageBox(
-            QMessageBox.Question, box_title, msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=toolbox
+            QMessageBox.Icon.Question,
+            box_title,
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=toolbox,
         )
-        box.button(QMessageBox.Ok).setText("Overwrite")
+        box.button(QMessageBox.StandardButton.Ok).setText("Overwrite")
         answer = box.exec()
-        if answer != QMessageBox.Ok:
+        if answer != QMessageBox.StandardButton.Ok:
             return False
         shutil.rmtree(new_dir)
     try:

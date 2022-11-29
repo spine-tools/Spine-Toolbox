@@ -499,15 +499,15 @@ class ProjectUpgrader:
                 "\n\nWould you like to overwrite it?".format(answer)
             )
             message_box = QMessageBox(
-                QMessageBox.Question,
+                QMessageBox.Icon.Question,
                 "Overwrite?",
                 msg,
-                buttons=QMessageBox.Ok | QMessageBox.Cancel,
+                buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
                 parent=self._toolbox,
             )
-            message_box.button(QMessageBox.Ok).setText("Overwrite")
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Overwrite")
             msgbox_answer = message_box.exec()
-            if msgbox_answer != QMessageBox.Ok:
+            if msgbox_answer != QMessageBox.StandardButton.Ok:
                 return ""
         return answer  # New project directory
 

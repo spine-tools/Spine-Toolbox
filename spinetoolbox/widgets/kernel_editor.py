@@ -144,11 +144,15 @@ class KernelEditorBase(QDialog):
                 f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
             )
             message_box = QMessageBox(
-                QMessageBox.Question, "ipykernel Missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                QMessageBox.Icon.Question,
+                "ipykernel Missing",
+                message,
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self,
             )
-            message_box.button(QMessageBox.Ok).setText("Install ipykernel")
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Install ipykernel")
             answer = message_box.exec()
-            if answer == QMessageBox.Cancel:
+            if answer == QMessageBox.StandardButton.Cancel:
                 return False
             # Install ipykernel
             self.start_package_install_process(prgm, "ipykernel")
@@ -299,11 +303,15 @@ class KernelEditorBase(QDialog):
                 f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
             )
             message_box = QMessageBox(
-                QMessageBox.Question, "IJulia missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                QMessageBox.Icon.Question,
+                "IJulia missing",
+                message,
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self,
             )
-            message_box.button(QMessageBox.Ok).setText("Install IJulia")
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Install IJulia")
             answer = message_box.exec()
-            if answer == QMessageBox.Cancel:
+            if answer == QMessageBox.StandardButton.Cancel:
                 return False
             self.start_ijulia_install_process(julia, project)
         return True
@@ -771,11 +779,15 @@ class KernelEditor(KernelEditorBase):
             msg = f"Kernel <b>{kernel_name}</b> already exists.<br><br>Would you like to overwrite it?"
             # noinspection PyCallByClass, PyTypeChecker
             message_box = QMessageBox(
-                QMessageBox.Question, "Overwrite kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                QMessageBox.Icon.Question,
+                "Overwrite kernel?",
+                msg,
+                buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self,
             )
-            message_box.button(QMessageBox.Ok).setText("Overwrite kernel")
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Overwrite kernel")
             answer = message_box.exec()
-            if answer != QMessageBox.Ok:
+            if answer != QMessageBox.StandardButton.Ok:
                 return False
         return True
 
@@ -998,11 +1010,15 @@ class KernelEditor(KernelEditorBase):
         msg += f"<br><br>Directory<br><br><b>{d}</b><br><br>will be deleted."
         # noinspection PyCallByClass, PyTypeChecker
         message_box = QMessageBox(
-            QMessageBox.Question, "Remove kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            QMessageBox.Icon.Question,
+            "Remove kernel?",
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=self,
         )
-        message_box.button(QMessageBox.Ok).setText("Remove kernel")
+        message_box.button(QMessageBox.StandardButton.Ok).setText("Remove kernel")
         answer = message_box.exec()
-        if answer != QMessageBox.Ok:
+        if answer != QMessageBox.StandardButton.Ok:
             return
         try:
             shutil.rmtree(d)

@@ -160,9 +160,13 @@ class MultiSpineDBEditor(MultiTabWindow):
         if self._waiting_box is not None:
             return
         self._waiting_box = QMessageBox(
-            QMessageBox.Information, "Closing database", "Waiting for database to close...", QMessageBox.Ok, parent=self
+            QMessageBox.Information,
+            "Closing database",
+            "Waiting for database to close...",
+            QMessageBox.StandardButton.Ok,
+            parent=self,
         )
-        self._waiting_box.button(QMessageBox.Ok).setText("I wait patiently")
+        self._waiting_box.button(QMessageBox.StandardButton.Ok).setText("I wait patiently")
         self._waiting_box.open()
 
     @Slot()

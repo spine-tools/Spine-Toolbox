@@ -644,7 +644,7 @@ class TestToolboxUI(unittest.TestCase):
         dc1_ind = self.toolbox.project_item_model.find_item(dc1)
         self.toolbox.ui.treeView_project.selectionModel().select(dc1_ind, QItemSelectionModel.ClearAndSelect)
         with mock.patch.object(spinetoolbox.ui_main.QMessageBox, "exec") as mock_message_box_exec:
-            mock_message_box_exec.return_value = QMessageBox.Ok
+            mock_message_box_exec.return_value = QMessageBox.StandardButton.Ok
             self.toolbox.ui.actionRemove.trigger()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 0)  # Check the number of project items
         dags = self.toolbox.project().dags()
@@ -688,7 +688,7 @@ class TestToolboxUI(unittest.TestCase):
         index = self.toolbox.specification_model.specification_index("Python Tool Specification")
         self.assertTrue(index.isValid())
         with mock.patch.object(spinetoolbox.ui_main.QMessageBox, "exec") as mock_message_box_exec:
-            mock_message_box_exec.return_value = QMessageBox.Ok
+            mock_message_box_exec.return_value = QMessageBox.StandardButton.Ok
             self.toolbox.remove_specification(index)
         # Tool spec model must be empty again
         self.assertEqual(0, self.toolbox.specification_model.rowCount())

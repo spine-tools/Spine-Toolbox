@@ -854,11 +854,11 @@ class ToolboxUI(QMainWindow):
                     "Would you like to overwrite the existing project?".format(project_dir)
                 )
                 box1 = QMessageBox(
-                    QMessageBox.Question, "Overwrite?", msg1, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                    QMessageBox.Icon.Question, "Overwrite?", msg1, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
                 )
-                box1.button(QMessageBox.Ok).setText("Overwrite")
+                box1.button(QMessageBox.StandardButton.Ok).setText("Overwrite")
                 answer1 = box1.exec()
-                if answer1 != QMessageBox.Ok:
+                if answer1 != QMessageBox.StandardButton.Ok:
                     return False
             else:
                 msg2 = (
@@ -866,11 +866,11 @@ class ToolboxUI(QMainWindow):
                     "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
                 )
                 box2 = QMessageBox(
-                    QMessageBox.Question, "Not empty", msg2, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                    QMessageBox.Icon.Question, "Not empty", msg2, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
                 )
-                box2.button(QMessageBox.Ok).setText("Go ahead")
+                box2.button(QMessageBox.StandardButton.Ok).setText("Go ahead")
                 answer2 = box2.exec()
-                if answer2 != QMessageBox.Ok:
+                if answer2 != QMessageBox.StandardButton.Ok:
                     return False
         return True
 
@@ -1084,7 +1084,11 @@ class ToolboxUI(QMainWindow):
         else:
             msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
         message_box = QMessageBox(
-            QMessageBox.Icon.Question, "Remove All Items", msg, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
+            QMessageBox.Icon.Question,
+            "Remove All Items",
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=self
         )
         message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Items")
         answer = message_box.exec()
@@ -1801,16 +1805,16 @@ class ToolboxUI(QMainWindow):
             True if exit should proceed, False if user cancelled
         """
         msg = QMessageBox(parent=self)
-        msg.setIcon(QMessageBox.Question)
+        msg.setIcon(QMessageBox.Icon.Question)
         msg.setWindowTitle("Confirm exit")
         msg.setText("Are you sure you want to exit Spine Toolbox?")
-        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        msg.button(QMessageBox.Ok).setText("Exit")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        msg.button(QMessageBox.StandardButton.Ok).setText("Exit")
         chkbox = QCheckBox()
         chkbox.setText("Do not ask me again")
         msg.setCheckBox(chkbox)
         answer = msg.exec()  # Show message box
-        if answer == QMessageBox.Ok:
+        if answer == QMessageBox.StandardButton.Ok:
             # Update conf file according to checkbox status
             if not chkbox.checkState():
                 show_prompt = "2"  # 2 as in True
@@ -1828,25 +1832,25 @@ class ToolboxUI(QMainWindow):
             True if exiting should proceed, False if user cancelled
         """
         msg = QMessageBox(parent=self)
-        msg.setIcon(QMessageBox.Question)
+        msg.setIcon(QMessageBox.Icon.Question)
         msg.setWindowTitle("Save project before leaving")
         msg.setText("The project has unsaved changes. Do you want to save them before closing?")
-        msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-        msg.button(QMessageBox.Save).setText("Save and exit")
-        msg.button(QMessageBox.Discard).setText("Exit without saving")
+        msg.setStandardButtons(QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel)
+        msg.button(QMessageBox.StandardButton.Save).setText("Save and exit")
+        msg.button(QMessageBox.StandardButton.Discard).setText("Exit without saving")
         chkbox = QCheckBox()
         chkbox.setText("Do not ask me again")
         msg.setCheckBox(chkbox)
         answer = msg.exec()
-        if answer == QMessageBox.Cancel:
+        if answer == QMessageBox.StandardButton.Cancel:
             return False
-        if answer == QMessageBox.Save:
+        if answer == QMessageBox.StandardButton.Save:
             self.save_project()
         chk = chkbox.checkState()
         if chk == 2:
-            if answer == QMessageBox.Save:
+            if answer == QMessageBox.StandardButton.Save:
                 self._qsettings.setValue("appSettings/saveAtExit", "2")
-            elif answer == QMessageBox.Discard:
+            elif answer == QMessageBox.StandardButton.Discard:
                 self._qsettings.setValue("appSettings/saveAtExit", "0")
         return True
 
@@ -1875,9 +1879,9 @@ class ToolboxUI(QMainWindow):
         """Clears recent projects list in File->Open recent menu."""
         msg = "Are you sure?"
         title = "Clear recent projects?"
-        message_box = QMessageBox(QMessageBox.Question, title, msg, QMessageBox.Yes | QMessageBox.No, parent=self)
+        message_box = QMessageBox(QMessageBox.Icon.Question, title, msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, parent=self)
         answer = message_box.exec()
-        if answer == QMessageBox.No:
+        if answer == QMessageBox.StandardButton.No:
             return
         self._qsettings.remove("appSettings/recentProjects")
         self._qsettings.remove("appSettings/recentProjectStorages")
@@ -2240,11 +2244,11 @@ class ToolboxUI(QMainWindow):
                 msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
             # noinspection PyCallByClass, PyTypeChecker
             message_box = QMessageBox(
-                QMessageBox.Question, "Remove Item", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                QMessageBox.Icon.Question, "Remove Item", msg, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
             )
-            message_box.button(QMessageBox.Ok).setText("Remove Item")
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Item")
             answer = message_box.exec()
-            if answer != QMessageBox.Ok:
+            if answer != QMessageBox.StandardButton.Ok:
                 return
         self.undo_stack.beginMacro("remove items and links")
         if project_item_names:

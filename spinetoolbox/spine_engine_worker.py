@@ -71,12 +71,16 @@ def _handle_prompt_arrived(prompt, engine_mngr):
     item_name = prompt["item_name"]
     # pylint: disable=undefined-variable
     box = QMessageBox(
-        QMessageBox.Question, item_name, text, buttons=QMessageBox.Yes | QMessageBox.No, parent=qApp.activeWindow()
+        QMessageBox.Icon.Question,
+        item_name,
+        text,
+        buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        parent=qApp.activeWindow(),
     )
     if info_text:
         box.setInformativeText(info_text)
     answer = box.exec()
-    accepted = answer == QMessageBox.Yes
+    accepted = answer == QMessageBox.StandardButton.Yes
     engine_mngr.answer_prompt(item_name, accepted)
 
 

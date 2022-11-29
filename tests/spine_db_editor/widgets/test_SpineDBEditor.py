@@ -454,7 +454,7 @@ class TestClosingDBEditors(unittest.TestCase):
         ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
         ) as commit_changes:
-            commit_changes.return_value = QMessageBox.Discard
+            commit_changes.return_value = QMessageBox.StandardButton.Discard
             editor_1.close()
             commit_changes.assert_not_called()
             editor_2.close()
@@ -471,7 +471,7 @@ class TestClosingDBEditors(unittest.TestCase):
         ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
         ) as commit_changes:
-            commit_changes.return_value = QMessageBox.Discard
+            commit_changes.return_value = QMessageBox.StandardButton.Discard
             editor.close()
             commit_changes.assert_called_once()
 

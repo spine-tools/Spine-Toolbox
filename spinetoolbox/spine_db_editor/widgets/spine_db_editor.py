@@ -819,10 +819,10 @@ class SpineDBEditorBase(QMainWindow):
         commit_msg = ""
         if dirty_db_maps:
             answer = self._prompt_to_commit_changes()
-            if answer == QMessageBox.Cancel:
+            if answer == QMessageBox.StandardButton.Cancel:
                 return False
             db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
-            if answer == QMessageBox.Save:
+            if answer == QMessageBox.StandardButton.Save:
                 commit_dirty = True
                 commit_msg = self._get_commit_msg(db_names)
                 if not commit_msg:
@@ -843,28 +843,30 @@ class SpineDBEditorBase(QMainWindow):
         commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
         if commit_at_exit == 0:
             # Don't commit session and don't show message box
-            return QMessageBox.Discard
+            return QMessageBox.StandardButton.Discard
         if commit_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox(self)
-            msg.setIcon(QMessageBox.Question)
+            msg.setIcon(QMessageBox.Icon.Question)
             msg.setWindowTitle(self.windowTitle())
             msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
-            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-            msg.button(QMessageBox.Save).setText("Commit and close ")
-            msg.button(QMessageBox.Discard).setText("Discard changes and close")
+            msg.setStandardButtons(
+                QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
+            )
+            msg.button(QMessageBox.StandardButton.Save).setText("Commit and close ")
+            msg.button(QMessageBox.StandardButton.Discard).setText("Discard changes and close")
             chkbox = QCheckBox()
             chkbox.setText("Do not ask me again")
             msg.setCheckBox(chkbox)
             answer = msg.exec()
-            if answer != QMessageBox.Cancel and chkbox.checkState() == 2:
+            if answer != QMessageBox.StandardButton.Cancel and chkbox.checkState() == 2:
                 # Save preference
-                preference = "2" if answer == QMessageBox.Save else "0"
+                preference = "2" if answer == QMessageBox.StandardButton.Save else "0"
                 self.qsettings.setValue("appSettings/commitAtExit", preference)
             return answer
         if commit_at_exit == 2:
             # Commit session and don't show message box
-            return QMessageBox.Save
+            return QMessageBox.StandardButton.Save
 
     def _get_commit_msg(self, db_names):
         """Prompts user for commit message.
@@ -890,16 +892,16 @@ class SpineDBEditorBase(QMainWindow):
             bool: True if user confirmed, False otherwise
         """
         message_box = QMessageBox(
-            QMessageBox.Question,
+            QMessageBox.Icon.Question,
             f"Rollback changes in {db_names}",
             "Are you sure? "
             "All your changes since the last commit will be reverted and removed from the undo/redo stack.",
-            QMessageBox.Ok | QMessageBox.Cancel,
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
             parent=self,
         )
-        message_box.button(QMessageBox.Ok).setText("Rollback")
+        message_box.button(QMessageBox.StandardButton.Ok).setText("Rollback")
         answer = message_box.exec()
-        return answer == QMessageBox.Ok
+        return answer == QMessageBox.StandardButton.Ok
 
     def _purge_change_notifiers(self):
         """Tears down change notifiers."""

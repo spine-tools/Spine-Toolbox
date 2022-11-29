@@ -355,14 +355,14 @@ class SpineDBManager(QObject):
         try:
             if not is_empty(url):
                 msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
-                msg.setIcon(QMessageBox.Question)
+                msg.setIcon(QMessageBox.Icon.Question)
                 msg.setWindowTitle("Database not empty")
                 msg.setText(f"The URL <b>{url}</b> points to an existing database.")
                 msg.setInformativeText("Do you want to overwrite it?")
-                msg.addButton("Overwrite", QMessageBox.AcceptRole)
-                msg.addButton("Cancel", QMessageBox.RejectRole)
+                msg.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
+                msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
                 ret = msg.exec()  # Show message box
-                if ret != QMessageBox.AcceptRole:
+                if ret != QMessageBox.ButtonRole.AcceptRole:
                     return
             do_create_new_spine_database(url)
             logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
@@ -426,14 +426,14 @@ class SpineDBManager(QObject):
             if v_err.upgrade_available:
                 text, info_text = get_upgrade_db_promt_text(url, v_err.current, v_err.expected)
                 msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
-                msg.setIcon(QMessageBox.Question)
+                msg.setIcon(QMessageBox.Icon.Question)
                 msg.setWindowTitle("Incompatible database version")
                 msg.setText(text)
                 msg.setInformativeText(info_text)
-                msg.addButton(QMessageBox.Cancel)
-                msg.addButton("Upgrade", QMessageBox.YesRole)
+                msg.addButton(QMessageBox.StandardButton.Cancel)
+                msg.addButton("Upgrade", QMessageBox.ButtonRole.YesRole)
                 ret = msg.exec()  # Show message box
-                if ret == QMessageBox.Cancel:
+                if ret == QMessageBox.StandardButton.Cancel:
                     return None
                 return self.get_db_map(url, logger, codename=codename, upgrade=True, create=create)
             QMessageBox.information(

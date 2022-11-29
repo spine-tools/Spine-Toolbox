@@ -346,20 +346,22 @@ def prompt_to_save_changes(parent, settings, save_callback):
     if save_spec == 2:
         return save_callback()
     msg = QMessageBox(parent)
-    msg.setIcon(QMessageBox.Question)
+    msg.setIcon(QMessageBox.Icon.Question)
     msg.setWindowTitle(parent.windowTitle())
     msg.setText("Do you want to save your changes to the specification?")
-    msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+    msg.setStandardButtons(
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
+    )
     chkbox = QCheckBox()
     chkbox.setText("Do not ask me again")
     msg.setCheckBox(chkbox)
     answer = msg.exec()
-    if answer == QMessageBox.Cancel:
+    if answer == QMessageBox.StandardButton.Cancel:
         return False
     if chkbox.checkState() == 2:
         # Save preference
-        preference = "2" if answer == QMessageBox.Yes else "0"
+        preference = "2" if answer == QMessageBox.StandardButton.Yes else "0"
         settings.setValue("appSettings/saveSpecBeforeClosing", preference)
-    if answer == QMessageBox.Yes:
+    if answer == QMessageBox.StandardButton.Yes:
         return save_callback()
     return True

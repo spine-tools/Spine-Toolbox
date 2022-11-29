@@ -72,7 +72,7 @@ class TestBase(unittest.TestCase):
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as message_box:
-            message_box.exec.return_value = QMessageBox.Ok
+            message_box.exec.return_value = QMessageBox.StandardButton.Ok
             with signal_waiter(self._db_mngr.session_rolled_back) as waiter:
                 self._db_editor.rollback_session()
                 if message_box.exec.call_count > 0:
