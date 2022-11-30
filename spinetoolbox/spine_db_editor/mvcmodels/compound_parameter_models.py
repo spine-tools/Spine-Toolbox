@@ -377,9 +377,6 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             d.setdefault(entity_class_id, list()).append(item)
         return d
 
-    def handle_references_fetched(self):
-        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1))
-
     def handle_items_added(self, db_map_data):
         """Runs when either parameter definitions or values are added to the dbs.
         Adds necessary sub-models and initializes them with data.

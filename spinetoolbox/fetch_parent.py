@@ -211,9 +211,6 @@ class FetchParent:
         """
         raise NotImplementedError(self.fetch_item_type)
 
-    def handle_references_fetched(self):
-        """Called by SpineDBWorker when references are fetched."""
-
 
 class ItemTypeFetchParent(FetchParent):
     def __init__(self, fetch_item_type):

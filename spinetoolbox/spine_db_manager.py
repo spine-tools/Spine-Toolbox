@@ -250,9 +250,8 @@ class SpineDBManager(QObject):
             return
         worker.fetch_more(parent)
 
-    def cache_items(self, item_type, db_map_data, update=False):
-        """Caches data for a given type.
-        It works for both insert and update operations.
+    def add_items_to_cache(self, item_type, db_map_data):
+        """Adds items to cache.
 
         Args:
             item_type (str)
@@ -267,12 +266,30 @@ class SpineDBManager(QObject):
                 continue
             db_cache = self._cache.setdefault(db_map, DBCache(worker.do_advance_query))
             table_cache = db_cache.table_cache(item_type)
-            _cache_item = table_cache.update_item if update else table_cache.add_item
             for item in items:
-                _cache_item(item)
+                table_cache.add_item(item)
 
-    def uncache_removed_items(self, item_type, db_map_ids):
-        """Removes data that has been removed from the database also from cache.
+    def update_items_in_cache(self, item_type, db_map_data):
+        """Updates items in cache.
+
+        Args:
+            item_type (str)
+            db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
+        """
+        if item_type in ("object_class", "relationship_class"):
+            self.update_icons(db_map_data)
+        for db_map, items in db_map_data.items():
+            db_cache = self._cache.get(db_map)
+            if db_cache is None:
+                continue
+            table_cache = db_cache.get(item_type)
+            if table_cache is None:
+                continue
+            for item in items:
+                table_cache.update_item(item)
+
+    def remove_items_in_cache(self, item_type, db_map_ids):
+        """Removes items in cache.
 
         Args:
             item_type (str)

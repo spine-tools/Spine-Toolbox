@@ -189,7 +189,7 @@ class SpineDBWorker(QObject):
             self._fetched_item_types.add(item_type)
             return False
         self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
-        self._db_mngr.cache_items(item_type, {self._db_map: chunk})
+        self._db_mngr.add_items_to_cache(item_type, {self._db_map: chunk})
         self._populate_commit_cache(item_type, chunk)
         # for cascading_item_type in self._db_map.descendant_tablenames[item_type]:
         #    for parent in self._parents_by_type.get(cascading_item_type, ()):
@@ -422,10 +422,14 @@ class SpineDBWorker(QObject):
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
-            self._fetched_ids.setdefault(actual_item_type, []).extend([x["id"] for x in actual_items])
-            self._db_mngr.cache_items(actual_item_type, {self._db_map: actual_items})
-            for parent in self._parents_by_type.get(actual_item_type, ()):
-                self.fetch_more(parent)
+            if not readd:
+                self._fetched_ids.setdefault(actual_item_type, []).extend([x["id"] for x in actual_items])
+                self._db_mngr.add_items_to_cache(actual_item_type, {self._db_map: actual_items})
+                for parent in self._parents_by_type.get(actual_item_type, ()):
+                    self.fetch_more(parent)
+            else:
+                for actual_item in actual_items:
+                    actual_item.cascade_readd()
             db_map_data = {self._db_map: actual_items}
             if item_type == actual_item_type and callback is not None:
                 callback(db_map_data)
@@ -470,7 +474,7 @@ class SpineDBWorker(QObject):
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
-            self._db_mngr.cache_items(actual_item_type, {self._db_map: actual_items}, update=True)
+            self._db_mngr.update_items_in_cache(actual_item_type, {self._db_map: actual_items})
             db_map_data = {self._db_map: [{**x} for x in actual_items]}
             if item_type == actual_item_type and callback is not None:
                 callback(db_map_data)
@@ -490,7 +494,7 @@ class SpineDBWorker(QObject):
                 except SpineDBAPIError as err:
                     self._db_mngr.error_msg.emit({self._db_map: [err]})
             return
-        db_map_data = self._db_mngr.uncache_removed_items(item_type, {self._db_map: ids})
+        db_map_data = self._db_mngr.remove_items_in_cache(item_type, {self._db_map: ids})
         if callback is not None:
             callback(db_map_data)
         self._db_mngr.items_removed.emit(item_type, db_map_data)
