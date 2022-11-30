@@ -89,7 +89,12 @@ class SpineDBWorker(QObject):
         self._fetched_item_types = set()
         self.commit_cache = {}
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
+        self._queries_to_advance = {}
+        self.startTimer(20)
         self._something_happened.connect(self._handle_something_happened)
+
+    def timerEvent(self, event):
+        self._advance_pending_queries()
 
     def clean_up(self):
         self._executor.shutdown()
@@ -160,8 +165,13 @@ class SpineDBWorker(QObject):
             parent.set_busy(False)
 
     def do_advance_query(self, item_type):
-        if item_type not in self._fetched_item_types:
-            self._executor.submit(self._do_advance_query, item_type)
+        self._queries_to_advance[item_type] = None
+
+    def _advance_pending_queries(self):
+        for item_type in self._queries_to_advance:
+            if item_type not in self._fetched_item_types:
+                self._executor.submit(self._do_advance_query, item_type)
+        self._queries_to_advance.clear()
 
     @busy_effect
     @_db_map_lock
@@ -191,9 +201,6 @@ class SpineDBWorker(QObject):
         self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
         self._db_mngr.add_items_to_cache(item_type, {self._db_map: chunk})
         self._populate_commit_cache(item_type, chunk)
-        # for cascading_item_type in self._db_map.descendant_tablenames[item_type]:
-        #    for parent in self._parents_by_type.get(cascading_item_type, ()):
-        #        parent.handle_references_fetched()
         return True
 
     def _register_fetch_parent(self, parent):
@@ -336,7 +343,6 @@ class SpineDBWorker(QObject):
         if fetch_item_types:
             _ = self._executor.submit(self._fetch_all, fetch_item_types).result()
 
-    @busy_effect
     def _fetch_all(self, item_types):
         for item_type in item_types:
             while self._do_advance_query(item_type):

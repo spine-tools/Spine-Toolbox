@@ -110,7 +110,8 @@ class EntityTreeView(CopyTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
-        self.resizeColumnToContents(0)
+        if parent.isValid() and not parent.parent().isValid():
+            self.resizeColumnToContents(0)
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)
