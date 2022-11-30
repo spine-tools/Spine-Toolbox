@@ -395,8 +395,8 @@ class JumpOrLink(LinkBase):
 
     def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
-        if option.state & QStyle.State_Selected:
-            option.state &= ~QStyle.State_Selected
+        if option.state & QStyle.StateFlag.State_Selected:
+            option.state &= ~QStyle.StateFlag.State_Selected
             self._outline.setPen(self.selected_pen)
             for icon in self._icons:
                 icon.setPen(self.selected_pen)

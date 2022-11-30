@@ -214,9 +214,9 @@ class EntityItem(QGraphicsRectItem):
 
     def paint(self, painter, option, widget=None):
         """Shows or hides the selection halo."""
-        if option.state & (QStyle.State_Selected):
+        if option.state & (QStyle.StateFlag.State_Selected):
             self._paint_as_selected()
-            option.state &= ~QStyle.State_Selected
+            option.state &= ~QStyle.StateFlag.State_Selected
         else:
             self._paint_as_deselected()
         super().paint(painter, option, widget)

@@ -282,7 +282,7 @@ class _SpecNameDescriptionToolbar(QToolBar):
         menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "")
         menu_action.setMenu(menu)
         menu_button = self.widgetForAction(menu_action)
-        menu_button.setPopupMode(QToolButton.InstantPopup)
+        menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         action = QAction(self)
         action.triggered.connect(menu_button.showMenu)
         keys = [QKeySequence(Qt.ALT | Qt.Key_F), QKeySequence(Qt.ALT | Qt.Key_E)]

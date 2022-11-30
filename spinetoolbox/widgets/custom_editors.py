@@ -168,7 +168,7 @@ class SearchBarEditor(QTableView):
         table_height = self.verticalHeader().length() + margins.top() + margins.bottom()
         table_width = self.horizontalHeader().length() + margins.left() + margins.right()
         if table_height > self.parent().size().height():
-            table_width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+            table_width += self.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
         size = QSize(table_width, table_height).boundedTo(self.parent().size())
         self.resize(size)
         # Adjust position if widget is outside parent's limits
@@ -358,7 +358,7 @@ class CheckListEditor(QTableView):
         table_height = self.verticalHeader().length() + margins.top() + margins.bottom()
         table_width = self.horizontalHeader().length() + margins.left() + margins.right()
         if table_height > self.parent().size().height():
-            table_width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+            table_width += self.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
         size = QSize(table_width, table_height).boundedTo(self.parent().size())
         self.resize(size)
         if self._tutor:
@@ -376,7 +376,7 @@ class _IconPainterDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         """Paints selected items using the highlight brush."""
-        if option.state & QStyle.State_Selected:
+        if option.state & QStyle.StateFlag.State_Selected:
             painter.fillRect(option.rect, qApp.palette().highlight())  # pylint: disable=undefined-variable
         super().paint(painter, option, index)
 

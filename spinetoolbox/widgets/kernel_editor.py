@@ -1081,7 +1081,7 @@ class KernelEditor(KernelEditorBase):
         """
         self._save_ui()
         self.selected_kernel = None
-        if r == QDialog.Accepted:
+        if r == QDialog.DialogCode.Accepted:
             ind = self.ui.tableView_kernel_list.selectedIndexes()
             if len(ind) > 0:
                 self.selected_kernel = (

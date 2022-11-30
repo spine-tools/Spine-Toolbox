@@ -424,9 +424,9 @@ class ProjectItemIcon(QGraphicsPathItem):
 
     def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
-        selected = bool(option.state & QStyle.State_Selected)
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
         self._selection_halo.setVisible(selected)
-        option.state &= ~QStyle.State_Selected
+        option.state &= ~QStyle.StateFlag.State_Selected
         super().paint(painter, option, widget)
 
 

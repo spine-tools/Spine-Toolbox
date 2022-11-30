@@ -82,7 +82,7 @@ class CustomQLineEdit(ElidedTextMixin, PropertyQLineEdit):
         if self.isClearButtonEnabled():
             # icon width and margin hardcoded in qlineedit.cpp
             # pylint: disable=undefined-variable
-            icon_width = qApp.style().pixelMetric(QStyle.PM_SmallIconSize, None, self)
+            icon_width = qApp.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize, None, self)
             margin = icon_width / 4
             return icon_width + margin + 6
         return super()._offset()

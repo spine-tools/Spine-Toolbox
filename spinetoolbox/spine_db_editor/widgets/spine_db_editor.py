@@ -301,7 +301,7 @@ class SpineDBEditorBase(QMainWindow):
         docks_menu = self._make_docks_menu()
         docks_menu_action.setMenu(docks_menu)
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
-        docks_menu_button.setPopupMode(QToolButton.InstantPopup)
+        docks_menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         session_action = ToolBarWidgetAction("Session", menu)
         session_action.tool_bar.addActions([self.ui.actionCommit, self.ui.actionRollback])
         session_action.tool_bar.addSeparator()
@@ -879,7 +879,7 @@ class SpineDBEditorBase(QMainWindow):
         """
         dialog = CommitDialog(self, db_names)
         answer = dialog.exec()
-        if answer == QDialog.Accepted:
+        if answer == QDialog.DialogCode.Accepted:
             return dialog.commit_msg
 
     def _get_rollback_confirmation(self, db_names):

@@ -260,7 +260,7 @@ class Ui_MainWindow(object):
         icon19 = QIcon()
         icon19.addFile(u":/icons/check-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_executions.setIcon(icon19)
-        self.toolButton_executions.setPopupMode(QToolButton.InstantPopup)
+        self.toolButton_executions.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.toolButton_executions.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
         self.verticalLayout_7.addWidget(self.toolButton_executions)

@@ -43,7 +43,7 @@ class TabularViewHeaderWidget(QFrame):
         self._area = area
         layout = QHBoxLayout(self)
         button = QToolButton(self)
-        button.setPopupMode(QToolButton.InstantPopup)
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         button.setStyleSheet("QToolButton {border: none;}")
         button.setEnabled(menu is not None)
         if menu:

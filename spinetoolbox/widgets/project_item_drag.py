@@ -390,7 +390,7 @@ class ProjectItemSpecArray(QToolBar):
         for w in widgets:
             w.set_orientation(orientation)
         style = self.style()
-        extent = style.pixelMetric(QStyle.PM_ToolBarExtensionExtent)
+        extent = style.pixelMetric(QStyle.PixelMetric.PM_ToolBarExtensionExtent)
         down, right = "\uf0d7", "\uf0da"
         if orientation == Qt.Orientation.Horizontal:
             icon = down if not self._visible else right

@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A widget for presenting basic information about the application.
+Contains a custom combo box for the custom open project dialog.
 
 :author: P. Savolainen (VTT)
 :date: 14.12.2017
@@ -30,11 +30,11 @@ class ElidedCombobox(QComboBox):
         opt = QStyleOptionComboBox()
         self.initStyleOption(opt)
         p = QStylePainter(self)
-        p.drawComplexControl(QStyle.CC_ComboBox, opt)
+        p.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, opt)
 
-        text_rect = self.style().subControlRect(QStyle.CC_ComboBox, opt, QStyle.SC_ComboBoxEditField, self)
+        text_rect = self.style().subControlRect(QStyle.ComplexControl.CC_ComboBox, opt, QStyle.SubControl.SC_ComboBoxEditField, self)
         opt.currentText = p.fontMetrics().elidedText(opt.currentText, Qt.ElideLeft, text_rect.width())
-        p.drawControl(QStyle.CE_ComboBoxLabel, opt)
+        p.drawControl(QStyle.ControlElement.CE_ComboBoxLabel, opt)
 
 
 class OpenProjectDialogComboBox(QComboBox):
@@ -50,7 +50,7 @@ class OpenProjectDialogComboBox(QComboBox):
         if e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
             state = self.validator().state
             fm_current_index = parent.ui.treeView_file_system.currentIndex()
-            if state == QValidator.Intermediate:
+            if state == QValidator.State.Intermediate:
                 # Remove path from qsettings
                 # This is done because pressing enter adds an entry to combobox drop-down list automatically
                 # and we don't want to clog it with irrelevant paths
@@ -63,7 +63,7 @@ class OpenProjectDialogComboBox(QComboBox):
                     self.removeItem(cb_index)
                 notification = Notification(parent, "Path does not exist")
                 notification.show()
-            elif state == QValidator.Acceptable:
+            elif state == QValidator.State.Acceptable:
                 p = self.currentText()
                 fm_index = parent.file_model.index(p)
                 if not fm_current_index == fm_index:
@@ -74,7 +74,7 @@ class OpenProjectDialogComboBox(QComboBox):
                 else:
                     project_json_fp = os.path.abspath(os.path.join(parent.selection(), ".spinetoolbox", "project.json"))
                     if os.path.isfile(project_json_fp):
-                        parent.done(QDialog.Accepted)
+                        parent.done(QDialog.DialogCode.Accepted)
             else:
                 # INVALID (or None). Happens if Enter key is pressed and the combobox text has not been edited yet.
                 pass

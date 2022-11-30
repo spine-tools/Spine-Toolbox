@@ -47,7 +47,7 @@ class TestProjectItemIcon(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_init(self):
-        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         self.assertEqual(icon.name(), "")
         self.assertEqual(icon.x(), 0)
         self.assertEqual(icon.y(), 0)
@@ -55,14 +55,14 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(icon.outgoing_connection_links(), [])
 
     def test_finalize(self):
-        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         icon.finalize("new name", -43, 314)
         self.assertEqual(icon.name(), "new name")
         self.assertEqual(icon.x(), -43)
         self.assertEqual(icon.y(), 314)
 
     def test_conn_button(self):
-        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         button = icon.conn_button("left")
         self.assertEqual(button.position, "left")
         button = icon.conn_button("right")
@@ -71,8 +71,8 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(button.position, "bottom")
 
     def test_outgoing_and_incoming_links(self):
-        source_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
-        target_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        source_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
+        target_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         self._toolbox.project().get_item = MagicMock()
         connection = LoggingConnection("source item", "bottom", "destination item", "bottom", toolbox=self._toolbox)
         link = Link(self._toolbox, source_icon.conn_button("bottom"), target_icon.conn_button("bottom"), connection)
@@ -140,7 +140,7 @@ class TestRankIcon(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_set_rank(self):
-        item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         icon = RankIcon(item_icon)
         self.assertEqual(icon.toPlainText(), "")
         icon.set_rank(23)
@@ -157,9 +157,9 @@ class TestLink(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
         self._toolbox.db_mngr = TestSpineDBManager(MagicMock(), None)
-        source_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        source_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         source_item_icon.update_name_item("source icon")
-        destination_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        destination_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         destination_item_icon.update_name_item("destination icon")
         project = self._toolbox.project()
         project.get_item = MagicMock()
