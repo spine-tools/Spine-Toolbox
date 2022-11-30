@@ -39,8 +39,26 @@ class FetchParent:
         self._items_to_remove = {}
         self._timer = QTimer()
         self._timer.setSingleShot(True)
-        self._timer.setInterval(20)
+        self._timer.setInterval(0)
         self._timer.timeout.connect(self._apply_pending_changes)
+        self._add_item_callbacks = {}
+        self._update_item_callbacks = {}
+        self._remove_item_callbacks = {}
+
+    def make_add_item_callback(self, db_map):
+        if db_map not in self._add_item_callbacks:
+            self._add_item_callbacks[db_map] = lambda item, db_map=db_map: self.add_item(db_map, item)
+        return self._add_item_callbacks[db_map]
+
+    def make_update_item_callback(self, db_map):
+        if db_map not in self._update_item_callbacks:
+            self._update_item_callbacks[db_map] = lambda item, db_map=db_map: self.update_item(db_map, item)
+        return self._update_item_callbacks[db_map]
+
+    def make_remove_item_callback(self, db_map):
+        if db_map not in self._remove_item_callbacks:
+            self._remove_item_callbacks[db_map] = lambda item, db_map=db_map: self.remove_item(db_map, item)
+        return self._remove_item_callbacks[db_map]
 
     @Slot()
     def _do_apply_pending_changes(self):

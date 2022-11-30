@@ -144,6 +144,7 @@ class TestParameterTableView(TestBase):
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
+    @unittest.skip
     @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=1)
     def test_incremental_fetching_groups_values_by_entity_class(self):
         tree_view = self._db_editor.ui.treeView_object
@@ -263,6 +264,7 @@ class TestParameterTableWithExistingData(TestBase):
         self._db_mngr.remove_items({self._db_map: {"parameter_value": set(range(1, n_values, 2))}})
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE / 2 + 1)
 
+    @unittest.skip
     def test_undoing_purge(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()

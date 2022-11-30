@@ -271,10 +271,10 @@ class SpineDBWorker(QObject):
             parent.position += 1
             item = self._db_mngr.get_item(self._db_map, item_type, id_)
             if parent.accepts_item(item, self._db_map):
-                item.readd_callbacks.add(lambda item=item, parent=parent: parent.add_item(self._db_map, item))
-                item.update_callbacks.add(lambda item=item, parent=parent: parent.update_item(self._db_map, item))
-                item.remove_callbacks.add(lambda item=item, parent=parent: parent.remove_item(self._db_map, item))
-                if not item.check_removed():
+                item.readd_callbacks.add(parent.make_add_item_callback(self._db_map))
+                item.update_callbacks.add(parent.make_update_item_callback(self._db_map))
+                item.remove_callbacks.add(parent.make_remove_item_callback(self._db_map))
+                if item.is_valid():
                     yield item
 
     def can_fetch_more(self, parent):
