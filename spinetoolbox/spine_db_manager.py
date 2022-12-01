@@ -256,7 +256,11 @@ class SpineDBManager(QObject):
         Args:
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
+
+        Returns:
+            dict: mapping db_map to added cache items
         """
+        new_db_map_data = {}
         if item_type in ("object_class", "relationship_class"):
             self.update_icons(db_map_data)
         for db_map, items in db_map_data.items():
@@ -266,8 +270,8 @@ class SpineDBManager(QObject):
                 continue
             db_cache = self._cache.setdefault(db_map, DBCache(worker.do_advance_query))
             table_cache = db_cache.table_cache(item_type)
-            for item in items:
-                table_cache.add_item(item)
+            new_db_map_data[db_map] = [table_cache.add_item(item) for item in items]
+        return new_db_map_data
 
     def update_items_in_cache(self, item_type, db_map_data):
         """Updates items in cache.
@@ -310,12 +314,14 @@ class SpineDBManager(QObject):
         return db_map_data
 
     @busy_effect
-    def get_db_map_cache(self, db_map):
+    def get_db_map_cache(self, db_map, fetch_item_types=None, only_descendants=False, include_ancestors=False):
         try:
             worker = self._get_worker(db_map)
         except KeyError:
             return {}
-        worker.fetch_all()
+        worker.fetch_all(
+            fetch_item_types=fetch_item_types, only_descendants=only_descendants, include_ancestors=include_ancestors
+        )
         return self._cache.setdefault(db_map, DBCache(worker.do_advance_query))
 
     def get_icon_mngr(self, db_map):
@@ -1559,7 +1565,10 @@ class SpineDBManager(QObject):
     def _get_data_for_export(self, db_map_item_ids):
         data = {}
         for db_map, item_ids in db_map_item_ids.items():
-            make_cache = lambda *args, db_map=db_map, **kwargs: self.get_db_map_cache(db_map)
+            make_cache = lambda tablenames, db_map=db_map, **kwargs: self.get_db_map_cache(
+                db_map, fetch_item_types=tablenames, **kwargs
+            )
+
             for key, items in export_data(db_map, make_cache=make_cache, parse_value=load_db_value, **item_ids).items():
                 data.setdefault(key, []).extend(items)
         return data

@@ -423,14 +423,18 @@ class SpineDBWorker(QObject):
             items, errors = getattr(self._db_map, method_name)(
                 *orig_items, check=check, readd=readd, return_items=True, cache=cache
             )
-        if self._committing:
-            return
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
+        if self._committing:
+            if callback is not None:
+                callback({})
+            return
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
             if not readd:
                 self._fetched_ids.setdefault(actual_item_type, []).extend([x["id"] for x in actual_items])
-                self._db_mngr.add_items_to_cache(actual_item_type, {self._db_map: actual_items})
+                actual_items = self._db_mngr.add_items_to_cache(actual_item_type, {self._db_map: actual_items})[
+                    self._db_map
+                ]
                 for parent in self._parents_by_type.get(actual_item_type, ()):
                     self.fetch_more(parent)
             else:
@@ -475,10 +479,12 @@ class SpineDBWorker(QObject):
         check &= not self._committing
         with self._db_map.override_committing(self._committing):
             items, errors = getattr(self._db_map, method_name)(*orig_items, check=check, return_items=True, cache=cache)
-        if self._committing:
-            return
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
+        if self._committing:
+            if callback is not None:
+                callback({})
+            return
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
             self._db_mngr.update_items_in_cache(actual_item_type, {self._db_map: actual_items})
             db_map_data = {self._db_map: [{**x} for x in actual_items]}
@@ -499,6 +505,8 @@ class SpineDBWorker(QObject):
                     self._db_map.cascade_remove_items(**{item_type: ids})
                 except SpineDBAPIError as err:
                     self._db_mngr.error_msg.emit({self._db_map: [err]})
+            if callback is not None:
+                callback({})
             return
         db_map_data = self._db_mngr.remove_items_in_cache(item_type, {self._db_map: ids})
         if callback is not None:
@@ -515,7 +523,7 @@ class SpineDBWorker(QObject):
         # Make sure that the worker thread has a reference to undo stacks even if they get deleted
         # in the GUI thread.
         undo_stack = self._db_mngr.undo_stack[self._db_map]
-        self._executor.submit(self._commit_session, commit_msg, undo_stack, cookie)
+        self._executor.submit(self._commit_session, commit_msg, undo_stack, cookie).result()
 
     def _commit_session(self, commit_msg, undo_stack, cookie=None):
         """Commits session for given database maps.
@@ -532,14 +540,10 @@ class SpineDBWorker(QObject):
         self._committing = False
         try:
             self._db_map.commit_session(commit_msg)
-            errors = []
-        except SpineDBAPIError as e:
-            errors = [e.msg]
-        undo_stack.setClean()
-        if errors:
-            self._db_mngr.error_msg.emit({self._db_map: errors})
-        else:
             self._db_mngr.session_committed.emit({self._db_map}, cookie)
+        except SpineDBAPIError as err:
+            self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
+        undo_stack.setClean()
 
     def rollback_session(self):
         """Initiates rollback session in the worker thread."""

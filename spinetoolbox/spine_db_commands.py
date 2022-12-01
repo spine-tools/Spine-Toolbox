@@ -21,6 +21,12 @@ from PySide2.QtWidgets import QUndoCommand, QUndoStack
 
 
 class AgedUndoStack(QUndoStack):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._lost_clean_index = None
+        self._command_backup = []
+        print(self.index(), self.count())
+
     @property
     def redo_age(self):
         if self.canRedo():
@@ -35,6 +41,31 @@ class AgedUndoStack(QUndoStack):
 
     def commands(self):
         return [self.command(idx) for idx in range(self.index())]
+
+    def push(self, cmd):
+        if self._lost_clean_index is None and self.cleanIndex() > self.index():
+            self._lost_clean_index = self.cleanIndex()
+            # Pushing the command will mean that a few commands will be lost. We need to save them
+            self._command_backup = [self.command(idx) for idx in range(self._lost_clean_index)]
+
+        super().push(cmd)
+        print(self.index(), self.count())
+
+    def commit(self):
+        if self._lost_clean_index is not None:
+
+            return
+        if self.index() > self.cleanIndex():
+            for idx in range(self.cleanIndex(), self.index()):
+                self.command(idx).redo()
+        elif self.index() < self.cleanIndex():
+            for idx in reversed(range(self.index(), self.cleanIndex())):
+                self.command(idx).undo()
+
+    def setClean(self):
+        self._lost_clean_index = None
+        self._command_backup = []
+        super().setClean()
 
 
 class AgedUndoCommand(QUndoCommand):
