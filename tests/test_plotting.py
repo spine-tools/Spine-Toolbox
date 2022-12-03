@@ -115,6 +115,8 @@ class TestBase(unittest.TestCase):
     def _select_object_class_in_tree_view(self):
         object_tree_model = self._db_editor.ui.treeView_object.model()
         root_index = object_tree_model.index(0, 0)
+        if object_tree_model.canFetchMore(root_index):
+            object_tree_model.fetchMore(root_index)
         self.assertEqual(object_tree_model.rowCount(root_index), 1)
         class_index = object_tree_model.index(0, 0, root_index)
         refreshing_models = list(self._db_editor._parameter_models) + list(self._db_editor._parameter_value_models)

@@ -144,7 +144,6 @@ class TestParameterTableView(TestBase):
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
-    @unittest.skip
     @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=1)
     def test_incremental_fetching_groups_values_by_entity_class(self):
         tree_view = self._db_editor.ui.treeView_object
@@ -264,7 +263,6 @@ class TestParameterTableWithExistingData(TestBase):
         self._db_mngr.remove_items({self._db_map: {"parameter_value": set(range(1, n_values, 2))}})
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE / 2 + 1)
 
-    @unittest.skip
     def test_undoing_purge(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
@@ -273,8 +271,8 @@ class TestParameterTableWithExistingData(TestBase):
         self.assertEqual(model.rowCount(), 1)
         self._db_editor.undo_action.trigger()
         while model.rowCount() != self._n_objects * self._n_parameters + 1:
-            # Wait for fetching to finish.
-            QApplication.processEvents()
+            # Fetch the entire model so we can validate the data.
+            model.fetchMore(QModelIndex())
         expected = sorted(
             [
                 ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", "database"]
@@ -283,7 +281,7 @@ class TestParameterTableWithExistingData(TestBase):
             key=lambda x: (x[1], x[2]),
         )
         expected.append([None, None, None, None, None, "database"])
-        self.assertEqual(model.rowCount(), 145)
+        self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 

@@ -158,7 +158,7 @@ class SpineDBWorker(QObject):
             parent (FetchParent)
         """
         self._do_advance_query(parent.fetch_item_type)
-        if parent.position < len(self._fetched_ids.get(parent.fetch_item_type, ())):
+        if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):
             self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
         else:
             parent.set_fetched(True)
@@ -274,8 +274,8 @@ class SpineDBWorker(QObject):
             dict: The next item from cache that passes the parent's filter.
         """
         item_type = parent.fetch_item_type
-        for id_ in self._fetched_ids.get(item_type, [])[parent.position :]:
-            parent.position += 1
+        for id_ in self._fetched_ids.get(item_type, [])[parent.position(self._db_map) :]:
+            parent.increment_position(self._db_map)
             item = self._db_mngr.get_item(self._db_map, item_type, id_)
             if parent.accepts_item(item, self._db_map):
                 item.readd_callbacks.add(parent.make_add_item_callback(self._db_map))
@@ -534,9 +534,7 @@ class SpineDBWorker(QObject):
             cookie (Any): a cookie to include in session_committed signal
         """
         self._committing = True
-        for i in range(undo_stack.index()):
-            cmd = undo_stack.command(i)
-            cmd.redo()
+        undo_stack.commit()
         self._committing = False
         try:
             self._db_map.commit_session(commit_msg)

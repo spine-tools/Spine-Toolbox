@@ -401,7 +401,7 @@ class SingleParameterValueMixin(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return item[self.entity_name_key] or "", item["parameter_name"] or "", item["alternative_name"] or ""
+        return item[self.entity_name_key], item["parameter_name"], item["alternative_name"]
 
     def set_filter_entity_ids(self, db_map_class_entity_ids):
         if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:

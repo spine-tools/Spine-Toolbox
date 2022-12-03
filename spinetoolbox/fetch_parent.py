@@ -28,7 +28,7 @@ class FetchParent:
         self._worker = None
         self._fetched = False
         self._busy = False
-        self.position = 0
+        self._position = {}
         self.fetch_token = None
         self.will_have_children = None
         """Whether this parent will have children if fetched.
@@ -44,6 +44,12 @@ class FetchParent:
         self._add_item_callbacks = {}
         self._update_item_callbacks = {}
         self._remove_item_callbacks = {}
+
+    def position(self, db_map):
+        return self._position.setdefault(db_map, 0)
+
+    def increment_position(self, db_map):
+        self._position[db_map] += 1
 
     def make_add_item_callback(self, db_map):
         if db_map not in self._add_item_callbacks:
@@ -176,7 +182,7 @@ class FetchParent:
         self._worker = None
         self._fetched = False
         self._busy = False
-        self.position = 0
+        self._position.clear()
         self.fetch_token = fetch_token
         self.will_have_children = None
         self.will_have_children_change()

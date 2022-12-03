@@ -17,6 +17,7 @@ QUndoCommand subclasses for modifying the db.
 """
 
 import time
+import uuid
 from PySide2.QtWidgets import QUndoCommand, QUndoStack
 
 
@@ -38,24 +39,34 @@ class AgedUndoStack(QUndoStack):
         return -1
 
     def commands(self):
-        return [self.command(idx) for idx in range(self.index())]
+        return [self.command(i) for i in range(self.index())]
 
     def push(self, cmd):
         if self.cleanIndex() > self.index() and not self._command_backup:
-            # Pushing the command will delete all commands. We need to save all commands till the clean index.
-            self._command_backup = [self.command(idx) for idx in range(self.cleanIndex())]
+            # Pushing the command will delete all undone commands.
+            # We need to save all commands till the clean index.
+            self._command_backup = [self.command(i).clone() for i in range(self.cleanIndex())]
         super().push(cmd)
 
     def commit(self):
         if self._command_backup:
-            # Undo all commands in backup and then redo till index
+            # Find index where backup and stack branch away
+            branching_idx = next(
+                (i for i in range(self.index()) if not self._command_backup[i].is_clone(self.command(i))), None
+            )
+            # Undo all backup commands from last till branching index
+            for cmd in reversed(self._command_backup[branching_idx:]):
+                cmd.undo()
+            # Redo all commands from branching index till stack index
+            for i in range(branching_idx, self.index()):
+                self.command(i).redo()
             return
         if self.index() > self.cleanIndex():
-            for idx in range(self.cleanIndex(), self.index()):
-                self.command(idx).redo()
+            for i in range(self.cleanIndex(), self.index()):
+                self.command(i).redo()
         elif self.index() < self.cleanIndex():
-            for idx in reversed(range(self.index(), self.cleanIndex())):
-                self.command(idx).undo()
+            for i in reversed(range(self.index(), self.cleanIndex())):
+                self.command(i).undo()
 
     def setClean(self):
         self._command_backup = []
@@ -140,6 +151,15 @@ class SpineDBCommand(AgedUndoCommand):
         self._done_once = False
         self.redo_complete_callback = lambda *args: None
         self.undo_complete_callback = lambda *args: None
+        self.identifier = uuid.uuid4()
+
+    def clone(self):
+        clone = self._do_clone()
+        clone.identifier = self.identifier
+        return clone
+
+    def is_clone(self, other):
+        return other.identifier == self.identifier
 
     def handle_undo_complete(self, data):
         """Calls the undo complete callback with the data from undo().
@@ -200,6 +220,14 @@ class AddItemsCommand(SpineDBCommand):
         self._readd = False
         self._check = check
         self.setText(self._add_command_name.get(item_type, "add item") + f" to '{db_map.codename}'")
+
+    def _do_clone(self):
+        clone = AddItemsCommand(self.db_mngr, self.db_map, [], self.item_type)
+        clone.redo_db_map_data = self.redo_db_map_data
+        clone.undo_db_map_ids = self.undo_db_map_ids
+        clone._readd = self._readd
+        clone._check = self._check
+        return clone
 
     def redo(self):
         super().redo()
@@ -267,6 +295,13 @@ class UpdateItemsCommand(SpineDBCommand):
         self._check = check
         self.setText(self._update_command_name.get(item_type, "update item") + f" in '{db_map.codename}'")
 
+    def _do_clone(self):
+        clone = UpdateItemsCommand(self.db_mngr, self.db_map, [], self.item_type)
+        clone.redo_db_map_data = self.redo_db_map_data
+        clone.undo_db_map_data = self.undo_db_map_data
+        clone._check = self._check
+        return clone
+
     def redo(self):
         super().redo()
         self.db_mngr.update_items(
@@ -300,18 +335,24 @@ class RemoveItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not ids:
             self.setObsolete(True)
-        self.redo_data = {db_map: ids}
-        self.undo_data = {}
+        self.redo_db_map_ids = {db_map: ids}
+        self.undo_db_map_data = {}
         self.item_type = item_type
         self.setText(f"remove {item_type} items from '{db_map.codename}'")
 
+    def _do_clone(self):
+        clone = RemoveItemsCommand(self.db_mngr, self.db_map, set(), self.item_type)
+        clone.redo_db_map_ids = self.redo_db_map_ids
+        clone.undo_db_map_data = self.undo_db_map_data
+        return clone
+
     def redo(self):
         super().redo()
-        self.db_mngr.do_remove_items(self.item_type, self.redo_data, callback=self.handle_redo_complete)
+        self.db_mngr.do_remove_items(self.item_type, self.redo_db_map_ids, callback=self.handle_redo_complete)
 
     def undo(self):
         super().undo()
-        self.db_mngr.add_items(self.undo_data, self.item_type, readd=True, callback=self.handle_undo_complete)
+        self.db_mngr.add_items(self.undo_db_map_data, self.item_type, readd=True, callback=self.handle_undo_complete)
 
     def _handle_first_redo_complete(self, db_map_data):
-        self.undo_data = db_map_data
+        self.undo_db_map_data = db_map_data
