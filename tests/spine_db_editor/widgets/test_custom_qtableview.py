@@ -306,8 +306,9 @@ class TestParameterTableWithExistingData(TestBase):
             ],
             key=lambda x: (x[1], x[2]),
         )
+        QApplication.processEvents()
         expected.append([None, None, None, None, None, "database"])
-        self.assertEqual(model.rowCount(), 145)
+        self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 

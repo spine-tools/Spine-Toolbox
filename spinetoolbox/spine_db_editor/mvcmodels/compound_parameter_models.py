@@ -186,7 +186,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             db_map (DiffDatabaseMapping)
             db_items (list(dict))
         """
-        return
+        return  # FIXME MM
         for menu in self._auto_filter_menus.values():
             menu.modify_menu_data(action, db_map, db_items)
 
@@ -448,8 +448,14 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         """
         for db_map, items in db_map_data.items():
             items_per_class = self._items_per_class(items)
-            for class_items in items_per_class.values():
+            for entity_class_id, class_items in items_per_class.items():
+                existing = next(
+                    (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+                )
+                if existing is not None:
+                    existing.resort()
                 self._do_update_data_in_filter_menus(db_map, class_items)
+
         self._emit_data_changed_for_column("parameter_name")
         # NOTE: parameter_definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names are. Why?

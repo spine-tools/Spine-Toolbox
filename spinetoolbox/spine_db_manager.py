@@ -155,47 +155,6 @@ class SpineDBManager(QObject):
                 except AttributeError:
                     pass
 
-    def special_cascading_ids(self, db_map, item_type, ids):
-        """Returns a dictionary mapping item type to a set of ids for given db_map, item_type, and ids.
-        The returned ids correspond to items that have a reference to the input ids,
-        but it is not a foreign key - so they are not returned by ``DiffDatabaseMapping.cascading_ids``.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-            item_type (str)
-            ids (Iterable of int)
-
-        Returns:
-            dict
-        """
-        cascading_ids = {}
-        if item_type == "scenario_alternative":
-            cascading_ids["scenario"] = {
-                self.get_item(db_map, "scenario_alternative", id_)["scenario_id"] for id_ in ids
-            }
-        elif item_type == "parameter_value_list":
-            for item in self.get_items(db_map, "parameter_definition"):
-                if item["value_list_id"] in ids:
-                    cascading_ids.setdefault("parameter_definition", set()).add(item["id"])
-            for item in self.get_items(db_map, "feature"):
-                if item["parameter_value_list_id"] in ids:
-                    cascading_ids.setdefault("feature", set()).add(item["id"])
-        elif item_type == "list_value":
-            cascading_ids["parameter_value_list"] = {
-                self.get_item(db_map, "list_value", id_)["parameter_value_list_id"] for id_ in ids
-            }
-            for item in self.get_items(db_map, "parameter_value"):
-                if item["list_value_id"] in ids:
-                    cascading_ids.setdefault("parameter_value", set()).add(item["id"])
-            for item in self.get_items(db_map, "parameter_definition"):
-                if item["list_value_id"] in ids:
-                    cascading_ids.setdefault("parameter_definition", set()).add(item["id"])
-        elif item_type == "entity_group":
-            cascading_ids["object"] = {
-                x["group_id"] for x in (self.get_item(db_map, "entity_group", id_) for id_ in ids) if x
-            }
-        return cascading_ids
-
     def _get_worker(self, db_map):
         """Returns a worker.
 

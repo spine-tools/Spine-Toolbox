@@ -90,7 +90,7 @@ class SpineDBWorker(QObject):
         self.commit_cache = {}
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._queries_to_advance = {}
-        self.startTimer(20)
+        self.startTimer(0)
         self._something_happened.connect(self._handle_something_happened)
 
     def timerEvent(self, event):
@@ -165,7 +165,8 @@ class SpineDBWorker(QObject):
             parent.set_busy(False)
 
     def do_advance_query(self, item_type):
-        self._queries_to_advance[item_type] = None
+        if item_type not in self._fetched_item_types:
+            self._queries_to_advance[item_type] = None
 
     def _advance_pending_queries(self):
         for item_type in self._queries_to_advance:
@@ -558,11 +559,7 @@ class SpineDBWorker(QObject):
         """
         try:
             self._db_map.reset_session()
-            errors = []
-        except SpineDBAPIError as e:
-            errors = [e.msg]
-        undo_stack.setClean()
-        if errors:
-            self._db_mngr.error_msg.emit({self._db_map: errors})
-        else:
             self._db_mngr.session_rolled_back.emit({self._db_map})
+        except SpineDBAPIError as err:
+            self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
+        undo_stack.setClean()

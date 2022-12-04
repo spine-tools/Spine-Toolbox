@@ -81,6 +81,15 @@ class AgedUndoCommand(QUndoCommand):
         """
         super().__init__(parent=parent)
         self._age = -1
+        self.identifier = uuid.uuid4()
+
+    def clone(self):
+        clone = self._do_clone()
+        clone.identifier = self.identifier
+        return clone
+
+    def is_clone(self, other):
+        return other.identifier == self.identifier
 
     def redo(self):
         super().redo()
@@ -105,6 +114,14 @@ class SpineDBMacro(AgedUndoCommand):
         self._reverse_cmd_iter = None
         self._cmds = []
         self._completed_once = False
+
+    def _do_clone(self):
+        clone = SpineDBMacro([])
+        clone._cmd_iter = self._cmd_iter
+        clone._reverse_cmd_iter = self._reverse_cmd_iter
+        clone._cmds = self._cmds
+        clone._completed_once = self._completed_once
+        return clone
 
     def redo(self):
         super().redo()
@@ -151,15 +168,6 @@ class SpineDBCommand(AgedUndoCommand):
         self._done_once = False
         self.redo_complete_callback = lambda *args: None
         self.undo_complete_callback = lambda *args: None
-        self.identifier = uuid.uuid4()
-
-    def clone(self):
-        clone = self._do_clone()
-        clone.identifier = self.identifier
-        return clone
-
-    def is_clone(self, other):
-        return other.identifier == self.identifier
 
     def handle_undo_complete(self, data):
         """Calls the undo complete callback with the data from undo().

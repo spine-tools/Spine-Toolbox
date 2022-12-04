@@ -33,6 +33,9 @@ from .colors import FIXED_FIELD_COLOR
 
 
 class HalfSortedTableModel(MinimalTableModel):
+    _resort_pending = False
+    _resort_timer_id = None
+
     def reset_model(self, main_data=None):
         """Reset model."""
         if main_data is None:
@@ -49,6 +52,32 @@ class HalfSortedTableModel(MinimalTableModel):
         self._main_data += data
         self._main_data.sort(key=self._sort_key)
         self.endResetModel()
+
+    def resort(self):
+        if self._resort_pending:
+            return
+        self._resort_pending = True
+        self._resort_timer_id = self.startTimer(0)
+
+    def timerEvent(self, ev):
+        if ev.timerId() == self._resort_timer_id:
+            self.killTimer(ev.timerId())
+            self._do_resort()
+
+    def _do_resort(self):
+        self._resort_pending = False
+        if not self._main_data:
+            return
+        self.layoutAboutToBeChanged.emit()
+        self._main_data.sort(key=self._sort_key)
+        self.layoutChanged.emit()
+
+    @staticmethod
+    def _get_key_safe(d, key):
+        try:
+            return d[key] or ""
+        except KeyError:
+            return ""
 
     def _sort_key(self, element):
         return element
@@ -346,7 +375,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return item["parameter_name"]
+        return self._get_key_safe(item, "parameter_name")
 
     def update_items_in_db(self, items):
         """Update items in db.
@@ -401,7 +430,7 @@ class SingleParameterValueMixin(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return item[self.entity_name_key], item["parameter_name"], item["alternative_name"]
+        return tuple(self._get_key_safe(item, k) for k in (self.entity_name_key, "parameter_name", "alternative_name"))
 
     def set_filter_entity_ids(self, db_map_class_entity_ids):
         if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:
