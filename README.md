@@ -106,11 +106,13 @@ install Python and get the latest version of pip.
 
 1. Clone or download the source code from this repository.
    
-2. Browse to the folder and create a virtual environment using
+2. Browse to the folder where Spine Toolbox was cloned and create a Python virtual environment using
 
         python -m venv .venv
+    
+    Make sure you have the right Python version in the system path, or then use the full path of the Python version you want to use.
 
-    or a new [conda](https://docs.conda.io/projects/conda/) environment using 
+    Instead of venv, one can also use a new [conda](https://docs.conda.io/projects/conda/) environment using 
 
         conda create -n spinetoolbox python=3.9
     
