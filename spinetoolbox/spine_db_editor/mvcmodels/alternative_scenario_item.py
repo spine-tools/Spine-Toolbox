@@ -107,10 +107,10 @@ class ScenarioLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def scenario_alternative_root_item(self):
         return self.child(1)
 
-    def _do_finalize(self):
+    def _do_set_up(self):
         if not self.id:
             return
-        super()._do_finalize()
+        super()._do_set_up()
         self.append_children([ScenarioActiveItem(), ScenarioAlternativeRootItem()])
 
     def handle_updated_in_db(self):

@@ -320,11 +320,11 @@ class TestSpineDBManager(SpineDBManager):
             mock_executor.return_value = _MockExecutor()
             return super().get_db_map(*args, **kwargs)
 
-    def can_fetch_more(self, db_map, parent, listener=None):
+    def can_fetch_more(self, db_map, parent):
         parent.add_item = lambda db_map, item: parent.handle_items_added({db_map: [item]})
         parent.update_item = lambda db_map, item: parent.handle_items_updated({db_map: [item]})
         parent.remove_item = lambda db_map, item: parent.handle_items_removed({db_map: [item]})
-        return super().can_fetch_more(db_map, parent, listener=None)
+        return super().can_fetch_more(db_map, parent)
 
 
 class _MockExecutor:

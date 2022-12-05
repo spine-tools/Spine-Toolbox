@@ -16,7 +16,7 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QTimer
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
@@ -33,8 +33,12 @@ from .colors import FIXED_FIELD_COLOR
 
 
 class HalfSortedTableModel(MinimalTableModel):
-    _resort_pending = False
-    _resort_timer_id = None
+    def __init__(self, header, lazy=False):
+        super().__init__(header=header, lazy=lazy)
+        self._resort_timer = QTimer()
+        self._resort_timer.setInterval(20)
+        self._resort_timer.setSingleShot(True)
+        self._resort_timer.timeout.connect(self._do_resort)
 
     def reset_model(self, main_data=None):
         """Reset model."""
@@ -54,28 +58,23 @@ class HalfSortedTableModel(MinimalTableModel):
         self.endResetModel()
 
     def resort(self):
-        if self._resort_pending:
-            return
-        self._resort_pending = True
-        self._resort_timer_id = self.startTimer(0)
-
-    def timerEvent(self, ev):
-        if ev.timerId() == self._resort_timer_id:
-            self.killTimer(ev.timerId())
-            self._do_resort()
+        self._resort_timer.start()
 
     def _do_resort(self):
-        self._resort_pending = False
         if not self._main_data:
             return
-        self.layoutAboutToBeChanged.emit()
         self._main_data.sort(key=self._sort_key)
-        self.layoutChanged.emit()
+        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1))
 
     @staticmethod
     def _get_key_safe(d, key):
         try:
-            return d[key] or ""
+            value = d[key]
+            if isinstance(value, tuple):
+                value = ",".join(v or "" for v in value)
+            else:
+                value = value or ""
+            return value
         except KeyError:
             return ""
 
@@ -95,7 +94,7 @@ class SingleParameterModel(HalfSortedTableModel):
         Args:
             header (list): list of field names for the header
         """
-        super().__init__(header=header, lazy=lazy)
+        super().__init__(header, lazy=lazy)
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.entity_class_id = entity_class_id

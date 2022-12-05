@@ -79,6 +79,9 @@ class SpineDBWorker(QObject):
     def __init__(self, db_mngr, db_url):
         super().__init__()
         self._parents_by_type = {}
+        self._add_item_callbacks = {}
+        self._update_item_callbacks = {}
+        self._remove_item_callbacks = {}
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
@@ -90,8 +93,15 @@ class SpineDBWorker(QObject):
         self.commit_cache = {}
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._queries_to_advance = {}
-        self.startTimer(0)
+        self.startTimer(20)
         self._something_happened.connect(self._handle_something_happened)
+
+    def _get_parents(self, item_type):
+        parents = self._parents_by_type.get(item_type, set())
+        for parent in list(parents):
+            if parent.is_obsolete:
+                parents.remove(parent)
+        return parents
 
     def timerEvent(self, event):
         self._advance_pending_queries()
@@ -169,10 +179,8 @@ class SpineDBWorker(QObject):
             self._queries_to_advance[item_type] = None
 
     def _advance_pending_queries(self):
-        for item_type in self._queries_to_advance:
-            if item_type not in self._fetched_item_types:
-                self._executor.submit(self._do_advance_query, item_type)
-        self._queries_to_advance.clear()
+        for item_type in list(self._queries_to_advance):
+            self._executor.submit(self._do_advance_query, item_type)
 
     @busy_effect
     @_db_map_lock
@@ -185,6 +193,7 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if new items were fetched from the DB, False otherwise.
         """
+        self._queries_to_advance.pop(item_type, None)
         if item_type not in self._queries:
             try:
                 sq_name = self._db_map.cache_sqs[item_type]
@@ -238,14 +247,14 @@ class SpineDBWorker(QObject):
         Args:
             item_type (str)
         """
-        parents = self._parents_by_type.get(item_type, ())
+        parents = self._get_parents(item_type)
         position = 0
         while True:
             parents_to_check = {parent for parent in parents if parent.will_have_children is None}
             if not parents_to_check:
                 break
             for id_ in self._fetched_ids.get(item_type, [])[position:]:
-                if self._parents_by_type.get(item_type, ()) != parents:
+                if self._get_parents(item_type) != parents:
                     # New parents registered - we need to start over
                     return
                 position += 1
@@ -279,11 +288,47 @@ class SpineDBWorker(QObject):
             parent.increment_position(self._db_map)
             item = self._db_mngr.get_item(self._db_map, item_type, id_)
             if parent.accepts_item(item, self._db_map):
-                item.readd_callbacks.add(parent.make_add_item_callback(self._db_map))
-                item.update_callbacks.add(parent.make_update_item_callback(self._db_map))
-                item.remove_callbacks.add(parent.make_remove_item_callback(self._db_map))
+                item.readd_callbacks.add(self._make_add_item_callback(parent))
+                item.update_callbacks.add(self._make_update_item_callback(parent))
+                item.remove_callbacks.add(self._make_remove_item_callback(parent))
                 if item.is_valid():
                     yield item
+
+    def _add_item(self, parent, item):
+        if parent.is_obsolete:
+            self._add_item_callbacks.pop(parent, None)
+            return False
+        parent.add_item(self._db_map, item)
+        return True
+
+    def _update_item(self, parent, item):
+        if parent.is_obsolete:
+            self._update_item_callbacks.pop(parent, None)
+            return False
+        parent.update_item(self._db_map, item)
+        return True
+
+    def _remove_item(self, parent, item):
+        if parent.is_obsolete:
+            self._remove_item_callbacks.pop(parent, None)
+            return False
+        parent.remove_item(self._db_map, item)
+        return True
+
+    def _make_add_item_callback(self, parent):
+        if parent not in self._add_item_callbacks:
+            self._add_item_callbacks[parent] = lambda item, parent=parent: self._add_item(parent, item)
+        return self._add_item_callbacks[parent]
+
+    def _make_update_item_callback(self, parent):
+        if parent not in self._update_item_callbacks:
+            self._update_item_callbacks[parent] = lambda item, parent=parent: self._update_item(parent, item)
+        return self._update_item_callbacks[parent]
+
+    def _make_remove_item_callback(self, parent):
+        if parent not in self._remove_item_callbacks:
+            self._remove_item_callbacks[parent] = lambda item, parent=parent: self._remove_item(parent, item)
+        return self._remove_item_callbacks[parent]
 
     def can_fetch_more(self, parent):
         """Returns whether more data can be fetched for parent.
@@ -299,8 +344,7 @@ class SpineDBWorker(QObject):
         self._register_fetch_parent(parent)
         return parent.will_have_children is not False and not parent.is_fetched and not parent.is_busy
 
-    @staticmethod
-    def _will_have_children_change_event(parents):
+    def _will_have_children_change_event(self, parents):
         for parent in parents:
             parent.will_have_children_change()
 
@@ -310,14 +354,10 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): fetch parent
         """
-        if parent not in self._parents_by_type.get(parent.fetch_item_type, ()):
-            raise RuntimeError(
-                f"attempting to fetch unregistered parent {parent} - did you forget to call ``can_fetch_more()``"
-            )
         self._reset_fetching_if_required(parent)
-        parent.bind_worker(self)
+        self._register_fetch_parent(parent)
         parent.set_busy(True)
-        chunk = next(parent, None)
+        chunk = parent.next_chunk(self)
         if chunk:
             parent.handle_items_added({self._db_map: chunk})
             parent.set_busy(False)
@@ -363,15 +403,6 @@ class SpineDBWorker(QObject):
     def _close_db_map(self):
         if not self._db_map.connection.closed:
             self._db_map.connection.close()
-
-    def remove_parents(self, parents):
-        """Remove given parents. Removed parents don't get updated whenever items are added/updated/removed.
-
-        Args:
-            parents (Iterable)
-        """
-        for parent in parents:
-            self._parents_by_type.get(parent.fetch_item_type).remove(parent)
 
     def _split_items_by_type(self, item_type, items):
         if item_type in ("parameter_value_metadata", "entity_metadata"):
@@ -436,7 +467,7 @@ class SpineDBWorker(QObject):
                 actual_items = self._db_mngr.add_items_to_cache(actual_item_type, {self._db_map: actual_items})[
                     self._db_map
                 ]
-                for parent in self._parents_by_type.get(actual_item_type, ()):
+                for parent in self._get_parents(actual_item_type):
                     self.fetch_more(parent)
             else:
                 for actual_item in actual_items:

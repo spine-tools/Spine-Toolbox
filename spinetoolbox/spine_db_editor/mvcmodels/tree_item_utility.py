@@ -119,8 +119,8 @@ class EmptyChildMixin:
     def empty_child(self):
         raise NotImplementedError()
 
-    def _do_finalize(self):
-        super()._do_finalize()
+    def _do_set_up(self):
+        super()._do_set_up()
         empty_child = self.empty_child()
         self.append_children([empty_child])
 
@@ -152,6 +152,10 @@ class FetchMoreMixin:
             accepts_item=self.accepts_item,
         )
 
+    def tear_down(self):
+        super().tear_down()
+        self._natural_fetch_parent.set_obsolete(True)
+
     @property
     def fetch_item_type(self):
         return self.item_type
@@ -162,7 +166,7 @@ class FetchMoreMixin:
     def can_fetch_more(self):
         result = False
         for parent in self._fetch_parents():
-            result |= self.db_mngr.can_fetch_more(self.db_map, parent, listener=self.model.db_editor)
+            result |= self.db_mngr.can_fetch_more(self.db_map, parent)
         return result
 
     def fetch_more(self):

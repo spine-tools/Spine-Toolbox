@@ -82,6 +82,7 @@ class GraphViewMixin:
             handle_items_removed=self._handle_objects_removed,
             handle_items_updated=self._handle_objects_updated,
             accepts_item=self._accepts_object_item,
+            owner=self,
         )
         self._relationship_fetch_parent = FlexibleFetchParent(
             "relationship",
@@ -89,6 +90,7 @@ class GraphViewMixin:
             handle_items_removed=self._handle_relationships_removed,
             handle_items_updated=self._handle_relationships_updated,
             accepts_item=self._accepts_relationship_item,
+            owner=self,
         )
 
     @Slot(bool)
@@ -361,7 +363,7 @@ class GraphViewMixin:
         """
         for fetch_parent in (self._object_fetch_parent, self._relationship_fetch_parent):
             for db_map in self.db_maps:
-                if self.db_mngr.can_fetch_more(db_map, fetch_parent, listener=self):
+                if self.db_mngr.can_fetch_more(db_map, fetch_parent):
                     self.db_mngr.fetch_more(db_map, fetch_parent)
         if "root" in self.selected_tree_inds:
             return (

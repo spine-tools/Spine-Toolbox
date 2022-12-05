@@ -107,7 +107,6 @@ class SpineDBManager(QObject):
         self.db_map_locks = {}
         self._workers = {}
         self.listeners = dict()
-        self._fetch_parents_by_listener = dict()
         self.undo_stack = {}
         self.undo_action = {}
         self.redo_action = {}
@@ -166,17 +165,13 @@ class SpineDBManager(QObject):
         """
         return self._workers[db_map]
 
-    def can_fetch_more(self, db_map, parent, listener=None):
+    def can_fetch_more(self, db_map, parent):
         """Whether or not we can fetch more items of given type from given db.
 
         Args:
             db_map (DiffDatabaseMapping)
             parent (FetchParent): The object that requests the fetching and that might want to react to further DB
                 modifications.
-            listener (object): The object that owns the fetch parent.
-                Must have been registered for given db_map using ``register_listener()``.
-                Calling ``unregister_listener()`` at a later stage will also cause the fetch parent to stop
-                reacting to DB modifications.
 
         Returns:
             bool
@@ -187,11 +182,6 @@ class SpineDBManager(QObject):
             worker = self._get_worker(db_map)
         except KeyError:
             return False
-        if listener is not None and listener not in self.db_map_listeners(db_map):
-            raise RuntimeError(
-                f"can't associate parent {parent} to listener {listener} - not listening on DB map {db_map}"
-            )
-        self._fetch_parents_by_listener.setdefault(listener, set()).add(parent)
         return worker.can_fetch_more(parent)
 
     def fetch_more(self, db_map, parent):
@@ -503,13 +493,7 @@ class SpineDBManager(QObject):
             commit_dirty (bool): True to commit dirty database mapping, False to roll back
             commit_msg (str): commit message
         """
-        parents = self._fetch_parents_by_listener.get(listener, ())
         for db_map in db_maps:
-            try:
-                worker = self._get_worker(db_map)
-                worker.remove_parents(parents)
-            except KeyError:
-                pass
             self.remove_db_map_listener(db_map, listener)
             try:
                 self.undo_stack[db_map].canRedoChanged.disconnect(listener.update_undo_redo_actions)

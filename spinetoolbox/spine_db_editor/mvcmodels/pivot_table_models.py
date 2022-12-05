@@ -73,7 +73,7 @@ class PivotTableModelBase(QAbstractTableModel):
         result = False
         for fetch_parent in self._fetch_parents():
             for db_map in self._parent.db_maps:
-                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent, listener=self._parent)
+                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
         return result
 
     def fetchMore(self, _):
@@ -734,6 +734,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_removed=self._handle_entities_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
             accepts_item=self._accepts_entity_item,
+            owner=self,
         )
         self._relationship_fetch_parent = FlexibleFetchParent(
             "relationship",
@@ -741,6 +742,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_removed=self._handle_entities_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
             accepts_item=self._accepts_entity_item,
+            owner=self,
         )
         self._parameter_definition_fetch_parent = FlexibleFetchParent(
             "parameter_definition",
@@ -748,6 +750,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_removed=self._handle_parameter_definitions_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
             accepts_item=self._accepts_parameter_item,
+            owner=self,
         )
         self._parameter_value_fetch_parent = FlexibleFetchParent(
             "parameter_value",
@@ -755,12 +758,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_removed=self._handle_parameter_values_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
             accepts_item=self._accepts_parameter_item,
+            owner=self,
         )
         self._alternative_fetch_parent = FlexibleFetchParent(
             "alternative",
             handle_items_added=self._handle_alternatives_added,
             handle_items_removed=self._handle_alternatives_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
+            owner=self,
         )
 
     def _accepts_entity_item(self, item, db_map):
@@ -1147,6 +1152,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             handle_items_removed=self._handle_relationships_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
             accepts_item=self._accepts_relationship_item,
+            owner=self,
         )
         self._object_fetch_parent = FlexibleFetchParent(
             "object",
@@ -1154,6 +1160,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             handle_items_removed=self._handle_objects_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
             accepts_item=self._accepts_object_item,
+            owner=self,
         )
 
     def _accepts_relationship_item(self, item, db_map):
@@ -1277,18 +1284,21 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_scenarios_added,
             handle_items_removed=self._handle_scenarios_removed,
             handle_items_updated=self._handle_scenarios_updated,
+            owner=self,
         )
         self._alternative_fetch_parent = FlexibleFetchParent(
             "alternative",
             handle_items_added=self._handle_alternatives_added,
             handle_items_removed=self._handle_alternatives_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
+            owner=self,
         )
         self._scenario_alternative_fetch_parent = FlexibleFetchParent(
             "scenario_alternative",
             handle_items_added=lambda _: self._parent.refresh_views(),
             handle_items_removed=lambda _: self._parent.refresh_views(),
             handle_items_updated=lambda _: self._parent.refresh_views(),
+            owner=self,
         )
 
     def _handle_scenarios_added(self, db_map_data):

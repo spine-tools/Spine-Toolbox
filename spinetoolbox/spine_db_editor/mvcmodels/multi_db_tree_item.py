@@ -19,11 +19,11 @@ from operator import attrgetter
 
 from PySide2.QtCore import Qt
 from ...helpers import rows_to_row_count_tuples, bisect_chunks
-from ...fetch_parent import FetchParent
+from ...fetch_parent import FlexibleFetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
 
 
-class MultiDBTreeItem(FetchParent, TreeItem):
+class MultiDBTreeItem(TreeItem):
     """A tree item that may belong in multiple databases."""
 
     item_type = None
@@ -42,6 +42,13 @@ class MultiDBTreeItem(FetchParent, TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
+        self._fetch_parent = FlexibleFetchParent(
+            self.fetch_item_type,
+            accepts_item=self.accepts_item,
+            handle_items_added=self.handle_items_added,
+            handle_items_removed=self.handle_items_removed,
+            handle_items_updated=self.handle_items_updated,
+        )
 
     def child_number(self):
         try:
@@ -244,7 +251,7 @@ class MultiDBTreeItem(FetchParent, TreeItem):
             return False
         result = False
         for db_map in self.db_maps:
-            result |= self.db_mngr.can_fetch_more(db_map, self, listener=self.model.db_editor)
+            result |= self.db_mngr.can_fetch_more(db_map, self._fetch_parent)
         return result
 
     def fetch_more(self):
@@ -252,11 +259,14 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         if self.fetch_item_type is None:
             return
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self)
+            self.db_mngr.fetch_more(db_map, self._fetch_parent)
 
     def fetch_more_if_possible(self):
         if self.can_fetch_more():
             self.fetch_more()
+
+    def accepts_item(self, item, db_map):
+        return True
 
     def handle_items_added(self, db_map_data):
         db_map_ids = {db_map: [x["id"] for x in data] for db_map, data in db_map_data.items()}

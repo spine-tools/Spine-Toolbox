@@ -153,10 +153,10 @@ class ToolLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def update_item_in_db(self, db_item):
         self.db_mngr.update_tools({self.db_map: [db_item]})
 
-    def _do_finalize(self):
+    def _do_set_up(self):
         if not self.id:
             return
-        super()._do_finalize()
+        super()._do_set_up()
         self.append_children([ToolFeatureRootItem()])
 
 
@@ -216,10 +216,10 @@ class ToolFeatureLeafItem(GrayIfLastMixin, LeafItem):
         )
         return item_data
 
-    def _do_finalize(self):
+    def _do_set_up(self):
         if not self.id:
             return
-        super()._do_finalize()
+        super()._do_set_up()
         self.append_children([ToolFeatureRequiredItem(), ToolFeatureMethodRootItem()])
 
     def _make_item_to_add(self, value):
@@ -284,6 +284,10 @@ class ToolFeatureMethodRootItem(EmptyChildRootItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._list_value_fetch_parent = FlexibleFetchParent("list_value", accepts_item=self._accepts_list_value_item)
+
+    def tear_down(self):
+        super().tear_down()
+        self._list_value_fetch_parent.set_obsolete(True)
 
     def _fetch_parents(self):
         yield self._list_value_fetch_parent

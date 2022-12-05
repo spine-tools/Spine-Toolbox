@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
 from ...helpers import rows_to_row_count_tuples, parameter_identifier
-from ...fetch_parent import FetchParent
+from ...fetch_parent import FlexibleFetchParent
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -37,7 +37,7 @@ from .single_parameter_models import (
 )
 
 
-class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
+class CompoundParameterModel(CompoundWithEmptyTableModel):
     """A model that concatenates several single parameter models
     and one empty parameter model.
     """
@@ -61,17 +61,24 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         self._filter_timer.setSingleShot(True)
         self._filter_timer.setInterval(100)
         self._filter_timer.timeout.connect(self.refresh)
-
-    @property
-    def fetch_item_type(self):
-        return self.item_type
+        self._fetch_parent = FlexibleFetchParent(
+            self.item_type,
+            accepts_item=self.accepts_item,
+            handle_items_added=self.handle_items_added,
+            handle_items_removed=self.handle_items_removed,
+            handle_items_updated=self.handle_items_updated,
+            owner=self,
+        )
 
     def canFetchMore(self, _parent):
-        return any(self.db_mngr.can_fetch_more(db_map, self, listener=self._parent) for db_map in self.db_maps)
+        result = False
+        for db_map in self.db_maps:
+            result |= self.db_mngr.can_fetch_more(db_map, self._fetch_parent)
+        return result
 
     def fetchMore(self, _parent):
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self)
+            self.db_mngr.fetch_more(db_map, self._fetch_parent)
 
     def accepts_item(self, item, db_map):
         return item.get(self.entity_class_id_key) is not None
