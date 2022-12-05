@@ -128,7 +128,9 @@ class CheckBoxDelegate(QStyledItemDelegate):
 
     def get_checkbox_rect(self, option):
         checkbox_style_option = QStyleOptionButton()
-        checkbox_rect = QApplication.style().subElementRect(QStyle.SubElement.SE_CheckBoxIndicator, checkbox_style_option, None)
+        checkbox_rect = QApplication.style().subElementRect(
+            QStyle.SubElement.SE_CheckBoxIndicator, checkbox_style_option, None
+        )
         if self._centered:
             checkbox_anchor = QPoint(
                 option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,

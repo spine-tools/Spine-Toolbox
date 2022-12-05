@@ -32,7 +32,9 @@ class ElidedCombobox(QComboBox):
         p = QStylePainter(self)
         p.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, opt)
 
-        text_rect = self.style().subControlRect(QStyle.ComplexControl.CC_ComboBox, opt, QStyle.SubControl.SC_ComboBoxEditField, self)
+        text_rect = self.style().subControlRect(
+            QStyle.ComplexControl.CC_ComboBox, opt, QStyle.SubControl.SC_ComboBoxEditField, self
+        )
         opt.currentText = p.fontMetrics().elidedText(opt.currentText, Qt.ElideLeft, text_rect.width())
         p.drawControl(QStyle.ControlElement.CE_ComboBoxLabel, opt)
 
