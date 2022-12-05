@@ -19,7 +19,6 @@ Classes for custom line edits.
 import os
 from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtWidgets import QLineEdit, QStyle
-from PySide6.QtGui import QKeySequence, QUndoStack
 from .custom_qwidgets import ElidedTextMixin, UndoRedoMixin
 
 
@@ -36,11 +35,7 @@ class PropertyQLineEdit(UndoRedoMixin, QLineEdit):
 
 
 class CustomQLineEdit(ElidedTextMixin, PropertyQLineEdit):
-    """A custom QLineEdit that accepts file drops and displays the path.
-
-    Attributes:
-        parent (QMainWindow): Parent for line edit widget
-    """
+    """A custom QLineEdit that accepts file drops and displays the path."""
 
     file_dropped = Signal(str)
 

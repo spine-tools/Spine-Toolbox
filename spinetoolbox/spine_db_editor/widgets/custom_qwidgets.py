@@ -66,7 +66,7 @@ class OpenFileButton(QToolButton):
         self.file_path = file_path
         self.dir_name, self.file_name = os.path.split(file_path)
         self.setText(self.file_name)
-        self.setPopupMode(QToolButton.MenuButtonPopup)
+        self.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         self.setStyleSheet(
             """
             QToolButton {

@@ -294,11 +294,7 @@ class ToolBarWidget(ToolBarWidgetBase):
 
 
 class MenuItemToolBarWidget(ToolBarWidgetBase):
-    """A menu item with a toolbar on the right.
-
-    Attributes:
-        tool_bar (QToolBar)
-    """
+    """A menu item with a toolbar on the right."""
 
     def __init__(self, text, parent=None, compact=False):
         """Class constructor.
@@ -418,7 +414,7 @@ class _MenuToolBar(QToolBar):
         Must be called everytime an action is added to the tool bar.
 
         Args:
-            QAction
+            action (QAction): Action to set up
         """
         button = self.widgetForAction(action)
         if not button:
@@ -680,7 +676,7 @@ class HorizontalSpinBox(QToolBar):
             return
         if value == self._value:
             return
-        acceptable = self._validator.validate(str(value), 0)[0] == QIntValidator.Acceptable
+        acceptable = self._validator.validate(str(value), 0)[0] == QIntValidator.State.Acceptable
         if strict and not acceptable:
             return
         self._line_edit.setText(str(value))
