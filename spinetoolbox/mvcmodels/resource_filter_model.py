@@ -53,7 +53,8 @@ class ResourceFilterModel(QStandardItemModel):
             for name in filters[filter_type]:
                 filter_item = QStandardItem(name)
                 filter_item.setData(
-                    Qt.Checked if name not in disabled else Qt.Unchecked, Qt.ItemDataRole.CheckStateRole
+                    Qt.CheckState.Checked if name not in disabled else Qt.CheckState.Unchecked,
+                    Qt.ItemDataRole.CheckStateRole,
                 )
                 filter_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 parent_item.appendRow(filter_item)
@@ -101,7 +102,7 @@ class ResourceFilterModel(QStandardItemModel):
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         if role != Qt.ItemDataRole.CheckStateRole:
             return super().setData(index, value, role)
-        self._change_filter_checked_state(index, value == Qt.Checked)
+        self._change_filter_checked_state(index, value == Qt.CheckState.Checked)
         return True
 
     def _change_filter_checked_state(self, index, is_on):
@@ -140,7 +141,7 @@ class ResourceFilterModel(QStandardItemModel):
             filter_item = filter_type_item.child(row)
             is_on = online.get(filter_item.text(), None)
             if is_on is not None:
-                checked = Qt.Checked if is_on else Qt.Unchecked
+                checked = Qt.CheckState.Checked if is_on else Qt.CheckState.Unchecked
                 if filter_item.data(Qt.ItemDataRole.CheckStateRole) != checked:
                     filter_item.setData(checked, Qt.ItemDataRole.CheckStateRole)
                     self.dataChanged.emit(filter_item.index(), filter_item.index(), [Qt.ItemDataRole.CheckStateRole])
@@ -181,9 +182,9 @@ class ResourceFilterModel(QStandardItemModel):
                     all_online = False
                     break
         all_selected_item = filter_type_item.child(0)
-        all_selected = all_selected_item.data(Qt.ItemDataRole.CheckStateRole) == Qt.Checked
+        all_selected = all_selected_item.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Checked
         if all_selected != all_online:
-            checked = Qt.Checked if all_online else Qt.Unchecked
+            checked = Qt.CheckState.Checked if all_online else Qt.CheckState.Unchecked
             all_selected_item.setData(checked, Qt.ItemDataRole.CheckStateRole)
             if emit_data_changed:
                 self.dataChanged.emit(

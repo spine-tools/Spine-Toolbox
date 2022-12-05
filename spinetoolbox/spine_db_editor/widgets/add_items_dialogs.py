@@ -98,7 +98,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         for row, relationship in enumerate(self.relationships):
             item = QTableWidgetItem()
             item.setFlags(Qt.ItemIsEnabled)
-            item.setCheckState(Qt.Checked)
+            item.setCheckState(Qt.CheckState.Checked)
             self.table_view.setItem(row, 0, item)
             for column, object_name in enumerate(relationship):
                 item = QTableWidgetItem(object_name)
@@ -114,7 +114,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
 
     def _handle_table_view_cell_clicked(self, row, column):
         item = self.table_view.item(row, 0)
-        check_state = Qt.Unchecked if item.checkState() == Qt.Checked else Qt.Checked
+        check_state = Qt.CheckState.Unchecked if item.checkState() == Qt.CheckState.Checked else Qt.CheckState.Checked
         item.setCheckState(check_state)
 
     def _handle_table_view_current_changed(self, current, _previous):
@@ -125,7 +125,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         super().accept()
         data = []
         for row in range(self.table_view.rowCount()):
-            if self.table_view.item(row, 0).checkState() != Qt.Checked:
+            if self.table_view.item(row, 0).checkState() != Qt.CheckState.Checked:
                 continue
             relationship = self.relationships[row]
             data.append([self.relationship_class["name"], relationship])

@@ -115,8 +115,8 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             return self._action_rows[row]
         if role == Qt.ItemDataRole.CheckStateRole:
             if row >= len(self._action_rows):
-                return Qt.Checked if self._data[data_row] in selected else Qt.Unchecked
-            return Qt.Checked if action_state[row] else Qt.Unchecked
+                return Qt.CheckState.Checked if self._data[data_row] in selected else Qt.CheckState.Unchecked
+            return Qt.CheckState.Checked if action_state[row] else Qt.CheckState.Unchecked
 
     def _handle_index_clicked(self, index):
         if index.row() == 0:

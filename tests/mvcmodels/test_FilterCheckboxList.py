@@ -148,7 +148,7 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         self.model.set_filter('b')
         self.assertFalse(self.model._add_to_selection)
         self.assertEqual(
-            self.model.data(self.model.index(len(self.model._action_rows) - 1, 0), Qt.ItemDataRole.CheckStateRole), Qt.Unchecked
+            self.model.data(self.model.index(len(self.model._action_rows) - 1, 0), Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Unchecked
         )
 
     def test_selected_when_filtered(self):
@@ -167,11 +167,11 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         self.model.set_list(self.data)
         self.assertEqual(self.model.rowCount(), len(self.data) + 1)
         self.assertEqual(self.model.data(self.model.index(0, 0)), "(Select all)")
-        self.assertEqual(self.model.data(self.model.index(0, 0), Qt.ItemDataRole.CheckStateRole), Qt.Checked)
+        self.assertEqual(self.model.data(self.model.index(0, 0), Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked)
         for index, expected in enumerate(self.data):
             model_index = self.model.index(index + 1, 0)
             self.assertEqual(self.model.data(model_index), expected)
-            self.assertEqual(self.model.data(model_index, Qt.ItemDataRole.CheckStateRole), Qt.Checked)
+            self.assertEqual(self.model.data(model_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked)
 
     def test_click_select_all_when_all_selected_and_filtered(self):
         self.model.set_list(self.data)

@@ -171,11 +171,11 @@ class SpineDBEditorSettingsMixin:
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true")
         db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Unchecked)
         elif commit_at_exit == 1:
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
         else:  # commit_at_exit == "2":
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Checked)
         self.ui.checkBox_object_tree_sticky_selection.setChecked(sticky_selection == "true")
         self.ui.checkBox_smooth_entity_graph_zoom.setChecked(smooth_zoom == "true")
         self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
@@ -559,36 +559,36 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         save_spec = int(self._qsettings.value("appSettings/saveSpecBeforeClosing", defaultValue="1"))  # tri-state
         spec_show_undo = int(self._qsettings.value("appSettings/specShowUndo", defaultValue="2"))
         if open_previous_project == 2:
-            self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
+            self.ui.checkBox_open_previous_project.setCheckState(Qt.CheckState.Checked)
         if show_exit_prompt == 2:
-            self.ui.checkBox_exit_prompt.setCheckState(Qt.Checked)
+            self.ui.checkBox_exit_prompt.setCheckState(Qt.CheckState.Checked)
         if save_at_exit == 0:  # Not needed but makes the code more readable.
-            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.Unchecked)
+            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.CheckState.Unchecked)
         elif save_at_exit == 1:
             self.ui.checkBox_save_project_before_closing.setCheckState(Qt.PartiallyChecked)
         else:  # save_at_exit == 2:
-            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.Checked)
+            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.CheckState.Checked)
         if datetime == 2:
-            self.ui.checkBox_datetime.setCheckState(Qt.Checked)
+            self.ui.checkBox_datetime.setCheckState(Qt.CheckState.Checked)
         if delete_data == 2:
-            self.ui.checkBox_delete_data.setCheckState(Qt.Checked)
+            self.ui.checkBox_delete_data.setCheckState(Qt.CheckState.Checked)
         if custom_open_project_dialog == "true":
-            self.ui.checkBox_custom_open_project_dialog.setCheckState(Qt.Checked)
+            self.ui.checkBox_custom_open_project_dialog.setCheckState(Qt.CheckState.Checked)
         if smooth_zoom == "true":
-            self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
+            self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.CheckState.Checked)
         if color_toolbar_icons == "true":
-            self.ui.checkBox_color_toolbar_icons.setCheckState(Qt.Checked)
+            self.ui.checkBox_color_toolbar_icons.setCheckState(Qt.CheckState.Checked)
         if color_properties_widgets == "true":
-            self.ui.checkBox_color_properties_widgets.setCheckState(Qt.Checked)
+            self.ui.checkBox_color_properties_widgets.setCheckState(Qt.CheckState.Checked)
         if curved_links == "true":
-            self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
+            self.ui.checkBox_use_curved_links.setCheckState(Qt.CheckState.Checked)
         if drag_to_draw_links == "true":
-            self.ui.checkBox_drag_to_draw_links.setCheckState(Qt.Checked)
+            self.ui.checkBox_drag_to_draw_links.setCheckState(Qt.CheckState.Checked)
         if rounded_items == "true":
-            self.ui.checkBox_use_rounded_items.setCheckState(Qt.Checked)
+            self.ui.checkBox_use_rounded_items.setCheckState(Qt.CheckState.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if prevent_overlapping == "true":
-            self.ui.checkBox_prevent_overlapping.setCheckState(Qt.Checked)
+            self.ui.checkBox_prevent_overlapping.setCheckState(Qt.CheckState.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
@@ -638,11 +638,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.lineEdit_work_dir.setText(work_dir)
         self.orig_work_dir = work_dir
         if save_spec == 0:
-            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.Unchecked)
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.CheckState.Unchecked)
         elif save_spec == 1:
             self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.PartiallyChecked)
         else:  # save_spec == 2:
-            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.Checked)
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.CheckState.Checked)
         if spec_show_undo == 2:
             self.ui.checkBox_spec_show_undo.setChecked(True)
         self._read_engine_settings()
@@ -652,7 +652,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         # Remote execution settings
         enable_remote_exec = self._qsettings.value("engineSettings/remoteExecutionEnabled", defaultValue="false")
         if enable_remote_exec == "true":
-            self.ui.checkBox_enable_remote_exec.setCheckState(Qt.Checked)
+            self.ui.checkBox_enable_remote_exec.setCheckState(Qt.CheckState.Checked)
         remote_host = self._qsettings.value("engineSettings/remoteHost", defaultValue="")
         self._edit_remote_host(remote_host)
         remote_port = int(self._qsettings.value("engineSettings/remotePort", defaultValue="49152"))

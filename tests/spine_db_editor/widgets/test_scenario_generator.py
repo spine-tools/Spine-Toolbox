@@ -42,7 +42,7 @@ class TestScenarioGenerator(TestBase):
         scenario_generator = ScenarioGenerator(self._db_editor, self._db_map, alternatives, self._db_editor)
         scenario_generator._ui.scenario_prefix_edit.setText("S_")
         scenario_generator._ui.operation_combo_box.setCurrentText("Scenario for each alternative")
-        scenario_generator._ui.use_base_alternative_check_box.setCheckState(Qt.Unchecked)
+        scenario_generator._ui.use_base_alternative_check_box.setCheckState(Qt.CheckState.Unchecked)
         scenario_generator._ui.button_box.accepted.emit()
         scenarios = self._db_mngr.get_items(self._db_map, "scenario")
         scenario_names = {s["name"] for s in scenarios}

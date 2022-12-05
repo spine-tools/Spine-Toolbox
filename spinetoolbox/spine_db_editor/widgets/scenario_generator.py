@@ -86,7 +86,7 @@ class ScenarioGenerator(QWidget):
         scenario_alternatives = {self._TYPE_LABELS[0]: all_combinations, self._TYPE_LABELS[1]: unique_alternatives}[
             operation_label
         ](alternatives)
-        if self._ui.use_base_alternative_check_box.checkState() == Qt.Checked:
+        if self._ui.use_base_alternative_check_box.checkState() == Qt.CheckState.Checked:
             self._insert_base_alternative(scenario_alternatives)
             if operation_label == self._TYPE_LABELS[0]:
                 _ensure_unique(scenario_alternatives)
@@ -174,7 +174,7 @@ class ScenarioGenerator(QWidget):
         Args:
             check_box_state (int): state of 'Use base alternative' check box
         """
-        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.Checked)
+        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.CheckState.Checked)
 
     def _insert_base_alternative(self, scenario_alternatives):
         """Prepends base alternative to scenario alternatives if it has been enabled.

@@ -300,7 +300,7 @@ class CheckListEditor(QTableView):
         if self._ranked:
             qitem.setData(self._icons[rank], Qt.ItemDataRole.DecorationRole)
         else:
-            qitem.setCheckState(Qt.Checked)
+            qitem.setCheckState(Qt.CheckState.Checked)
 
     def _deselect_item(self, qitem, update_ranks=False):
         if self._ranked:
@@ -310,7 +310,7 @@ class CheckListEditor(QTableView):
                     qitem = self._items[item]
                     self._select_item(qitem, rank)
         else:
-            qitem.setCheckState(Qt.Unchecked)
+            qitem.setCheckState(Qt.CheckState.Unchecked)
 
     def mouseMoveEvent(self, event):
         """Sets the current index to the one under mouse."""

@@ -441,7 +441,7 @@ class ToolboxUI(QMainWindow):
         )
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
-            if open_previous_project != Qt.Checked.value:  # 2: Qt.Checked, ie. open_previous_project==True
+            if open_previous_project != Qt.CheckState.Checked.value:  # 2: Qt.CheckState.Checked, ie. open_previous_project==True
                 self.msg.emit(welcome_msg)
                 return
             # Get previous project (directory)
