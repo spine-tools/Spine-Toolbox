@@ -90,7 +90,7 @@ class TestBase(unittest.TestCase):
     def _add_object_parameter_values(self, values):
         self._db_mngr.add_object_classes({self._db_map: [{"name": "class"}]})
         self._db_mngr.add_parameter_definitions(
-            {self._db_map: [{"entity_class_id": 1, "name": name} for name in values]}
+            {self._db_map: [{"object_class_id": 1, "name": name} for name in values]}
         )
         object_count = max(len(x) for x in values.values())
         self._db_mngr.add_objects({self._db_map: [{"class_id": 1, "name": f"o{i + 1}"} for i in range(object_count)]})
@@ -100,8 +100,8 @@ class TestBase(unittest.TestCase):
         }
         value_items = [
             {
-                "entity_class_id": 1,
-                "entity_id": (i + 1),
+                "object_class_id": 1,
+                "object_id": (i + 1),
                 "parameter_definition_id": param_i + 1,
                 "alternative_id": 1,
                 "type": type_,

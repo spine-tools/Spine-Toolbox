@@ -189,13 +189,13 @@ class TestParameterTableView(TestBase):
             self._db_editor.refresh_session()
             waiter.wait()
         while model.rowCount() != 4:
+            print()
+            print()
+            for row in range(model.rowCount()):
+                print([model.index(row, column).data() for column in range(model.columnCount())])
+            print()
+            print()
             QApplication.processEvents()
-        print()
-        print()
-        for row in range(model.rowCount()):
-            print([model.index(row, column).data() for column in range(model.columnCount())])
-        print()
-        print()
         expected = [
             ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", "database"],
             ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", "database"],
@@ -230,7 +230,7 @@ class TestParameterTableWithExistingData(TestBase):
         db_map.connection.close()
         self._common_setup(url, create=False)
         model = self._db_editor.ui.tableView_object_parameter_value.model()
-        while model.rowCount() != self._CHUNK_SIZE + 1:
+        while model.rowCount() != self._n_objects * self._n_parameters + 1:
             # Wait for fetching to finish.
             QApplication.processEvents()
 
@@ -241,14 +241,14 @@ class TestParameterTableWithExistingData(TestBase):
     def test_purging_value_data_removes_all_rows(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
 
     def test_purging_value_data_leaves_empty_rows_intact(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         delegate_mock = EditorDelegateMocking()
         _set_row_data(
             table_view, model, model.rowCount() - 1, ["object_class", "object_1", "parameter_1", "Base"], delegate_mock
@@ -265,21 +265,21 @@ class TestParameterTableWithExistingData(TestBase):
     def test_removing_fetched_rows_allows_still_fetching_more(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         n_values = self._n_parameters * self._n_objects
         self._db_mngr.remove_items({self._db_map: {"parameter_value": set(range(1, n_values, 2))}})
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE / 2 + 1)
+        self.assertEqual(model.rowCount(), (self._n_objects * self._n_parameters) / 2 + 1)
 
     def test_undoing_purge(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
         self._db_editor.undo_action.trigger()
         while model.rowCount() != self._n_objects * self._n_parameters + 1:
-            # Fetch the entire model so we can validate the data.
-            model.fetchMore(QModelIndex())
+            # Wait for fetching to finish.
+            QApplication.processEvents()
         expected = sorted(
             [
                 ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", "database"]
@@ -295,7 +295,7 @@ class TestParameterTableWithExistingData(TestBase):
     def test_rolling_back_purge(self):
         table_view = self._db_editor.ui.tableView_object_parameter_value
         model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as roll_back_dialog:

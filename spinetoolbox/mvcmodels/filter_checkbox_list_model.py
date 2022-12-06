@@ -192,6 +192,8 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             self.remove_filter()
 
     def search_filter_expression(self, item):
+        if isinstance(item, tuple):
+            item = " | ".join(item)  # FIXME MM
         return self._filter_expression.search(item)
 
     def set_base_filter(self, condition):

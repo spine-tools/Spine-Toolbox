@@ -177,10 +177,8 @@ class SpineDBWorker(QObject):
             parent.set_busy(False)
 
     def do_advance_query(self, item_type):
-        if item_type in self._fetched_item_types:
-            return False
-        self._queries_to_advance[item_type] = None
-        return True
+        if item_type not in self._fetched_item_types:
+            self._queries_to_advance[item_type] = None
 
     def _advance_pending_queries(self):
         for item_type in list(self._queries_to_advance):
@@ -293,7 +291,6 @@ class SpineDBWorker(QObject):
             parent.increment_position(self._db_map)
             item = self._db_mngr.get_item(self._db_map, item_type, id_)
             if not item.is_complete():
-                print(parent, item)
                 item.complete_callbacks.add(self._make_complete_item_callback(parent))
                 continue
             if parent.accepts_item(item, self._db_map):

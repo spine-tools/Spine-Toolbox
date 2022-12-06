@@ -1008,7 +1008,6 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
                 item.fetch_more()
 
 
-@unittest.skip
 class TestToolFeatureTreeViewWithExistingData(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
