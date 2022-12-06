@@ -21,7 +21,6 @@ from .helpers import busy_effect
 
 
 class FetchParent(QObject):
-    _CHUNK_SIZE = 1000
     _changes_pending = Signal()
 
     def __init__(self, owner=None):
@@ -40,7 +39,7 @@ class FetchParent(QObject):
         self._items_to_remove = {}
         self._timer = QTimer()
         self._timer.setSingleShot(True)
-        self._timer.setInterval(20)
+        self._timer.setInterval(0)
         self._timer.timeout.connect(self._apply_pending_changes)
         self._changes_pending.connect(self._timer.start)
         if owner is not None:
@@ -83,31 +82,11 @@ class FetchParent(QObject):
     @property
     def fetch_item_type(self):
         """Returns the type of item to fetch, e.g., "object_class".
-        Used to create an initial query for this item.
 
         Returns:
             str
         """
         raise NotImplementedError()
-
-    def _next_chunk(self, worker):
-        """Produces the next chunk of items by iterating the worker's cache.
-        If nothing found, then schedules a progression of the worker's query so more items can be found in the future.
-
-        Yields:
-            dict
-        """
-        k = 0
-        for item in worker.iterate_cache(self):
-            yield item
-            k += 1
-            if k == self._CHUNK_SIZE:
-                return
-        if not self.is_fetched and k == 0:
-            worker.advance_query(self)
-
-    def next_chunk(self, worker):
-        return list(self._next_chunk(worker))
 
     # pylint: disable=no-self-use
     def accepts_item(self, item, db_map):
@@ -238,7 +217,7 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         accepts_item=None,
         owner=None,
     ):
-        super().__init__(fetch_item_type, owner=None)
+        super().__init__(fetch_item_type, owner=owner)
         self._accepts_item = accepts_item
         self._handle_items_added = handle_items_added
         self._handle_items_removed = handle_items_removed

@@ -193,7 +193,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             db_map (DiffDatabaseMapping)
             db_items (list(dict))
         """
-        return  # FIXME MM
         for menu in self._auto_filter_menus.values():
             menu.modify_menu_data(action, db_map, db_items)
 

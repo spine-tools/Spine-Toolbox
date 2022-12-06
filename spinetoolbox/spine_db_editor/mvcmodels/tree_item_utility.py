@@ -137,11 +137,18 @@ class SortChildrenMixin:
                 return False
         return True
 
+    def _resort(self):
+        print(self, [child.data(0) for child in self.children])
+        non_empty_children, empty_child = self.children[:-1], self.children[-1]
+        non_empty_children.sort(key=self._children_sort_key)
+        self.children = non_empty_children + [empty_child]
+        top = self.model.index_from_item(self.child(0))
+        bottom = self.model.index_from_item(self.child(-1))
+        self.model.dataChanged.emit(top, bottom)
+        print(self, [child.data(0) for child in self.children])
+
 
 class FetchMoreMixin:
-    # FIXME: Use parent for calls to fetch_more can_fetch_more
-    # and also insert items from db map cache in case they were already fetched
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._natural_fetch_parent = FlexibleFetchParent(
@@ -220,6 +227,7 @@ class FetchMoreMixin:
                 top_left = self.model.index_from_item(leaf_item.child(0))
                 bottom_right = self.model.index_from_item(leaf_item.child(-1))
                 self.model.dataChanged.emit(top_left, bottom_right)
+        self._resort()
 
 
 class StandardDBItem(SortChildrenMixin, StandardTreeItem):

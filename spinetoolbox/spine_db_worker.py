@@ -82,6 +82,7 @@ class SpineDBWorker(QObject):
         self._add_item_callbacks = {}
         self._update_item_callbacks = {}
         self._remove_item_callbacks = {}
+        self._complete_item_callbacks = {}
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
@@ -137,6 +138,7 @@ class SpineDBWorker(QObject):
         self._queries.clear()
         self._fetched_ids.clear()
         self._fetched_item_types.clear()
+        self._queries_to_advance.clear()
 
     def _reset_fetching_if_required(self, parent):
         """Sets fetch parent's token or resets the parent if fetch tokens don't match.
@@ -175,8 +177,10 @@ class SpineDBWorker(QObject):
             parent.set_busy(False)
 
     def do_advance_query(self, item_type):
-        if item_type not in self._fetched_item_types:
-            self._queries_to_advance[item_type] = None
+        if item_type in self._fetched_item_types:
+            return False
+        self._queries_to_advance[item_type] = None
+        return True
 
     def _advance_pending_queries(self):
         for item_type in list(self._queries_to_advance):
@@ -208,8 +212,8 @@ class SpineDBWorker(QObject):
         if not chunk:
             self._fetched_item_types.add(item_type)
             return False
-        self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
         self._db_mngr.add_items_to_cache(item_type, {self._db_map: chunk})
+        self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
         self._populate_commit_cache(item_type, chunk)
         return True
 
@@ -241,7 +245,7 @@ class SpineDBWorker(QObject):
         3. Check if the unchecked parents accept the item. Set will_have_children to True if any of them do
            and remove them from the list to check.
         4. If there are no more items in cache, advance the query and if it brings more items, go back to 2.
-        5. If the query is completed, set will_have_children to False for all parents remaining to check and quit.
+        5. If the query is completed, set will_have_children to False for all remaining parents to check and quit.
         6. If at any moment the set of parents associated to given type is mutated, quit so we can start over.
 
         Args:
@@ -274,25 +278,46 @@ class SpineDBWorker(QObject):
                 self._something_happened.emit(_Event.WILL_HAVE_CHILDREN_CHANGE, (parents_to_check,))
                 break
 
-    def iterate_cache(self, parent):
+    def _iterate_cache(self, parent):
         """Iterates the cache for given parent while updating its ``position`` property.
 
         Args:
             parent (FetchParent): the parent that requests the items.
 
-        Yields:
-            dict: The next item from cache that passes the parent's filter.
+        Returns:
+            int: Number of added items
         """
         item_type = parent.fetch_item_type
+        added_count = 0
         for id_ in self._fetched_ids.get(item_type, [])[parent.position(self._db_map) :]:
             parent.increment_position(self._db_map)
             item = self._db_mngr.get_item(self._db_map, item_type, id_)
+            if not item.is_complete():
+                print(parent, item)
+                item.complete_callbacks.add(self._make_complete_item_callback(parent))
+                continue
             if parent.accepts_item(item, self._db_map):
-                item.readd_callbacks.add(self._make_add_item_callback(parent))
-                item.update_callbacks.add(self._make_update_item_callback(parent))
-                item.remove_callbacks.add(self._make_remove_item_callback(parent))
+                self._bind_item(parent, item)
                 if item.is_valid():
-                    yield item
+                    parent.add_item(self._db_map, item)
+                    added_count += 1
+                if added_count == _CHUNK_SIZE:
+                    break
+        return added_count
+
+    def _bind_item(self, parent, item):
+        item.readd_callbacks.add(self._make_add_item_callback(parent))
+        item.update_callbacks.add(self._make_update_item_callback(parent))
+        item.remove_callbacks.add(self._make_remove_item_callback(parent))
+
+    def _complete_item(self, parent, item):
+        if parent.is_obsolete:
+            self._complete_item_callbacks.pop(parent, None)
+            return
+        if parent.accepts_item(item, self._db_map):
+            self._bind_item(parent, item)
+            if item.is_valid():
+                parent.add_item(self._db_map, item)
 
     def _add_item(self, parent, item):
         if parent.is_obsolete:
@@ -314,6 +339,11 @@ class SpineDBWorker(QObject):
             return False
         parent.remove_item(self._db_map, item)
         return True
+
+    def _make_complete_item_callback(self, parent):
+        if parent not in self._complete_item_callbacks:
+            self._complete_item_callbacks[parent] = lambda item, parent=parent: self._complete_item(parent, item)
+        return self._complete_item_callbacks[parent]
 
     def _make_add_item_callback(self, parent):
         if parent not in self._add_item_callbacks:
@@ -357,10 +387,10 @@ class SpineDBWorker(QObject):
         self._reset_fetching_if_required(parent)
         self._register_fetch_parent(parent)
         parent.set_busy(True)
-        chunk = parent.next_chunk(self)
-        if chunk:
-            parent.handle_items_added({self._db_map: chunk})
+        if self._iterate_cache(parent):
             parent.set_busy(False)
+        elif not parent.is_fetched:
+            self.advance_query(parent)
 
     def _more_available_event(self, parent):
         self.fetch_more(parent)
@@ -463,10 +493,10 @@ class SpineDBWorker(QObject):
             return
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
             if not readd:
-                self._fetched_ids.setdefault(actual_item_type, []).extend([x["id"] for x in actual_items])
                 actual_items = self._db_mngr.add_items_to_cache(actual_item_type, {self._db_map: actual_items})[
                     self._db_map
                 ]
+                self._fetched_ids.setdefault(actual_item_type, []).extend([x["id"] for x in actual_items])
                 for parent in self._get_parents(actual_item_type):
                     self.fetch_more(parent)
             else:

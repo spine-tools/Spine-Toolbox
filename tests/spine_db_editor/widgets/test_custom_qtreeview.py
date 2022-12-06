@@ -174,6 +174,8 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(TestBase):
         model = view.model()
         root_index = model.index(0, 0)
         class_index = model.index(0, 0, root_index)
+        model.fetchMore(class_index)
+        QApplication.processEvents()
         self.assertEqual(model.rowCount(class_index), 1)
         self.assertEqual(class_index.data(), "an_object_class")
         object_index = model.index(0, 0, class_index)
@@ -1006,6 +1008,7 @@ class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
                 item.fetch_more()
 
 
+@unittest.skip
 class TestToolFeatureTreeViewWithExistingData(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()

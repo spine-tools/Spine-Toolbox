@@ -65,6 +65,12 @@ class TestSpineDBFetcher(unittest.TestCase):
             {
                 self._db_map: [
                     {'id': 1, 'name': 'Base', 'description': 'Base alternative', 'commit_id': 1},
+                ]
+            }
+        )
+        fetcher.handle_items_added.assert_any_call(
+            {
+                self._db_map: [
                     {'id': 2, 'name': 'alt', 'description': None, 'commit_id': 2},
                 ]
             }
@@ -116,6 +122,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_objects(self):
         self._import_data(object_classes=("oc",), objects=(("oc", "obj"),))
         item = {'id': 1, 'class_id': 1, 'name': 'obj', 'description': None, 'commit_id': 2}
+        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object_class"))
         fetcher = ItemTypeFetchParent("object")
         fetcher.handle_items_added = MagicMock()
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):

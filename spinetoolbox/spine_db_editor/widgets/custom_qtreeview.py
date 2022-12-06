@@ -21,12 +21,18 @@ from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemS
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
+from spinetoolbox.widgets.custom_qwidgets import ResizingViewMixin
 from .custom_delegates import ToolFeatureDelegate, AlternativeScenarioDelegate, ParameterValueListDelegate
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels.alternative_scenario_item import AlternativeLeafItem
 
 
-class EntityTreeView(CopyTreeView):
+class ResizableTreeView(ResizingViewMixin, CopyTreeView):
+    def _do_resize(self):
+        self.resizeColumnToContents(0)
+
+
+class EntityTreeView(ResizableTreeView):
     """Tree view base class for object and relationship tree views."""
 
     tree_selection_changed = Signal(dict)
@@ -110,8 +116,6 @@ class EntityTreeView(CopyTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
-        if parent.isValid() and not parent.parent().isValid():
-            self.resizeColumnToContents(0)
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)
@@ -374,7 +378,7 @@ class RelationshipTreeView(EntityTreeView):
         self._spine_db_editor.show_add_relationships_form(self._context_item)
 
 
-class ItemTreeView(CopyTreeView):
+class ItemTreeView(ResizableTreeView):
     """Base class for all non-entity tree views."""
 
     def __init__(self, parent):

@@ -720,3 +720,19 @@ class PurgeSettingsDialog(QDialog):
             dict: mapping from purgeable database item name to purge flag
         """
         return self._item_check_boxes_widget.checked_states()
+
+
+class ResizingViewMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._resizing_timer = QTimer()
+        self._resizing_timer.setSingleShot(True)
+        self._resizing_timer.setInterval(20)
+        self._resizing_timer.timeout.connect(self._do_resize)
+
+    def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
+        self._resizing_timer.start()
+
+    def _do_resize(self):
+        raise NotImplementedError()
