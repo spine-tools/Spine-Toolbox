@@ -456,7 +456,7 @@ class PivotTableModelBase(QAbstractTableModel):
             if self.index_in_data(index):
                 return self._data(index, role)
             return None
-        if role == Qt.FontRole and self.index_in_top_left(index):
+        if role == Qt.ItemDataRole.FontRole and self.index_in_top_left(index):
             font = QFont()
             font.setBold(True)
             return font

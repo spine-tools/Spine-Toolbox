@@ -203,7 +203,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         italic_font = QFont()
         italic_font.setItalic(True)
         if (
-            role == Qt.FontRole
+            role == Qt.ItemDataRole.FontRole
             and orientation == Qt.Orientation.Horizontal
             and self._auto_filter.get(self.header[section], {}) != {}
         ):

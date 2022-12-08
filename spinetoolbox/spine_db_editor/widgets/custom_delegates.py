@@ -19,10 +19,9 @@ Custom item delegates.
 from numbers import Number
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Signal
 from PySide6.QtWidgets import QStyledItemDelegate, QComboBox
-from PySide6.QtGui import QFontMetrics
+from PySide6.QtGui import QFontMetrics, QFont
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
-from ..mvcmodels.single_parameter_models import SingleParameterModel
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
@@ -552,7 +551,10 @@ class ToolFeatureDelegate(QStyledItemDelegate):
         item = index.model().item_from_index(index)
         if item.item_type in ("feature", "tool_feature", "tool_feature required", "tool_feature_method"):
             if item.item_type == "tool_feature required":
-                dx = QFontMetrics(index.data(Qt.FontRole)).horizontalAdvance("required:")
+                font = index.data(Qt.ItemDataRole.FontRole)
+                if not font:
+                    font = QFont()  # app default
+                dx = QFontMetrics(font).horizontalAdvance("required:")
                 editor.set_base_offset(QPoint(dx, 0))
             editor.update_geometry(option)
 
@@ -627,7 +629,10 @@ class AlternativeScenarioDelegate(QStyledItemDelegate):
         item = index.model().item_from_index(index)
         if item.item_type in ("scenario active", "scenario_alternative"):
             if item.item_type == "scenario active":
-                dx = QFontMetrics(index.data(Qt.FontRole)).horizontalAdvance("active:")
+                font = index.data(Qt.ItemDataRole.FontRole)
+                if not font:
+                    font = QFont()  # App default font
+                dx = QFontMetrics(font).horizontalAdvance("active:")
                 editor.set_base_offset(QPoint(dx, 0))
             editor.update_geometry(option)
 

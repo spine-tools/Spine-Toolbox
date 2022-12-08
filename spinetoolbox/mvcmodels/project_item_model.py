@@ -173,7 +173,7 @@ class ProjectItemModel(QAbstractItemModel):
             # item is a LeafProjectTreeItem
             icon_path = item.project_item.get_icon().icon_file
             return QIcon(icon_path)
-        if role == Qt.FontRole:
+        if role == Qt.ItemDataRole.FontRole:
             if not hasattr(item, "project_item"):
                 bold_font = QFont()
                 bold_font.setBold(True)

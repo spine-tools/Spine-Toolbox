@@ -120,7 +120,7 @@ class MapModel(QAbstractTableModel):
             self.dataChanged.emit(
                 self.index(top, 0),
                 self.index(bottom, self.columnCount() - 2),
-                [Qt.ItemDataRole.BackgroundRole, Qt.FontRole],
+                [Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.FontRole],
             )
 
     def columnCount(self, index=QModelIndex()):
@@ -171,7 +171,7 @@ class MapModel(QAbstractTableModel):
             if data is empty:
                 return ""
             return data
-        if role == Qt.FontRole:
+        if role == Qt.ItemDataRole.FontRole:
             if self._is_in_expanse(row_index, column_index):
                 return None
             row = self._rows[row_index]
@@ -369,7 +369,7 @@ class MapModel(QAbstractTableModel):
         self.dataChanged.emit(
             self.index(top_left.row(), 0),
             self.index(bottom_right.row(), self.columnCount() - 2),
-            [Qt.ItemDataRole.BackgroundRole, Qt.FontRole],
+            [Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.FontRole],
         )
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
@@ -417,7 +417,7 @@ class MapModel(QAbstractTableModel):
         if column_index > 0:
             top_left = self.index(row_index, 0)
             bottom_right = self.index(row_index, len(row))
-            self.dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
+            self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.FontRole])
         return True
 
     def setHeaderData(self, section, orientation, value, role=Qt.ItemDataRole.EditRole):

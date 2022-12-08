@@ -85,7 +85,7 @@ class EntityClassItem(MultiDBTreeItem):
         """Returns data for given column and role."""
         if role == Qt.ItemDataRole.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
-        if role == Qt.FontRole and column == 0:
+        if role == Qt.ItemDataRole.FontRole and column == 0:
             bold_font = QFont()
             bold_font.setBold(True)
             return bold_font
@@ -189,7 +189,7 @@ class MemberObjectClassItem(ObjectClassItem):
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
-        if role == Qt.FontRole and column == 0:
+        if role == Qt.ItemDataRole.FontRole and column == 0:
             bold_font = QFont()
             bold_font.setBold(True)
             return bold_font

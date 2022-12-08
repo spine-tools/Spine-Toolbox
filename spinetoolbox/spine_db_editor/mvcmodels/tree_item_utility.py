@@ -102,7 +102,7 @@ class BoldTextMixin:
     """Bolds text."""
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.FontRole:
+        if role == Qt.ItemDataRole.FontRole:
             bold_font = QFont()
             bold_font.setBold(True)
             return bold_font
