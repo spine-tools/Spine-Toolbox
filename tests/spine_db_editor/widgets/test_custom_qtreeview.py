@@ -393,7 +393,9 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(TestBase):
         class_index = model.index(0, 0, root_index)
         view._context_item = model.item_from_index(class_index)
         self._add_relationship("a_relationship", ["an_object"])
-        class_index = model.index(0, 0, root_index)
+        if model.canFetchMore(class_index):
+            model.fetchMore(class_index)
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(class_index), 1)
         relationship_index = model.index(0, 0, class_index)
         self.assertEqual(model.rowCount(relationship_index), 0)
@@ -1051,36 +1053,43 @@ class TestToolFeatureTreeViewWithExistingData(TestBase):
         self._common_setup(url, create=False)
         view = self._db_editor.ui.treeView_tool_feature
         model = view.model()
+        # Fetch the entire model
         db_index = model.index(0, 0)
+        feature_root_index = model.index(0, 0, db_index)
+        while model.rowCount(feature_root_index) != 3:
+            QApplication.processEvents()
         tool_root_index = model.index(1, 0, db_index)
         while model.rowCount(tool_root_index) != 3:
-            # Wait for fetching to finish.
             QApplication.processEvents()
-        tool_index = model.index(1, 0, tool_root_index)
+        tool_index = model.index(0, 0, tool_root_index)
         tool_feature_root_index = model.index(0, 0, tool_index)
         while model.rowCount(tool_feature_root_index) != 3:
             model.fetchMore(tool_feature_root_index)
+            QApplication.processEvents()
+        tool_feature_index = model.index(0, 0, tool_feature_root_index)
+        method_root_index = model.index(1, 0, tool_feature_index)
+        while model.rowCount(method_root_index) != 3:
+            model.fetchMore(method_root_index)
             QApplication.processEvents()
         tool_feature_index = model.index(1, 0, tool_feature_root_index)
         method_root_index = model.index(1, 0, tool_feature_index)
         while model.rowCount(method_root_index) != 2:
             model.fetchMore(method_root_index)
             QApplication.processEvents()
-        # Also fetch parameter value lists
-        view = self._db_editor.ui.treeView_parameter_value_list
-        model = view.model()
-        root_index = model.index(0, 0)
-        while model.rowCount(root_index) != 3:
-            # Wait for fetching to finish.
+        tool_index = model.index(1, 0, tool_root_index)
+        tool_feature_root_index = model.index(0, 0, tool_index)
+        while model.rowCount(tool_feature_root_index) != 3:
+            model.fetchMore(tool_feature_root_index)
             QApplication.processEvents()
-        list_name_index1 = model.index(0, 0, root_index)
-        list_name_index2 = model.index(1, 0, root_index)
-        model.fetchMore(list_name_index1)
-        while model.rowCount(list_name_index1) != 3:
-            # Wait for fetching to finish.
+        tool_feature_index = model.index(0, 0, tool_feature_root_index)
+        method_root_index = model.index(1, 0, tool_feature_index)
+        while model.rowCount(method_root_index) != 3:
+            model.fetchMore(method_root_index)
             QApplication.processEvents()
-        model.fetchMore(list_name_index2)
-        while model.rowCount(list_name_index2) != 2:
+        tool_feature_index = model.index(1, 0, tool_feature_root_index)
+        method_root_index = model.index(1, 0, tool_feature_index)
+        while model.rowCount(method_root_index) != 2:
+            model.fetchMore(method_root_index)
             QApplication.processEvents()
 
     def tearDown(self):

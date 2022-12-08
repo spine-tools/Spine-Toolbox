@@ -42,8 +42,9 @@ class FetchParent(QObject):
         self._timer.setInterval(0)
         self._timer.timeout.connect(self._apply_pending_changes)
         self._changes_pending.connect(self._timer.start)
-        if owner is not None:
-            owner.destroyed.connect(lambda obj=None: self.set_obsolete(True))
+        self._owner = owner
+        if self._owner is not None:
+            self._owner.destroyed.connect(lambda obj=None: self.set_obsolete(True))
 
     def position(self, db_map):
         return self._position.setdefault(db_map, 0)
@@ -205,6 +206,9 @@ class ItemTypeFetchParent(FetchParent):
 
     def handle_items_updated(self, db_map_data):
         raise NotImplementedError(self.fetch_item_type)
+
+    def __str__(self):
+        return f"Fetch parent for {self.fetch_item_type} items owned by {self._owner}"
 
 
 class FlexibleFetchParent(ItemTypeFetchParent):
