@@ -742,7 +742,7 @@ class RankIcon(QGraphicsTextItem):
         fmt = QTextBlockFormat()
         fmt.setAlignment(Qt.AlignHCenter)
         cursor = self.textCursor()
-        cursor.select(QTextCursor.Document)
+        cursor.select(QTextCursor.SelectionType.Document)
         cursor.mergeBlockFormat(fmt)
         cursor.clearSelection()
         self.setTextCursor(cursor)

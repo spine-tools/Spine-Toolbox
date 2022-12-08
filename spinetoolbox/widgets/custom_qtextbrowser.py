@@ -76,7 +76,7 @@ class CustomQTextBrowser(QTextBrowser):
         """
         with scrolling_to_bottom(self):
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.End)
+            cursor.movePosition(QTextCursor.MoveOperation.End)
             cursor.insertBlock()
             cursor.insertHtml(text)
 
@@ -150,7 +150,7 @@ class CustomQTextBrowser(QTextBrowser):
         item_blocks = self._execution_blocks.setdefault(self._executing_timestamp, {})
         if item_name not in item_blocks:
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.End)
+            cursor.movePosition(QTextCursor.MoveOperation.End)
             cursor.insertFrame(self._frame_format)
             item_blocks[item_name] = [cursor.block()]
             self._item_anchors[self._executing_timestamp, item_name] = anchor = self._executing_timestamp + item_name
@@ -158,7 +158,7 @@ class CustomQTextBrowser(QTextBrowser):
             cursor.insertHtml(f'<a name="{anchor}">{title}</a>')
             self._item_cursors[self._executing_timestamp, item_name] = cursor
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.End)
+            cursor.movePosition(QTextCursor.MoveOperation.End)
             item_blocks[item_name].append(cursor.block())
             self._item_filter_cursors[self._executing_timestamp, item_name] = {}
         blocks = item_blocks[item_name]
@@ -173,7 +173,7 @@ class CustomQTextBrowser(QTextBrowser):
                     filter_cursor.insertHtml(title)
                     blocks.append(filter_cursor.block())
                     filter_cursors[filter_id] = filter_cursor
-                    cursor.movePosition(cursor.NextBlock)
+                    cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
                     blocks.append(cursor.block())
                 cursor = filter_cursors[filter_id]
             cursor.insertBlock()

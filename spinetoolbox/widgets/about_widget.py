@@ -125,7 +125,7 @@ class AboutWidget(QWidget):
               License along with this program. If not, see
               <a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>.</p>"""
         self.ui.textBrowser.insertHtml(license_html)
-        self.ui.textBrowser.moveCursor(QTextCursor.Start)
+        self.ui.textBrowser.moveCursor(QTextCursor.MoveOperation.Start)
 
     def keyPressEvent(self, e):
         """Close form when Escape, Enter, Return, or Space bar keys are pressed.

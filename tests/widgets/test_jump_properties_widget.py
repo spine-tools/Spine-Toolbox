@@ -65,7 +65,7 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         properties_widget = self._find_widget()
         self._set_link(properties_widget)
         cursor = properties_widget._ui.condition_script_edit.textCursor()
-        cursor.select(QTextCursor.Document)
+        cursor.select(QTextCursor.SelectionType.Document)
         cursor.removeSelectedText()
         cursor.insertText("exit(5)")
         self.assertEqual(properties_widget._ui.condition_script_edit.toPlainText(), "exit(5)")
