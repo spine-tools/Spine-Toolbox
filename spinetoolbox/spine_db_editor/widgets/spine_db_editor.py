@@ -722,7 +722,6 @@ class SpineDBEditorBase(QMainWindow):
             return
         self.init_models()
         self.msg.emit("Session refreshed.")
-        print("Session refreshed")
 
     @Slot(bool)
     def show_mass_remove_items_form(self, checked=False):
