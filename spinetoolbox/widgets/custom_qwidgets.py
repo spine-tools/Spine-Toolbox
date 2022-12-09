@@ -289,7 +289,7 @@ class ToolBarWidgetBase(QWidget):
 class ToolBarWidget(ToolBarWidgetBase):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
-        spacing = qApp.fontMetrics().horizontalAdvance(self._text)  # pylint: disable=undefined-variable
+        spacing = self.fontMetrics().horizontalAdvance(self._text)  # pylint: disable=undefined-variable
         self.layout().insertSpacing(0, spacing)
 
 

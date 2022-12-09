@@ -60,7 +60,7 @@ class EditorDelegateMocking:
         delegate.closeEditor.emit(self._cell_editor)
 
     def try_to_edit_index(self, view, index):
-        delegate = view.itemDelegate(index)
+        delegate = view.itemDelegateForIndex(index)
         if self._cell_editor is None:
             original_create_editor = delegate.createEditor
 
