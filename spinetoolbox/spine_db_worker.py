@@ -290,6 +290,9 @@ class SpineDBWorker(QObject):
         for id_ in self._fetched_ids.get(item_type, [])[parent.position(self._db_map) :]:
             parent.increment_position(self._db_map)
             item = self._db_mngr.get_item(self._db_map, item_type, id_)
+            if not item:
+                # Happens in one unit test
+                continue
             if not item.is_complete():
                 item.complete_callbacks.add(self._make_complete_item_callback(parent))
                 continue
