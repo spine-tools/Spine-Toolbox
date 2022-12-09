@@ -94,7 +94,6 @@ class SpineDBWorker(QObject):
         self.commit_cache = {}
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._queries_to_advance = {}
-        self.startTimer(20)
         self._something_happened.connect(self._handle_something_happened)
 
     def _get_parents(self, item_type):
@@ -103,9 +102,6 @@ class SpineDBWorker(QObject):
             if parent.is_obsolete:
                 parents.remove(parent)
         return parents
-
-    def timerEvent(self, event):
-        self._advance_pending_queries()
 
     def clean_up(self):
         self._executor.shutdown()
@@ -177,11 +173,8 @@ class SpineDBWorker(QObject):
             parent.set_busy(False)
 
     def do_advance_query(self, item_type):
-        if item_type not in self._fetched_item_types:
+        if item_type not in self._fetched_item_types and item_type not in self._queries_to_advance:
             self._queries_to_advance[item_type] = None
-
-    def _advance_pending_queries(self):
-        for item_type in list(self._queries_to_advance):
             self._executor.submit(self._do_advance_query, item_type)
 
     @busy_effect
@@ -195,7 +188,6 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if new items were fetched from the DB, False otherwise.
         """
-        self._queries_to_advance.pop(item_type, None)
         if item_type not in self._queries:
             try:
                 sq_name = self._db_map.cache_sqs[item_type]
@@ -207,6 +199,7 @@ class SpineDBWorker(QObject):
             )
         query = self._queries[item_type]
         chunk = next(query, [])
+        self._queries_to_advance.pop(item_type, None)
         if not chunk:
             self._fetched_item_types.add(item_type)
             return False
@@ -266,7 +259,7 @@ class SpineDBWorker(QObject):
                         parent.will_have_children = True
                         parents_to_check.remove(parent)
                 if not parents_to_check:
-                    return
+                    break
             if not parents_to_check:
                 break
             self._do_advance_query(item_type)
