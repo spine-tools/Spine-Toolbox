@@ -59,7 +59,7 @@ class ParameterViewMixin:
             view.setModel(model)
             view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-            view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+            view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
             view.horizontalHeader().setStretchLastSection(True)
             view.horizontalHeader().setSectionsMovable(True)
             view.connect_spine_db_editor(self)

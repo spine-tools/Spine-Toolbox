@@ -37,7 +37,7 @@ class ManageItemsDialogBase(QDialog):
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.db_mngr = db_mngr
         self.table_view = self.make_table_view()
-        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.horizontalHeader().setMinimumSectionSize(120)
         self.table_view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))

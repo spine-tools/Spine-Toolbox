@@ -81,10 +81,10 @@ class CustomQGraphicsView(QGraphicsView):
         """Set rubber band selection mode if Control pressed.
         Enable resetting the zoom factor from the middle mouse button.
         """
-        item = self.itemAt(event.pos())
+        item = self.itemAt(event.position().toPoint())
         if not item or not item.acceptedMouseButtons() & event.buttons():
             if event.modifiers() & Qt.ControlModifier:
-                self.setDragMode(QGraphicsView.RubberBandDrag)
+                self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
                 self.viewport().setCursor(Qt.CrossCursor)
             if event.button() == Qt.MidButton:
                 self.reset_zoom()
@@ -93,9 +93,9 @@ class CustomQGraphicsView(QGraphicsView):
     def mouseReleaseEvent(self, event):
         """Reestablish scroll hand drag mode."""
         super().mouseReleaseEvent(event)
-        item = next(iter([x for x in self.items(event.pos()) if x.hasCursor()]), None)
-        was_not_rubber_band_drag = self.dragMode() != QGraphicsView.RubberBandDrag
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        item = next(iter([x for x in self.items(event.position().toPoint()) if x.hasCursor()]), None)
+        was_not_rubber_band_drag = self.dragMode() != QGraphicsView.DragMode.RubberBandDrag
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         if item and was_not_rubber_band_drag:
             self.viewport().setCursor(item.cursor())
         else:
