@@ -307,10 +307,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.max_relationship_dimension = value
         self._spine_db_editor.build_graph()
 
-    def set_max_relationship_dimension(self, value):
-        self._update_max_relationship_dimension_label(value)
-        self._set_max_relationship_dimension(save_setting=False)
-
     @Slot(bool)
     def add_objects_at_position(self, checked=False):
         self._spine_db_editor.add_objects_at_position(self._context_menu_pos)
