@@ -227,7 +227,7 @@ class MainToolBar(ToolBar):
         self.addSeparator()
         self.addWidget(PaddingLabel("Execute"))
         self.execute_project_button = NiceButton()
-        self.execute_project_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.execute_project_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         self.execute_project_button.setDefaultAction(self._execute_project_action)
         self._add_tool_button(self.execute_project_button)
         self.execute_selection_button = NiceButton()
@@ -270,7 +270,7 @@ class MainToolBar(ToolBar):
         source = event.source()
         if not isinstance(source, ProjectItemButton):
             return
-        target = self.childAt(event.pos())
+        target = self.childAt(event.position().toPoint())
         if target is None:
             return
         while target.parent() != self:
@@ -280,9 +280,9 @@ class MainToolBar(ToolBar):
         while source.parent() != self:
             source = source.parent()
         if self.orientation() == Qt.Orientation.Horizontal:
-            after = target.geometry().center().x() < event.pos().x()
+            after = target.geometry().center().x() < event.position().toPoint().x()
         else:
-            after = target.geometry().center().y() < event.pos().y()
+            after = target.geometry().center().y() < event.position().toPoint().y()
         actions = self.actions()
         source_action = next((a for a in actions if self.widgetForAction(a) == source))
         target_index = next((i for i, a in enumerate(actions) if self.widgetForAction(a) == target))

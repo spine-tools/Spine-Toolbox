@@ -92,7 +92,7 @@ class TabularViewHeaderWidget(QFrame):
     def mousePressEvent(self, event):
         """Register drag start position"""
         if event.button() == Qt.LeftButton:
-            self.drag_start_pos = event.pos()
+            self.drag_start_pos = event.position().toPoint()
 
     # noinspection PyArgumentList, PyUnusedLocal
     def mouseMoveEvent(self, event):
@@ -101,7 +101,7 @@ class TabularViewHeaderWidget(QFrame):
             return
         if not self.drag_start_pos:
             return
-        if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+        if (event.position().toPoint() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
             return
         drag = QDrag(self)
         mime_data = QMimeData()

@@ -476,7 +476,7 @@ class ToolFeatureTreeView(ItemTreeView):
 
     def dragMoveEvent(self, event):
         super().dragMoveEvent(event)
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         item = self.model().item_from_index(index)
         if item and item.item_type == "tool":
             self.expand(index)
@@ -602,7 +602,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def dragMoveEvent(self, event):
         super().dragMoveEvent(event)
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         item = self.model().item_from_index(index)
         if item and item.item_type == "scenario":
             self.expand(index)

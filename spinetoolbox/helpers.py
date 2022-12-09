@@ -452,8 +452,8 @@ class IconListManager:
         for codepoint, searchterms in self.searchterms.items():
             item = QStandardItem()
             display_icon = int(codepoint, 16)
-            item.setData(display_icon, Qt.UserRole)
-            item.setData(searchterms, Qt.UserRole + 1)
+            item.setData(display_icon, Qt.ItemDataRole.UserRole)
+            item.setData(searchterms, Qt.ItemDataRole.UserRole + 1)
             items.append(item)
         self.model.invisibleRootItem().appendRows(items)
 
@@ -471,7 +471,7 @@ class IconListManager:
             return None
         if role != Qt.ItemDataRole.DecorationRole:
             return QStandardItemModel.data(self.model, index, role)
-        display_icon = index.data(Qt.UserRole)
+        display_icon = index.data(Qt.ItemDataRole.UserRole)
         return object_icon(display_icon)
 
 

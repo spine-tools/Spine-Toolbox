@@ -47,7 +47,7 @@ class _MockParentModel(QAbstractTableModel):
         return 2
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.UserRole):
+        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.UserRole):
             return None
         return self._table[index.column()][index.row()]
 

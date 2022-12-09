@@ -102,7 +102,7 @@ class Notification(QFrame):
         self.fade_in_anim.start(QPropertyAnimation.DeleteWhenStopped)
 
     def show(self):
-        # Move to the selected corner of the parent
+        """Shows widget and moves it to the selected corner of the parent widget."""
         super().show()
         if self._corner in (Qt.TopRightCorner, Qt.BottomRightCorner):
             x = self._parent.size().width() - self.width() - 2

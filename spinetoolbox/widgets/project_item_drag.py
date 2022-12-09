@@ -41,7 +41,7 @@ class ProjectItemDragMixin:
             return
         if not self.drag_start_pos:
             return
-        if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+        if (event.position().toPoint() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
             return
         drag = QDrag(self)
         drag.setPixmap(self.pixmap)
@@ -67,14 +67,14 @@ class NiceButton(QToolButton):
         font = self.font()
         font.setPointSize(9)
         self.setFont(font)
-        self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
     def setText(self, text):
         super().setText(fill(text, width=12, break_long_words=False))
 
     def set_orientation(self, orientation):
         if orientation == Qt.Orientation.Horizontal:
-            self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+            self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         else:
             self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
@@ -102,7 +102,7 @@ class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
         """Register drag start position"""
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
-            self.drag_start_pos = event.pos()
+            self.drag_start_pos = event.position().toPoint()
             self.pixmap = self.icon().pixmap(self.iconSize())
             self.mime_data = QMimeData()
             self.mime_data.setText(self._make_mime_data_text())

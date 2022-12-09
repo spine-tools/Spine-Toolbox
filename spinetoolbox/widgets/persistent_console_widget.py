@@ -254,14 +254,14 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def mouseMoveEvent(self, ev):
         super().mouseMoveEvent(ev)
-        if self.anchorAt(ev.pos()):
+        if self.anchorAt(ev.position().toPoint()):
             self.viewport().setCursor(Qt.PointingHandCursor)
         else:
             self.viewport().setCursor(Qt.IBeamCursor)
 
     def mousePressEvent(self, ev):
         super().mousePressEvent(ev)
-        self._anchor = self.anchorAt(ev.pos())
+        self._anchor = self.anchorAt(ev.position().toPoint())
 
     def mouseReleaseEvent(self, ev):
         super().mouseReleaseEvent(ev)
@@ -270,7 +270,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         text_buffer = self._skipped.pop(self._anchor, None)
         if text_buffer is None:
             return
-        cursor = self.cursorForPosition(ev.pos())
+        cursor = self.cursorForPosition(ev.position().toPoint())
         cursor.select(cursor.BlockUnderCursor)
         cursor.removeSelectedText()
         cursor.beginEditBlock()

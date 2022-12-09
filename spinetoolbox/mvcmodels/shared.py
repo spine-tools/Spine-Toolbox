@@ -18,5 +18,5 @@ Contains stuff that is used by more than one model
 
 from PySide6.QtCore import Qt
 
-PARSED_ROLE = Qt.UserRole
-DB_MAP_ROLE = Qt.UserRole + 1
+PARSED_ROLE = Qt.ItemDataRole.UserRole
+DB_MAP_ROLE = Qt.ItemDataRole.UserRole + 1

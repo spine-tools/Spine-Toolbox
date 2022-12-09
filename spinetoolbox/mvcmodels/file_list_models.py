@@ -228,7 +228,7 @@ class CommandLineArgItem(QStandardItem):
         painter.end()
         return QIcon(pixmap)
 
-    def setData(self, value, role=Qt.UserRole + 1):
+    def setData(self, value, role=Qt.ItemDataRole.UserRole + 1):
         if role != Qt.ItemDataRole.EditRole:
             return super().setData(value, role=role)
         if value != self.data(role=role):
@@ -243,7 +243,7 @@ class NewCommandLineArgItem(CommandLineArgItem):
         gray_color.setAlpha(128)
         self.setForeground(gray_color)
 
-    def setData(self, value, role=Qt.UserRole + 1):
+    def setData(self, value, role=Qt.ItemDataRole.UserRole + 1):
         if role != Qt.ItemDataRole.EditRole:
             return super().setData(value, role=role)
         if value != self.data(role=role):

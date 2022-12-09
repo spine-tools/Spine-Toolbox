@@ -34,7 +34,7 @@ class SearchBarDelegate(QItemDelegate):
 
     def createEditor(self, parent, option, index):
         editor = SearchBarEditor(parent)
-        editor.set_data(index.data(), index.data(Qt.UserRole))
+        editor.set_data(index.data(), index.data(Qt.ItemDataRole.UserRole))
         model = index.model()
         editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
         return editor
@@ -88,7 +88,7 @@ class ObjectNameListEditor(ManageItemsDialog):
             except IndexError:
                 obj_name = None
             qitem = QStandardItem(obj_name)
-            qitem.setData(object_names_list, role=Qt.UserRole)
+            qitem.setData(object_names_list, role=Qt.ItemDataRole.UserRole)
             item_list.append(qitem)
         self.model.invisibleRootItem().appendRow(item_list)
 

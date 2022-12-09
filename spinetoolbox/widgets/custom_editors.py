@@ -229,14 +229,14 @@ class SearchBarEditor(QTableView):
         """Sets the current index to the one hovered by the mouse."""
         if not self.currentIndex().isValid():
             return
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         if index.row() == 0:
             return
         self.setCurrentIndex(index)
 
     def mousePressEvent(self, event):
         """Commits data."""
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         if index.row() == 0:
             return
         self.proxy_model.setData(self.first_index, index.data(Qt.ItemDataRole.EditRole))
@@ -314,12 +314,12 @@ class CheckListEditor(QTableView):
 
     def mouseMoveEvent(self, event):
         """Sets the current index to the one under mouse."""
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         self.setCurrentIndex(index)
 
     def mousePressEvent(self, event):
         """Toggles checked state of pressed index."""
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         self.toggle_selected(index)
 
     def set_data(self, items, checked_items):
@@ -429,7 +429,7 @@ class IconColorEditor(QDialog):
         text = self.line_edit.text()
         if not text:
             return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
-        searchterms = self.icon_mngr.model.index(source_row, 0, source_parent).data(Qt.UserRole + 1)
+        searchterms = self.icon_mngr.model.index(source_row, 0, source_parent).data(Qt.ItemDataRole.UserRole + 1)
         return any(text in term for term in searchterms)
 
     def connect_signals(self):
@@ -443,12 +443,12 @@ class IconColorEditor(QDialog):
         self.icon_mngr.init_model()
         for i in range(self.proxy_model.rowCount()):
             index = self.proxy_model.index(i, 0)
-            if index.data(Qt.UserRole) == icon_code:
+            if index.data(Qt.ItemDataRole.UserRole) == icon_code:
                 self.icon_list.setCurrentIndex(index)
                 break
         self.color_dialog.setCurrentColor(QColor(color_code))
 
     def data(self):
-        icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
+        icon_code = self.icon_list.currentIndex().data(Qt.ItemDataRole.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
         return make_icon_id(icon_code, color_code)

@@ -283,7 +283,7 @@ class ToolBarWidgetBase(QWidget):
             QStyle.PixelMetric.PM_SmallIconSize
         )  # pylint: disable=undefined-variable
         self.tool_bar.setIconSize(QSize(icon_extent, icon_extent))
-        self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.tool_bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
 
 class ToolBarWidget(ToolBarWidgetBase):
