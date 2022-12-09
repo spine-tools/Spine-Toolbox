@@ -25,6 +25,12 @@ from spinedb_api.import_functions import import_data
 from tests.mock_helpers import TestSpineDBManager
 
 
+class TestItemTypeFetchParent(ItemTypeFetchParent):
+    def __init__(self, item_type):
+        super().__init__(item_type)
+        self.handle_items_added = MagicMock()
+
+
 class TestSpineDBFetcher(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -45,11 +51,11 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._db_map.remove_items(alternative={1})
         self._db_map.commit_session("ddd")
         for item_type in DatabaseMapping.ITEM_TYPES:
-            fetcher = ItemTypeFetchParent(item_type)
-            fetcher.handle_items_added = MagicMock()
+            fetcher = TestItemTypeFetchParent(item_type)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_not_called()
+            fetcher.set_obsolete(True)
 
     def _import_data(self, **data):
         import_data(self._db_map, **data)
@@ -57,8 +63,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_alternatives(self):
         self._import_data(alternatives=("alt",))
-        fetcher = ItemTypeFetchParent("alternative")
-        fetcher.handle_items_added = MagicMock()
+        fetcher = TestItemTypeFetchParent("alternative")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call(
@@ -79,28 +84,31 @@ class TestSpineDBFetcher(unittest.TestCase):
             self._db_mngr.get_item(self._db_map, "alternative", 2),
             {'commit_id': 2, 'description': None, 'id': 2, 'name': 'alt'},
         )
+        fetcher.set_obsolete(True)
 
     def test_fetch_scenarios(self):
         self._import_data(scenarios=("scenario",))
         item = {'id': 1, 'name': 'scenario', 'description': None, 'active': False, 'commit_id': 2}
-        fetcher = ItemTypeFetchParent("scenario")
-        fetcher.handle_items_added = MagicMock()
+        fetcher = TestItemTypeFetchParent("scenario")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "scenario", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_scenario_alternatives(self):
         self._import_data(alternatives=("alt",), scenarios=("scenario",), scenario_alternatives=(("scenario", "alt"),))
         item = {'id': 1, 'scenario_id': 1, 'alternative_id': 2, 'rank': 1, 'commit_id': 2}
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("scenario"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("alternative"))
-        fetcher = ItemTypeFetchParent("scenario_alternative")
-        fetcher.handle_items_added = MagicMock()
+        for item_type in ("scenario", "alternative"):
+            dep_fetcher = TestItemTypeFetchParent(item_type)
+            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+            dep_fetcher.set_obsolete(True)
+        fetcher = TestItemTypeFetchParent("scenario_alternative")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "scenario_alternative", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_object_classes(self):
         self._import_data(object_classes=("oc",))
@@ -113,24 +121,28 @@ class TestSpineDBFetcher(unittest.TestCase):
             'hidden': 0,
             'commit_id': 2,
         }
-        fetcher = ItemTypeFetchParent("object_class")
-        fetcher.handle_items_added = MagicMock()
+        fetcher = TestItemTypeFetchParent("object_class")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertIsInstance(self._db_mngr.entity_class_icon(self._db_map, "object_class", 1), QIcon)
         self.assertEqual(self._db_mngr.get_item(self._db_map, "object_class", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_objects(self):
         self._import_data(object_classes=("oc",), objects=(("oc", "obj"),))
         item = {'id': 1, 'class_id': 1, 'name': 'obj', 'description': None, 'commit_id': 2}
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object_class"))
-        fetcher = ItemTypeFetchParent("object")
-        fetcher.handle_items_added = MagicMock()
+        self._db_mngr.fetch_more(self._db_map, TestItemTypeFetchParent("object_class"))
+        for item_type in ("object",):
+            dep_fetcher = TestItemTypeFetchParent(item_type)
+            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+            dep_fetcher.set_obsolete(True)
+        fetcher = TestItemTypeFetchParent("object")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "object", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_relationship_classes(self):
         self._import_data(object_classes=("oc",), relationship_classes=(("rc", ("oc",)),))
@@ -143,13 +155,16 @@ class TestSpineDBFetcher(unittest.TestCase):
             'display_icon': None,
             'commit_id': 2,
         }
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object_class"))
-        fetcher = ItemTypeFetchParent("relationship_class")
-        fetcher.handle_items_added = MagicMock()
+        for item_type in ("object_class",):
+            dep_fetcher = TestItemTypeFetchParent(item_type)
+            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+            dep_fetcher.set_obsolete(True)
+        fetcher = TestItemTypeFetchParent("relationship_class")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "relationship_class", 2), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_relationships(self):
         self._import_data(
@@ -169,27 +184,28 @@ class TestSpineDBFetcher(unittest.TestCase):
             'object_class_name_list': 'oc',
             'commit_id': 2,
         }
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object_class"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("relationship_class"))
-        fetcher = ItemTypeFetchParent("relationship")
-        fetcher.handle_items_added = MagicMock()
+        for item_type in ("object_class", "object", "relationship_class"):
+            dep_fetcher = TestItemTypeFetchParent(item_type)
+            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+            dep_fetcher.set_obsolete(True)
+        fetcher = TestItemTypeFetchParent("relationship")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "relationship", 2), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_object_groups(self):
         self._import_data(
             object_classes=("oc",), objects=(("oc", "obj"), ("oc", "group")), object_groups=(("oc", "group", "obj"),)
         )
         item = {'id': 1, 'entity_class_id': 1, 'entity_id': 2, 'member_id': 1}
-        fetcher = ItemTypeFetchParent("entity_group")
-        fetcher.handle_items_added = MagicMock()
+        fetcher = TestItemTypeFetchParent("entity_group")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "entity_group", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_parameter_definitions(self):
         self._import_data(object_classes=("oc",), object_parameters=(("oc", "param"),))
@@ -206,13 +222,16 @@ class TestSpineDBFetcher(unittest.TestCase):
             'description': None,
             'commit_id': 2,
         }
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object_class"))
-        fetcher = ItemTypeFetchParent("parameter_definition")
-        fetcher.handle_items_added = MagicMock()
+        for item_type in ("object_class",):
+            dep_fetcher = TestItemTypeFetchParent(item_type)
+            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+            dep_fetcher.set_obsolete(True)
+        fetcher = TestItemTypeFetchParent("parameter_definition")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_definition", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_parameter_values(self):
         self._import_data(
@@ -236,33 +255,32 @@ class TestSpineDBFetcher(unittest.TestCase):
             'list_value_id': None,
             'commit_id': 2,
         }
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object_class"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("parameter_definition"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("alternative"))
-        fetcher = ItemTypeFetchParent("parameter_value")
-        fetcher.handle_items_added = MagicMock()
+        for item_type in ("object_class", "object", "parameter_definition", "alternative"):
+            dep_fetcher = TestItemTypeFetchParent(item_type)
+            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+            dep_fetcher.set_obsolete(True)
+        fetcher = TestItemTypeFetchParent("parameter_value")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_parameter_value_lists(self):
         self._import_data(parameter_value_lists=(("value_list", (2.3,)),))
         item = {'id': 1, 'name': 'value_list', 'commit_id': 2}
-        fetcher = ItemTypeFetchParent("parameter_value_list")
-        fetcher.handle_items_added = MagicMock()
+        fetcher = TestItemTypeFetchParent("parameter_value_list")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value_list", 1), item)
         item = {'id': 1, 'parameter_value_list_id': 1, 'index': 0, 'value': b'[2.3]', 'type': None, 'commit_id': 2}
-        fetcher = ItemTypeFetchParent("list_value")
-        fetcher.handle_items_added = MagicMock()
+        fetcher = TestItemTypeFetchParent("list_value")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "list_value", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_features(self):
         self._import_data(
@@ -278,25 +296,26 @@ class TestSpineDBFetcher(unittest.TestCase):
             'description': None,
             'commit_id': 2,
         }
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object_class"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("parameter_definition"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("parameter_value_list"))
-        fetcher = ItemTypeFetchParent("feature")
-        fetcher.handle_items_added = MagicMock()
+        for item_type in ("object_class", "parameter_definition", "parameter_value_list"):
+            dep_fetcher = TestItemTypeFetchParent(item_type)
+            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+            dep_fetcher.set_obsolete(True)
+        fetcher = TestItemTypeFetchParent("feature")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "feature", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_tools(self):
         self._import_data(tools=("tool",))
         item = {'id': 1, 'name': 'tool', 'description': None, 'commit_id': 2}
-        fetcher = ItemTypeFetchParent("tool")
-        fetcher.handle_items_added = MagicMock()
+        fetcher = TestItemTypeFetchParent("tool")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "tool", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_tool_features(self):
         self._import_data(
@@ -308,17 +327,16 @@ class TestSpineDBFetcher(unittest.TestCase):
             tool_features=(("tool", "oc", "param"),),
         )
         item = {'id': 1, 'tool_id': 1, 'feature_id': 1, 'parameter_value_list_id': 1, 'required': False, 'commit_id': 2}
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("tool"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("feature"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object_class"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("parameter_definition"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("parameter_value_list"))
-        fetcher = ItemTypeFetchParent("tool_feature")
-        fetcher.handle_items_added = MagicMock()
+        for item_type in ("tool", "feature", "object_class", "parameter_definition", "parameter_value_list"):
+            dep_fetcher = TestItemTypeFetchParent(item_type)
+            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+            dep_fetcher.set_obsolete(True)
+        fetcher = TestItemTypeFetchParent("tool_feature")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "tool_feature", 1), item)
+        fetcher.set_obsolete(True)
 
     def test_fetch_tool_feature_methods(self):
         self._import_data(
@@ -331,19 +349,24 @@ class TestSpineDBFetcher(unittest.TestCase):
             tool_feature_methods=(("tool", "oc", "param", "m"),),
         )
         item = {'id': 1, 'tool_feature_id': 1, 'parameter_value_list_id': 1, 'method_index': 0, 'commit_id': 2}
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("object_class"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("parameter_definition"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("parameter_value_list"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("list_value"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("tool"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("feature"))
-        self._db_mngr.fetch_more(self._db_map, ItemTypeFetchParent("tool_feature"))
-        fetcher = ItemTypeFetchParent("tool_feature_method")
-        fetcher.handle_items_added = MagicMock()
+        for item_type in (
+            "object_class",
+            "parameter_definition",
+            "parameter_value_list",
+            "list_value",
+            "tool",
+            "feature",
+            "tool_feature",
+        ):
+            dep_fetcher = TestItemTypeFetchParent(item_type)
+            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+            dep_fetcher.set_obsolete(True)
+        fetcher = TestItemTypeFetchParent("tool_feature_method")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "tool_feature_method", 1), item)
+        fetcher.set_obsolete(True)
 
 
 if __name__ == "__main__":

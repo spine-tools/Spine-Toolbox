@@ -151,6 +151,8 @@ class FetchParent(QObject):
         Args:
             fetch_token (object): current fetch token
         """
+        if self.is_obsolete:
+            return
         self._fetched = False
         self._busy = False
         self._position.clear()
@@ -208,7 +210,7 @@ class ItemTypeFetchParent(FetchParent):
         raise NotImplementedError(self.fetch_item_type)
 
     def __str__(self):
-        return f"Fetch parent for {self.fetch_item_type} items owned by {self._owner}"
+        return f"{super().__str__()} fetching {self.fetch_item_type} items owned by {self._owner}"
 
 
 class FlexibleFetchParent(ItemTypeFetchParent):
