@@ -93,7 +93,7 @@ class SpineDBWorker(QObject):
         self._fetched_item_types = set()
         self.commit_cache = {}
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
-        self._queries_to_advance = {}
+        self._advance_query_callbacks = {}
         self._something_happened.connect(self._handle_something_happened)
 
     def _get_parents(self, item_type):
@@ -134,7 +134,7 @@ class SpineDBWorker(QObject):
         self._queries.clear()
         self._fetched_ids.clear()
         self._fetched_item_types.clear()
-        self._queries_to_advance.clear()
+        self._advance_query_callbacks.clear()
 
     def _reset_fetching_if_required(self, parent):
         """Sets fetch parent's token or resets the parent if fetch tokens don't match.
@@ -147,35 +147,21 @@ class SpineDBWorker(QObject):
         elif parent.fetch_token != self._current_fetch_token:
             parent.reset_fetching(self._current_fetch_token)
 
-    def advance_query(self, parent):
-        """Schedules a progression of the DB query that fetches items for given parent.
-        Called whenever the parent has fetched everything from the cache already, so more items are needed.
+    def advance_query(self, item_type, callback=None):
+        """Schedules a progression of the DB query that fetches items of given type.
+        Adds the given callback to the collection of callbacks to call when the query progresses.
 
         Args:
             parent (FetchParent)
+            callback (Function or None)
         """
-        self._executor.submit(self._advance_query, parent)
-
-    def _advance_query(self, parent):
-        """Advances the DB query that fetches items for given parent.
-        If the query yields new items, then notifies the main thread to fetch the parent again so the new items
-        can be processed.
-        Otherwise sets the parent as fully fetched.
-
-        Args:
-            parent (FetchParent)
-        """
-        self._do_advance_query(parent.fetch_item_type)
-        if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):
-            self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
-        else:
-            parent.set_fetched(True)
-            parent.set_busy(False)
-
-    def do_advance_query(self, item_type):
-        if item_type not in self._fetched_item_types and item_type not in self._queries_to_advance:
-            self._queries_to_advance[item_type] = None
-            self._executor.submit(self._do_advance_query, item_type)
+        if item_type in self._fetched_item_types:
+            return
+        if item_type in self._advance_query_callbacks:
+            self._advance_query_callbacks[item_type].add(callback)
+            return
+        self._advance_query_callbacks[item_type] = {callback}
+        self._executor.submit(self._do_advance_query, item_type)
 
     @busy_effect
     @_db_map_lock
@@ -199,14 +185,17 @@ class SpineDBWorker(QObject):
             )
         query = self._queries[item_type]
         chunk = next(query, [])
-        self._queries_to_advance.pop(item_type, None)
+        callbacks = self._advance_query_callbacks.pop(item_type, ())
         if not chunk:
             self._fetched_item_types.add(item_type)
-            return False
-        self._db_mngr.add_items_to_cache(item_type, {self._db_map: chunk})
-        self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
-        self._populate_commit_cache(item_type, chunk)
-        return True
+        else:
+            self._db_mngr.add_items_to_cache(item_type, {self._db_map: chunk})
+            self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
+            self._populate_commit_cache(item_type, chunk)
+        for callback in callbacks:
+            if callback is not None:
+                callback()
+        return bool(chunk)
 
     def _register_fetch_parent(self, parent):
         """Registers the given parent and starts checking whether it will have children if fetched.
@@ -230,18 +219,17 @@ class SpineDBWorker(QObject):
     def _do_update_parents_will_have_children(self, item_type):
         """Updates the ``will_have_children`` property for all parents associated to given type.
 
-        The algorithm is as follows:
-        1. Initialize the list parents to check (those with will_have_children equal to None)
-        2. Obtain the next item of given type from cache.
-        3. Check if the unchecked parents accept the item. Set will_have_children to True if any of them do
-           and remove them from the list to check.
-        4. If there are no more items in cache, advance the query and if it brings more items, go back to 2.
-        5. If the query is completed, set will_have_children to False for all remaining parents to check and quit.
-        6. If at any moment the set of parents associated to given type is mutated, quit so we can start over.
-
         Args:
             item_type (str)
         """
+        # The algorithm goes as follows:
+        # 1. Initialize the list of parents to check (those with will_have_children equal to None)
+        # 2. Obtain the next item of given type from cache.
+        # 3. Check if the unchecked parents accept the item. Set will_have_children to True if any of them does
+        #    and remove them from the list to check.
+        # 4. If there are no more items in cache, advance the query and if it brings more items, go back to 2.
+        # 5. If the query is completed, set will_have_children to False for all remaining parents to check and quit.
+        # 6. If at any moment the set of parents associated to given type is mutated, quit so we can start over.
         parents = self._get_parents(item_type)
         position = 0
         while True:
@@ -383,7 +371,14 @@ class SpineDBWorker(QObject):
         if self._iterate_cache(parent):
             parent.set_busy(False)
         elif not parent.is_fetched:
-            self.advance_query(parent)
+            self.advance_query(parent.fetch_item_type, callback=lambda: self._handle_query_advanced(parent))
+
+    def _handle_query_advanced(self, parent):
+        if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):
+            self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
+        else:
+            parent.set_fetched(True)
+            parent.set_busy(False)
 
     def _more_available_event(self, parent):
         self.fetch_more(parent)

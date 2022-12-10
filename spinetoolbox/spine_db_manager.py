@@ -217,7 +217,7 @@ class SpineDBManager(QObject):
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            db_cache = self._cache.setdefault(db_map, DBCache(worker.do_advance_query))
+            db_cache = self._cache.setdefault(db_map, DBCache(worker.advance_query))
             table_cache = db_cache.table_cache(item_type)
             new_db_map_data[db_map] = [table_cache.add_item(item) for item in items]
         return new_db_map_data
@@ -271,7 +271,7 @@ class SpineDBManager(QObject):
         worker.fetch_all(
             fetch_item_types=fetch_item_types, only_descendants=only_descendants, include_ancestors=include_ancestors
         )
-        return self._cache.setdefault(db_map, DBCache(worker.do_advance_query))
+        return self._cache.setdefault(db_map, DBCache(worker.advance_query))
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
