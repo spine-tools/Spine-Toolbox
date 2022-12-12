@@ -139,7 +139,9 @@ class ObjectClassItem(EntityClassItem):
         return result
 
     def can_fetch_more(self):
-        return self._can_fetch_more_entity_groups() or super().can_fetch_more()
+        result = self._can_fetch_more_entity_groups()
+        result |= super().can_fetch_more()
+        return result
 
     def _fetch_more_entity_groups(self):
         for db_map in self.db_maps:
@@ -252,7 +254,7 @@ class EntityItem(MultiDBTreeItem):
         self.is_group = is_group
 
     def should_be_merged(self):
-        return self.is_group and not self.has_members_item
+        return self.is_group
 
     @property
     def display_icon(self):

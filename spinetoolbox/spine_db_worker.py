@@ -221,7 +221,6 @@ class SpineDBWorker(QObject):
         Args:
             item_type (str)
         """
-        # The algorithm goes as follows:
         # 1. Initialize the list of parents to check (those with will_have_children equal to None)
         # 2. Obtain the next item of given type from cache.
         # 3. Check if the unchecked parents accept the item. Set will_have_children to True if any of them does
@@ -350,9 +349,7 @@ class SpineDBWorker(QObject):
         self._reset_fetching_if_required(parent)
         self._register_fetch_parent(parent)
         parent.set_busy(True)
-        if self._iterate_cache(parent):
-            parent.set_busy(False)
-        elif not parent.is_fetched:
+        if not self._iterate_cache(parent) and not parent.is_fetched:
             self._advance_query(parent.fetch_item_type, callback=lambda: self._handle_query_advanced(parent))
 
     def _handle_query_advanced(self, parent):

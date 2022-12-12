@@ -48,6 +48,7 @@ class MultiDBTreeItem(TreeItem):
             handle_items_added=self.handle_items_added,
             handle_items_removed=self.handle_items_removed,
             handle_items_updated=self.handle_items_updated,
+            will_have_children_change=self.will_have_children_change,
             owner=self,
         )
 

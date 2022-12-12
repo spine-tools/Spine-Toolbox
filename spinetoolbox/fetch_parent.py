@@ -67,6 +67,7 @@ class FetchParent(QObject):
         for db_map in list(self._items_to_remove):
             data = self._items_to_remove.pop(db_map)
             self.handle_items_removed({db_map: data})
+        QTimer.singleShot(0, lambda: self.set_busy(False))
 
     def add_item(self, db_map, item):
         self._items_to_add.setdefault(db_map, []).append(item)
@@ -108,6 +109,7 @@ class FetchParent(QObject):
 
     def will_have_children_change(self):
         """Called when the will_have_children property changes."""
+        raise NotImplementedError(self.fetch_item_type)
 
     @property
     def is_obsolete(self):
@@ -221,6 +223,7 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         handle_items_removed=None,
         handle_items_updated=None,
         accepts_item=None,
+        will_have_children_change=None,
         owner=None,
     ):
         super().__init__(fetch_item_type, owner=owner)
@@ -228,6 +231,7 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         self._handle_items_added = handle_items_added
         self._handle_items_removed = handle_items_removed
         self._handle_items_updated = handle_items_updated
+        self._will_have_children_change = will_have_children_change
 
     def handle_items_added(self, db_map_data):
         if self._handle_items_added is None:
@@ -248,3 +252,8 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         if self._accepts_item is None:
             return super().accepts_item(item, db_map)
         return self._accepts_item(item, db_map)
+
+    def will_have_children_change(self):
+        if self._will_have_children_change is None:
+            return
+        self._will_have_children_change()
