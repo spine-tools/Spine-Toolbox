@@ -109,7 +109,6 @@ class FetchParent(QObject):
 
     def will_have_children_change(self):
         """Called when the will_have_children property changes."""
-        raise NotImplementedError(self.fetch_item_type)
 
     @property
     def is_obsolete(self):
@@ -255,5 +254,6 @@ class FlexibleFetchParent(ItemTypeFetchParent):
 
     def will_have_children_change(self):
         if self._will_have_children_change is None:
-            return
-        self._will_have_children_change()
+            super().will_have_children_change()
+        else:
+            self._will_have_children_change()

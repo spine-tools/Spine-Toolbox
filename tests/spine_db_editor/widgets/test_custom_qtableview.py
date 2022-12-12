@@ -188,6 +188,7 @@ class TestParameterTableView(TestBase):
             self._db_editor.refresh_session()
             waiter.wait()
         while model.rowCount() != 4:
+            model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = [
             ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", "database"],
