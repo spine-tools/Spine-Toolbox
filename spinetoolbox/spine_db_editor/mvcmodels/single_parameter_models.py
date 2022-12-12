@@ -16,7 +16,7 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, QTimer
+from PySide2.QtCore import Qt
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
@@ -33,13 +33,6 @@ from .colors import FIXED_FIELD_COLOR
 
 
 class HalfSortedTableModel(MinimalTableModel):
-    def __init__(self, header, lazy=False):
-        super().__init__(header=header, lazy=lazy)
-        self._resort_timer = QTimer()
-        self._resort_timer.setInterval(20)
-        self._resort_timer.setSingleShot(True)
-        self._resort_timer.timeout.connect(self._do_resort)
-
     def reset_model(self, main_data=None):
         """Reset model."""
         if main_data is None:
@@ -57,27 +50,6 @@ class HalfSortedTableModel(MinimalTableModel):
         self._main_data.sort(key=self._sort_key)
         self.endResetModel()
 
-    def resort(self):
-        self._resort_timer.start()
-
-    def _do_resort(self):
-        if not self._main_data:
-            return
-        self._main_data.sort(key=self._sort_key)
-        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1))
-
-    @staticmethod
-    def _get_key_safe(d, key):
-        try:
-            value = d[key]
-            if isinstance(value, tuple):
-                value = ",".join(v or "" for v in value)
-            else:
-                value = value or ""
-            return value
-        except KeyError:
-            return ""
-
     def _sort_key(self, element):
         return element
 
@@ -94,7 +66,7 @@ class SingleParameterModel(HalfSortedTableModel):
         Args:
             header (list): list of field names for the header
         """
-        super().__init__(header, lazy=lazy)
+        super().__init__(header=header, lazy=lazy)
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.entity_class_id = entity_class_id
@@ -374,7 +346,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return self._get_key_safe(item, "parameter_name")
+        return item["parameter_name"]
 
     def update_items_in_db(self, items):
         """Update items in db.
@@ -429,7 +401,7 @@ class SingleParameterValueMixin(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return tuple(self._get_key_safe(item, k) for k in (self.entity_name_key, "parameter_name", "alternative_name"))
+        return tuple(item[k] for k in (self.entity_name_key, "parameter_name", "alternative_name"))
 
     def set_filter_entity_ids(self, db_map_class_entity_ids):
         if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:

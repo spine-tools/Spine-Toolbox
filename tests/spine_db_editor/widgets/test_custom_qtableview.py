@@ -270,8 +270,9 @@ class TestParameterTableWithExistingData(TestBase):
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
         self._db_editor.undo_action.trigger()
-        while model.rowCount() != self._CHUNK_SIZE + 1:
-            # Wait for fetching to finish.
+        while model.rowCount() != self._n_objects * self._n_parameters + 1:
+            # Fetch the entire model, because we want to validate all the data.
+            model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = sorted(
             [
@@ -281,7 +282,7 @@ class TestParameterTableWithExistingData(TestBase):
             key=lambda x: (x[1], x[2]),
         )
         expected.append([None, None, None, None, None, "database"])
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
+        self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 

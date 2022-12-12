@@ -458,8 +458,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 existing = next(
                     (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
                 )
-                if existing is not None:
-                    existing.resort()
                 self._do_update_data_in_filter_menus(db_map, class_items)
 
         self._emit_data_changed_for_column("parameter_name")
