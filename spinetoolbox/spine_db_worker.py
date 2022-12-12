@@ -82,7 +82,6 @@ class SpineDBWorker(QObject):
         self._add_item_callbacks = {}
         self._update_item_callbacks = {}
         self._remove_item_callbacks = {}
-        self._complete_item_callbacks = {}
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
@@ -147,7 +146,7 @@ class SpineDBWorker(QObject):
         elif parent.fetch_token != self._current_fetch_token:
             parent.reset_fetching(self._current_fetch_token)
 
-    def advance_query(self, item_type, callback=None):
+    def _advance_query(self, item_type, callback=None):
         """Schedules a progression of the DB query that fetches items of given type.
         Adds the given callback to the collection of callbacks to call when the query progresses.
 
@@ -161,11 +160,11 @@ class SpineDBWorker(QObject):
             self._advance_query_callbacks[item_type].add(callback)
             return
         self._advance_query_callbacks[item_type] = {callback}
-        self._executor.submit(self._do_advance_query, item_type)
+        self._executor.submit(self.advance_query, item_type)
 
     @busy_effect
     @_db_map_lock
-    def _do_advance_query(self, item_type):
+    def advance_query(self, item_type):
         """Advances the DB query that fetches items of given type and caches the results.
 
         Args:
@@ -250,7 +249,7 @@ class SpineDBWorker(QObject):
                     break
             if not parents_to_check:
                 break
-            self._do_advance_query(item_type)
+            self.advance_query(item_type)
             if position == len(self._fetched_ids.get(item_type, ())):
                 for parent in parents_to_check:
                     parent.will_have_children = False
@@ -274,9 +273,6 @@ class SpineDBWorker(QObject):
             if not item:
                 # Happens in one unit test
                 continue
-            if not item.is_complete():
-                item.complete_callbacks.add(self._make_complete_item_callback(parent))
-                continue
             if parent.accepts_item(item, self._db_map):
                 self._bind_item(parent, item)
                 if item.is_valid():
@@ -290,15 +286,6 @@ class SpineDBWorker(QObject):
         item.readd_callbacks.add(self._make_add_item_callback(parent))
         item.update_callbacks.add(self._make_update_item_callback(parent))
         item.remove_callbacks.add(self._make_remove_item_callback(parent))
-
-    def _complete_item(self, parent, item):
-        if parent.is_obsolete:
-            self._complete_item_callbacks.pop(parent, None)
-            return
-        if parent.accepts_item(item, self._db_map):
-            self._bind_item(parent, item)
-            if item.is_valid():
-                parent.add_item(self._db_map, item)
 
     def _add_item(self, parent, item):
         if parent.is_obsolete:
@@ -320,11 +307,6 @@ class SpineDBWorker(QObject):
             return False
         parent.remove_item(self._db_map, item)
         return True
-
-    def _make_complete_item_callback(self, parent):
-        if parent not in self._complete_item_callbacks:
-            self._complete_item_callbacks[parent] = lambda item, parent=parent: self._complete_item(parent, item)
-        return self._complete_item_callbacks[parent]
 
     def _make_add_item_callback(self, parent):
         if parent not in self._add_item_callbacks:
@@ -371,7 +353,7 @@ class SpineDBWorker(QObject):
         if self._iterate_cache(parent):
             parent.set_busy(False)
         elif not parent.is_fetched:
-            self.advance_query(parent.fetch_item_type, callback=lambda: self._handle_query_advanced(parent))
+            self._advance_query(parent.fetch_item_type, callback=lambda: self._handle_query_advanced(parent))
 
     def _handle_query_advanced(self, parent):
         if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):
@@ -404,7 +386,7 @@ class SpineDBWorker(QObject):
 
     def _fetch_all(self, item_types):
         for item_type in item_types:
-            while self._do_advance_query(item_type):
+            while self.advance_query(item_type):
                 pass
 
     def _populate_commit_cache(self, item_type, items):
