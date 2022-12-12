@@ -48,6 +48,7 @@ class MultiDBTreeItem(TreeItem):
             handle_items_added=self.handle_items_added,
             handle_items_removed=self.handle_items_removed,
             handle_items_updated=self.handle_items_updated,
+            owner=self,
         )
 
     def child_number(self):
@@ -193,7 +194,7 @@ class MultiDBTreeItem(TreeItem):
         """Returns field from data for this item in given db_map or None if not found."""
         return self.db_map_data(db_map).get(field, default)
 
-    def _create_new_children(self, db_map, children_ids):
+    def _create_new_children(self, db_map, children_ids, **kwargs):
         """
         Creates new items from ids associated to a db map.
 
@@ -204,7 +205,7 @@ class MultiDBTreeItem(TreeItem):
         Returns:
             list of MultiDBTreeItem: new children
         """
-        return [self.child_item_class(self.model, {db_map: id_}) for id_ in children_ids]
+        return [self.child_item_class(self.model, {db_map: id_}, **kwargs) for id_ in children_ids]
 
     def _merge_children(self, new_children):
         """Merges new children into this item. Ensures that each child has a valid display id afterwards."""
@@ -280,7 +281,7 @@ class MultiDBTreeItem(TreeItem):
         db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
         self.update_children_by_id(db_map_ids)
 
-    def append_children_by_id(self, db_map_ids):
+    def append_children_by_id(self, db_map_ids, **kwargs):
         """
         Appends children by id.
 
@@ -289,7 +290,7 @@ class MultiDBTreeItem(TreeItem):
         """
         new_children = []
         for db_map, ids in db_map_ids.items():
-            new_children += self._create_new_children(db_map, ids)
+            new_children += self._create_new_children(db_map, ids, **kwargs)
         self._merge_children(new_children)
 
     def remove_children_by_id(self, db_map_ids):
@@ -308,7 +309,7 @@ class MultiDBTreeItem(TreeItem):
         """Checks if the item is still valid after an update operation."""
         return True
 
-    def update_children_by_id(self, db_map_ids):
+    def update_children_by_id(self, db_map_ids, **kwargs):
         """
         Updates children by id. Essentially makes sure all children have a valid display id
         after updating the underlying data. These may require 'splitting' a child
@@ -335,11 +336,12 @@ class MultiDBTreeItem(TreeItem):
                     db_map_ids_to_add.setdefault(db_map, set()).add(id_)
         new_children = []  # List of new children to be inserted
         for db_map, ids in db_map_ids_to_add.items():
-            new_children += self._create_new_children(db_map, ids)
+            new_children += self._create_new_children(db_map, ids, **kwargs)
         # Check display ids
         display_ids = [child.display_id for child in self.children if child.display_id is not None]
         for row in sorted(rows_to_update, reverse=True):
             child = self.child(row)
+            child.update(**kwargs)
             if not child:
                 continue
             if not child.is_valid():
@@ -351,9 +353,7 @@ class MultiDBTreeItem(TreeItem):
                 db_map = child.first_db_map
                 new_child = child.deep_take_db_map(db_map)
                 new_children.append(new_child)
-            if child.display_id in display_ids[:row] + display_ids[row + 1 :] or (
-                hasattr(child, "is_group") and child.is_group() and not child.has_members_item
-            ):
+            if child.display_id in display_ids[:row] + display_ids[row + 1 :] or child.should_be_merged():
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
                 self.remove_children(row, 1)
@@ -363,6 +363,12 @@ class MultiDBTreeItem(TreeItem):
         top_left = self.model.index(0, 0, self.index())
         bottom_right = self.model.index(self.child_count() - 1, 0, self.index())
         self.model.dataChanged.emit(top_left, bottom_right)
+
+    def update(self, **kwargs):
+        pass
+
+    def should_be_merged(self):
+        return False
 
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
@@ -440,3 +446,7 @@ class MultiDBTreeItem(TreeItem):
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""
         return {"database": self.first_db_map.codename}
+
+    def tear_down(self):
+        super().tear_down()
+        self._fetch_parent.set_obsolete(True)
