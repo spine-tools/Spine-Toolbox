@@ -241,6 +241,9 @@ class LoggingConnection(LogMixin, HeadlessConnection):
     def receive_session_rolled_back(self, db_map):
         self._receive_data_changed()
 
+    def receive_error_msg(self, _db_map_error_log):
+        pass
+
     def get_scenario_names(self, url):
         db_map = self._get_db_map(url)
         if db_map is None:
