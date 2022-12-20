@@ -354,6 +354,8 @@ class RelationshipItem(EntityItem):
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
+        if not self.db_map_ids:
+            return {}
         return dict(
             relationship_class_name=self.entity_class_name,
             object_name_list=self.object_name_list,
@@ -448,6 +450,8 @@ class ObjectItem(EntityItem):
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
+        if not self.db_map_ids:
+            return {}
         return dict(
             object_class_name=self.entity_class_name, object_name=self.entity_name, database=self.first_db_map.codename
         )
