@@ -46,6 +46,21 @@ class FetchParent(QObject):
         if isinstance(self._owner, QObject):
             self._owner.destroyed.connect(lambda obj=None: self.set_obsolete(True))
 
+    def reset_fetching(self, fetch_token):
+        """Resets fetch parent as if nothing was ever fetched.
+
+        Args:
+            fetch_token (object): current fetch token
+        """
+        if self.is_obsolete:
+            return
+        self._fetched = False
+        self._busy = False
+        self._position.clear()
+        self.fetch_token = fetch_token
+        self.will_have_children = None
+        self.will_have_children_change()
+
     def position(self, db_map):
         return self._position.setdefault(db_map, 0)
 
@@ -145,21 +160,6 @@ class FetchParent(QObject):
             busy (bool): whether parent is busy fetching
         """
         self._busy = busy
-
-    def reset_fetching(self, fetch_token):
-        """Resets fetch parent as if nothing was ever fetched.
-
-        Args:
-            fetch_token (object): current fetch token
-        """
-        if self.is_obsolete:
-            return
-        self._fetched = False
-        self._busy = False
-        self._position.clear()
-        self.fetch_token = fetch_token
-        self.will_have_children = None
-        self.will_have_children_change()
 
     def handle_items_added(self, db_map_data):
         """

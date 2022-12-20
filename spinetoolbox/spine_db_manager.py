@@ -1380,8 +1380,12 @@ class SpineDBManager(QObject):
     def remove_items(self, db_map_typed_ids):
         """Pushes a command to remove items to undo stack."""
         for db_map, ids_per_type in db_map_typed_ids.items():
-            for item_type, ids_ in ids_per_type.items():
-                self.undo_stack[db_map].push(RemoveItemsCommand(self, db_map, ids_, item_type))
+            macro = SpineDBMacro(self._remove_items_commands(db_map, ids_per_type))
+            self.undo_stack[db_map].push(macro)
+
+    def _remove_items_commands(self, db_map, ids_per_type):
+        for item_type, ids_ in ids_per_type.items():
+            yield RemoveItemsCommand(self, db_map, ids_, item_type)
 
     @busy_effect
     def do_remove_items(self, item_type, db_map_ids, callback=None):

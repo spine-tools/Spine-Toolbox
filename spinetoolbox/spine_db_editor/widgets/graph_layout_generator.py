@@ -89,6 +89,7 @@ class ProgressBarWidget(QWidget):
         self.stop_button.clicked.connect(self._layout_gen.stop)
         self._layout_gen.finished.connect(self.hide)
         self._layout_gen.progressed.connect(self._progress_bar.setValue)
+        self._layout_gen.progressed.connect(self.show)
         self._layout_gen.msg.connect(self._progress_bar.setFormat)
 
     def paintEvent(self, event):
