@@ -766,9 +766,9 @@ class CrossHairsRelationshipItem(RelationshipItem):
     def refresh_icon(self):
         """Refreshes the icon."""
         obj_items = [arc_item.obj_item for arc_item in self.arc_items]
-        object_class_name_list = [
+        object_class_name_list = tuple(
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
-        ]
+        )
         renderer = self.db_mngr.get_icon_mngr(self.first_db_map).relationship_class_renderer(
             None, object_class_name_list
         )

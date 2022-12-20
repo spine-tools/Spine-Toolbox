@@ -55,7 +55,6 @@ from .manage_items_dialogs import (
     ManageItemsDialog,
     ManageItemsDialogBase,
 )
-from ...helpers import default_icon_id
 from ...spine_db_commands import AgedUndoCommand, AddItemsCommand, RemoveItemsCommand
 
 
@@ -92,7 +91,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         object_class_name_list = self.relationship_class["object_class_name_list"]
         self.table_view.setRowCount(len(self.relationships))
         self.table_view.setColumnCount(len(object_class_name_list) + 1)
-        labels = [""] + object_class_name_list
+        labels = ("",) + object_class_name_list
         self.table_view.setHorizontalHeaderLabels(labels)
         self.table_view.verticalHeader().hide()
         for row, relationship in enumerate(self.relationships):
