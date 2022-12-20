@@ -129,7 +129,7 @@ class TestMetadataTableModel(unittest.TestCase):
     def test_add_and_update_via_adding_entity_metadata(self):
         db_map_data = {self._db_map: [{"name": "object class"}]}
         self._db_mngr.add_object_classes(db_map_data)
-        db_map_data = {self._db_map: [{"object_class": "object class", "name": "object"}]}
+        db_map_data = {self._db_map: [{"class_id": 1, "name": "object"}]}
         self._db_mngr.add_objects(db_map_data)
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
         self._db_mngr.add_metadata(db_map_data)
