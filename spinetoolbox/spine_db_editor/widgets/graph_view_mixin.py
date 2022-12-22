@@ -112,8 +112,8 @@ class GraphViewMixin:
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
-        self.ui.treeView_object.tree_selection_changed.connect(self.rebuild_graph)
-        self.ui.treeView_relationship.tree_selection_changed.connect(self.rebuild_graph)
+        self.ui.treeView_object.tree_selection_changed.connect(self._handle_tree_selection_changed)
+        self.ui.treeView_relationship.tree_selection_changed.connect(self._handle_tree_selection_changed)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
         self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
         self.db_mngr.items_added.connect(self._refresh_icons)
@@ -285,13 +285,18 @@ class GraphViewMixin:
             QTimer.singleShot(100, self.build_graph)
 
     @Slot(dict)
-    def rebuild_graph(self, selected=None):
+    def _handle_tree_selection_changed(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
         self._renew_fetch_parents()
-        if selected is not None:
-            self.selected_tree_inds = selected
+        self.selected_tree_inds = selected
         self.added_db_map_relationship_ids.clear()
         self._extending_graph = True
+        self.build_graph()
+
+    @Slot(bool)
+    def rebuild_graph(self, _checked=False):
+        self.db_map_object_id_sets.clear()
+        self.db_map_relationship_id_sets.clear()
         self.build_graph()
 
     def build_graph(self, persistent=False):
