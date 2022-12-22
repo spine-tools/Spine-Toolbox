@@ -135,7 +135,11 @@ install Python and get the latest version of pip.
 You can now launch Spine Toolbox by calling `spinetoolbox` when the environment 
 is active. 
 
-**To upgrade**, pull or copy the latest changes from the repository and run
+**To upgrade**, pull (or copy) the latest changes from the Spine Toolbox repository 
+
+    git pull
+ 
+and run (to upgrade the other Spine Toolbox packages)
 
     python -m pip install -U -r requirements.txt
 

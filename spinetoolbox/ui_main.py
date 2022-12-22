@@ -1737,11 +1737,14 @@ class ToolboxUI(QMainWindow):
         has_selection = bool(selected_items)
         can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
         has_items = self.project_item_model.n_items() > 0
+        selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
+        _methods = [getattr(self.project_item_model.get_item(x.name()).project_item, "copy_local_data") for x in selected_project_items]
+        can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
         self.ui.actionCopy.setEnabled(can_copy)
         self.ui.actionPaste.setEnabled(can_paste)
         self.ui.actionPasteAndDuplicateFiles.setEnabled(can_paste)
         self.ui.actionDuplicate.setEnabled(can_copy)
-        self.ui.actionDuplicateAndDuplicateFiles.setEnabled(can_copy)
+        self.ui.actionDuplicateAndDuplicateFiles.setEnabled(can_duplicate_files)
         self.ui.actionRemove.setEnabled(has_selection)
         self.ui.actionRemove_all.setEnabled(has_items)
 
