@@ -651,14 +651,26 @@ class TabularViewMixin:
             TabularViewFilterMenu
         """
         if identifier not in self.filter_menus:
-            pivot_top_left_header = self.pivot_table_model.top_left_headers[identifier]
-            data_to_value = pivot_top_left_header.header_data
+            header = self.pivot_table_model.top_left_headers[identifier]
+            if header.header_type == "parameter":
+                item_type = "parameter_definition"
+            elif header.header_type == "index":
+                item_type = "parameter_value"
+            else:
+                item_type = header.header_type
+            if header.header_type == "object":
+                accepts_item = (
+                    self.accepts_entity_item
+                    if self.current_class_type == "object_class"
+                    else lambda item, db_map: self.accepts_ith_member_object_item(header.rank, item, db_map)
+                )
+            elif header.header_type == "parameter":
+                accepts_item = self.accepts_parameter_item
+            else:
+                accepts_item = None
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(
-                self, identifier, data_to_value, show_empty=False
+                self, self.db_mngr, self.db_maps, item_type, accepts_item, identifier, show_empty=False
             )
-            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
-            index_values.pop(None, None)
-            menu.set_filter_list(index_values.keys())
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -798,3 +810,16 @@ class TabularViewMixin:
         """Reacts to session rolled back event."""
         super().receive_session_rolled_back(db_maps)
         self.clear_pivot_table()
+
+    def accepts_entity_item(self, item, db_map):
+        return item["class_id"] == self.current_class_id.get(db_map)
+
+    def accepts_parameter_item(self, item, db_map):
+        return item["entity_class_id"] == self.current_class_id.get(db_map)
+
+    def accepts_member_object_item(self, item, db_map):
+        object_class_id_list = {x[db_map] for x in self.current_object_class_id_list}
+        return item["class_id"] in object_class_id_list
+
+    def accepts_ith_member_object_item(self, i, item, db_map):
+        return item["class_id"] == self.current_object_class_id_list[i][db_map]

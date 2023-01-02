@@ -31,6 +31,197 @@ from ..widgets.custom_delegates import (
 )
 
 
+class TopLeftHeaderItem:
+    """Base class for all 'top left pivot headers'.
+    Represents a header located in the top left area of the pivot table."""
+
+    def __init__(self, model):
+        """
+        Args:
+            model (PivotTableModelBase)
+        """
+        self._model = model
+
+    @property
+    def model(self):
+        return self._model
+
+    @property
+    def db_mngr(self):
+        return self._model.db_mngr
+
+    def _get_header_data_from_db(self, item_type, header_id, field_name, role):
+        db_map, id_ = header_id
+        item = self.db_mngr.get_item(db_map, item_type, id_)
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            return item.get(field_name)
+        if role == Qt.ToolTipRole:
+            return item.get("description", "No description")
+
+
+class TopLeftObjectHeaderItem(TopLeftHeaderItem):
+    """A top left header for object_class."""
+
+    def __init__(self, model, rank, class_name, class_id):
+        super().__init__(model)
+        self.rank = rank
+        self._name = class_name
+        self._class_id = class_id
+
+    @property
+    def header_type(self):
+        return "object"
+
+    @property
+    def name(self):
+        return self._name
+
+    def header_data(self, header_id, role=Qt.DisplayRole):
+        return self._get_header_data_from_db("object", header_id, "name", role)
+
+    def update_data(self, db_map_data):
+        if not db_map_data:
+            return False
+        self.db_mngr.update_objects(db_map_data)
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        db_map_data = {
+            db_map: [{"name": name, "class_id": class_id} for name in names]
+            for db_map, class_id in self._class_id.items()
+        }
+        self.db_mngr.add_objects(db_map_data)
+        return True
+
+
+class TopLeftParameterHeaderItem(TopLeftHeaderItem):
+    """A top left header for parameter_definition."""
+
+    @property
+    def header_type(self):
+        return "parameter"
+
+    @property
+    def name(self):
+        return "parameter"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):
+        return self._get_header_data_from_db("parameter_definition", header_id, "parameter_name", role)
+
+    def update_data(self, db_map_data):
+        if not db_map_data:
+            return False
+        self.db_mngr.update_parameter_definitions(db_map_data)
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        db_map_data = {
+            db_map: [{"name": name, "entity_class_id": class_id} for name in names]
+            for db_map, class_id in self.model._parent.current_class_id.items()
+        }
+        self.db_mngr.add_parameter_definitions(db_map_data)
+        return True
+
+
+class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
+    """A top left header for parameter index."""
+
+    @property
+    def header_type(self):
+        return "index"
+
+    @property
+    def name(self):
+        return "index"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        _, index = header_id
+        if role == PARSED_ROLE:
+            return index
+        return str(index)
+
+    def update_data(self, db_map_data):  # pylint: disable=no-self-use
+        return False
+
+    def add_data(self, _names):  # pylint: disable=no-self-use
+        return False
+
+
+class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
+    """A top left header for alternative."""
+
+    @property
+    def header_type(self):
+        return "alternative"
+
+    @property
+    def name(self):
+        return "alternative"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return self._get_header_data_from_db("alternative", header_id, "name", role)
+
+    def update_data(self, db_map_data):
+        if not db_map_data:
+            return False
+        self.db_mngr.update_alternatives(db_map_data)
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
+        self.db_mngr.add_alternatives(db_map_data)
+        return True
+
+
+class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
+    """A top left header for scenario."""
+
+    @property
+    def header_type(self):
+        return "scenario"
+
+    @property
+    def name(self):
+        return "scenario"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return self._get_header_data_from_db("scenario", header_id, "name", role)
+
+    def update_data(self, db_map_data):
+        if not db_map_data:
+            return False
+        self.db_mngr.update_scenarios(db_map_data)
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
+        self.db_mngr.add_scenarios(db_map_data)
+        return True
+
+
+class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
+    """A top left header for database."""
+
+    @property
+    def header_type(self):
+        return "database"
+
+    @property
+    def name(self):
+        return "database"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return header_id.codename
+
+
 class PivotTableModelBase(QAbstractTableModel):
 
     _V_HEADER_WIDTH = 5
@@ -529,196 +720,6 @@ class PivotTableModelBase(QAbstractTableModel):
         return any(self.top_left_headers[id_].add_data(names) for id_, names in names_by_top_left_id.items())
 
 
-class TopLeftHeaderItem:
-    """Base class for all 'top left pivot headers'.
-    Represents a header located in the top left area of the pivot table."""
-
-    def __init__(self, model):
-        """
-        Args:
-            model (PivotTableModelBase)
-        """
-        self._model = model
-
-    @property
-    def model(self):
-        return self._model
-
-    @property
-    def db_mngr(self):
-        return self._model.db_mngr
-
-    def _get_header_data_from_db(self, item_type, header_id, field_name, role):
-        db_map, id_ = header_id
-        item = self.db_mngr.get_item(db_map, item_type, id_)
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return item.get(field_name)
-        if role == Qt.ToolTipRole:
-            return item.get("description", "No description")
-
-
-class TopLeftObjectHeaderItem(TopLeftHeaderItem):
-    """A top left header for object_class."""
-
-    def __init__(self, model, class_name, class_id):
-        super().__init__(model)
-        self._name = class_name
-        self._class_id = class_id
-
-    @property
-    def header_type(self):
-        return "object"
-
-    @property
-    def name(self):
-        return self._name
-
-    def header_data(self, header_id, role=Qt.DisplayRole):
-        return self._get_header_data_from_db("object", header_id, "name", role)
-
-    def update_data(self, db_map_data):
-        if not db_map_data:
-            return False
-        self.db_mngr.update_objects(db_map_data)
-        return True
-
-    def add_data(self, names):
-        if not names:
-            return False
-        db_map_data = {
-            db_map: [{"name": name, "class_id": class_id} for name in names]
-            for db_map, class_id in self._class_id.items()
-        }
-        self.db_mngr.add_objects(db_map_data)
-        return True
-
-
-class TopLeftParameterHeaderItem(TopLeftHeaderItem):
-    """A top left header for parameter_definition."""
-
-    @property
-    def header_type(self):
-        return "parameter"
-
-    @property
-    def name(self):
-        return "parameter"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):
-        return self._get_header_data_from_db("parameter_definition", header_id, "parameter_name", role)
-
-    def update_data(self, db_map_data):
-        if not db_map_data:
-            return False
-        self.db_mngr.update_parameter_definitions(db_map_data)
-        return True
-
-    def add_data(self, names):
-        if not names:
-            return False
-        db_map_data = {
-            db_map: [{"name": name, "entity_class_id": class_id} for name in names]
-            for db_map, class_id in self.model._parent.current_class_id.items()
-        }
-        self.db_mngr.add_parameter_definitions(db_map_data)
-        return True
-
-
-class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
-    """A top left header for parameter index."""
-
-    @property
-    def header_type(self):
-        return "index"
-
-    @property
-    def name(self):
-        return "index"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
-        _, index = header_id
-        if role == PARSED_ROLE:
-            return index
-        return str(index)
-
-    def update_data(self, db_map_data):  # pylint: disable=no-self-use
-        return False
-
-    def add_data(self, _names):  # pylint: disable=no-self-use
-        return False
-
-
-class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
-    """A top left header for alternative."""
-
-    @property
-    def header_type(self):
-        return "alternative"
-
-    @property
-    def name(self):
-        return "alternative"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
-        return self._get_header_data_from_db("alternative", header_id, "name", role)
-
-    def update_data(self, db_map_data):
-        if not db_map_data:
-            return False
-        self.db_mngr.update_alternatives(db_map_data)
-        return True
-
-    def add_data(self, names):
-        if not names:
-            return False
-        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
-        self.db_mngr.add_alternatives(db_map_data)
-        return True
-
-
-class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
-    """A top left header for scenario."""
-
-    @property
-    def header_type(self):
-        return "scenario"
-
-    @property
-    def name(self):
-        return "scenario"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
-        return self._get_header_data_from_db("scenario", header_id, "name", role)
-
-    def update_data(self, db_map_data):
-        if not db_map_data:
-            return False
-        self.db_mngr.update_scenarios(db_map_data)
-        return True
-
-    def add_data(self, names):
-        if not names:
-            return False
-        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
-        self.db_mngr.add_scenarios(db_map_data)
-        return True
-
-
-class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
-    """A top left header for database."""
-
-    @property
-    def header_type(self):
-        return "database"
-
-    @property
-    def name(self):
-        return "database"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
-        return header_id.codename
-
-
 class ParameterValuePivotTableModel(PivotTableModelBase):
     """A model for the pivot table in parameter_value input type."""
 
@@ -728,20 +729,12 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._object_fetch_parent = FlexibleFetchParent(
-            "object",
+        self._entity_fetch_parent = FlexibleFetchParent(
+            None,
             handle_items_added=self._handle_entities_added,
             handle_items_removed=self._handle_entities_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_entity_item,
-            owner=self,
-        )
-        self._relationship_fetch_parent = FlexibleFetchParent(
-            "relationship",
-            handle_items_added=self._handle_entities_added,
-            handle_items_removed=self._handle_entities_removed,
-            handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_entity_item,
+            accepts_item=self._parent.accepts_entity_item,
             owner=self,
         )
         self._parameter_definition_fetch_parent = FlexibleFetchParent(
@@ -749,7 +742,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_parameter_definitions_added,
             handle_items_removed=self._handle_parameter_definitions_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_parameter_item,
+            accepts_item=self._parent.accepts_parameter_item,
             owner=self,
         )
         self._parameter_value_fetch_parent = FlexibleFetchParent(
@@ -757,7 +750,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_parameter_values_added,
             handle_items_removed=self._handle_parameter_values_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_parameter_item,
+            accepts_item=self._parent.accepts_parameter_item,
             owner=self,
         )
         self._alternative_fetch_parent = FlexibleFetchParent(
@@ -767,12 +760,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_updated=lambda _: self._parent.refresh_views(),
             owner=self,
         )
-
-    def _accepts_entity_item(self, item, db_map):
-        return item["class_id"] == self._parent.current_class_id.get(db_map)
-
-    def _accepts_parameter_item(self, item, db_map):
-        return item["entity_class_id"] == self._parent.current_class_id.get(db_map)
 
     def _handle_entities_added(self, db_map_data):
         data = self._load_empty_parameter_value_data(db_map_entities=db_map_data)
@@ -828,10 +815,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         yield self._parameter_value_fetch_parent
         yield self._alternative_fetch_parent
         yield self._parameter_definition_fetch_parent
+        yield self._entity_fetch_parent
+
+    def reset_fetch_parents(self):
+        super().reset_fetch_parents()
         if self._parent.current_class_type == "object_class":
-            yield self._object_fetch_parent
+            self._entity_fetch_parent.fetch_item_type = "object"
         elif self._parent.current_class_type == "relationship_class":
-            yield self._relationship_fetch_parent
+            self._entity_fetch_parent.fetch_item_type = "relationship"
 
     def db_map_object_ids(self, index):
         """
@@ -1151,7 +1142,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_relationships_added,
             handle_items_removed=self._handle_relationships_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_relationship_item,
+            accepts_item=self._parent.accepts_entity_item,
             owner=self,
         )
         self._object_fetch_parent = FlexibleFetchParent(
@@ -1159,16 +1150,9 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_objects_added,
             handle_items_removed=self._handle_objects_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_object_item,
+            accepts_item=self._parent.accepts_member_object_item,
             owner=self,
         )
-
-    def _accepts_relationship_item(self, item, db_map):
-        return item["class_id"] == self._parent.current_class_id.get(db_map)
-
-    def _accepts_object_item(self, item, db_map):
-        object_class_id_list = {x[db_map] for x in self._parent.current_object_class_id_list}
-        return item["class_id"] in object_class_id_list
 
     def _handle_relationships_added(self, db_map_data):
         data = self._parent.load_full_relationship_data(db_map_relationships=db_map_data, action="add")

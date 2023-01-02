@@ -38,8 +38,6 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self._data_set = set()
         self._selected = set()
         self._selected_filtered = set()
-        self._is_base_filtered = False
-        self._base_filter_index = []
         self._is_filtered = False
         self._filter_index = []
         self._filter_expression = re.compile("")
@@ -159,6 +157,15 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self.remove_filter()
         self.endResetModel()
 
+    def filter_by_condition(self, condition):
+        """Updates selected items by applying a condition.
+
+        Args:
+            condition (function): Filter acceptance condition.
+        """
+        selected = {item for item in self._data if condition(item)}
+        self.set_selected(selected)
+
     def set_selected(self, selected, select_empty=None):
         self.beginResetModel()
         self._selected = self._data_set.intersection(selected)
@@ -192,24 +199,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             self.remove_filter()
 
     def search_filter_expression(self, item):
-        if isinstance(item, tuple):
-            item = " | ".join(item)  # FIXME MM
         return self._filter_expression.search(item)
-
-    def set_base_filter(self, condition):
-        """Sets the base filter. The other filter, the one that works by typing in the search bar, should be applied
-        on top of this base filter.
-
-        Args:
-            condition (function): Filter acceptance condition.
-        """
-        self._base_filter_index = [i for i, item in enumerate(self._data) if condition(item)]
-        self._is_base_filtered = True
-        self._filter_index = self._base_filter_index
-        self._selected_filtered = set(self._data[i] for i in self._filter_index)
-        self.beginResetModel()
-        self._is_filtered = True
-        self.endResetModel()
 
     def apply_filter(self):
         if not self._is_filtered:
@@ -245,8 +235,8 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self._filter_expression = re.compile("")
         if self._show_add_to_selection:
             self._action_rows.remove(self._ADD_TO_SELECTION_STR)
-        self._filter_index = self._base_filter_index
-        self._is_filtered = self._is_base_filtered
+        self._filter_index = []
+        self._is_filtered = False
         self._selected_filtered = set()
         self._all_selected = self._check_all_selected()
         self.endResetModel()
@@ -294,29 +284,27 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
 class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
     """Extends SimpleFilterCheckboxListModel to allow for lazy loading in synch with another model."""
 
-    def __init__(self, parent, source_model, show_empty=True):
+    def __init__(self, parent, db_mngr, db_maps, fetch_parent, show_empty=True):
         """Init class.
 
         Args:
             parent (SpineDBEditor)
-            source_model (CompoundParameterModel): a model to lazily get data from
+            fetch_parent (FetchParent)
         """
         super().__init__(parent, show_empty=show_empty)
-        self.source_model = source_model
+        self._db_mngr = db_mngr
+        self._db_maps = db_maps
+        self._fetch_parent = fetch_parent
 
-    def canFetchMore(self, parent):
-        if self.source_model is None:
-            return False
-        return self.source_model.canFetchMore(QModelIndex())
+    def canFetchMore(self, _parent):
+        result = False
+        for db_map in self._db_maps:
+            result |= self._db_mngr.can_fetch_more(db_map, self._fetch_parent)
+        return result
 
-    def fetchMore(self, parent):
-        if self.source_model is None:
-            return
-        row_count_before = self.rowCount(parent)
-        self.source_model.fetchMore(QModelIndex())
-        # If fetching the source model doesn't bring any new data, emit layoutChanged to fetch more again.
-        if self.rowCount(parent) == row_count_before:
-            self.layoutChanged.emit()
+    def fetchMore(self, _parent):
+        for db_map in self._db_maps:
+            self._db_mngr.fetch_more(db_map, self._fetch_parent)
 
     def _do_add_items(self, data):
         """Adds items so the list is always sorted, while assuming that both existing and new items are sorted."""

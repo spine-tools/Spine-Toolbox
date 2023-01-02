@@ -406,7 +406,7 @@ class RelationshipParameterValueTableView(RelationshipParameterTableMixin, Param
         )
 
 
-class PivotTableView(CopyPasteTableView):
+class PivotTableView(ResizingViewMixin, CopyPasteTableView):
     """Custom QTableView class with pivot capabilities.
 
     Uses 'contexts' to provide different UI elements (table headers, context menus,...) depending on what
@@ -850,6 +850,9 @@ class PivotTableView(CopyPasteTableView):
             selected = [source_model.data(index) for index in self._selected_scenario_alternative_indexes]
             checked = len(selected) * [not all(selected)]
             source_model.batch_set_data(self._selected_scenario_alternative_indexes, checked)
+
+    def _do_resize(self):
+        self.resizeColumnsToContents()
 
     @property
     def source_model(self):

@@ -277,7 +277,7 @@ class SingleParameterModel(HalfSortedTableModel):
         return self._auto_filter_accepts_item(item)
 
     def set_auto_filter(self, field, values):
-        if values == self._auto_filter.get(field, {}):
+        if values == self._auto_filter.get(field, set()):
             return False
         self._auto_filter[field] = values
         return True
@@ -286,12 +286,8 @@ class SingleParameterModel(HalfSortedTableModel):
         """Returns the result of the auto filter."""
         if self._auto_filter is None:
             return False
-        try:
-            item_id = item["id"]
-        except KeyError as error:
-            raise error
-        for accepted_ids in self._auto_filter.values():
-            if accepted_ids and item_id not in accepted_ids:
+        for field, values in self._auto_filter.items():
+            if values and item.get(field) not in values:
                 return False
         return True
 
