@@ -17,17 +17,10 @@ The SpineDBWorker class
 """
 from functools import wraps
 import itertools
-from enum import Enum, unique, auto
 from PySide2.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from .helpers import busy_effect, separate_metadata_and_item_metadata
 from .qthread_pool_executor import QtBasedThreadPoolExecutor
-
-
-@unique
-class _Event(Enum):
-    MORE_AVAILABLE = auto()
-    WILL_HAVE_CHILDREN_CHANGE = auto()
 
 
 _CHUNK_SIZE = 1000
@@ -74,7 +67,8 @@ def _by_chunks(it):
 class SpineDBWorker(QObject):
     """Does all the communication with a certain DB for SpineDBManager, in a non-GUI thread."""
 
-    _something_happened = Signal(object, tuple)
+    _more_available = Signal(object)
+    _will_have_children_change = Signal(list)
 
     def __init__(self, db_mngr, db_url):
         super().__init__()
@@ -93,7 +87,8 @@ class SpineDBWorker(QObject):
         self.commit_cache = {}
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._advance_query_callbacks = {}
-        self._something_happened.connect(self._handle_something_happened)
+        self._more_available.connect(self.fetch_more)
+        self._will_have_children_change.connect(self._handle_will_have_children_change)
 
     def _get_parents(self, item_type):
         parents = self._parents_by_type.get(item_type, set())
@@ -105,13 +100,6 @@ class SpineDBWorker(QObject):
     def clean_up(self):
         self._executor.shutdown()
         self.deleteLater()
-
-    @Slot(object, tuple)
-    def _handle_something_happened(self, event, args):
-        {
-            _Event.MORE_AVAILABLE: self._more_available_event,
-            _Event.WILL_HAVE_CHILDREN_CHANGE: self._will_have_children_change_event,
-        }[event](*args)
 
     def query(self, sq_name):
         """For tests."""
@@ -252,8 +240,14 @@ class SpineDBWorker(QObject):
             if position == len(self._fetched_ids.get(item_type, ())):
                 for parent in parents_to_check:
                     parent.will_have_children = False
-                self._something_happened.emit(_Event.WILL_HAVE_CHILDREN_CHANGE, (parents_to_check,))
+                self._will_have_children_change.emit(parents_to_check)
                 break
+
+    @Slot(list)
+    @staticmethod
+    def _handle_will_have_children_change(parents):
+        for parent in parents:
+            parent.will_have_children_change()
 
     def _iterate_cache(self, parent):
         """Iterates the cache for given parent while updating its ``position`` property.
@@ -274,10 +268,12 @@ class SpineDBWorker(QObject):
                 continue
             if parent.accepts_item(item, self._db_map):
                 self._bind_item(parent, item)
+                if not item.is_complete():
+                    _ = self._executor.submit(item.complete).result()
                 if item.is_valid():
                     parent.add_item(self._db_map, item)
                     added_count += 1
-                if added_count == _CHUNK_SIZE:
+                if added_count == parent.chunk_size:
                     break
         return added_count
 
@@ -336,10 +332,7 @@ class SpineDBWorker(QObject):
         self._register_fetch_parent(parent)
         return parent.will_have_children is not False and not parent.is_fetched and not parent.is_busy
 
-    def _will_have_children_change_event(self, parents):
-        for parent in parents:
-            parent.will_have_children_change()
-
+    @Slot(object)
     def fetch_more(self, parent):
         """Fetches items from the database.
 
@@ -354,13 +347,10 @@ class SpineDBWorker(QObject):
 
     def _handle_query_advanced(self, parent):
         if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):
-            self._something_happened.emit(_Event.MORE_AVAILABLE, (parent,))
+            self._more_available.emit(parent)
         else:
             parent.set_fetched(True)
             parent.set_busy(False)
-
-    def _more_available_event(self, parent):
-        self.fetch_more(parent)
 
     def fetch_all(self, fetch_item_types=None, only_descendants=False, include_ancestors=False):
         if fetch_item_types is None:

@@ -23,7 +23,7 @@ from .helpers import busy_effect
 class FetchParent(QObject):
     _changes_pending = Signal()
 
-    def __init__(self, owner=None):
+    def __init__(self, owner=None, chunk_size=1000):
         super().__init__()
         self._obsolete = False
         self._fetched = False
@@ -45,6 +45,7 @@ class FetchParent(QObject):
         self._owner = owner
         if isinstance(self._owner, QObject):
             self._owner.destroyed.connect(lambda obj=None: self.set_obsolete(True))
+        self.chunk_size = chunk_size
 
     def reset_fetching(self, fetch_token):
         """Resets fetch parent as if nothing was ever fetched.
@@ -193,13 +194,17 @@ class FetchParent(QObject):
 
 
 class ItemTypeFetchParent(FetchParent):
-    def __init__(self, fetch_item_type, owner=None):
-        super().__init__(owner=owner)
+    def __init__(self, fetch_item_type, owner=None, chunk_size=1000):
+        super().__init__(owner=owner, chunk_size=chunk_size)
         self._fetch_item_type = fetch_item_type
 
     @property
     def fetch_item_type(self):
         return self._fetch_item_type
+
+    @fetch_item_type.setter
+    def fetch_item_type(self, fetch_item_type):
+        self._fetch_item_type = fetch_item_type
 
     def handle_items_added(self, db_map_data):
         raise NotImplementedError(self.fetch_item_type)
@@ -224,8 +229,9 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         accepts_item=None,
         will_have_children_change=None,
         owner=None,
+        chunk_size=1000,
     ):
-        super().__init__(fetch_item_type, owner=owner)
+        super().__init__(fetch_item_type, owner=owner, chunk_size=chunk_size)
         self._accepts_item = accepts_item
         self._handle_items_added = handle_items_added
         self._handle_items_removed = handle_items_removed
