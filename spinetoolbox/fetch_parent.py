@@ -21,6 +21,13 @@ from .helpers import busy_effect
 
 
 class FetchParent(QObject):
+    """
+    Attrs:
+        fetch_token (int or None)
+        will_have_children (bool or None): Whether this parent will have children if fetched.
+            None means we don't know yet. Set to a boolean value whenever we find out.
+    """
+
     _changes_pending = Signal()
 
     def __init__(self, owner=None, chunk_size=1000):
@@ -42,9 +49,6 @@ class FetchParent(QObject):
         self._position = {}
         self.fetch_token = None
         self.will_have_children = None
-        """Whether this parent will have children if fetched.
-        None means we don't know yet. Set to a boolean value whenever we find out.
-        """
         self._timer.setSingleShot(True)
         self._timer.setInterval(0)
         self._timer.timeout.connect(self._apply_pending_changes)
