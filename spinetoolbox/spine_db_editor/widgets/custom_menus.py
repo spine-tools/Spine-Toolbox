@@ -74,7 +74,7 @@ class ParameterViewFilterMenu(FilterMenuBase):
             handle_items_removed=self._handle_items_removed,
             accepts_item=self._accepts_item,
             owner=self,
-            chunk_size=-1,
+            chunk_size=None,
         )
         self._set_up(LazyFilterCheckboxListModel, self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
 
@@ -184,7 +184,7 @@ class TabularViewFilterMenu(FilterMenuBase):
             handle_items_removed=self._handle_items_removed,
             accepts_item=accepts_item,
             owner=self,
-            chunk_size=-1,
+            chunk_size=None,
         )
         self._set_up(LazyFilterCheckboxListModel, self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
 

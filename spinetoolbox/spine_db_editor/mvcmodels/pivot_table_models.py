@@ -757,6 +757,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_updated=lambda _: self._parent.refresh_views(),
             accepts_item=self._parent.accepts_parameter_item,
             owner=self,
+            chunk_size=None,
         )
         self._alternative_fetch_parent = FlexibleFetchParent(
             "alternative",
@@ -1153,6 +1154,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             handle_items_updated=lambda _: self._parent.refresh_views(),
             accepts_item=self._parent.accepts_entity_item,
             owner=self,
+            chunk_size=None,
         )
         self._object_fetch_parent = FlexibleFetchParent(
             "object",
@@ -1291,6 +1293,7 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             handle_items_removed=lambda _: self._parent.refresh_views(),
             handle_items_updated=lambda _: self._parent.refresh_views(),
             owner=self,
+            chunk_size=None,
         )
 
     def _handle_scenarios_added(self, db_map_data):

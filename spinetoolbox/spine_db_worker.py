@@ -254,12 +254,13 @@ class SpineDBWorker(QObject):
 
     def _iterate_cache(self, parent):
         """Iterates the cache for given parent while updating its ``position`` property.
+        Iterated items are added to the parent if it accepts them.
 
         Args:
-            parent (FetchParent): the parent that requests the items.
+            parent (FetchParent): the parent.
 
         Returns:
-            int: Number of added items
+            bool: Whether the parent can stop fetching from now
         """
         item_type = parent.fetch_item_type
         added_count = 0
@@ -278,7 +279,9 @@ class SpineDBWorker(QObject):
                     added_count += 1
                 if added_count == parent.chunk_size:
                     break
-        return added_count
+        if parent.chunk_size is None:
+            return False
+        return added_count > 0
 
     def _bind_item(self, parent, item):
         item.readd_callbacks.add(self._make_add_item_callback(parent))
