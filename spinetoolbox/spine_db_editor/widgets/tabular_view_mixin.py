@@ -597,8 +597,7 @@ class TabularViewMixin:
             self.pivot_table_model.modelReset.disconnect(self.make_pivot_headers)
             self.pivot_table_model.modelReset.disconnect(self.reload_frozen_table)
             self.pivot_table_model = None
-        if self.frozen_table_model:
-            self.frozen_table_model.clear_model()
+        self.frozen_table_model.clear_model()
 
     def wipe_out_filter_menus(self):
         while self.filter_menus:

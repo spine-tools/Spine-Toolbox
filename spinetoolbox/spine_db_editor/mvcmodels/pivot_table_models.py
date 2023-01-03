@@ -350,17 +350,33 @@ class PivotTableModelBase(QAbstractTableModel):
     def add_to_model(self, db_map_data):
         if not db_map_data:
             return
-        self.beginResetModel()
-        self.model.add_to_model(db_map_data)
-        self.endResetModel()
+        row_count, column_count = self.model.add_to_model(db_map_data)
+        if row_count > 0:
+            first = self.headerRowCount() + self.dataRowCount()
+            self.beginInsertRows(QModelIndex(), first, first + row_count - 1)
+            self._data_row_count += row_count
+            self.endInsertRows()
+        if column_count > 0:
+            first = self.headerColumnCount() + self.dataColumnCount()
+            self.beginInsertColumns(QModelIndex(), first, first + column_count - 1)
+            self._data_column_count += column_count
+            self.endInsertColumns()
         self._emit_all_data_changed()
 
     def remove_from_model(self, data):
         if not data:
             return
-        self.beginResetModel()
-        self.model.remove_from_model(data)
-        self.endResetModel()
+        row_count, column_count = self.model.remove_from_model(data)
+        if row_count > 0:
+            first = self.headerRowCount()
+            self.beginRemoveRows(QModelIndex(), first, first + row_count - 1)
+            self._data_row_count -= row_count
+            self.endRemoveRows()
+        if column_count > 0:
+            first = self.headerColumnCount()
+            self.beginRemoveColumns(QModelIndex(), first, first + column_count - 1)
+            self._data_column_count -= column_count
+            self.endRemoveColumns()
         self._emit_all_data_changed()
 
     def _emit_all_data_changed(self):

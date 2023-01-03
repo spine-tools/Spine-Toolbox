@@ -77,7 +77,7 @@ class PivotModel:
         """
         addable_data = {k: v for k, v in data.items() if v is not None or k not in self._data}
         if not addable_data:
-            return
+            return 0, 0
         self._data.update(addable_data)
         if not any(self.frozen_value):
             first = next(iter(self._data), None)
@@ -87,14 +87,24 @@ class PivotModel:
                 frozen_getter = self._index_key_getter(self.pivot_frozen)
                 self.frozen_value = frozen_getter(first)
         self.index_values = dict(zip(self.index_ids, zip(*self._data.keys())))
+        old_row_count = len(self._row_data_header)
+        old_column_count = len(self._column_data_header)
         self._row_data_header = self._get_unique_index_values(self.pivot_rows)
         self._column_data_header = self._get_unique_index_values(self.pivot_columns)
+        added_row_count = len(self._row_data_header) - old_row_count
+        added_column_count = len(self._column_data_header) - old_column_count
+        return added_row_count, added_column_count
 
     def remove_from_model(self, data):
         self._data = {key: self._data[key] for key in self._data if key not in data}
         self.index_values = dict(zip(self.index_ids, zip(*self._data.keys())))
+        old_row_count = len(self._row_data_header)
+        old_column_count = len(self._column_data_header)
         self._row_data_header = self._get_unique_index_values(self.pivot_rows)
         self._column_data_header = self._get_unique_index_values(self.pivot_columns)
+        removed_row_count = old_row_count - len(self._row_data_header)
+        removed_column_count = old_column_count - len(self._column_data_header)
+        return removed_row_count, removed_column_count
 
     def _check_pivot(self, rows, columns, frozen, frozen_value):
         """Checks if given pivot is valid.
