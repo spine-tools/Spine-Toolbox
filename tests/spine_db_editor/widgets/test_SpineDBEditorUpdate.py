@@ -77,8 +77,7 @@ class TestSpineDBEditorUpdateMixin:
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.fetch_object_tree_model()
         self.water_parameter = self._object_parameter_definition(1, self.fish_class["id"], "fish", "fire")
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.water_parameter]})
+        self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.water_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -106,8 +105,7 @@ class TestSpineDBEditorUpdateMixin:
             ["fish", "dog"],
             "each_others_opinion",
         )
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.relative_speed_parameter]})
+        self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.relative_speed_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -139,8 +137,7 @@ class TestSpineDBEditorUpdateMixin:
             b'"pepper"',
             None,
         )
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_water]})
+        self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_water]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -175,8 +172,7 @@ class TestSpineDBEditorUpdateMixin:
             b"100",
             None,
         )
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_pluto_relative_speed]})
+        self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_pluto_relative_speed]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):

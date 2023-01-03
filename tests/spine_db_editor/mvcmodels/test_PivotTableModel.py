@@ -55,7 +55,8 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         self._editor._update_class_attributes(index)
         self._editor.do_reload_pivot_table()
         self._model = self._editor.pivot_table_model
-        self._model.start_fetching()
+        self._model.beginResetModel()
+        self._model.endResetModel()
         qApp.processEvents()
 
     def tearDown(self):
@@ -141,7 +142,9 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
         self._editor._update_class_attributes(index)
         self._editor.do_reload_pivot_table()
         self._model = self._editor.pivot_table_model
-        self._model.start_fetching()
+        self._model.beginResetModel()
+        self._model.endResetModel()
+        qApp.processEvents()
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()

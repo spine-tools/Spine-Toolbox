@@ -132,6 +132,9 @@ class SpineDBWorker(QObject):
         if parent.fetch_token is None:
             parent.fetch_token = self._current_fetch_token
         elif parent.fetch_token != self._current_fetch_token:
+            self._add_item_callbacks.pop(parent, None)
+            self._update_item_callbacks.pop(parent, None)
+            self._remove_item_callbacks.pop(parent, None)
             parent.reset_fetching(self._current_fetch_token)
 
     def _advance_query(self, item_type, callback=None):

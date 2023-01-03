@@ -64,7 +64,10 @@ class ParameterViewFilterMenu(FilterMenuBase):
         """
         super().__init__(parent)
         self._item_type = item_type
+        self._db_mngr = db_mngr
         self._entity_class_id_key = entity_class_id_key
+        self._field = field
+        self._menu_data = dict()  # Maps display value to set of (db map, entity_class_id, actual value) tuples
         fetch_parent = FlexibleFetchParent(
             self._item_type,
             handle_items_added=self._handle_items_added,
@@ -73,9 +76,6 @@ class ParameterViewFilterMenu(FilterMenuBase):
             owner=self,
             chunk_size=-1,
         )
-        self._db_mngr = db_mngr
-        self._field = field
-        self._menu_data = dict()  # Maps display value to set of (db map, entity_class_id, actual value) tuples
         self._set_up(LazyFilterCheckboxListModel, self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
 
     def set_filter_accepted_values(self, accepted_values):
@@ -173,7 +173,11 @@ class TabularViewFilterMenu(FilterMenuBase):
             identifier (int): index identifier
         """
         super().__init__(parent)
+        self.anchor = parent
+        self._db_mngr = db_mngr
         self._item_type = item_type
+        self._identifier = identifier
+        self._menu_data = {}
         fetch_parent = FlexibleFetchParent(
             self._item_type,
             handle_items_added=self._handle_items_added,
@@ -182,19 +186,23 @@ class TabularViewFilterMenu(FilterMenuBase):
             owner=self,
             chunk_size=-1,
         )
-        self.identifier = identifier
-        self.anchor = parent
-        self._menu_data = {}
         self._set_up(LazyFilterCheckboxListModel, self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
 
     def _handle_items_added(self, db_map_data):
         to_add = set()
         for db_map, items in db_map_data.items():
             for item in items:
-                display_value = item["name"]
-                to_add.add(display_value)
-                self._menu_data.setdefault(display_value, set()).add((db_map, item["id"]))
+                for display_value, value in self._get_values(db_map, item):
+                    to_add.add(display_value)
+                    self._menu_data.setdefault(display_value, set()).add(value)
         self.add_items_to_filter_list(to_add)
+
+    def _get_values(self, db_map, item):
+        if self._item_type == "parameter_value":
+            for index in self._db_mngr.get_value_indexes(db_map, "parameter_value", item["id"]):
+                yield str(index), (None, index)
+        else:
+            yield item["name"], (db_map, item["id"])
 
     def _handle_items_removed(self, db_map_data):
         for db_map, items in db_map_data.items():
@@ -208,7 +216,7 @@ class TabularViewFilterMenu(FilterMenuBase):
 
     def emit_filter_changed(self, valid_values):
         valid_values = {db_map_id for v in valid_values for db_map_id in self._menu_data[v]}
-        self.filterChanged.emit(self.identifier, valid_values, self._filter.has_filter())
+        self.filterChanged.emit(self._identifier, valid_values, self._filter.has_filter())
 
     def event(self, event):
         if event.type() == QEvent.Show and self.anchor is not None:

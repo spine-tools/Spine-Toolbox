@@ -223,11 +223,7 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
 
 
 class PivotTableModelBase(QAbstractTableModel):
-
-    _V_HEADER_WIDTH = 5
-    _MAX_FETCH_COUNT = 1000
-    _FETCH_DELAY = 0
-
+    _CHUNK_SIZE = 1000
     model_data_changed = Signal()
 
     def __init__(self, db_editor):
@@ -240,13 +236,14 @@ class PivotTableModelBase(QAbstractTableModel):
         self.db_mngr = db_editor.db_mngr
         self.model = PivotModel()
         self.top_left_headers = {}
+        self._active = False
         self._plot_x_column = None
         self._data_row_count = 0
         self._data_column_count = 0
-        self.rowsInserted.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.fetch_more_rows))
-        self.columnsInserted.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.fetch_more_columns))
-        self.modelAboutToBeReset.connect(self.reset_data_count)
-        self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
+        self.modelAboutToBeReset.connect(self._reset_data_count)
+        self.modelReset.connect(lambda *args: QTimer.singleShot(0, self._collect_more_data))
+        self.rowsInserted.connect(lambda *args: QTimer.singleShot(0, self._collect_more_rows))
+        self.columnsInserted.connect(lambda *args: QTimer.singleShot(0, self._collect_more_columns))
 
     def reset_fetch_parents(self):
         for parent in self._fetch_parents():
@@ -261,6 +258,8 @@ class PivotTableModelBase(QAbstractTableModel):
         raise NotImplementedError()
 
     def canFetchMore(self, _):
+        if not self._active:
+            return False
         result = False
         for fetch_parent in self._fetch_parents():
             for db_map in self._parent.db_maps:
@@ -268,6 +267,8 @@ class PivotTableModelBase(QAbstractTableModel):
         return result
 
     def fetchMore(self, _):
+        if not self._active:
+            return
         for parent in self._fetch_parents():
             for db_map in self._parent.db_maps:
                 self.db_mngr.fetch_more(db_map, parent)
@@ -278,18 +279,18 @@ class PivotTableModelBase(QAbstractTableModel):
         raise NotImplementedError()
 
     @Slot()
-    def reset_data_count(self):
+    def _reset_data_count(self):
         self._data_row_count = 0
         self._data_column_count = 0
 
     @Slot()
-    def start_fetching(self):
-        self.fetch_more_rows()
-        self.fetch_more_columns()
+    def _collect_more_data(self):
+        self._collect_more_rows()
+        self._collect_more_columns()
 
     @Slot()
-    def fetch_more_rows(self):
-        count = min(self._MAX_FETCH_COUNT, len(self.model.rows) - self._data_row_count)
+    def _collect_more_rows(self):
+        count = min(self._CHUNK_SIZE, len(self.model.rows) - self._data_row_count)
         if not count:
             return
         first = self.headerRowCount() + self.dataRowCount()
@@ -298,8 +299,8 @@ class PivotTableModelBase(QAbstractTableModel):
         self.endInsertRows()
 
     @Slot()
-    def fetch_more_columns(self):
-        count = min(self._MAX_FETCH_COUNT, len(self.model.columns) - self._data_column_count)
+    def _collect_more_columns(self):
+        count = min(self._CHUNK_SIZE, len(self.model.columns) - self._data_column_count)
         if not count:
             return
         first = self.headerColumnCount() + self.dataColumnCount()
@@ -322,14 +323,18 @@ class PivotTableModelBase(QAbstractTableModel):
     def reset_model(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
         self.beginResetModel()
         self.model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
+        self._active = True
         self.endResetModel()
         self._plot_x_column = None
+        self.reset_fetch_parents()
 
     def clear_model(self):
         self.beginResetModel()
         self.model.clear_model()
+        self._active = False
         self.endResetModel()
         self._plot_x_column = None
+        self.reset_fetch_parents()
 
     def update_model(self, data):
         """Update model with new data, but doesn't grow the model.
@@ -345,33 +350,17 @@ class PivotTableModelBase(QAbstractTableModel):
     def add_to_model(self, db_map_data):
         if not db_map_data:
             return
-        row_count, column_count = self.model.add_to_model(db_map_data)
-        if row_count > 0:
-            first = self.headerRowCount() + self.dataRowCount()
-            self.beginInsertRows(QModelIndex(), first, first + row_count - 1)
-            self._data_row_count += row_count
-            self.endInsertRows()
-        if column_count > 0:
-            first = self.headerColumnCount() + self.dataColumnCount()
-            self.beginInsertColumns(QModelIndex(), first, first + column_count - 1)
-            self._data_column_count += column_count
-            self.endInsertColumns()
+        self.beginResetModel()
+        self.model.add_to_model(db_map_data)
+        self.endResetModel()
         self._emit_all_data_changed()
 
     def remove_from_model(self, data):
         if not data:
             return
-        row_count, column_count = self.model.remove_from_model(data)
-        if row_count > 0:
-            first = self.headerRowCount()
-            self.beginRemoveRows(QModelIndex(), first, first + row_count - 1)
-            self._data_row_count -= row_count
-            self.endRemoveRows()
-        if column_count > 0:
-            first = self.headerColumnCount()
-            self.beginRemoveColumns(QModelIndex(), first, first + column_count - 1)
-            self._data_column_count -= column_count
-            self.endRemoveColumns()
+        self.beginResetModel()
+        self.model.remove_from_model(data)
+        self.endResetModel()
         self._emit_all_data_changed()
 
     def _emit_all_data_changed(self):
@@ -545,7 +534,7 @@ class PivotTableModelBase(QAbstractTableModel):
             if orientation == Qt.Horizontal and section == self._plot_x_column:
                 return "(X)"
             if orientation == Qt.Vertical:
-                return self._V_HEADER_WIDTH * " "
+                return 5 * " "
         return None
 
     def map_to_pivot(self, index):
@@ -899,15 +888,17 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def call_reset_model(self, pivot=None):
         """See base class."""
         object_class_ids = self._parent.current_object_class_ids
-        data = self._parent.load_parameter_value_data()
-        top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
+        data = {}
+        top_left_headers = [
+            TopLeftObjectHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+        ]
         top_left_headers += [TopLeftParameterHeaderItem(self)]
         top_left_headers += [TopLeftAlternativeHeaderItem(self)]
         top_left_headers += [TopLeftDatabaseHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        super().reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, list(self.top_left_headers), *pivot)
 
     @staticmethod
     def make_delegate(parent):
@@ -1060,8 +1051,10 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
     def call_reset_model(self, pivot=None):
         """See base class."""
         object_class_ids = self._parent.current_object_class_ids
-        data = self._parent.load_expanded_parameter_value_data()
-        top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
+        data = {}
+        top_left_headers = [
+            TopLeftObjectHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+        ]
         self._index_top_left_header = TopLeftParameterIndexHeaderItem(self)
         top_left_headers += [
             self._index_top_left_header,
@@ -1072,7 +1065,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        super().reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, list(self.top_left_headers), *pivot)
         pivot_rows = pivot[0]
         try:
             x_column = pivot_rows.index(self._index_top_left_header.name)
@@ -1189,16 +1182,15 @@ class RelationshipPivotTableModel(PivotTableModelBase):
     def call_reset_model(self, pivot=None):
         """See base class."""
         object_class_ids = self._parent.current_object_class_ids
-        data = self._parent.load_relationship_data()
-        top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
+        data = {}
+        top_left_headers = [
+            TopLeftObjectHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+        ]
         top_left_headers += [TopLeftDatabaseHeaderItem(self)]
-        self.top_left_headers = {
-            name: TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()
-        }
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        super().reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, list(self.top_left_headers), *pivot)
 
     @staticmethod
     def make_delegate(parent):
@@ -1316,7 +1308,7 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
 
     def call_reset_model(self, pivot=None):
         """See base class."""
-        data = self._parent.load_scenario_alternative_data()
+        data = {}
         top_left_headers = [
             TopLeftScenarioHeaderItem(self),
             TopLeftAlternativeHeaderItem(self),
@@ -1325,7 +1317,7 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        super().reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, list(self.top_left_headers), *pivot)
 
     @staticmethod
     def make_delegate(parent):

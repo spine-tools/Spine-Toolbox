@@ -25,6 +25,10 @@ class FetchParent(QObject):
 
     def __init__(self, owner=None, chunk_size=1000):
         super().__init__()
+        self._timer = QTimer()
+        self._items_to_add = {}
+        self._items_to_update = {}
+        self._items_to_remove = {}
         self._obsolete = False
         self._fetched = False
         self._busy = False
@@ -34,10 +38,6 @@ class FetchParent(QObject):
         """Whether this parent will have children if fetched.
         None means we don't know yet. Set to a boolean value whenever we find out.
         """
-        self._items_to_add = {}
-        self._items_to_update = {}
-        self._items_to_remove = {}
-        self._timer = QTimer()
         self._timer.setSingleShot(True)
         self._timer.setInterval(0)
         self._timer.timeout.connect(self._apply_pending_changes)
@@ -55,6 +55,10 @@ class FetchParent(QObject):
         """
         if self.is_obsolete:
             return
+        self._timer.stop()
+        self._items_to_add.clear()
+        self._items_to_update.clear()
+        self._items_to_remove.clear()
         self._fetched = False
         self._busy = False
         self._position.clear()

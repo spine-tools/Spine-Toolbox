@@ -572,16 +572,15 @@ class TabularViewMixin:
         if not self._can_build_pivot_table():
             return
         self.pivot_table_model = self._pivot_table_models[self.current_input_type]
-        self.pivot_table_model.reset_fetch_parents()
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
+        self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
+        self.pivot_table_model.modelReset.connect(self.reload_frozen_table)
         delegate = self.pivot_table_model.make_delegate(self)
         self.ui.pivot_table.setItemDelegate(delegate)
-        self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
         pivot = self.get_pivot_preferences()
         self.wipe_out_filter_menus()
         self.pivot_table_model.call_reset_model(pivot)
         self.pivot_table_proxy.clear_filter()
-        self.reload_frozen_table()
 
     def _can_build_pivot_table(self):
         if self.current_input_type != self._SCENARIO_ALTERNATIVE and not self.current_class_id:
@@ -595,6 +594,8 @@ class TabularViewMixin:
         if self.pivot_table_model:
             self.pivot_table_model.clear_model()
             self.pivot_table_proxy.clear_filter()
+            self.pivot_table_model.modelReset.disconnect(self.make_pivot_headers)
+            self.pivot_table_model.modelReset.disconnect(self.reload_frozen_table)
             self.pivot_table_model = None
         if self.frozen_table_model:
             self.frozen_table_model.clear_model()

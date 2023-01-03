@@ -130,6 +130,11 @@ class FilterWidget(QWidget):
         self._ui_list.setModel(self._filter_model)
         self.connect_signals()
 
+    # For tests
+    def set_filter_list(self, items):
+        self._filter_state = items
+        self._filter_model.set_list(self._filter_state)
+
     def connect_signals(self):
         self._ui_list.clicked.connect(self._filter_model._handle_index_clicked)
         self._search_timer.timeout.connect(self._filter_list)
