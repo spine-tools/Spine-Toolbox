@@ -240,8 +240,8 @@ this time selecting the `node` class from the `Object tree`, we need to add the 
    
    Defining model execution parameters.
 
-Before we go through the interpretation of each parameter, click on the following link for each `fix_node_state` parameter (`Node state Språnget <../../source/data/Spranget_node.txt>`_,
-`Node state Fallet <../../source/data/Fallet_node.txt>`_), select all, copy the data and then paste them directly in the respective parameter value cell.
+Before we go through the interpretation of each parameter, click on the following link for each `fix_node_state` parameter (`Node state Språnget <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/Spranget_node.txt>`_,
+`Node state Fallet <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/Fallet_node.txt>`_), select all, copy the data and then paste them directly in the respective parameter value cell.
 Spine should automatically detect and input the timeseries data as a parameter value. The data type for those entries should be `Timeseries` as shown in the figure above. 
 Alternatively, you can select the data type as `Timeseries` and manually insert the data (values with their corresponding datetimes).
 
@@ -295,7 +295,7 @@ the maximal water that can be discharged by each hydropower plant:
    Setting the maximal water discharge of each plant.
 
 To define the income from selling the produced electricity we use the `vom_cost` parameter and negate the values of the electricity prices.
-To automatically insert the timeseries data in Spine, click on the `Electricity prices timeseries <../../source/data/el_prices.txt>`_, select all values, copy, and paste them, after having selected
+To automatically insert the timeseries data in Spine, click on the `Electricity prices timeseries <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/el_prices.txt>`_, select all values, copy, and paste them, after having selected
 the value cell of the corresponding row. You can plot and edit the timeseries data by
 double clicking on the same cell afterwards:
 
@@ -422,7 +422,7 @@ To model the value of stored water we need to make some additions and modificati
 
    #. Finally, we need to add some relationship parameter values for the new units:
 
-      * Add a `vom_cost` parameter value on a `value_stored_water|stored_water` instance of a `unit__from_node` relationship, as you see in the figure bellow. For the timeseries you can copy-paste the data directly from `this link <../../source/data/value_stored_water_vom.txt>`_. If you examine the timeseries data you'll notice that we have imposed a zero cost for all the optimisation horizon, while we use an assumed future electricity value for the additional time step at the end of the horizon.
+      * Add a `vom_cost` parameter value on a `value_stored_water|stored_water` instance of a `unit__from_node` relationship, as you see in the figure bellow. For the timeseries you can copy-paste the data directly from `this link <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/value_stored_water_vom.txt>`_. If you examine the timeseries data you'll notice that we have imposed a zero cost for all the optimisation horizon, while we use an assumed future electricity value for the additional time step at the end of the horizon.
 
       .. figure:: img/two_hydro_max_stored_water_unit_values.png
          :width: 800px
@@ -485,7 +485,7 @@ It is often the case that a system of hydropower plants should follow a given pr
 To model this in the given system, all we have to do is set a demand in the form of a timeseries 
 to the `electricity_node`. 
 
-   #. Add the `Contracted load timeseries <../../source/data/contracted_load.txt>`_, to the `demand` parameter value of the `electricity_node` (see :ref:`adding node parameter values <node_parameters>`).
+   #. Add the `Contracted load timeseries <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/contracted_load.txt>`_, to the `demand` parameter value of the `electricity_node` (see :ref:`adding node parameter values <node_parameters>`).
 
 Commit your changes in the database, execute the project and :ref:`examine the results <examine_results>`!
 
