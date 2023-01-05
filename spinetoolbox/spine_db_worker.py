@@ -137,12 +137,25 @@ class SpineDBWorker(QObject):
             self._remove_item_callbacks.pop(parent, None)
             parent.reset_fetching(self._current_fetch_token)
 
-    def advance_query(self, item_type, callback=None):
+    def advance_query(self, item_type):
+        """Advances the DB query that fetches items of given type.
+
+        Args:
+            item_type (str)
+
+        Returns:
+            bool
+        """
+        if item_type in self._fetched_item_types:
+            return True
+        return self._executor.submit(self._do_advance_query, item_type).result()
+
+    def _advance_query(self, item_type, callback=None):
         """Schedules a progression of the DB query that fetches items of given type.
         Adds the given callback to the collection of callbacks to call when the query progresses.
 
         Args:
-            parent (FetchParent)
+            item_type (str)
             callback (Function or None)
         """
         if item_type in self._fetched_item_types:
@@ -175,14 +188,13 @@ class SpineDBWorker(QObject):
             )
         query = self._queries[item_type]
         chunk = next(query, [])
-        callbacks = self._advance_query_callbacks.pop(item_type, ())
         if not chunk:
             self._fetched_item_types.add(item_type)
         else:
             self._db_mngr.add_items_to_cache(item_type, {self._db_map: chunk})
             self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
             self._populate_commit_cache(item_type, chunk)
-        for callback in callbacks:
+        for callback in self._advance_query_callbacks.pop(item_type, ()):
             if callback is not None:
                 callback()
         return bool(chunk)
@@ -347,7 +359,7 @@ class SpineDBWorker(QObject):
         self._register_fetch_parent(parent)
         parent.set_busy(True)
         if not self._iterate_cache(parent) and not parent.is_fetched:
-            self.advance_query(parent.fetch_item_type, callback=lambda: self._handle_query_advanced(parent))
+            self._advance_query(parent.fetch_item_type, callback=lambda: self._handle_query_advanced(parent))
 
     def _handle_query_advanced(self, parent):
         if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):
