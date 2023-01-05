@@ -137,7 +137,7 @@ class SpineDBWorker(QObject):
             self._remove_item_callbacks.pop(parent, None)
             parent.reset_fetching(self._current_fetch_token)
 
-    def _advance_query(self, item_type, callback=None):
+    def advance_query(self, item_type, callback=None):
         """Schedules a progression of the DB query that fetches items of given type.
         Adds the given callback to the collection of callbacks to call when the query progresses.
 
@@ -151,11 +151,11 @@ class SpineDBWorker(QObject):
             self._advance_query_callbacks[item_type].add(callback)
             return
         self._advance_query_callbacks[item_type] = {callback}
-        self._executor.submit(self.advance_query, item_type)
+        self._executor.submit(self._do_advance_query, item_type)
 
     @busy_effect
     @_db_map_lock
-    def advance_query(self, item_type):
+    def _do_advance_query(self, item_type):
         """Advances the DB query that fetches items of given type and caches the results.
 
         Args:
@@ -239,7 +239,7 @@ class SpineDBWorker(QObject):
                     break
             if not parents_to_check:
                 break
-            self.advance_query(item_type)
+            self._do_advance_query(item_type)
             if position == len(self._fetched_ids.get(item_type, ())):
                 for parent in parents_to_check:
                     parent.will_have_children = False
@@ -272,8 +272,6 @@ class SpineDBWorker(QObject):
                 continue
             if parent.accepts_item(item, self._db_map):
                 self._bind_item(parent, item)
-                if not item.is_complete():
-                    _ = self._executor.submit(item.complete).result()
                 if item.is_valid():
                     parent.add_item(self._db_map, item)
                     added_count += 1
@@ -349,7 +347,7 @@ class SpineDBWorker(QObject):
         self._register_fetch_parent(parent)
         parent.set_busy(True)
         if not self._iterate_cache(parent) and not parent.is_fetched:
-            self._advance_query(parent.fetch_item_type, callback=lambda: self._handle_query_advanced(parent))
+            self.advance_query(parent.fetch_item_type, callback=lambda: self._handle_query_advanced(parent))
 
     def _handle_query_advanced(self, parent):
         if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):
@@ -379,7 +377,7 @@ class SpineDBWorker(QObject):
 
     def _fetch_all(self, item_types):
         for item_type in item_types:
-            while self.advance_query(item_type):
+            while self._do_advance_query(item_type):
                 pass
 
     def _populate_commit_cache(self, item_type, items):
