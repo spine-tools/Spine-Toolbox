@@ -153,6 +153,11 @@ class TreeItem:
     def tear_down(self):
         """Do stuff after the item has been removed."""
 
+    def tear_down_recursively(self):
+        for child in self.children:
+            child.tear_down_recursively()
+        self.tear_down()
+
     def remove_children(self, position, count):
         """Removes count children starting from the given position.
 
@@ -176,7 +181,7 @@ class TreeItem:
         del self.children[first : last + 1]
         self.model.endRemoveRows()
         for child in children:
-            child.tear_down()
+            child.tear_down_recursively()
         return True
 
     def clear_children(self):
