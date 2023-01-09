@@ -16,10 +16,7 @@ Unit tests for the TreeViewFormUpdateMixin.
 :date:   6.12.2018
 """
 
-import unittest
-from unittest import mock
-from PySide2.QtCore import Qt
-from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 
 
 class TestSpineDBEditorUpdateMixin:
@@ -178,7 +175,7 @@ class TestSpineDBEditorUpdateMixin:
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("object_name_list")).data(Qt.EditRole),
+                    tuple((model.index(row, h("object_name_list")).data() or "").split(DB_ITEM_SEPARATOR)),
                     model.index(row, h("parameter_name")).data(),
                     model.index(row, h("value")).data(),
                 )

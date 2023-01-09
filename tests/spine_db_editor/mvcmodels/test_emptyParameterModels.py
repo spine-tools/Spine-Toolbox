@@ -33,6 +33,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyRelationshipParameterDefinitionModel,
 )
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinedb_api.parameter_value import join_value_and_type
 from ...mock_helpers import TestSpineDBManager
 
@@ -140,7 +141,14 @@ class TestEmptyParameterModel(unittest.TestCase):
         self.assertTrue(
             model.batch_set_data(
                 _empty_indexes(model),
-                ["dog__fish", ("pluto", "nemo"), "relative_speed", 1, join_value_and_type(b"-1", None), "mock_db"],
+                [
+                    "dog__fish",
+                    DB_ITEM_SEPARATOR.join(["pluto", "nemo"]),
+                    "relative_speed",
+                    1,
+                    join_value_and_type(b"-1", None),
+                    "mock_db",
+                ],
             )
         )
         values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["relationship_class_id"]]

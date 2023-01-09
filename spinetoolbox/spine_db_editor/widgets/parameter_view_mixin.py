@@ -25,7 +25,7 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from ...helpers import preferred_row_height
+from ...helpers import preferred_row_height, DB_ITEM_SEPARATOR
 
 
 class ParameterViewMixin:
@@ -110,7 +110,7 @@ class ParameterViewMixin:
             object_names_lists.append(object_names_list)
         object_name_list = index.data(Qt.EditRole)
         try:
-            current_object_names = object_name_list.split(",")
+            current_object_names = object_name_list.split(DB_ITEM_SEPARATOR)
         except AttributeError:
             # Gibberish
             current_object_names = []

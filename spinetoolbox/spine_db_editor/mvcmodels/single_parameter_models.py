@@ -242,7 +242,7 @@ class SingleParameterModel(HalfSortedTableModel):
                 if description not in (None, ""):
                     return description
             data = item.get(field)
-            if role == Qt.DisplayRole and data and field in self.group_fields:
+            if data and field in self.group_fields:
                 data = DB_ITEM_SEPARATOR.join(data)
             return data
         if role == Qt.DecorationRole and field == self.entity_class_name_field:
@@ -256,11 +256,17 @@ class SingleParameterModel(HalfSortedTableModel):
         Sets data directly in database using db mngr. If successful, updated data will be
         automatically seen by the data method.
         """
+
+        def split_value(value, column):
+            if self.header[column] in self.group_fields:
+                return tuple(value.split(DB_ITEM_SEPARATOR))
+            return value
+
         if not indexes or not data:
             return False
         row_data = dict()
         for index, value in zip(indexes, data):
-            row_data.setdefault(index.row(), {})[self.header[index.column()]] = value
+            row_data.setdefault(index.row(), {})[self.header[index.column()]] = split_value(value, index.column())
         items = [dict(id=self._main_data[row], **data) for row, data in row_data.items()]
         self.update_items_in_db(items)
         return True

@@ -28,7 +28,7 @@ from .parameter_mixins import (
     FillInValueListIdMixin,
 )
 from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
-from ...helpers import rows_to_row_count_tuples
+from ...helpers import rows_to_row_count_tuples, DB_ITEM_SEPARATOR
 
 
 class EmptyParameterModel(EmptyRowModel):
@@ -139,6 +139,9 @@ class EmptyParameterModel(EmptyRowModel):
         """
         raise NotImplementedError()
 
+    def _make_item(self, row):
+        return dict(zip(self.header, self._main_data[row]), row=row)
+
     def _make_db_map_data(self, rows):
         """
         Returns model data grouped by database map.
@@ -149,7 +152,7 @@ class EmptyParameterModel(EmptyRowModel):
         Returns:
             dict: mapping DiffDatabaseMapping instance to list of items
         """
-        items = [dict(zip(self.header, self._main_data[row]), row=row) for row in rows]
+        items = [self._make_item(row) for row in rows]
         db_map_data = dict()
         for item in items:
             database = item.pop("database")
@@ -307,6 +310,12 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
     @property
     def entity_type(self):
         return "relationship"
+
+    def _make_item(self, row):
+        item = super()._make_item(row)
+        if item["object_name_list"]:
+            item["object_name_list"] = tuple(item["object_name_list"].split(DB_ITEM_SEPARATOR))
+        return item
 
     def add_items_to_db(self, db_map_data):
         """See base class."""
