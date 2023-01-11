@@ -147,7 +147,7 @@ class SpineDBWorker(QObject):
             bool
         """
         if item_type in self._fetched_item_types:
-            return True
+            return False
         return self._executor.submit(self._do_advance_query, item_type).result()
 
     def _advance_query(self, item_type, callback=None):
