@@ -207,7 +207,8 @@ class PluginManager:
         worker.start(_download_plugin, plugin, plugin_local_dir)
 
     def _load_installed_plugin(self, plugin_local_dir):
-        local_data = load_specification_local_data(self._toolbox.project().config_dir)
+        project = self._toolbox.project()
+        local_data = load_specification_local_data(project.config_dir) if project is not None else {}
         self.load_individual_plugin(plugin_local_dir, local_data)
         self._toolbox.refresh_toolbars()
 
