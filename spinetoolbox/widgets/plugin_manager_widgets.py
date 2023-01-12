@@ -77,7 +77,7 @@ class InstallPluginDialog(QDialog):
         self._timer.start()
 
     def _filter_model(self):
-        self._model.setFilterRegExp(self._line_edit.text())
+        self._model.setFilterRegularExpression(self._line_edit.text())
 
     @Slot(bool)
     def _handle_ok_clicked(self, _=False):
