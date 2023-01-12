@@ -645,7 +645,7 @@ class _MockExecutableItem(ExecutableItemBase):
     def ready_to_execute(self, _settings):
         return True
 
-    def execute(self, _forward_resources, _backward_resources):
+    def execute(self, _forward_resources, _backward_resources, lock):
         self.execute_called = True
         return ItemExecutionFinishState.SUCCESS
 
