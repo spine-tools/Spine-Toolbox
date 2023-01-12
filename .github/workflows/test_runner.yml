@@ -31,8 +31,9 @@ jobs:
     - name: Install unixodbc
       if: runner.os == 'Linux'
       run: |
+        sudo apt-get update -y
         sudo apt-get install -y unixodbc-dev
-        sudo apt install -y libegl1
+        sudo apt-get install -y libegl1
     - name: Install dependencies
       env:
         PYTHONUTF8: 1
@@ -73,8 +74,9 @@ jobs:
     - name: Install unixodbc
       if: runner.os == 'Linux'
       run: |
+        sudo apt-get update -y
         sudo apt-get install -y unixodbc-dev
-        sudo apt install -y libegl1
+        sudo apt-get install -y libegl1
     - name: Install dependencies
       env:
         PYTHONUTF8: 1
