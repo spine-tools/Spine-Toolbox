@@ -35,9 +35,6 @@ class MultiTabSpecEditor(MultiTabWindow):
     def _make_other(self):
         return MultiTabSpecEditor(self._toolbox, self.item_type)
 
-    def others(self):
-        return [w for w in self._toolbox.get_all_multi_tab_spec_editors(self.item_type) if w is not self]
-
     def _make_new_tab(self, *args, **kwargs):
         tab = self._toolbox.item_factories[self.item_type].make_specification_editor(self._toolbox, *args, **kwargs)
         tab.setAttribute(Qt.WA_DeleteOnClose, True)

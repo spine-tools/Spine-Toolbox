@@ -26,6 +26,7 @@ class MultiTabWindow(QMainWindow):
     """A main window that has a tab widget as its central widget."""
 
     _tab_slots = {}
+    _other_editor_windows = {}
 
     def __init__(self, qsettings, settings_group):
         """
@@ -34,6 +35,7 @@ class MultiTabWindow(QMainWindow):
             settings_group (str): this window's settings group in ``qsettings``
         """
         super().__init__()
+        self._other_editor_windows.setdefault(type(self).__name__, []).append(self)
         self.qsettings = qsettings
         self.settings_group = settings_group
         self.tab_widget = QTabWidget(self)
@@ -43,7 +45,6 @@ class MultiTabWindow(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self._hot_spot = None
         self._timer_id = None
-        self._others = None
         self._accepting_new_tabs = True
         self.restore_ui()
         self.connect_signals()
@@ -68,7 +69,7 @@ class MultiTabWindow(QMainWindow):
         Returns:
             list of MultiTabWindow: other MutliTabWindows windows
         """
-        raise NotImplementedError()
+        return [w for w in self._other_editor_windows[type(self).__name__] if w is not self]
 
     def _make_new_tab(self, *args, **kwargs):
         """Creates a new tab.
@@ -290,7 +291,6 @@ class MultiTabWindow(QMainWindow):
         self.setStyleSheet(f"QTabWidget::tab-bar {{left: {offset}px;}}")
         self._hot_spot = hot_spot
         self.grabMouse()
-        self._others = self.others()
         self._timer_id = self.startTimer(1000 // 60)  # 60 fps is supposed to be the maximum the eye can see
 
     def _frame_height(self):
@@ -305,8 +305,9 @@ class MultiTabWindow(QMainWindow):
         """Performs the drag, i.e., moves the window with the mouse cursor.
         As soon as the mouse hovers the tab bar of another MultiTabWindow, reattaches it.
         """
-        self.move(QCursor.pos() - self._hot_spot - QPoint(0, self._frame_height()))
-        for other in self._others:
+        if self._hot_spot is not None:
+            self.move(QCursor.pos() - self._hot_spot - QPoint(0, self._frame_height()))
+        for other in self.others():
             index = other.tab_bar.index_under_mouse()
             if index is not None:
                 db_editor = self.tab_widget.widget(0)
@@ -325,6 +326,8 @@ class MultiTabWindow(QMainWindow):
             self.killTimer(self._timer_id)
             self._hot_spot = None
             self.update()
+        if self.tab_bar.count() == 0:
+            return
         index = self.tab_bar.tabAt(event.pos())
         if index is not None:
             if index == -1:
@@ -350,7 +353,8 @@ class MultiTabWindow(QMainWindow):
         Args:
             index (int): tab index
         """
-        self.tab_widget.widget(index).close()
+        if not self.tab_widget.widget(index).close():
+            return
         self.tab_widget.removeTab(index)
         if not self.tab_widget.count():
             self.close()
@@ -433,12 +437,21 @@ class MultiTabWindow(QMainWindow):
         self._accepting_new_tabs = False
         for k in range(self.tab_widget.count()):
             editor = self.tab_widget.widget(k)
-            editor.close()
-            if editor.isVisible():
+            if not editor.close():
                 event.ignore()
+                self._accepting_new_tabs = True
                 return
         self.save_window_state()
         super().closeEvent(event)
+        if event.isAccepted():
+            other_windows = self._other_editor_windows[type(self).__name__]
+            try:
+                window_index = other_windows.index(self)
+            except ValueError:
+                # It's possible that closeEvent() is called again after we've already popped
+                # this window from _other_editor_windows.
+                return
+            other_windows.pop(window_index)
 
 
 class TabBarPlus(QTabBar):
@@ -494,7 +507,8 @@ class TabBarPlus(QTabBar):
 
     def mouseMoveEvent(self, event):
         """Detaches a tab either if the user moves beyond the limits of the tab bar, or if it's the only one."""
-        self._plus_button.hide()
+        if self.count() > 0:
+            self._plus_button.hide()
         if self.count() == 1:
             self._send_release_event(event.pos())
             hot_spot = QPoint(event.pos().x(), self._hot_spot_y)
