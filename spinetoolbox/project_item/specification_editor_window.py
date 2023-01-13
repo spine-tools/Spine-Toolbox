@@ -17,7 +17,7 @@ Contains SpecificationEditorWindowBase and ChangeSpecPropertyCommand
 """
 
 from PySide6.QtGui import QKeySequence, QIcon, QUndoStack, QAction, QUndoCommand
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Signal, Slot, Qt
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -93,6 +93,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         # Setup toolbar
         self._spec_toolbar = _SpecNameDescriptionToolbar(self, specification, self._undo_stack)
         self._spec_toolbar.show_toolbox_action.triggered.connect(self._toolbox.restore_and_activate)
+        self._spec_toolbar.name_changed.connect(self._set_window_title)
         self.addToolBar(Qt.TopToolBarArea, self._spec_toolbar)
         self._populate_main_menu()
         self._spec_toolbar.save_action.triggered.connect(self._save)
@@ -155,6 +156,16 @@ class SpecificationEditorWindowBase(QMainWindow):
         self.setWindowModified(not clean)
         self._spec_toolbar.save_action.setEnabled(not clean)
         self.setWindowTitle(self._spec_toolbar.name())
+        self.windowTitleChanged.emit(self.windowTitle())
+
+    @Slot(str)
+    def _set_window_title(self, title):
+        """Sets window title.
+
+        Args:
+            title (str): new window title
+        """
+        self.setWindowTitle(title)
         self.windowTitleChanged.emit(self.windowTitle())
 
     def _save(self):
@@ -228,9 +239,10 @@ class SpecificationEditorWindowBase(QMainWindow):
 class _SpecNameDescriptionToolbar(QToolBar):
     """A QToolBar to let users set name and description for an Spec."""
 
+    name_changed = Signal(str)
+
     def __init__(self, parent, spec, undo_stack):
         """
-
         Args:
             parent (QMainWindow): QMainWindow instance
             spec (ProjectItemSpecification): specification that is being edited
@@ -316,6 +328,7 @@ class _SpecNameDescriptionToolbar(QToolBar):
     def do_set_name(self, name):
         self._current_name = name
         self._line_edit_name.setText(name)
+        self.name_changed.emit(name)
 
     def do_set_description(self, description):
         self._current_description = description

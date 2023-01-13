@@ -55,9 +55,6 @@ class MultiSpineDBEditor(MultiTabWindow):
     def _make_other(self):
         return MultiSpineDBEditor(self.db_mngr)
 
-    def others(self):
-        return [w for w in self.db_mngr.get_all_multi_spine_db_editors() if w is not self]
-
     def _connect_tab_signals(self, tab):
         if not super()._connect_tab_signals(tab):
             return False
