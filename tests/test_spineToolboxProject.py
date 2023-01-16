@@ -308,6 +308,18 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertFalse(item1_executable.execute_called)
         self.assertTrue(item2_executable.execute_called)
 
+    def test_executing_cyclic_dag_fails_graciously(self):
+        item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
+        self.toolbox.project().add_connection(
+            LoggingConnection(item1.name, "right", item2.name, "left", toolbox=self.toolbox)
+        )
+        self.toolbox.project().add_connection(
+            LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
+        )
+        self.toolbox.project().execute_project()
+        self.assertFalse(self.toolbox.project()._execution_in_progress)
+
     def test_change_name(self):
         """Tests renaming a project."""
         new_name = "New Project Name"
