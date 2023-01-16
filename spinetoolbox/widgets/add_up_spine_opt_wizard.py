@@ -170,10 +170,11 @@ class CheckPreviousInstallPage(QWizardPage):
             f"--project={julia_project}",
             "-e",
             'import Pkg; '
-            'manifest = joinpath(dirname(Base.active_project()), "Manifest.toml");'
+            'manifest = joinpath(dirname(Base.active_project()), "Manifest.toml"); '
             'pkgs = isfile(manifest) ? Pkg.TOML.parsefile(manifest) : Dict(); '
-            'spine_opt = get(pkgs, "SpineOpt", nothing); '
-            'if spine_opt != nothing println(spine_opt[1]["version"]) end',
+            'manifest_format = get(pkgs, "manifest_format", missing); '
+            'if manifest_format === missing spine_opt = get(pkgs, "SpineOpt", nothing) else spine_opt = get(pkgs["deps"], "SpineOpt", nothing) end; '
+            'if spine_opt != nothing println(spine_opt[1]["version"]) end; '
         ]
         self._exec_mngr = QProcessExecutionManager(self, julia_exe, args, silent=True)
         self.completeChanged.emit()
