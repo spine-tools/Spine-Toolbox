@@ -958,6 +958,9 @@ class SpineToolboxProject(MetaObject):
             execution_permits_list (Sequence(dict))
             msg (str): message to log before execution
         """
+        if not dags:
+            self._logger.msg.emit("Nothing to execute.")
+            return
         self.project_execution_about_to_start.emit()
         self._logger.msg.emit("")
         self._logger.msg.emit("-------------------------------------------------")
@@ -1108,8 +1111,7 @@ class SpineToolboxProject(MetaObject):
         valid = []
         for dag in dags:
             if not dag.nodes:
-                # Should never happen
-                continue
+                raise RuntimeError("Logic error: DAG should never have no nodes.")
             if not nx.is_directed_acyclic_graph(dag):
                 items = ", ".join(dag.nodes)
                 self._logger.msg_error.emit(f"<b>Skipping execution of items as they are in a cycle: {items}</b>")
