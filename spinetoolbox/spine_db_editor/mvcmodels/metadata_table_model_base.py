@@ -112,7 +112,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         result = False
         for fetch_parent in self._fetch_parents():
             for db_map in self._db_maps:
-                result |= self._db_mngr.can_fetch_more(db_map, fetch_parent, listener=self._db_editor)
+                result |= self._db_mngr.can_fetch_more(db_map, fetch_parent)
         return result
 
     def fetchMore(self, _):

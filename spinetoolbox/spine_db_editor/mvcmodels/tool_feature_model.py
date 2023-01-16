@@ -47,6 +47,10 @@ class ToolFeatureModel(TreeModelBase):
 
     @staticmethod
     def make_feature_name(entity_class_name, parameter_definition_name):
+        if entity_class_name is None:
+            entity_class_name = ""
+        if parameter_definition_name is None:
+            parameter_definition_name = ""
         return entity_class_name + "/" + parameter_definition_name
 
     def _begin_set_features(self, db_map):
@@ -69,7 +73,7 @@ class ToolFeatureModel(TreeModelBase):
         parameter_value_list = self.db_mngr.get_item(
             db_map, "parameter_value_list", parameter_value_list_id, only_visible=False
         )
-        value_index_list = [int(ind) for ind in parameter_value_list["value_index_list"].split(",")]
+        value_index_list = parameter_value_list["value_index_list"]
         display_value_list = self.db_mngr.get_parameter_value_list(
             db_map, parameter_value_list_id, role=Qt.DisplayRole, only_visible=False
         )

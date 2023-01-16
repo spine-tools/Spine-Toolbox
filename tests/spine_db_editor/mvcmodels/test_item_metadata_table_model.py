@@ -91,7 +91,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         logger = mock.MagicMock()
         self._db_map = self._db_mngr.get_db_map(self._url, logger, codename="database")
         QApplication.processEvents()
-        self._db_mngr.get_db_map_cache(self._db_map, {"entity_metadata", "parameter_value_metadata"})
+        self._db_mngr.get_db_map_cache(self._db_map)
         self._model = ItemMetadataTableModel(self._db_mngr, [self._db_map], None)
         if self._model.canFetchMore(None):
             self._model.fetchMore(None)

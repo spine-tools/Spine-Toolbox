@@ -281,18 +281,16 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
         self.table_view.setItemDelegate(ManageRelationshipsDelegate(self))
         self.connect_signals()
         self.class_name, self.object_class_name_list = class_key
-        object_class_name_list = self.object_class_name_list.split(",")
         self.model.set_horizontal_header_labels(
-            [x + ' name' for x in object_class_name_list] + ['relationship name', 'databases']
+            [x + ' name' for x in self.object_class_name_list] + ['relationship name', 'databases']
         )
         self.orig_data = list()
         model_data = list()
         self.db_maps = set()
         for item in selected:
             self.db_maps.update(item.db_maps)
-            object_name_list = item.object_name_list.split(",")
             data = item.db_map_data(item.first_db_map)
-            row_data = [*object_name_list, data["name"]]
+            row_data = [*item.object_name_list, data["name"]]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -343,7 +341,6 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
                     return
                 rel_cls = relationship_classes[self.class_name, self.object_class_name_list]
                 object_class_id_list = rel_cls["object_class_id_list"]
-                object_class_id_list = [int(x) for x in object_class_id_list.split(",")]
                 objects = self.db_map_obj_lookup[db_map]
                 # Find object_id_list
                 object_id_list = list()

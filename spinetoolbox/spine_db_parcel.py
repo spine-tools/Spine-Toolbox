@@ -61,9 +61,9 @@ class SpineDBParcel:
         self.push_object_class_ids(
             {
                 db_map: {
-                    int(obj_cls_id)
+                    obj_cls_id
                     for obj_cls_id_list in self._get_fields(db_map, "relationship_class", "object_class_id_list", ids)
-                    for obj_cls_id in obj_cls_id_list.split(",")
+                    for obj_cls_id in obj_cls_id_list
                 }
                 for db_map, ids in db_map_ids.items()
             }
@@ -82,9 +82,9 @@ class SpineDBParcel:
         self.push_object_ids(
             {
                 db_map: {
-                    int(obj_id)
+                    obj_id
                     for obj_id_list in self._get_fields(db_map, "relationship", "object_id_list", ids)
-                    for obj_id in obj_id_list.split(",")
+                    for obj_id in obj_id_list
                 }
                 for db_map, ids in db_map_ids.items()
             }

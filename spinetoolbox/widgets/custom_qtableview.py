@@ -168,7 +168,7 @@ class CopyPasteTableView(QTableView):
         """
 
         def _process_value(value):
-            """Delocalizes value, expect when it's one of our 'complex' value types.
+            """Delocalizes value, except when it's one of our 'complex' value types.
             We need this exception because our complex values are json strings, so they have commas,
             and ``locale.delocalize`` might remove those commas.
 

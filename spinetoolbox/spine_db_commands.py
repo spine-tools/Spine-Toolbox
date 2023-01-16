@@ -17,10 +17,15 @@ QUndoCommand subclasses for modifying the db.
 """
 
 import time
+import uuid
 from PySide2.QtWidgets import QUndoCommand, QUndoStack
 
 
 class AgedUndoStack(QUndoStack):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._command_backup = []
+
     @property
     def redo_age(self):
         if self.canRedo():
@@ -34,7 +39,38 @@ class AgedUndoStack(QUndoStack):
         return -1
 
     def commands(self):
-        return [self.command(idx) for idx in range(self.index())]
+        return [self.command(i) for i in range(self.index())]
+
+    def push(self, cmd):
+        if self.cleanIndex() > self.index() and not self._command_backup:
+            # Pushing the command will delete all undone commands.
+            # We need to save all commands till the clean index.
+            self._command_backup = [self.command(i).clone() for i in range(self.cleanIndex())]
+        super().push(cmd)
+
+    def commit(self):
+        if self._command_backup:
+            # Find index where backup and stack branch away
+            branching_idx = next(
+                (i for i in range(self.index()) if not self._command_backup[i].is_clone(self.command(i))), None
+            )
+            # Undo all backup commands from last till branching index
+            for cmd in reversed(self._command_backup[branching_idx:]):
+                cmd.undo()
+            # Redo all commands from branching index till stack index
+            for i in range(branching_idx, self.index()):
+                self.command(i).redo()
+            return
+        if self.index() > self.cleanIndex():
+            for i in range(self.cleanIndex(), self.index()):
+                self.command(i).redo()
+        elif self.index() < self.cleanIndex():
+            for i in reversed(range(self.index(), self.cleanIndex())):
+                self.command(i).undo()
+
+    def setClean(self):
+        self._command_backup = []
+        super().setClean()
 
 
 class AgedUndoCommand(QUndoCommand):
@@ -45,6 +81,15 @@ class AgedUndoCommand(QUndoCommand):
         """
         super().__init__(parent=parent)
         self._age = -1
+        self.identifier = uuid.uuid4()
+
+    def clone(self):
+        clone = self._do_clone()
+        clone.identifier = self.identifier
+        return clone
+
+    def is_clone(self, other):
+        return other.identifier == self.identifier
 
     def redo(self):
         super().redo()
@@ -69,6 +114,14 @@ class SpineDBMacro(AgedUndoCommand):
         self._reverse_cmd_iter = None
         self._cmds = []
         self._completed_once = False
+
+    def _do_clone(self):
+        clone = SpineDBMacro([])
+        clone._cmd_iter = self._cmd_iter
+        clone._reverse_cmd_iter = self._reverse_cmd_iter
+        clone._cmds = self._cmds
+        clone._completed_once = self._completed_once
+        return clone
 
     def redo(self):
         super().redo()
@@ -134,10 +187,6 @@ class SpineDBCommand(AgedUndoCommand):
         """Reimplement in subclasses to do stuff with the data from running redo() the first time."""
         raise NotImplementedError()
 
-    def _undo_item(self, db_map, item_type, id_):
-        undo_item = self.db_mngr.get_item(db_map, item_type, id_, only_visible=True)
-        return db_map.cache_to_db(item_type, undo_item)
-
 
 class AddItemsCommand(SpineDBCommand):
     _add_command_name = {
@@ -152,6 +201,7 @@ class AddItemsCommand(SpineDBCommand):
         "list_value": "add parameter value list values",
         "alternative": "add alternative",
         "scenario": "add scenario",
+        "scenario_alternative": "add scenario alternative",
         "feature": "add feature",
         "tool": "add tool",
         "tool_feature": "add tool features",
@@ -175,10 +225,18 @@ class AddItemsCommand(SpineDBCommand):
             self.setObsolete(True)
         self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
-        self.undo_db_map_typed_ids = None
+        self.undo_db_map_ids = None
         self._readd = False
         self._check = check
         self.setText(self._add_command_name.get(item_type, "add item") + f" to '{db_map.codename}'")
+
+    def _do_clone(self):
+        clone = AddItemsCommand(self.db_mngr, self.db_map, [], self.item_type)
+        clone.redo_db_map_data = self.redo_db_map_data
+        clone.undo_db_map_ids = self.undo_db_map_ids
+        clone._readd = self._readd
+        clone._check = self._check
+        return clone
 
     def redo(self):
         super().redo()
@@ -192,23 +250,15 @@ class AddItemsCommand(SpineDBCommand):
 
     def undo(self):
         super().undo()
-        self.db_mngr.do_remove_items(self.undo_db_map_typed_ids, callback=self.handle_undo_complete)
+        self.db_mngr.do_remove_items(self.item_type, self.undo_db_map_ids, callback=self.handle_undo_complete)
         self._readd = True
 
     def _handle_first_redo_complete(self, db_map_data):
         if self.db_map not in db_map_data:
             self.setObsolete(True)
             return
-        self.redo_db_map_data = {
-            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
-        }
-        self.undo_db_map_typed_ids = {
-            db_map: db_map.cascading_ids(
-                cache=self.db_mngr.get_db_map_cache(db_map, {self.item_type}, only_descendants=True),
-                **{self.item_type: {x["id"] for x in data}},
-            )
-            for db_map, data in db_map_data.items()
-        }
+        self.redo_db_map_data = db_map_data
+        self.undo_db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
 
 
 class UpdateItemsCommand(SpineDBCommand):
@@ -223,6 +273,7 @@ class UpdateItemsCommand(SpineDBCommand):
         "list_value": "update parameter value list values",
         "alternative": "update alternatives",
         "scenario": "update scenarios",
+        "scenario_alternative": "update scenario alternative",
         "feature": "update features",
         "tool": "update tools",
         "tool_feature": "update tool features",
@@ -244,7 +295,7 @@ class UpdateItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not data:
             self.setObsolete(True)
-        undo_data = [self._undo_item(db_map, item_type, item["id"]) for item in data]
+        undo_data = [self.db_mngr.get_item(self.db_map, item_type, item["id"]).copy() for item in data]
         redo_data = [{**undo_item, **item} for undo_item, item in zip(undo_data, data)]
         if undo_data == redo_data:
             self.setObsolete(True)
@@ -253,6 +304,13 @@ class UpdateItemsCommand(SpineDBCommand):
         self.item_type = item_type
         self._check = check
         self.setText(self._update_command_name.get(item_type, "update item") + f" in '{db_map.codename}'")
+
+    def _do_clone(self):
+        clone = UpdateItemsCommand(self.db_mngr, self.db_map, [], self.item_type)
+        clone.redo_db_map_data = self.redo_db_map_data
+        clone.undo_db_map_data = self.undo_db_map_data
+        clone._check = self._check
+        return clone
 
     def redo(self):
         super().redo()
@@ -270,58 +328,41 @@ class UpdateItemsCommand(SpineDBCommand):
         if not db_map_data.get(self.db_map):
             self.setObsolete(True)
             return
-        self.redo_db_map_data = {
-            db_map: [db_map.cache_to_db(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
-        }
+        self.redo_db_map_data = db_map_data
         self._check = False
 
 
 class RemoveItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, typed_data, parent=None):
+    def __init__(self, db_mngr, db_map, ids, item_type, parent=None):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
             db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
-            typed_data (dict): lists of dict-items to remove keyed by string type
+            ids (set): set of ids to remove
+            item_type (str): the item type
             parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
         super().__init__(db_mngr, db_map, parent=parent)
-        if not any(typed_data.values()):
+        if not ids:
             self.setObsolete(True)
-        self.redo_typed_data = db_map.cascading_ids(
-            cache=self.db_mngr.get_db_map_cache(db_map, set(typed_data), only_descendants=True), **typed_data
-        )
-        self.undo_typed_data = {}
-        self.setText(f"remove items from '{db_map.codename}'")
+        self.redo_db_map_ids = {db_map: ids}
+        self.undo_db_map_data = {}
+        self.item_type = item_type
+        self.setText(f"remove {item_type} items from '{db_map.codename}'")
+
+    def _do_clone(self):
+        clone = RemoveItemsCommand(self.db_mngr, self.db_map, set(), self.item_type)
+        clone.redo_db_map_ids = self.redo_db_map_ids
+        clone.undo_db_map_data = self.undo_db_map_data
+        return clone
 
     def redo(self):
         super().redo()
-        self.db_mngr.do_remove_items({self.db_map: self.redo_typed_data}, callback=self.handle_redo_complete)
+        self.db_mngr.do_remove_items(self.item_type, self.redo_db_map_ids, callback=self.handle_redo_complete)
 
     def undo(self):
         super().undo()
-        item_type_iter = iter(list(self.undo_typed_data))
-        self._undo_next(item_type_iter)
+        self.db_mngr.add_items(self.undo_db_map_data, self.item_type, readd=True, callback=self.handle_undo_complete)
 
-    def _undo_next(self, item_type_iter):
-        item_type = next(item_type_iter, None)
-        if item_type is None:
-            self.handle_undo_complete(None)
-            return
-        data = self.undo_typed_data[item_type]
-        self.db_mngr.add_items(
-            {self.db_map: data}, item_type, readd=True, callback=lambda _db_map_data: self._undo_next(item_type_iter)
-        )
-
-    def _handle_first_redo_complete(self, db_map_typed_items):
-        for item_type, items in db_map_typed_items.get(self.db_map, {}).items():
-            if item_type not in self.db_map.ITEM_TYPES:
-                continue
-            undo_items = []
-            for item in items:
-                undo_item = self.db_map.cache_to_db(item_type, item)
-                undo_items.append(undo_item)
-            if undo_items:
-                self.undo_typed_data[item_type] = undo_items
-        if not self.undo_typed_data:
-            self.setObsolete(True)
+    def _handle_first_redo_complete(self, db_map_data):
+        self.undo_db_map_data = db_map_data

@@ -217,11 +217,11 @@ class TestAddItems(unittest.TestCase):
 
         def callback(db_map_data):
             self.assertEqual(
-                db_map_data, {db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": None}]}
+                db_map_data, {db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": 2}]}
             )
 
         db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
-        self._db_mngr.add_items(db_map_data, "add_metadata", "metadata", callback=callback)
+        self._db_mngr.add_items(db_map_data, "metadata", callback=callback)
 
     def test_add_object_metadata(self):
         db_map = DatabaseMapping(self._db_url, create=True)
@@ -235,7 +235,7 @@ class TestAddItems(unittest.TestCase):
             self.assertEqual(db_map_data, {db_map: [{'entity_id': 1, 'metadata_id': 1, 'commit_id': None, 'id': 1}]})
 
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
-        self._db_mngr.add_items(db_map_data, "add_entity_metadata", "entity_metadata", callback=callback)
+        self._db_mngr.add_items(db_map_data, "entity_metadata", callback=callback)
 
 
 class TestImportData(unittest.TestCase):
@@ -249,27 +249,30 @@ class TestImportData(unittest.TestCase):
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
         self._db_mngr = SpineDBManager(mock_settings, None)
         logger = MagicMock()
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+        self._temp_dir = TemporaryDirectory()
+        url = "sqlite:///" + self._temp_dir.name + "/db.sqlite"
+        self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=True)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         while not self._db_map.connection.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
+        self._temp_dir.cleanup()
 
     def test_import_parameter_value_lists(self):
-        with signal_waiter(self._db_mngr.items_added) as waiter:
+        with signal_waiter(
+            self._db_mngr.items_added, condition=lambda item_type, _: item_type == "list_value"
+        ) as waiter:
             self._db_mngr.import_data(
                 {self._db_map: {"parameter_value_lists": [["list_1", "first value"], ["list_1", "second value"]]}}
             )
-            waiter.wait(lambda args: args[0] == "list_value")
+            waiter.wait()
         value_lists = self._db_mngr.get_items(self._db_map, "parameter_value_list")
         list_values = self._db_mngr.get_items(self._db_map, "list_value")
         self.assertEqual(len(value_lists), 1)
         value_list = value_lists[0]
-        index_to_id = dict(
-            zip(map(int, value_list["value_id_list"].split(",")), map(int, value_list["value_index_list"].split(",")))
-        )
+        index_to_id = dict(zip(value_list["value_id_list"], value_list["value_index_list"]))
         values = len(index_to_id) * [None]
         for row in list_values:
             value = from_database(row["value"], row["type"])
@@ -304,6 +307,7 @@ class TestOpenDBEditor(unittest.TestCase):
         editor = editors[0]
         self.assertEqual(editor.tab_widget.count(), 2)
         for editor in self._db_mngr.get_all_multi_spine_db_editors():
+            QApplication.processEvents()
             editor.close()
 
     def tearDown(self):

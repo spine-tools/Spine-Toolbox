@@ -16,11 +16,13 @@ Classes for custom context menus and pop-up menus.
 :date:   13.5.2020
 """
 
-from PySide2.QtWidgets import QWidgetAction, QMenu, QWidget
-from PySide2.QtCore import Qt, QEvent, QPoint, Signal, Slot
+from PySide2.QtWidgets import QMenu, QWidget
+from PySide2.QtCore import Qt, QEvent, QPoint, Signal
 from PySide2.QtGui import QKeyEvent, QKeySequence
-from .custom_qwidgets import LazyFilterWidget, DataToValueFilterWidget
 from ...widgets.custom_menus import FilterMenuBase
+from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel
+from ...fetch_parent import FlexibleFetchParent
+from ...helpers import DB_ITEM_SEPARATOR
 
 
 class MainMenu(QMenu):
@@ -48,97 +50,81 @@ class MainMenu(QMenu):
 
 class ParameterViewFilterMenu(FilterMenuBase):
 
-    filterChanged = Signal(str, dict)
+    filterChanged = Signal(str, object)
 
-    def __init__(self, parent, source_model, field, show_empty=True):
+    def __init__(self, parent, db_mngr, db_maps, item_type, entity_class_id_key, field, show_empty=True):
         """
         Args:
             parent (SpineDBEditor)
-            source_model (CompoundParameterModel): a model to lazily get data from
+            db_mngr (SpineDBManager)
+            db_maps (Sequence of DatabaseMapping)
+            item_type (str)
+            entity_class_id_key (str)
             field (str): the field name
         """
         super().__init__(parent)
-        self._source_model = source_model
+        self._item_type = item_type
+        self._db_mngr = db_mngr
+        self._entity_class_id_key = entity_class_id_key
         self._field = field
-        self._filter = LazyFilterWidget(self, source_model, show_empty=show_empty)
-        self._filter_action = QWidgetAction(parent)
-        self._filter_action.setDefaultWidget(self._filter)
-        self.addAction(self._filter_action)
-        self._menu_data = dict()  # Maps value to set of (db map, entity_class id, item id)
-        self._inv_menu_data = dict()  # Maps tuple (db map, entity_class id, item id) to value
-        self.connect_signals()
-        self.aboutToShow.connect(self._filter.set_model)
-        self._source_model.refreshed.connect(self._handle_source_model_refreshed)
-
-    @Slot()
-    def _handle_source_model_refreshed(self):
-        """Updates the menu to only present values that are actually shown in the source model."""
-        accepted_identifiers = {(m.db_map, m.entity_class_id, m.item_id(i)) for m, i in self._source_model._row_map}
-        accepted_values = {
-            value for value, identifiers in self._menu_data.items() if identifiers.intersection(accepted_identifiers)
-        }
-        self.set_filter_accepted_values(accepted_values)
+        self._menu_data = dict()  # Maps display value to set of (db map, entity_class_id, actual value) tuples
+        fetch_parent = FlexibleFetchParent(
+            self._item_type,
+            handle_items_added=self._handle_items_added,
+            handle_items_removed=self._handle_items_removed,
+            accepts_item=self._accepts_item,
+            owner=self,
+            chunk_size=None,
+        )
+        self._set_up(LazyFilterCheckboxListModel, self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
 
     def set_filter_accepted_values(self, accepted_values):
-        self._filter._filter_model.set_base_filter(lambda x: x in accepted_values)
+        if self._filter._filter_model.canFetchMore(None):
+            self._filter._filter_model.fetchMore(None)
+        self._filter._filter_model.filter_by_condition(lambda x: x in accepted_values)
+        self._filter._apply_filter()
 
     def set_filter_rejected_values(self, rejected_values):
-        self._filter._filter_model.set_base_filter(lambda x: x not in rejected_values)
+        if self._filter._filter_model.canFetchMore(None):
+            self._filter._filter_model.fetchMore(None)
+        self._filter._filter_model.filter_by_condition(lambda x: x not in rejected_values)
+        self._filter._apply_filter()
 
-    def _get_value_to_remove(self, action, db_map, db_item):
-        if action not in ("remove", "update"):
-            return None
-        entity_class_id = db_item.get(self._source_model.entity_class_id_key)
-        item_id = db_item["id"]
-        identifier = (db_map, entity_class_id, item_id)
-        old_value = self._inv_menu_data.pop(identifier, None)
-        if old_value is None:
-            return None
-        old_items = self._menu_data[old_value]
-        old_items.remove(identifier)
-        if not old_items:
-            del self._menu_data[old_value]
-            return old_value
-
-    def _get_value_to_add(self, action, db_map, db_item):
-        if action not in ("add", "update"):
-            return None
-        entity_class_id = db_item.get(self._source_model.entity_class_id_key)
-        item_id = db_item["id"]
-        identifier = (db_map, entity_class_id, item_id)
+    def _get_value(self, item, db_map):
         if self._field == "database":
-            value = db_map.codename
-        elif self._field.endswith("value") and db_item[self._field] is not None:
-            value = str(db_item[self._field], "UTF8")
-        else:
-            value = db_item[self._field]
-        self._inv_menu_data[identifier] = value
-        if value not in self._menu_data:
-            self._menu_data[value] = {identifier}
-            return value
-        self._menu_data[value].add(identifier)
+            return db_map.codename
+        return item[self._field]
 
-    def modify_menu_data(self, action, db_map, db_items):
-        """Modifies data in the menu.
+    def _get_display_value(self, item, db_map):
+        if self._field in ("value", "default_value"):
+            return self._db_mngr.get_value(db_map, self._item_type, item["id"], role=Qt.DisplayRole)
+        if self._field in ("object_class_name_list", "object_name_list"):
+            return DB_ITEM_SEPARATOR.join(item[self._field])
+        return self._get_value(item, db_map) or "(empty)"
 
-        Args:
-            action (str): either 'add', 'remove', or 'update'
-            db_map (DiffDatabaseMapping)
-            db_items (list(dict))
-        """
-        values_to_add = list()
-        values_to_remove = list()
-        for db_item in db_items:
-            to_remove = self._get_value_to_remove(action, db_map, db_item)
-            to_add = self._get_value_to_add(action, db_map, db_item)
-            if to_remove is not None:
-                values_to_remove.append(to_remove)
-            if to_add is not None:
-                values_to_add.append(to_add)
-        if values_to_remove:
-            self.remove_items_from_filter_list(values_to_remove)
-        if values_to_add:
-            self.add_items_to_filter_list(values_to_add)
+    def _accepts_item(self, item, db_map):
+        return item.get(self._entity_class_id_key) is not None
+
+    def _handle_items_added(self, db_map_data):
+        to_add = set()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                display_value = self._get_display_value(item, db_map)
+                value = self._get_value(item, db_map)
+                to_add.add(display_value)
+                self._menu_data.setdefault(display_value, set()).add((db_map, item["entity_class_id"], value))
+        self.add_items_to_filter_list(to_add)
+
+    def _handle_items_removed(self, db_map_data):
+        for db_map, items in db_map_data.items():
+            for item in items:
+                display_value = self._get_display_value(item, db_map)
+                value = self._get_value(item, db_map)
+                self._menu_data.get(display_value, set()).discard((db_map, item["entity_class_id"], value))
+        to_remove = {display_value for display_value, data in self._menu_data.items() if not data}
+        for display_value in to_remove:
+            del self._menu_data[display_value]
+        self.remove_items_from_filter_list(to_remove)
 
     def _build_auto_filter(self, valid_values):
         """
@@ -148,16 +134,16 @@ class ParameterViewFilterMenu(FilterMenuBase):
             valid_values (Sequence): Values accepted by the filter.
 
         Returns:
-            dict: mapping db_map, to entity_class_id, to set of accepted parameter_value/definition ids
+            dict: mapping (db_map, entity_class_id) to set of valid values
         """
         if not self._filter.has_filter():
             return {}  # All-pass
         if not valid_values:
             return None  # You shall not pass
         auto_filter = {}
-        for value in valid_values:
-            for db_map, entity_class_id, item_id in self._menu_data[value]:
-                auto_filter.setdefault(db_map, {}).setdefault(entity_class_id, set()).add(item_id)
+        for display_value in valid_values:
+            for db_map, entity_class_id, value in self._menu_data[display_value]:
+                auto_filter.setdefault((db_map, entity_class_id), set()).add(value)
         return auto_filter
 
     def emit_filter_changed(self, valid_values):
@@ -176,24 +162,61 @@ class TabularViewFilterMenu(FilterMenuBase):
 
     filterChanged = Signal(str, set, bool)
 
-    def __init__(self, parent, identifier, data_to_value, show_empty=True):
+    def __init__(self, parent, db_mngr, db_maps, item_type, accepts_item, identifier, show_empty=True):
         """
         Args:
             parent (SpineDBEditor)
+            db_mngr (SpineDBManager)
+            db_maps (Sequence of DatabaseMapping)
+            item_type (str)
+            accepts_item (function)
             identifier (int): index identifier
-            data_to_value (method): a method to translate item data to a value for display role
         """
         super().__init__(parent)
-        self.identifier = identifier
-        self._filter = DataToValueFilterWidget(self, data_to_value, show_empty=show_empty)
-        self._filter_action = QWidgetAction(parent)
-        self._filter_action.setDefaultWidget(self._filter)
-        self.addAction(self._filter_action)
         self.anchor = parent
-        self.connect_signals()
+        self._db_mngr = db_mngr
+        self._item_type = item_type
+        self._identifier = identifier
+        self._menu_data = {}
+        fetch_parent = FlexibleFetchParent(
+            self._item_type,
+            handle_items_added=self._handle_items_added,
+            handle_items_removed=self._handle_items_removed,
+            accepts_item=accepts_item,
+            owner=self,
+            chunk_size=None,
+        )
+        self._set_up(LazyFilterCheckboxListModel, self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
+
+    def _handle_items_added(self, db_map_data):
+        to_add = set()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                for display_value, value in self._get_values(db_map, item):
+                    to_add.add(display_value)
+                    self._menu_data.setdefault(display_value, set()).add(value)
+        self.add_items_to_filter_list(to_add)
+
+    def _get_values(self, db_map, item):
+        if self._item_type == "parameter_value":
+            for index in self._db_mngr.get_value_indexes(db_map, "parameter_value", item["id"]):
+                yield str(index), (None, index)
+        else:
+            yield item["name"], (db_map, item["id"])
+
+    def _handle_items_removed(self, db_map_data):
+        for db_map, items in db_map_data.items():
+            for item in items:
+                display_value = item["name"]
+                self._menu_data.get(display_value, set()).discard((db_map, item["id"]))
+        to_remove = {display_value for display_value, data in self._menu_data.items() if not data}
+        for display_value in to_remove:
+            del self._menu_data[display_value]
+        self.remove_items_from_filter_list(to_remove)
 
     def emit_filter_changed(self, valid_values):
-        self.filterChanged.emit(self.identifier, valid_values, self._filter.has_filter())
+        valid_values = {db_map_id for v in valid_values for db_map_id in self._menu_data[v]}
+        self.filterChanged.emit(self._identifier, valid_values, self._filter.has_filter())
 
     def event(self, event):
         if event.type() == QEvent.Show and self.anchor is not None:

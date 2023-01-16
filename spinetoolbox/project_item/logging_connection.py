@@ -208,19 +208,26 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             self._fetch_parents.pop(db_map)
             self._toolbox.db_mngr.unregister_listener(self, db_map)
 
+    def _make_fetch_parent(self, db_map, item_type):
+        fetch_parents = self._fetch_parents.setdefault(db_map, {})
+        if item_type not in fetch_parents:
+            fetch_parents[item_type] = self._fetch_parents.setdefault(db_map, {}).setdefault(
+                item_type,
+                FlexibleFetchParent(
+                    item_type,
+                    handle_items_added=lambda _: self._receive_data_changed(),
+                    handle_items_removed=lambda _: self._receive_data_changed(),
+                    handle_items_updated=lambda _: self._receive_data_changed(),
+                    owner=self.resource_filter_model,
+                ),
+            )
+        return fetch_parents[item_type]
+
     def _fetch_more_if_possible(self):
         for db_map in self._db_maps.values():
             for item_type in ("scenario", "tool"):
-                fetch_parent = self._fetch_parents.setdefault(db_map, {}).setdefault(
-                    item_type,
-                    FlexibleFetchParent(
-                        item_type,
-                        handle_items_added=lambda _: self._receive_data_changed(),
-                        handle_items_removed=lambda _: self._receive_data_changed(),
-                        handle_items_updated=lambda _: self._receive_data_changed(),
-                    ),
-                )
-                if self._toolbox.db_mngr.can_fetch_more(db_map, fetch_parent, listener=self):
+                fetch_parent = self._make_fetch_parent(db_map, item_type)
+                if self._toolbox.db_mngr.can_fetch_more(db_map, fetch_parent):
                     self._toolbox.db_mngr.fetch_more(db_map, fetch_parent)
 
     def _receive_data_changed(self):
@@ -233,6 +240,9 @@ class LoggingConnection(LogMixin, HeadlessConnection):
 
     def receive_session_rolled_back(self, db_map):
         self._receive_data_changed()
+
+    def receive_error_msg(self, _db_map_error_log):
+        pass
 
     def get_scenario_names(self, url):
         db_map = self._get_db_map(url)

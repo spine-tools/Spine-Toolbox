@@ -16,7 +16,6 @@ Classes to represent tool and feature items in a tree.
 :date:    1.9.2020
 """
 from PySide2.QtCore import Qt
-from ...fetch_parent import FlexibleFetchParent
 from .tree_item_utility import GrayIfLastMixin, EditableMixin, EmptyChildRootItem, LeafItem, StandardTreeItem
 
 _FEATURE_ICON = "\uf5bc"  # splotch
@@ -85,8 +84,10 @@ class FeatureLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
         item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
         if not item_data:
             return {}
-        name = self.model.make_feature_name(item_data["entity_class_name"], item_data["parameter_definition_name"])
-        return dict(name=name, **item_data)
+        item_data["name"] = self.model.make_feature_name(
+            item_data["entity_class_name"], item_data["parameter_definition_name"]
+        )
+        return item_data
 
     @property
     def tool_tip(self):
@@ -151,10 +152,10 @@ class ToolLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def update_item_in_db(self, db_item):
         self.db_mngr.update_tools({self.db_map: [db_item]})
 
-    def _do_finalize(self):
+    def _do_set_up(self):
         if not self.id:
             return
-        super()._do_finalize()
+        super()._do_set_up()
         self.append_children([ToolFeatureRootItem()])
 
 
@@ -209,15 +210,15 @@ class ToolFeatureLeafItem(GrayIfLastMixin, LeafItem):
         if not item_data:
             return {}
         feature_data = self.db_mngr.get_item(self.db_map, "feature", item_data["feature_id"])
-        name = self.model.make_feature_name(
+        item_data["name"] = self.model.make_feature_name(
             feature_data["entity_class_name"], feature_data["parameter_definition_name"]
         )
-        return dict(name=name, **item_data)
+        return item_data
 
-    def _do_finalize(self):
+    def _do_set_up(self):
         if not self.id:
             return
-        super()._do_finalize()
+        super()._do_set_up()
         self.append_children([ToolFeatureRequiredItem(), ToolFeatureMethodRootItem()])
 
     def _make_item_to_add(self, value):
@@ -279,14 +280,6 @@ class ToolFeatureRequiredItem(StandardTreeItem):
 class ToolFeatureMethodRootItem(EmptyChildRootItem):
     """A tool_feature_method root item."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._list_value_fetch_parent = FlexibleFetchParent("list_value", accepts_item=self._accepts_list_value_item)
-
-    def _fetch_parents(self):
-        yield self._list_value_fetch_parent
-        yield from super()._fetch_parents()
-
     @property
     def item_type(self):
         return "tool_feature_method"
@@ -308,9 +301,6 @@ class ToolFeatureMethodRootItem(EmptyChildRootItem):
     def accepts_item(self, item, db_map):
         return item["tool_feature_id"] == self.parent_item.id
 
-    def _accepts_list_value_item(self, item, db_map):
-        return item["parameter_value_list_id"] == self.parent_item.item_data["parameter_value_list_id"]
-
 
 class ToolFeatureMethodLeafItem(GrayIfLastMixin, LeafItem):
     """A tool_feature_method leaf item."""
@@ -330,10 +320,10 @@ class ToolFeatureMethodLeafItem(GrayIfLastMixin, LeafItem):
         item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
         if not item_data:
             return {}
-        name = self.db_mngr.get_value_list_item(
+        item_data["name"] = self.db_mngr.get_value_list_item(
             self.db_map, item_data["parameter_value_list_id"], item_data["method_index"]
         )
-        return dict(name=name, **item_data)
+        return item_data
 
     def _make_item_data(self):
         return {"name": "Enter new method here...", "description": ""}

@@ -138,14 +138,13 @@ class SpineDBIconManager:
         _center_scene(scene)
         self._rel_cls_renderers[object_class_names] = _SceneSvgRenderer.from_scene(scene)
 
-    def relationship_class_renderer(self, rel_cls_name, str_object_class_name_list):
+    def relationship_class_renderer(self, rel_cls_name, object_class_name_list):
         display_icon = self.display_icons.get(rel_cls_name)
         if display_icon is not None:
             return self.class_renderer(rel_cls_name)
-        object_class_names = tuple(str_object_class_name_list.split(","))
-        if object_class_names not in self._rel_cls_renderers:
-            self._create_rel_cls_renderer(object_class_names)
-        return self._rel_cls_renderers[object_class_names]
+        if object_class_name_list not in self._rel_cls_renderers:
+            self._create_rel_cls_renderer(object_class_name_list)
+        return self._rel_cls_renderers[object_class_name_list]
 
     def _create_group_renderer(self, class_name):
         display_icon = self.display_icons.get(class_name, -1)

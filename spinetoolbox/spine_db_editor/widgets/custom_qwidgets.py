@@ -21,40 +21,6 @@ from PySide2.QtWidgets import QMenu, QToolButton, QLabel, QGraphicsOpacityEffect
 from PySide2.QtCore import Slot, QVariantAnimation, QPointF, Qt
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url
-from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, DataToValueFilterCheckboxListModel
-from ...widgets.custom_qwidgets import FilterWidgetBase
-
-
-class DataToValueFilterWidget(FilterWidgetBase):
-    def __init__(self, parent, data_to_value, show_empty=True):
-        """Init class.
-
-        Args:
-            parent (QWidget)
-            data_to_value (method): a method to translate item data to a value for display role
-        """
-        super().__init__(parent)
-        self._filter_model = DataToValueFilterCheckboxListModel(self, data_to_value, show_empty=show_empty)
-        self._filter_model.set_list(self._filter_state)
-        self._ui_list.setModel(self._filter_model)
-        self.connect_signals()
-
-
-class LazyFilterWidget(FilterWidgetBase):
-    def __init__(self, parent, source_model, show_empty=True):
-        """Init class.
-
-        Args:
-            parent (SpineDBEditor)
-            source_model (CompoundParameterModel, optional): a model to lazily get data from
-        """
-        super().__init__(parent)
-        self._filter_model = LazyFilterCheckboxListModel(self, source_model, show_empty=show_empty)
-        self._filter_model.set_list(self._filter_state)
-        self.connect_signals()
-
-    def set_model(self):
-        self._ui_list.setModel(self._filter_model)
 
 
 class OpenFileButton(QToolButton):

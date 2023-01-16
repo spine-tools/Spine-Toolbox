@@ -46,7 +46,7 @@ from spinedb_api import (
 from spinedb_api.parameter_value import load_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
-from spinedb_api.helpers import CacheItem
+from spinedb_api.db_cache import DBCache
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import SpineDBMacro, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
@@ -83,11 +83,12 @@ class SpineDBManager(QObject):
         str: item type, such as "object_class"
         dict: mapping DiffDatabaseMapping to list of updated dict-items.
     """
-    items_removed = Signal(dict)
+    items_removed = Signal(str, dict)
     """Emitted whenever items are removed from a DB.
 
     Args:
-        dict: mapping DiffDatabaseMapping to string item type to list of removed dict-items.
+        str: item type, such as "object_class"
+        dict: mapping DiffDatabaseMapping to list of updated dict-items.
     """
     # Closing
     waiting_for_fetcher = Signal()
@@ -106,7 +107,6 @@ class SpineDBManager(QObject):
         self.db_map_locks = {}
         self._workers = {}
         self.listeners = dict()
-        self._fetch_parents_by_listener = dict()
         self.undo_stack = {}
         self.undo_action = {}
         self.redo_action = {}
@@ -154,64 +154,6 @@ class SpineDBManager(QObject):
                 except AttributeError:
                     pass
 
-    def _new_item_from_id(self, db_map, item_type, id_, fill_missing=True):
-        cache = self._cache.get(db_map, {})
-        return db_map.get_updated_item(cache, item_type, id_, fill_missing=fill_missing)
-
-    def make_items_from_db_items(self, db_map, item_type, db_items):
-        cache = self._cache.get(db_map, {})
-        items = [db_map.db_to_cache(cache, item_type, item, fetch=False) for item in db_items]
-        self.cache_items(item_type, {db_map: items})
-        return items
-
-    def make_items_from_ids(self, db_map, item_type, ids, fill_missing=True):
-        items = list(
-            filter(None, (self._new_item_from_id(db_map, item_type, id_, fill_missing=fill_missing) for id_ in ids))
-        )
-        self.cache_items(item_type, {db_map: items})
-        return items
-
-    def special_cascading_ids(self, db_map, item_type, ids):
-        """Returns a dictionary mapping item type to a set of ids for given db_map, item_type, and ids.
-        The returned ids correspond to items that have a reference to the input ids,
-        but it is not a foreign key - so they are not returned by ``DiffDatabaseMapping.cascading_ids``.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-            item_type (str)
-            ids (Iterable of int)
-
-        Returns:
-            dict
-        """
-        cascading_ids = {}
-        if item_type == "scenario_alternative":
-            cascading_ids["scenario"] = {
-                self.get_item(db_map, "scenario_alternative", id_)["scenario_id"] for id_ in ids
-            }
-        elif item_type == "parameter_value_list":
-            for item in self.get_items(db_map, "parameter_definition"):
-                if item["value_list_id"] in ids:
-                    cascading_ids.setdefault("parameter_definition", set()).add(item["id"])
-            for item in self.get_items(db_map, "feature"):
-                if item["parameter_value_list_id"] in ids:
-                    cascading_ids.setdefault("feature", set()).add(item["id"])
-        elif item_type == "list_value":
-            cascading_ids["parameter_value_list"] = {
-                self.get_item(db_map, "list_value", id_)["parameter_value_list_id"] for id_ in ids
-            }
-            for item in self.get_items(db_map, "parameter_value"):
-                if item["list_value_id"] in ids:
-                    cascading_ids.setdefault("parameter_value", set()).add(item["id"])
-            for item in self.get_items(db_map, "parameter_definition"):
-                if item["list_value_id"] in ids:
-                    cascading_ids.setdefault("parameter_definition", set()).add(item["id"])
-        elif item_type == "entity_group":
-            cascading_ids["object"] = {
-                x["group_id"] for x in (self.get_item(db_map, "entity_group", id_) for id_ in ids) if x
-            }
-        return cascading_ids
-
     def _get_worker(self, db_map):
         """Returns a worker.
 
@@ -223,17 +165,13 @@ class SpineDBManager(QObject):
         """
         return self._workers[db_map]
 
-    def can_fetch_more(self, db_map, parent, listener=None):
+    def can_fetch_more(self, db_map, parent):
         """Whether or not we can fetch more items of given type from given db.
 
         Args:
             db_map (DiffDatabaseMapping)
             parent (FetchParent): The object that requests the fetching and that might want to react to further DB
                 modifications.
-            listener (object): The object that owns the fetch parent.
-                Must have been registered for given db_map using ``register_listener()``.
-                Calling ``unregister_listener()`` at a later stage will also cause the fetch parent to stop
-                reacting to DB modifications.
 
         Returns:
             bool
@@ -244,11 +182,6 @@ class SpineDBManager(QObject):
             worker = self._get_worker(db_map)
         except KeyError:
             return False
-        if listener is not None and listener not in self.db_map_listeners(db_map):
-            raise RuntimeError(
-                f"can't associate parent {parent} to listener {listener} - not listening on DB map {db_map}"
-            )
-        self._fetch_parents_by_listener.setdefault(listener, set()).add(parent)
         return worker.can_fetch_more(parent)
 
     def fetch_more(self, db_map, parent):
@@ -266,9 +199,31 @@ class SpineDBManager(QObject):
             return
         worker.fetch_more(parent)
 
-    def cache_items(self, item_type, db_map_data):
-        """Caches data for a given type.
-        It works for both insert and update operations.
+    def add_items_to_cache(self, item_type, db_map_data):
+        """Adds items to cache.
+
+        Args:
+            item_type (str)
+            db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
+
+        Returns:
+            dict: mapping db_map to added cache items
+        """
+        new_db_map_data = {}
+        if item_type in ("object_class", "relationship_class"):
+            self.update_icons(db_map_data)
+        for db_map, items in db_map_data.items():
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            db_cache = self._cache.setdefault(db_map, DBCache(worker.advance_query))
+            table_cache = db_cache.table_cache(item_type)
+            new_db_map_data[db_map] = [table_cache.add_item(item) for item in items]
+        return new_db_map_data
+
+    def update_items_in_cache(self, item_type, db_map_data):
+        """Updates items in cache.
 
         Args:
             item_type (str)
@@ -277,25 +232,35 @@ class SpineDBManager(QObject):
         if item_type in ("object_class", "relationship_class"):
             self.update_icons(db_map_data)
         for db_map, items in db_map_data.items():
+            db_cache = self._cache.get(db_map)
+            if db_cache is None:
+                continue
+            table_cache = db_cache.get(item_type)
+            if table_cache is None:
+                continue
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
+                table_cache.update_item(item)
 
-    def _pop_item(self, db_map, item_type, id_):
-        return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
-
-    def uncache_removed_items(self, db_map_typed_ids):
-        """Removes data that has been removed from the database also from cache.
+    def remove_items_in_cache(self, item_type, db_map_ids):
+        """Removes items in cache.
 
         Args:
-            db_map_typed_ids (dict): mapping db_map, to item type, to ids to remove
+            item_type (str)
+            db_map_ids (dict): mapping db_map to ids to remove
 
         Returns:
-            dict: mapping db_map, to item type, to items removed
+            dict: mapping db_map to removed cache items
         """
-        for db_map, ids_per_type in db_map_typed_ids.items():
-            for item_type, ids in ids_per_type.items():
-                for id_ in ids:
-                    _ = self._pop_item(db_map, item_type, id_)
+        db_map_data = {}
+        for db_map, ids in db_map_ids.items():
+            db_cache = self._cache.get(db_map)
+            if db_cache is None:
+                continue
+            table_cache = db_cache.get(item_type)
+            if table_cache is None:
+                continue
+            db_map_data[db_map] = [table_cache.remove_item(id_) for id_ in ids]
+        return db_map_data
 
     @busy_effect
     def get_db_map_cache(self, db_map, fetch_item_types=None, only_descendants=False, include_ancestors=False):
@@ -306,7 +271,7 @@ class SpineDBManager(QObject):
         worker.fetch_all(
             fetch_item_types=fetch_item_types, only_descendants=only_descendants, include_ancestors=include_ancestors
         )
-        return self._cache.setdefault(db_map, {})
+        return self._cache.setdefault(db_map, DBCache(worker.advance_query))
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -528,13 +493,7 @@ class SpineDBManager(QObject):
             commit_dirty (bool): True to commit dirty database mapping, False to roll back
             commit_msg (str): commit message
         """
-        parents = self._fetch_parents_by_listener.get(listener, ())
         for db_map in db_maps:
-            try:
-                worker = self._get_worker(db_map)
-                worker.remove_parents(parents)
-            except KeyError:
-                pass
             self.remove_db_map_listener(db_map, listener)
             try:
                 self.undo_stack[db_map].canRedoChanged.disconnect(listener.update_undo_redo_actions)
@@ -968,9 +927,9 @@ class SpineDBManager(QObject):
 
     def get_scenario_alternative_id_list(self, db_map, scen_id, only_visible=True):
         scenario = self.get_item(db_map, "scenario", scen_id, only_visible=only_visible)
-        if scenario is None or not scenario["alternative_id_list"]:
+        if scenario is None:
             return []
-        return [int(id_) for id_ in scenario["alternative_id_list"].split(",")]
+        return scenario["alternative_id_list"]
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -983,9 +942,7 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = dict()
         for db_map, data in db_map_data.items():
-            make_cache = lambda tablenames, db_map=db_map, **kwargs: self.get_db_map_cache(
-                db_map, fetch_item_types=tablenames, **kwargs
-            )
+            make_cache = lambda *args, db_map=db_map, **kwargs: self.get_db_map_cache(db_map)
             try:
                 data_for_import = get_data_for_import(db_map, make_cache=make_cache, **data)
             except (TypeError, ValueError) as err:
@@ -1002,10 +959,10 @@ class SpineDBManager(QObject):
     def _import_data_cmds(self, db_map, data_for_import, db_map_error_log):
         for item_type, (to_add, to_update, import_error_log) in data_for_import:
             db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
-            if to_add:
-                yield AddItemsCommand(self, db_map, to_add, item_type, check=False)
             if to_update:
                 yield UpdateItemsCommand(self, db_map, to_update, item_type, check=False)
+            if to_add:
+                yield AddItemsCommand(self, db_map, to_add, item_type, check=False)
 
     def add_items(self, db_map_data, item_type, readd=False, check=True, callback=None):
         for db_map, data in db_map_data.items():
@@ -1014,7 +971,7 @@ class SpineDBManager(QObject):
             except KeyError:
                 # We're closing the kiosk.
                 continue
-            cache = self.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
+            cache = self.get_db_map_cache(db_map)
             worker.add_items(data, item_type, readd, check, cache, callback)
 
     def update_items(self, db_map_data, item_type, check=True, callback=None):
@@ -1024,7 +981,7 @@ class SpineDBManager(QObject):
             except KeyError:
                 # We're closing the kiosk.
                 continue
-            cache = self.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
+            cache = self.get_db_map_cache(db_map)
             worker.update_items(data, item_type, check, cache, callback)
 
     def add_alternatives(self, db_map_data):
@@ -1392,10 +1349,10 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             child_cmds = []
-            cache = self.get_db_map_cache(db_map, {"scenario_alternative"}, include_ancestors=True)
+            cache = self.get_db_map_cache(db_map)
             items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data, cache=cache)
             if ids_to_remove:
-                rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove})
+                rm_cmd = RemoveItemsCommand(self, db_map, ids_to_remove, "scenario_alternative")
                 child_cmds.append(rm_cmd)
             if items_to_add:
                 add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative")
@@ -1423,21 +1380,26 @@ class SpineDBManager(QObject):
     def remove_items(self, db_map_typed_ids):
         """Pushes a command to remove items to undo stack."""
         for db_map, ids_per_type in db_map_typed_ids.items():
-            self.undo_stack[db_map].push(RemoveItemsCommand(self, db_map, ids_per_type))
+            macro = SpineDBMacro(self._remove_items_commands(db_map, ids_per_type))
+            self.undo_stack[db_map].push(macro)
+
+    def _remove_items_commands(self, db_map, ids_per_type):
+        for item_type, ids_ in ids_per_type.items():
+            yield RemoveItemsCommand(self, db_map, ids_, item_type)
 
     @busy_effect
-    def do_remove_items(self, db_map_typed_ids, callback=None):
+    def do_remove_items(self, item_type, db_map_ids, callback=None):
         """Removes items from database.
 
         Args:
             db_map_typed_ids (dict): mapping DiffDatabaseMapping to item type (str) to lists of items to remove
         """
-        for db_map, ids_per_type in db_map_typed_ids.items():
+        for db_map, ids in db_map_ids.items():
             try:
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            worker.remove_items(ids_per_type, callback)
+            worker.remove_items(item_type, ids, callback)
 
     @staticmethod
     def db_map_ids(db_map_data):
@@ -1456,8 +1418,7 @@ class SpineDBManager(QObject):
         db_map_cascading_data = dict()
         for db_map, object_class_ids in db_map_ids.items():
             for item in self.get_items(db_map, "relationship_class", only_visible=only_visible):
-                object_class_id_list = {int(id_) for id_ in item["object_class_id_list"].split(",")}
-                if object_class_id_list & set(object_class_ids):
+                if set(item["object_class_id_list"]) & set(object_class_ids):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
@@ -1466,8 +1427,7 @@ class SpineDBManager(QObject):
         db_map_cascading_data = dict()
         for db_map, object_ids in db_map_ids.items():
             for item in self.get_items(db_map, "relationship", only_visible=only_visible):
-                object_id_list = {int(id_) for id_ in item["object_id_list"].split(",")}
-                if object_id_list & set(object_ids):
+                if set(item["object_id_list"]) & set(object_ids):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
@@ -1555,6 +1515,7 @@ class SpineDBManager(QObject):
             make_cache = lambda tablenames, db_map=db_map, **kwargs: self.get_db_map_cache(
                 db_map, fetch_item_types=tablenames, **kwargs
             )
+
             for key, items in export_data(db_map, make_cache=make_cache, parse_value=load_db_value, **item_ids).items():
                 data.setdefault(key, []).extend(items)
         return data

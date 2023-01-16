@@ -95,13 +95,13 @@ class UndoRedoMixin:
             super().keyPressEvent(e)
 
 
-class FilterWidgetBase(QWidget):
+class FilterWidget(QWidget):
     """Filter widget class."""
 
     okPressed = Signal()
     cancelPressed = Signal()
 
-    def __init__(self, parent):
+    def __init__(self, parent, make_filter_model, *args, **kwargs):
         """Init class.
 
         Args:
@@ -113,7 +113,6 @@ class FilterWidgetBase(QWidget):
         self._filter_empty_state = None
         self._search_text = ''
         self.search_delay = 200
-
         # create ui elements
         self._ui_vertical_layout = QVBoxLayout(self)
         self._ui_list = QListView()
@@ -124,12 +123,17 @@ class FilterWidgetBase(QWidget):
         self._ui_vertical_layout.addWidget(self._ui_edit)
         self._ui_vertical_layout.addWidget(self._ui_list)
         self._ui_vertical_layout.addWidget(self._ui_buttons)
-
-        # add models
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
+        self._filter_model = make_filter_model(*args, **kwargs)
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+        self.connect_signals()
 
-        self._filter_model = None
+    # For tests
+    def set_filter_list(self, items):
+        self._filter_state = items
+        self._filter_model.set_list(self._filter_state)
 
     def connect_signals(self):
         self._ui_list.clicked.connect(self._filter_model._handle_index_clicked)
@@ -156,11 +160,6 @@ class FilterWidgetBase(QWidget):
     def has_filter(self):
         """Returns true if any item is filtered in FilterCheckboxListModel false otherwise."""
         return not self._filter_model._all_selected
-
-    def set_filter_list(self, data):
-        """Sets the list of items to filter."""
-        self._filter_state = list(data)
-        self._filter_model.set_list(self._filter_state)
 
     def _apply_filter(self):
         """Apply current filter and save state."""
@@ -720,3 +719,19 @@ class PurgeSettingsDialog(QDialog):
             dict: mapping from purgeable database item name to purge flag
         """
         return self._item_check_boxes_widget.checked_states()
+
+
+class ResizingViewMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._resizing_timer = QTimer()
+        self._resizing_timer.setSingleShot(True)
+        self._resizing_timer.setInterval(20)
+        self._resizing_timer.timeout.connect(self._do_resize)
+
+    def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
+        self._resizing_timer.start()
+
+    def _do_resize(self):
+        raise NotImplementedError()

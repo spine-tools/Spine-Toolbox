@@ -19,17 +19,18 @@ Unit tests for the models in ``custom_qwidgets`` module.
 import unittest
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import DataToValueFilterWidget
+from spinetoolbox.widgets.custom_qwidgets import FilterWidget
+from spinetoolbox.mvcmodels.filter_checkbox_list_model import DataToValueFilterCheckboxListModel
 
 
-class TestDataToValueFilterWidget(unittest.TestCase):
+class TestFilterWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
 
     def setUp(self):
-        self._widget = DataToValueFilterWidget(None, str)
+        self._widget = FilterWidget(None, DataToValueFilterCheckboxListModel, None, str)
         self._widget.set_filter_list(["ei", "bii", "cii"])
 
     def tearDown(self):

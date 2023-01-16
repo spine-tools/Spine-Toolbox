@@ -785,9 +785,9 @@ class SpineDBEditorBase(QMainWindow):
         msg = f"Successfully updated {count} {item_type} item(s)"
         self._log_items_change(msg)
 
-    def _handle_items_removed(self, db_map_typed_data):
-        count = sum(len(data) for typed_data in db_map_typed_data.values() for data in typed_data.values())
-        msg = f"Successfully removed {count} item(s)"
+    def _handle_items_removed(self, item_type, db_map_data):
+        count = sum(len(data) for data in db_map_data.values())
+        msg = f"Successfully removed {count} {item_type} item(s)"
         self._log_items_change(msg)
 
     def restore_ui(self):

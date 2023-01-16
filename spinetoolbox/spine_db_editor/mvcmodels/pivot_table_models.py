@@ -31,12 +31,199 @@ from ..widgets.custom_delegates import (
 )
 
 
+class TopLeftHeaderItem:
+    """Base class for all 'top left pivot headers'.
+    Represents a header located in the top left area of the pivot table."""
+
+    def __init__(self, model):
+        """
+        Args:
+            model (PivotTableModelBase)
+        """
+        self._model = model
+
+    @property
+    def model(self):
+        return self._model
+
+    @property
+    def db_mngr(self):
+        return self._model.db_mngr
+
+    def _get_header_data_from_db(self, item_type, header_id, field_name, role):
+        db_map, id_ = header_id
+        item = self.db_mngr.get_item(db_map, item_type, id_)
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            return item.get(field_name)
+        if role == Qt.ToolTipRole:
+            return item.get("description", "No description")
+
+
+class TopLeftObjectHeaderItem(TopLeftHeaderItem):
+    """A top left header for object_class."""
+
+    def __init__(self, model, rank, class_name, class_id):
+        super().__init__(model)
+        self.rank = rank
+        self._name = class_name
+        self._class_id = class_id
+
+    @property
+    def header_type(self):
+        return "object"
+
+    @property
+    def name(self):
+        return self._name
+
+    def header_data(self, header_id, role=Qt.DisplayRole):
+        return self._get_header_data_from_db("object", header_id, "name", role)
+
+    def update_data(self, db_map_data):
+        if not db_map_data:
+            return False
+        self.db_mngr.update_objects(db_map_data)
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        db_map_data = {
+            db_map: [{"name": name, "class_id": class_id} for name in names]
+            for db_map, class_id in self._class_id.items()
+        }
+        self.db_mngr.add_objects(db_map_data)
+        return True
+
+
+class TopLeftParameterHeaderItem(TopLeftHeaderItem):
+    """A top left header for parameter_definition."""
+
+    @property
+    def header_type(self):
+        return "parameter"
+
+    @property
+    def name(self):
+        return "parameter"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):
+        return self._get_header_data_from_db("parameter_definition", header_id, "parameter_name", role)
+
+    def update_data(self, db_map_data):
+        if not db_map_data:
+            return False
+        self.db_mngr.update_parameter_definitions(db_map_data)
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        db_map_data = {
+            db_map: [{"name": name, "entity_class_id": class_id} for name in names]
+            for db_map, class_id in self.model._parent.current_class_id.items()
+        }
+        self.db_mngr.add_parameter_definitions(db_map_data)
+        return True
+
+
+class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
+    """A top left header for parameter index."""
+
+    @property
+    def header_type(self):
+        return "index"
+
+    @property
+    def name(self):
+        return "index"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        _, index = header_id
+        if role == PARSED_ROLE:
+            return index
+        return str(index)
+
+    def update_data(self, db_map_data):  # pylint: disable=no-self-use
+        return False
+
+    def add_data(self, _names):  # pylint: disable=no-self-use
+        return False
+
+
+class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
+    """A top left header for alternative."""
+
+    @property
+    def header_type(self):
+        return "alternative"
+
+    @property
+    def name(self):
+        return "alternative"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return self._get_header_data_from_db("alternative", header_id, "name", role)
+
+    def update_data(self, db_map_data):
+        if not db_map_data:
+            return False
+        self.db_mngr.update_alternatives(db_map_data)
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
+        self.db_mngr.add_alternatives(db_map_data)
+        return True
+
+
+class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
+    """A top left header for scenario."""
+
+    @property
+    def header_type(self):
+        return "scenario"
+
+    @property
+    def name(self):
+        return "scenario"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return self._get_header_data_from_db("scenario", header_id, "name", role)
+
+    def update_data(self, db_map_data):
+        if not db_map_data:
+            return False
+        self.db_mngr.update_scenarios(db_map_data)
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
+        self.db_mngr.add_scenarios(db_map_data)
+        return True
+
+
+class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
+    """A top left header for database."""
+
+    @property
+    def header_type(self):
+        return "database"
+
+    @property
+    def name(self):
+        return "database"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return header_id.codename
+
+
 class PivotTableModelBase(QAbstractTableModel):
-
-    _V_HEADER_WIDTH = 5
-    _MAX_FETCH_COUNT = 1000
-    _FETCH_DELAY = 0
-
+    _CHUNK_SIZE = 1000
     model_data_changed = Signal()
 
     def __init__(self, db_editor):
@@ -49,13 +236,14 @@ class PivotTableModelBase(QAbstractTableModel):
         self.db_mngr = db_editor.db_mngr
         self.model = PivotModel()
         self.top_left_headers = {}
+        self._active = False
         self._plot_x_column = None
         self._data_row_count = 0
         self._data_column_count = 0
-        self.rowsInserted.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.fetch_more_rows))
-        self.columnsInserted.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.fetch_more_columns))
-        self.modelAboutToBeReset.connect(self.reset_data_count)
-        self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
+        self.modelAboutToBeReset.connect(self._reset_data_count)
+        self.modelReset.connect(lambda *args: QTimer.singleShot(0, self._collect_more_data))
+        self.rowsInserted.connect(lambda *args: QTimer.singleShot(0, self._collect_more_rows))
+        self.columnsInserted.connect(lambda *args: QTimer.singleShot(0, self._collect_more_columns))
 
     def reset_fetch_parents(self):
         for parent in self._fetch_parents():
@@ -70,13 +258,17 @@ class PivotTableModelBase(QAbstractTableModel):
         raise NotImplementedError()
 
     def canFetchMore(self, _):
+        if not self._active:
+            return False
         result = False
         for fetch_parent in self._fetch_parents():
             for db_map in self._parent.db_maps:
-                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent, listener=self._parent)
+                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
         return result
 
     def fetchMore(self, _):
+        if not self._active:
+            return
         for parent in self._fetch_parents():
             for db_map in self._parent.db_maps:
                 self.db_mngr.fetch_more(db_map, parent)
@@ -87,18 +279,18 @@ class PivotTableModelBase(QAbstractTableModel):
         raise NotImplementedError()
 
     @Slot()
-    def reset_data_count(self):
+    def _reset_data_count(self):
         self._data_row_count = 0
         self._data_column_count = 0
 
     @Slot()
-    def start_fetching(self):
-        self.fetch_more_rows()
-        self.fetch_more_columns()
+    def _collect_more_data(self):
+        self._collect_more_rows()
+        self._collect_more_columns()
 
     @Slot()
-    def fetch_more_rows(self):
-        count = min(self._MAX_FETCH_COUNT, len(self.model.rows) - self._data_row_count)
+    def _collect_more_rows(self):
+        count = min(self._CHUNK_SIZE, len(self.model.rows) - self._data_row_count)
         if not count:
             return
         first = self.headerRowCount() + self.dataRowCount()
@@ -107,8 +299,8 @@ class PivotTableModelBase(QAbstractTableModel):
         self.endInsertRows()
 
     @Slot()
-    def fetch_more_columns(self):
-        count = min(self._MAX_FETCH_COUNT, len(self.model.columns) - self._data_column_count)
+    def _collect_more_columns(self):
+        count = min(self._CHUNK_SIZE, len(self.model.columns) - self._data_column_count)
         if not count:
             return
         first = self.headerColumnCount() + self.dataColumnCount()
@@ -131,14 +323,18 @@ class PivotTableModelBase(QAbstractTableModel):
     def reset_model(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
         self.beginResetModel()
         self.model.reset_model(data, index_ids, rows, columns, frozen, frozen_value)
+        self._active = True
         self.endResetModel()
         self._plot_x_column = None
+        self.reset_fetch_parents()
 
     def clear_model(self):
         self.beginResetModel()
         self.model.clear_model()
+        self._active = False
         self.endResetModel()
         self._plot_x_column = None
+        self.reset_fetch_parents()
 
     def update_model(self, data):
         """Update model with new data, but doesn't grow the model.
@@ -354,7 +550,7 @@ class PivotTableModelBase(QAbstractTableModel):
             if orientation == Qt.Horizontal and section == self._plot_x_column:
                 return "(X)"
             if orientation == Qt.Vertical:
-                return self._V_HEADER_WIDTH * " "
+                return 5 * " "
         return None
 
     def map_to_pivot(self, index):
@@ -529,196 +725,6 @@ class PivotTableModelBase(QAbstractTableModel):
         return any(self.top_left_headers[id_].add_data(names) for id_, names in names_by_top_left_id.items())
 
 
-class TopLeftHeaderItem:
-    """Base class for all 'top left pivot headers'.
-    Represents a header located in the top left area of the pivot table."""
-
-    def __init__(self, model):
-        """
-        Args:
-            model (PivotTableModelBase)
-        """
-        self._model = model
-
-    @property
-    def model(self):
-        return self._model
-
-    @property
-    def db_mngr(self):
-        return self._model.db_mngr
-
-    def _get_header_data_from_db(self, item_type, header_id, field_name, role):
-        db_map, id_ = header_id
-        item = self.db_mngr.get_item(db_map, item_type, id_)
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return item.get(field_name)
-        if role == Qt.ToolTipRole:
-            return item.get("description", "No description")
-
-
-class TopLeftObjectHeaderItem(TopLeftHeaderItem):
-    """A top left header for object_class."""
-
-    def __init__(self, model, class_name, class_id):
-        super().__init__(model)
-        self._name = class_name
-        self._class_id = class_id
-
-    @property
-    def header_type(self):
-        return "object"
-
-    @property
-    def name(self):
-        return self._name
-
-    def header_data(self, header_id, role=Qt.DisplayRole):
-        return self._get_header_data_from_db("object", header_id, "name", role)
-
-    def update_data(self, db_map_data):
-        if not db_map_data:
-            return False
-        self.db_mngr.update_objects(db_map_data)
-        return True
-
-    def add_data(self, names):
-        if not names:
-            return False
-        db_map_data = {
-            db_map: [{"name": name, "class_id": class_id} for name in names]
-            for db_map, class_id in self._class_id.items()
-        }
-        self.db_mngr.add_objects(db_map_data)
-        return True
-
-
-class TopLeftParameterHeaderItem(TopLeftHeaderItem):
-    """A top left header for parameter_definition."""
-
-    @property
-    def header_type(self):
-        return "parameter"
-
-    @property
-    def name(self):
-        return "parameter"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):
-        return self._get_header_data_from_db("parameter_definition", header_id, "parameter_name", role)
-
-    def update_data(self, db_map_data):
-        if not db_map_data:
-            return False
-        self.db_mngr.update_parameter_definitions(db_map_data)
-        return True
-
-    def add_data(self, names):
-        if not names:
-            return False
-        db_map_data = {
-            db_map: [{"name": name, "entity_class_id": class_id} for name in names]
-            for db_map, class_id in self.model._parent.current_class_id.items()
-        }
-        self.db_mngr.add_parameter_definitions(db_map_data)
-        return True
-
-
-class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
-    """A top left header for parameter index."""
-
-    @property
-    def header_type(self):
-        return "index"
-
-    @property
-    def name(self):
-        return "index"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
-        _, index = header_id
-        if role == PARSED_ROLE:
-            return index
-        return str(index)
-
-    def update_data(self, db_map_data):  # pylint: disable=no-self-use
-        return False
-
-    def add_data(self, _names):  # pylint: disable=no-self-use
-        return False
-
-
-class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
-    """A top left header for alternative."""
-
-    @property
-    def header_type(self):
-        return "alternative"
-
-    @property
-    def name(self):
-        return "alternative"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
-        return self._get_header_data_from_db("alternative", header_id, "name", role)
-
-    def update_data(self, db_map_data):
-        if not db_map_data:
-            return False
-        self.db_mngr.update_alternatives(db_map_data)
-        return True
-
-    def add_data(self, names):
-        if not names:
-            return False
-        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
-        self.db_mngr.add_alternatives(db_map_data)
-        return True
-
-
-class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
-    """A top left header for scenario."""
-
-    @property
-    def header_type(self):
-        return "scenario"
-
-    @property
-    def name(self):
-        return "scenario"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
-        return self._get_header_data_from_db("scenario", header_id, "name", role)
-
-    def update_data(self, db_map_data):
-        if not db_map_data:
-            return False
-        self.db_mngr.update_scenarios(db_map_data)
-        return True
-
-    def add_data(self, names):
-        if not names:
-            return False
-        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
-        self.db_mngr.add_scenarios(db_map_data)
-        return True
-
-
-class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
-    """A top left header for database."""
-
-    @property
-    def header_type(self):
-        return "database"
-
-    @property
-    def name(self):
-        return "database"
-
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
-        return header_id.codename
-
-
 class ParameterValuePivotTableModel(PivotTableModelBase):
     """A model for the pivot table in parameter_value input type."""
 
@@ -728,46 +734,38 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._object_fetch_parent = FlexibleFetchParent(
-            "object",
+        self._entity_fetch_parent = FlexibleFetchParent(
+            None,
             handle_items_added=self._handle_entities_added,
             handle_items_removed=self._handle_entities_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_entity_item,
-        )
-        self._relationship_fetch_parent = FlexibleFetchParent(
-            "relationship",
-            handle_items_added=self._handle_entities_added,
-            handle_items_removed=self._handle_entities_removed,
-            handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_entity_item,
+            accepts_item=self._parent.accepts_entity_item,
+            owner=self,
         )
         self._parameter_definition_fetch_parent = FlexibleFetchParent(
             "parameter_definition",
             handle_items_added=self._handle_parameter_definitions_added,
             handle_items_removed=self._handle_parameter_definitions_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_parameter_item,
+            accepts_item=self._parent.accepts_parameter_item,
+            owner=self,
         )
         self._parameter_value_fetch_parent = FlexibleFetchParent(
             "parameter_value",
             handle_items_added=self._handle_parameter_values_added,
             handle_items_removed=self._handle_parameter_values_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_parameter_item,
+            accepts_item=self._parent.accepts_parameter_item,
+            owner=self,
+            chunk_size=None,
         )
         self._alternative_fetch_parent = FlexibleFetchParent(
             "alternative",
             handle_items_added=self._handle_alternatives_added,
             handle_items_removed=self._handle_alternatives_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
+            owner=self,
         )
-
-    def _accepts_entity_item(self, item, db_map):
-        return item["class_id"] == self._parent.current_class_id.get(db_map)
-
-    def _accepts_parameter_item(self, item, db_map):
-        return item["entity_class_id"] == self._parent.current_class_id.get(db_map)
 
     def _handle_entities_added(self, db_map_data):
         data = self._load_empty_parameter_value_data(db_map_entities=db_map_data)
@@ -823,10 +821,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         yield self._parameter_value_fetch_parent
         yield self._alternative_fetch_parent
         yield self._parameter_definition_fetch_parent
+        yield self._entity_fetch_parent
+
+    def reset_fetch_parents(self):
+        super().reset_fetch_parents()
         if self._parent.current_class_type == "object_class":
-            yield self._object_fetch_parent
+            self._entity_fetch_parent.fetch_item_type = "object"
         elif self._parent.current_class_type == "relationship_class":
-            yield self._relationship_fetch_parent
+            self._entity_fetch_parent.fetch_item_type = "relationship"
 
     def db_map_object_ids(self, index):
         """
@@ -903,15 +905,17 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def call_reset_model(self, pivot=None):
         """See base class."""
         object_class_ids = self._parent.current_object_class_ids
-        data = self._parent.load_parameter_value_data()
-        top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
+        data = {}
+        top_left_headers = [
+            TopLeftObjectHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+        ]
         top_left_headers += [TopLeftParameterHeaderItem(self)]
         top_left_headers += [TopLeftAlternativeHeaderItem(self)]
         top_left_headers += [TopLeftDatabaseHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        super().reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, list(self.top_left_headers), *pivot)
 
     @staticmethod
     def make_delegate(parent):
@@ -951,7 +955,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         )
 
     def _relationship_parameter_value_to_add(self, db_map, header_ids, value_and_type, rel_id_lookup):
-        object_id_list = ",".join([str(id_) for id_ in header_ids[:-2]])
+        object_id_list = tuple(id_ for id_ in header_ids[:-2])
         relationship_id = rel_id_lookup[db_map, object_id_list]
         value, value_type = split_value_and_type(value_and_type)
         return dict(
@@ -1064,8 +1068,10 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
     def call_reset_model(self, pivot=None):
         """See base class."""
         object_class_ids = self._parent.current_object_class_ids
-        data = self._parent.load_expanded_parameter_value_data()
-        top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
+        data = {}
+        top_left_headers = [
+            TopLeftObjectHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+        ]
         self._index_top_left_header = TopLeftParameterIndexHeaderItem(self)
         top_left_headers += [
             self._index_top_left_header,
@@ -1076,7 +1082,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        super().reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, list(self.top_left_headers), *pivot)
         pivot_rows = pivot[0]
         try:
             x_column = pivot_rows.index(self._index_top_left_header.name)
@@ -1146,22 +1152,18 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_relationships_added,
             handle_items_removed=self._handle_relationships_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_relationship_item,
+            accepts_item=self._parent.accepts_entity_item,
+            owner=self,
+            chunk_size=None,
         )
         self._object_fetch_parent = FlexibleFetchParent(
             "object",
             handle_items_added=self._handle_objects_added,
             handle_items_removed=self._handle_objects_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._accepts_object_item,
+            accepts_item=self._parent.accepts_member_object_item,
+            owner=self,
         )
-
-    def _accepts_relationship_item(self, item, db_map):
-        return item["class_id"] == self._parent.current_class_id.get(db_map)
-
-    def _accepts_object_item(self, item, db_map):
-        object_class_id_list = {x[db_map] for x in self._parent.current_object_class_id_list}
-        return item["class_id"] in object_class_id_list
 
     def _handle_relationships_added(self, db_map_data):
         data = self._parent.load_full_relationship_data(db_map_relationships=db_map_data, action="add")
@@ -1198,16 +1200,15 @@ class RelationshipPivotTableModel(PivotTableModelBase):
     def call_reset_model(self, pivot=None):
         """See base class."""
         object_class_ids = self._parent.current_object_class_ids
-        data = self._parent.load_relationship_data()
-        top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
+        data = {}
+        top_left_headers = [
+            TopLeftObjectHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+        ]
         top_left_headers += [TopLeftDatabaseHeaderItem(self)]
-        self.top_left_headers = {
-            name: TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()
-        }
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        super().reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, list(self.top_left_headers), *pivot)
 
     @staticmethod
     def make_delegate(parent):
@@ -1277,18 +1278,22 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             handle_items_added=self._handle_scenarios_added,
             handle_items_removed=self._handle_scenarios_removed,
             handle_items_updated=self._handle_scenarios_updated,
+            owner=self,
         )
         self._alternative_fetch_parent = FlexibleFetchParent(
             "alternative",
             handle_items_added=self._handle_alternatives_added,
             handle_items_removed=self._handle_alternatives_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
+            owner=self,
         )
         self._scenario_alternative_fetch_parent = FlexibleFetchParent(
             "scenario_alternative",
             handle_items_added=lambda _: self._parent.refresh_views(),
             handle_items_removed=lambda _: self._parent.refresh_views(),
             handle_items_updated=lambda _: self._parent.refresh_views(),
+            owner=self,
+            chunk_size=None,
         )
 
     def _handle_scenarios_added(self, db_map_data):
@@ -1322,7 +1327,7 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
 
     def call_reset_model(self, pivot=None):
         """See base class."""
-        data = self._parent.load_scenario_alternative_data()
+        data = {}
         top_left_headers = [
             TopLeftScenarioHeaderItem(self),
             TopLeftAlternativeHeaderItem(self),
@@ -1331,7 +1336,7 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        super().reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, list(self.top_left_headers), *pivot)
 
     @staticmethod
     def make_delegate(parent):
@@ -1375,15 +1380,20 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         db_map_items = {}
         for (db_map, scen_id), alt_ids_to_add in to_add.items():
             alt_ids_to_remove = to_remove.pop((db_map, scen_id), [])
-            alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
-            alternative_id_list = alternative_id_list + alt_ids_to_add
-            alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alt_ids_to_remove]
-            db_item = {"id": scen_id, "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list])}
+            alternative_id_list = [
+                id_
+                for id_ in list(self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)) + alt_ids_to_add
+                if id_ not in alt_ids_to_remove
+            ]
+            db_item = {"id": scen_id, "alternative_id_list": alternative_id_list}
             db_map_items.setdefault(db_map, []).append(db_item)
         for (db_map, scen_id), alt_ids_to_remove in to_remove.items():
-            alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
-            alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alt_ids_to_remove]
-            db_item = {"id": scen_id, "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list])}
+            alternative_id_list = [
+                id_
+                for id_ in self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
+                if id_ not in alt_ids_to_remove
+            ]
+            db_item = {"id": scen_id, "alternative_id_list": alternative_id_list}
             db_map_items.setdefault(db_map, []).append(db_item)
         self.db_mngr.set_scenario_alternatives(db_map_items)
         return True

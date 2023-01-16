@@ -20,6 +20,7 @@ from PySide2.QtCore import Qt
 from PySide2.QtGui import QFont, QBrush, QIcon
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.fetch_parent import FlexibleFetchParent
 from .multi_db_tree_item import MultiDBTreeItem
 
 
@@ -107,6 +108,16 @@ class ObjectClassItem(EntityClassItem):
 
     item_type = "object_class"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._entity_group_fetch_parent = FlexibleFetchParent(
+            "entity_group",
+            accepts_item=self._accepts_entity_group_item,
+            handle_items_added=self._handle_entity_group_items_added,
+            handle_items_updated=self._handle_entity_group_items_updated,
+            owner=self,
+        )
+
     @property
     def child_item_class(self):
         """Returns ObjectItem."""
@@ -119,7 +130,42 @@ class ObjectClassItem(EntityClassItem):
     @property
     def _children_sort_key(self):
         """Reimplemented so groups are above non-groups."""
-        return lambda item: (not item.is_group(), item.display_id)
+        return lambda item: (not item.is_group, item.display_id)
+
+    def _can_fetch_more_entity_groups(self):
+        result = False
+        for db_map in self.db_maps:
+            result |= self.db_mngr.can_fetch_more(db_map, self._entity_group_fetch_parent)
+        return result
+
+    def can_fetch_more(self):
+        result = self._can_fetch_more_entity_groups()
+        result |= super().can_fetch_more()
+        return result
+
+    def _fetch_more_entity_groups(self):
+        for db_map in self.db_maps:
+            self.db_mngr.fetch_more(db_map, self._entity_group_fetch_parent)
+
+    def fetch_more(self):
+        self._fetch_more_entity_groups()
+        super().fetch_more()
+
+    def _accepts_entity_group_item(self, item, db_map):
+        return item["class_id"] == self.db_map_id(db_map)
+
+    def _handle_entity_group_items_added(self, db_map_data):
+        self._fetch_more_entity_groups()
+        db_map_ids = {db_map: [x["group_id"] for x in data] for db_map, data in db_map_data.items()}
+        self.update_children_by_id(db_map_ids, is_group=True)
+
+    def _handle_entity_group_items_updated(self, db_map_data):
+        db_map_ids = {db_map: [x["group_id"] for x in data] for db_map, data in db_map_data.items()}
+        self.update_children_by_id(db_map_ids, is_group=True)
+
+    def tear_down(self):
+        super().tear_down()
+        self._entity_group_fetch_parent.set_obsolete(True)
 
 
 class RelationshipClassItem(EntityClassItem):
@@ -147,11 +193,11 @@ class ObjectRelationshipClassItem(RelationshipClassItem):
         if not super().accepts_item(item, db_map):
             return False
         object_id = self.parent_item.db_map_id(db_map)
-        return str(object_id) in item["object_id_list"].split(",")
+        return object_id in item["object_id_list"]
 
 
-class MemberObjectClassItem(ObjectClassItem):
-    """A member object class item."""
+class MembersItem(EntityClassItem):
+    """An item to hold members of a group."""
 
     item_type = "members"
 
@@ -167,16 +213,16 @@ class MemberObjectClassItem(ObjectClassItem):
     def db_map_data(self, db_map):
         """Returns data for this item as if it was indeed an object class."""
         id_ = self.db_map_id(db_map)
-        return self.db_mngr.get_item(db_map, super().item_type, id_)
+        return self.db_mngr.get_item(db_map, "object_class", id_)
 
     def _display_icon(self, for_group=False):
         """Returns icon for this item as if it was indeed an object class."""
         return self.db_mngr.entity_class_icon(
-            self.first_db_map, super().item_type, self.db_map_id(self.first_db_map), for_group=False
+            self.first_db_map, "object_class", self.db_map_id(self.first_db_map), for_group=False
         )
 
     def accepts_item(self, item, db_map):
-        return super().accepts_item(item, db_map) and item["group_id"] == self.parent_item.db_map_id(db_map)
+        return item["group_id"] == self.parent_item.db_map_id(db_map)
 
     @property
     def child_item_class(self):
@@ -199,17 +245,21 @@ class MemberObjectClassItem(ObjectClassItem):
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, is_group=False, **kwargs):
         super().__init__(*args, **kwargs)
+        self.is_group = is_group
         self.has_members_item = False
+
+    def update(self, is_group=False):
+        self.is_group = is_group
+
+    def should_be_merged(self):
+        return self.is_group
 
     @property
     def display_icon(self):
         """Returns corresponding class icon."""
-        return self.parent_item._display_icon(for_group=self.is_group())
-
-    def is_group(self):
-        return any(self.db_map_data_field(db_map, "group_id") is not None for db_map in self.db_maps)
+        return self.parent_item._display_icon(for_group=self.is_group)
 
     def data(self, column, role=Qt.DisplayRole):
         if role == Qt.ToolTipRole:
@@ -221,13 +271,13 @@ class EntityItem(MultiDBTreeItem):
         return False
 
     def _can_fetch_members_item(self):
-        return self.is_group() and not self.has_members_item
+        return self.is_group and not self.has_members_item
 
     def _fetch_members_item(self):
         if self._can_fetch_members_item():
             self.has_members_item = True
             # Insert members item. Note that we pass the db_map_ids of the parent object class item
-            self.insert_children(0, [MemberObjectClassItem(self.model, self.parent_item.db_map_ids.copy())])
+            self.insert_children(0, [MembersItem(self.model, self.parent_item.db_map_ids.copy())])
 
     def can_fetch_more(self):
         return super().can_fetch_more() or self._can_fetch_members_item()
@@ -259,7 +309,7 @@ class ObjectItem(EntityItem):
         if not super().accepts_item(item, db_map):
             return False
         object_class_id = self.db_map_data_field(db_map, 'class_id')
-        return str(object_class_id) in item["object_class_id_list"].split(",")
+        return object_class_id in item["object_class_id_list"]
 
 
 class MemberObjectItem(ObjectItem):
@@ -303,7 +353,7 @@ class RelationshipItem(EntityItem):
     def display_data(self):
         """ "Returns the name for display."""
         return DB_ITEM_SEPARATOR.join(
-            [x for x in self.object_name_list.split(",") if x != self.parent_item.parent_item.display_data]
+            [x for x in self.object_name_list if x != self.parent_item.parent_item.display_data]
         )
 
     @property
@@ -329,4 +379,4 @@ class RelationshipItem(EntityItem):
         grand_parent = self.parent_item.parent_item
         if grand_parent.item_type == "root":
             return True
-        return grand_parent.display_data in self.object_name_list.split(",")
+        return grand_parent.display_data in self.object_name_list

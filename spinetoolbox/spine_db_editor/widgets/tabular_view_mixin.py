@@ -181,8 +181,8 @@ class TabularViewMixin:
         current_object_class_id_list = [{} for _ in self.current_object_class_name_list]
         for db_map, class_id in self.current_class_id.items():
             relationship_class = self.db_mngr.get_item(db_map, "relationship_class", class_id)
-            for k, id_ in enumerate(relationship_class["object_class_id_list"].split(",")):
-                current_object_class_id_list[k][db_map] = int(id_)
+            for k, id_ in enumerate(relationship_class["object_class_id_list"]):
+                current_object_class_id_list[k][db_map] = id_
         return current_object_class_id_list
 
     @property
@@ -191,7 +191,7 @@ class TabularViewMixin:
         if self.current_class_type == "object_class":
             return [self.db_mngr.get_item(db_map, "object_class", class_id)["name"]]
         relationship_class = self.db_mngr.get_item(db_map, "relationship_class", class_id)
-        return fix_name_ambiguity(relationship_class["object_class_name_list"].split(","))
+        return fix_name_ambiguity(relationship_class["object_class_name_list"])
 
     @property
     def current_object_class_ids(self):
@@ -337,7 +337,7 @@ class TabularViewMixin:
             db_map_relationships = self._get_db_map_entities()
         get_id = self._make_get_id(action)
         return {
-            tuple((db_map, int(id_)) for id_ in rel["object_id_list"].split(',')) + (db_map,): get_id(db_map, rel)
+            tuple((db_map, id_) for id_ in rel["object_id_list"]) + (db_map,): get_id(db_map, rel)
             for db_map, relationships in db_map_relationships.items()
             for rel in relationships
         }
@@ -439,7 +439,7 @@ class TabularViewMixin:
             }
         if self.current_class_type == "relationship_class":
             db_map_entity_ids = {
-                db_map: [tuple((db_map, int(id_)) for id_ in e["object_id_list"].split(',')) for e in entities]
+                db_map: [tuple((db_map, id_) for id_ in e["object_id_list"]) for e in entities]
                 for db_map, entities in db_map_entities.items()
             }
         else:
@@ -482,7 +482,7 @@ class TabularViewMixin:
                 for x in items
             }
         return {
-            tuple((db_map, int(id_)) for id_ in x["object_id_list"].split(','))
+            tuple((db_map, id_) for id_ in x["object_id_list"])
             + ((db_map, x["parameter_id"]), (db_map, x["alternative_id"]), db_map): get_id(db_map, x)
             for db_map, items in db_map_parameter_values.items()
             for x in items
@@ -572,16 +572,15 @@ class TabularViewMixin:
         if not self._can_build_pivot_table():
             return
         self.pivot_table_model = self._pivot_table_models[self.current_input_type]
-        self.pivot_table_model.reset_fetch_parents()
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
+        self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
+        self.pivot_table_model.modelReset.connect(self.reload_frozen_table)
         delegate = self.pivot_table_model.make_delegate(self)
         self.ui.pivot_table.setItemDelegate(delegate)
-        self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
         pivot = self.get_pivot_preferences()
         self.wipe_out_filter_menus()
         self.pivot_table_model.call_reset_model(pivot)
         self.pivot_table_proxy.clear_filter()
-        self.reload_frozen_table()
 
     def _can_build_pivot_table(self):
         if self.current_input_type != self._SCENARIO_ALTERNATIVE and not self.current_class_id:
@@ -595,9 +594,10 @@ class TabularViewMixin:
         if self.pivot_table_model:
             self.pivot_table_model.clear_model()
             self.pivot_table_proxy.clear_filter()
+            self.pivot_table_model.modelReset.disconnect(self.make_pivot_headers)
+            self.pivot_table_model.modelReset.disconnect(self.reload_frozen_table)
             self.pivot_table_model = None
-        if self.frozen_table_model:
-            self.frozen_table_model.clear_model()
+        self.frozen_table_model.clear_model()
 
     def wipe_out_filter_menus(self):
         while self.filter_menus:
@@ -651,14 +651,26 @@ class TabularViewMixin:
             TabularViewFilterMenu
         """
         if identifier not in self.filter_menus:
-            pivot_top_left_header = self.pivot_table_model.top_left_headers[identifier]
-            data_to_value = pivot_top_left_header.header_data
+            header = self.pivot_table_model.top_left_headers[identifier]
+            if header.header_type == "parameter":
+                item_type = "parameter_definition"
+            elif header.header_type == "index":
+                item_type = "parameter_value"
+            else:
+                item_type = header.header_type
+            if header.header_type == "object":
+                accepts_item = (
+                    self.accepts_entity_item
+                    if self.current_class_type == "object_class"
+                    else lambda item, db_map: self.accepts_ith_member_object_item(header.rank, item, db_map)
+                )
+            elif header.header_type == "parameter":
+                accepts_item = self.accepts_parameter_item
+            else:
+                accepts_item = None
             self.filter_menus[identifier] = menu = TabularViewFilterMenu(
-                self, identifier, data_to_value, show_empty=False
+                self, self.db_mngr, self.db_maps, item_type, accepts_item, identifier, show_empty=False
             )
-            index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
-            index_values.pop(None, None)
-            menu.set_filter_list(index_values.keys())
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
@@ -798,3 +810,16 @@ class TabularViewMixin:
         """Reacts to session rolled back event."""
         super().receive_session_rolled_back(db_maps)
         self.clear_pivot_table()
+
+    def accepts_entity_item(self, item, db_map):
+        return item["class_id"] == self.current_class_id.get(db_map)
+
+    def accepts_parameter_item(self, item, db_map):
+        return item["entity_class_id"] == self.current_class_id.get(db_map)
+
+    def accepts_member_object_item(self, item, db_map):
+        object_class_id_list = {x[db_map] for x in self.current_object_class_id_list}
+        return item["class_id"] in object_class_id_list
+
+    def accepts_ith_member_object_item(self, i, item, db_map):
+        return item["class_id"] == self.current_object_class_id_list[i][db_map]

@@ -93,7 +93,7 @@ class AlternativeScenarioModel(TreeModelBase):
             # on a wrong tree item (bug in Qt or canDropMimeData()?).
             # In those cases the type of scen_alt_root_item is StandardTreeItem or ScenarioRootItem.
             return False
-        alternative_id_list = scen_alt_root_item.alternative_id_list
+        alternative_id_list = list(scen_alt_root_item.alternative_id_list)
         if row == -1:
             row = len(alternative_id_list)
         master_key, alternative_rows = json.loads(data.text()).popitem()
@@ -107,9 +107,6 @@ class AlternativeScenarioModel(TreeModelBase):
             alternative_ids = [scen_alt_root_item.child(row).alternative_id for row in alternative_rows]
             alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alternative_ids]
         alternative_id_list[row:row] = alternative_ids
-        db_item = {
-            "id": scen_alt_root_item.parent_item.id,
-            "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
-        }
+        db_item = {"id": scen_alt_root_item.parent_item.id, "alternative_id_list": alternative_id_list}
         self.db_mngr.set_scenario_alternatives({scen_alt_root_item.db_map: [db_item]})
         return True

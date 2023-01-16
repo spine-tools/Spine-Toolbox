@@ -16,7 +16,7 @@ Unit tests for the TreeViewFormAddMixin class.
 :date:   6.12.2018
 """
 from unittest import mock
-from PySide2.QtCore import Qt
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.spine_db_editor.mvcmodels.single_parameter_models import SingleParameterModel
 
 
@@ -193,11 +193,11 @@ class TestSpineDBEditorAddMixin:
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("object_name_list")).data(Qt.EditRole),
+                    tuple((model.index(row, h("object_name_list")).data() or "").split(DB_ITEM_SEPARATOR)),
                     model.index(row, h("parameter_name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )
-        self.assertTrue(("nemo,pluto", "relative_speed", "-1.0") in parameters)
-        self.assertTrue(("nemo,scooby", "relative_speed", "5.0") in parameters)
-        self.assertTrue(("pluto,nemo", "combined_mojo", "100.0") in parameters)
+        self.assertTrue((("nemo", "pluto"), "relative_speed", "-1.0") in parameters)
+        self.assertTrue((("nemo", "scooby"), "relative_speed", "5.0") in parameters)
+        self.assertTrue((("pluto", "nemo"), "combined_mojo", "100.0") in parameters)

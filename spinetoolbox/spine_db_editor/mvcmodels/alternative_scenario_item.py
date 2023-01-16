@@ -107,10 +107,10 @@ class ScenarioLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def scenario_alternative_root_item(self):
         return self.child(1)
 
-    def _do_finalize(self):
+    def _do_set_up(self):
         if not self.id:
             return
-        super()._do_finalize()
+        super()._do_set_up()
         self.append_children([ScenarioActiveItem(), ScenarioAlternativeRootItem()])
 
     def handle_updated_in_db(self):
@@ -246,11 +246,8 @@ class ScenarioAlternativeLeafItem(GrayIfLastMixin, LeafItem):
         if self.alternative_id:
             return False
         if column == 0:
-            alternative_id_list = self.parent_item.alternative_id_list
+            alternative_id_list = list(self.parent_item.alternative_id_list)
             alternative_id_list.append(value)
-            db_item = {
-                "id": self.parent_item.parent_item.id,
-                "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
-            }
+            db_item = {"id": self.parent_item.parent_item.id, "alternative_id_list": alternative_id_list}
             self.db_mngr.set_scenario_alternatives({self.db_map: [db_item]})
         return True

@@ -49,12 +49,15 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         }
         self._db_mngr.import_data({db_map: data})
         object_class_index = self._editor.object_tree_model.index(0, 0)
-        self._editor.object_tree_model.fetchMore(object_class_index)
+        if self._editor.object_tree_model.canFetchMore(object_class_index):
+            self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)
         self._editor._update_class_attributes(index)
         self._editor.do_reload_pivot_table()
         self._model = self._editor.pivot_table_model
-        self._model.start_fetching()
+        self._model.beginResetModel()
+        self._model.endResetModel()
+        qApp.processEvents()
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -129,7 +132,8 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
         }
         self._db_mngr.import_data({db_map: data})
         object_class_index = self._editor.object_tree_model.index(0, 0)
-        self._editor.object_tree_model.fetchMore(object_class_index)
+        if self._editor.object_tree_model.canFetchMore(object_class_index):
+            self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)
         for action in self._editor.pivot_action_group.actions():
             if action.text() == self._editor._INDEX_EXPANSION:
@@ -138,7 +142,9 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
         self._editor._update_class_attributes(index)
         self._editor.do_reload_pivot_table()
         self._model = self._editor.pivot_table_model
-        self._model.start_fetching()
+        self._model.beginResetModel()
+        self._model.endResetModel()
+        qApp.processEvents()
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()

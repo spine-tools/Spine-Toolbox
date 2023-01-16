@@ -122,12 +122,10 @@ class TestRelationshipItem(unittest.TestCase):
                 'id': 2,
                 'class_id': 2,
                 'class_name': 'rc',
-                'object_id_list': '1',
-                'object_name_list': 'o',
-                'object_class_id_list': '1',
-                'commit_id': None,
-                'type_id': 2,
-                'object_class_name_list': 'oc',
+                'object_id_list': (1,),
+                'object_name_list': ['o'],
+                'object_class_id_list': (1,),
+                'commit_id': 2,
             },
         )
 

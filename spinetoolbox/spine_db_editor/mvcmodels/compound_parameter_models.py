@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
 from ...helpers import rows_to_row_count_tuples, parameter_identifier
-from ...fetch_parent import FetchParent
+from ...fetch_parent import FlexibleFetchParent
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -37,7 +37,7 @@ from .single_parameter_models import (
 )
 
 
-class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
+class CompoundParameterModel(CompoundWithEmptyTableModel):
     """A model that concatenates several single parameter models
     and one empty parameter model.
     """
@@ -56,25 +56,32 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         self.db_maps = db_maps
         self._filter_class_ids = {}
         self._auto_filter_menus = {}
-        self._auto_filter = {}  # Maps field to db map, to entity id, to *accepted* item ids
+        self._auto_filter = {}
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
         self._filter_timer.setInterval(100)
         self._filter_timer.timeout.connect(self.refresh)
-
-    @property
-    def fetch_item_type(self):
-        return self.item_type
+        self._fetch_parent = FlexibleFetchParent(
+            self.item_type,
+            accepts_item=self.accepts_item,
+            handle_items_added=self.handle_items_added,
+            handle_items_removed=self.handle_items_removed,
+            handle_items_updated=self.handle_items_updated,
+            owner=self,
+        )
 
     def canFetchMore(self, _parent):
-        return any(self.db_mngr.can_fetch_more(db_map, self, listener=self._parent) for db_map in self.db_maps)
+        result = False
+        for db_map in self.db_maps:
+            result |= self.db_mngr.can_fetch_more(db_map, self._fetch_parent)
+        return result
 
     def fetchMore(self, _parent):
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self)
+            self.db_mngr.fetch_more(db_map, self._fetch_parent)
 
     def accepts_item(self, item, db_map):
-        return item[self.entity_class_id_key] is not None
+        return item.get(self.entity_class_id_key) is not None
 
     def _make_header(self):
         raise NotImplementedError()
@@ -157,15 +164,9 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         self._filter_class_ids = {}
         self._auto_filter = {}
         self.empty_model.fetchMore(QModelIndex())
-        self._make_auto_filter_menus()
-
-    def _make_auto_filter_menus(self):
-        """Makes auto filter menus."""
-        self._auto_filter_menus.clear()
-        for field in self.header:
-            # TODO: show_empty=True
-            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(self._parent, self, field, show_empty=False)
-            menu.filterChanged.connect(self.set_auto_filter)
+        while self._auto_filter_menus:
+            _, menu = self._auto_filter_menus.popitem()
+            menu.wipe_out()
 
     def get_auto_filter_menu(self, logical_index):
         """Returns auto filter menu for given logical index from header view.
@@ -176,27 +177,21 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         Returns:
             ParameterViewFilterMenu
         """
-        return self._auto_filter_menus.get(self.header[logical_index], None)
+        return self._make_auto_filter_menu(self.header[logical_index])
 
-    def _modify_data_in_filter_menus(self, action, db_map, db_items):
-        """Modifies data in filter menus.
-
-        Args:
-            action (str): either 'add', 'remove', or 'update'
-            db_map (DiffDatabaseMapping)
-            db_items (list(dict))
-        """
-        for menu in self._auto_filter_menus.values():
-            menu.modify_menu_data(action, db_map, db_items)
-
-    def _do_add_data_to_filter_menus(self, db_map, db_items):
-        self._modify_data_in_filter_menus("add", db_map, db_items)
-
-    def _do_update_data_in_filter_menus(self, db_map, db_items):
-        self._modify_data_in_filter_menus("update", db_map, db_items)
-
-    def _do_remove_data_from_filter_menus(self, db_map, db_items):
-        self._modify_data_in_filter_menus("remove", db_map, db_items)
+    def _make_auto_filter_menu(self, field):
+        if field not in self._auto_filter_menus:
+            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(
+                self._parent,
+                self.db_mngr,
+                self.db_maps,
+                self.item_type,
+                self.entity_class_id_key,
+                field,
+                show_empty=False,
+            )
+            menu.filterChanged.connect(self.set_auto_filter)
+        return self._auto_filter_menus[field]
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""
@@ -243,12 +238,13 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
     def _auto_filter_accepts_model(self, model):
         if None in self._auto_filter.values():
             return False
-        for auto_filter in self._auto_filter.values():
-            if not auto_filter:
+        for values in self._auto_filter.values():
+            if not values:
                 continue
-            if model.db_map not in auto_filter:
-                return False
-            if model.entity_class_id not in auto_filter[model.db_map]:
+            for db_map, entity_class_id in values:
+                if model.db_map == db_map and (entity_class_id is None or model.entity_class_id == entity_class_id):
+                    break
+            else:  # nobreak
                 return False
         return True
 
@@ -278,13 +274,13 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         self._auto_filter = {}
         self._invalidate_filter()
 
-    @Slot(str, dict)
+    @Slot(str, object)
     def set_auto_filter(self, field, values):
         """Updates and applies the auto filter.
 
         Args:
             field (str): the field name
-            values (dict): mapping db_map to entity_class id to accepted values for the field
+            values (dict): mapping (db_map, entity_class_id) to set of valid values
         """
         self._set_compound_auto_filter(field, values)
         for model in self.accepted_single_models():
@@ -295,7 +291,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
 
         Args:
             field (str): the field name
-            values (dict): maps tuple (database map, entity_class id) to list of accepted ids for the field
+            values (set): set of valid (db_map, item_type, id) tuples
         """
         if self._auto_filter.setdefault(field, {}) == values:
             return
@@ -312,7 +308,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         Returns:
             bool: True if the auto-filtered values were updated, None otherwise
         """
-        values = self._auto_filter[field].get(model.db_map, {}).get(model.entity_class_id, {})
+        values = self._auto_filter[field].get((model.db_map, model.entity_class_id), set())
         if model.set_auto_filter(field, values):
             self._invalidate_filter()
 
@@ -341,23 +337,6 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             list
         """
         return [m for m in self.single_models if m.db_map == db_map]
-
-    def receive_entity_classes_removed(self, db_map_data):
-        """Runs when entity classes are removed from the dbs.
-        Removes sub-models for the given entity classes and dbs.
-
-        Args:
-            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
-        """
-        self.layoutAboutToBeChanged.emit()
-        for db_map, data in db_map_data.items():
-            ids = {x["id"] for x in data}
-            for model in self._models_with_db_map(db_map):
-                if model.entity_class_id in ids:
-                    i = self.sub_models.index(model)
-                    self.sub_models.pop(i).deleteLater()
-        self._do_refresh()
-        self.layoutChanged.emit()
 
     def _items_per_class(self, items):
         """Returns a dict mapping entity_class ids to a set of items.
@@ -392,7 +371,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
                 ids_committed = list()
                 ids_uncommitted = list()
                 for item in class_items:
-                    is_committed = item.get("commit_id") is not None
+                    is_committed = db_map.commit_id() is None or item["commit_id"] != db_map.commit_id()
                     item_id = item["id"]
                     if item_id in existing_ids:
                         continue
@@ -402,7 +381,6 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
                         ids_uncommitted.append(item_id)
                 self._add_parameter_data(db_map, entity_class_id, ids_committed, committed=True)
                 self._add_parameter_data(db_map, entity_class_id, ids_uncommitted, committed=False)
-                self._do_add_data_to_filter_menus(db_map, class_items)
         self.empty_model.handle_items_added(db_map_data)
 
     def _get_insert_position(self, model):
@@ -445,10 +423,6 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         Args:
             db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
         """
-        for db_map, items in db_map_data.items():
-            items_per_class = self._items_per_class(items)
-            for class_items in items_per_class.values():
-                self._do_update_data_in_filter_menus(db_map, class_items)
         self._emit_data_changed_for_column("parameter_name")
         # NOTE: parameter_definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names are. Why?
@@ -470,8 +444,6 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
                 removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
                 for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
                     del model._main_data[row : row + count]
-            for class_items in items_per_class.values():
-                self._do_remove_data_from_filter_menus(db_map, class_items)
         self._do_refresh()
         self.layoutChanged.emit()
 
@@ -518,7 +490,8 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             },
             "parameter_value": {"object_class": "object_name", "relationship_class": "object_name_list"},
         }[self.item_type][self.entity_class_type]
-        names = item[name_key].split(",")
+        name = item[name_key]
+        names = [name] if not isinstance(name, tuple) else list(name)
         alternative_name = {"parameter_definition": lambda x: None, "parameter_value": lambda x: x["alternative_name"]}[
             self.item_type
         ](item)
@@ -554,18 +527,16 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
     def filter_by(self, rows_per_column):
         for column, rows in rows_per_column.items():
             field = self.headerData(column)
-            menu = self._auto_filter_menus[field]
-            accepted_values = {self.index(row, column).data(Qt.EditRole) for row in rows}
+            menu = self._make_auto_filter_menu(field)
+            accepted_values = {self.index(row, column).data(Qt.DisplayRole) for row in rows}
             menu.set_filter_accepted_values(accepted_values)
-            menu._filter._apply_filter()
 
     def filter_excluding(self, rows_per_column):
         for column, rows in rows_per_column.items():
             field = self.headerData(column)
-            menu = self._auto_filter_menus[field]
-            rejected_values = {self.index(row, column).data(Qt.EditRole) for row in rows}
+            menu = self._make_auto_filter_menu(field)
+            rejected_values = {self.index(row, column).data(Qt.DisplayRole) for row in rows}
             menu.set_filter_rejected_values(rejected_values)
-            menu._filter._apply_filter()
 
 
 class CompoundObjectParameterMixin:
