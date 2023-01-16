@@ -352,20 +352,17 @@ class TestSpineDBEditor(
     def put_mock_object_parameter_definitions_in_db_mngr(self):
         """Put water and breed object parameter definitions in the db mngr."""
         parameter_definitions = [self.water_parameter, self.breed_parameter]
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.add_parameter_definitions({self.mock_db_map: parameter_definitions})
+        self.db_mngr.add_parameter_definitions({self.mock_db_map: parameter_definitions})
 
     def put_mock_relationship_parameter_definitions_in_db_mngr(self):
         """Put relative speed and combined mojo relationship parameter definitions in the db mngr."""
         parameter_definitions = [self.relative_speed_parameter, self.combined_mojo_parameter]
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.add_parameter_definitions({self.mock_db_map: parameter_definitions})
+        self.db_mngr.add_parameter_definitions({self.mock_db_map: parameter_definitions})
 
     def put_mock_object_parameter_values_in_db_mngr(self):
         """Put some object parameter values in the db mngr."""
         parameter_values = [self.nemo_water, self.pluto_breed, self.scooby_breed]
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.add_parameter_values({self.mock_db_map: parameter_values})
+        self.db_mngr.add_parameter_values({self.mock_db_map: parameter_values})
 
     def put_mock_relationship_parameter_values_in_db_mngr(self):
         """Put some relationship parameter values in the db mngr."""
@@ -374,8 +371,7 @@ class TestSpineDBEditor(
             self.nemo_scooby_relative_speed,
             self.pluto_nemo_combined_mojo,
         ]
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.add_parameter_values({self.mock_db_map: parameter_values})
+        self.db_mngr.add_parameter_values({self.mock_db_map: parameter_values})
 
     def put_mock_dataset_in_db_mngr(self):
         """Put mock dataset in the db mngr."""

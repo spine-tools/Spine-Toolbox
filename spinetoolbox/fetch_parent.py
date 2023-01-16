@@ -16,53 +16,112 @@ The FetchParent and FlexibleFetchParent classes.
 :date:   18.11.2022
 """
 
+from PySide2.QtCore import QTimer, Signal, Slot, QObject
+from .helpers import busy_effect
 
-class FetchParent:
-    _CHUNK_SIZE = 1000
-    _worker = None
-    _fetched = False
-    _busy = False
-    position = 0
-    fetch_token = None
-    will_have_children = None
-    """Whether this parent will have children if fetched.
-    None means we don't know yet. Set to a boolean value whenever we find out.
+
+class FetchParent(QObject):
     """
+    Attrs:
+        fetch_token (int or None)
+        will_have_children (bool or None): Whether this parent will have children if fetched.
+            None means we don't know yet. Set to a boolean value whenever we find out.
+    """
+
+    _changes_pending = Signal()
+
+    def __init__(self, owner=None, chunk_size=1000):
+        """
+        Args:
+            owner (object): somebody who owns this FetchParent. If it's a QObject instance, then this FetchParent
+                becomes obsolete whenener the owner is destroyed
+            chunk_size (int or None): the number of items this parent should be happy with fetching at a time.
+                If None, then no limit is imposed and the parent should fetch the entire contents of the DB.
+        """
+        super().__init__()
+        self._timer = QTimer()
+        self._items_to_add = {}
+        self._items_to_update = {}
+        self._items_to_remove = {}
+        self._obsolete = False
+        self._fetched = False
+        self._busy = False
+        self._position = {}
+        self.fetch_token = None
+        self.will_have_children = None
+        self._timer.setSingleShot(True)
+        self._timer.setInterval(0)
+        self._timer.timeout.connect(self._apply_pending_changes)
+        self._changes_pending.connect(self._timer.start)
+        self._owner = owner
+        if isinstance(self._owner, QObject):
+            self._owner.destroyed.connect(lambda obj=None: self.set_obsolete(True))
+        self.chunk_size = chunk_size
+
+    def reset_fetching(self, fetch_token):
+        """Resets fetch parent as if nothing was ever fetched.
+
+        Args:
+            fetch_token (object): current fetch token
+        """
+        if self.is_obsolete:
+            return
+        self._timer.stop()
+        self._items_to_add.clear()
+        self._items_to_update.clear()
+        self._items_to_remove.clear()
+        self._fetched = False
+        self._busy = False
+        self._position.clear()
+        self.fetch_token = fetch_token
+        self.will_have_children = None
+        self.will_have_children_change()
+
+    def position(self, db_map):
+        return self._position.setdefault(db_map, 0)
+
+    def increment_position(self, db_map):
+        self._position[db_map] += 1
+
+    @Slot()
+    def _do_apply_pending_changes(self):
+        self._apply_pending_changes()
+
+    @busy_effect
+    def _apply_pending_changes(self):
+        if self.is_obsolete:
+            return
+        for db_map in list(self._items_to_add):
+            data = self._items_to_add.pop(db_map)
+            self.handle_items_added({db_map: data})
+        for db_map in list(self._items_to_update):
+            data = self._items_to_update.pop(db_map)
+            self.handle_items_updated({db_map: data})
+        for db_map in list(self._items_to_remove):
+            data = self._items_to_remove.pop(db_map)
+            self.handle_items_removed({db_map: data})
+        QTimer.singleShot(0, lambda: self.set_busy(False))
+
+    def add_item(self, db_map, item):
+        self._items_to_add.setdefault(db_map, []).append(item)
+        self._changes_pending.emit()
+
+    def update_item(self, db_map, item):
+        self._items_to_update.setdefault(db_map, []).append(item)
+        self._changes_pending.emit()
+
+    def remove_item(self, db_map, item):
+        self._items_to_remove.setdefault(db_map, []).append(item)
+        self._changes_pending.emit()
 
     @property
     def fetch_item_type(self):
         """Returns the type of item to fetch, e.g., "object_class".
-        Used to create an initial query for this item.
 
         Returns:
             str
         """
         raise NotImplementedError()
-
-    def bind_worker(self, worker):
-        self._worker = worker
-
-    def _next_chunk(self):
-        """Produces the next chunk of items by iterating the worker's cache.
-        If nothing found, then schedules a progression of the worker's query so more items can be found in the future.
-
-        Yields:
-            dict
-        """
-        k = 0
-        for item in self._worker.iterate_cache(self):
-            yield item
-            k += 1
-            if k == self._CHUNK_SIZE:
-                return
-        if not self.is_fetched and k == 0:
-            self._worker.advance_query(self)
-
-    def __next__(self):
-        return list(self._next_chunk())
-
-    def __iter__(self):
-        return self
 
     # pylint: disable=no-self-use
     def accepts_item(self, item, db_map):
@@ -83,6 +142,18 @@ class FetchParent:
 
     def will_have_children_change(self):
         """Called when the will_have_children property changes."""
+
+    @property
+    def is_obsolete(self):
+        return self._obsolete
+
+    def set_obsolete(self, obsolete):
+        """Sets the obsolete status.
+
+        Args:
+            obsolete (bool): whether parent has become obsolete
+        """
+        self._obsolete = obsolete
 
     @property
     def is_fetched(self):
@@ -107,20 +178,6 @@ class FetchParent:
             busy (bool): whether parent is busy fetching
         """
         self._busy = busy
-
-    def reset_fetching(self, fetch_token):
-        """Resets fetch parent as if nothing was ever fetched.
-
-        Args:
-            fetch_token (object): current fetch token
-        """
-        self._worker = None
-        self._fetched = False
-        self._busy = False
-        self.position = 0
-        self.fetch_token = fetch_token
-        self.will_have_children = None
-        self.will_have_children_change()
 
     def handle_items_added(self, db_map_data):
         """
@@ -154,13 +211,17 @@ class FetchParent:
 
 
 class ItemTypeFetchParent(FetchParent):
-    def __init__(self, fetch_item_type):
-        super().__init__()
+    def __init__(self, fetch_item_type, owner=None, chunk_size=1000):
+        super().__init__(owner=owner, chunk_size=chunk_size)
         self._fetch_item_type = fetch_item_type
 
     @property
     def fetch_item_type(self):
         return self._fetch_item_type
+
+    @fetch_item_type.setter
+    def fetch_item_type(self, fetch_item_type):
+        self._fetch_item_type = fetch_item_type
 
     def handle_items_added(self, db_map_data):
         raise NotImplementedError(self.fetch_item_type)
@@ -171,6 +232,9 @@ class ItemTypeFetchParent(FetchParent):
     def handle_items_updated(self, db_map_data):
         raise NotImplementedError(self.fetch_item_type)
 
+    def __str__(self):
+        return f"{super().__str__()} fetching {self.fetch_item_type} items owned by {self._owner}"
+
 
 class FlexibleFetchParent(ItemTypeFetchParent):
     def __init__(
@@ -180,12 +244,16 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         handle_items_removed=None,
         handle_items_updated=None,
         accepts_item=None,
+        will_have_children_change=None,
+        owner=None,
+        chunk_size=1000,
     ):
-        super().__init__(fetch_item_type)
+        super().__init__(fetch_item_type, owner=owner, chunk_size=chunk_size)
         self._accepts_item = accepts_item
         self._handle_items_added = handle_items_added
         self._handle_items_removed = handle_items_removed
         self._handle_items_updated = handle_items_updated
+        self._will_have_children_change = will_have_children_change
 
     def handle_items_added(self, db_map_data):
         if self._handle_items_added is None:
@@ -206,3 +274,9 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         if self._accepts_item is None:
             return super().accepts_item(item, db_map)
         return self._accepts_item(item, db_map)
+
+    def will_have_children_change(self):
+        if self._will_have_children_change is None:
+            super().will_have_children_change()
+        else:
+            self._will_have_children_change()

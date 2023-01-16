@@ -306,6 +306,7 @@ class MockInstantQProcess(mock.Mock):
 
 
 class TestSpineDBManager(SpineDBManager):
+    # FIXME: Needed?
     def fetch_all(self, db_map):
         worker = self._get_worker(db_map)
         for item_type in db_map.ITEM_TYPES:
@@ -318,6 +319,12 @@ class TestSpineDBManager(SpineDBManager):
         with mock.patch("spinetoolbox.spine_db_worker.QtBasedThreadPoolExecutor") as mock_executor:
             mock_executor.return_value = _MockExecutor()
             return super().get_db_map(*args, **kwargs)
+
+    def can_fetch_more(self, db_map, parent):
+        parent.add_item = lambda db_map, item: parent.handle_items_added({db_map: [item]})
+        parent.update_item = lambda db_map, item: parent.handle_items_updated({db_map: [item]})
+        parent.remove_item = lambda db_map, item: parent.handle_items_removed({db_map: [item]})
+        return super().can_fetch_more(db_map, parent)
 
 
 class _MockExecutor:

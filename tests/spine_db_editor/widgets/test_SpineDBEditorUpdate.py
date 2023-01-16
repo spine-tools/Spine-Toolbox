@@ -16,10 +16,7 @@ Unit tests for the TreeViewFormUpdateMixin.
 :date:   6.12.2018
 """
 
-import unittest
-from unittest import mock
-from PySide6.QtCore import Qt
-from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 
 
 class TestSpineDBEditorUpdateMixin:
@@ -77,8 +74,7 @@ class TestSpineDBEditorUpdateMixin:
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.fetch_object_tree_model()
         self.water_parameter = self._object_parameter_definition(1, self.fish_class["id"], "fish", "fire")
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.water_parameter]})
+        self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.water_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -106,8 +102,7 @@ class TestSpineDBEditorUpdateMixin:
             ["fish", "dog"],
             "each_others_opinion",
         )
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.relative_speed_parameter]})
+        self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.relative_speed_parameter]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -139,8 +134,7 @@ class TestSpineDBEditorUpdateMixin:
             b'"pepper"',
             None,
         )
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_water]})
+        self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_water]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -175,16 +169,15 @@ class TestSpineDBEditorUpdateMixin:
             b"100",
             None,
         )
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_pluto_relative_speed]})
+        self.db_mngr.update_parameter_values({self.mock_db_map: [self.nemo_pluto_relative_speed]})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("object_name_list")).data(Qt.ItemDataRole.EditRole),
+                    tuple((model.index(row, h("object_name_list")).data() or "").split(DB_ITEM_SEPARATOR)),
                     model.index(row, h("parameter_name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )
-        self.assertTrue(("nemo,pluto", "relative_speed", "100.0") in parameters)
+        self.assertTrue((("nemo", "pluto"), "relative_speed", "100.0") in parameters)

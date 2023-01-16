@@ -31,7 +31,7 @@ class TreeItem:
         self._model = model
         self._parent_item = None
         self._fetched = False
-        self._finalized = False
+        self._set_up_once = False
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
@@ -117,13 +117,13 @@ class TreeItem:
     def index(self):
         return self.model.index_from_item(self)
 
-    def finalize(self):
-        if not self._finalized:
-            self._do_finalize()
-            self._finalized = True
+    def set_up(self):
+        if not self._set_up_once:
+            self._set_up_once = True
+            self._do_set_up()
 
-    def _do_finalize(self):
-        """Do some final initialization after setting the parent."""
+    def _do_set_up(self):
+        """Do stuff after the item has been inserted."""
 
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
@@ -137,18 +137,26 @@ class TreeItem:
             raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
         if position < 0 or position > self.child_count():
             return False
+        self.model.beginInsertRows(self.index(), position, position + len(children) - 1)
         for child in children:
             child.parent_item = self
-        self.model.beginInsertRows(self.index(), position, position + len(children) - 1)
         self.children[position:position] = children
         self.model.endInsertRows()
         for child in children:
-            child.finalize()
+            child.set_up()
         return True
 
     def append_children(self, children):
         """Append children at the end."""
         return self.insert_children(self.child_count(), children)
+
+    def tear_down(self):
+        """Do stuff after the item has been removed."""
+
+    def tear_down_recursively(self):
+        for child in self.children:
+            child.tear_down_recursively()
+        self.tear_down()
 
     def remove_children(self, position, count):
         """Removes count children starting from the given position.
@@ -166,11 +174,14 @@ class TreeItem:
             return False
         if last >= self.child_count():
             last = self.child_count() - 1
+        children = self.children[first : last + 1]
         self.model.beginRemoveRows(self.index(), first, last)
-        for child in self.children[first : last + 1]:
+        for child in children:
             child.parent_item = None
         del self.children[first : last + 1]
         self.model.endRemoveRows()
+        for child in children:
+            child.tear_down_recursively()
         return True
 
     def clear_children(self):

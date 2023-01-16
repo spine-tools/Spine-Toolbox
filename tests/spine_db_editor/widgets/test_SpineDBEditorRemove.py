@@ -86,8 +86,7 @@ class TestSpineDBEditorRemoveMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.fetch_object_tree_model()
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.water_parameter["id"]}}})
+        self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.water_parameter["id"]}}})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -108,10 +107,7 @@ class TestSpineDBEditorRemoveMixin:
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
         self.fetch_object_tree_model()
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.remove_items(
-                {self.mock_db_map: {"parameter_definition": {self.relative_speed_parameter["id"]}}}
-            )
+        self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.relative_speed_parameter["id"]}}})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -130,8 +126,7 @@ class TestSpineDBEditorRemoveMixin:
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
         self.fetch_object_tree_model()
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_water["id"]}}})
+        self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_water["id"]}}})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -149,8 +144,7 @@ class TestSpineDBEditorRemoveMixin:
         model = self.spine_db_editor.relationship_parameter_value_model
         model.init_model()
         self.put_mock_dataset_in_db_mngr()
-        with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
-            self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_pluto_relative_speed["id"]}}})
+        self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_pluto_relative_speed["id"]}}})
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):

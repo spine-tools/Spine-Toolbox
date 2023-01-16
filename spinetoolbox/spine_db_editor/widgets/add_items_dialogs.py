@@ -55,7 +55,6 @@ from .manage_items_dialogs import (
     ManageItemsDialog,
     ManageItemsDialogBase,
 )
-from ...helpers import default_icon_id
 from ...spine_db_commands import AgedUndoCommand, AddItemsCommand, RemoveItemsCommand
 
 
@@ -89,10 +88,10 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         return QTableWidget(self)
 
     def populate_table_view(self):
-        object_class_name_list = self.relationship_class["object_class_name_list"].split(",")
+        object_class_name_list = self.relationship_class["object_class_name_list"]
         self.table_view.setRowCount(len(self.relationships))
         self.table_view.setColumnCount(len(object_class_name_list) + 1)
-        labels = [""] + object_class_name_list
+        labels = ("",) + object_class_name_list
         self.table_view.setHorizontalHeaderLabels(labels)
         self.table_view.verticalHeader().hide()
         for row, relationship in enumerate(self.relationships):
@@ -543,8 +542,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
     def reset_model(self, index):
         """Setup model according to current relationship_class selected in combobox."""
         self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
-        object_class_name_list = self.object_class_name_list.split(",")
-        header = object_class_name_list + ['relationship name', 'databases']
+        header = self.object_class_name_list + ('relationship name', 'databases')
         self.model.set_horizontal_header_labels(header)
         default_db_maps = [
             db_map
@@ -609,7 +607,6 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
                 rel_cls = relationship_classes[self.class_name, self.object_class_name_list]
                 class_id = rel_cls["id"]
                 object_class_id_list = rel_cls["object_class_id_list"]
-                object_class_id_list = [int(x) for x in object_class_id_list.split(",")]
                 objects = self.db_map_obj_lookup[db_map]
                 object_id_list = list()
                 for object_class_id, object_name in zip(object_class_id_list, object_name_list):
@@ -741,7 +738,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
             for relationship in self.db_mngr.get_items_by_field(
                 db_map, "relationship", "class_id", rel_cls["id"], only_visible=False
             ):
-                key = tuple(relationship["object_name_list"].split(","))
+                key = relationship["object_name_list"]
                 self.relationship_ids[key] = relationship["id"]
         existing_items = sorted(self.relationship_ids)
         self.existing_items_model.reset_model(existing_items)
@@ -1025,6 +1022,6 @@ class ManageMembersDialog(ObjectGroupDialogBase):
         if items_to_add:
             AddItemsCommand(self.db_mngr, self.db_map, items_to_add, "entity_group", parent=macro)
         if ids_to_remove:
-            RemoveItemsCommand(self.db_mngr, self.db_map, {"entity_group": ids_to_remove}, parent=macro)
+            RemoveItemsCommand(self.db_mngr, self.db_map, ids_to_remove, "entity_group", parent=macro)
         self.db_mngr.undo_stack[self.db_map].push(macro)
         super().accept()

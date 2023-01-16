@@ -48,6 +48,7 @@ class MetadataTableModel(MetadataTableModelBase):
             handle_items_added=self.add_metadata,
             handle_items_removed=self.remove_metadata,
             handle_items_updated=self.update_metadata,
+            owner=self,
         )
 
     @staticmethod

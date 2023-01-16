@@ -34,8 +34,7 @@ class PivotModel:
         self._column_data_header = []  # header values for column data
 
     def reset_model(self, data, index_ids=(), rows=(), columns=(), frozen=(), frozen_value=()):
-        """Resets the model.
-        """
+        """Resets the model."""
         if not rows + columns + frozen:
             # no pivot given, set default
             rows = tuple(index_ids)

@@ -1250,31 +1250,32 @@ def parameter_identifier(database, parameter, names, alternative):
 class SignalWaiter(QObject):
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
-    def __init__(self):
-        super().__init__()
-        self._triggered = False
-        self.args = ()
-
-    def trigger(self, *args):
-        """Signal receiving slot."""
-        self._triggered = True
-        self.args = args
-
-    def wait(self, condition=lambda args: True):
-        """Wait for signal to be received.
-
+    def __init__(self, condition=None):
+        """
         Args:
             condition (function): receiving the self.args and returning whether to stop waiting.
         """
-        while True:
-            if self._triggered and condition(self.args):
-                break
+        super().__init__()
+        self._triggered = False
+        self.args = ()
+        self._condition = condition
+
+    def trigger(self, *args):
+        """Signal receiving slot."""
+        if self._triggered:
+            return
+        self._triggered = True if self._condition is None else self._condition(*args)
+        self.args = args
+
+    def wait(self):
+        """Wait for signal to be received."""
+        while not self._triggered:
             QApplication.processEvents()
 
 
 @contextmanager
-def signal_waiter(signal):
-    waiter = SignalWaiter()
+def signal_waiter(signal, condition=None):
+    waiter = SignalWaiter(condition=condition)
     signal.connect(waiter.trigger)
     try:
         yield waiter

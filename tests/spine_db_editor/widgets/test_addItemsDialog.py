@@ -18,6 +18,7 @@ Unit tests for SpineDBEditor classes.
 
 import unittest
 from unittest import mock
+from tempfile import TemporaryDirectory
 import logging
 import sys
 from PySide6.QtCore import QModelIndex
@@ -51,7 +52,8 @@ class TestAddItemsDialog(unittest.TestCase):
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = SpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            url = "sqlite:///"
+            self._temp_dir = TemporaryDirectory()
+            url = "sqlite:///" + self._temp_dir.name + "/db.sqlite"
             self._db_map = self._db_mngr.get_db_map(url, logger, codename="mock_db", create=True)
             self._db_editor = SpineDBEditor(self._db_mngr, {url: "mock_db"})
 
@@ -69,6 +71,7 @@ class TestAddItemsDialog(unittest.TestCase):
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
         self._db_editor = None
+        self._temp_dir.cleanup()
 
     def test_add_object_classes(self):
         """Test object classes are added through the manager when accepting the dialog."""

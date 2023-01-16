@@ -21,12 +21,18 @@ from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemS
 from PySide6.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
+from spinetoolbox.widgets.custom_qwidgets import ResizingViewMixin
 from .custom_delegates import ToolFeatureDelegate, AlternativeScenarioDelegate, ParameterValueListDelegate
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels.alternative_scenario_item import AlternativeLeafItem
 
 
-class EntityTreeView(CopyTreeView):
+class ResizableTreeView(ResizingViewMixin, CopyTreeView):
+    def _do_resize(self):
+        self.resizeColumnToContents(0)
+
+
+class EntityTreeView(ResizableTreeView):
     """Tree view base class for object and relationship tree views."""
 
     tree_selection_changed = Signal(dict)
@@ -110,7 +116,6 @@ class EntityTreeView(CopyTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
-        self.resizeColumnToContents(0)
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)
@@ -282,7 +287,7 @@ class ObjectTreeView(EntityTreeView):
         self._add_object_group_action.setEnabled(item.item_type == "object_class")
         self._add_relationship_classes_action.setEnabled(item.item_type in ("root", "object_class"))
         self._manage_members_action.setEnabled(item.item_type == "members")
-        self._duplicate_object_action.setEnabled(item.item_type == "object" and not item.is_group())
+        self._duplicate_object_action.setEnabled(item.item_type == "object" and not item.is_group)
         self._find_next_action.setEnabled(item.item_type == "relationship")
 
     def _add_middle_actions(self):
@@ -373,7 +378,7 @@ class RelationshipTreeView(EntityTreeView):
         self._spine_db_editor.show_add_relationships_form(self._context_item)
 
 
-class ItemTreeView(CopyTreeView):
+class ItemTreeView(ResizableTreeView):
     """Base class for all non-entity tree views."""
 
     def __init__(self, parent):
@@ -581,14 +586,14 @@ class AlternativeScenarioTreeView(ItemTreeView):
                 scen_alt_root_item = scen_item.scenario_alternative_root_item
                 if not scen_alt_root_item.non_empty_children:
                     continue
-                curr_alt_id_list = scen_alt_root_item.alternative_id_list
+                curr_alt_id_list = list(scen_alt_root_item.alternative_id_list)
                 new_alt_id_list = [
                     id_
                     for alt_item, id_ in zip(scen_alt_root_item.non_empty_children, curr_alt_id_list)
                     if alt_item not in items
                 ]
                 if new_alt_id_list != curr_alt_id_list:
-                    item = {"id": scen_item.id, "alternative_id_list": ",".join([str(id_) for id_ in new_alt_id_list])}
+                    item = {"id": scen_item.id, "alternative_id_list": new_alt_id_list}
                     db_map_scen_alt_data[db_item.db_map].append(item)
         self.model().db_mngr.set_scenario_alternatives(db_map_scen_alt_data)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)

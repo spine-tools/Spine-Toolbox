@@ -19,13 +19,6 @@ Miscelaneous mixins for parameter models
 from spinedb_api.parameter_value import split_value_and_type
 
 
-def _parse_csv_list(csv_list):
-    try:
-        return csv_list.split(",")
-    except AttributeError:
-        return None
-
-
 class ConvertToDBMixin:
     """Base class for all mixins that convert model items (name-based) into database items (id-based)."""
 
@@ -485,7 +478,7 @@ class ImposeEntityClassIdMixin(ConvertToDBMixin):
         entity_id = entity_ids.get(self.entity_class_id)
         parameter_definition_id = parameter_ids.get(self.entity_class_id)
         if entity_id:
-            item["entity_id"] = entity_id
+            item[self.entity_id_key] = entity_id
         if parameter_definition_id:
             item["parameter_definition_id"] = parameter_definition_id
         return []
@@ -518,9 +511,8 @@ class MakeRelationshipOnTheFlyMixin:
         for db_map, items in db_map_data.items():
             for item in items:
                 object_name_list = item.get("object_name_list")
-                parsed_object_name_list = _parse_csv_list(object_name_list)
-                if parsed_object_name_list:
-                    db_map_object_names.setdefault(db_map, set()).update(parsed_object_name_list)
+                if object_name_list:
+                    db_map_object_names.setdefault(db_map, set()).update(object_name_list)
                 relationship_class_name = item.get("relationship_class_name")
                 db_map_rel_cls_names.setdefault(db_map, set()).add(relationship_class_name)
         # Build lookup dicts
@@ -557,20 +549,19 @@ class MakeRelationshipOnTheFlyMixin:
         """
         relationship_class_name = item.get("relationship_class_name")
         object_name_list = item.get("object_name_list")
+        if not object_name_list:
+            return None, []
         relationships = self._db_map_existing_rels.get(db_map, set())
         if (relationship_class_name, object_name_list) in relationships:
             return None, []
         relationship_class = self._db_map_rel_cls_lookup.get(db_map, {}).get(relationship_class_name)
         if not relationship_class:
             return None, [f"Unknown relationship_class {relationship_class_name}"] if relationship_class_name else []
-        parsed_object_name_list = _parse_csv_list(object_name_list)
-        if parsed_object_name_list is None:
-            return None, [f"Unable to parse {object_name_list}"] if object_name_list else []
         object_id_list = []
-        for name in parsed_object_name_list:
+        for name in object_name_list:
             object_ = self._db_map_obj_lookup.get(db_map, {}).get(name)
             if not object_:
                 return None, [f"Unknown object {name}"]
             object_id_list.append(object_["id"])
-        relationship_name = relationship_class_name + "__" + "_".join(parsed_object_name_list)
+        relationship_name = relationship_class_name + "__" + "_".join(object_name_list)
         return {"class_id": relationship_class["id"], "object_id_list": object_id_list, "name": relationship_name}, []

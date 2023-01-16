@@ -17,7 +17,6 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication
 
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog, AddObjectsDialog
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.widgets.custom_editors import SearchBarEditor

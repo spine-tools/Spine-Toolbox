@@ -17,9 +17,10 @@ Classes for custom context menus and pop-up menus.
 """
 
 import os
-from PySide6.QtWidgets import QMenu
+from PySide6.QtWidgets import QMenu, QWidgetAction
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import Slot, QPersistentModelIndex
+from spinetoolbox.widgets.custom_qwidgets import FilterWidget
 
 
 class CustomContextMenu(QMenu):
@@ -143,7 +144,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
 
     def has_recents(self):
         """Returns True if recent projects available, False otherwise."""
-        return False if not self._parent.qsettings().value("appSettings/recentProjects", defaultValue=None) else True
+        return bool(self._parent.qsettings().value("appSettings/recentProjects", defaultValue=None))
 
     def add_recent_projects(self):
         """Reads the previous project names and paths from QSettings. Adds them to the QMenu as QActions."""
@@ -202,19 +203,22 @@ class FilterMenuBase(QMenu):
             parent (QWidget): a parent widget
         """
         super().__init__(parent)
-        self._remove_filter = QAction('Remove filters', None)
         self._filter = None
-        self._filter_action = None
+        self._remove_filter = QAction('Remove filters', None)
+        self._filter_action = QWidgetAction(self)
         self.addAction(self._remove_filter)
+
+    def _set_up(self, make_filter_model, *args, **kwargs):
+        self._filter = FilterWidget(self, make_filter_model, *args, **kwargs)
+        self._filter_action.setDefaultWidget(self._filter)
+        self.addAction(self._filter_action)
+        self.connect_signals()
 
     def connect_signals(self):
         self.aboutToShow.connect(self._check_filter)
         self._remove_filter.triggered.connect(self._clear_filter)
         self._filter.okPressed.connect(self._change_filter)
         self._filter.cancelPressed.connect(self.hide)
-
-    def set_filter_list(self, data):
-        self._filter.set_filter_list(data)
 
     def add_items_to_filter_list(self, items):
         self._filter._filter_model.add_items(items)

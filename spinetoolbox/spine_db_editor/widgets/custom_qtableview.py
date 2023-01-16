@@ -15,12 +15,11 @@ Custom QTableView classes that support copy-paste and the like.
 :author: M. Marin (KTH)
 :date:   18.5.2018
 """
-from dataclasses import replace
 
+from dataclasses import replace
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint
 from PySide6.QtWidgets import QTableView, QHeaderView, QMenu
 from PySide6.QtGui import QKeySequence, QAction
-
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels.pivot_table_models import (
     ParameterValuePivotTableModel,
@@ -32,7 +31,7 @@ from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
-from ...widgets.custom_qwidgets import TitleWidgetAction
+from ...widgets.custom_qwidgets import TitleWidgetAction, ResizingViewMixin
 from ...plotting import (
     PlottingError,
     ParameterTableHeaderSection,
@@ -67,7 +66,7 @@ def _set_parameter_data(index, new_value):
     index.model().setData(index, new_value)
 
 
-class ParameterTableView(AutoFilterCopyPasteTableView):
+class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
     value_column_header: str = NotImplemented
     """Either "default value" or "value". Used to identify the value column for advanced editing and plotting."""
 
@@ -258,8 +257,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
 
-    def rowsInserted(self, parent, start, end):
-        super().rowsInserted(parent, start, end)
+    def _do_resize(self):
         self.resizeColumnsToContents()
 
     @Slot(QModelIndex, QModelIndex)
@@ -407,7 +405,7 @@ class RelationshipParameterValueTableView(RelationshipParameterTableMixin, Param
         )
 
 
-class PivotTableView(CopyPasteTableView):
+class PivotTableView(ResizingViewMixin, CopyPasteTableView):
     """Custom QTableView class with pivot capabilities.
 
     Uses 'contexts' to provide different UI elements (table headers, context menus,...) depending on what
@@ -422,8 +420,8 @@ class PivotTableView(CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
-        self.setHorizontalScrollMode(QTableView.ScrollPerPixel)
-        self.setVerticalScrollMode(QTableView.ScrollPerPixel)
+        self.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+        self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         # NOTE: order of creation of header tables is important for them to stack properly
         self._left_header_table = CopyPasteTableView(self)
         self._top_header_table = CopyPasteTableView(self)
@@ -852,6 +850,9 @@ class PivotTableView(CopyPasteTableView):
             checked = len(selected) * [not all(selected)]
             source_model.batch_set_data(self._selected_scenario_alternative_indexes, checked)
 
+    def _do_resize(self):
+        self.resizeColumnsToContents()
+
     @property
     def source_model(self):
         return self.model().sourceModel()
@@ -945,8 +946,8 @@ class PivotTableView(CopyPasteTableView):
             header_table.show()
             header_table.verticalHeader().hide()
             header_table.horizontalHeader().hide()
-            header_table.setHorizontalScrollMode(QTableView.ScrollPerPixel)
-            header_table.setVerticalScrollMode(QTableView.ScrollPerPixel)
+            header_table.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+            header_table.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
             header_table.setStyleSheet("QTableView { border: none;}")
             self.viewport().stackUnder(header_table)
 
@@ -1063,7 +1064,7 @@ class MetadataTableViewBase(CopyPasteTableView):
             db_editor (SpineDBEditor): database editor
         """
 
-    def _populate_context_menu(self,):
+    def _populate_context_menu(self):
         """Fills context menu with actions."""
         self._menu.addAction(self.copy_action)
         self._menu.addAction(self.paste_action)

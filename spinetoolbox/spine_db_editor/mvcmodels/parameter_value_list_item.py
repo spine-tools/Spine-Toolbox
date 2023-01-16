@@ -70,10 +70,10 @@ class ListItem(
     def _make_item_data(self):
         return {"name": "Type new list name here..." if self._name is None else self._name}
 
-    def _do_finalize(self):
+    def _do_set_up(self):
         if not self.id and not self._name:
             return
-        super()._do_finalize()
+        super()._do_set_up()
 
     # pylint: disable=no-self-use
     def empty_child(self):

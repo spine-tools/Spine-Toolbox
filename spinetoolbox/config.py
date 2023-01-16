@@ -24,7 +24,7 @@ from pathlib import Path
 LATEST_PROJECT_VERSION = 9
 
 # For the Add/Update SpineOpt wizard
-REQUIRED_SPINE_OPT_VERSION = "0.5.3"
+REQUIRED_SPINE_OPT_VERSION = "0.6.9"
 
 # Invalid characters for directory names
 # NOTE: "." is actually valid in a directory name but this is

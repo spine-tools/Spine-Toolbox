@@ -90,7 +90,7 @@ class TestBase(unittest.TestCase):
     def _add_object_parameter_values(self, values):
         self._db_mngr.add_object_classes({self._db_map: [{"name": "class"}]})
         self._db_mngr.add_parameter_definitions(
-            {self._db_map: [{"entity_class_id": 1, "name": name} for name in values]}
+            {self._db_map: [{"object_class_id": 1, "name": name} for name in values]}
         )
         object_count = max(len(x) for x in values.values())
         self._db_mngr.add_objects({self._db_map: [{"class_id": 1, "name": f"o{i + 1}"} for i in range(object_count)]})
@@ -100,8 +100,8 @@ class TestBase(unittest.TestCase):
         }
         value_items = [
             {
-                "entity_class_id": 1,
-                "entity_id": (i + 1),
+                "object_class_id": 1,
+                "object_id": (i + 1),
                 "parameter_definition_id": param_i + 1,
                 "alternative_id": 1,
                 "type": type_,
@@ -115,6 +115,8 @@ class TestBase(unittest.TestCase):
     def _select_object_class_in_tree_view(self):
         object_tree_model = self._db_editor.ui.treeView_object.model()
         root_index = object_tree_model.index(0, 0)
+        if object_tree_model.canFetchMore(root_index):
+            object_tree_model.fetchMore(root_index)
         self.assertEqual(object_tree_model.rowCount(root_index), 1)
         class_index = object_tree_model.index(0, 0, root_index)
         refreshing_models = list(self._db_editor._parameter_models) + list(self._db_editor._parameter_value_models)

@@ -62,6 +62,7 @@ class ItemMetadataTableModel(MetadataTableModelBase):
             handle_items_removed=self.remove_item_metadata,
             handle_items_updated=self.update_item_metadata,
             accepts_item=self._accepts_entity_metadata_item,
+            owner=self,
         )
         self._parameter_value_metadata_fetch_parent = FlexibleFetchParent(
             "parameter_value_metadata",
@@ -69,6 +70,7 @@ class ItemMetadataTableModel(MetadataTableModelBase):
             handle_items_removed=self.remove_item_metadata,
             handle_items_updated=self.update_item_metadata,
             accepts_item=self._accepts_parameter_value_metadata_item,
+            owner=self,
         )
 
     def _fetch_parents(self):

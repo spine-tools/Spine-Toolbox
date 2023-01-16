@@ -119,8 +119,8 @@ class EmptyChildMixin:
     def empty_child(self):
         raise NotImplementedError()
 
-    def _do_finalize(self):
-        super()._do_finalize()
+    def _do_set_up(self):
+        super()._do_set_up()
         empty_child = self.empty_child()
         self.append_children([empty_child])
 
@@ -137,11 +137,17 @@ class SortChildrenMixin:
                 return False
         return True
 
+    def _resort(self):
+        # FIXME MM Needed?
+        non_empty_children, empty_child = self.children[:-1], self.children[-1]
+        non_empty_children.sort(key=self._children_sort_key)
+        self.children = non_empty_children + [empty_child]
+        top = self.model.index_from_item(self.child(0))
+        bottom = self.model.index_from_item(self.child(-1))
+        self.model.dataChanged.emit(top, bottom)
+
 
 class FetchMoreMixin:
-    # FIXME: Use parent for calls to fetch_more can_fetch_more
-    # and also insert items from db map cache in case they were already fetched
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._natural_fetch_parent = FlexibleFetchParent(
@@ -151,6 +157,10 @@ class FetchMoreMixin:
             handle_items_updated=self.handle_items_updated,
             accepts_item=self.accepts_item,
         )
+
+    def tear_down(self):
+        super().tear_down()
+        self._natural_fetch_parent.set_obsolete(True)
 
     @property
     def fetch_item_type(self):
@@ -162,7 +172,7 @@ class FetchMoreMixin:
     def can_fetch_more(self):
         result = False
         for parent in self._fetch_parents():
-            result |= self.db_mngr.can_fetch_more(self.db_map, parent, listener=self.model.db_editor)
+            result |= self.db_mngr.can_fetch_more(self.db_map, parent)
         return result
 
     def fetch_more(self):

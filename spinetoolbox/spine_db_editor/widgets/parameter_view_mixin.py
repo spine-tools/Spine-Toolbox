@@ -25,7 +25,7 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from ...helpers import preferred_row_height
+from ...helpers import preferred_row_height, DB_ITEM_SEPARATOR
 
 
 class ParameterViewMixin:
@@ -100,8 +100,7 @@ class ParameterViewMixin:
         object_class_id_list = relationship_class.get("object_class_id_list")
         object_class_names = []
         object_names_lists = []
-        for id_ in object_class_id_list.split(","):
-            id_ = int(id_)
+        for id_ in object_class_id_list:
             object_class_name = self.db_mngr.get_item(db_map, "object_class", id_, only_visible=False).get("name")
             object_names_list = [
                 x["name"]
@@ -111,7 +110,7 @@ class ParameterViewMixin:
             object_names_lists.append(object_names_list)
         object_name_list = index.data(Qt.ItemDataRole.EditRole)
         try:
-            current_object_names = object_name_list.split(",")
+            current_object_names = object_name_list.split(DB_ITEM_SEPARATOR)
         except AttributeError:
             # Gibberish
             current_object_names = []

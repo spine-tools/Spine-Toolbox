@@ -33,6 +33,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyRelationshipParameterDefinitionModel,
 )
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinedb_api.parameter_value import join_value_and_type
 from ...mock_helpers import TestSpineDBManager
 
@@ -58,7 +59,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         import_objects(self._db_map, (("dog", "pluto"), ("fish", "nemo")))
         import_relationship_classes(self._db_map, (("dog__fish", ("dog", "fish")),))
         import_relationship_parameters(self._db_map, (("dog__fish", "relative_speed"),))
-        import_relationships(self._db_map, (("dog_fish", ("pluto", "nemo")),))
+        import_relationships(self._db_map, (("dog__fish", ("pluto", "nemo")),))
         self._db_map.commit_session("Add test data")
         self._db_mngr.fetch_all(self._db_map)
         self.object_table_header = [
@@ -140,13 +141,20 @@ class TestEmptyParameterModel(unittest.TestCase):
         self.assertTrue(
             model.batch_set_data(
                 _empty_indexes(model),
-                ["dog__fish", "pluto,nemo", "relative_speed", 1, join_value_and_type(b"-1", None), "mock_db"],
+                [
+                    "dog__fish",
+                    DB_ITEM_SEPARATOR.join(["pluto", "nemo"]),
+                    "relative_speed",
+                    1,
+                    join_value_and_type(b"-1", None),
+                    "mock_db",
+                ],
             )
         )
         values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["relationship_class_id"]]
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["relationship_class_name"], "dog__fish")
-        self.assertEqual(values[0]["object_name_list"], "pluto,nemo")
+        self.assertEqual(values[0]["object_name_list"], ("pluto", "nemo"))
         self.assertEqual(values[0]["parameter_name"], "relative_speed")
         self.assertEqual(values[0]["value"], b"-1")
 

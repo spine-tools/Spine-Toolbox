@@ -172,7 +172,6 @@ class GetObjectsMixin:
                 continue
             rel_cls = relationship_classes[rel_cls_key]
             object_class_id_list = rel_cls["object_class_id_list"]
-            object_class_id_list = [int(x) for x in object_class_id_list.split(",")]
             object_class_id = object_class_id_list[column]
             objects = self.db_map_obj_lookup[db_map]
             object_name_lists.append([name for (class_id, name) in objects if class_id == object_class_id])

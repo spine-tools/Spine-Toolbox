@@ -45,8 +45,8 @@ class ObjectTreeModel(MultiDBTreeModel):
             # Get specific data for our searches
             rel_cls_id = rel_cls_data['id']
             obj_id = obj_data['id']
-            object_ids = list(reversed([int(id_) for id_ in rel_data['object_id_list'].split(",")]))
-            object_class_ids = list(reversed([int(id_) for id_ in rel_cls_data['object_class_id_list'].split(",")]))
+            object_ids = list(reversed(rel_data['object_id_list']))
+            object_class_ids = list(reversed(rel_cls_data['object_class_id_list']))
             # Find position in the relationship of the (grand parent) object,
             # then use it to determine object_class and object id to look for
             pos = object_ids.index(obj_id) - 1

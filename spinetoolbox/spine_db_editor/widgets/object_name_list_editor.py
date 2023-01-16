@@ -12,7 +12,6 @@
 """
 Contains the ObjectNameListEditor class.
 
-
 :author: M. Marin (KTH)
 :date:   27.11.2019
 """
@@ -20,6 +19,7 @@ Contains the ObjectNameListEditor class.
 from PySide6.QtCore import Qt, Slot, Signal, QEvent, QCoreApplication
 from PySide6.QtWidgets import QItemDelegate
 from PySide6.QtGui import QStandardItemModel, QStandardItem
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from .manage_items_dialogs import ManageItemsDialog
 from ...widgets.custom_editors import SearchBarEditor
 
@@ -95,6 +95,6 @@ class ObjectNameListEditor(ManageItemsDialog):
     @Slot()
     def accept(self):
         self._index.model().setData(
-            self._index, ",".join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
+            self._index, DB_ITEM_SEPARATOR.join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
         )
         super().accept()

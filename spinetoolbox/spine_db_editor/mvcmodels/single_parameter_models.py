@@ -17,7 +17,6 @@ Single models for parameter definitions and values (as 'for a single entity').
 """
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QGuiApplication
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
@@ -243,8 +242,8 @@ class SingleParameterModel(HalfSortedTableModel):
                 if description not in (None, ""):
                     return description
             data = item.get(field)
-            if role == Qt.ItemDataRole.DisplayRole and data and field in self.group_fields:
-                data = data.replace(",", DB_ITEM_SEPARATOR)
+            if data and field in self.group_fields:
+                data = DB_ITEM_SEPARATOR.join(data)
             return data
         if role == Qt.ItemDataRole.DecorationRole and field == self.entity_class_name_field:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
@@ -257,11 +256,17 @@ class SingleParameterModel(HalfSortedTableModel):
         Sets data directly in database using db mngr. If successful, updated data will be
         automatically seen by the data method.
         """
+
+        def split_value(value, column):
+            if self.header[column] in self.group_fields:
+                return tuple(value.split(DB_ITEM_SEPARATOR))
+            return value
+
         if not indexes or not data:
             return False
         row_data = dict()
         for index, value in zip(indexes, data):
-            row_data.setdefault(index.row(), {})[self.header[index.column()]] = value
+            row_data.setdefault(index.row(), {})[self.header[index.column()]] = split_value(value, index.column())
         items = [dict(id=self._main_data[row], **data) for row, data in row_data.items()]
         self.update_items_in_db(items)
         return True
@@ -278,7 +283,7 @@ class SingleParameterModel(HalfSortedTableModel):
         return self._auto_filter_accepts_item(item)
 
     def set_auto_filter(self, field, values):
-        if values == self._auto_filter.get(field, {}):
+        if values == self._auto_filter.get(field, set()):
             return False
         self._auto_filter[field] = values
         return True
@@ -287,12 +292,8 @@ class SingleParameterModel(HalfSortedTableModel):
         """Returns the result of the auto filter."""
         if self._auto_filter is None:
             return False
-        try:
-            item_id = item["id"]
-        except KeyError as error:
-            raise error
-        for accepted_ids in self._auto_filter.values():
-            if accepted_ids and item_id not in accepted_ids:
+        for field, values in self._auto_filter.items():
+            if values and item.get(field) not in values:
                 return False
         return True
 
@@ -353,7 +354,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
         """Update items in db.
 
         Args:
-            item (list): dictionary-items
+            items (list): dictionary-items
         """
         self.build_lookup_dictionary({self.db_map: items})
         param_defs = list()
@@ -402,7 +403,7 @@ class SingleParameterValueMixin(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return item[self.entity_name_key], item["parameter_name"], item["alternative_name"]
+        return tuple(item[k] for k in (self.entity_name_key, "parameter_name", "alternative_name"))
 
     def set_filter_entity_ids(self, db_map_class_entity_ids):
         if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:
@@ -496,7 +497,7 @@ class SingleRelationshipParameterValueModel(
         """Update items in db.
 
         Args:
-            item (list): dictionary-items
+            items (list): dictionary-items
         """
         for item in items:
             item["relationship_class_name"] = self.entity_class_name
