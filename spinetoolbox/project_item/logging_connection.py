@@ -13,7 +13,7 @@
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from spine_engine.project_item.connection import ResourceConvertingConnection, Jump, ConnectionBase
+from spine_engine.project_item.connection import ResourceConvertingConnection, Jump, ConnectionBase, FilterSettings
 from ..log_mixin import LogMixin
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
 from ..helpers import busy_effect
@@ -30,12 +30,10 @@ class HeadlessConnection(ResourceConvertingConnection):
         destination_name,
         destination_position,
         options=None,
-        disabled_filter_names=None,
+        filter_settings=None,
         legacy_resource_filter_ids=None,
     ):
-        super().__init__(
-            source_name, source_position, destination_name, destination_position, options, disabled_filter_names
-        )
+        super().__init__(source_name, source_position, destination_name, destination_position, options, filter_settings)
         self._legacy_resource_filter_ids = legacy_resource_filter_ids
 
     @property
@@ -52,14 +50,13 @@ class HeadlessConnection(ResourceConvertingConnection):
             filter_name (str): filter name
             enabled (bool): True to enable the filter, False to disable it
         """
-        disabled_names = self._disabled_filter_names.setdefault(resource_label, {}).setdefault(filter_type, set())
-        if enabled:
-            disabled_names.discard(filter_name)
-        else:
-            disabled_names.add(filter_name)
+        specific_filter_settings = self._filter_settings.known_filters.setdefault(resource_label, {}).setdefault(
+            filter_type, {}
+        )
+        specific_filter_settings[filter_name] = enabled
 
-    def _convert_legacy_resource_filter_ids_to_disabled_filter_names(self):
-        """Converts legacy resource filter ids to disabled filter names.
+    def _convert_legacy_resource_filter_ids_to_filter_settings(self):
+        """Converts legacy resource filter ids to filter settings.
 
         This method should be called once after constructing the connection from potentially legacy dict
         using ``from_dict()``.
@@ -77,19 +74,19 @@ class HeadlessConnection(ResourceConvertingConnection):
                 continue
             try:
                 scenario_filter_ids = resource_filter_ids.get(SCENARIO_FILTER_TYPE)
-                disabled_scenarios = set()
                 if scenario_filter_ids is not None:
+                    specific_filter_settings = self._filter_settings.known_filters.setdefault(
+                        resource.label, {}
+                    ).setdefault(SCENARIO_FILTER_TYPE, {})
                     for row in db_map.query(db_map.scenario_sq):
-                        if row.id not in scenario_filter_ids:
-                            disabled_scenarios.add(row.name)
-                self._disabled_filter_names.setdefault(resource.label, {})[SCENARIO_FILTER_TYPE] = disabled_scenarios
+                        specific_filter_settings[row.name]: row.id = row.id in scenario_filter_ids
                 tool_filter_ids = resource_filter_ids.get(TOOL_FILTER_TYPE)
-                disabled_tools = set()
                 if tool_filter_ids is not None:
+                    specific_filter_settings = self._filter_settings.known_filters.setdefault(
+                        resource.label, {}
+                    ).setdefault(TOOL_FILTER_TYPE, {})
                     for row in db_map.query(db_map.tool_sq):
-                        if row.id not in tool_filter_ids:
-                            disabled_tools.add(row.name)
-                self._disabled_filter_names.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = disabled_tools
+                        specific_filter_settings[row.name] = row.id in tool_filter_ids
             finally:
                 db_map.connection.close()
         self._legacy_resource_filter_ids = None
@@ -119,7 +116,7 @@ class HeadlessConnection(ResourceConvertingConnection):
         """See base class."""
         super().receive_resources_from_source(resources)
         if self._legacy_resource_filter_ids is not None:
-            self._convert_legacy_resource_filter_ids_to_disabled_filter_names()
+            self._convert_legacy_resource_filter_ids_to_filter_settings()
 
     def replace_resources_from_source(self, old, new):
         """Replaces existing resources by new ones.
@@ -130,11 +127,11 @@ class HeadlessConnection(ResourceConvertingConnection):
         """
         for old_resource, new_resource in zip(old, new):
             self._resources.discard(old_resource)
-            old_filters = self._disabled_filter_names.pop(old_resource.label, None)
+            old_filters = self._filter_settings.known_filters.pop(old_resource.label, None)
             if new_resource.type_ == "database":
                 self._resources.add(new_resource)
                 if old_filters is not None:
-                    self._disabled_filter_names[new_resource.label] = old_filters
+                    self._filter_settings.known_filters[new_resource.label] = old_filters
 
 
 class LoggingConnection(LogMixin, HeadlessConnection):
@@ -169,22 +166,22 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             url = resource.url
             if not url:
                 continue
-            disabled_scenarios = set(self._disabled_filter_names.get(resource.label, {}).get(SCENARIO_FILTER_TYPE, ()))
-            disabled_tools = set(self._disabled_filter_names.get(resource.label, {}).get(TOOL_FILTER_TYPE, ()))
-            if not disabled_scenarios and not disabled_tools:
-                return True
             db_map = self._get_db_map(url)
             if db_map is None:
-                return False
+                continue
             available_scenarios = {
                 x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario", only_visible=True)
             }
-            enabled_scenarios = available_scenarios - disabled_scenarios
-            if enabled_scenarios:
+            scenario_filters = self._filter_settings.known_filters.get(resource.label, {}).get(SCENARIO_FILTER_TYPE, {})
+            if any(enabled for s, enabled in scenario_filters.items() if s in available_scenarios):
+                return True
+            if self._filter_settings.auto_online and any(name not in scenario_filters for name in available_scenarios):
                 return True
             available_tools = {x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "tool", only_visible=True)}
-            enabled_tools = available_tools - disabled_tools
-            if enabled_tools:
+            tool_filters = self._filter_settings.known_filters.get(resource.label, {}).get(TOOL_FILTER_TYPE, {})
+            if any(enabled for t, enabled in tool_filters.items() if t in available_tools):
+                return True
+            if self._filter_settings.auto_online and any(name not in tool_filters for name in available_tools):
                 return True
         return False
 
@@ -296,17 +293,24 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         """
         return self._destination_item_type == "Data Store"
 
-    def disabled_filter_names(self, resource_label, filter_type):
-        """Returns disabled filter names for given resource and filter type.
+    def online_filters(self, resource_label, filter_type):
+        """Returns filter online states for given resource and filter type.
 
         Args:
             resource_label (str): resource label
             filter_type (str): filter type
 
         Returns:
-            set of str: names of disabled filters
+            dict: mapping from filter names to online states
         """
-        return self._disabled_filter_names.get(resource_label, {}).get(filter_type, set())
+        found_resource = None
+        for resource in self._resources:
+            if resource.label == resource_label:
+                found_resource = resource
+                break
+        if found_resource is None:
+            return {}
+        return self._resource_filters_online(found_resource, filter_type)
 
     def set_online(self, resource, filter_type, online):
         """Sets the given filters online or offline.
@@ -316,10 +320,17 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
             online (dict): mapping from scenario/tool name to online flag
         """
-        enabled = {filter_name for filter_name, is_on in online.items() if is_on}
-        disabled = {filter_name for filter_name, is_on in online.items() if not is_on}
-        current_disabled = self._disabled_filter_names.get(resource, {}).get(filter_type, set())
-        self._disabled_filter_names.setdefault(resource, {})[filter_type] = disabled | (current_disabled - enabled)
+        self._filter_settings.known_filters.setdefault(resource, {}).setdefault(filter_type, {}).update(online)
+
+    def set_filter_default_online_status(self, auto_online):
+        """Sets the auto_online flag.
+
+        Args:
+            auto_online (bool): If True, unknown filters are online by default
+        """
+        self._filter_settings.auto_online = auto_online
+        if self is self._toolbox.active_link_item:
+            self._toolbox.link_properties_widgets[LoggingConnection].set_auto_check_filters_state(auto_online)
 
     def refresh_resource_filter_model(self):
         """Makes resource filter mode fetch filter data from database."""
@@ -356,53 +367,49 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         if self is self._toolbox.active_link_item:
             self._toolbox.link_properties_widgets[LoggingConnection].load_connection_options()
 
-    def _mask_unavailable_disabled_filters(self):
-        """Cross-checks disabled filters with source databases.
+    def _check_available_filters(self):
+        """Cross-checks filter settings with source databases.
 
         Returns:
-            dict: disabled filter names containing only names that exist in source databases
+            FilterSettings: filter settings containing only filters that exist in source databases
         """
-        available_disabled_filter_names = {}
+        filter_settings = FilterSettings(auto_online=self._filter_settings.auto_online)
         for resource in self._resources:
-            url = resource.url
-            if not url:
-                continue
-            try:
-                db_map = DatabaseMapping(url)
-            except (SpineDBAPIError, SpineDBVersionError):
-                continue
-            try:
-                disabled_scenarios = set(
-                    self._disabled_filter_names.get(resource.label, {}).get(SCENARIO_FILTER_TYPE, set())
-                )
-                available_scenarios = {row.name for row in db_map.query(db_map.scenario_sq)}
-                available_disabled_scenarios = disabled_scenarios & available_scenarios
-                if available_disabled_scenarios:
-                    available_disabled_filter_names.setdefault(resource.label, {})[
-                        SCENARIO_FILTER_TYPE
-                    ] = available_disabled_scenarios
-                disabled_tools = set(self._disabled_filter_names.get(resource.label, {}).get(TOOL_FILTER_TYPE, set()))
-                available_tools = {row.name for row in db_map.query(db_map.tool_sq)}
-                available_disabled_tools = disabled_tools & available_tools
-                if available_disabled_tools:
-                    available_disabled_filter_names.setdefault(resource.label, {})[
-                        TOOL_FILTER_TYPE
-                    ] = available_disabled_tools
-            finally:
-                db_map.connection.close()
-        return available_disabled_filter_names
+            for filter_type in (SCENARIO_FILTER_TYPE, TOOL_FILTER_TYPE):
+                online_filters = self._resource_filters_online(resource, filter_type)
+                if online_filters is not None:
+                    filter_settings.known_filters.setdefault(resource.label, {})[filter_type] = online_filters
+        return filter_settings
+
+    def _resource_filters_online(self, resource, filter_type):
+        url = resource.url
+        if not url:
+            return None
+        db_map = self._get_db_map(url)
+        if db_map is None:
+            return None
+        db_item_type = {SCENARIO_FILTER_TYPE: "scenario", TOOL_FILTER_TYPE: "tool"}[filter_type]
+        available_filters = (
+            x["name"] for x in self._toolbox.db_mngr.get_items(db_map, db_item_type, only_visible=True)
+        )
+        specific_filter_settings = self._filter_settings.known_filters.get(resource.label, {}).get(filter_type, {})
+        checked_specific_filter_settings = {}
+        for name in sorted(available_filters):
+            checked_specific_filter_settings[name] = specific_filter_settings.get(
+                name, self._filter_settings.auto_online
+            )
+        return checked_specific_filter_settings
 
     def to_dict(self):
         """See base class."""
-        has_disabled_filters = self._has_disabled_filters()
         original = None
-        if has_disabled_filters:
+        if self.has_filters():
             # Temporarily remove unavailable filters to keep project.json clean.
-            original = self._disabled_filter_names
-            self._disabled_filter_names = self._mask_unavailable_disabled_filters()
+            original = self._filter_settings
+            self._filter_settings = self._check_available_filters()
         d = super().to_dict()
-        if has_disabled_filters:
-            self._disabled_filter_names = original
+        if original is not None:
+            self._filter_settings = original
         return d
 
     def tear_down(self):

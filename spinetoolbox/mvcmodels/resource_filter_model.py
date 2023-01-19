@@ -49,10 +49,10 @@ class ResourceFilterModel(QStandardItemModel):
     def build_tree(self):
         """Rebuilds model's contents."""
 
-        def append_filter_items(parent_item, filters, filter_type, disabled):
-            for name in filters[filter_type]:
+        def append_filter_items(parent_item, filter_names, filter_type, online, online_default):
+            for name in filter_names[filter_type]:
                 filter_item = QStandardItem(name)
-                filter_item.setData(Qt.Checked if name not in disabled else Qt.Unchecked, Qt.CheckStateRole)
+                filter_item.setData(Qt.Checked if online.get(name, online_default) else Qt.Unchecked, Qt.CheckStateRole)
                 filter_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 parent_item.appendRow(filter_item)
 
@@ -77,8 +77,10 @@ class ResourceFilterModel(QStandardItemModel):
                 select_all_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 filter_parent.appendRow(select_all_item)
                 root_item.appendRow(filter_parent)
-                disabled_names = self._connection.disabled_filter_names(resource_label, type_)
-                append_filter_items(filter_parent, filters_by_type, type_, disabled_names)
+                online_filters = self._connection.online_filters(resource_label, type_)
+                append_filter_items(
+                    filter_parent, filters_by_type, type_, online_filters, self._connection.is_filter_online_by_default
+                )
                 self._set_all_selected_item(resource_label, filter_parent)
         self.tree_built.emit()
 
@@ -171,13 +173,8 @@ class ResourceFilterModel(QStandardItemModel):
             filter_type_item (QStandardItem): filter type item
             emit_data_changed (bool): if True, emit dataChanged signal if the state was updated
         """
-        disabled_filters = self._connection.disabled_filter_names(resource, self._FILTER_TYPES[filter_type_item.text()])
-        all_online = True
-        if disabled_filters:
-            for row in range(1, filter_type_item.rowCount()):
-                if filter_type_item.child(row).text() in disabled_filters:
-                    all_online = False
-                    break
+        online_filters = self._connection.online_filters(resource, self._FILTER_TYPES[filter_type_item.text()])
+        all_online = all(online_filters.values())
         all_selected_item = filter_type_item.child(0)
         all_selected = all_selected_item.data(Qt.CheckStateRole) == Qt.Checked
         if all_selected != all_online:

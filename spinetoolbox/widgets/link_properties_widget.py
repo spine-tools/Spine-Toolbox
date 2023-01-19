@@ -19,7 +19,7 @@ Link properties widget.
 from PySide2.QtCore import Slot
 from .properties_widget import PropertiesWidgetBase
 from .custom_qwidgets import PurgeSettingsDialog
-from ..project_commands import SetConnectionOptionsCommand
+from ..project_commands import SetConnectionOptionsCommand, SetConnectionDefaultFilterOnlineStatus
 
 
 class LinkPropertiesWidget(PropertiesWidgetBase):
@@ -37,6 +37,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self._purge_settings_dialog = None
         self.ui = Ui_Form()
         self.ui.setupUi(self)
+        self.ui.auto_check_filters_check_box.clicked.connect(self._handle_auto_check_filters_state_changed)
         self.ui.spinBox_write_index.valueChanged.connect(self._handle_write_index_value_changed)
         self.ui.checkBox_use_datapackage.stateChanged.connect(self._handle_use_datapackage_state_changed)
         self.ui.checkBox_use_memory_db.stateChanged.connect(self._handle_use_memory_db_state_changed)
@@ -58,7 +59,10 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self._connection.refresh_resource_filter_model()
         self._toolbox.label_item_name.setText(f"<b>Link {self._connection.link.name}</b>")
         self.load_connection_options()
-        self.ui.treeView_filters.setEnabled(self._connection.may_have_filters())
+        may_have_filters = self._connection.may_have_filters()
+        self.ui.treeView_filters.setEnabled(may_have_filters)
+        self.ui.auto_check_filters_check_box.setChecked(self._connection.is_filter_online_by_default)
+        self.ui.auto_check_filters_check_box.setEnabled(may_have_filters)
         self.ui.spinBox_write_index.setEnabled(self._connection.may_have_write_index())
         self.ui.label_write_index.setEnabled(self._connection.may_have_write_index())
         self.ui.checkBox_use_memory_db.setEnabled(self._connection.may_use_memory_db())
@@ -68,6 +72,25 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
     def unset_link(self):
         """Releases the widget from any links."""
         self.ui.treeView_filters.setModel(None)
+
+    @Slot(bool)
+    def _handle_auto_check_filters_state_changed(self, checked):
+        """Updates filters' auto enabled setting.
+
+        Args:
+            checked (bool): True if the checkbox is checked, False otherwise
+        """
+        if checked == self._connection.is_filter_online_by_default:
+            return
+        self._toolbox.undo_stack.push(SetConnectionDefaultFilterOnlineStatus(self._connection, checked))
+
+    def set_auto_check_filters_state(self, checked):
+        """Sets the checked status of filter default online status check box
+
+        Args:
+            checked (bool): True if the checkbox is checked
+        """
+        self.ui.auto_check_filters_check_box.setChecked(checked)
 
     @Slot(int)
     def _handle_write_index_value_changed(self, value):
