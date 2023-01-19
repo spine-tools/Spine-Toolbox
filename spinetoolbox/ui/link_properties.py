@@ -47,6 +47,17 @@ class Ui_Form(object):
         self.frame.setFrameShadow(QFrame.Raised)
         self.verticalLayout_2 = QVBoxLayout(self.frame)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.auto_check_filters_check_box = QCheckBox(self.frame)
+        self.auto_check_filters_check_box.setObjectName(u"auto_check_filters_check_box")
+        self.auto_check_filters_check_box.setChecked(True)
+
+        self.horizontalLayout_3.addWidget(self.auto_check_filters_check_box)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout_3)
+
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.label_write_index = QLabel(self.frame)
@@ -108,6 +119,7 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.auto_check_filters_check_box.setText(QCoreApplication.translate("Form", u"Check new filters automatically", None))
         self.label_write_index.setText(QCoreApplication.translate("Form", u"Write index (lower writes earlier):", None))
         self.checkBox_purge_before_writing.setText(QCoreApplication.translate("Form", u"Purge before writing", None))
 #if QT_CONFIG(tooltip)

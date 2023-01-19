@@ -453,6 +453,27 @@ class SetFiltersOnlineCommand(SpineToolboxCommand):
         self._resource_filter_model.set_online(self._resource, self._filter_type, negated_online)
 
 
+class SetConnectionDefaultFilterOnlineStatus(SpineToolboxCommand):
+    """Command to set connection's default filter online status."""
+
+    def __init__(self, connection, default_status):
+        """
+        Args:
+            connection (LoggingConnection): connection
+            default_status (bool): default filter online status
+        """
+        super().__init__()
+        self.setText(f"change options in connection {connection.name}")
+        self._connection = connection
+        self._checked = default_status
+
+    def redo(self):
+        self._connection.set_filter_default_online_status(self._checked)
+
+    def undo(self):
+        self._connection.set_filter_default_online_status(not self._checked)
+
+
 class SetConnectionOptionsCommand(SpineToolboxCommand):
     def __init__(self, connection, options):
         """Command to set connection options.
