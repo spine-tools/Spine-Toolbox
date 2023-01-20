@@ -280,11 +280,11 @@ already open in the issue tracker.
 <table width=500px frame="none">
 <tr>
 <td valign="middle" width=100px>
-<img src=https://europa.eu/european-union/sites/europaeu/files/docs/body/flag_yellow_low.jpg alt="EU emblem" width=100%></td>
+<img src=fig/eu-emblem-low-res.jpg alt="EU emblem" width=100%></td>
 <td valign="middle">This project has received funding from European Climate, Infrastructure and Environment Executive Agency under the European Union’s HORIZON Research and Innovation Actions under grant agreement N°101095998.</td>
 <tr>
 <td valign="middle" width=100px>
-<img src= alt="EU emblem" width=100%></td>
+<img src=fig/eu-emblem-low-res.jpg alt="EU emblem" width=100%></td>
 <td valign="middle">This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 774629.</td>
 </table>
 </center>
