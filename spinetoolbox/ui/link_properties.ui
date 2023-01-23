@@ -49,6 +49,20 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QCheckBox" name="auto_check_filters_check_box">
+          <property name="text">
+           <string>Check new filters automatically</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
          <widget class="QLabel" name="label_write_index">
@@ -143,7 +157,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../../items/spine_items/ui/resources/resources_icons.qrc"/>
+  <include location="../../../spine-items/spine_items/ui/resources/resources_icons.qrc"/>
  </resources>
  <connections/>
 </ui>

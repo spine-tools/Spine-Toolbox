@@ -67,18 +67,10 @@ class TestSpineDBFetcher(unittest.TestCase):
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call(
-            {
-                self._db_map: [
-                    {'id': 1, 'name': 'Base', 'description': 'Base alternative', 'commit_id': 1},
-                ]
-            }
+            {self._db_map: [{'id': 1, 'name': 'Base', 'description': 'Base alternative', 'commit_id': 1}]}
         )
         fetcher.handle_items_added.assert_any_call(
-            {
-                self._db_map: [
-                    {'id': 2, 'name': 'alt', 'description': None, 'commit_id': 2},
-                ]
-            }
+            {self._db_map: [{'id': 2, 'name': 'alt', 'description': None, 'commit_id': 2}]}
         )
         self.assertEqual(
             self._db_mngr.get_item(self._db_map, "alternative", 2),

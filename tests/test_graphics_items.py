@@ -28,7 +28,6 @@ from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, Ran
 from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
-from spinetoolbox.helpers import signal_waiter
 from tests.mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project, TestSpineDBManager
 
 
@@ -199,8 +198,9 @@ class TestLink(unittest.TestCase):
         self.assertEqual(scenario_item.index().data(), "Select all")
         scenario_item = scenario_title_item.child(1, 0)
         self.assertEqual(scenario_item.index().data(), "scenario")
-        scenario_item.setCheckState(Qt.CheckState.Checked)
-        self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), set())
+        scenario_index = filter_model.indexFromItem(scenario_item)
+        filter_model.setData(scenario_index, Qt.CheckState.Checked, role=Qt.ItemDataRole.CheckStateRole)
+        self.assertEqual(self._link.connection.online_filters("my_database", "scenario_filter"), {"scenario": True})
 
     def test_tool_filter_gets_added_to_filter_model(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
@@ -228,8 +228,9 @@ class TestLink(unittest.TestCase):
         self.assertEqual(tool_item.index().data(), "Select all")
         tool_item = tool_title_item.child(1, 0)
         self.assertEqual(tool_item.index().data(), "tool")
-        tool_item.setCheckState(Qt.CheckState.Checked)
-        self.assertEqual(self._link.connection.disabled_filter_names("my_database", "scenario_filter"), set())
+        tool_index = filter_model.indexFromItem(tool_item)
+        filter_model.setData(tool_index, Qt.CheckState.Checked, role=Qt.ItemDataRole.CheckStateRole)
+        self.assertEqual(self._link.connection.online_filters("my_database", "scenario_filter"), {})
 
     def test_toggle_scenario_filter(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
@@ -241,7 +242,7 @@ class TestLink(unittest.TestCase):
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {1: True})
-        self.assertEqual(self._link.connection.disabled_filter_names(url, "scenario_filter"), set())
+        self.assertEqual(self._link.connection.online_filters(url, "scenario_filter"), {"scenario": True})
 
     def test_toggle_tool_filter(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
@@ -253,7 +254,7 @@ class TestLink(unittest.TestCase):
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "tool_filter", {1: True})
-        self.assertEqual(self._link.connection.disabled_filter_names(url, "tool_filter"), set())
+        self.assertEqual(self._link.connection.online_filters(url, "tool_filter"), {"tool": True})
 
 
 if __name__ == "__main__":
