@@ -19,7 +19,7 @@ import queue
 import threading
 import json
 from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
-from spine_engine.exception import RemoteEngineInitFailed
+from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.server.util.event_data_converter import EventDataConverter
 
 
@@ -150,7 +150,8 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         return self._engine.get_event()
 
     def stop_engine(self):
-        self._engine.stop()
+        if self._engine is not None:
+            self._engine.stop()
 
     def answer_prompt(self, item_name, accepted):
         self._engine.answer_prompt(item_name, accepted)
