@@ -31,7 +31,7 @@ Before submitting a bug report, please do the following:
 4. **Search the project’s bug/issue tracker to make sure it’s not a known issue.** If you
    don’t find a pre-existing issue, consider checking with the maintainers in case the problem
    is non-bug-related. `Spine Toolbox issue tracker is here
-   <https://github.com/Spine-project/Spine-Toolbox/issues>`_.
+   <https://github.com/spine-tools/Spine-Toolbox/issues>`_.
 
 
 What to Put in Your Bug Report
