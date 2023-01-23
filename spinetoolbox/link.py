@@ -317,14 +317,11 @@ class _SvgIcon(_IconBase):
 class _TextIcon(_IconBase):
     """A font awesome icon to show over a Link."""
 
-    FONT_SIZE_PIXELS = 16  # Using pixel size to prevent font scaling by system.
-
     def __init__(self, parent, extent, char, tooltip=None, active=False):
         super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)
         self._text_item = QGraphicsTextItem(self)
         font = QFont('Font Awesome 5 Free Solid', weight=QFont.Bold)
         self._text_item.setFont(font)
-        self._text_item.setDefaultTextColor(self._fg_color)
         self._text_item.setPlainText(char)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
         self.setPen(Qt.NoPen)
@@ -333,6 +330,15 @@ class _TextIcon(_IconBase):
         """Cleans up icon's resources."""
         self._text_item.deleteLater()
         self.scene().removeItem(self)
+
+
+class _WarningTextIcon(_TextIcon):
+    """A font awesome icon to show over a Link."""
+
+    def __init__(self, parent, extent, char, tooltip):
+        super().__init__(parent, extent, char, tooltip, active=True)
+        self._fg_color = QColor("red")
+        self._text_item.setDefaultTextColor(self._fg_color)
 
 
 class JumpOrLink(LinkBase):
@@ -461,6 +467,7 @@ class Link(JumpOrLink):
     _MEMORY = "\uf538"
     _FILTERS = "\uf0b0"
     _PURGE = "\uf0e7"
+    _WARNING = "\uf06a"
     _DATAPACKAGE = ":/icons/datapkg.svg"
 
     def __init__(self, toolbox, src_connector, dst_connector, connection):
@@ -494,6 +501,10 @@ class Link(JumpOrLink):
             sibling_conns = self._toolbox.project().incoming_connections(self.connection.destination)
             active = any(l.write_index > 1 for l in sibling_conns)
             self._icons.append(_TextIcon(self, self._icon_extent, str(self._connection.write_index), active=active))
+        notifications = self._connection.notifications()
+        if notifications:
+            tooltip = "Check Link properties. " + " ".join(notifications)
+            self._icons.append(_WarningTextIcon(self, self._icon_extent, self._WARNING, tooltip))
         self._place_icons()
 
     @property

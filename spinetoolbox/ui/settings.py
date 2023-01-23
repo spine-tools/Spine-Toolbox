@@ -58,7 +58,7 @@ class Ui_SettingsForm(object):
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.splitter = QSplitter(SettingsForm)
         self.splitter.setObjectName(u"splitter")
-        self.splitter.setOrientation(Qt.Orientation.Horizontal)
+        self.splitter.setOrientation(Qt.Horizontal)
         self.listWidget = QListWidget(self.splitter)
         icon = QIcon()
         icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -309,7 +309,7 @@ class Ui_SettingsForm(object):
         self.horizontalSlider_data_flow_animation_duration.setPageStep(50)
         self.horizontalSlider_data_flow_animation_duration.setSliderPosition(100)
         self.horizontalSlider_data_flow_animation_duration.setTracking(False)
-        self.horizontalSlider_data_flow_animation_duration.setOrientation(Qt.Orientation.Horizontal)
+        self.horizontalSlider_data_flow_animation_duration.setOrientation(Qt.Horizontal)
         self.horizontalSlider_data_flow_animation_duration.setInvertedAppearance(True)
         self.horizontalSlider_data_flow_animation_duration.setInvertedControls(False)
 
@@ -878,8 +878,8 @@ class Ui_SettingsForm(object):
 
         self.buttonBox = QDialogButtonBox(SettingsForm)
         self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Cancel|QDialogButtonBox.StandardButton.Ok)
+        self.buttonBox.setOrientation(Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
         self.buttonBox.setCenterButtons(False)
 
         self.verticalLayout_7.addWidget(self.buttonBox)

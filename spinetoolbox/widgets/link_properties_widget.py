@@ -17,6 +17,9 @@ Link properties widget.
 """
 
 from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QMenu
+from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
+from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from .properties_widget import PropertiesWidgetBase
 from .custom_qwidgets import PurgeSettingsDialog
 from ..project_commands import SetConnectionOptionsCommand, SetConnectionDefaultFilterOnlineStatus
@@ -37,7 +40,10 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self._purge_settings_dialog = None
         self.ui = Ui_Form()
         self.ui.setupUi(self)
+        self._filter_validation_menu = QMenu(self)
+        self._filter_validation_actions = self._populate_filter_validation_menu()
         self.ui.auto_check_filters_check_box.clicked.connect(self._handle_auto_check_filters_state_changed)
+        self.ui.open_filter_validation_menu_button.setMenu(self._filter_validation_menu)
         self.ui.spinBox_write_index.valueChanged.connect(self._handle_write_index_value_changed)
         self.ui.checkBox_use_datapackage.stateChanged.connect(self._handle_use_datapackage_state_changed)
         self.ui.checkBox_use_memory_db.stateChanged.connect(self._handle_use_memory_db_state_changed)
@@ -63,6 +69,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self.ui.treeView_filters.setEnabled(may_have_filters)
         self.ui.auto_check_filters_check_box.setChecked(self._connection.is_filter_online_by_default)
         self.ui.auto_check_filters_check_box.setEnabled(may_have_filters)
+        self.ui.open_filter_validation_menu_button.setEnabled(may_have_filters)
         self.ui.spinBox_write_index.setEnabled(self._connection.may_have_write_index())
         self.ui.label_write_index.setEnabled(self._connection.may_have_write_index())
         self.ui.checkBox_use_memory_db.setEnabled(self._connection.may_use_memory_db())
@@ -91,6 +98,33 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
             checked (bool): True if the checkbox is checked
         """
         self.ui.auto_check_filters_check_box.setChecked(checked)
+
+    def _populate_filter_validation_menu(self):
+        """Adds actions to filter validation menu.
+
+        Returns:
+            dict: menu actions
+        """
+        action_data = {
+            "Require at least one checked scenario": SCENARIO_FILTER_TYPE,
+            "Require at least one checked tool": TOOL_FILTER_TYPE,
+        }
+        actions = {}
+        for label, filter_type in action_data.items():
+            action = self._filter_validation_menu.addAction(label)
+            action.setCheckable(True)
+            action.toggled.connect(self._update_filter_validation_options)
+            actions[filter_type] = action
+        return actions
+
+    @Slot(bool)
+    def _update_filter_validation_options(self, checked):
+        """"""
+        for filter_type, action in self._filter_validation_actions.items():
+            if self._connection.require_filter_online(filter_type) != action.isChecked():
+                options = {"require_" + filter_type: checked}
+                self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._connection, options))
+                return
 
     @Slot(int)
     def _handle_write_index_value_changed(self, value):
@@ -149,6 +183,10 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self._purge_settings_dialog = None
 
     def load_connection_options(self):
+        for filter_type, action in self._filter_validation_actions.items():
+            action.toggled.disconnect()
+            action.setChecked(self._connection.require_filter_online(filter_type))
+            action.toggled.connect(self._update_filter_validation_options)
         self.ui.checkBox_use_datapackage.setChecked(self._connection.use_datapackage)
         self.ui.checkBox_use_memory_db.setChecked(self._connection.use_memory_db)
         self.ui.checkBox_purge_before_writing.setChecked(self._connection.purge_before_writing)
