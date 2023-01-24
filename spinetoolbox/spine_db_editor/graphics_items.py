@@ -357,7 +357,7 @@ class RelationshipItem(EntityItem):
             return {}
         return dict(
             relationship_class_name=self.entity_class_name,
-            object_name_list=self.object_name_list,
+            object_name_list=DB_ITEM_SEPARATOR.join(self.object_name_list),
             database=self.first_db_map.codename,
         )
 

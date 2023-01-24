@@ -111,7 +111,7 @@ Importing the SpineOpt database template
 ----------------------------------------
 
 #. Download `the SpineOpt database template 
-   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/templates/spineopt_template.json>`_
+   <https://raw.githubusercontent.com/spine-tools/SpineOpt.jl/master/templates/spineopt_template.json>`_
    (right click on the link, then select *Save link as...*)
 
 #. Select the `input` Data Store item in the *Design View*.
@@ -501,8 +501,8 @@ Importing the model
 ~~~~~~~~~~~~~~~~~~~
 
 
-#. Download `the data <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/a5.xlsx>`_ and `the 
-   accompanying mapping <https://raw.githubusercontent.com/Spine-project/Spine-Toolbox/master/docs/source/data/A5_importer_specification.json>`_
+#. Download `the data <https://raw.githubusercontent.com/spine-tools/Spine-Toolbox/master/docs/source/data/a5.xlsx>`_ and `the
+   accompanying mapping <https://raw.githubusercontent.com/spine-tools/Spine-Toolbox/master/docs/source/data/A5_importer_specification.json>`_
    (right click on the links, then select *Save link as...*).
 
 #. Add a reference to the file containing the model.

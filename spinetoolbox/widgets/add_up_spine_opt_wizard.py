@@ -85,7 +85,7 @@ class IntroPage(QWizardPage):
         self.setTitle("Welcome")
         label = HyperTextLabel(
             "This wizard will help you install or upgrade "
-            "<a title='spine opt' href='https://github.com/Spine-project/SpineOpt.jl#spineoptjl'>SpineOpt</a> "
+            "<a title='spine opt' href='https://github.com/spine-tools/SpineOpt.jl#spineoptjl'>SpineOpt</a> "
             "in a Julia project of your choice."
         )
         layout = QVBoxLayout(self)
@@ -242,7 +242,7 @@ class AddUpSpineOptPage(QWizardProcessPage):
         processing, code, process = {
             "add": (
                 "Installing",
-                'using Pkg; pkg"registry add General https://github.com/Spine-project/SpineJuliaRegistry.git"; '
+                'using Pkg; pkg"registry add General https://github.com/spine-tools/SpineJuliaRegistry.git"; '
                 'pkg"add SpineOpt"',
                 "installation",
             ),
@@ -339,7 +339,7 @@ class TroubleshootProblemsPage(QWizardPage):
         msg1a.append(
             """
             \u22ee<br>
-            Updating git-repo `https://github.com/Spine-project/SpineJuliaRegistry`<br>
+            Updating git-repo `https://github.com/spine-tools/SpineJuliaRegistry`<br>
             Resolving package versions...<br>
             ERROR: expected package `UUIDs [cf7118a7]` to be registered<br>
             \u22ee
@@ -348,7 +348,7 @@ class TroubleshootProblemsPage(QWizardPage):
         msg1b.append(
             """
             \u22ee<br>
-            Updating git-repo `https://github.com/Spine-project/SpineJuliaRegistry`<br>
+            Updating git-repo `https://github.com/spine-tools/SpineJuliaRegistry`<br>
             Resolving package versions...<br>
             ERROR: cannot find name corresponding to UUID f269a46b-ccf7-5d73-abea-4c690281aa53 in a registry<br>
             \u22ee
@@ -519,7 +519,7 @@ class TotalFailurePage(QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Troubleshooting failed")
-        msg = "<p>Please <a href=https://github.com/Spine-project/SpineOpt.jl/issues>open an issue with SpineOpt</a>."
+        msg = "<p>Please <a href=https://github.com/spine-tools/SpineOpt.jl/issues>open an issue with SpineOpt</a>."
         layout = QVBoxLayout(self)
         layout.addWidget(HyperTextLabel(msg))
 
