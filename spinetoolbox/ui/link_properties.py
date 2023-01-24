@@ -55,6 +55,15 @@ class Ui_Form(object):
 
         self.horizontalLayout_3.addWidget(self.auto_check_filters_check_box)
 
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
+
+        self.open_filter_validation_menu_button = QPushButton(self.frame)
+        self.open_filter_validation_menu_button.setObjectName(u"open_filter_validation_menu_button")
+
+        self.horizontalLayout_3.addWidget(self.open_filter_validation_menu_button)
+
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_3)
 
@@ -120,6 +129,7 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.auto_check_filters_check_box.setText(QCoreApplication.translate("Form", u"Check new filters automatically", None))
+        self.open_filter_validation_menu_button.setText(QCoreApplication.translate("Form", u"Filter validation", None))
         self.label_write_index.setText(QCoreApplication.translate("Form", u"Write index (lower writes earlier):", None))
         self.checkBox_purge_before_writing.setText(QCoreApplication.translate("Form", u"Purge before writing", None))
 #if QT_CONFIG(tooltip)

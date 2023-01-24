@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 - Executable Tool Specifications can be used to run any (shell) command. This enhancement
   duplicates the functionality of Gimlet project items and makes them obsolete.
+- There is now an option to select if new scenarios or tools are automatically used
+  for filtering in Link properties.
+- The new "Filer validation" button in Link properties allows forcing at least one scenario or tool
+  filter to be checked.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools

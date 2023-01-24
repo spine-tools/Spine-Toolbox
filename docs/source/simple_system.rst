@@ -55,15 +55,15 @@ Installing requirements
 =======================
 
 .. note:: This tutorial is written for latest `Spine Toolbox 
-   <https://github.com/Spine-project/Spine-Toolbox/>`_ and `SpineOpt 
-   <https://github.com/Spine-project/SpineOpt.jl>`_ development versions.
+   <https://github.com/spine-tools/Spine-Toolbox/>`_ and `SpineOpt
+   <https://github.com/spine-tools/SpineOpt.jl>`_ development versions.
 
-- If you haven't, follow the instructions `here <https://github.com/Spine-project/SpineOpt.jl#installation>`_ 
+- If you haven't, follow the instructions `here <https://github.com/spine-tools/SpineOpt.jl#installation>`_
   to install Spine Toolbox and SpineOpt in your system.
 
 - If you already have Spine Toolbox and SpineOpt installed, please follow the instructions
-  `here <https://github.com/Spine-project/Spine-Toolbox/blob/master/README.md#upgrading>`_
-  and `here <https://github.com/Spine-project/SpineOpt.jl#upgrading>`_ to upgrade to the latest versions.
+  `here <https://github.com/spine-tools/Spine-Toolbox/blob/master/README.md#upgrading>`_
+  and `here <https://github.com/spine-tools/SpineOpt.jl#upgrading>`_ to upgrade to the latest versions.
 
 
 Installing the SpineOpt plugin
@@ -144,9 +144,9 @@ Importing the SpineOpt database template
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #. Download `the SpineOpt database template 
-   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/templates/spineopt_template.json>`_
+   <https://raw.githubusercontent.com/spine-tools/SpineOpt.jl/master/templates/spineopt_template.json>`_
    and `the basic SpineOpt model 
-   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/templates/models/basic_model_template.json>`_
+   <https://raw.githubusercontent.com/spine-tools/SpineOpt.jl/master/templates/models/basic_model_template.json>`_
    (right click on the links, then select *Save link as...*)
 
 #. Select the 'input' Data Store item in the *Design View*.

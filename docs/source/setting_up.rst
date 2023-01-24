@@ -28,9 +28,9 @@ installation options are:
 
 1. Using a single-file **installation bundle** (e.g. *spine-toolbox-0.6.0-final.2-x64.exe* or newer). You can
    find this file and all releases from
-   `Spine Toolbox releases <https://github.com/Spine-project/Spine-Toolbox/releases>`_.
+   `Spine Toolbox releases <https://github.com/spine-tools/Spine-Toolbox/releases>`_.
    The installation bundles are only available for Windows at the moment.
-2. Cloning Spine Toolbox Git repository from `<https://github.com/Spine-project/Spine-Toolbox>`_. Checkout branch
+2. Cloning Spine Toolbox Git repository from `<https://github.com/spine-tools/Spine-Toolbox>`_. Checkout branch
    **release-0.6** or **master** and run `pip install -r requirements.txt` in the repo root.
 
 .. tip:: You can always see the current Python configured for Spine Toolbox from the `Tools` page in
@@ -48,7 +48,7 @@ installed Spine Toolbox to the default directory for all users.
    Toolbox v0.6.0 is shipped with `spinedb_api` v0.12.1. If you want to use the Python in your PATH, **you must install
    the correct version of spinedb_api for this Python manually**. The correct version in this case is in the
    `release-0.12` branch of `spinedb_api` git repo
-   (https://github.com/Spine-project/Spine-Database-API/tree/release-0.12).
+   (https://github.com/spine-tools/Spine-Database-API/tree/release-0.12).
    **To avoid this additional step, it is recommended** that you use the 'embedded' Python interpreter that is shipped
    with the application. You can set up this Python for Spine Toolbox by opening the `Tools` page of
    `File->Settings...` and replacing the path of the Python Interpreter with *<install_dir>\\tools\\python.exe*.

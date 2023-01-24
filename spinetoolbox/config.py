@@ -47,7 +47,7 @@ ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/master/"
 
 PLUGINS_PATH = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "plugins"))
 
-PLUGIN_REGISTRY_URL = "https://spine-project.github.io/PluginRegistry/registry.json"
+PLUGIN_REGISTRY_URL = "https://spine-tools.github.io/PluginRegistry/registry.json"
 # Jupyter kernel constants
 JUPYTER_KERNEL_TIME_TO_DEAD = 8.0
 
