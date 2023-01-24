@@ -21,8 +21,8 @@ from contextlib import contextmanager
 from unittest.mock import Mock, MagicMock, patch
 
 import numpy
-from PySide2.QtCore import QModelIndex, QItemSelectionModel, QObject
-from PySide2.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QModelIndex, QItemSelectionModel, QObject
+from PySide6.QtWidgets import QApplication, QMessageBox
 from matplotlib.gridspec import GridSpec
 
 from spinedb_api import (
@@ -72,10 +72,10 @@ class TestBase(unittest.TestCase):
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as message_box:
-            message_box.exec_.return_value = QMessageBox.Ok
+            message_box.exec.return_value = QMessageBox.StandardButton.Ok
             with signal_waiter(self._db_mngr.session_rolled_back) as waiter:
                 self._db_editor.rollback_session()
-                if message_box.exec_.call_count > 0:
+                if message_box.exec.call_count > 0:
                     waiter.wait()
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
             "spinetoolbox.spine_db_manager.QMessageBox"

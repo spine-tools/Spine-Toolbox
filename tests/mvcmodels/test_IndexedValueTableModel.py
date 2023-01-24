@@ -17,8 +17,8 @@ Unit tests for the IndexedValueTableModel class.
 """
 
 import unittest
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.indexed_value_table_model import IndexedValueTableModel
 
 
@@ -65,12 +65,12 @@ class TestIndexedValueTableModel(unittest.TestCase):
         self.assertEqual(self._model.headerData(1), 'Value')
 
     def test_set_horizontal_header_data(self):
-        self._model.setHeaderData(0, Qt.Horizontal, "new idx")
+        self._model.setHeaderData(0, Qt.Orientation.Horizontal, "new idx")
         self.assertEqual(self._model.headerData(0), 'new idx')
 
     def test_vertical_header_data_is_row_number(self):
         for row in range(3):
-            self.assertEqual(self._model.headerData(row, orientation=Qt.Vertical), row + 1)
+            self.assertEqual(self._model.headerData(row, orientation=Qt.Orientation.Vertical), row + 1)
 
     def test_reset(self):
         new_value = MockValue(['d'], [1])

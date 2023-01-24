@@ -19,8 +19,8 @@ Unit tests for the TimePatternModel class.
 import unittest
 import numpy as np
 import numpy.testing
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinedb_api import TimePattern
 from spinetoolbox.mvcmodels.time_pattern_model import TimePatternModel
 

@@ -23,7 +23,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 import venv
-from PySide2.QtWidgets import QApplication, QMessageBox, QWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from spine_engine.utils.helpers import resolve_julia_executable
 from spinetoolbox.widgets.kernel_editor import KernelEditor, KernelEditorBase
@@ -49,7 +49,7 @@ class TestKernelEditorBase(unittest.TestCase):
         cls._settings_widget.deleteLater()
 
     def test_is_package_installed(self):
-        self.assertTrue(KernelEditorBase.is_package_installed(sys.executable, "PySide2"))
+        self.assertTrue(KernelEditorBase.is_package_installed(sys.executable, "PySide6"))
         self.assertFalse(KernelEditorBase.is_package_installed(sys.executable, "nonexistenttestpackageXYZ"))
 
     def test_make_python_kernel(self):
@@ -67,7 +67,7 @@ class TestKernelEditorBase(unittest.TestCase):
             ), patch.object(KernelEditorBase, "_python_kernel_name", return_value=kernel_name), patch.object(
                 KernelEditorBase, "_python_kernel_display_name", return_value="Test kernel"
             ):
-                mock_message_box.exec_.return_value = QMessageBox.Ok
+                mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
                 editor = KernelEditorBase(self._settings_widget, "python")
                 self.assertTrue(editor.make_python_kernel())
                 while editor._install_package_process is not None:
@@ -95,7 +95,7 @@ class TestKernelEditorBase(unittest.TestCase):
         ), patch.object(KernelEditorBase, "_julia_executable", return_value=julia_exec), patch.object(
             KernelEditorBase, "_julia_project", return_value="@."
         ):
-            mock_message_box.exec_.return_value = QMessageBox.Ok
+            mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
             editor = KernelEditorBase(self._settings_widget, "julia")
             julia_project_dir = editor._julia_project()
             ijulia_installation_status = editor.is_ijulia_installed(julia_exec, julia_project_dir)

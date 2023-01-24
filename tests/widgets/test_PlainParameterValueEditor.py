@@ -17,7 +17,7 @@ Unit tests for the PlainParameterValueEditor widget.
 """
 
 import unittest
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.plain_parameter_value_editor import PlainParameterValueEditor
 
 

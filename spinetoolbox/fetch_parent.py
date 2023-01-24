@@ -16,7 +16,7 @@ The FetchParent and FlexibleFetchParent classes.
 :date:   18.11.2022
 """
 
-from PySide2.QtCore import QTimer, Signal, Slot, QObject
+from PySide6.QtCore import QTimer, Signal, Slot, QObject
 from .helpers import busy_effect
 
 

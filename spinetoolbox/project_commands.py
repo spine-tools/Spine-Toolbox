@@ -16,7 +16,7 @@ QUndoCommand subclasses for modifying the project.
 :date:   12.2.2020
 """
 
-from PySide2.QtWidgets import QUndoCommand
+from PySide6.QtGui import QUndoCommand
 from spine_engine.project_item.connection import Connection, Jump
 
 

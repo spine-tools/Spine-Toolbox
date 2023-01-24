@@ -17,9 +17,9 @@ Contains the GraphLayoutGeneratorRunnable class.
 """
 
 import numpy as np
-from PySide2.QtCore import Signal, Slot, QObject, Qt, QRunnable
-from PySide2.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout, QHBoxLayout
-from PySide2.QtGui import QPainter, QColor
+from PySide6.QtCore import Signal, Slot, QObject, Qt, QRunnable
+from PySide6.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout, QHBoxLayout
+from PySide6.QtGui import QPainter, QColor
 from spinedb_api.graph_layout_generator import GraphLayoutGenerator
 from spinetoolbox.helpers import busy_effect
 
@@ -61,12 +61,12 @@ class ProgressBarWidget(QWidget):
         self._progress_bar = QProgressBar()
         button_box = QDialogButtonBox()
         button_box.setCenterButtons(True)
-        self._previews_button = button_box.addButton("Show previews", QDialogButtonBox.NoRole)
+        self._previews_button = button_box.addButton("Show previews", QDialogButtonBox.ButtonRole.NoRole)
         self._previews_button.setCheckable(True)
         self._previews_button.toggled.connect(
             lambda checked: self._previews_button.setText(f"{'Hide' if checked else 'Show'} previews")
         )
-        self.stop_button = button_box.addButton("Stop", QDialogButtonBox.NoRole)
+        self.stop_button = button_box.addButton("Stop", QDialogButtonBox.ButtonRole.NoRole)
         inner_layout = QVBoxLayout(inner_widget)
         inner_layout.addStretch()
         inner_layout.addWidget(self._label)

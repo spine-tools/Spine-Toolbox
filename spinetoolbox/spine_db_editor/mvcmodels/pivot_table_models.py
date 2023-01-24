@@ -16,8 +16,8 @@ Provides pivot table models for the Tabular View.
 :date:   1.11.2018
 """
 
-from PySide2.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
-from PySide2.QtGui import QColor, QFont
+from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
+from PySide6.QtGui import QColor, QFont
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier
 from spinetoolbox.fetch_parent import FlexibleFetchParent
@@ -53,9 +53,9 @@ class TopLeftHeaderItem:
     def _get_header_data_from_db(self, item_type, header_id, field_name, role):
         db_map, id_ = header_id
         item = self.db_mngr.get_item(db_map, item_type, id_)
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return item.get(field_name)
-        if role == Qt.ToolTipRole:
+        if role == Qt.ItemDataRole.ToolTipRole:
             return item.get("description", "No description")
 
 
@@ -76,7 +76,7 @@ class TopLeftObjectHeaderItem(TopLeftHeaderItem):
     def name(self):
         return self._name
 
-    def header_data(self, header_id, role=Qt.DisplayRole):
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         return self._get_header_data_from_db("object", header_id, "name", role)
 
     def update_data(self, db_map_data):
@@ -107,7 +107,7 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
     def name(self):
         return "parameter"
 
-    def header_data(self, header_id, role=Qt.DisplayRole):
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         return self._get_header_data_from_db("parameter_definition", header_id, "parameter_name", role)
 
     def update_data(self, db_map_data):
@@ -138,7 +138,7 @@ class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
     def name(self):
         return "index"
 
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
         _, index = header_id
         if role == PARSED_ROLE:
             return index
@@ -162,7 +162,7 @@ class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
     def name(self):
         return "alternative"
 
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
         return self._get_header_data_from_db("alternative", header_id, "name", role)
 
     def update_data(self, db_map_data):
@@ -190,7 +190,7 @@ class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
     def name(self):
         return "scenario"
 
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
         return self._get_header_data_from_db("scenario", header_id, "name", role)
 
     def update_data(self, db_map_data):
@@ -218,7 +218,7 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
     def name(self):
         return "database"
 
-    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
         return header_id.codename
 
 
@@ -401,7 +401,7 @@ class PivotTableModelBase(QAbstractTableModel):
             self._plot_x_column = column
         elif column == self._plot_x_column:
             self._plot_x_column = None
-        self.headerDataChanged.emit(Qt.Horizontal, column, column)
+        self.headerDataChanged.emit(Qt.Orientation.Horizontal, column, column)
 
     @property
     def plot_x_column(self):
@@ -506,18 +506,18 @@ class PivotTableModelBase(QAbstractTableModel):
         return index.column() == self.headerColumnCount() - 1 and index.row() < len(self.model.pivot_columns)
 
     def index_in_top_left(self, index):
-        """Returns whether or not the given index is in top left corner, where pivot names are displayed"""
+        """Returns whether the given index is in top left corner, where pivot names are displayed."""
         return self.index_in_top(index) or self.index_in_left(index)
 
     def index_in_column_headers(self, index):
-        """Returns whether or not the given index is in column headers (horizontal) area"""
+        """Returns whether the given index is in column headers (horizontal) area."""
         return (
             index.row() < len(self.model.pivot_columns)
             and self.headerColumnCount() <= index.column() < self.headerColumnCount() + self.dataColumnCount()
         )
 
     def index_in_row_headers(self, index):
-        """Returns whether or not the given index is in row headers (vertical) area"""
+        """Returns whether the given index is in row headers (vertical) area."""
         return (
             index.column() < len(self.model.pivot_rows)
             and self.headerRowCount() <= index.row() < self.headerRowCount() + self.dataRowCount()
@@ -527,15 +527,15 @@ class PivotTableModelBase(QAbstractTableModel):
         return self.index_in_column_headers(index) or self.index_in_row_headers(index)
 
     def index_in_empty_column_headers(self, index):
-        """Returns whether or not the given index is in empty column headers (vertical) area"""
+        """Returns whether the given index is in empty column headers (vertical) area."""
         return index.row() < len(self.model.pivot_columns) and index.column() == self.columnCount() - 1
 
     def index_in_empty_row_headers(self, index):
-        """Returns whether or not the given index is in empty row headers (vertical) area"""
+        """Returns whether the given index is in empty row headers (vertical) area."""
         return index.column() < len(self.model.pivot_rows) and index.row() == self.rowCount() - 1
 
     def index_in_data(self, index):
-        """Returns whether or not the given index is in data area"""
+        """Returns whether the given index is in data area."""
         return (
             self.headerRowCount() <= index.row() < self.rowCount() - self.emptyRowCount()
             and self.headerColumnCount() <= index.column() < self.columnCount() - self.emptyColumnCount()
@@ -545,11 +545,11 @@ class PivotTableModelBase(QAbstractTableModel):
         """Returns True if column is the column containing expanded parameter_value indexes."""
         return False
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal and section == self._plot_x_column:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal and section == self._plot_x_column:
                 return "(X)"
-            if orientation == Qt.Vertical:
+            if orientation == Qt.Orientation.Vertical:
                 return 5 * " "
         return None
 
@@ -630,7 +630,7 @@ class PivotTableModelBase(QAbstractTableModel):
     def _text_alignment_data(self, index):  # pylint: disable=no-self-use
         return None
 
-    def _header_data(self, index, role=Qt.DisplayRole):
+    def _header_data(self, index, role=Qt.ItemDataRole.DisplayRole):
         header_id = self._header_id(index)
         top_left_id = self.top_left_id(index)
         return self._header_name(top_left_id, header_id)
@@ -641,8 +641,8 @@ class PivotTableModelBase(QAbstractTableModel):
     def _data(self, index, role):
         raise NotImplementedError()
 
-    def data(self, index, role=Qt.DisplayRole):
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, PARSED_ROLE):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole, PARSED_ROLE):
             if self.index_in_top(index):
                 return self.model.pivot_rows[index.column()]
             if self.index_in_left(index):
@@ -652,18 +652,18 @@ class PivotTableModelBase(QAbstractTableModel):
             if self.index_in_data(index):
                 return self._data(index, role)
             return None
-        if role == Qt.FontRole and self.index_in_top_left(index):
+        if role == Qt.ItemDataRole.FontRole and self.index_in_top_left(index):
             font = QFont()
             font.setBold(True)
             return font
-        if role == Qt.BackgroundRole:
+        if role == Qt.ItemDataRole.BackgroundRole:
             return self._color_data(index)
-        if role == Qt.TextAlignmentRole:
+        if role == Qt.ItemDataRole.TextAlignmentRole:
             return self._text_alignment_data(index)
         return None
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.EditRole:
             return False
         return self.batch_set_data([index], [value])
 

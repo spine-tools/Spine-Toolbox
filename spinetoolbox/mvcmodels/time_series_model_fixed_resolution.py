@@ -17,7 +17,7 @@ A model for fixed resolution time series, used by the parameter_value editors.
 """
 
 import numpy as np
-from PySide2.QtCore import QModelIndex, Qt, Slot, QLocale
+from PySide6.QtCore import QModelIndex, Qt, Slot, QLocale
 from spinedb_api import TimeSeriesFixedResolution
 from .indexed_value_table_model import IndexedValueTableModel
 
@@ -104,7 +104,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         self._value = value
         self.endResetModel()
 
-    def setData(self, index, value, role=Qt.EditRole):
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         """
         Sets a given value in the series.
 
@@ -118,7 +118,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         Returns:
             True if the operation was successful
         """
-        if role != Qt.EditRole or not index.isValid():
+        if role != Qt.ItemDataRole.EditRole or not index.isValid():
             return False
         if index.column() != 1:
             return False
@@ -126,7 +126,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         if row == len(self._value):
             self.insertRow(row)
         self._value.values[row] = value
-        self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
+        self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
         return True
 
     def batch_set_data(self, indexes, values):
@@ -150,7 +150,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
             return
         top = min(rows)
         bottom = max(rows)
-        self.dataChanged.emit(self.index(top, 1), self.index(bottom, 1), [Qt.EditRole])
+        self.dataChanged.emit(self.index(top, 1), self.index(bottom, 1), [Qt.ItemDataRole.EditRole])
 
     @Slot(bool, name="set_ignore_year")
     def set_ignore_year(self, ignore_year):

@@ -16,12 +16,11 @@ Custom QWidgets for Filtering and Zooming.
 :date:   4.12.2018
 """
 
-from PySide2.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QMenu,
-    QAction,
     QStyle,
     QToolBar,
     QStyleOptionMenuItem,
@@ -34,12 +33,21 @@ from PySide2.QtWidgets import (
     QWizardPage,
     QToolButton,
     QPushButton,
-    QUndoStack,
     QSpinBox,
     QDialog,
 )
-from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
-from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont, QIntValidator, QKeySequence
+from PySide6.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
+from PySide6.QtGui import (
+    QPainter,
+    QFontMetrics,
+    QKeyEvent,
+    QFontDatabase,
+    QFont,
+    QIntValidator,
+    QKeySequence,
+    QAction,
+    QUndoStack,
+)
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from .select_database_items import SelectDatabaseItems
 from ..helpers import format_log_message
@@ -119,7 +127,7 @@ class FilterWidget(QWidget):
         self._ui_edit = QLineEdit()
         self._ui_edit.setPlaceholderText('Search')
         self._ui_edit.setClearButtonEnabled(True)
-        self._ui_buttons = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self._ui_buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         self._ui_vertical_layout.addWidget(self._ui_edit)
         self._ui_vertical_layout.addWidget(self._ui_list)
         self._ui_vertical_layout.addWidget(self._ui_buttons)
@@ -139,8 +147,8 @@ class FilterWidget(QWidget):
         self._ui_list.clicked.connect(self._filter_model._handle_index_clicked)
         self._search_timer.timeout.connect(self._filter_list)
         self._ui_edit.textChanged.connect(self._text_edited)
-        self._ui_buttons.button(QDialogButtonBox.Ok).clicked.connect(self._apply_filter)
-        self._ui_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self._cancel_filter)
+        self._ui_buttons.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self._apply_filter)
+        self._ui_buttons.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self._cancel_filter)
 
     def save_state(self):
         """Saves the state of the FilterCheckboxListModel."""
@@ -270,24 +278,22 @@ class ToolBarWidgetBase(QWidget):
         self.tool_bar = _MenuToolBar(self)
         layout.addStretch()
         layout.addWidget(self.tool_bar)
-        icon_extent = qApp.style().pixelMetric(QStyle.PM_SmallIconSize)  # pylint: disable=undefined-variable
+        icon_extent = qApp.style().pixelMetric(
+            QStyle.PixelMetric.PM_SmallIconSize
+        )  # pylint: disable=undefined-variable
         self.tool_bar.setIconSize(QSize(icon_extent, icon_extent))
-        self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.tool_bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
 
 class ToolBarWidget(ToolBarWidgetBase):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
-        spacing = qApp.fontMetrics().horizontalAdvance(self._text)  # pylint: disable=undefined-variable
+        spacing = self.fontMetrics().horizontalAdvance(self._text)  # pylint: disable=undefined-variable
         self.layout().insertSpacing(0, spacing)
 
 
 class MenuItemToolBarWidget(ToolBarWidgetBase):
-    """A menu item with a toolbar on the right.
-
-    Attributes:
-        tool_bar (QToolBar)
-    """
+    """A menu item with a toolbar on the right."""
 
     def __init__(self, text, parent=None, compact=False):
         """Class constructor.
@@ -304,14 +310,16 @@ class MenuItemToolBarWidget(ToolBarWidgetBase):
         if compact:
             self.tool_bar.setFixedHeight(self.option.rect.height())
         text_width = self.option.fontMetrics.horizontalAdvance(self._text)
-        icon_width = qApp.style().pixelMetric(QStyle.PM_ToolBarIconSize)  # pylint: disable=undefined-variable
+        icon_width = qApp.style().pixelMetric(
+            QStyle.PixelMetric.PM_ToolBarIconSize
+        )  # pylint: disable=undefined-variable
         spacing = text_width + 3 * icon_width
         self.layout().insertSpacing(0, spacing)
 
     def paintEvent(self, event):
         """Draws the menu item, then calls the super() method to draw the tool bar."""
         painter = QPainter(self)
-        self.style().drawControl(QStyle.CE_MenuItem, self.option, painter)
+        self.style().drawControl(QStyle.ControlElement.CE_MenuItem, self.option, painter)
         super().paintEvent(event)
 
 
@@ -405,7 +413,7 @@ class _MenuToolBar(QToolBar):
         Must be called everytime an action is added to the tool bar.
 
         Args:
-            QAction
+            action (QAction): Action to set up
         """
         button = self.widgetForAction(action)
         if not button:
@@ -667,7 +675,7 @@ class HorizontalSpinBox(QToolBar):
             return
         if value == self._value:
             return
-        acceptable = self._validator.validate(str(value), 0)[0] == QIntValidator.Acceptable
+        acceptable = self._validator.validate(str(value), 0)[0] == QIntValidator.State.Acceptable
         if strict and not acceptable:
             return
         self._line_edit.setText(str(value))
@@ -705,7 +713,7 @@ class PurgeSettingsDialog(QDialog):
 
         super().__init__(parent)
         self.setWindowTitle("Database purge settings")
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self._ui = Ui_Dialog()
         self._ui.setupUi(self)

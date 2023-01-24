@@ -17,7 +17,7 @@ Contains :class:`ItemMetadataTableModel` and associated functionality.
 """
 from enum import auto, Enum, IntEnum, unique
 
-from PySide2.QtCore import QModelIndex
+from PySide6.QtCore import QModelIndex
 
 from spinetoolbox.helpers import rows_to_row_count_tuples
 from spinetoolbox.fetch_parent import FlexibleFetchParent

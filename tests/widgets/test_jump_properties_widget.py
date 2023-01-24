@@ -17,8 +17,8 @@ Unit tests for the jump properties widget.
 """
 from tempfile import TemporaryDirectory
 import unittest
-from PySide2.QtGui import QTextCursor
-from PySide2.QtWidgets import QApplication
+from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import QApplication
 from spine_items.data_connection.data_connection import DataConnection
 from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.widgets.jump_properties_widget import JumpPropertiesWidget
@@ -65,7 +65,7 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         properties_widget = self._find_widget()
         self._set_link(properties_widget)
         cursor = properties_widget._ui.condition_script_edit.textCursor()
-        cursor.select(QTextCursor.Document)
+        cursor.select(QTextCursor.SelectionType.Document)
         cursor.removeSelectedText()
         cursor.insertText("exit(5)")
         self.assertEqual(properties_widget._ui.condition_script_edit.toPlainText(), "exit(5)")

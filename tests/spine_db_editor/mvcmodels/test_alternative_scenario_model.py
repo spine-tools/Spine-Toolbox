@@ -16,8 +16,8 @@ Unit tests for :class:`AlternativeScenarioModel`.
 """
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide2.QtCore import QModelIndex
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QModelIndex
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.alternative_scenario_model import AlternativeScenarioModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from ...mock_helpers import TestSpineDBManager

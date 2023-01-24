@@ -17,8 +17,8 @@ Contains a class for storing project items.
 """
 import logging
 from copy import copy
-from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel, Slot
-from PySide2.QtGui import QIcon, QFont
+from PySide6.QtCore import Qt, QModelIndex, QAbstractItemModel, Slot
+from PySide6.QtGui import QIcon, QFont
 
 from .project_tree_item import LeafProjectTreeItem
 
@@ -164,16 +164,16 @@ class ProjectItemModel(QAbstractItemModel):
         if not index.isValid():
             return None
         item = index.internalPointer()
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return item.name
-        if role == Qt.DecorationRole:
+        if role == Qt.ItemDataRole.DecorationRole:
             if not hasattr(item, "project_item"):
                 # item is a CategoryProjectTreeItem or root
                 return None
             # item is a LeafProjectTreeItem
             icon_path = item.project_item.get_icon().icon_file
             return QIcon(icon_path)
-        if role == Qt.FontRole:
+        if role == Qt.ItemDataRole.FontRole:
             if not hasattr(item, "project_item"):
                 bold_font = QFont()
                 bold_font.setBold(True)
@@ -223,7 +223,9 @@ class ProjectItemModel(QAbstractItemModel):
         for category in self.root().children():
             category_index = self.find_category(category.name)
             start_index = self.index(0, 0, category_index)
-            matching_index = self.match(start_index, Qt.DisplayRole, name, 1, Qt.MatchFixedString | Qt.MatchRecursive)
+            matching_index = self.match(
+                start_index, Qt.ItemDataRole.DisplayRole, name, 1, Qt.MatchFixedString | Qt.MatchRecursive
+            )
             if not matching_index:
                 pass  # no match in this category
             elif len(matching_index) == 1:

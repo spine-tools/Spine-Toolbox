@@ -22,9 +22,9 @@ from collections import namedtuple
 from itertools import combinations, takewhile
 import json
 from pathlib import Path
-from PySide2.QtCore import QAbstractItemModel, QFileInfo, QModelIndex, Qt, Signal, QMimeData
-from PySide2.QtWidgets import QFileIconProvider
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QPixmap, QPainter, QIcon, QColor
+from PySide6.QtCore import QAbstractItemModel, QFileInfo, QModelIndex, Qt, Signal, QMimeData
+from PySide6.QtWidgets import QFileIconProvider
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QPainter, QIcon, QColor
 from spine_engine.project_item.project_item_resource import extract_packs, CmdLineArg, LabelArg
 
 
@@ -57,17 +57,17 @@ class FileListModel(QAbstractItemModel):
     def columnCount(self, parent=QModelIndex()):
         return 1
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         """Returns header information."""
-        if role != Qt.DisplayRole or orientation != Qt.Horizontal:
+        if role != Qt.ItemDataRole.DisplayRole or orientation != Qt.Orientation.Horizontal:
             return None
         return self._header_label
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns data associated with given role at given index."""
         if not index.isValid():
             return None
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             row = index.row()
             pack_label = index.internalPointer()
             if pack_label is None:
@@ -76,7 +76,7 @@ class FileListModel(QAbstractItemModel):
                     return resource.label
                 return self._pack_resources[row - len(self._single_resources)].label
             return self._pack_resources[self._pack_index(pack_label)].resources[row].path
-        if role == Qt.DecorationRole:
+        if role == Qt.ItemDataRole.DecorationRole:
             row = index.row()
             pack_label = index.internalPointer()
             if pack_label is None:
@@ -88,7 +88,7 @@ class FileListModel(QAbstractItemModel):
                 resource = self._pack_resources[self._pack_index(pack_label)].resources[row]
             if resource.hasfilepath:
                 return QFileIconProvider().icon(QFileInfo(resource.path))
-        if role == Qt.ToolTipRole:
+        if role == Qt.ItemDataRole.ToolTipRole:
             row = index.row()
             pack_label = index.internalPointer()
             if pack_label is None:
@@ -228,8 +228,8 @@ class CommandLineArgItem(QStandardItem):
         painter.end()
         return QIcon(pixmap)
 
-    def setData(self, value, role=Qt.UserRole + 1):
-        if role != Qt.EditRole:
+    def setData(self, value, role=Qt.ItemDataRole.UserRole + 1):
+        if role != Qt.ItemDataRole.EditRole:
             return super().setData(value, role=role)
         if value != self.data(role=role):
             self.model().replace_arg(self.row(), CmdLineArg(value))
@@ -243,8 +243,8 @@ class NewCommandLineArgItem(CommandLineArgItem):
         gray_color.setAlpha(128)
         self.setForeground(gray_color)
 
-    def setData(self, value, role=Qt.UserRole + 1):
-        if role != Qt.EditRole:
+    def setData(self, value, role=Qt.ItemDataRole.UserRole + 1):
+        if role != Qt.ItemDataRole.EditRole:
             return super().setData(value, role=role)
         if value != self.data(role=role):
             self.model().append_arg(CmdLineArg(value))

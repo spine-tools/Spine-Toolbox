@@ -16,8 +16,8 @@ Classes for custom QDialogs to add edit and remove database items.
 :date:   13.5.2018
 """
 
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QCheckBox
-from PySide2.QtCore import Slot, Qt, Signal
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QCheckBox
+from PySide6.QtCore import Slot, Qt, Signal
 from spinetoolbox.widgets.select_database_items import add_check_boxes, SelectDatabaseItems
 
 
@@ -37,7 +37,7 @@ class MassSelectItemsDialog(QDialog):
         from ..ui.select_database_items_dialog import Ui_Dialog  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.db_mngr = db_mngr
         self.db_maps = db_maps
@@ -52,7 +52,7 @@ class MassSelectItemsDialog(QDialog):
         self._item_check_boxes_widget = SelectDatabaseItems(item_state, self)
         self._item_check_boxes_widget.checked_state_changed.connect(self._handle_check_box_state_changed)
         self._ui.root_layout.insertWidget(1, self._item_check_boxes_widget)
-        self._ok_button = self._ui.button_box.button(QDialogButtonBox.Ok)
+        self._ok_button = self._ui.button_box.button(QDialogButtonBox.StandardButton.Ok)
         self._db_map_check_boxes = {db_map: QCheckBox(db_map.codename, self) for db_map in self.db_maps}
         check_boxes = {box.text(): box for box in self._db_map_check_boxes.values()}
         add_check_boxes(

@@ -19,8 +19,8 @@ Unit tests for ProjectItemModel class.
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import NonCallableMagicMock
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.project_item_model import ProjectItemModel
 from spinetoolbox.mvcmodels.project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
 from spinetoolbox.project_item.project_item import ProjectItem
@@ -62,7 +62,7 @@ class TestProjectItemModel(unittest.TestCase):
         self.assertTrue(category_index.isValid())
         self.assertEqual(category_index.row(), 0)
         self.assertEqual(category_index.column(), 0)
-        self.assertEqual(model.data(category_index, Qt.DisplayRole), "category")
+        self.assertEqual(model.data(category_index, Qt.ItemDataRole.DisplayRole), "category")
 
     def test_insert_item_leaf_item(self):
         root = RootProjectTreeItem()

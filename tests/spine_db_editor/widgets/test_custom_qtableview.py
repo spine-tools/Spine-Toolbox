@@ -15,8 +15,8 @@ import os
 import unittest
 from tempfile import TemporaryDirectory
 from unittest import mock
-from PySide2.QtCore import QItemSelectionModel, QModelIndex
-from PySide2.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QItemSelectionModel, QModelIndex
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from spinedb_api import DatabaseMapping, import_functions
 from spinetoolbox.helpers import signal_waiter
@@ -294,9 +294,9 @@ class TestParameterTableWithExistingData(TestBase):
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as roll_back_dialog:
-            roll_back_dialog.Ok = QMessageBox.Ok
+            roll_back_dialog.StandardButton.Ok = QMessageBox.StandardButton.Ok
             instance = roll_back_dialog.return_value
-            instance.exec_.return_value = QMessageBox.Ok
+            instance.exec.return_value = QMessageBox.StandardButton.Ok
             self._db_editor.ui.actionRollback.trigger()
         while model.rowCount() != self._n_objects * self._n_parameters + 1:
             # Wait for fetching to finish.

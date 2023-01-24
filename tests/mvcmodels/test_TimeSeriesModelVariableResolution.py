@@ -17,8 +17,8 @@ Unit tests for the TimeSeriesModelVariableResolution class.
 """
 
 import unittest
-from PySide2.QtCore import QObject, Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Qt
+from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 
@@ -40,7 +40,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T08:15"], [-5.0, 7.0], True, False),
             self._parent,
         )
-        for role in [Qt.DisplayRole, Qt.EditRole]:
+        for role in [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole]:
             model_index = model.index(0, 0)
             self.assertEqual(model.data(model_index, role), "2019-07-05T12:00:00")
             model_index = model.index(0, 1)

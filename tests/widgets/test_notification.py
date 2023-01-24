@@ -13,8 +13,9 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from PySide2.QtCore import QAbstractAnimation
-from PySide2.QtWidgets import QApplication, QUndoCommand, QUndoStack, QWidget
+from PySide6.QtCore import QAbstractAnimation
+from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtGui import QUndoCommand, QUndoStack
 from spinetoolbox.widgets.notification import Notification, ChangeNotifier
 
 

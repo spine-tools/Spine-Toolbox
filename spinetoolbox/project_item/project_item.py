@@ -17,7 +17,7 @@ Contains base classes for project items and item factories.
 
 import os
 import logging
-from PySide2.QtCore import Slot, Qt
+from PySide6.QtCore import Slot, Qt
 from spine_engine.utils.helpers import shorten
 from ..helpers import create_dir, open_url
 from ..metaobject import MetaObject

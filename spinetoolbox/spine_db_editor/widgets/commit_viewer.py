@@ -16,7 +16,7 @@ Contains the CommitViewer class.
 :date:   26.11.2018
 """
 
-from PySide2.QtWidgets import (
+from PySide6.QtWidgets import (
     QMainWindow,
     QTabWidget,
     QWidget,
@@ -27,7 +27,7 @@ from PySide2.QtWidgets import (
     QSplitter,
     QLabel,
 )
-from PySide2.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Slot
 from spinetoolbox.helpers import restore_ui, save_ui, busy_effect
 
 
@@ -55,7 +55,7 @@ class _DBCommitViewer(QWidget):
         layout.setSpacing(0)
         for commit in reversed(self._db_mngr.get_items(db_map, "commit", only_visible=False)):
             tree_item = QTreeWidgetItem(self._commit_list)
-            tree_item.setData(0, Qt.UserRole + 1, commit["id"])
+            tree_item.setData(0, Qt.ItemDataRole.UserRole + 1, commit["id"])
             self._commit_list.addTopLevelItem(tree_item)
             index = self._commit_list.indexFromItem(tree_item)
             widget = _CommitItem(commit)
@@ -70,7 +70,7 @@ class _DBCommitViewer(QWidget):
 
     @busy_effect
     def _do_select_commit(self, current):
-        commit_id = current.data(0, Qt.UserRole + 1)
+        commit_id = current.data(0, Qt.ItemDataRole.UserRole + 1)
         self._affected_items.clear()
         # TODO: If no items, show message that data was overwritten by a further commit
         for item_type, ids in self._db_mngr.get_items_for_commit(self._db_map, commit_id).items():

@@ -26,7 +26,7 @@ import pathlib
 import tempfile
 from zipfile import ZipFile
 import numpy as np
-from PySide2.QtCore import (
+from PySide6.QtCore import (
     QByteArray,
     QItemSelection,
     QMimeData,
@@ -39,8 +39,8 @@ from PySide2.QtCore import (
     QUrl,
     QEvent,
 )
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow
-from PySide2.QtWidgets import (
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow, QAction, QUndoStack
+from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
     QErrorMessage,
@@ -50,8 +50,6 @@ from PySide2.QtWidgets import (
     QMessageBox,
     QCheckBox,
     QDockWidget,
-    QAction,
-    QUndoStack,
     QWidget,
     QLabel,
     QScrollArea,
@@ -457,7 +455,7 @@ class ToolboxUI(QMainWindow):
         )
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
-            if open_previous_project != Qt.Checked:  # 2: Qt.Checked, ie. open_previous_project==True
+            if open_previous_project != Qt.CheckState.Checked.value:  # 2: Qt.CheckState.Checked, ie. open_previous_project==True
                 self.msg.emit(welcome_msg)
                 return
             # Get previous project (directory)
@@ -870,11 +868,11 @@ class ToolboxUI(QMainWindow):
                     "Would you like to overwrite the existing project?".format(project_dir)
                 )
                 box1 = QMessageBox(
-                    QMessageBox.Question, "Overwrite?", msg1, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                    QMessageBox.Icon.Question, "Overwrite?", msg1, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
                 )
-                box1.button(QMessageBox.Ok).setText("Overwrite")
-                answer1 = box1.exec_()
-                if answer1 != QMessageBox.Ok:
+                box1.button(QMessageBox.StandardButton.Ok).setText("Overwrite")
+                answer1 = box1.exec()
+                if answer1 != QMessageBox.StandardButton.Ok:
                     return False
             else:
                 msg2 = (
@@ -882,11 +880,11 @@ class ToolboxUI(QMainWindow):
                     "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
                 )
                 box2 = QMessageBox(
-                    QMessageBox.Question, "Not empty", msg2, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                    QMessageBox.Icon.Question, "Not empty", msg2, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
                 )
-                box2.button(QMessageBox.Ok).setText("Go ahead")
-                answer2 = box2.exec_()
-                if answer2 != QMessageBox.Ok:
+                box2.button(QMessageBox.StandardButton.Ok).setText("Go ahead")
+                answer2 = box2.exec()
+                if answer2 != QMessageBox.StandardButton.Ok:
                     return False
         return True
 
@@ -1100,11 +1098,15 @@ class ToolboxUI(QMainWindow):
         else:
             msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
         message_box = QMessageBox(
-            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            QMessageBox.Icon.Question,
+            "Remove All Items",
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=self
         )
-        message_box.button(QMessageBox.Ok).setText("Remove Items")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
+        message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Items")
+        answer = message_box.exec()
+        if answer != QMessageBox.StandardButton.Ok:
             return
         self.undo_stack.push(RemoveAllProjectItemsCommand(self._project, self.item_factories, delete_data=delete_data))
 
@@ -1195,7 +1197,7 @@ class ToolboxUI(QMainWindow):
             return
         item_factory = self.item_factories[spec.item_type]
         menu = item_factory.make_specification_menu(self, ind)
-        menu.exec_(global_pos)
+        menu.exec(global_pos)
         menu.deleteLater()
         menu = None
 
@@ -1225,15 +1227,15 @@ class ToolboxUI(QMainWindow):
         specification = self.specification_model.specification(index.row())
         message = f"Remove Specification <b>{specification.name}</b> from Project?"
         message_box = QMessageBox(
-            QMessageBox.Question,
+            QMessageBox.Icon.Question,
             "Remove Specification",
             message,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
             parent=self,
         )
-        message_box.button(QMessageBox.Ok).setText("Remove Specification")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
+        message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Specification")
+        answer = message_box.exec()
+        if answer != QMessageBox.StandardButton.Ok:
             return
         self.undo_stack.push(RemoveSpecificationCommand(self._project, specification.name))
 
@@ -1302,17 +1304,17 @@ class ToolboxUI(QMainWindow):
             dock.setMinimumSize(0, 0)
             dock.setVisible(True)
             dock.setFloating(False)
-        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_eventlog, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_eventlog, Qt.Orientation.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Orientation.Horizontal)
         self.ui.dockWidget_eventlog.raise_()
-        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Orientation.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Orientation.Horizontal)
         docks = (self.ui.dockWidget_project, self.ui.dockWidget_design_view, self.ui.dockWidget_item)
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.3 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.3 * width], Qt.Orientation.Horizontal)
         docks = (self.ui.dockWidget_project, self.ui.dockWidget_eventlog)
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.6 * width, 0.4 * width], Qt.Vertical)
+        self.resizeDocks(docks, [0.6 * width, 0.4 * width], Qt.Orientation.Vertical)
 
     def _add_actions(self):
         """Adds actions to the main window."""
@@ -1322,8 +1324,8 @@ class ToolboxUI(QMainWindow):
 
     def set_debug_qactions(self):
         """Sets shortcuts for QActions that may be needed in debugging."""
-        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
-        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_8))
+        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_0))
+        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_8))
         self.addAction(self.show_properties_tabbar)
         self.addAction(self.show_supported_img_formats)
 
@@ -1702,7 +1704,7 @@ class ToolboxUI(QMainWindow):
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
-        menu.exec_(pos)
+        menu.exec(pos)
         menu.deleteLater()
 
     def show_link_context_menu(self, pos, link):
@@ -1716,7 +1718,7 @@ class ToolboxUI(QMainWindow):
         menu.addAction(self.ui.actionRemove)
         self.ui.actionRemove.setEnabled(True)
         menu.addAction(self.ui.actionTake_link)
-        action = menu.exec_(pos)
+        action = menu.exec(pos)
         if action is self.ui.actionTake_link:
             self.ui.graphicsView.take_link(link)
         self.refresh_edit_action_states()
@@ -1820,16 +1822,16 @@ class ToolboxUI(QMainWindow):
             True if exit should proceed, False if user cancelled
         """
         msg = QMessageBox(parent=self)
-        msg.setIcon(QMessageBox.Question)
+        msg.setIcon(QMessageBox.Icon.Question)
         msg.setWindowTitle("Confirm exit")
         msg.setText("Are you sure you want to exit Spine Toolbox?")
-        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-        msg.button(QMessageBox.Ok).setText("Exit")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        msg.button(QMessageBox.StandardButton.Ok).setText("Exit")
         chkbox = QCheckBox()
         chkbox.setText("Do not ask me again")
         msg.setCheckBox(chkbox)
-        answer = msg.exec_()  # Show message box
-        if answer == QMessageBox.Ok:
+        answer = msg.exec()  # Show message box
+        if answer == QMessageBox.StandardButton.Ok:
             # Update conf file according to checkbox status
             if not chkbox.checkState():
                 show_prompt = "2"  # 2 as in True
@@ -1847,25 +1849,25 @@ class ToolboxUI(QMainWindow):
             True if exiting should proceed, False if user cancelled
         """
         msg = QMessageBox(parent=self)
-        msg.setIcon(QMessageBox.Question)
+        msg.setIcon(QMessageBox.Icon.Question)
         msg.setWindowTitle("Save project before leaving")
         msg.setText("The project has unsaved changes. Do you want to save them before closing?")
-        msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-        msg.button(QMessageBox.Save).setText("Save and exit")
-        msg.button(QMessageBox.Discard).setText("Exit without saving")
+        msg.setStandardButtons(QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel)
+        msg.button(QMessageBox.StandardButton.Save).setText("Save and exit")
+        msg.button(QMessageBox.StandardButton.Discard).setText("Exit without saving")
         chkbox = QCheckBox()
         chkbox.setText("Do not ask me again")
         msg.setCheckBox(chkbox)
-        answer = msg.exec_()
-        if answer == QMessageBox.Cancel:
+        answer = msg.exec()
+        if answer == QMessageBox.StandardButton.Cancel:
             return False
-        if answer == QMessageBox.Save:
+        if answer == QMessageBox.StandardButton.Save:
             self.save_project()
         chk = chkbox.checkState()
         if chk == 2:
-            if answer == QMessageBox.Save:
+            if answer == QMessageBox.StandardButton.Save:
                 self._qsettings.setValue("appSettings/saveAtExit", "2")
-            elif answer == QMessageBox.Discard:
+            elif answer == QMessageBox.StandardButton.Discard:
                 self._qsettings.setValue("appSettings/saveAtExit", "0")
         return True
 
@@ -1894,9 +1896,9 @@ class ToolboxUI(QMainWindow):
         """Clears recent projects list in File->Open recent menu."""
         msg = "Are you sure?"
         title = "Clear recent projects?"
-        message_box = QMessageBox(QMessageBox.Question, title, msg, QMessageBox.Yes | QMessageBox.No, parent=self)
-        answer = message_box.exec_()
-        if answer == QMessageBox.No:
+        message_box = QMessageBox(QMessageBox.Icon.Question, title, msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, parent=self)
+        answer = message_box.exec()
+        if answer == QMessageBox.StandardButton.No:
             return
         self._qsettings.remove("appSettings/recentProjects")
         self._qsettings.remove("appSettings/recentProjectStorages")
@@ -1931,7 +1933,7 @@ class ToolboxUI(QMainWindow):
         """Method for handling application exit.
 
         Args:
-             event (QCloseEvent): PySide2 event
+             event (QCloseEvent): PySide6 event
         """
         # Show confirm exit message box
         exit_confirmed = self._perform_pre_exit_tasks()
@@ -2259,11 +2261,11 @@ class ToolboxUI(QMainWindow):
                 msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
             # noinspection PyCallByClass, PyTypeChecker
             message_box = QMessageBox(
-                QMessageBox.Question, "Remove Item", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                QMessageBox.Icon.Question, "Remove Item", msg, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
             )
-            message_box.button(QMessageBox.Ok).setText("Remove Item")
-            answer = message_box.exec_()
-            if answer != QMessageBox.Ok:
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Item")
+            answer = message_box.exec()
+            if answer != QMessageBox.StandardButton.Ok:
                 return
         self.undo_stack.beginMacro("remove items and links")
         if project_item_names:

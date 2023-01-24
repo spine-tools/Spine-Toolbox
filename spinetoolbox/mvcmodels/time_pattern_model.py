@@ -17,8 +17,8 @@ A model for time patterns, used by the parameter_value editors.
 """
 
 import numpy as np
-from PySide2.QtCore import QModelIndex, Qt
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtWidgets import QMessageBox
 from spinedb_api import TimePattern, ParameterValueFormatError
 from .indexed_value_table_model import IndexedValueTableModel
 
@@ -87,7 +87,7 @@ class TimePatternModel(IndexedValueTableModel):
         self.endRemoveRows()
         return True
 
-    def setData(self, index, value, role=Qt.EditRole):
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         """
         Sets a time period or a value in the pattern.
 
@@ -100,7 +100,7 @@ class TimePatternModel(IndexedValueTableModel):
         Returns:
             bool: True if the operation was successful
         """
-        if not index.isValid() or role != Qt.EditRole:
+        if not index.isValid() or role != Qt.ItemDataRole.EditRole:
             return False
         row = index.row()
         if row == len(self._value):
@@ -113,7 +113,7 @@ class TimePatternModel(IndexedValueTableModel):
                 return False
         else:
             self._value.values[row] = value
-        self.dataChanged.emit(index, index, [Qt.EditRole])
+        self.dataChanged.emit(index, index, [Qt.ItemDataRole.EditRole])
         return True
 
     def batch_set_data(self, indexes, values):
@@ -137,4 +137,4 @@ class TimePatternModel(IndexedValueTableModel):
                 self._value.values[row] = value
         left_top = self.index(min(modified_rows), min(modified_columns))
         right_bottom = self.index(max(modified_rows), max(modified_columns))
-        self.dataChanged.emit(left_top, right_bottom, [Qt.EditRole])
+        self.dataChanged.emit(left_top, right_bottom, [Qt.ItemDataRole.EditRole])

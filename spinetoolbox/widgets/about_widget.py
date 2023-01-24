@@ -19,9 +19,9 @@ A widget for presenting basic information about the application.
 import os
 import sys
 import platform
-from PySide2.QtWidgets import QWidget, QApplication
-from PySide2.QtCore import Qt, QPoint, Slot
-from PySide2.QtGui import QTextCursor
+from PySide6.QtWidgets import QWidget, QApplication
+from PySide6.QtCore import Qt, QPoint, Slot
+from PySide6.QtGui import QTextCursor
 import spinetoolbox
 import spinedb_api
 import spine_engine
@@ -45,7 +45,7 @@ class AboutWidget(QWidget):
         self.ui = about.Ui_Form()
         self.ui.setupUi(self)
         self.ui.toolButton_copy_to_clipboard.clicked.connect(self.copy_to_clipboard)
-        self.setWindowFlags(Qt.Popup)
+        self.setWindowFlags(Qt.WindowType.Popup)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         full_version = (
@@ -125,7 +125,7 @@ class AboutWidget(QWidget):
               License along with this program. If not, see
               <a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>.</p>"""
         self.ui.textBrowser.insertHtml(license_html)
-        self.ui.textBrowser.moveCursor(QTextCursor.Start)
+        self.ui.textBrowser.moveCursor(QTextCursor.MoveOperation.Start)
 
     def keyPressEvent(self, e):
         """Close form when Escape, Enter, Return, or Space bar keys are pressed.

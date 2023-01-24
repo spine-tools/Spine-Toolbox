@@ -16,8 +16,9 @@ Contains custom QHeaderView for the pivot table.
 :date:   2.12.2019
 """
 
-from PySide2.QtCore import Signal, Slot, Qt, QPoint
-from PySide2.QtWidgets import QHeaderView, QMenu, QAction
+from PySide6.QtCore import Signal, Slot, Qt, QPoint
+from PySide6.QtWidgets import QHeaderView, QMenu
+from PySide6.QtGui import QAction
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
@@ -33,7 +34,7 @@ class PivotTableHeaderView(QHeaderView):
     def __init__(self, orientation, area, pivot_table_view):
         """
         Args:
-            orientation (int): Qt.Horizontal or Qt.Vertical
+            orientation (int): Qt.Orientation.Horizontal or Qt.Orientation.Vertical
             area (str): which pivot area the header represents: "columns", "rows" or "frozen"
             pivot_table_view (PivotTableView): parent view
         """
@@ -66,14 +67,16 @@ class ParameterValuePivotHeaderView(PivotTableHeaderView):
     def __init__(self, orientation, area, pivot_table_view):
         """
         Args:
-            orientation (int): Qt.Horizontal or Qt.Vertical
+            orientation (int): Qt.Orientation.Horizontal or Qt.Orientation.Vertical
             area (str): which pivot area the header represents: "columns", "rows" or "frozen"
             pivot_table_view (PivotTableView): parent view
         """
         super().__init__(orientation, area, pivot_table_view)
         self._proxy_model = pivot_table_view.model()
         self._model_index = None
-        self.setContextMenuPolicy(Qt.DefaultContextMenu if orientation == Qt.Horizontal else Qt.NoContextMenu)
+        self.setContextMenuPolicy(
+            Qt.DefaultContextMenu if orientation == Qt.Orientation.Horizontal else Qt.NoContextMenu
+        )
         self._menu = QMenu(self)
         self._plot_action = self._menu.addAction("Plot single column", self._plot_column)
         self._add_to_plot_menu = self._menu.addMenu("Plot in window")

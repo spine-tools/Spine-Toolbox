@@ -18,7 +18,7 @@ Unit tests for the KernelEditor widget.
 
 import unittest
 from unittest import mock
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWizard
 from spinetoolbox.widgets.install_julia_wizard import InstallJuliaWizard
 from spinetoolbox.widgets.settings_widget import SettingsWidget
 from tests.mock_helpers import create_toolboxui, clean_up_toolbox, MockInstantQProcess
@@ -46,7 +46,7 @@ class TestInstallJuliaWizard(unittest.TestCase):
         wizard.next()
         self.assertEqual("Select directories", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isCommitPage())
-        self.assertEqual("Install Julia", wizard.currentPage().buttonText(wizard.CommitButton))
+        self.assertEqual("Install Julia", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
         wizard.set_julia_exe = mock_set_julia_exe = mock.Mock()
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
             MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit))
@@ -69,7 +69,7 @@ class TestInstallJuliaWizard(unittest.TestCase):
         wizard.next()
         self.assertEqual("Select directories", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isCommitPage())
-        self.assertEqual("Install Julia", wizard.currentPage().buttonText(wizard.CommitButton))
+        self.assertEqual("Install Julia", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
         wizard.set_julia_exe = mock_set_julia_exe = mock.Mock()
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
             MockQProcess.return_value = MockInstantQProcess(finished_args=(-1, MockQProcess.NormalExit))
@@ -90,7 +90,7 @@ class TestInstallJuliaWizard(unittest.TestCase):
         wizard.next()
         self.assertEqual("Select directories", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isCommitPage())
-        self.assertEqual("Install Julia", wizard.currentPage().buttonText(wizard.CommitButton))
+        self.assertEqual("Install Julia", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
         wizard.set_julia_exe = mock_set_julia_exe = mock.Mock()
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
             MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.CrashExit))

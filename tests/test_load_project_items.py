@@ -16,7 +16,7 @@ Unit tests for the :module:`spinetoolbox.load_project_items` module.
 :date:   8.5.2020
 """
 import unittest
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.load_project_items import load_project_items
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 

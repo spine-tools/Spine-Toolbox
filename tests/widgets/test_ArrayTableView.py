@@ -20,8 +20,8 @@ import csv
 import locale
 from io import StringIO
 import unittest
-from PySide2.QtCore import QItemSelectionModel, QObject
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QItemSelectionModel, QObject
+from PySide6.QtWidgets import QApplication
 from spinedb_api import Array
 from spinetoolbox.mvcmodels.array_model import ArrayModel
 from spinetoolbox.widgets.custom_qtableview import ArrayTableView, system_lc_numeric

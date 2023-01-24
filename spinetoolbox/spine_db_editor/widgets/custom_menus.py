@@ -16,9 +16,9 @@ Classes for custom context menus and pop-up menus.
 :date:   13.5.2020
 """
 
-from PySide2.QtWidgets import QMenu, QWidget
-from PySide2.QtCore import Qt, QEvent, QPoint, Signal
-from PySide2.QtGui import QKeyEvent, QKeySequence
+from PySide6.QtWidgets import QMenu, QWidget
+from PySide6.QtCore import Qt, QEvent, QPoint, Signal
+from PySide6.QtGui import QKeyEvent, QKeySequence
 from ...widgets.custom_menus import FilterMenuBase
 from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel
 from ...fetch_parent import FlexibleFetchParent
@@ -37,7 +37,7 @@ class MainMenu(QMenu):
         if ev.type() == QEvent.ShortcutOverride and ev.modifiers() == Qt.NoModifier:
             actions = self.actions() + [a for child in self.findChildren(QWidget) for a in child.actions()]
             mnemonics = [QKeySequence.mnemonic(a.text()) for a in actions]
-            key_seq = QKeySequence(Qt.ALT + ev.key())
+            key_seq = QKeySequence(Qt.ALT | Qt.Key(ev.key()))
             if key_seq in mnemonics:
                 ev = QKeyEvent(QEvent.KeyPress, ev.key(), Qt.AltModifier)
                 qApp.postEvent(self, ev)  # pylint: disable=undefined-variable

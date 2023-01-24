@@ -20,8 +20,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import QModelIndex, Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
@@ -55,9 +55,9 @@ class TestMetadataTableModel(unittest.TestCase):
     def test_empty_model(self):
         self.assertEqual(self._model.rowCount(), 1)
         self.assertEqual(self._model.columnCount(), 3)
-        self.assertEqual(self._model.headerData(Column.NAME, Qt.Horizontal), "name")
-        self.assertEqual(self._model.headerData(Column.VALUE, Qt.Horizontal), "value")
-        self.assertEqual(self._model.headerData(Column.DB_MAP, Qt.Horizontal), "database")
+        self.assertEqual(self._model.headerData(Column.NAME, Qt.Orientation.Horizontal), "name")
+        self.assertEqual(self._model.headerData(Column.VALUE, Qt.Orientation.Horizontal), "value")
+        self.assertEqual(self._model.headerData(Column.DB_MAP, Qt.Orientation.Horizontal), "database")
         self._assert_empty_last_row()
 
     def test_add_metadata_from_database_to_empty_model(self):

@@ -17,8 +17,8 @@ Classes for custom QTreeView.
 """
 
 import os
-from PySide2.QtWidgets import QTreeView, QApplication
-from PySide2.QtCore import Signal, Qt
+from PySide6.QtWidgets import QTreeView, QApplication
+from PySide6.QtCore import Signal, Qt
 
 
 class CopyTreeView(QTreeView):
@@ -51,7 +51,7 @@ class CopyTreeView(QTreeView):
         if not selection:
             return False
         indexes = selection.indexes()
-        values = [index.data(Qt.EditRole) for index in indexes]
+        values = [index.data(Qt.ItemDataRole.EditRole) for index in indexes]
         content = "\n".join(values)
         QApplication.clipboard().setText(content)
         return True

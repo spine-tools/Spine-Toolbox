@@ -17,7 +17,7 @@ The SpineDBWorker class
 """
 from functools import wraps
 import itertools
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from .helpers import busy_effect, separate_metadata_and_item_metadata
 from .qthread_pool_executor import QtBasedThreadPoolExecutor

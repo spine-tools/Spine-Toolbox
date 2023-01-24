@@ -16,7 +16,7 @@ Contains :class:`MetadataTableModel` and associated functionality.
 :date:   7.2.2022
 """
 from enum import IntEnum, unique
-from PySide2.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex, Qt
 from spinetoolbox.helpers import rows_to_row_count_tuples
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from .metadata_table_model_base import Column, FLAGS_FIXED, FLAGS_EDITABLE, MetadataTableModelBase
@@ -146,7 +146,7 @@ class MetadataTableModel(MetadataTableModelBase):
             if updated_rows:
                 top_left = self.index(updated_rows[0], 0)
                 bottom_right = self.index(updated_rows[-1], Column.DB_MAP - 1)
-                self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
+                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
 
     def remove_metadata(self, db_map_data):
         """Removes metadata from model after it has been removed from databases.

@@ -17,9 +17,9 @@ Contains a class for a widget that represents a 'Open Project Directory' dialog.
 """
 
 import os
-from PySide2.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QAction, QComboBox
-from PySide2.QtCore import Qt, Slot, QDir, QStandardPaths, QModelIndex
-from PySide2.QtGui import QKeySequence, QValidator
+from PySide6.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QComboBox
+from PySide6.QtCore import Qt, Slot, QDir, QStandardPaths, QModelIndex
+from PySide6.QtGui import QKeySequence, QValidator, QAction
 from spinetoolbox.helpers import ProjectDirectoryIconProvider
 from spinetoolbox.widgets.notification import Notification
 from spinetoolbox.widgets.custom_menus import OpenProjectDialogComboBoxContextMenu
@@ -45,7 +45,7 @@ class OpenProjectDialog(QDialog):
         self.combobox_context_menu = None
         # Ensure this dialog is garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         # QActions for keyboard shortcuts
         self.go_root_action = QAction(self)
         self.go_home_action = QAction(self)
@@ -68,7 +68,7 @@ class OpenProjectDialog(QDialog):
         # Pressing enter still triggers the done() slot of the QDialog.
         self.validator = DirValidator()
         self.ui.comboBox_current_path.setValidator(self.validator)
-        self.ui.comboBox_current_path.setInsertPolicy(QComboBox.NoInsert)
+        self.ui.comboBox_current_path.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         # Read recent project directories and populate combobox
         recents = self._toolbox.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
         if recents:
@@ -143,9 +143,9 @@ class OpenProjectDialog(QDialog):
     def validator_state_changed(self):
         """Changes the combobox border color according to the current state of the validator."""
         state = self.ui.comboBox_current_path.validator().state
-        if state == QValidator.Acceptable:
+        if state == QValidator.State.Acceptable:
             self.ui.comboBox_current_path.setStyleSheet(self.cb_ss)
-        elif state == QValidator.Intermediate:
+        elif state == QValidator.State.Intermediate:
             ss = "QComboBox {border: 1px solid #ff704d}"
             self.ui.comboBox_current_path.setStyleSheet(ss)
         else:  # Invalid. This is never returned (on purpose).
@@ -271,7 +271,7 @@ class OpenProjectDialog(QDialog):
         possible_project_json_file = os.path.join(self.selection(), ".spinetoolbox", "project.json")
         if not os.path.isfile(possible_project_json_file):
             return
-        self.done(QDialog.Accepted)
+        self.done(QDialog.DialogCode.Accepted)
 
     def done(self, r):
         """Checks that selected path exists and is a valid
@@ -281,7 +281,7 @@ class OpenProjectDialog(QDialog):
         Args:
             r (int) Return code
         """
-        if r == QDialog.Accepted:
+        if r == QDialog.DialogCode.Accepted:
             if not os.path.isdir(self.selection()):
                 notification = Notification(self, "Path does not exist")
                 notification.show()
@@ -405,16 +405,16 @@ class DirValidator(QValidator):
         """
         previous_state = self.state
         if not txt:
-            self.state = QValidator.Intermediate
+            self.state = QValidator.State.Intermediate
             if not previous_state == self.state:
                 self.changed.emit()
             return self.state
         if os.path.isdir(txt):
-            self.state = QValidator.Acceptable
+            self.state = QValidator.State.Acceptable
             if not previous_state == self.state:
                 self.changed.emit()
             return self.state
-        self.state = QValidator.Intermediate
+        self.state = QValidator.State.Intermediate
         if not previous_state == self.state:
             self.changed.emit()
         return self.state

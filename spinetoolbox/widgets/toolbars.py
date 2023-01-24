@@ -16,9 +16,9 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QToolBar, QLabel
-from PySide2.QtGui import QIcon, QPainter
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QToolBar, QLabel
+from PySide6.QtGui import QIcon, QPainter
 from ..helpers import make_icon_toolbar_ss, ColoredIcon, CharIconEngine
 from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
 
@@ -227,7 +227,7 @@ class MainToolBar(ToolBar):
         self.addSeparator()
         self.addWidget(PaddingLabel("Execute"))
         self.execute_project_button = NiceButton()
-        self.execute_project_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.execute_project_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         self.execute_project_button.setDefaultAction(self._execute_project_action)
         self._add_tool_button(self.execute_project_button)
         self.execute_selection_button = NiceButton()
@@ -270,7 +270,7 @@ class MainToolBar(ToolBar):
         source = event.source()
         if not isinstance(source, ProjectItemButton):
             return
-        target = self.childAt(event.pos())
+        target = self.childAt(event.position().toPoint())
         if target is None:
             return
         while target.parent() != self:
@@ -279,10 +279,10 @@ class MainToolBar(ToolBar):
             return
         while source.parent() != self:
             source = source.parent()
-        if self.orientation() == Qt.Horizontal:
-            after = target.geometry().center().x() < event.pos().x()
+        if self.orientation() == Qt.Orientation.Horizontal:
+            after = target.geometry().center().x() < event.position().toPoint().x()
         else:
-            after = target.geometry().center().y() < event.pos().y()
+            after = target.geometry().center().y() < event.position().toPoint().y()
         actions = self.actions()
         source_action = next((a for a in actions if self.widgetForAction(a) == source))
         target_index = next((i for i, a in enumerate(actions) if self.widgetForAction(a) == target))
@@ -298,18 +298,18 @@ class MainToolBar(ToolBar):
         if self._drop_target_action is None:
             return
         painter = QPainter(self)
-        painter.drawLine(*self._drop_line())
+        painter.drawLine(*self._drop_line())  # Draw line from (x1, y1) to (x2, y2)
         painter.end()
 
     def _drop_line(self):
         widget = self.widgetForAction(self._drop_target_action)
         geom = widget.geometry()
-        margin = self.layout().margin()
-        if self.orientation() == Qt.Horizontal:
+        margins = self.layout().contentsMargins()
+        if self.orientation() == Qt.Orientation.Horizontal:
             x = geom.left() - 1
-            return x, margin, x, self.height() - margin
+            return x, margins.left(), x, self.height() - margins.top()
         y = geom.top() - 1
-        return margin, y, self.width() - margin, y
+        return margins.top(), y, self.width() - margins.left(), y
 
     def icon_ordering(self):
         item_types = []

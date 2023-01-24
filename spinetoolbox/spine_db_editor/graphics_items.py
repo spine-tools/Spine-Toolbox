@@ -15,10 +15,9 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QLineF
-from PySide2.QtSvg import QGraphicsSvgItem
-from PySide2.QtWidgets import (
-    QAction,
+from PySide6.QtCore import Qt, Signal, Slot, QLineF
+from PySide6.QtSvgWidgets import QGraphicsSvgItem
+from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
     QGraphicsRectItem,
@@ -28,7 +27,7 @@ from PySide2.QtWidgets import (
     QApplication,
     QMenu,
 )
-from PySide2.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication
+from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvas  # pylint: disable=no-name-in-module
 
@@ -215,9 +214,9 @@ class EntityItem(QGraphicsRectItem):
 
     def paint(self, painter, option, widget=None):
         """Shows or hides the selection halo."""
-        if option.state & (QStyle.State_Selected):
+        if option.state & (QStyle.StateFlag.State_Selected):
             self._paint_as_selected()
-            option.state &= ~QStyle.State_Selected
+            option.state &= ~QStyle.StateFlag.State_Selected
         else:
             self._paint_as_deselected()
         super().paint(painter, option, widget)

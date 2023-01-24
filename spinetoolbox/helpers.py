@@ -30,11 +30,11 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import matplotlib
-from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
-from PySide2.QtCore import __version__ as qt_version
-from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
-from PySide2.QtGui import (
+from PySide6.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
+from PySide6.QtCore import __version__ as qt_version
+from PySide6.QtCore import __version_info__ as qt_version_info
+from PySide6.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
+from PySide6.QtGui import (
     QGuiApplication,
     QCursor,
     QImageReader,
@@ -161,11 +161,15 @@ def rename_dir(old_dir, new_dir, toolbox, box_title):
     if os.path.exists(new_dir):
         msg = "Directory <b>{0}</b> already exists.<br/><br/>Would you like to overwrite its contents?".format(new_dir)
         box = QMessageBox(
-            QMessageBox.Question, box_title, msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=toolbox
+            QMessageBox.Icon.Question,
+            box_title,
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=toolbox,
         )
-        box.button(QMessageBox.Ok).setText("Overwrite")
-        answer = box.exec_()
-        if answer != QMessageBox.Ok:
+        box.button(QMessageBox.StandardButton.Ok).setText("Overwrite")
+        answer = box.exec()
+        if answer != QMessageBox.StandardButton.Ok:
             return False
         shutil.rmtree(new_dir)
     try:
@@ -238,23 +242,20 @@ def supported_img_formats():
     logging.debug("Supported Image formats:\n%s", img_formats_str)
 
 
-def pyside2_version_check():
-    """Check that PySide2 version is 5.14 or 5.15.
-    Version 5.15 is allowed but it is not promoted yet
-    because user's may need to update their VC++ runtime
-    libraries on Windows.
+def pyside6_version_check():
+    """Check that PySide6 version is at least 6.4.
 
-    qt_version is the Qt version used to compile PySide2 as string. E.g. "5.14.2"
-    qt_version_info is a tuple with each version component of Qt used to compile PySide2. E.g. (5, 14, 2)
+    qt_version (str) is the Qt version used to compile PySide6. E.g. "6.4.1"
+    qt_version_info (tuple) contains each version component separately e.g. (6, 4, 1)
     """
-    if not (qt_version_info[0] == 5 and qt_version_info[1] in (14, 15)):
+    if not (qt_version_info[0] == 6 and qt_version_info[1] >= 4):
         print(
             f"""Sorry for the inconvenience but,
 
-            Spine Toolbox does not support PySide2 version {qt_version}.
-            At the moment, supported PySide2 versions are 5.14 & 5.15.
+            Spine Toolbox does not support PySide6 version {qt_version}.
+            At the moment, PySide6 version must be 6.4 or greater.
 
-            To upgrade PySide2 to latest supported version, run
+            To upgrade PySide6 to latest supported version, run
 
                 pip install -r requirements.txt --upgrade
 
@@ -451,8 +452,8 @@ class IconListManager:
         for codepoint, searchterms in self.searchterms.items():
             item = QStandardItem()
             display_icon = int(codepoint, 16)
-            item.setData(display_icon, Qt.UserRole)
-            item.setData(searchterms, Qt.UserRole + 1)
+            item.setData(display_icon, Qt.ItemDataRole.UserRole)
+            item.setData(searchterms, Qt.ItemDataRole.UserRole + 1)
             items.append(item)
         self.model.invisibleRootItem().appendRows(items)
 
@@ -466,11 +467,11 @@ class IconListManager:
         Returns:
             Any: role-dependent model data
         """
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return None
-        if role != Qt.DecorationRole:
+        if role != Qt.ItemDataRole.DecorationRole:
             return QStandardItemModel.data(self.model, index, role)
-        display_icon = index.data(Qt.UserRole)
+        display_icon = index.data(Qt.ItemDataRole.UserRole)
         return object_icon(display_icon)
 
 
@@ -1335,12 +1336,12 @@ def inquire_index_name(model, column, title, parent_widget):
         title (str): input dialog's title
         parent_widget (QWidget): dialog's parent widget
     """
-    index_name = model.headerData(column, Qt.Horizontal)
+    index_name = model.headerData(column, Qt.Orientation.Horizontal)
     dialog_flags = Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
     new_name, ok = QInputDialog.getText(parent_widget, title, "Index name:", text=index_name, flags=dialog_flags)
     if not ok:
         return
-    model.setHeaderData(column, Qt.Horizontal, new_name)
+    model.setHeaderData(column, Qt.Orientation.Horizontal, new_name)
 
 
 def preferred_row_height(widget, factor=1.5):

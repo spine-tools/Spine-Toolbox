@@ -16,8 +16,8 @@ Classes to represent entities in a tree.
 :date:   11.3.2019
 """
 
-from PySide2.QtCore import Qt
-from PySide2.QtGui import QFont, QBrush, QIcon
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont, QBrush, QIcon
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.fetch_parent import FlexibleFetchParent
@@ -82,11 +82,11 @@ class EntityClassItem(MultiDBTreeItem):
             self.first_db_map, self.item_type, self.db_map_id(self.first_db_map), for_group=for_group
         )
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
-        if role == Qt.ToolTipRole:
+        if role == Qt.ItemDataRole.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
-        if role == Qt.FontRole and column == 0:
+        if role == Qt.ItemDataRole.FontRole and column == 0:
             bold_font = QFont()
             bold_font.setBold(True)
             return bold_font
@@ -233,9 +233,9 @@ class MembersItem(EntityClassItem):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict()
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
-        if role == Qt.FontRole and column == 0:
+        if role == Qt.ItemDataRole.FontRole and column == 0:
             bold_font = QFont()
             bold_font.setBold(True)
             return bold_font
@@ -261,8 +261,8 @@ class EntityItem(MultiDBTreeItem):
         """Returns corresponding class icon."""
         return self.parent_item._display_icon(for_group=self.is_group)
 
-    def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.ToolTipRole:
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
         return super().data(column, role)
 

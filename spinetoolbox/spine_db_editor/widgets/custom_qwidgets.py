@@ -17,8 +17,8 @@ Custom QWidgets.
 """
 
 import os
-from PySide2.QtWidgets import QMenu, QToolButton, QLabel, QGraphicsOpacityEffect
-from PySide2.QtCore import Slot, QVariantAnimation, QPointF, Qt
+from PySide6.QtWidgets import QMenu, QToolButton, QLabel, QGraphicsOpacityEffect
+from PySide6.QtCore import Slot, QVariantAnimation, QPointF, Qt
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url
 
@@ -32,7 +32,7 @@ class OpenFileButton(QToolButton):
         self.file_path = file_path
         self.dir_name, self.file_name = os.path.split(file_path)
         self.setText(self.file_name)
-        self.setPopupMode(QToolButton.MenuButtonPopup)
+        self.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         self.setStyleSheet(
             """
             QToolButton {

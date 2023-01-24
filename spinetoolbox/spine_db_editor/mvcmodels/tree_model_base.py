@@ -14,7 +14,7 @@ Models to represent things in a tree.
 :authors: M. Marin (KTH)
 :date:    1.0.2020
 """
-from PySide2.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from .tree_item_utility import StandardTreeItem
 
@@ -42,8 +42,8 @@ class TreeModelBase(MinimalTreeModel):
         """
         return 2
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return ("name", "description")[section]
         return None
 

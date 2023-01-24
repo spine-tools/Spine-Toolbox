@@ -15,9 +15,9 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Qt, Slot, QTimer, Signal, QRect, QSize
-from PySide2.QtWidgets import QPlainTextEdit, QSizePolicy
-from PySide2.QtGui import (
+from PySide6.QtCore import Qt, Slot, QTimer, Signal, QRect, QSize
+from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy
+from PySide6.QtGui import (
     QFontDatabase,
     QTextCharFormat,
     QFont,
@@ -108,8 +108,8 @@ class _CustomLineEdit(QPlainTextEdit):
         if cursor.position() < self.min_pos:
             cursor.setPosition(self.min_pos)
         elif cursor.positionInBlock() < self.new_line_indent:
-            cursor.movePosition(QTextCursor.StartOfBlock)
-            cursor.movePosition(QTextCursor.NextCharacter, n=self.new_line_indent)
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+            cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, n=self.new_line_indent)
         self.setTextCursor(cursor)
         self._updating = False
 
@@ -125,19 +125,19 @@ class _CustomLineEdit(QPlainTextEdit):
             if cursor.position() == self.min_pos:
                 return
             if cursor.positionInBlock() == self.new_line_indent:
-                cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.KeepAnchor, n=self.new_line_indent + 1)
+                cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.KeepAnchor, n=self.new_line_indent + 1)
                 cursor.removeSelectedText()
                 return
         if ev.key() == Qt.Key_Left:
             cursor = self.textCursor()
             if cursor.positionInBlock() == self.new_line_indent:
-                cursor.movePosition(QTextCursor.PreviousCharacter, n=self.new_line_indent + 1)
+                cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, n=self.new_line_indent + 1)
                 self.setTextCursor(cursor)
                 return
         if ev.key() == Qt.Key_Delete:
             cursor = self.textCursor()
             if cursor.atBlockEnd():
-                cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor, n=self.new_line_indent + 1)
+                cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor, n=self.new_line_indent + 1)
                 cursor.removeSelectedText()
                 return
         if self._console.key_press_event(ev):
@@ -254,14 +254,14 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def mouseMoveEvent(self, ev):
         super().mouseMoveEvent(ev)
-        if self.anchorAt(ev.pos()):
+        if self.anchorAt(ev.position().toPoint()):
             self.viewport().setCursor(Qt.PointingHandCursor)
         else:
             self.viewport().setCursor(Qt.IBeamCursor)
 
     def mousePressEvent(self, ev):
         super().mousePressEvent(ev)
-        self._anchor = self.anchorAt(ev.pos())
+        self._anchor = self.anchorAt(ev.position().toPoint())
 
     def mouseReleaseEvent(self, ev):
         super().mouseReleaseEvent(ev)
@@ -270,7 +270,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         text_buffer = self._skipped.pop(self._anchor, None)
         if text_buffer is None:
             return
-        cursor = self.cursorForPosition(ev.pos())
+        cursor = self.cursorForPosition(ev.position().toPoint())
         cursor.select(cursor.BlockUnderCursor)
         cursor.removeSelectedText()
         cursor.beginEditBlock()
@@ -305,7 +305,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
             le_selection_start = max(self._line_edit.min_pos, le_selection_start)
             le_selection_end = max(self._line_edit.min_pos, le_selection_end)
             le_cursor.setPosition(le_selection_start)
-            le_cursor.setPosition(le_selection_end, QTextCursor.KeepAnchor)
+            le_cursor.setPosition(le_selection_end, QTextCursor.MoveMode.KeepAnchor)
         self._line_edit.setTextCursor(le_cursor)
 
     @Slot()
@@ -338,7 +338,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._updating = True
         cursor = self.textCursor()
         cursor.setPosition(self._input_start_pos)
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        cursor.movePosition(QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor)
         text = self._line_edit.raw_text()
         cursor.insertText(text)
         self._highlight_current_input()
@@ -388,7 +388,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def _make_prompt_block(self, prompt=""):
         cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.End)
+        cursor.movePosition(QTextCursor.MoveOperation.End)
         cursor.insertBlock()
         self._prompt_block = cursor.block()
         self._insert_prompt(prompt=prompt)
@@ -397,7 +397,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor = self.textCursor()
         cursor.setPosition(self._prompt_block.position())
         cursor.insertText(prompt, self._prompt_format)
-        cursor.movePosition(QTextCursor.End)
+        cursor.movePosition(QTextCursor.MoveOperation.End)
         self._current_prompt = prompt
         self._line_edit.reset(self._current_prompt)
         self._move_line_edit()
@@ -483,20 +483,20 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def _get_prefix(self):
         le_cursor = self._line_edit.textCursor()
-        le_cursor.setPosition(self._line_edit.min_pos, QTextCursor.KeepAnchor)
+        le_cursor.setPosition(self._line_edit.min_pos, QTextCursor.MoveMode.KeepAnchor)
         return le_cursor.selectedText().rstrip()
 
     def _highlight_current_input(self):
         cursor = self.textCursor()
         cursor.setPosition(self._input_start_pos)
-        cursor.movePosition(QTextCursor.End, QTextCursor.KeepAnchor)
+        cursor.movePosition(QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor)
         text = cursor.selectedText()
         for start, count, text_format in self._highlighter.yield_formats(text):
             start += self._input_start_pos
             cursor.setPosition(start)
-            cursor.setPosition(start + count, QTextCursor.KeepAnchor)
+            cursor.setPosition(start + count, QTextCursor.MoveMode.KeepAnchor)
             cursor.setCharFormat(text_format)
-        cursor.movePosition(QTextCursor.NextCharacter)
+        cursor.movePosition(QTextCursor.MoveOperation.NextCharacter)
         cursor.setCharFormat(QTextCharFormat())
 
     def key_press_event(self, ev):
@@ -707,7 +707,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
             else self.createStandardContextMenu()
         )
         self._extend_menu(menu)
-        menu.exec_(ev.globalPos())
+        menu.exec(ev.globalPos())
 
 
 # Translated from

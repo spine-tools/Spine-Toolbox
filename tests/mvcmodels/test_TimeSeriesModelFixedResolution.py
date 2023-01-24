@@ -21,8 +21,8 @@ import dateutil.parser
 from dateutil.relativedelta import relativedelta
 import numpy as np
 import numpy.testing
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesFixedResolution
 from spinetoolbox.mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 
@@ -37,7 +37,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         model = TimeSeriesModelFixedResolution(
             TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 7.0], True, False), None
         )
-        for role in [Qt.DisplayRole, Qt.EditRole]:
+        for role in [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole]:
             model_index = model.index(0, 0)
             self.assertEqual(model.data(model_index, role), "2019-07-05T12:00:00")
             model_index = model.index(0, 1)

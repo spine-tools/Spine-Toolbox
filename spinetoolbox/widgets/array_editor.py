@@ -16,8 +16,8 @@ Contains an editor widget for array type parameter values.
 :date:   25.3.2020
 """
 
-from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
-from PySide2.QtWidgets import QWidget
+from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
+from PySide6.QtWidgets import QWidget
 
 from spinedb_api import DateTime, Duration, ParameterValueFormatError
 from .array_value_editor import ArrayValueEditor
@@ -125,7 +125,7 @@ class ArrayEditor(QWidget):
             position (QPoint): menu's position on the table
         """
         menu = ArrayTableContextMenu(self, self._ui.array_table_view, position)
-        menu.exec_(self._ui.array_table_view.mapToGlobal(position))
+        menu.exec(self._ui.array_table_view.mapToGlobal(position))
 
     @Slot(QModelIndex, QModelIndex, list)
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):

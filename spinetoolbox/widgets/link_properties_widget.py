@@ -16,9 +16,8 @@ Link properties widget.
 :date:   27.11.2020
 """
 
-from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QMenu
-
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QMenu
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from .properties_widget import PropertiesWidgetBase

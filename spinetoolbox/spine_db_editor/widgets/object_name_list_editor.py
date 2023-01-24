@@ -12,14 +12,13 @@
 """
 Contains the ObjectNameListEditor class.
 
-
 :author: M. Marin (KTH)
 :date:   27.11.2019
 """
 
-from PySide2.QtCore import Qt, Slot, Signal, QEvent, QCoreApplication
-from PySide2.QtWidgets import QItemDelegate
-from PySide2.QtGui import QStandardItemModel, QStandardItem
+from PySide6.QtCore import Qt, Slot, Signal, QEvent, QCoreApplication
+from PySide6.QtWidgets import QItemDelegate
+from PySide6.QtGui import QStandardItemModel, QStandardItem
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from .manage_items_dialogs import ManageItemsDialog
 from ...widgets.custom_editors import SearchBarEditor
@@ -35,7 +34,7 @@ class SearchBarDelegate(QItemDelegate):
 
     def createEditor(self, parent, option, index):
         editor = SearchBarEditor(parent)
-        editor.set_data(index.data(), index.data(Qt.UserRole))
+        editor.set_data(index.data(), index.data(Qt.ItemDataRole.UserRole))
         model = index.model()
         editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
         return editor
@@ -89,7 +88,7 @@ class ObjectNameListEditor(ManageItemsDialog):
             except IndexError:
                 obj_name = None
             qitem = QStandardItem(obj_name)
-            qitem.setData(object_names_list, role=Qt.UserRole)
+            qitem.setData(object_names_list, role=Qt.ItemDataRole.UserRole)
             item_list.append(qitem)
         self.model.invisibleRootItem().appendRow(item_list)
 

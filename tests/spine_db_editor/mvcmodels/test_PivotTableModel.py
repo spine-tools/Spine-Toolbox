@@ -17,7 +17,7 @@ Unit tests for :class:`ParameterValuePivotTableModel` module.
 """
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinedb_api import Map
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from ...mock_helpers import TestSpineDBManager

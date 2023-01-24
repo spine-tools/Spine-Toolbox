@@ -19,9 +19,9 @@ import os
 import shutil
 import json
 import subprocess
-from PySide2.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QDialogButtonBox, QWidget
-from PySide2.QtCore import Slot, Qt, QModelIndex, QTimer, QItemSelection, QPoint
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QIcon
+from PySide6.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QDialogButtonBox, QWidget
+from PySide6.QtCore import Slot, Qt, QModelIndex, QTimer, QItemSelection, QPoint
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QIcon
 from jupyter_client.kernelspec import find_kernel_specs
 from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable
 from spinetoolbox.execution_managers import QProcessExecutionManager
@@ -51,7 +51,7 @@ class KernelEditorBase(QDialog):
             python_or_julia (str): kernel type; valid values: "julia", "python"
         """
         super().__init__(parent=parent)  # Inherits stylesheet from SettingsWindow
-        self.setWindowFlags(Qt.Window)
+        self.setWindowFlags(Qt.WindowType.Window)
         self.setup_dialog_style()
         # Class attributes
         self._parent = parent
@@ -144,11 +144,15 @@ class KernelEditorBase(QDialog):
                 f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
             )
             message_box = QMessageBox(
-                QMessageBox.Question, "ipykernel Missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                QMessageBox.Icon.Question,
+                "ipykernel Missing",
+                message,
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self,
             )
-            message_box.button(QMessageBox.Ok).setText("Install ipykernel")
-            answer = message_box.exec_()
-            if answer == QMessageBox.Cancel:
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Install ipykernel")
+            answer = message_box.exec()
+            if answer == QMessageBox.StandardButton.Cancel:
                 return False
             # Install ipykernel
             self.start_package_install_process(prgm, "ipykernel")
@@ -299,11 +303,15 @@ class KernelEditorBase(QDialog):
                 f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
             )
             message_box = QMessageBox(
-                QMessageBox.Question, "IJulia missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                QMessageBox.Icon.Question,
+                "IJulia missing",
+                message,
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self,
             )
-            message_box.button(QMessageBox.Ok).setText("Install IJulia")
-            answer = message_box.exec_()
-            if answer == QMessageBox.Cancel:
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Install IJulia")
+            answer = message_box.exec()
+            if answer == QMessageBox.StandardButton.Cancel:
                 return False
             self.start_ijulia_install_process(julia, project)
         return True
@@ -627,7 +635,7 @@ class KernelEditor(KernelEditorBase):
         self._update_ok_button_enabled()
 
     def _update_ok_button_enabled(self):
-        self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(
+        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
             self.ui.tableView_kernel_list.selectionModel().hasSelection()
         )
 
@@ -699,7 +707,7 @@ class KernelEditor(KernelEditorBase):
         name_column = self.find_column("Name")
         for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
             row_index = self.kernel_list_model.index(row, name_column, self.ui.tableView_kernel_list.rootIndex())
-            if k_name == row_index.data(Qt.DisplayRole):
+            if k_name == row_index.data(Qt.ItemDataRole.DisplayRole):
                 index = row_index
                 break
         self.ui.tableView_kernel_list.setCurrentIndex(index)
@@ -715,7 +723,7 @@ class KernelEditor(KernelEditorBase):
         """
         if not current.isValid():
             return
-        d = current.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        d = current.siblingAtColumn(self.find_column("Location")).data(Qt.ItemDataRole.DisplayRole)  # Location column
         kernel_json = os.path.join(d, "kernel.json")
         if not os.path.exists(kernel_json):
             self._logger.msg_error.emit(f"Path {kernel_json} does not exist")
@@ -740,7 +748,7 @@ class KernelEditor(KernelEditorBase):
             int: Column number or -1 if label not found
         """
         for column in range(self.kernel_list_model.columnCount()):
-            if self.kernel_list_model.headerData(column, Qt.Horizontal) == label:
+            if self.kernel_list_model.headerData(column, Qt.Orientation.Horizontal) == label:
                 return column
         return -1
 
@@ -755,10 +763,12 @@ class KernelEditor(KernelEditorBase):
         # Ask permission to overwrite if kernel name is taken
         for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
             row_index = self.kernel_list_model.index(row, 0, self.ui.tableView_kernel_list.rootIndex())
-            if kernel_name == row_index.siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole):  # Name column
+            if kernel_name == row_index.siblingAtColumn(self.find_column("Name")).data(
+                Qt.ItemDataRole.DisplayRole
+            ):  # Name column
                 name_taken = True
             elif display_name == row_index.siblingAtColumn(self.find_column("Display Name")).data(
-                Qt.DisplayRole
+                Qt.ItemDataRole.DisplayRole
             ):  # Display name column
                 display_name_taken = True
         if display_name_taken:
@@ -771,11 +781,15 @@ class KernelEditor(KernelEditorBase):
             msg = f"Kernel <b>{kernel_name}</b> already exists.<br><br>Would you like to overwrite it?"
             # noinspection PyCallByClass, PyTypeChecker
             message_box = QMessageBox(
-                QMessageBox.Question, "Overwrite kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+                QMessageBox.Icon.Question,
+                "Overwrite kernel?",
+                msg,
+                buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self,
             )
-            message_box.button(QMessageBox.Ok).setText("Overwrite kernel")
-            answer = message_box.exec_()
-            if answer != QMessageBox.Ok:
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Overwrite kernel")
+            answer = message_box.exec()
+            if answer != QMessageBox.StandardButton.Ok:
                 return False
         return True
 
@@ -946,7 +960,7 @@ class KernelEditor(KernelEditorBase):
         index = self.ui.tableView_kernel_list.currentIndex()
         if not index.isValid():
             return
-        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.ItemDataRole.DisplayRole)  # Location column
         kernel_json = os.path.join(d, "kernel.json")
         if not os.path.exists(kernel_json):
             msg = f"Path <br><br>{kernel_json}<br><br>does not exist.<br>Consider removing the kernel manually."
@@ -966,7 +980,7 @@ class KernelEditor(KernelEditorBase):
         index = self.ui.tableView_kernel_list.currentIndex()
         if not index.isValid():
             return
-        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.ItemDataRole.DisplayRole)  # Location column
         if not os.path.exists(d):
             msg = "Path does not exist. Consider removing the kernel manually."
             # noinspection PyCallByClass, PyArgumentList
@@ -987,8 +1001,8 @@ class KernelEditor(KernelEditorBase):
         index = self.ui.tableView_kernel_list.currentIndex()
         if not index.isValid():
             return
-        name = index.siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole)  # Name column
-        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        name = index.siblingAtColumn(self.find_column("Name")).data(Qt.ItemDataRole.DisplayRole)  # Name column
+        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.ItemDataRole.DisplayRole)  # Location column
         if not os.path.exists(d):
             msg = "Path does not exist. Please remove it manually."
             # noinspection PyCallByClass, PyArgumentList
@@ -998,11 +1012,15 @@ class KernelEditor(KernelEditorBase):
         msg += f"<br><br>Directory<br><br><b>{d}</b><br><br>will be deleted."
         # noinspection PyCallByClass, PyTypeChecker
         message_box = QMessageBox(
-            QMessageBox.Question, "Remove kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            QMessageBox.Icon.Question,
+            "Remove kernel?",
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=self,
         )
-        message_box.button(QMessageBox.Ok).setText("Remove kernel")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
+        message_box.button(QMessageBox.StandardButton.Ok).setText("Remove kernel")
+        answer = message_box.exec()
+        if answer != QMessageBox.StandardButton.Ok:
             return
         try:
             shutil.rmtree(d)
@@ -1063,10 +1081,12 @@ class KernelEditor(KernelEditorBase):
         """
         self._save_ui()
         self.selected_kernel = None
-        if r == QDialog.Accepted:
+        if r == QDialog.DialogCode.Accepted:
             ind = self.ui.tableView_kernel_list.selectedIndexes()
             if len(ind) > 0:
-                self.selected_kernel = ind[0].siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole)
+                self.selected_kernel = (
+                    ind[0].siblingAtColumn(self.find_column("Name")).data(Qt.ItemDataRole.DisplayRole)
+                )
         super().done(r)
 
     def closeEvent(self, event=None):
@@ -1090,7 +1110,7 @@ class MiniKernelEditorBase(KernelEditorBase):
         self._cursors = {w: w.cursor() for w in self.findChildren(QWidget)}
         for widget in self._cursors:
             widget.setCursor(Qt.BusyCursor)
-        self.ui.buttonBox.button(QDialogButtonBox.Close).setVisible(False)
+        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(False)
 
     def _python_interpreter_name(self):
         return self.ui.lineEdit_python_interpreter.text()
@@ -1102,8 +1122,8 @@ class MiniKernelEditorBase(KernelEditorBase):
         return self.ui.lineEdit_julia_project.text()
 
     def _show_close_button(self, failed=False):
-        self.ui.buttonBox.button(QDialogButtonBox.Close).setVisible(True)
-        self.ui.buttonBox.button(QDialogButtonBox.Cancel).setVisible(False)
+        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
+        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
         for widget, cursor in self._cursors.items():
             widget.setCursor(cursor)
         msg = "Done" if not failed else "Failed"
@@ -1111,7 +1131,7 @@ class MiniKernelEditorBase(KernelEditorBase):
 
     def make_kernel(self):
         QTimer.singleShot(0, self._do_make_kernel)
-        self.exec_()
+        self.exec()
 
     def _do_make_kernel(self):
         raise NotImplementedError()

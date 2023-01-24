@@ -16,8 +16,8 @@ Contains the ParameterViewMixin class.
 :date:   26.11.2018
 """
 
-from PySide2.QtCore import Qt, Slot, QModelIndex
-from PySide2.QtWidgets import QHeaderView
+from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtWidgets import QHeaderView
 from .object_name_list_editor import ObjectNameListEditor
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
@@ -59,7 +59,7 @@ class ParameterViewMixin:
             view.setModel(model)
             view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-            view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+            view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
             view.horizontalHeader().setStretchLastSection(True)
             view.horizontalHeader().setSectionsMovable(True)
             view.connect_spine_db_editor(self)
@@ -108,7 +108,7 @@ class ParameterViewMixin:
             ]
             object_class_names.append(object_class_name)
             object_names_lists.append(object_names_list)
-        object_name_list = index.data(Qt.EditRole)
+        object_name_list = index.data(Qt.ItemDataRole.EditRole)
         try:
             current_object_names = object_name_list.split(DB_ITEM_SEPARATOR)
         except AttributeError:

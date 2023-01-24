@@ -19,8 +19,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtCore import Qt, QSettings
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QSettings
+from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DatabaseMapping,
     to_database,
@@ -71,117 +71,117 @@ class TestParameterValueFormatting(unittest.TestCase):
     def test_plain_number_in_display_role(self):
         value = 2.3
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.DisplayRole)
+        formatted = self.get_value(Qt.ItemDataRole.DisplayRole)
         self.assertEqual(formatted, "2.3")
 
     def test_plain_number_in_edit_role(self):
         value = 2.3
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.EditRole)
+        formatted = self.get_value(Qt.ItemDataRole.EditRole)
         self.assertEqual(formatted, join_value_and_type(b"2.3", None))
 
     def test_plain_number_in_tool_tip_role(self):
         value = 2.3
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        self.assertIsNone(self.get_value(Qt.ToolTipRole))
+        self.assertIsNone(self.get_value(Qt.ItemDataRole.ToolTipRole))
 
     def test_date_time_in_display_role(self):
         value = DateTime("2019-07-12T16:00")
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.DisplayRole)
+        formatted = self.get_value(Qt.ItemDataRole.DisplayRole)
         self.assertEqual(formatted, "2019-07-12T16:00:00")
 
     def test_date_time_in_edit_role(self):
         value = DateTime("2019-07-12T16:00")
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.EditRole)
+        formatted = self.get_value(Qt.ItemDataRole.EditRole)
         self.assertEqual(formatted, join_value_and_type(*to_database(value)))
 
     def test_date_time_in_tool_tip_role(self):
         value = DateTime("2019-07-12T16:00")
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        self.assertIsNone(self.get_value(Qt.ToolTipRole))
+        self.assertIsNone(self.get_value(Qt.ItemDataRole.ToolTipRole))
 
     def test_duration_in_display_role(self):
         value = Duration("3Y")
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.DisplayRole)
+        formatted = self.get_value(Qt.ItemDataRole.DisplayRole)
         self.assertEqual(formatted, "3Y")
 
     def test_duration_in_edit_role(self):
         value = Duration("2M")
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.EditRole)
+        formatted = self.get_value(Qt.ItemDataRole.EditRole)
         self.assertEqual(formatted, join_value_and_type(*to_database(value)))
 
     def test_duration_in_tool_tip_role(self):
         value = Duration("13D")
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        self.assertIsNone(self.get_value(Qt.ToolTipRole))
+        self.assertIsNone(self.get_value(Qt.ItemDataRole.ToolTipRole))
 
     def test_time_pattern_in_display_role(self):
         value = TimePattern(["M1-12"], [5.0])
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.DisplayRole)
+        formatted = self.get_value(Qt.ItemDataRole.DisplayRole)
         self.assertEqual(formatted, "Time pattern")
 
     def test_time_pattern_in_edit_role(self):
         value = TimePattern(["M1-12"], [5.0])
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.EditRole)
+        formatted = self.get_value(Qt.ItemDataRole.EditRole)
         self.assertEqual(formatted, join_value_and_type(*to_database(value)))
 
     def test_time_pattern_in_tool_tip_role(self):
         value = TimePattern(["M1-12"], [5.0])
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        self.assertIsNone(self.get_value(Qt.ToolTipRole))
+        self.assertIsNone(self.get_value(Qt.ItemDataRole.ToolTipRole))
 
     def test_time_series_in_display_role(self):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", "7 hours", [1.1, 2.2, 3.3], False, False)
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.DisplayRole)
+        formatted = self.get_value(Qt.ItemDataRole.DisplayRole)
         self.assertEqual(formatted, "Time series")
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.DisplayRole)
+        formatted = self.get_value(Qt.ItemDataRole.DisplayRole)
         self.assertEqual(formatted, "Time series")
 
     def test_time_series_in_edit_role(self):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", "7 hours", [1.1, 2.2, 3.3], False, False)
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.EditRole)
+        formatted = self.get_value(Qt.ItemDataRole.EditRole)
         self.assertEqual(formatted, join_value_and_type(*to_database(value)))
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.EditRole)
+        formatted = self.get_value(Qt.ItemDataRole.EditRole)
         self.assertEqual(formatted, join_value_and_type(*to_database(value)))
 
     def test_time_series_in_tool_tip_role(self):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", ["7 hours", "12 hours"], [1.1, 2.2, 3.3], False, False)
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.ToolTipRole)
+        formatted = self.get_value(Qt.ItemDataRole.ToolTipRole)
         self.assertEqual(formatted, "Start: 2019-07-12 08:00:00, resolution: [7h, 12h], length: 3")
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(*to_database(value))
-        formatted = self.get_value(Qt.ToolTipRole)
+        formatted = self.get_value(Qt.ItemDataRole.ToolTipRole)
         self.assertEqual(formatted, "Start: 2019-07-12T08:00:00, resolution: variable, length: 2")
 
     def test_broken_value_in_display_role(self):
         value = b"dubbidubbidu"
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(value, None)
-        formatted = self.get_value(Qt.DisplayRole)
+        formatted = self.get_value(Qt.ItemDataRole.DisplayRole)
         self.assertEqual(formatted, "Error")
 
     def test_broken_value_in_edit_role(self):
         value = b"diibadaaba"
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(value, None)
-        formatted = self.get_value(Qt.EditRole)
+        formatted = self.get_value(Qt.ItemDataRole.EditRole)
         self.assertEqual(formatted, join_value_and_type(b"diibadaaba", None))
 
     def test_broken_value_in_tool_tip_role(self):
         value = b"diibadaaba"
         self.db_mngr.get_item.side_effect = _make_get_item_side_effect(value, None)
-        formatted = self.get_value(Qt.ToolTipRole)
+        formatted = self.get_value(Qt.ItemDataRole.ToolTipRole)
         self.assertTrue(formatted.startswith('Could not decode the value'))
 
 

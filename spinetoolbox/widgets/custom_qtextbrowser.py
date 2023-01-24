@@ -17,9 +17,9 @@ Class for a custom QTextBrowser for showing the logs and tool output.
 """
 
 from contextlib import contextmanager
-from PySide2.QtCore import Slot
-from PySide2.QtGui import QTextCursor, QFontDatabase, QTextBlockFormat, QTextFrameFormat, QBrush
-from PySide2.QtWidgets import QTextBrowser, QAction, QMenu
+from PySide6.QtCore import Slot
+from PySide6.QtGui import QTextCursor, QFontDatabase, QTextBlockFormat, QTextFrameFormat, QBrush, QAction, QPalette
+from PySide6.QtWidgets import QTextBrowser, QMenu
 from ..config import TEXTBROWSER_SS
 from ..helpers import scrolling_to_bottom
 
@@ -54,7 +54,7 @@ class CustomQTextBrowser(QTextBrowser):
         self._frame_format.setBorder(1)
         self._selected_frame_format = QTextFrameFormat(self._frame_format)
         palette = self.palette()
-        self._selected_frame_format.setBackground(QBrush(palette.color(palette.Highlight).darker()))
+        self._selected_frame_format.setBackground(QBrush(palette.color(QPalette.Highlight).darker()))
         self._executions_menu.aboutToShow.connect(self._populate_executions_menu)
         self._executions_menu.triggered.connect(self._select_execution)
 
@@ -76,7 +76,7 @@ class CustomQTextBrowser(QTextBrowser):
         """
         with scrolling_to_bottom(self):
             cursor = self.textCursor()
-            cursor.movePosition(cursor.End)
+            cursor.movePosition(QTextCursor.MoveOperation.End)
             cursor.insertBlock()
             cursor.insertHtml(text)
 
@@ -92,7 +92,7 @@ class CustomQTextBrowser(QTextBrowser):
         menu = self.createStandardContextMenu()
         menu.addSeparator()
         menu.addAction(clear_action)
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
     def clear(self):
         super().clear()
@@ -150,7 +150,7 @@ class CustomQTextBrowser(QTextBrowser):
         item_blocks = self._execution_blocks.setdefault(self._executing_timestamp, {})
         if item_name not in item_blocks:
             cursor = self.textCursor()
-            cursor.movePosition(cursor.End)
+            cursor.movePosition(QTextCursor.MoveOperation.End)
             cursor.insertFrame(self._frame_format)
             item_blocks[item_name] = [cursor.block()]
             self._item_anchors[self._executing_timestamp, item_name] = anchor = self._executing_timestamp + item_name
@@ -158,7 +158,7 @@ class CustomQTextBrowser(QTextBrowser):
             cursor.insertHtml(f'<a name="{anchor}">{title}</a>')
             self._item_cursors[self._executing_timestamp, item_name] = cursor
             cursor = self.textCursor()
-            cursor.movePosition(cursor.End)
+            cursor.movePosition(QTextCursor.MoveOperation.End)
             item_blocks[item_name].append(cursor.block())
             self._item_filter_cursors[self._executing_timestamp, item_name] = {}
         blocks = item_blocks[item_name]
@@ -173,7 +173,7 @@ class CustomQTextBrowser(QTextBrowser):
                     filter_cursor.insertHtml(title)
                     blocks.append(filter_cursor.block())
                     filter_cursors[filter_id] = filter_cursor
-                    cursor.movePosition(cursor.NextBlock)
+                    cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
                     blocks.append(cursor.block())
                 cursor = filter_cursors[filter_id]
             cursor.insertBlock()
@@ -202,7 +202,7 @@ class CustomQTextBrowser(QTextBrowser):
             self._visible_timestamp = timestamp
         block_format = QTextBlockFormat()
         if not visible:
-            block_format.setLineHeight(0, QTextBlockFormat.FixedHeight)
+            block_format.setLineHeight(0, QTextBlockFormat.FixedHeight.value)
         frame_format = self._frame_format if visible else QTextFrameFormat()
         item_blocks = self._execution_blocks.get(timestamp, {})
         all_blocks = [block for blocks in item_blocks.values() for block in blocks]

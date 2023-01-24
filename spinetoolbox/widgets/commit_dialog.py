@@ -16,8 +16,9 @@ Classes for custom QDialogs to add edit and remove database items.
 :date:   13.5.2018
 """
 
-from PySide2.QtWidgets import QDialog, QVBoxLayout, QPlainTextEdit, QDialogButtonBox, QAction, QApplication
-from PySide2.QtCore import Slot, Qt
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QPlainTextEdit, QDialogButtonBox, QApplication
+from PySide6.QtCore import Slot, Qt
+from PySide6.QtGui import QAction
 
 
 class CommitDialog(QDialog):
@@ -31,7 +32,7 @@ class CommitDialog(QDialog):
             db_names (Iterable of str): database names
         """
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setWindowModality(Qt.ApplicationModal)
         self.commit_msg = None
         self.setWindowTitle('Commit changes to {}'.format(",".join(db_names)))
@@ -45,8 +46,8 @@ class CommitDialog(QDialog):
         self.commit_msg_edit.setPlaceholderText('Commit message \t(press Ctrl+Enter to commit)')
         self.commit_msg_edit.addAction(self.action_accept)
         button_box = QDialogButtonBox()
-        button_box.addButton(QDialogButtonBox.Cancel)
-        self.commit_button = button_box.addButton('Commit', QDialogButtonBox.AcceptRole)
+        button_box.addButton(QDialogButtonBox.StandardButton.Cancel)
+        self.commit_button = button_box.addButton('Commit', QDialogButtonBox.ButtonRole.AcceptRole)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         form.addWidget(self.commit_msg_edit)

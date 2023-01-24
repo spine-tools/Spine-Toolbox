@@ -11,7 +11,7 @@
 """Unit tests for the ``single_parameter_model`` module."""
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE

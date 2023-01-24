@@ -16,8 +16,8 @@ An editor widget for editing a map type parameter values.
 :date:   11.2.2020
 """
 
-from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
-from PySide2.QtWidgets import QWidget
+from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
+from PySide6.QtWidgets import QWidget
 
 from spinedb_api import Map
 from ..helpers import inquire_index_name
@@ -65,7 +65,7 @@ class MapEditor(QWidget):
             position (QPoint): menu's position
         """
         menu = MapTableContextMenu(self, self._ui.map_table_view, position)
-        menu.exec_(self._ui.map_table_view.mapToGlobal(position))
+        menu.exec(self._ui.map_table_view.mapToGlobal(position))
 
     def set_value(self, value):
         """Sets the parameter_value to be edited."""

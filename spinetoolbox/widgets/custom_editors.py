@@ -17,8 +17,8 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 
-from PySide2.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
-from PySide2.QtWidgets import (
+from PySide6.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
+from PySide6.QtWidgets import (
     QLineEdit,
     QTableView,
     QStyledItemDelegate,
@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
     QStyle,
     QLabel,
 )
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QColor, QIcon, QPixmap, QPainter
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor, QIcon, QPixmap, QPainter
 from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
 
 
@@ -168,7 +168,7 @@ class SearchBarEditor(QTableView):
         table_height = self.verticalHeader().length() + margins.top() + margins.bottom()
         table_width = self.horizontalHeader().length() + margins.left() + margins.right()
         if table_height > self.parent().size().height():
-            table_width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+            table_width += self.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
         size = QSize(table_width, table_height).boundedTo(self.parent().size())
         self.resize(size)
         # Adjust position if widget is outside parent's limits
@@ -179,13 +179,13 @@ class SearchBarEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
-        return self.first_index.data(Qt.EditRole)
+        return self.first_index.data(Qt.ItemDataRole.EditRole)
 
     @Slot(str)
     def _handle_delegate_text_edited(self, text):
         """Filters model as the first row is being edited."""
         self._original_text = text
-        self.proxy_model.setFilterRegExp("^" + text)
+        self.proxy_model.setFilterRegularExpression("^" + text)
         self.proxy_model.setData(self.first_index, text)
         self.refit()
 
@@ -229,17 +229,17 @@ class SearchBarEditor(QTableView):
         """Sets the current index to the one hovered by the mouse."""
         if not self.currentIndex().isValid():
             return
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         if index.row() == 0:
             return
         self.setCurrentIndex(index)
 
     def mousePressEvent(self, event):
         """Commits data."""
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         if index.row() == 0:
             return
-        self.proxy_model.setData(self.first_index, index.data(Qt.EditRole))
+        self.proxy_model.setData(self.first_index, index.data(Qt.ItemDataRole.EditRole))
         self.data_committed.emit()
 
 
@@ -298,28 +298,28 @@ class CheckListEditor(QTableView):
 
     def _select_item(self, qitem, rank):
         if self._ranked:
-            qitem.setData(self._icons[rank], Qt.DecorationRole)
+            qitem.setData(self._icons[rank], Qt.ItemDataRole.DecorationRole)
         else:
-            qitem.setCheckState(Qt.Checked)
+            qitem.setCheckState(Qt.CheckState.Checked)
 
     def _deselect_item(self, qitem, update_ranks=False):
         if self._ranked:
-            qitem.setData(self._blank_icon, Qt.DecorationRole)
+            qitem.setData(self._blank_icon, Qt.ItemDataRole.DecorationRole)
             if update_ranks:
                 for rank, item in enumerate(self._selected):
                     qitem = self._items[item]
                     self._select_item(qitem, rank)
         else:
-            qitem.setCheckState(Qt.Unchecked)
+            qitem.setCheckState(Qt.CheckState.Unchecked)
 
     def mouseMoveEvent(self, event):
         """Sets the current index to the one under mouse."""
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         self.setCurrentIndex(index)
 
     def mousePressEvent(self, event):
         """Toggles checked state of pressed index."""
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         self.toggle_selected(index)
 
     def set_data(self, items, checked_items):
@@ -333,7 +333,7 @@ class CheckListEditor(QTableView):
         for item in items:
             qitem = QStandardItem(item)
             qitem.setFlags(~Qt.ItemIsEditable)
-            qitem.setData(qApp.palette().window(), Qt.BackgroundRole)  # pylint: disable=undefined-variable
+            qitem.setData(qApp.palette().window(), Qt.ItemDataRole.BackgroundRole)  # pylint: disable=undefined-variable
             self._deselect_item(qitem)
             self._items[item] = qitem
             self.model.appendRow(qitem)
@@ -358,7 +358,7 @@ class CheckListEditor(QTableView):
         table_height = self.verticalHeader().length() + margins.top() + margins.bottom()
         table_width = self.horizontalHeader().length() + margins.left() + margins.right()
         if table_height > self.parent().size().height():
-            table_width += self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+            table_width += self.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
         size = QSize(table_width, table_height).boundedTo(self.parent().size())
         self.resize(size)
         if self._tutor:
@@ -376,7 +376,7 @@ class _IconPainterDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         """Paints selected items using the highlight brush."""
-        if option.state & QStyle.State_Selected:
+        if option.state & QStyle.StateFlag.State_Selected:
             painter.fillRect(option.rect, qApp.palette().highlight())  # pylint: disable=undefined-variable
         super().paint(painter, option, index)
 
@@ -405,11 +405,11 @@ class IconColorEditor(QDialog):
         icon_widget_layout.addWidget(self.line_edit)
         icon_widget_layout.addWidget(self.icon_list)
         self.color_dialog = QColorDialog(self)
-        self.color_dialog.setWindowFlags(Qt.Widget)
+        self.color_dialog.setWindowFlags(Qt.WindowType.Widget)
         self.color_dialog.setOption(QColorDialog.NoButtons, True)
         self.color_dialog.setOption(QColorDialog.DontUseNativeDialog, True)
         self.button_box = QDialogButtonBox(self)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         top_widget = QWidget(self)
         top_layout = QHBoxLayout(top_widget)
         top_layout.addWidget(self.icon_widget)
@@ -429,7 +429,7 @@ class IconColorEditor(QDialog):
         text = self.line_edit.text()
         if not text:
             return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
-        searchterms = self.icon_mngr.model.index(source_row, 0, source_parent).data(Qt.UserRole + 1)
+        searchterms = self.icon_mngr.model.index(source_row, 0, source_parent).data(Qt.ItemDataRole.UserRole + 1)
         return any(text in term for term in searchterms)
 
     def connect_signals(self):
@@ -443,12 +443,12 @@ class IconColorEditor(QDialog):
         self.icon_mngr.init_model()
         for i in range(self.proxy_model.rowCount()):
             index = self.proxy_model.index(i, 0)
-            if index.data(Qt.UserRole) == icon_code:
+            if index.data(Qt.ItemDataRole.UserRole) == icon_code:
                 self.icon_list.setCurrentIndex(index)
                 break
         self.color_dialog.setCurrentColor(QColor(color_code))
 
     def data(self):
-        icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
+        icon_code = self.icon_list.currentIndex().data(Qt.ItemDataRole.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
         return make_icon_id(icon_code, color_code)

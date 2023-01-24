@@ -17,7 +17,7 @@ Unit tests for the AboutWidget class.
 """
 
 import unittest
-from PySide2.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 from spinetoolbox.widgets.about_widget import AboutWidget
 
 

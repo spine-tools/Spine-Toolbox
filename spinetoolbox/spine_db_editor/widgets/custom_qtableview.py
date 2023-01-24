@@ -15,12 +15,11 @@ Custom QTableView classes that support copy-paste and the like.
 :author: M. Marin (KTH)
 :date:   18.5.2018
 """
+
 from dataclasses import replace
-
-from PySide2.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint
-from PySide2.QtWidgets import QAction, QTableView, QMenu
-from PySide2.QtGui import QKeySequence
-
+from PySide6.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint
+from PySide6.QtWidgets import QTableView, QHeaderView, QMenu
+from PySide6.QtGui import QKeySequence, QAction
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels.pivot_table_models import (
     ParameterValuePivotTableModel,
@@ -174,7 +173,7 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         self._menu.addAction("Clear all filters", self._spine_db_editor.clear_all_filters)
         self._menu.addSeparator()
         # Shortcuts
-        remove_rows_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
+        remove_rows_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Delete))
         remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
         self.addAction(remove_rows_action)
 
@@ -188,7 +187,7 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         if not index.isValid():
             return
         model = self.model()
-        is_value = model.headerData(index.column(), Qt.Horizontal) == self.value_column_header
+        is_value = model.headerData(index.column(), Qt.Orientation.Horizontal) == self.value_column_header
         self._open_in_editor_action.setEnabled(is_value)
         self._plot_action.setEnabled(is_value)
         if is_value:
@@ -196,7 +195,7 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
             plot_in_window_menu.triggered.connect(self.plot_in_window)
             prepare_plot_in_window_menu(plot_in_window_menu)
             self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
-        self._menu.exec_(event.globalPos())
+        self._menu.exec(event.globalPos())
         if is_value:
             plot_in_window_menu.deleteLater()
 
@@ -238,7 +237,7 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         selection = self.selectionModel().selection()
         rows = list()
         while not selection.isEmpty():
-            current = selection.takeFirst()
+            current = selection.takeAt(0)
             top = current.top()
             bottom = current.bottom()
             rows += range(top, bottom + 1)
@@ -421,8 +420,8 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
-        self.setHorizontalScrollMode(QTableView.ScrollPerPixel)
-        self.setVerticalScrollMode(QTableView.ScrollPerPixel)
+        self.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+        self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         # NOTE: order of creation of header tables is important for them to stack properly
         self._left_header_table = CopyPasteTableView(self)
         self._top_header_table = CopyPasteTableView(self)
@@ -501,7 +500,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             """Shows the context menu."""
             self._refresh_selected_indexes()
             self._update_actions_availability()
-            self._menu.exec_(position)
+            self._menu.exec(position)
 
         def _to_selection_lists(self, index):
             """Caches given index to corresponding selected index list.
@@ -603,8 +602,8 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self._remove_relationships_action = None
             self._plot_action = None
             self._plot_in_window_menu = None
-            horizontal_header = ParameterValuePivotHeaderView(Qt.Horizontal, "columns", view)
-            vertical_header = ParameterValuePivotHeaderView(Qt.Vertical, "rows", view)
+            horizontal_header = ParameterValuePivotHeaderView(Qt.Orientation.Horizontal, "columns", view)
+            vertical_header = ParameterValuePivotHeaderView(Qt.Orientation.Vertical, "rows", view)
             super().__init__(view, db_editor, horizontal_header, vertical_header)
             self._header_selection_lists["parameter"] = self._selected_parameter_indexes
 
@@ -737,8 +736,8 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
                 db_editor (SpineDBEditor): database editor
             """
             self._remove_objects_action = None
-            horizontal_header = PivotTableHeaderView(Qt.Horizontal, "columns", view)
-            vertical_header = PivotTableHeaderView(Qt.Vertical, "rows", view)
+            horizontal_header = PivotTableHeaderView(Qt.Orientation.Horizontal, "columns", view)
+            vertical_header = PivotTableHeaderView(Qt.Orientation.Vertical, "rows", view)
             super().__init__(view, db_editor, horizontal_header, vertical_header)
 
         def populate_context_menu(self):
@@ -768,9 +767,9 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self._toggle_alternatives_checked.triggered.connect(self._toggle_checked_state)
             self._remove_scenarios_action = None
             self._duplicate_scenario_action = None
-            horizontal_header = ScenarioAlternativePivotHeaderView(Qt.Horizontal, "columns", view)
+            horizontal_header = ScenarioAlternativePivotHeaderView(Qt.Orientation.Horizontal, "columns", view)
             horizontal_header.context_menu_requested.connect(self.show_context_menu)
-            vertical_header = ScenarioAlternativePivotHeaderView(Qt.Vertical, "rows", view)
+            vertical_header = ScenarioAlternativePivotHeaderView(Qt.Orientation.Vertical, "rows", view)
             vertical_header.context_menu_requested.connect(self.show_context_menu)
             super().__init__(view, db_editor, horizontal_header, vertical_header)
             self._header_selection_lists["scenario"] = self._selected_scenario_indexes
@@ -896,7 +895,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             title = TitleWidgetAction("Pivot", self._spine_db_editor)
             pivot_menu.addAction(title)
             pivot_menu.addActions(self._spine_db_editor.pivot_action_group.actions())
-            pivot_menu.exec_(event.globalPos())
+            pivot_menu.exec(event.globalPos())
             return
         self._context.show_context_menu(event.globalPos())
 
@@ -947,8 +946,8 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             header_table.show()
             header_table.verticalHeader().hide()
             header_table.horizontalHeader().hide()
-            header_table.setHorizontalScrollMode(QTableView.ScrollPerPixel)
-            header_table.setVerticalScrollMode(QTableView.ScrollPerPixel)
+            header_table.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+            header_table.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
             header_table.setStyleSheet("QTableView { border: none;}")
             self.viewport().stackUnder(header_table)
 
@@ -1046,7 +1045,7 @@ class MetadataTableViewBase(CopyPasteTableView):
 
     def contextMenuEvent(self, event):
         menu_position = event.globalPos()
-        self._menu.exec_(menu_position)
+        self._menu.exec(menu_position)
 
     def _remove_selected(self):
         """Removes selected rows from view's model."""

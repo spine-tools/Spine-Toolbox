@@ -16,22 +16,20 @@ Contains SpecificationEditorWindowBase and ChangeSpecPropertyCommand
 :date:   12.4.2018
 """
 
-from PySide2.QtGui import QKeySequence, QIcon
-from PySide2.QtCore import Signal, Slot, Qt
-from PySide2.QtWidgets import (
+from PySide6.QtGui import QKeySequence, QIcon, QUndoStack, QAction, QUndoCommand
+from PySide6.QtCore import Signal, Slot, Qt
+from PySide6.QtWidgets import (
     QMainWindow,
-    QUndoStack,
     QWidget,
     QToolBar,
     QLabel,
     QHBoxLayout,
     QMessageBox,
-    QAction,
     QMenu,
     QLineEdit,
     QCheckBox,
-    QUndoCommand,
     QErrorMessage,
+    QToolButton,
 )
 from spinetoolbox.widgets.notification import ChangeNotifier, Notification
 from spinetoolbox.helpers import CharIconEngine, restore_ui, save_ui
@@ -83,7 +81,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._ui = self._make_ui()
         self._ui.setupUi(self)
         self._ui_error = QErrorMessage(self)
-        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self._ui_error.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self._ui_error.setWindowTitle("Error")
         self.setWindowTitle(specification.name if specification else "")
         # Restore ui
@@ -274,7 +272,7 @@ class _SpecNameDescriptionToolbar(QToolBar):
         self.addWidget(widget)
         toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
         self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (Ctrl+ESC)")
-        self.show_toolbox_action.setShortcut(Qt.CTRL + Qt.Key_Escape)
+        self.show_toolbox_action.setShortcut(Qt.CTRL | Qt.Key_Escape)
         self.menu = self._make_main_menu()
         self.save_action = self.menu.addAction("Save")
         self.duplicate_action = self.menu.addAction("Duplicate")
@@ -282,7 +280,7 @@ class _SpecNameDescriptionToolbar(QToolBar):
         self.save_action.setEnabled(False)
         self.duplicate_action.setEnabled(self._parent.specification is not None)
         self.save_action.setShortcut(QKeySequence.Save)
-        self.duplicate_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_D))
+        self.duplicate_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_D))
         self.close_action.setShortcut(QKeySequence.Close)
         self.setObjectName("_SpecNameDescriptionToolbar")
         if spec:
@@ -296,10 +294,10 @@ class _SpecNameDescriptionToolbar(QToolBar):
         menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "")
         menu_action.setMenu(menu)
         menu_button = self.widgetForAction(menu_action)
-        menu_button.setPopupMode(menu_button.InstantPopup)
+        menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         action = QAction(self)
         action.triggered.connect(menu_button.showMenu)
-        keys = [QKeySequence(Qt.ALT + Qt.Key_F), QKeySequence(Qt.ALT + Qt.Key_E)]
+        keys = [QKeySequence(Qt.ALT | Qt.Key_F), QKeySequence(Qt.ALT | Qt.Key_E)]
         action.setShortcuts(keys)
         self._parent.addAction(action)
         keys_str = ", ".join([key.toString() for key in keys])
@@ -361,20 +359,22 @@ def prompt_to_save_changes(parent, settings, save_callback):
     if save_spec == 2:
         return save_callback()
     msg = QMessageBox(parent)
-    msg.setIcon(QMessageBox.Question)
+    msg.setIcon(QMessageBox.Icon.Question)
     msg.setWindowTitle(parent.windowTitle())
     msg.setText("Do you want to save your changes to the specification?")
-    msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
+    msg.setStandardButtons(
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
+    )
     chkbox = QCheckBox()
     chkbox.setText("Do not ask me again")
     msg.setCheckBox(chkbox)
-    answer = msg.exec_()
-    if answer == QMessageBox.Cancel:
+    answer = msg.exec()
+    if answer == QMessageBox.StandardButton.Cancel:
         return False
     if chkbox.checkState() == 2:
         # Save preference
-        preference = "2" if answer == QMessageBox.Yes else "0"
+        preference = "2" if answer == QMessageBox.StandardButton.Yes else "0"
         settings.setValue("appSettings/saveSpecBeforeClosing", preference)
-    if answer == QMessageBox.Yes:
+    if answer == QMessageBox.StandardButton.Yes:
         return save_callback()
     return True

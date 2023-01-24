@@ -19,8 +19,8 @@ Contains the GraphViewMixin class.
 import sys
 import itertools
 from time import monotonic
-from PySide2.QtCore import Slot, QTimer, QThreadPool
-from PySide2.QtWidgets import QHBoxLayout
+from PySide6.QtCore import Slot, QTimer, QThreadPool
+from PySide6.QtWidgets import QHBoxLayout
 from spinedb_api import from_database
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
 from ...helpers import get_save_file_name_in_last_dir

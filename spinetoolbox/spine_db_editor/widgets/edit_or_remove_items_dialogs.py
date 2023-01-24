@@ -16,7 +16,7 @@ Classes for custom QDialogs to edit items in databases.
 :date:   13.5.2018
 """
 
-from PySide2.QtCore import Slot
+from PySide6.QtCore import Slot
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from .custom_delegates import (
     ManageObjectClassesDelegate,

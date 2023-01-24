@@ -17,9 +17,9 @@ Contains the MultiSpineDBEditor class.
 """
 
 import os
-from PySide2.QtWidgets import QMessageBox, QMenu, QStatusBar, QToolButton
-from PySide2.QtCore import Slot, QPoint
-from PySide2.QtGui import QIcon, QFont
+from PySide6.QtWidgets import QMessageBox, QMenu, QStatusBar, QToolButton
+from PySide6.QtCore import Slot, QPoint
+from PySide6.QtGui import QIcon, QFont
 from .spine_db_editor import SpineDBEditor
 from .custom_qwidgets import ShootingLabel, OpenFileButton, OpenSQLiteFileButton
 from ...widgets.multi_tab_window import MultiTabWindow
@@ -157,9 +157,13 @@ class MultiSpineDBEditor(MultiTabWindow):
         if self._waiting_box is not None:
             return
         self._waiting_box = QMessageBox(
-            QMessageBox.Information, "Closing database", "Waiting for database to close...", QMessageBox.Ok, parent=self
+            QMessageBox.Information,
+            "Closing database",
+            "Waiting for database to close...",
+            QMessageBox.StandardButton.Ok,
+            parent=self,
         )
-        self._waiting_box.button(QMessageBox.Ok).setText("I wait patiently")
+        self._waiting_box.button(QMessageBox.StandardButton.Ok).setText("I wait patiently")
         self._waiting_box.open()
 
     @Slot()

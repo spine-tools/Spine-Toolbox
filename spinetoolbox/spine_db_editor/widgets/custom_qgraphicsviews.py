@@ -17,10 +17,10 @@ Classes for custom QGraphicsViews for the Entity graph view.
 """
 
 import sys
-from PySide2.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
-from PySide2.QtWidgets import QMenu
-from PySide2.QtGui import QCursor, QPainter, QIcon
-from PySide2.QtPrintSupport import QPrinter
+from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
+from PySide6.QtWidgets import QMenu, QGraphicsView
+from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize
+from PySide6.QtPrintSupport import QPrinter
 from ...helpers import CharIconEngine
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
@@ -169,7 +169,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._restore_pruned_menu.triggered.connect(self.restore_pruned_items)
         self._restore_all_pruned_action = self._menu.addAction("Restore all", self.restore_all_pruned_items)
         self._menu.addSeparator()
-        # FIXME: The heap map doesn't seem to be working nicely
+        # FIXME: The heat map doesn't seem to be working nicely
         # self._parameter_heat_map_menu = self._menu.addMenu("Add heat map")
         # self._parameter_heat_map_menu.triggered.connect(self.add_heat_map)
         self._menu.addSeparator()
@@ -237,7 +237,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self._hide_classes_menu.addAction(key)
         for key in sorted(self._items_per_class.keys() - self.pruned_db_map_entity_ids.keys()):
             self._prune_classes_menu.addAction(key)
-        # FIXME: The heap map doesn't seem to be working nicely
+        # FIXME: The heat map doesn't seem to be working nicely
         # self._parameter_heat_map_menu.setEnabled(has_graph)
         # if has_graph:
         #    self._populate_add_heat_map_menu()
@@ -307,10 +307,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.max_relationship_dimension = value
         self._spine_db_editor.build_graph()
 
-    def set_max_relationship_dimension(self, value):
-        self._update_max_relationship_dimension_label(value)
-        self._set_max_relationship_dimension(save_setting=False)
-
     @Slot(bool)
     def add_objects_at_position(self, checked=False):
         self._spine_db_editor.add_objects_at_position(self._context_menu_pos)
@@ -351,7 +347,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for item in self.selected_items:
             item.setVisible(False)
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _hide_class(self, action):
         """Hides some class."""
         key = action.text()
@@ -372,7 +368,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             for item in items:
                 item.setVisible(True)
 
-    @Slot("QAction")
+    @Slot(QAction)
     def show_hidden_items(self, action):
         """Shows some hidden items."""
         key = action.text()
@@ -392,7 +388,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _prune_class(self, action):
         """Prunnes some class."""
         key = action.text()
@@ -415,7 +411,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._restore_pruned_menu.clear()
         self._spine_db_editor.build_graph()
 
-    @Slot("QAction")
+    @Slot(QAction)
     def restore_pruned_items(self, action):
         """Reinstates some pruned items."""
         key = action.text()
@@ -497,7 +493,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._spine_db_editor.build_graph()
 
     @Slot(bool)
-    def export_as_pdf(self, checked=False):
+    def export_as_pdf(self, _=False):
         file_path = self._spine_db_editor.get_pdf_file_path()
         if not file_path:
             return
@@ -506,7 +502,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._zoom(1.0 / current_zoom_factor)
         self.scene().clearSelection()
         printer = QPrinter()
-        printer.setPaperSize(source.size(), QPrinter.Point)
+        printer.setPageSize(QPageSize(source.size(), QPageSize.Unit.Point))
         printer.setOutputFileName(file_path)
         painter = QPainter(printer)
         self.scene().render(painter, QRectF(), source)
@@ -549,7 +545,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 self._parameter_heat_map_menu.addAction(name)
         self._parameter_heat_map_menu.setDisabled(self._parameter_heat_map_menu.isEmpty())
 
-    @Slot("QAction")
+    @Slot(QAction)
     def add_heat_map(self, action):
         """Adds heat map for the parameter in the action text."""
         self._clean_up_heat_map_items()
@@ -604,7 +600,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def mousePressEvent(self, event):
         """Handles relationship creation if one it's in process."""
-        self._previous_mouse_pos = event.pos()
+        self._previous_mouse_pos = event.position().toPoint()
         if not self.cross_hairs_items:
             super().mousePressEvent(event)
             return
@@ -633,18 +629,18 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def mouseMoveEvent(self, event):
         """Updates the hovered object item if we're in relationship creation mode."""
         if self.cross_hairs_items:
-            self._update_cross_hairs_pos(event.pos())
+            self._update_cross_hairs_pos(event.position().toPoint())
             return
         super().mouseMoveEvent(event)
         if (
-            not self.itemAt(event.pos())
+            not self.itemAt(event.position().toPoint())
             and (event.buttons() & Qt.LeftButton != 0)
-            and self.dragMode() != self.RubberBandDrag
+            and self.dragMode() != QGraphicsView.DragMode.RubberBandDrag
         ):
             if self._previous_mouse_pos is not None:
-                delta = event.pos() - self._previous_mouse_pos
+                delta = event.position().toPoint() - self._previous_mouse_pos
                 self._scroll_scene_by(delta.x(), delta.y())
-            self._previous_mouse_pos = event.pos()
+            self._previous_mouse_pos = event.position().toPoint()
 
     def _update_cross_hairs_pos(self, pos):
         """Updates the hovered object item and sets the 'cross_hairs' icon accordingly.
@@ -711,7 +707,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             return
         e.accept()
         self._context_menu_pos = self.mapToScene(e.pos())
-        self._menu.exec_(e.globalPos())
+        self._menu.exec(e.globalPos())
 
     def _compute_max_zoom(self):
         return sys.maxsize
@@ -737,7 +733,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if event.modifiers() != Qt.ShiftModifier:
             super().wheelEvent(event)
             return
-        if event.orientation() != Qt.Vertical:
+        if event.orientation() != Qt.Orientation.Vertical:
             event.ignore()
             return
         event.accept()

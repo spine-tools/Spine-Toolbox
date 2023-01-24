@@ -16,7 +16,7 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
@@ -213,31 +213,31 @@ class SingleParameterModel(HalfSortedTableModel):
         item_id = db_item.get(id_key)
         return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Gets the id and database for the row, and reads data from the db manager
         using the item_type property.
         Paint the object_class icon next to the name.
         Also paint background of fixed indexes gray and apply custom format to JSON fields."""
         field = self.header[index.column()]
         # Background role
-        if role == Qt.BackgroundRole and field in self.fixed_fields:
+        if role == Qt.ItemDataRole.BackgroundRole and field in self.fixed_fields:
             return FIXED_FIELD_COLOR
         # Display, edit, tool tip, alignment role of 'json fields'
         if field == self.value_field and role in (
-            Qt.DisplayRole,
-            Qt.EditRole,
-            Qt.ToolTipRole,
+            Qt.ItemDataRole.DisplayRole,
+            Qt.ItemDataRole.EditRole,
+            Qt.ItemDataRole.ToolTipRole,
             Qt.TextAlignmentRole,
             PARSED_ROLE,
         ):
             id_ = self._main_data[index.row()]
             return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
-            if role == Qt.ToolTipRole:
+            if role == Qt.ItemDataRole.ToolTipRole:
                 description = self.get_field_item(field, item).get("description", None)
                 if description not in (None, ""):
                     return description
@@ -245,7 +245,7 @@ class SingleParameterModel(HalfSortedTableModel):
             if data and field in self.group_fields:
                 data = DB_ITEM_SEPARATOR.join(data)
             return data
-        if role == Qt.DecorationRole and field == self.entity_class_name_field:
+        if role == Qt.ItemDataRole.DecorationRole and field == self.entity_class_name_field:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
         if role == DB_MAP_ROLE:
             return self.db_map
@@ -354,7 +354,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
         """Update items in db.
 
         Args:
-            item (list): dictionary-items
+            items (list): dictionary-items
         """
         self.build_lookup_dictionary({self.db_map: items})
         param_defs = list()
@@ -497,7 +497,7 @@ class SingleRelationshipParameterValueModel(
         """Update items in db.
 
         Args:
-            item (list): dictionary-items
+            items (list): dictionary-items
         """
         for item in items:
             item["relationship_class_name"] = self.entity_class_name

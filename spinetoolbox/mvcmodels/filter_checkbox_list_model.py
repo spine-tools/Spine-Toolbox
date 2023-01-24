@@ -17,7 +17,7 @@ Provides FilterCheckboxListModel for FilterWidget.
 """
 
 import re
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
+from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel
 from spinetoolbox.helpers import bisect_chunks
 
 
@@ -75,7 +75,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self._all_selected = not self._all_selected
         if self._show_empty:
             self._empty_selected = self._all_selected
-        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), 0), [Qt.CheckStateRole])
+        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), 0), [Qt.ItemDataRole.CheckStateRole])
 
     def _check_all_selected(self):
         if self._is_filtered:
@@ -90,7 +90,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             return 0
         return len(self._data) + len(self._action_rows)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         row = index.row()
@@ -107,14 +107,14 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             selected = self._selected
             if row >= len(self._action_rows):
                 data_row = row - len(self._action_rows)
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             if row >= len(self._action_rows):
                 return self._data[data_row]
             return self._action_rows[row]
-        if role == Qt.CheckStateRole:
+        if role == Qt.ItemDataRole.CheckStateRole:
             if row >= len(self._action_rows):
-                return Qt.Checked if self._data[data_row] in selected else Qt.Unchecked
-            return Qt.Checked if action_state[row] else Qt.Unchecked
+                return Qt.CheckState.Checked if self._data[data_row] in selected else Qt.CheckState.Unchecked
+            return Qt.CheckState.Checked if action_state[row] else Qt.CheckState.Unchecked
 
     def _handle_index_clicked(self, index):
         if index.row() == 0:
@@ -139,8 +139,8 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
                     else:
                         self._selected.add(item)
             self._all_selected = self._check_all_selected()
-            self.dataChanged.emit(index, index, [Qt.CheckStateRole])
-            self.dataChanged.emit(0, 0, [Qt.CheckStateRole])
+            self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
+            self.dataChanged.emit(0, 0, [Qt.ItemDataRole.CheckStateRole])
 
     def set_list(self, data, all_selected=True):
         self.beginResetModel()
@@ -327,9 +327,9 @@ class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):
         super().__init__(parent, show_empty=show_empty)
         self.data_to_value = data_to_value
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         data = super().data(index, role=role)
-        if role == Qt.DisplayRole and data not in self._action_rows:
+        if role == Qt.ItemDataRole.DisplayRole and data not in self._action_rows:
             return self.data_to_value(data)
         return data
 

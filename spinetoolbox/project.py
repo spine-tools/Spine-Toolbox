@@ -21,8 +21,8 @@ import os
 from pathlib import Path
 import json
 import random
-from PySide2.QtCore import Signal, QCoreApplication
-from PySide2.QtGui import QColor
+from PySide6.QtCore import Signal, QCoreApplication
+from PySide6.QtGui import QColor
 import networkx as nx
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data

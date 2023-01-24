@@ -22,8 +22,8 @@ import csv
 
 import numpy
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
-from PySide2.QtCore import QMetaObject, Qt
-from PySide2.QtWidgets import QVBoxLayout, QWidget, QMenu, QApplication
+from PySide6.QtCore import QMetaObject, Qt
+from PySide6.QtWidgets import QVBoxLayout, QWidget, QMenu, QApplication
 from .plot_canvas import PlotCanvas, LegendPosition
 from .custom_qtableview import CopyPasteTableView
 from ..mvcmodels.minimal_table_model import MinimalTableModel
@@ -69,7 +69,7 @@ class PlotWidget(QWidget):
         menu = QMenu(self)
         menu.addAction("Show plot data...", self.show_plot_data)
         menu.addAction("Copy plot data", self.copy_plot_data)
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
     def _get_plot_data(self):
         """Gathers plot data into a table.
@@ -108,7 +108,7 @@ class PlotWidget(QWidget):
         """Opens a separate window that shows the plot data."""
         rows = self._get_plot_data()
         widget = _PlotDataWidget(rows, self)
-        widget.setWindowFlag(Qt.Window, True)
+        widget.setWindowFlag(Qt.WindowType.Window, True)
         title = "Plot data"
         widget.setWindowTitle(title)
         widget.show()
@@ -130,7 +130,7 @@ class PlotWidget(QWidget):
             document_name (str): a string to add to the window title
         """
         self.setParent(parent_window)
-        self.setWindowFlag(Qt.Window, True)
+        self.setWindowFlag(Qt.WindowType.Window, True)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         title = "Plot"
         if document_name:
@@ -154,7 +154,7 @@ class _PlotDataView(CopyPasteTableView):
         menu = QMenu(self)
         menu.addAction("Select all", self.selectAll)
         menu.addAction("Copy", self.copy).setEnabled(self.can_copy())
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
 
 class _PlotDataWidget(QWidget):

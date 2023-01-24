@@ -14,6 +14,6 @@ Color constants for models.
 :authors: A. Soininen (VTT)
 :date:    30.3.2022
 """
-from PySide2.QtGui import QColor
+from PySide6.QtGui import QColor
 
 FIXED_FIELD_COLOR = QColor("lightGray")

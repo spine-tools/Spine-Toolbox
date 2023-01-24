@@ -17,8 +17,8 @@ Unit tests for the EmptyParameterModel subclasses.
 """
 import unittest
 from unittest import mock
-from PySide2.QtCore import QModelIndex
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QModelIndex
+from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     import_object_classes,
     import_object_parameters,

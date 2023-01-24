@@ -17,9 +17,9 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 """
 
 import math
-from PySide2.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
-from PySide2.QtGui import QCursor
-from PySide2.QtCore import Slot, Qt, QTimeLine, QRectF
+from PySide6.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
+from PySide6.QtGui import QCursor
+from PySide6.QtCore import Slot, Qt, QTimeLine, QRectF
 from spine_engine.project_item.connection import Connection
 from ..project_item_icon import ProjectItemIcon
 from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
@@ -81,10 +81,10 @@ class CustomQGraphicsView(QGraphicsView):
         """Set rubber band selection mode if Control pressed.
         Enable resetting the zoom factor from the middle mouse button.
         """
-        item = self.itemAt(event.pos())
+        item = self.itemAt(event.position().toPoint())
         if not item or not item.acceptedMouseButtons() & event.buttons():
             if event.modifiers() & Qt.ControlModifier:
-                self.setDragMode(QGraphicsView.RubberBandDrag)
+                self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
                 self.viewport().setCursor(Qt.CrossCursor)
             if event.button() == Qt.MidButton:
                 self.reset_zoom()
@@ -93,9 +93,9 @@ class CustomQGraphicsView(QGraphicsView):
     def mouseReleaseEvent(self, event):
         """Reestablish scroll hand drag mode."""
         super().mouseReleaseEvent(event)
-        item = next(iter([x for x in self.items(event.pos()) if x.hasCursor()]), None)
-        was_not_rubber_band_drag = self.dragMode() != QGraphicsView.RubberBandDrag
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        item = next(iter([x for x in self.items(event.position().toPoint()) if x.hasCursor()]), None)
+        was_not_rubber_band_drag = self.dragMode() != QGraphicsView.DragMode.RubberBandDrag
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         if item and was_not_rubber_band_drag:
             self.viewport().setCursor(item.cursor())
         else:
@@ -110,12 +110,12 @@ class CustomQGraphicsView(QGraphicsView):
         Args:
             event (QWheelEvent): Mouse wheel event
         """
-        if event.orientation() != Qt.Vertical:
+        if event.angleDelta().x() != 0:
             event.ignore()
             return
         event.accept()
         if self._use_smooth_zoom():
-            angle = event.delta() / 8
+            angle = event.angleDelta().y() / 8
             steps = angle / 15
             self._scheduled_transformations += steps
             if self._scheduled_transformations * steps < 0:
@@ -124,13 +124,15 @@ class CustomQGraphicsView(QGraphicsView):
                 self.time_line.deleteLater()
             self.time_line = QTimeLine(200, self)
             self.time_line.setUpdateInterval(20)
-            self.time_line.valueChanged.connect(lambda x, pos=event.pos(): self._handle_zoom_time_line_advanced(pos))
+            self.time_line.valueChanged.connect(
+                lambda x, pos=event.position().toPoint(): self._handle_zoom_time_line_advanced(pos)
+            )
             self.time_line.finished.connect(self._handle_transformation_time_line_finished)
             self.time_line.start()
         else:
             angle = event.angleDelta().y()
             factor = self._zoom_factor_base ** angle
-            self.gentle_zoom(factor, event.pos())
+            self.gentle_zoom(factor, event.position().toPoint())
             self._set_preferred_scene_rect()
 
     def resizeEvent(self, event):

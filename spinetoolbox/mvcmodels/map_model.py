@@ -19,8 +19,8 @@ from copy import deepcopy
 from numbers import Number
 from itertools import takewhile
 import numpy
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide2.QtGui import QColor, QFont
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtGui import QColor, QFont
 from spinedb_api import (
     Array,
     convert_leaf_maps_to_specialized_containers,
@@ -112,9 +112,15 @@ class MapModel(QAbstractTableModel):
             right = max(right, column)
             self._rows[row][column] = empty
         if top <= bottom:
-            self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.DisplayRole, Qt.ToolTipRole])
             self.dataChanged.emit(
-                self.index(top, 0), self.index(bottom, self.columnCount() - 2), [Qt.BackgroundRole, Qt.FontRole]
+                self.index(top, left),
+                self.index(bottom, right),
+                [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole],
+            )
+            self.dataChanged.emit(
+                self.index(top, 0),
+                self.index(bottom, self.columnCount() - 2),
+                [Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.FontRole],
             )
 
     def columnCount(self, index=QModelIndex()):
@@ -128,23 +134,23 @@ class MapModel(QAbstractTableModel):
         if isinstance(converted, Map):
             self.reset(converted)
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns the data associated with the given role."""
         row_index = index.row()
         column_index = index.column()
-        if role == Qt.BackgroundRole:
+        if role == Qt.ItemDataRole.BackgroundRole:
             if self._is_in_expanse(row_index, column_index):
                 return EXPANSE_COLOR
             data_length = _data_length(self._rows[row_index])
             if column_index >= data_length:
                 return self._EMTPY_COLOR
             return None
-        if role in (Qt.EditRole, PARSED_ROLE):
+        if role in (Qt.ItemDataRole.EditRole, PARSED_ROLE):
             if self._is_in_expanse(row_index, column_index):
                 return ""
             value = self._rows[row_index][column_index]
             return value if value is not empty else ""
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             if self._is_in_expanse(row_index, column_index):
                 return ""
             data = self._rows[row_index][column_index]
@@ -165,7 +171,7 @@ class MapModel(QAbstractTableModel):
             if data is empty:
                 return ""
             return data
-        if role == Qt.FontRole:
+        if role == Qt.ItemDataRole.FontRole:
             if self._is_in_expanse(row_index, column_index):
                 return None
             row = self._rows[row_index]
@@ -180,11 +186,11 @@ class MapModel(QAbstractTableModel):
             return Qt.NoItemFlags
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         """Returns row numbers for vertical headers and column titles for horizontal ones."""
-        if role != Qt.DisplayRole:
+        if role != Qt.ItemDataRole.DisplayRole:
             return None
-        if orientation == Qt.Vertical:
+        if orientation == Qt.Orientation.Vertical:
             if section < len(self._rows):
                 return section + 1
             return None
@@ -359,14 +365,14 @@ class MapModel(QAbstractTableModel):
             first_column = top_left.column()
             for column_index in range(first_column, bottom_right.column() + 1):
                 self._rows[row_index][column_index] = data_row[column_index - first_column]
-        self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole, Qt.ToolTipRole])
+        self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole])
         self.dataChanged.emit(
             self.index(top_left.row(), 0),
             self.index(bottom_right.row(), self.columnCount() - 2),
-            [Qt.BackgroundRole, Qt.FontRole],
+            [Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.FontRole],
         )
 
-    def setData(self, index, value, role=Qt.EditRole):
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         """
         Sets data in the map.
 
@@ -377,7 +383,7 @@ class MapModel(QAbstractTableModel):
         Returns:
             bool: True if the operation was successful
         """
-        if not index.isValid() or role != Qt.EditRole:
+        if not index.isValid() or role != Qt.ItemDataRole.EditRole:
             return False
         row_index = index.row()
         column_index = index.column()
@@ -391,7 +397,9 @@ class MapModel(QAbstractTableModel):
             top_left = self.index(row_index, column_index + 1)
             if top_left.isValid():
                 bottom_right = self.index(row_index, len(row))
-                self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole, Qt.ToolTipRole])
+                self.dataChanged.emit(
+                    top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole]
+                )
         else:
             row = self._rows[row_index]
         if column_index == len(row):
@@ -405,15 +413,15 @@ class MapModel(QAbstractTableModel):
             row[column_index] = empty
         else:
             row[column_index] = value if not isinstance(value, Number) else float(value)
-        self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
+        self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole])
         if column_index > 0:
             top_left = self.index(row_index, 0)
             bottom_right = self.index(row_index, len(row))
-            self.dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
+            self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.FontRole])
         return True
 
-    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
+    def setHeaderData(self, section, orientation, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.EditRole:
             return False
         self._index_names[section] = value
         self.headerDataChanged.emit(orientation, section, section)
@@ -446,10 +454,10 @@ class MapModel(QAbstractTableModel):
 
     def index_name(self, index):
         return (
-            self.headerData(index.column(), Qt.Horizontal)
+            self.headerData(index.column(), Qt.Orientation.Horizontal)
             + "("
             + ", ".join(
-                f"{self.headerData(c, Qt.Horizontal)}={self.data(index.siblingAtColumn(c))}"
+                f"{self.headerData(c, Qt.Orientation.Horizontal)}={self.data(index.siblingAtColumn(c))}"
                 for c in range(index.column())
             )
             + ")"

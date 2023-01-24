@@ -15,7 +15,7 @@ An editor dialog for map indexes and values.
 :author: A. Soininen (VTT)
 :date:   2.11.2020
 """
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from .array_editor import ArrayEditor
 from .duration_editor import DurationEditor
 from .datetime_editor import DatetimeEditor
@@ -48,7 +48,7 @@ class MapValueEditor(ParameterValueEditorBase):
         super().__init__(index, editors, parent)
         self._model = index.model()
         self.setWindowTitle("Edit map value")
-        self._select_editor(index.data(Qt.EditRole))
+        self._select_editor(index.data(Qt.ItemDataRole.EditRole))
 
     def _set_data(self, value):
         """See base class."""

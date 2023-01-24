@@ -16,8 +16,8 @@ Contains logic for the variable resolution time series editor widget.
 :date:   31.5.2019
 """
 
-from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
-from PySide2.QtWidgets import QWidget
+from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
+from PySide6.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution
 from ..plotting import add_time_series_plot
 from ..mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
@@ -72,7 +72,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
             position (QPoint): menu's position on the table
         """
         menu = IndexedValueTableContextMenu(self._ui.time_series_table, position)
-        menu.exec_(self._ui.time_series_table.mapToGlobal(position))
+        menu.exec(self._ui.time_series_table.mapToGlobal(position))
 
     def set_value(self, value):
         """Sets the time series being edited."""

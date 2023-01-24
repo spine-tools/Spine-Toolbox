@@ -15,7 +15,7 @@ Contains machinery to deal with metadata editor.
 :author: A. Soininen (VTT)
 :date:   7.2.2022
 """
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from ..mvcmodels.metadata_table_model import MetadataTableModel
 
 

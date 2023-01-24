@@ -15,8 +15,8 @@ Contains SpineEngineWorker.
 :date:   14.10.2020
 """
 import copy
-from PySide2.QtCore import Signal, Slot, QObject, QThread
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtCore import Signal, Slot, QObject, QThread
+from PySide6.QtWidgets import QMessageBox
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from .spine_engine_manager import make_engine_manager, LocalSpineEngineManager
@@ -71,12 +71,16 @@ def _handle_prompt_arrived(prompt, engine_mngr):
     item_name = prompt["item_name"]
     # pylint: disable=undefined-variable
     box = QMessageBox(
-        QMessageBox.Question, item_name, text, buttons=QMessageBox.Yes | QMessageBox.No, parent=qApp.activeWindow()
+        QMessageBox.Icon.Question,
+        item_name,
+        text,
+        buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        parent=qApp.activeWindow(),
     )
     if info_text:
         box.setInformativeText(info_text)
-    answer = box.exec_()
-    accepted = answer == QMessageBox.Yes
+    answer = box.exec()
+    accepted = answer == QMessageBox.StandardButton.Yes
     engine_mngr.answer_prompt(item_name, accepted)
 
 

@@ -19,7 +19,7 @@ Unit tests for the custom QTextBrowser.
 import logging
 import unittest
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 
 # XXX: This modules just tests QTextBrowser.maximumBlockCount, so maybe we can remove it?

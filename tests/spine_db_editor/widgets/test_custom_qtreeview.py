@@ -19,8 +19,8 @@ import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import Qt, QItemSelectionModel
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QItemSelectionModel
+from PySide6.QtWidgets import QApplication
 
 from spinedb_api import (
     DatabaseMapping,
@@ -148,8 +148,8 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(model.rowCount(root_index), 0)
         self.assertEqual(model.columnCount(root_index), 2)
         self.assertEqual(root_index.data(), "root")
-        self.assertEqual(model.headerData(0, Qt.Horizontal), "name")
-        self.assertEqual(model.headerData(1, Qt.Horizontal), "database")
+        self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "name")
+        self.assertEqual(model.headerData(1, Qt.Orientation.Horizontal), "database")
 
     def test_add_object_class(self):
         view = self._db_editor.ui.treeView_object
@@ -245,8 +245,8 @@ class TestObjectTreeViewWithExistingData(TestBase):
             QApplication.processEvents()
         self.assertEqual(model.columnCount(root_index), 2)
         self.assertEqual(root_index.data(), "root")
-        self.assertEqual(model.headerData(0, Qt.Horizontal), "name")
-        self.assertEqual(model.headerData(1, Qt.Horizontal), "database")
+        self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "name")
+        self.assertEqual(model.headerData(1, Qt.Orientation.Horizontal), "database")
         class_index = model.index(0, 0, root_index)
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
@@ -360,8 +360,8 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(model.rowCount(root_index), 0)
         self.assertEqual(model.columnCount(root_index), 2)
         self.assertEqual(root_index.data(), "root")
-        self.assertEqual(model.headerData(0, Qt.Horizontal), "name")
-        self.assertEqual(model.headerData(1, Qt.Horizontal), "database")
+        self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "name")
+        self.assertEqual(model.headerData(1, Qt.Orientation.Horizontal), "database")
 
     def test_add_relationship_class(self):
         add_object_class(self._db_editor.ui.treeView_object, "an_object_class")
@@ -468,8 +468,8 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
             QApplication.processEvents()
         self.assertEqual(model.columnCount(root_index), 2)
         self.assertEqual(root_index.data(), "root")
-        self.assertEqual(model.headerData(0, Qt.Horizontal), "name")
-        self.assertEqual(model.headerData(1, Qt.Horizontal), "database")
+        self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "name")
+        self.assertEqual(model.headerData(1, Qt.Orientation.Horizontal), "database")
         class_index = model.index(0, 0, root_index)
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:

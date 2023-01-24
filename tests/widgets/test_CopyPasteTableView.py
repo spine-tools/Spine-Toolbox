@@ -19,8 +19,8 @@ Unit tests for CopyPasteTableView class.
 import locale
 import unittest
 from unittest.mock import patch
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, QItemSelectionModel, Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QItemSelectionModel, Qt
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
 
 
@@ -37,18 +37,18 @@ class _MockModel(QAbstractTableModel):
     def columnCount(self, parent=QModelIndex()):
         return len(self._data[0])
 
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid() or role not in (Qt.DisplayRole, Qt.EditRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if not index.isValid() or role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return None
         return self._data[index.row()][index.column()]
 
     def flags(self, index):
         return Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role not in (Qt.DisplayRole, Qt.EditRole):
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return None
-        if orientation == Qt.Horizontal:
+        if orientation == Qt.Orientation.Horizontal:
             return 'Column {}'.format(section)
         return 'Row {}'.format(section)
 

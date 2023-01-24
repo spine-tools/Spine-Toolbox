@@ -16,7 +16,7 @@ A tree model for parameter_value lists.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex
 from .tree_model_base import TreeModelBase
 from .parameter_value_list_item import DBItem
 
@@ -37,7 +37,7 @@ class ParameterValueListModel(TreeModelBase):
         return 1
 
     def index_name(self, index):
-        return self.data(index.parent(), role=Qt.DisplayRole)
+        return self.data(index.parent(), role=Qt.ItemDataRole.DisplayRole)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,

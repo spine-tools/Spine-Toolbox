@@ -13,15 +13,21 @@
 ################################################################################
 ## Form generated from reading UI file 'about.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 6.4.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
+    QLabel, QSizePolicy, QSpacerItem, QTextBrowser,
+    QToolButton, QVBoxLayout, QWidget)
 from spinetoolbox import resources_icons_rc
 from spinetoolbox import resources_logos_rc
 
@@ -101,10 +107,9 @@ class Ui_Form(object):
         self.label_spine_toolbox.setMaximumSize(QSize(16777215, 16777215))
         self.label_spine_toolbox.setBaseSize(QSize(0, 0))
         font = QFont()
-        font.setFamily(u"Arial Black")
+        font.setFamilies([u"Arial Black"])
         font.setPointSize(6)
         font.setBold(False)
-        font.setWeight(50)
         font.setStyleStrategy(QFont.PreferDefault)
         self.label_spine_toolbox.setFont(font)
         self.label_spine_toolbox.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
@@ -118,7 +123,7 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.label_spinedb_api.sizePolicy().hasHeightForWidth())
         self.label_spinedb_api.setSizePolicy(sizePolicy2)
         font1 = QFont()
-        font1.setFamily(u"Arial Black")
+        font1.setFamilies([u"Arial Black"])
         font1.setPointSize(6)
         font1.setStyleStrategy(QFont.PreferDefault)
         self.label_spinedb_api.setFont(font1)
@@ -262,10 +267,9 @@ class Ui_Form(object):
         self.label_3.setSizePolicy(sizePolicy3)
         self.label_3.setMinimumSize(QSize(200, 0))
         font3 = QFont()
-        font3.setFamily(u"Arial Black")
+        font3.setFamilies([u"Arial Black"])
         font3.setPointSize(8)
         font3.setBold(True)
-        font3.setWeight(75)
         font3.setStyleStrategy(QFont.PreferDefault)
         self.label_3.setFont(font3)
         self.label_3.setStyleSheet(u"background-color: rgb(0, 74, 194);")

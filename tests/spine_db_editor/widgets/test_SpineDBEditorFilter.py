@@ -16,7 +16,7 @@ Unit tests for the TreeViewFormFilterMixin class.
 :date:   6.12.2018
 """
 
-from PySide2.QtCore import Qt, QItemSelectionModel
+from PySide6.QtCore import Qt, QItemSelectionModel
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 
 
@@ -42,7 +42,7 @@ class TestSpineDBEditorFilterMixin:
     @staticmethod
     def _parameter_data(model, *fields):
         return [
-            tuple(model.index(row, model.header.index(field)).data(Qt.EditRole) for field in fields)
+            tuple(model.index(row, model.header.index(field)).data(Qt.ItemDataRole.EditRole) for field in fields)
             for row in range(model.rowCount())
         ]
 

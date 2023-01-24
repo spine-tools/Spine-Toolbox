@@ -17,7 +17,7 @@ Base classes to represent items from multiple databases in a tree.
 """
 from operator import attrgetter
 
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from ...helpers import rows_to_row_count_tuples, bisect_chunks
 from ...fetch_parent import FlexibleFetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
@@ -432,16 +432,16 @@ class MultiDBTreeItem(TreeItem):
                 if row != -1:
                     yield row
 
-    def data(self, column, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
         if column == 0:
-            if role == Qt.DecorationRole:
+            if role == Qt.ItemDataRole.DecorationRole:
                 return self.display_icon
-            if role == Qt.DisplayRole:
+            if role == Qt.ItemDataRole.DisplayRole:
                 return self.display_data
-            if role == Qt.EditRole:
+            if role == Qt.ItemDataRole.EditRole:
                 return self.edit_data
-        if column and role == Qt.DisplayRole:
+        if column and role == Qt.ItemDataRole.DisplayRole:
             return self.display_database
 
     def default_parameter_data(self):

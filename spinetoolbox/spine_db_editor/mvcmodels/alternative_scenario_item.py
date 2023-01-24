@@ -15,7 +15,7 @@ Classes to represent alternative and scenario items in a tree.
 :authors: P. Vennström (VTT)
 :date:    17.6.2020
 """
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from .tree_item_utility import GrayIfLastMixin, EditableMixin, EmptyChildRootItem, LeafItem, StandardTreeItem
 
 _ALTERNATIVE_ICON = "\uf277"  # map-signs
@@ -129,14 +129,14 @@ class ScenarioActiveItem(StandardTreeItem):
             flags |= Qt.ItemIsEditable
         return flags
 
-    def data(self, column, role=Qt.DisplayRole):
-        if column == 0 and role in (Qt.DisplayRole, Qt.EditRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if column == 0 and role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             active = "yes" if self.parent_item.item_data["active"] else "no"
             return "active: " + active
         return super().data(column, role)
 
-    def set_data(self, column, value, role=Qt.EditRole):
-        if role == Qt.EditRole and column == 0:
+    def set_data(self, column, value, role=Qt.ItemDataRole.EditRole):
+        if role == Qt.ItemDataRole.EditRole and column == 0:
             active = {"yes": True, "no": False}.get(value)
             if active is None:
                 return False
@@ -240,8 +240,8 @@ class ScenarioAlternativeLeafItem(GrayIfLastMixin, LeafItem):
             flags |= Qt.ItemIsEditable
         return flags
 
-    def set_data(self, column, value, role=Qt.EditRole):
-        if role != Qt.EditRole or value == self.data(column, role):
+    def set_data(self, column, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.EditRole or value == self.data(column, role):
             return False
         if self.alternative_id:
             return False

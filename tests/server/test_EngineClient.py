@@ -23,7 +23,7 @@ from unittest import mock
 from tempfile import TemporaryDirectory
 from pathlib import Path
 import zmq
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
 from spine_engine.execution_managers.persistent_execution_manager import PythonPersistentExecutionManager

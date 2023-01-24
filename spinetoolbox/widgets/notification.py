@@ -16,9 +16,9 @@ Contains a notification widget.
 :date: 12.12.2019
 """
 
-from PySide2.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton
-from PySide2.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
-from PySide2.QtGui import QFont, QColor
+from PySide6.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton
+from PySide6.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
+from PySide6.QtGui import QFont, QColor
 from spinetoolbox.helpers import color_from_index
 
 
@@ -46,7 +46,7 @@ class Notification(QFrame):
             mspw = 60000 / 140  # Assume people can read ~140 words per minute
             life_span = mspw * word_count
         self.setFocusPolicy(Qt.NoFocus)
-        self.setWindowFlags(Qt.Popup)
+        self.setWindowFlags(Qt.WindowType.Popup)
         self.setParent(parent)
         self._parent = parent
         self._corner = corner
@@ -102,7 +102,7 @@ class Notification(QFrame):
         self.fade_in_anim.start(QPropertyAnimation.DeleteWhenStopped)
 
     def show(self):
-        # Move to the selected corner of the parent
+        """Shows widget and moves it to the selected corner of the parent widget."""
         super().show()
         if self._corner in (Qt.TopRightCorner, Qt.BottomRightCorner):
             x = self._parent.size().width() - self.width() - 2
@@ -221,7 +221,7 @@ class ChangeNotifier(QObject):
 
     @Slot(int)
     def _push_notification(self, index):
-        if self._settings.value(self._settings_key, default="2") != "2":
+        if self._settings.value(self._settings_key, defaultValue="2") != "2":
             return
         if self._notification is not None:
             try:

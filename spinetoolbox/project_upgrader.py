@@ -21,7 +21,7 @@ import shutil
 import os
 import json
 import copy
-from PySide2.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .helpers import home_dir
@@ -499,15 +499,15 @@ class ProjectUpgrader:
                 "\n\nWould you like to overwrite it?".format(answer)
             )
             message_box = QMessageBox(
-                QMessageBox.Question,
+                QMessageBox.Icon.Question,
                 "Overwrite?",
                 msg,
-                buttons=QMessageBox.Ok | QMessageBox.Cancel,
+                buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
                 parent=self._toolbox,
             )
-            message_box.button(QMessageBox.Ok).setText("Overwrite")
-            msgbox_answer = message_box.exec_()
-            if msgbox_answer != QMessageBox.Ok:
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Overwrite")
+            msgbox_answer = message_box.exec()
+            if msgbox_answer != QMessageBox.StandardButton.Ok:
                 return ""
         return answer  # New project directory
 

@@ -17,9 +17,9 @@ Classes for custom context menus and pop-up menus.
 """
 
 import os
-from PySide2.QtWidgets import QAction, QMenu, QWidgetAction
-from PySide2.QtGui import QIcon
-from PySide2.QtCore import Slot, QPersistentModelIndex
+from PySide6.QtWidgets import QMenu, QWidgetAction
+from PySide6.QtGui import QIcon, QAction
+from PySide6.QtCore import Slot, QPersistentModelIndex
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
 
 
@@ -59,7 +59,7 @@ class CustomContextMenu(QMenu):
 
     def get_action(self):
         """Returns the clicked action, a string with a description."""
-        self.exec_(self.position)
+        self.exec(self.position)
         return self.option
 
 

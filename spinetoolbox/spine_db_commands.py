@@ -18,7 +18,7 @@ QUndoCommand subclasses for modifying the db.
 
 import time
 import uuid
-from PySide2.QtWidgets import QUndoCommand, QUndoStack
+from PySide6.QtGui import QUndoCommand, QUndoStack
 
 
 class AgedUndoStack(QUndoStack):

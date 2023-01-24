@@ -12,8 +12,9 @@
 """
 Functions to make and handle QStatusBars.
 """
-from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QStatusBar, QToolButton, QMenu, QAction
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QStatusBar, QToolButton, QMenu
+from PySide6.QtGui import QAction
 from ..config import STATUSBAR_SS
 
 
@@ -34,7 +35,7 @@ class MainStatusBar(QStatusBar):
         self.executions_button = QToolButton(self)
         self.reset_executions_button_text()
         self.executions_button.setMenu(self._executions_menu)
-        self.executions_button.setPopupMode(QToolButton.InstantPopup)
+        self.executions_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.insertWidget(0, self.executions_button)
         self._executions_menu.aboutToShow.connect(self._populate_executions_menu)
         self._executions_menu.triggered.connect(self._select_execution)

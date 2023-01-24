@@ -16,7 +16,7 @@ Functions to report failures in plotting to the user.
 :date:   10.7.2019
 """
 
-from PySide2.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 
 def report_plotting_failure(error, parent_widget):

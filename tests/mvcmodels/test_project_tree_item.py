@@ -18,8 +18,8 @@ Unit tests for project_tree_item module.
 
 from tempfile import TemporaryDirectory
 import unittest
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.mvcmodels.project_tree_item import (
     BaseProjectTreeItem,

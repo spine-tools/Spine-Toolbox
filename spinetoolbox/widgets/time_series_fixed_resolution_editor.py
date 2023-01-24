@@ -17,8 +17,8 @@ Contains logic for the fixed step time series editor widget.
 """
 
 from datetime import datetime
-from PySide2.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
-from PySide2.QtWidgets import QCalendarWidget, QWidget
+from PySide6.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
+from PySide6.QtWidgets import QCalendarWidget, QWidget
 
 from spinedb_api import (
     duration_to_relativedelta,
@@ -91,7 +91,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.repeat_check_box.toggled.connect(self._model.set_repeat)
         self._calendar = QCalendarWidget(self)
         self._calendar.setMinimumDate(QDate(100, 1, 1))
-        self._calendar.setWindowFlags(Qt.Popup)
+        self._calendar.setWindowFlags(Qt.WindowType.Popup)
         self._calendar.activated.connect(self._select_date)
         for i in range(self._ui.splitter.count()):
             self._ui.splitter.setCollapsible(i, False)
@@ -116,7 +116,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
             position (QPoint): menu's position in table view's coordinates
         """
         menu = IndexedValueTableContextMenu(self._ui.time_series_table, position)
-        menu.exec_(self._ui.time_series_table.mapToGlobal(position))
+        menu.exec(self._ui.time_series_table.mapToGlobal(position))
 
     @Slot(QDate)
     def _select_date(self, selected_date):

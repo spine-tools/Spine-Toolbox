@@ -16,8 +16,8 @@ Widget shown to user when a new Project Item is created.
 :date:   19.1.2017
 """
 
-from PySide2.QtWidgets import QWidget, QStatusBar
-from PySide2.QtCore import Slot, Qt
+from PySide6.QtWidgets import QWidget, QStatusBar
+from PySide6.QtCore import Slot, Qt
 from spine_engine.utils.helpers import shorten
 from ..config import STATUSBAR_SS
 from ..project import ItemNameStatus

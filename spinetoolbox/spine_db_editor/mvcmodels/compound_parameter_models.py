@@ -16,8 +16,8 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
-from PySide2.QtGui import QFont
+from PySide6.QtCore import Qt, Slot, QTimer, QModelIndex
+from PySide6.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
 from ...helpers import rows_to_row_count_tuples, parameter_identifier
 from ...fetch_parent import FlexibleFetchParent
@@ -193,13 +193,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             menu.filterChanged.connect(self.set_auto_filter)
         return self._auto_filter_menus[field]
 
-    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+    def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""
         italic_font = QFont()
         italic_font.setItalic(True)
         if (
-            role == Qt.FontRole
-            and orientation == Qt.Horizontal
+            role == Qt.ItemDataRole.FontRole
+            and orientation == Qt.Orientation.Horizontal
             and self._auto_filter.get(self.header[section], {}) != {}
         ):
             return italic_font
@@ -457,7 +457,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             column = self.header.index(field)
         except ValueError:
             return
-        self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
+        self.dataChanged.emit(
+            self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.ItemDataRole.DisplayRole]
+        )
 
     def db_item(self, index):
         sub_index = self.map_to_sub(index)
@@ -528,14 +530,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for column, rows in rows_per_column.items():
             field = self.headerData(column)
             menu = self._make_auto_filter_menu(field)
-            accepted_values = {self.index(row, column).data(Qt.DisplayRole) for row in rows}
+            accepted_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
             menu.set_filter_accepted_values(accepted_values)
 
     def filter_excluding(self, rows_per_column):
         for column, rows in rows_per_column.items():
             field = self.headerData(column)
             menu = self._make_auto_filter_menu(field)
-            rejected_values = {self.index(row, column).data(Qt.DisplayRole) for row in rows}
+            rejected_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
             menu.set_filter_rejected_values(rejected_values)
 
 

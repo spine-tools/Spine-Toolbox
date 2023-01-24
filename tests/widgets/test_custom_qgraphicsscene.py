@@ -17,7 +17,7 @@ Unit tests for custom graphics scenes.
 """
 from tempfile import TemporaryDirectory
 import unittest
-from PySide2.QtWidgets import QApplication, QGraphicsRectItem
+from PySide6.QtWidgets import QApplication, QGraphicsRectItem
 from spine_items.data_connection.data_connection import DataConnection
 from spinetoolbox.widgets.custom_qgraphicsscene import CustomGraphicsScene
 from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project

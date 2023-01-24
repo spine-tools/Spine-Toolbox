@@ -18,7 +18,7 @@ Contains model for the Array editor widget.
 import locale
 from numbers import Number
 import numpy
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from spinedb_api import Array, from_database, ParameterValueFormatError, SpineDBAPIError
 from .indexed_value_table_model import EXPANSE_COLOR
 
@@ -68,7 +68,11 @@ class ArrayModel(QAbstractTableModel):
             self._data[row] = value
         top_left = self.index(top_row, 0)
         bottom_right = self.index(bottom_row, 0)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole, Qt.DisplayRole, Qt.ToolTipRole])
+        self.dataChanged.emit(
+            top_left,
+            bottom_right,
+            [Qt.ItemDataRole.BackgroundRole, Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole],
+        )
 
     def columnCount(self, parent=QModelIndex()):
         """Returns 2."""
@@ -121,13 +125,13 @@ class ArrayModel(QAbstractTableModel):
                     pass
         return filtered, converted
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns model's data for given role."""
         if not index.isValid():
             return None
         row = index.row()
         column = index.column()
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             if column == 0:
                 return row + 1
             if row == len(self._data):
@@ -137,16 +141,16 @@ class ArrayModel(QAbstractTableModel):
                 return element
             return str(element)
         if column == 1:
-            if role == Qt.EditRole:
+            if role == Qt.ItemDataRole.EditRole:
                 if row == len(self._data):
                     return self._data_type()
                 return self._data[row]
-            if role == Qt.ToolTipRole:
+            if role == Qt.ItemDataRole.ToolTipRole:
                 if row == len(self._data):
                     return None
                 element = self._data[row]
                 return str(element)
-            if role == Qt.BackgroundRole and row == len(self._data):
+            if role == Qt.ItemDataRole.BackgroundRole and row == len(self._data):
                 return EXPANSE_COLOR
         return None
 
@@ -159,9 +163,9 @@ class ArrayModel(QAbstractTableModel):
             flags = flags | Qt.ItemIsEditable
         return flags
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         """Returns header data."""
-        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
             return (self._index_name, "Value")[section]
         return None
 
@@ -193,7 +197,9 @@ class ArrayModel(QAbstractTableModel):
             if len(self._data) == 1:
                 self._data.clear()
                 self.dataChanged.emit(
-                    self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.ToolTipRole, Qt.BackgroundRole]
+                    self.index(0, 0),
+                    self.index(0, 0),
+                    [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.BackgroundRole],
                 )
                 return False
         first_row = row if count < len(self._data) else 1
@@ -202,7 +208,9 @@ class ArrayModel(QAbstractTableModel):
         self.endRemoveRows()
         if not self._data:
             self.dataChanged.emit(
-                self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.ToolTipRole, Qt.BackgroundRole]
+                self.index(0, 0),
+                self.index(0, 0),
+                [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.BackgroundRole],
             )
         return True
 
@@ -243,18 +251,18 @@ class ArrayModel(QAbstractTableModel):
         self._data_type = new_type
         self.endResetModel()
 
-    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
-        if role == Qt.EditRole and section == 0 and orientation == Qt.Horizontal and value:
+    def setHeaderData(self, section, orientation, value, role=Qt.ItemDataRole.EditRole):
+        if role == Qt.ItemDataRole.EditRole and section == 0 and orientation == Qt.Orientation.Horizontal and value:
             self._index_name = value
             self.headerDataChanged.emit(orientation, section, section)
             return True
         return False
 
-    def setData(self, index, value, role=Qt.EditRole):
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         """Sets the value at given index."""
         if not index.isValid():
             return False
-        if role == Qt.EditRole:
+        if role == Qt.ItemDataRole.EditRole:
             if isinstance(value, (str, Number)):
                 try:
                     value = self._data_type(value)
@@ -264,6 +272,8 @@ class ArrayModel(QAbstractTableModel):
             if row == len(self._data):
                 self.insertRow(row)
             self._data[row] = value
-            self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole, Qt.BackgroundRole])
+            self.dataChanged.emit(
+                index, index, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole, Qt.ItemDataRole.BackgroundRole]
+            )
             return True
         return False

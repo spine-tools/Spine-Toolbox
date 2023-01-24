@@ -18,7 +18,7 @@ Unit tests for the indexed_value_table_context_menu module.
 
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from spinedb_api import Array, Map, TimePattern, TimeSeriesFixedResolution, TimeSeriesVariableResolution
 from spinetoolbox.widgets.array_editor import ArrayEditor
 from spinetoolbox.widgets.indexed_value_table_context_menu import (

@@ -17,9 +17,9 @@ Classes for custom QListView.
 """
 
 from textwrap import fill
-from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QMimeData
-from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine
-from PySide2.QtWidgets import QToolButton, QApplication, QToolBar, QWidgetAction
+from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QMimeData, QMargins
+from PySide6.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine
+from PySide6.QtWidgets import QToolButton, QApplication, QToolBar, QWidgetAction, QStyle
 from ..helpers import CharIconEngine, make_icon_background
 
 
@@ -41,7 +41,7 @@ class ProjectItemDragMixin:
             return
         if not self.drag_start_pos:
             return
-        if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+        if (event.position().toPoint() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
             return
         drag = QDrag(self)
         drag.setPixmap(self.pixmap)
@@ -51,7 +51,7 @@ class ProjectItemDragMixin:
         self.pixmap = None
         self.mime_data = None
         self.drag_about_to_start.emit()
-        drag.exec_()
+        drag.exec()
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""
@@ -67,14 +67,14 @@ class NiceButton(QToolButton):
         font = self.font()
         font.setPointSize(9)
         self.setFont(font)
-        self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
     def setText(self, text):
         super().setText(fill(text, width=12, break_long_words=False))
 
     def set_orientation(self, orientation):
-        if orientation == Qt.Horizontal:
-            self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        if orientation == Qt.Orientation.Horizontal:
+            self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
         else:
             self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
@@ -102,7 +102,7 @@ class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
         """Register drag start position"""
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
-            self.drag_start_pos = event.pos()
+            self.drag_start_pos = event.position().toPoint()
             self.pixmap = self.icon().pixmap(self.iconSize())
             self.mime_data = QMimeData()
             self.mime_data.setText(self._make_mime_data_text())
@@ -212,8 +212,8 @@ class ProjectItemSpecArray(QToolBar):
         """
         super().__init__()
         self._extension_button = next(iter(self.findChildren(QToolButton)))
-        self._margin = 4
-        self.layout().setMargin(self._margin)
+        self._margins = QMargins(4, 4, 4, 4)
+        self.layout().setContentsMargins(self._margins)
         self._maximum_size = self.maximumSize()
         self._model = model
         self._toolbox = toolbox
@@ -283,7 +283,7 @@ class ProjectItemSpecArray(QToolBar):
         """
         actions_iter = (self._actions.get(spec.name) for spec in self._model.specifications())
         actions = [act for act in actions_iter if act is not None]
-        if self.orientation() == Qt.Horizontal:
+        if self.orientation() == Qt.Orientation.Horizontal:
             get_point = lambda ref_geom: (ref_geom.right() + 1, ref_geom.top())
         else:
             get_point = lambda ref_geom: (ref_geom.left(), ref_geom.bottom() + 1)
@@ -335,12 +335,12 @@ class ProjectItemSpecArray(QToolBar):
         geom = previous.geometry()
         style = self.style()
         extension_extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
-        if self.orientation() == Qt.Horizontal:
-            toolbar_size = self.width() - extension_extent - 2 * self._margin + 2
+        if self.orientation() == Qt.Orientation.Horizontal:
+            toolbar_size = self.width() - extension_extent - 2 * self._margins.left() + 2
             x, y = geom.right() + 1, geom.top()
             w, h = toolbar_size - geom.right(), geom.height()
         else:
-            toolbar_size = self.height() - extension_extent - 2 * self._margin + 2
+            toolbar_size = self.height() - extension_extent - 2 * self._margins.top() + 2
             x, y = geom.left(), geom.bottom() + 1
             w, h = geom.width(), toolbar_size - geom.bottom()
         return x, y, w, h
@@ -390,12 +390,12 @@ class ProjectItemSpecArray(QToolBar):
         for w in widgets:
             w.set_orientation(orientation)
         style = self.style()
-        extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
+        extent = style.pixelMetric(QStyle.PixelMetric.PM_ToolBarExtensionExtent)
         down, right = "\uf0d7", "\uf0da"
-        if orientation == Qt.Horizontal:
+        if orientation == Qt.Orientation.Horizontal:
             icon = down if not self._visible else right
             width = extent
-            min_width = self._button_base_item.sizeHint().width() + extent + self._margin + spacing
+            min_width = self._button_base_item.sizeHint().width() + extent + self._margins.left() + spacing
             min_visible_width = min_width + self._button_new.sizeHint().width() - spacing
             if widgets:
                 min_visible_width += extent
@@ -411,7 +411,7 @@ class ProjectItemSpecArray(QToolBar):
             icon = right if not self._visible else down
             height = extent
             min_width = self._button_base_item.sizeHint().width()
-            min_height = self._button_base_item.sizeHint().height() + extent + self._margin + spacing
+            min_height = self._button_base_item.sizeHint().height() + extent + self._margins.top() + spacing
             min_visible_height = min_height + self._button_new.sizeHint().height() - spacing
             if widgets:
                 min_visible_height += extent
@@ -460,7 +460,7 @@ class ProjectItemSpecArray(QToolBar):
         self._update_button_geom()
 
     def _remove_spec(self, row):
-        spec_name = self._model.index(row, 0).data(Qt.DisplayRole)
+        spec_name = self._model.index(row, 0).data(Qt.ItemDataRole.DisplayRole)
         try:
             action = self._actions.pop(spec_name)
             self.removeAction(action)

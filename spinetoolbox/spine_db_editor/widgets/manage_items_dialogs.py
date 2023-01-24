@@ -17,8 +17,9 @@ Classes for custom QDialogs to add edit and remove database items.
 """
 
 from functools import reduce
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout, QAction
-from PySide2.QtCore import Slot, Qt, QModelIndex
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
+from PySide6.QtCore import Slot, Qt, QModelIndex
+from PySide6.QtGui import QAction
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
 from ...helpers import busy_effect, preferred_row_height
@@ -33,10 +34,10 @@ class ManageItemsDialogBase(QDialog):
             db_mngr (SpineDBManager)
         """
         super().__init__(parent)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.db_mngr = db_mngr
         self.table_view = self.make_table_view()
-        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.horizontalHeader().setMinimumSectionSize(120)
         self.table_view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
@@ -44,7 +45,7 @@ class ManageItemsDialogBase(QDialog):
         self._accept_action.setShortcut("Ctrl+Return")
         self.addAction(self._accept_action)
         self.button_box = QDialogButtonBox(self)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         layout = QGridLayout(self)
         layout.addWidget(self.table_view)
         layout.addWidget(self.button_box)
@@ -109,7 +110,7 @@ class ManageItemsDialog(ManageItemsDialogBase):
         """Update model data."""
         if data is None:
             return
-        self.model.setData(index, data, Qt.EditRole)
+        self.model.setData(index, data, Qt.ItemDataRole.EditRole)
 
     @Slot()
     def _handle_model_reset(self):
@@ -198,6 +199,6 @@ class ShowIconColorEditorMixin:
     @busy_effect
     def show_icon_color_editor(self, index):
         editor = IconColorEditor(self)
-        editor.set_data(index.data(Qt.DisplayRole))
+        editor.set_data(index.data(Qt.ItemDataRole.DisplayRole))
         editor.accepted.connect(lambda index=index, editor=editor: self.set_model_data(index, editor.data()))
         editor.show()

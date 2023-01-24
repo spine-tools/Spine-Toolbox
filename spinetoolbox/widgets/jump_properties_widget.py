@@ -15,7 +15,7 @@ Contains jump properties widget's business logic.
 :author: A. Soininen (VTT)
 :date:   23.6.2021
 """
-from PySide2.QtCore import Slot, QItemSelection
+from PySide6.QtCore import Slot, QItemSelection
 from .properties_widget import PropertiesWidgetBase
 from ..project_commands import SetJumpConditionCommand, UpdateJumpCmdLineArgsCommand
 from ..mvcmodels.file_list_models import FileListModel, JumpCommandLineArgsModel

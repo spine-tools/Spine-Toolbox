@@ -126,9 +126,6 @@
        <property name="text">
         <string>General</string>
        </property>
-       <property name="textAlignment">
-        <set>AlignLeading|AlignVCenter</set>
-       </property>
        <property name="icon">
         <iconset resource="resources/resources_icons.qrc">
          <normaloff>:/icons/sliders-h.svg</normaloff>:/icons/sliders-h.svg</iconset>
@@ -782,7 +779,7 @@
                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
                    <property name="sizeAdjustPolicy">
-                    <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                    <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
                    </property>
                   </widget>
                  </item>
@@ -949,9 +946,6 @@
                  </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="sizeAdjustPolicy">
-                  <enum>QComboBox::AdjustToMinimumContentsLength</enum>
                  </property>
                 </widget>
                </item>
@@ -1611,7 +1605,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="persistent_processes_button_group"/>
   <buttongroup name="engine_processes_button_group"/>
+  <buttongroup name="persistent_processes_button_group"/>
  </buttongroups>
 </ui>

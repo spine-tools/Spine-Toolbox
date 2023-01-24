@@ -28,7 +28,7 @@ from matplotlib.container import BarContainer
 from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from PySide2.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex
 
 from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
 from spinedb_api import Array, IndexedValue, TimeSeries, DateTime
@@ -536,7 +536,7 @@ def plot_value_editor_table_selection(model, model_indexes, plot_widget=None):
     model_indexes = [i for i in model_indexes if model.is_leaf_value(i)]
     if not model_indexes:
         raise PlottingError("Nothing to plot.")
-    header_columns = [model.headerData(column, Qt.Horizontal) for column in range(model.columnCount())]
+    header_columns = [model.headerData(column, Qt.Orientation.Horizontal) for column in range(model.columnCount())]
     root_node = TreeNode(header_columns[0])
     for model_index in sorted(model_indexes, key=methodcaller("row")):
         value = _get_parsed_value(model_index, _table_display_row)

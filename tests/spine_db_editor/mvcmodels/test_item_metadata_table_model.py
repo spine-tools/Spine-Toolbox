@@ -18,8 +18,8 @@ Unit tests for the item metadata table model.
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DatabaseMapping,
     import_object_classes,
@@ -107,9 +107,9 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
     def test_model_is_initially_empty(self):
         self.assertEqual(self._model.rowCount(), 1)
         self.assertEqual(self._model.columnCount(), 3)
-        self.assertEqual(self._model.headerData(Column.NAME, Qt.Horizontal), "name")
-        self.assertEqual(self._model.headerData(Column.VALUE, Qt.Horizontal), "value")
-        self.assertEqual(self._model.headerData(Column.DB_MAP, Qt.Horizontal), "database")
+        self.assertEqual(self._model.headerData(Column.NAME, Qt.Orientation.Horizontal), "name")
+        self.assertEqual(self._model.headerData(Column.VALUE, Qt.Orientation.Horizontal), "value")
+        self.assertEqual(self._model.headerData(Column.DB_MAP, Qt.Orientation.Horizontal), "database")
         self._assert_empty_last_row()
 
     def test_get_metadata_for_object(self):

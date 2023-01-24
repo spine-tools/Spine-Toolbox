@@ -17,7 +17,7 @@ Models that vertically concatenate two or more table models.
 """
 
 import bisect
-from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QTimer
+from PySide6.QtCore import Qt, Signal, Slot, QModelIndex, QTimer
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 
 
@@ -182,7 +182,7 @@ class CompoundTableModel(MinimalTableModel):
     def flags(self, index):
         return self.map_to_sub(index).flags()
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         return self.map_to_sub(index).data(role)
 
     def rowCount(self, parent=QModelIndex()):

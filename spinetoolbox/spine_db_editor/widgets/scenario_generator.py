@@ -16,8 +16,8 @@ Contains a dialog for generating scenarios from selected alternatives.
 :date:    7.9.2021
 """
 from enum import auto, Enum, unique
-from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QWidget, QMessageBox
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QWidget, QMessageBox
 
 from ...helpers import signal_waiter
 from ..scenario_generation import all_combinations, unique_alternatives
@@ -50,8 +50,8 @@ class ScenarioGenerator(QWidget):
         self._alternatives = alternatives
         self._db_editor = spine_db_editor
         super().__init__(parent)
-        self.setWindowFlag(Qt.Window, True)
-        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.Window, True)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self._ui = Ui_Form()
         self._ui.setupUi(self)
@@ -86,7 +86,7 @@ class ScenarioGenerator(QWidget):
         scenario_alternatives = {self._TYPE_LABELS[0]: all_combinations, self._TYPE_LABELS[1]: unique_alternatives}[
             operation_label
         ](alternatives)
-        if self._ui.use_base_alternative_check_box.checkState() == Qt.Checked:
+        if self._ui.use_base_alternative_check_box.checkState() == Qt.CheckState.Checked:
             self._insert_base_alternative(scenario_alternatives)
             if operation_label == self._TYPE_LABELS[0]:
                 _ensure_unique(scenario_alternatives)
@@ -152,16 +152,16 @@ class ScenarioGenerator(QWidget):
         if all(name not in existing_scenario_names for name in proposed_scenario_names):
             return _ScenarioNameResolution.NO_CONFLICT
         message_box = QMessageBox(
-            QMessageBox.Warning,
+            QMessageBox.Icon.Warning,
             "Scenarios already in database",
             "One or more scenarios that are about to be generated already exist in the database.",
-            QMessageBox.NoButton,
+            QMessageBox.StandardButton.NoButton,
             self,
         )
-        message_box.addButton("Overwrite", QMessageBox.DestructiveRole)
-        keep_button = message_box.addButton("Keep existing", QMessageBox.AcceptRole)
-        cancel_button = message_box.addButton(QMessageBox.Cancel)
-        message_box.exec_()
+        message_box.addButton("Overwrite", QMessageBox.ButtonRole.DestructiveRole)
+        keep_button = message_box.addButton("Keep existing", QMessageBox.ButtonRole.AcceptRole)
+        cancel_button = message_box.addButton(QMessageBox.StandardButton.Cancel)
+        message_box.exec()
         clicked_button = message_box.clickedButton()
         if clicked_button is None or clicked_button is cancel_button:
             return _ScenarioNameResolution.CANCEL_OPERATION
@@ -176,7 +176,7 @@ class ScenarioGenerator(QWidget):
         Args:
             check_box_state (int): state of 'Use base alternative' check box
         """
-        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.Checked)
+        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.CheckState.Checked)
 
     def _insert_base_alternative(self, scenario_alternatives):
         """Prepends base alternative to scenario alternatives if it has been enabled.

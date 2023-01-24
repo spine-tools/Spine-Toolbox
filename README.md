@@ -3,7 +3,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.7%20|%203.8%20|%203.9%20|%203.10-blue.svg)](https://www.python.org/downloads/release/python-379/)
+[![Python](https://img.shields.io/badge/python-3.8%20|%203.9%20|%203.10%20|%203.11-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/spine-tools/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/spine-tools/Spine-Toolbox)
@@ -14,10 +14,10 @@ Spine Toolbox is an open source Python package to manage data, scenarios and wor
 
 ## Programming language
 
-- Python 3.7
 - Python 3.8
 - Python 3.9
 - Python 3.10 (requires Microsoft Visual C++ 14.0 or greater on Windows)
+- Python 3.11 (experimental)
 
 Python 3.8.0 is not supported (use Python 3.8.1 or later).
 
@@ -50,7 +50,7 @@ updated with new releases.
 1. If you don't yet have Python installed, the recommended version is the latest **Python 3.9** release
    from [Python.org](https://www.python.org/downloads/release/python-3913/).
 
-2. Python 3.10 support is in experimental stage. If you want to try it out, please
+2. Python 3.10 and 3.11 supports are in experimental stage. If you want to try them out, please
    install **Microsoft Visual C++ 14.0 or greater** on Windows. Get it with *Microsoft C++ 
    Build Tools*: https://visualstudio.microsoft.com/visual-cpp-build-tools/.
 
@@ -149,7 +149,7 @@ and run (to upgrade the other Spine Toolbox packages)
 
 ### About requirements
 
-Python 3.7, 3.8, 3.9, or 3.10 is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
+Python 3.8.1-3.11 is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
 
 See file `setup.cfg` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
@@ -175,9 +175,9 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 
 #### Installation fails
 
-Please make sure you are using Python 3.7, 3.8, 3.9, or 3.10 to install the requirements.
+Please make sure you are using Python 3.8, 3.9, 3.10, or 3.11 to install the requirements.
 
-If you are on **Python 3.10**, please install **Microsoft Visual C++ 14.0 or greater** on Windows. 
+If you are on **Python 3.10 or 3.11**, please install **Microsoft Visual C++ 14.0 or greater** on Windows. 
 Get it with *Microsoft C++ Build Tools*: https://visualstudio.microsoft.com/visual-cpp-build-tools/.
 
 #### Installation fails on Linux
@@ -193,18 +193,18 @@ $ sudo apt-get install unixodbc-dev
 
 If there are problems in starting Spine Toolbox, the chances are that the required 
 packages were not installed successfully. In case this happens, the first thing you 
-should check is that you don't have `Qt`, `PyQt4`, `PyQt5`, `PySide`, and `PySide2` 
-packages installed in the same environment. These do not play nice together and may 
-introduce conflicts. In addition, make sure that you do not have multiple versions 
+should check is that you don't have `Qt`, `PyQt4`, `PyQt5`, `PySide`, `PySide2`, and 
+`PySide6` packages installed in the same environment. These do not play nice together 
+and may introduce conflicts. In addition, make sure that you do not have multiple versions 
 of these `Qt` related packages installed in the same environment. The easiest way 
 to solve this problem is to create a blank (e.g. virtual environment) Python 
-environment just for `PySide2` applications and installing the requirements again.
+environment just for `PySide6` applications and installing the requirements again.
 
 **Warning: Using the *conda-forge* channel for installing the requirements is not 
 recommended.**
 
 The required `qtconsole` package from the ***conda-forge*** channel also
-installs `qt` and `PyQt` packages. Since this is a `PySide2` application, those 
+installs `qt` and `PyQt` packages. Since this is a `PySide6` application, those 
 are not needed and there is a chance of conflicts between the packages.
 
 **Note**: Python 3.8.0 is not supported. Use Python 3.8.1 or later.

@@ -17,7 +17,7 @@ Classes for custom QDialogs to add items to databases.
 """
 
 from itertools import product
-from PySide2.QtWidgets import (
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
     QGridLayout,
@@ -36,8 +36,8 @@ from PySide2.QtWidgets import (
     QSplitter,
     QDialogButtonBox,
 )
-from PySide2.QtCore import Slot, Qt, QSize, QModelIndex
-from PySide2.QtGui import QIcon
+from PySide6.QtCore import Slot, Qt, QSize, QModelIndex
+from PySide6.QtGui import QIcon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
@@ -97,7 +97,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         for row, relationship in enumerate(self.relationships):
             item = QTableWidgetItem()
             item.setFlags(Qt.ItemIsEnabled)
-            item.setCheckState(Qt.Checked)
+            item.setCheckState(Qt.CheckState.Checked)
             self.table_view.setItem(row, 0, item)
             for column, object_name in enumerate(relationship):
                 item = QTableWidgetItem(object_name)
@@ -113,7 +113,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
 
     def _handle_table_view_cell_clicked(self, row, column):
         item = self.table_view.item(row, 0)
-        check_state = Qt.Unchecked if item.checkState() == Qt.Checked else Qt.Checked
+        check_state = Qt.CheckState.Unchecked if item.checkState() == Qt.CheckState.Checked else Qt.CheckState.Checked
         item.setCheckState(check_state)
 
     def _handle_table_view_current_changed(self, current, _previous):
@@ -124,7 +124,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         super().accept()
         data = []
         for row in range(self.table_view.rowCount()):
-            if self.table_view.item(row, 0).checkState() != Qt.Checked:
+            if self.table_view.item(row, 0).checkState() != Qt.CheckState.Checked:
                 continue
             relationship = self.relationships[row]
             data.append([self.relationship_class["name"], relationship])
@@ -384,7 +384,7 @@ class AddRelationshipClassesDialog(ShowIconColorEditorMixin, GetObjectClassesMix
 
     @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        if Qt.EditRole not in roles:
+        if Qt.ItemDataRole.EditRole not in roles:
             return
         top = top_left.row()
         left = top_left.column()
@@ -557,7 +557,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
 
     @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        if Qt.EditRole not in roles:
+        if Qt.ItemDataRole.EditRole not in roles:
             return
         header = self.model.horizontal_header_labels()
         top = top_left.row()
@@ -844,7 +844,7 @@ class ObjectGroupDialogBase(QDialog):
         vertical_button_layout.addWidget(self.remove_button)
         vertical_button_layout.addStretch()
         self.button_box = QDialogButtonBox(self)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         layout = QGridLayout(self)
         layout.addWidget(self.header_widget, 0, 0, 1, 3, Qt.AlignHCenter)
         layout.addWidget(self.non_members_tree, 1, 0)

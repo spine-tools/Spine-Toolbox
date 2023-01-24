@@ -19,8 +19,8 @@ Unit tests for the ParameterValueEditor widget.
 import unittest
 import dateutil.parser
 import numpy as np
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide2.QtWidgets import QApplication
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DateTime,
     Duration,
@@ -46,13 +46,13 @@ class _MockParentModel(QAbstractTableModel):
     def columnCount(self, parent=QModelIndex()):
         return 2
 
-    def data(self, index, role=Qt.DisplayRole):
-        if role not in (Qt.DisplayRole, Qt.EditRole, Qt.UserRole):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.UserRole):
             return None
         return self._table[index.column()][index.row()]
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.EditRole:
             return False
         self._table[index.column()][index.row()] = value
         return True

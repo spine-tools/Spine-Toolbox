@@ -23,7 +23,7 @@ try:
     import jill.install as jill_install
 except ModuleNotFoundError:
     jill_install = None
-from PySide2.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget,
     QWizard,
     QWizardPage,
@@ -35,8 +35,8 @@ from PySide2.QtWidgets import (
     QFileDialog,
     QCheckBox,
 )
-from PySide2.QtCore import Signal, Slot, Qt
-from PySide2.QtGui import QCursor
+from PySide6.QtCore import Signal, Slot, Qt
+from PySide6.QtGui import QCursor
 from spine_engine.utils.helpers import resolve_python_interpreter
 from ..execution_managers import QProcessExecutionManager
 from ..config import APPLICATION_PATH

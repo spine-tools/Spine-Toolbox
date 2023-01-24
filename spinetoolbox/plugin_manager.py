@@ -22,7 +22,7 @@ import urllib.request
 import urllib.error
 from urllib.parse import urljoin
 import shutil
-from PySide2.QtCore import Qt, Signal, Slot, QObject, QThread
+from PySide6.QtCore import Qt, Signal, Slot, QObject, QThread
 from spine_engine.utils.serialization import serialize_path, deserialize_path, deserialize_remote_path
 from .config import PLUGINS_PATH, PLUGIN_REGISTRY_URL
 from .helpers import (

@@ -20,7 +20,7 @@ from enum import IntEnum, unique
 import json
 import pathlib
 import sys
-from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 import networkx as nx
 
 from spine_engine import SpineEngineState
@@ -499,7 +499,7 @@ def headless_main(args):
     startup_event_type = QEvent.Type(QEvent.registerEventType())
     task = ActionsWithProject(args, startup_event_type, application)
     application.postEvent(task, QEvent(startup_event_type))
-    return application.exec_()
+    return application.exec()
 
 
 def open_project(project_dict, project_dir, logger):

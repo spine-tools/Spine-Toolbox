@@ -19,16 +19,15 @@ import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch, MagicMock
-from PySide2.QtCore import QEvent, QPoint, Qt
-from PySide2.QtGui import QColor
-from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
+from PySide6.QtCore import QEvent, QPoint, Qt
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QApplication, QGraphicsSceneMouseEvent
 from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
 from spine_engine.project_item.project_item_resource import database_resource
 from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
 from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
-from spinetoolbox.helpers import signal_waiter
 from tests.mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project, TestSpineDBManager
 
 
@@ -47,7 +46,7 @@ class TestProjectItemIcon(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_init(self):
-        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         self.assertEqual(icon.name(), "")
         self.assertEqual(icon.x(), 0)
         self.assertEqual(icon.y(), 0)
@@ -55,14 +54,14 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(icon.outgoing_connection_links(), [])
 
     def test_finalize(self):
-        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         icon.finalize("new name", -43, 314)
         self.assertEqual(icon.name(), "new name")
         self.assertEqual(icon.x(), -43)
         self.assertEqual(icon.y(), 314)
 
     def test_conn_button(self):
-        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         button = icon.conn_button("left")
         self.assertEqual(button.position, "left")
         button = icon.conn_button("right")
@@ -71,8 +70,8 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(button.position, "bottom")
 
     def test_outgoing_and_incoming_links(self):
-        source_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
-        target_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        source_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
+        target_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         self._toolbox.project().get_item = MagicMock()
         connection = LoggingConnection("source item", "bottom", "destination item", "bottom", toolbox=self._toolbox)
         link = Link(self._toolbox, source_icon.conn_button("bottom"), target_icon.conn_button("bottom"), connection)
@@ -104,20 +103,20 @@ class TestExclamationIcon(unittest.TestCase):
             QApplication()
 
     def test_no_notifications(self):
-        with patch("PySide2.QtWidgets.QToolTip.showText") as show_text:
+        with patch("PySide6.QtWidgets.QToolTip.showText") as show_text:
             icon = ExclamationIcon(None)
             icon.hoverEnterEvent(QGraphicsSceneMouseEvent())
             show_text.assert_not_called()
 
     def test_add_notification(self):
-        with patch("PySide2.QtWidgets.QToolTip.showText") as show_text:
+        with patch("PySide6.QtWidgets.QToolTip.showText") as show_text:
             icon = ExclamationIcon(None)
             icon.add_notification("Please note!")
             icon.hoverEnterEvent(QGraphicsSceneMouseEvent())
             show_text.assert_called_once_with(QPoint(0, 0), "<p>Please note!")
 
     def test_clear_notifications(self):
-        with patch("PySide2.QtWidgets.QToolTip.showText") as show_text:
+        with patch("PySide6.QtWidgets.QToolTip.showText") as show_text:
             icon = ExclamationIcon(None)
             icon.add_notification("Please note!")
             icon.clear_notifications()
@@ -140,7 +139,7 @@ class TestRankIcon(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_set_rank(self):
-        item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         icon = RankIcon(item_icon)
         self.assertEqual(icon.toPlainText(), "")
         icon.set_rank(23)
@@ -157,9 +156,9 @@ class TestLink(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
         self._toolbox.db_mngr = TestSpineDBManager(MagicMock(), None)
-        source_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        source_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         source_item_icon.update_name_item("source icon")
-        destination_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
+        destination_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         destination_item_icon.update_name_item("destination icon")
         project = self._toolbox.project()
         project.get_item = MagicMock()
@@ -200,7 +199,7 @@ class TestLink(unittest.TestCase):
         scenario_item = scenario_title_item.child(1, 0)
         self.assertEqual(scenario_item.index().data(), "scenario")
         scenario_index = filter_model.indexFromItem(scenario_item)
-        filter_model.setData(scenario_index, Qt.Checked, role=Qt.CheckStateRole)
+        filter_model.setData(scenario_index, Qt.CheckState.Checked, role=Qt.ItemDataRole.CheckStateRole)
         self.assertEqual(self._link.connection.online_filters("my_database", "scenario_filter"), {"scenario": True})
 
     def test_tool_filter_gets_added_to_filter_model(self):
@@ -230,7 +229,7 @@ class TestLink(unittest.TestCase):
         tool_item = tool_title_item.child(1, 0)
         self.assertEqual(tool_item.index().data(), "tool")
         tool_index = filter_model.indexFromItem(tool_item)
-        filter_model.setData(tool_index, Qt.Checked, role=Qt.CheckStateRole)
+        filter_model.setData(tool_index, Qt.CheckState.Checked, role=Qt.ItemDataRole.CheckStateRole)
         self.assertEqual(self._link.connection.online_filters("my_database", "scenario_filter"), {})
 
     def test_toggle_scenario_filter(self):

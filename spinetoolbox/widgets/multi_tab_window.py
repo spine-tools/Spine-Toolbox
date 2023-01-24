@@ -16,9 +16,9 @@ Contains the MultiTabWindow and TabBarPlus classes.
 :date:   12.12.2020
 """
 
-from PySide2.QtWidgets import QMainWindow, QTabWidget, QWidget, QTabBar, QToolButton, QApplication, QMenu
-from PySide2.QtCore import Qt, Slot, QPoint, Signal, QEvent
-from PySide2.QtGui import QGuiApplication, QCursor, QIcon, QMouseEvent
+from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QTabBar, QToolButton, QApplication, QMenu
+from PySide6.QtCore import Qt, Slot, QPoint, Signal, QEvent
+from PySide6.QtGui import QGuiApplication, QCursor, QIcon, QMouseEvent
 from ..helpers import ensure_window_is_on_screen, CharIconEngine
 
 
@@ -328,7 +328,7 @@ class MultiTabWindow(QMainWindow):
             self.update()
         if self.tab_bar.count() == 0:
             return
-        index = self.tab_bar.tabAt(event.pos())
+        index = self.tab_bar.tabAt(event.position().toPoint())
         if index is not None:
             if index == -1:
                 index = self.tab_bar.count() - 1
@@ -501,23 +501,24 @@ class TabBarPlus(QTabBar):
     def mousePressEvent(self, event):
         """Registers the position of the press, in case we need to detach the tab."""
         super().mousePressEvent(event)
-        tab_rect = self.tabRect(self.tabAt(event.pos()))
-        self._tab_hot_spot_x = event.pos().x() - tab_rect.x()
-        self._hot_spot_y = event.pos().y() - tab_rect.y()
+        event_pos = event.position().toPoint()
+        tab_rect = self.tabRect(self.tabAt(event_pos))
+        self._tab_hot_spot_x = event_pos.x() - tab_rect.x()
+        self._hot_spot_y = event_pos.y() - tab_rect.y()
 
     def mouseMoveEvent(self, event):
         """Detaches a tab either if the user moves beyond the limits of the tab bar, or if it's the only one."""
         if self.count() > 0:
             self._plus_button.hide()
         if self.count() == 1:
-            self._send_release_event(event.pos())
-            hot_spot = QPoint(event.pos().x(), self._hot_spot_y)
+            self._send_release_event(event.position().toPoint())
+            hot_spot = QPoint(event.position().toPoint().x(), self._hot_spot_y)
             self._parent.start_drag(hot_spot)
             return
-        if self.count() > 1 and not self.geometry().contains(event.pos()):
-            self._send_release_event(event.pos())
-            hot_spot_x = event.pos().x()
-            hot_spot = QPoint(event.pos().x(), self._hot_spot_y)
+        if self.count() > 1 and not self.geometry().contains(event.position().toPoint()):
+            self._send_release_event(event.position().toPoint())
+            hot_spot_x = event.position().toPoint().x()
+            hot_spot = QPoint(hot_spot_x, self._hot_spot_y)
             index = self.tabAt(hot_spot)
             if index == -1:
                 index = self.count() - 1

@@ -15,8 +15,8 @@ Classes for custom QDialogs to add items to databases.
 :author: M. Marin (KTH)
 :date:   13.5.2018
 """
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QVBoxLayout,
@@ -36,7 +36,7 @@ class SelectPositionParametersDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Select position parameters")
         button_box = QDialogButtonBox(self)
-        button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         layout = QVBoxLayout(self)
         self._table_widget = QTableWidget(1, 2, self)
         self._table_widget.setHorizontalHeaderLabels(["Position x", "Position y"])
@@ -91,7 +91,7 @@ class ParameterNameDelegate(QStyledItemDelegate):
         """Returns editor."""
         editor = SearchBarEditor(self.parent(), parent)
         editor.set_data(
-            index.data(Qt.DisplayRole),
+            index.data(Qt.ItemDataRole.DisplayRole),
             {
                 x["parameter_name"]
                 for db_map in self.db_maps

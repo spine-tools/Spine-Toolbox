@@ -19,8 +19,7 @@ Contains the SpineDBEditor class.
 import os
 import json
 from sqlalchemy.engine.url import URL
-from PySide2.QtWidgets import (
-    QAction,
+from PySide6.QtWidgets import (
     QMainWindow,
     QErrorMessage,
     QDockWidget,
@@ -31,9 +30,10 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QDialog,
     QInputDialog,
+    QToolButton,
 )
-from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
-from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
+from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
+from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QAction
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
@@ -101,7 +101,7 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings = self.db_mngr.qsettings
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
-        self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self.err_msg.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.silenced = False
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / preferred_row_height(self))
@@ -301,7 +301,7 @@ class SpineDBEditorBase(QMainWindow):
         docks_menu = self._make_docks_menu()
         docks_menu_action.setMenu(docks_menu)
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
-        docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
+        docks_menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         session_action = ToolBarWidgetAction("Session", menu)
         session_action.tool_bar.addActions([self.ui.actionCommit, self.ui.actionRollback])
         session_action.tool_bar.addSeparator()
@@ -819,10 +819,10 @@ class SpineDBEditorBase(QMainWindow):
         commit_msg = ""
         if dirty_db_maps:
             answer = self._prompt_to_commit_changes()
-            if answer == QMessageBox.Cancel:
+            if answer == QMessageBox.StandardButton.Cancel:
                 return False
             db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
-            if answer == QMessageBox.Save:
+            if answer == QMessageBox.StandardButton.Save:
                 commit_dirty = True
                 commit_msg = self._get_commit_msg(db_names)
                 if not commit_msg:
@@ -843,28 +843,30 @@ class SpineDBEditorBase(QMainWindow):
         commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
         if commit_at_exit == 0:
             # Don't commit session and don't show message box
-            return QMessageBox.Discard
+            return QMessageBox.StandardButton.Discard
         if commit_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox(self)
-            msg.setIcon(QMessageBox.Question)
+            msg.setIcon(QMessageBox.Icon.Question)
             msg.setWindowTitle(self.windowTitle())
             msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
-            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-            msg.button(QMessageBox.Save).setText("Commit and close ")
-            msg.button(QMessageBox.Discard).setText("Discard changes and close")
+            msg.setStandardButtons(
+                QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
+            )
+            msg.button(QMessageBox.StandardButton.Save).setText("Commit and close ")
+            msg.button(QMessageBox.StandardButton.Discard).setText("Discard changes and close")
             chkbox = QCheckBox()
             chkbox.setText("Do not ask me again")
             msg.setCheckBox(chkbox)
-            answer = msg.exec_()
-            if answer != QMessageBox.Cancel and chkbox.checkState() == 2:
+            answer = msg.exec()
+            if answer != QMessageBox.StandardButton.Cancel and chkbox.checkState() == 2:
                 # Save preference
-                preference = "2" if answer == QMessageBox.Save else "0"
+                preference = "2" if answer == QMessageBox.StandardButton.Save else "0"
                 self.qsettings.setValue("appSettings/commitAtExit", preference)
             return answer
         if commit_at_exit == 2:
             # Commit session and don't show message box
-            return QMessageBox.Save
+            return QMessageBox.StandardButton.Save
 
     def _get_commit_msg(self, db_names):
         """Prompts user for commit message.
@@ -876,8 +878,8 @@ class SpineDBEditorBase(QMainWindow):
             str: commit message
         """
         dialog = CommitDialog(self, db_names)
-        answer = dialog.exec_()
-        if answer == QDialog.Accepted:
+        answer = dialog.exec()
+        if answer == QDialog.DialogCode.Accepted:
             return dialog.commit_msg
 
     def _get_rollback_confirmation(self, db_names):
@@ -890,16 +892,16 @@ class SpineDBEditorBase(QMainWindow):
             bool: True if user confirmed, False otherwise
         """
         message_box = QMessageBox(
-            QMessageBox.Question,
+            QMessageBox.Icon.Question,
             f"Rollback changes in {db_names}",
             "Are you sure? "
             "All your changes since the last commit will be reverted and removed from the undo/redo stack.",
-            QMessageBox.Ok | QMessageBox.Cancel,
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
             parent=self,
         )
-        message_box.button(QMessageBox.Ok).setText("Rollback")
-        answer = message_box.exec_()
-        return answer == QMessageBox.Ok
+        message_box.button(QMessageBox.StandardButton.Ok).setText("Rollback")
+        answer = message_box.exec()
+        return answer == QMessageBox.StandardButton.Ok
 
     def _purge_change_notifiers(self):
         """Tears down change notifiers."""
@@ -1066,13 +1068,21 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
     def apply_stacked_style(self, checked=False):
         """Applies the stacked style, inspired in the former tree view."""
         self.begin_style_change()
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
+            self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Horizontal
         )
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_alternative_scenario_tree,
+            Qt.Orientation.Horizontal,
+        )
+        self.splitDockWidget(
+            self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
+        )
         # right-side
-        self.splitDockWidget(self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical
+        )
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_alternative_scenario_tree,
@@ -1083,7 +1093,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         # center
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_relationship_parameter_value,
+            Qt.Orientation.Vertical,
         )
         self.tabify_and_raise(
             [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
@@ -1100,19 +1112,23 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_alternative_scenario_tree,
         ]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
 
     @Slot(QAction)
     def apply_pivot_style(self, _action):
         """Applies the pivot style, inspired in the former tabular view."""
         self.begin_style_change()
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_frozen_table, self.ui.dockWidget_tool_feature_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Orientation.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Orientation.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
+            self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
+        )
+        self.splitDockWidget(
+            self.ui.dockWidget_frozen_table, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
+        )
+        self.splitDockWidget(
+            self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_alternative_scenario_tree, Qt.Orientation.Vertical
         )
         self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_object_parameter_value.hide()
@@ -1124,7 +1140,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.item_metadata_dock_widget.hide()
         docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
 
     @Slot(bool)
@@ -1133,12 +1149,14 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.begin_style_change()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Orientation.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_entity_graph, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
+            self.ui.dockWidget_entity_graph, self.ui.dockWidget_alternative_scenario_tree, Qt.Orientation.Horizontal
         )
         # right-side
-        self.splitDockWidget(self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical
+        )
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_alternative_scenario_tree,
@@ -1148,15 +1166,23 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         )
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         # left
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
+            self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
         )
         self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Vertical
+            self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Vertical
         )
-        self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_relationship_parameter_value,
+            Qt.Orientation.Vertical,
+        )
+        self.splitDockWidget(
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
+        )
+        self.splitDockWidget(
+            self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
+        )
         self.tabify_and_raise(
             [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
         )
@@ -1169,14 +1195,14 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_relationship_parameter_value,
         ]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.6 * height, 0.2 * height, 0.2 * height], Qt.Vertical)
+        self.resizeDocks(docks, [0.6 * height, 0.2 * height, 0.2 * height], Qt.Orientation.Vertical)
         docks = [
             self.ui.dockWidget_object_tree,
             self.ui.dockWidget_entity_graph,
             self.ui.dockWidget_alternative_scenario_tree,
         ]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 

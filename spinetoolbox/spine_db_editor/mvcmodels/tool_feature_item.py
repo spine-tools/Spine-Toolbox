@@ -15,7 +15,7 @@ Classes to represent tool and feature items in a tree.
 :authors: M. Marin (KTH)
 :date:    1.9.2020
 """
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from .tree_item_utility import GrayIfLastMixin, EditableMixin, EmptyChildRootItem, LeafItem, StandardTreeItem
 
 _FEATURE_ICON = "\uf5bc"  # splotch
@@ -255,16 +255,16 @@ class ToolFeatureRequiredItem(StandardTreeItem):
             flags |= Qt.ItemIsEditable
         return flags
 
-    def data(self, column, role=Qt.DisplayRole):
-        if column == 0 and role in (Qt.DisplayRole, Qt.EditRole):
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if column == 0 and role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             if not self.parent_item.item_data:
                 return None
             required = "yes" if self.parent_item.item_data["required"] else "no"
             return "required: " + required
         return super().data(column, role)
 
-    def set_data(self, column, value, role=Qt.EditRole):
-        if role == Qt.EditRole and column == 0:
+    def set_data(self, column, value, role=Qt.ItemDataRole.EditRole):
+        if role == Qt.ItemDataRole.EditRole and column == 0:
             required = {"yes": True, "no": False}.get(value)
             if required is None:
                 return False

@@ -16,9 +16,9 @@ Contains TabularViewHeaderWidget class.
 :date:   2.12.2019
 """
 
-from PySide2.QtCore import Qt, QMimeData, Signal
-from PySide2.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout
-from PySide2.QtGui import QDrag
+from PySide6.QtCore import Qt, QMimeData, Signal
+from PySide6.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout
+from PySide6.QtGui import QDrag
 from ...config import PIVOT_TABLE_HEADER_COLOR
 
 
@@ -43,7 +43,7 @@ class TabularViewHeaderWidget(QFrame):
         self._area = area
         layout = QHBoxLayout(self)
         button = QToolButton(self)
-        button.setPopupMode(QToolButton.InstantPopup)
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         button.setStyleSheet("QToolButton {border: none;}")
         button.setEnabled(menu is not None)
         if menu:
@@ -92,7 +92,7 @@ class TabularViewHeaderWidget(QFrame):
     def mousePressEvent(self, event):
         """Register drag start position"""
         if event.button() == Qt.LeftButton:
-            self.drag_start_pos = event.pos()
+            self.drag_start_pos = event.position().toPoint()
 
     # noinspection PyArgumentList, PyUnusedLocal
     def mouseMoveEvent(self, event):
@@ -101,7 +101,7 @@ class TabularViewHeaderWidget(QFrame):
             return
         if not self.drag_start_pos:
             return
-        if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+        if (event.position().toPoint() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
             return
         drag = QDrag(self)
         mime_data = QMimeData()
@@ -109,7 +109,7 @@ class TabularViewHeaderWidget(QFrame):
         pixmap = self.grab()
         drag.setPixmap(pixmap)
         drag.setHotSpot(pixmap.rect().center())
-        drag.exec_()
+        drag.exec()
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""

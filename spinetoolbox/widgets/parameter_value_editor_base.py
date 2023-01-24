@@ -18,8 +18,8 @@ A base for editor windows for editing parameter values.
 
 from enum import auto, Enum, unique
 from numbers import Number
-from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QMessageBox, QWidget
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QMessageBox, QWidget
 from spinedb_api import (
     Array,
     DateTime,

@@ -15,9 +15,8 @@ Contains ResourceFilterModel.
 :author: M. Marin (KTH)
 :date:   26.11.2020
 """
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QStandardItemModel, QStandardItem
-
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QStandardItemModel, QStandardItem
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from ..project_commands import SetFiltersOnlineCommand
@@ -52,7 +51,10 @@ class ResourceFilterModel(QStandardItemModel):
         def append_filter_items(parent_item, filter_names, filter_type, online, online_default):
             for name in filter_names[filter_type]:
                 filter_item = QStandardItem(name)
-                filter_item.setData(Qt.Checked if online.get(name, online_default) else Qt.Unchecked, Qt.CheckStateRole)
+                filter_item.setData(
+                    Qt.CheckState.Checked if online.get(name, online_default) else Qt.CheckState.Unchecked,
+                    Qt.ItemDataRole.CheckStateRole,
+                )
                 filter_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 parent_item.appendRow(filter_item)
 
@@ -73,8 +75,8 @@ class ResourceFilterModel(QStandardItemModel):
                     continue
                 filter_parent.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
                 select_all_item = QStandardItem(self._SELECT_ALL)
-                select_all_item.setData(False, Qt.CheckStateRole)
                 select_all_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
+                select_all_item.setCheckState(Qt.CheckState.Unchecked)
                 filter_parent.appendRow(select_all_item)
                 root_item.appendRow(filter_parent)
                 online_filters = self._connection.online_filters(resource_label, type_)
@@ -98,10 +100,10 @@ class ResourceFilterModel(QStandardItemModel):
                 filters.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = tool_names
         return filters
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.CheckStateRole:
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if role != Qt.ItemDataRole.CheckStateRole:
             return super().setData(index, value, role)
-        self._change_filter_checked_state(index, value == Qt.Checked)
+        self._change_filter_checked_state(index, value == Qt.CheckState.Checked)
         return True
 
     def _change_filter_checked_state(self, index, is_on):
@@ -140,10 +142,10 @@ class ResourceFilterModel(QStandardItemModel):
             filter_item = filter_type_item.child(row)
             is_on = online.get(filter_item.text(), None)
             if is_on is not None:
-                checked = Qt.Checked if is_on else Qt.Unchecked
-                if filter_item.data(Qt.CheckStateRole) != checked:
-                    filter_item.setData(checked, Qt.CheckStateRole)
-                    self.dataChanged.emit(filter_item.index(), filter_item.index(), [Qt.CheckStateRole])
+                checked = Qt.CheckState.Checked if is_on else Qt.CheckState.Unchecked
+                if filter_item.data(Qt.ItemDataRole.CheckStateRole) != checked.value:
+                    filter_item.setCheckState(checked)
+                    self.dataChanged.emit(filter_item.index(), filter_item.index(), [Qt.ItemDataRole.CheckStateRole])
         self._set_all_selected_item(resource, filter_type_item, True)
 
     def _find_filter_type_item(self, resource, filter_type):
@@ -176,9 +178,11 @@ class ResourceFilterModel(QStandardItemModel):
         online_filters = self._connection.online_filters(resource, self._FILTER_TYPES[filter_type_item.text()])
         all_online = all(online_filters.values())
         all_selected_item = filter_type_item.child(0)
-        all_selected = all_selected_item.data(Qt.CheckStateRole) == Qt.Checked
+        all_selected = all_selected_item.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Checked.value
         if all_selected != all_online:
-            checked = Qt.Checked if all_online else Qt.Unchecked
-            all_selected_item.setData(checked, Qt.CheckStateRole)
+            checked = Qt.CheckState.Checked if all_online else Qt.CheckState.Unchecked
+            all_selected_item.setCheckState(checked)
             if emit_data_changed:
-                self.dataChanged.emit(all_selected_item.index(), all_selected_item.index(), [Qt.CheckStateRole])
+                self.dataChanged.emit(
+                    all_selected_item.index(), all_selected_item.index(), [Qt.ItemDataRole.CheckStateRole]
+                )

@@ -16,9 +16,9 @@ Classes for custom QTreeView.
 :date:   25.4.2018
 """
 
-from PySide2.QtWidgets import QMenu
-from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
-from PySide2.QtGui import QMouseEvent, QIcon
+from PySide6.QtWidgets import QMenu, QAbstractItemView
+from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
+from PySide6.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
 from spinetoolbox.widgets.custom_qwidgets import ResizingViewMixin
@@ -104,7 +104,7 @@ class EntityTreeView(ResizableTreeView):
     @Slot(QModelIndex, int, QEvent)
     def edit(self, index, trigger, event):
         """Edit all selected items."""
-        if trigger == self.EditKeyPressed:
+        if trigger == QAbstractItemView.EditTrigger.EditKeyPressed:
             self.edit_selected()
             return True
         return super().edit(index, trigger, event)
@@ -206,7 +206,7 @@ class EntityTreeView(ResizableTreeView):
             return
         self._context_item = self.model().item_from_index(index)
         self.update_actions_availability()
-        self._menu.exec_(event.globalPos())
+        self._menu.exec(event.globalPos())
 
     def mousePressEvent(self, event):
         """Overrides selection behaviour if the user has selected sticky selection in Settings.
@@ -424,7 +424,7 @@ class ItemTreeView(ResizableTreeView):
             return
         item = index.model().item_from_index(index)
         self.update_actions_availability(item)
-        self._menu.exec_(event.globalPos())
+        self._menu.exec(event.globalPos())
 
     @Slot(QModelIndex, QModelIndex)
     def _refresh_copy_paste_actions(self, _, __):
@@ -481,7 +481,7 @@ class ToolFeatureTreeView(ItemTreeView):
 
     def dragMoveEvent(self, event):
         super().dragMoveEvent(event)
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         item = self.model().item_from_index(index)
         if item and item.item_type == "tool":
             self.expand(index)
@@ -607,7 +607,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def dragMoveEvent(self, event):
         super().dragMoveEvent(event)
-        index = self.indexAt(event.pos())
+        index = self.indexAt(event.position().toPoint())
         item = self.model().item_from_index(index)
         if item and item.item_type == "scenario":
             self.expand(index)

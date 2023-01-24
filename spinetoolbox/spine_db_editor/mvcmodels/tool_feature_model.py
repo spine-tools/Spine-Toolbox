@@ -15,7 +15,7 @@ Models to represent tools and features in a tree.
 :date:    1.0.2020
 """
 import json
-from PySide2.QtCore import QMimeData, Qt
+from PySide6.QtCore import QMimeData, Qt
 from .tree_model_base import TreeModelBase
 from .tree_item_utility import StandardDBItem
 from .tool_feature_item import FeatureRootItem, ToolRootItem
@@ -75,7 +75,7 @@ class ToolFeatureModel(TreeModelBase):
         )
         value_index_list = parameter_value_list["value_index_list"]
         display_value_list = self.db_mngr.get_parameter_value_list(
-            db_map, parameter_value_list_id, role=Qt.DisplayRole, only_visible=False
+            db_map, parameter_value_list_id, role=Qt.ItemDataRole.DisplayRole, only_visible=False
         )
         self._db_map_feature_methods.setdefault(db_map, {})[parameter_value_list_id] = dict(
             zip(display_value_list, value_index_list)

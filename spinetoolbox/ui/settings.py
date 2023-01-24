@@ -13,17 +13,28 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 6.4.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QAbstractScrollArea, QAbstractSpinBox,
+    QApplication, QButtonGroup, QCheckBox, QComboBox,
+    QDialogButtonBox, QFormLayout, QFrame, QGridLayout,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QListView, QListWidget, QListWidgetItem, QPushButton,
+    QRadioButton, QSizePolicy, QSlider, QSpacerItem,
+    QSpinBox, QSplitter, QStackedWidget, QToolButton,
+    QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_qcombobox import CustomQComboBox
-
 from spinetoolbox import resources_icons_rc
 
 class Ui_SettingsForm(object):
@@ -52,7 +63,6 @@ class Ui_SettingsForm(object):
         icon = QIcon()
         icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Normal, QIcon.Off)
         __qlistwidgetitem = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem.setTextAlignment(Qt.AlignLeading|Qt.AlignVCenter);
         __qlistwidgetitem.setIcon(icon);
         __qlistwidgetitem.setFlags(Qt.ItemIsSelectable|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
         icon1 = QIcon()
@@ -437,7 +447,7 @@ class Ui_SettingsForm(object):
         sizePolicy6.setVerticalStretch(0)
         sizePolicy6.setHeightForWidth(self.comboBox_julia_kernel.sizePolicy().hasHeightForWidth())
         self.comboBox_julia_kernel.setSizePolicy(sizePolicy6)
-        self.comboBox_julia_kernel.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLength)
+        self.comboBox_julia_kernel.setSizeAdjustPolicy(QComboBox.AdjustToContentsOnFirstShow)
 
         self.horizontalLayout_9.addWidget(self.comboBox_julia_kernel)
 
@@ -541,7 +551,6 @@ class Ui_SettingsForm(object):
         self.comboBox_python_kernel.setObjectName(u"comboBox_python_kernel")
         sizePolicy6.setHeightForWidth(self.comboBox_python_kernel.sizePolicy().hasHeightForWidth())
         self.comboBox_python_kernel.setSizePolicy(sizePolicy6)
-        self.comboBox_python_kernel.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLength)
 
         self.horizontalLayout_11.addWidget(self.comboBox_python_kernel)
 

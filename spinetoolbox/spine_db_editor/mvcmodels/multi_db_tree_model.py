@@ -15,7 +15,7 @@ A base model class to represent items from multiple databases in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:    17.6.2020
 """
-from PySide2.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex, Qt
 from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 
 
@@ -60,8 +60,8 @@ class MultiDBTreeModel(MinimalTreeModel):
     def columnCount(self, parent=QModelIndex()):
         return 2
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return ("name", "database")[section]
         return None
 

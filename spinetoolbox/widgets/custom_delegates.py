@@ -16,8 +16,8 @@ Custom item delegates.
 :date:   1.9.2018
 """
 
-from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
-from PySide2.QtWidgets import (
+from PySide6.QtCore import Qt, Signal, QEvent, QPoint, QRect
+from PySide6.QtWidgets import (
     QComboBox,
     QStyledItemDelegate,
     QStyleOptionButton,
@@ -39,22 +39,22 @@ class ComboBoxDelegate(QStyledItemDelegate):
         return editor
 
     def paint(self, painter, option, index):
-        value = index.data(Qt.DisplayRole)
+        value = index.data(Qt.ItemDataRole.DisplayRole)
         style = QApplication.style()
         opt = QStyleOptionComboBox()
         opt.text = str(value)
         opt.rect = option.rect
-        style.drawComplexControl(QStyle.CC_ComboBox, opt, painter)
+        style.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, opt, painter)
         super().paint(painter, option, index)
 
     def setEditorData(self, editor, index):
-        value = index.data(Qt.DisplayRole)
+        value = index.data(Qt.ItemDataRole.DisplayRole)
         ind = self._items.get(value, -1)
         editor.setCurrentIndex(ind)
 
     def setModelData(self, editor, model, index):
         value = editor.currentText()
-        model.setData(index, value, Qt.EditRole)
+        model.setData(index, value, Qt.ItemDataRole.EditRole)
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
@@ -87,27 +87,27 @@ class CheckBoxDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         """Paint a checkbox without the label."""
-        if option.state & QStyle.State_Selected:
+        if option.state & QStyle.StateFlag.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
         checkbox_style_option = QStyleOptionButton()
         checkbox_style_option.rect = self.get_checkbox_rect(option)
         if (index.flags() & Qt.ItemIsEditable) > 0:
-            checkbox_style_option.state |= QStyle.State_Enabled
+            checkbox_style_option.state |= QStyle.StateFlag.State_Enabled
         else:
-            checkbox_style_option.state |= QStyle.State_ReadOnly
+            checkbox_style_option.state |= QStyle.StateFlag.State_ReadOnly
         self._do_paint(painter, checkbox_style_option, index)
 
     @staticmethod
     def _do_paint(painter, checkbox_style_option, index):
         checked = index.data()
         if checked is None:
-            checkbox_style_option.state |= QStyle.State_NoChange
+            checkbox_style_option.state |= QStyle.StateFlag.State_NoChange
         elif checked:
-            checkbox_style_option.state |= QStyle.State_On
+            checkbox_style_option.state |= QStyle.StateFlag.State_On
         else:
-            checkbox_style_option.state |= QStyle.State_Off
+            checkbox_style_option.state |= QStyle.StateFlag.State_Off
         # noinspection PyArgumentList
-        QApplication.style().drawControl(QStyle.CE_CheckBox, checkbox_style_option, painter)
+        QApplication.style().drawControl(QStyle.ControlElement.CE_CheckBox, checkbox_style_option, painter)
 
     def editorEvent(self, event, model, option, index):
         """Change the data in the model and the state of the checkbox
@@ -119,7 +119,7 @@ class CheckBoxDelegate(QStyledItemDelegate):
         if event.type() == QEvent.MouseButtonDblClick:
             return True
         if event.type() == QEvent.MouseButtonPress and self.get_checkbox_rect(option).contains(event.pos()):
-            self.data_committed.emit(index, not index.data(Qt.EditRole))
+            self.data_committed.emit(index, not index.data(Qt.ItemDataRole.EditRole))
             return True
         return False
 
@@ -128,7 +128,9 @@ class CheckBoxDelegate(QStyledItemDelegate):
 
     def get_checkbox_rect(self, option):
         checkbox_style_option = QStyleOptionButton()
-        checkbox_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, checkbox_style_option, None)
+        checkbox_rect = QApplication.style().subElementRect(
+            QStyle.SubElement.SE_CheckBoxIndicator, checkbox_style_option, None
+        )
         if self._centered:
             checkbox_anchor = QPoint(
                 option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
@@ -146,8 +148,8 @@ class RankDelegate(CheckBoxDelegate):
 
     @staticmethod
     def _do_paint(painter, checkbox_style_option, index):
-        checkbox_style_option.state |= QStyle.State_Off
-        QApplication.style().drawControl(QStyle.CE_CheckBox, checkbox_style_option, painter)
+        checkbox_style_option.state |= QStyle.StateFlag.State_Off
+        QApplication.style().drawControl(QStyle.ControlElement.CE_CheckBox, checkbox_style_option, painter)
         rank = index.data()
         if not rank:
             return

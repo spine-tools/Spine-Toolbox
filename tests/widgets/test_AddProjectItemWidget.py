@@ -18,8 +18,8 @@ Unit tests for AddProjectItemWidget.
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide2.QtWidgets import QApplication, QWidget
-from PySide2.QtGui import QColor
+from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtGui import QColor
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
