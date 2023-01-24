@@ -105,7 +105,7 @@ def _make_argument_parser():
 
 def _add_pywin32_system32_to_path():
     """Adds a directory to PATH on Windows that is required to make pywin32 work
-    on (Conda) Python 3.8. See https://github.com/Spine-project/Spine-Toolbox/issues/1230."""
+    on (Conda) Python 3.8. See https://github.com/spine-tools/Spine-Toolbox/issues/1230."""
     if not sys.platform == "win32":
         return
     if sys.version_info[0:2] == (3, 8):

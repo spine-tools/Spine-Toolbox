@@ -9,7 +9,7 @@
 #define MyAppName "Spine Toolbox Console"
 #define MyAppVersion "0.6.0-final.0"
 #define MyAppPublisher "Spine Project Consortium"
-#define MyAppURL "https://github.com/Spine-project"
+#define MyAppURL "https://github.com/spine-tools"
 #define MyAppExeName "spinetoolbox.exe"
 #define MyAppRegKey "Software\SpineProject"
 

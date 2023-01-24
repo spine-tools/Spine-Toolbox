@@ -5,8 +5,8 @@ Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badg
 
 [![Python](https://img.shields.io/badge/python-3.7%20|%203.8%20|%203.9%20|%203.10-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
-[![Test suite](https://github.com/Spine-project/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/Spine-project/Spine-Toolbox/actions/workflows/test_runner.yml)
-[![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
+[![Test suite](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml)
+[![codecov](https://codecov.io/gh/spine-tools/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/spine-tools/Spine-Toolbox)
 [![PyPI version](https://badge.fury.io/py/spinetoolbox.svg)](https://badge.fury.io/py/spinetoolbox)
 
 Spine Toolbox is an open source Python package to manage data, scenarios and workflows for modelling and simulation. You can have your local workflow, but work as a team through version control and SQL databases.
@@ -73,7 +73,7 @@ updated with new releases.
 
    or get the latest *development* version using
 
-        python -m pipx install git+https://github.com/Spine-project/spinetoolbox-dev
+        python -m pipx install git+https://github.com/spine-tools/spinetoolbox-dev
 
 That’s it! To launch Spine Toolbox, open a terminal and run
 
@@ -96,7 +96,7 @@ There are old Windows installer packages available for a quick install, but they
 at this point (3.11.2022) quite obsolete and cannot be recommended for anything but 
 a quick look at how Spine Toolbox looks and feels (although even that has changed).
 Download the installer package from 
-[here](https://github.com/Spine-project/Spine-Toolbox/releases),
+[here](https://github.com/spine-tools/Spine-Toolbox/releases),
 run it, and follow the instructions to install Spine Toolbox.
 
 
@@ -153,8 +153,8 @@ Python 3.7, 3.8, 3.9, or 3.10 is required. Python 3.8.0 is not supported due to 
 See file `setup.cfg` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
 
-The requirements include three packages ([`spinedb_api`](https://github.com/Spine-project/Spine-Database-API),
-[`spine_engine`](https://github.com/Spine-project/spine-engine), and [`spine_items`](https://github.com/Spine-project/spine-items)),
+The requirements include three packages ([`spinedb_api`](https://github.com/spine-tools/Spine-Database-API),
+[`spine_engine`](https://github.com/spine-tools/spine-engine), and [`spine_items`](https://github.com/spine-tools/spine-items)),
 developed by the Spine project consortium.
 
 ### Building the User Guide
