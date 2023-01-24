@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   for filtering in Link properties.
 - The new "Filer validation" button in Link properties allows forcing at least one scenario or tool
   filter to be checked.
+- Python 3.11 support
+- PySide6 support. The app has been ported from PySide2 to PySide6.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools
@@ -32,6 +34,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Gimlet project items are deprecated and will be removed in the future.
 
 ### Removed
+- Python 3.7 support
 
 ### Fixed
 
