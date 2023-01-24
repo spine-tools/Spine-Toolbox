@@ -113,8 +113,8 @@ class EmptyParameterModel(EmptyRowModel):
                 unique_id = (database, *self._make_unique_id(item))
                 added_ids.add(unique_id)
         removed_rows = []
-        for row, data in enumerate(self._main_data):
-            item = dict(zip(self.header, data))
+        for row in range(self.rowCount()):
+            item = self._make_item(row)
             database = item.get("database")
             unique_id = (database, *self._make_unique_id(item))
             if unique_id in added_ids:
@@ -256,7 +256,7 @@ class EmptyParameterValueModel(
 
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
-        return (*super()._make_unique_id(item), item.get(self.entity_name_key), item.get("alternative_name"))
+        return (*super()._make_unique_id(item), item.get("alternative_name"))
 
     def add_items_to_db(self, db_map_data):
         """See base class."""
@@ -297,6 +297,9 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
     def entity_type(self):
         return "object"
 
+    def _make_unique_id(self, item):
+        return (*super()._make_unique_id(item), item.get("name"))
+
 
 class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyParameterValueModel):
     """An empty relationship parameter_value model."""
@@ -310,6 +313,13 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
     @property
     def entity_type(self):
         return "relationship"
+
+    def _make_unique_id(self, item):
+        object_name_list = item.get("object_name_list")
+        return (
+            *super()._make_unique_id(item),
+            DB_ITEM_SEPARATOR.join(object_name_list) if object_name_list is not None else None,
+        )
 
     def _make_item(self, row):
         item = super()._make_item(row)
