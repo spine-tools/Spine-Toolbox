@@ -17,9 +17,10 @@ Unit tests for the models in ``custom_qwidgets`` module.
 """
 
 import unittest
+from contextlib import contextmanager
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
-from spinetoolbox.widgets.custom_qwidgets import FilterWidget
+from PySide6.QtWidgets import QApplication, QDialogButtonBox
+from spinetoolbox.widgets.custom_qwidgets import FilterWidget, SelectDatabaseItemsDialog
 from spinetoolbox.mvcmodels.filter_checkbox_list_model import DataToValueFilterCheckboxListModel
 
 
@@ -77,6 +78,33 @@ class TestFilterWidget(unittest.TestCase):
         self._widget.save_state()
         self.assertEqual(self._widget._filter_state, {"bii", "cii"})
         self.assertTrue(self._widget._filter_empty_state)
+
+
+class TestSelectDatabaseItemsDialog(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def test_ok_button_text(self):
+        text = "Do it!"
+        with _select_database_items_dialog(None, text) as dialog:
+            self.assertEqual(dialog._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).text(), text)
+
+    def test_warning_label(self):
+        with _select_database_items_dialog(None, None) as dialog:
+            self.assertEqual(dialog._ui.warning_label.text(), "")
+            dialog._item_check_boxes_widget._item_check_boxes["metadata"].setChecked(True)
+            self.assertEqual(dialog._ui.warning_label.text(), "Warning! Structural data items selected.")
+
+
+@contextmanager
+def _select_database_items_dialog(checked_states, ok_button_text):
+    dialog = SelectDatabaseItemsDialog(checked_states, ok_button_text)
+    try:
+        yield dialog
+    finally:
+        dialog.deleteLater()
 
 
 if __name__ == "__main__":

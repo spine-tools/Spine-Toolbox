@@ -33,7 +33,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(400, 300)
+        Form.resize(409, 300)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.groupBox = QGroupBox(Form)
@@ -52,15 +52,15 @@ class Ui_Form(object):
 
         self.horizontalLayout.addWidget(self.select_all_button)
 
-        self.deselect_all_button = QPushButton(self.groupBox)
-        self.deselect_all_button.setObjectName(u"deselect_all_button")
-
-        self.horizontalLayout.addWidget(self.deselect_all_button)
-
         self.select_data_items_button = QPushButton(self.groupBox)
         self.select_data_items_button.setObjectName(u"select_data_items_button")
 
         self.horizontalLayout.addWidget(self.select_data_items_button)
+
+        self.select_scenario_items_button = QPushButton(self.groupBox)
+        self.select_scenario_items_button.setObjectName(u"select_scenario_items_button")
+
+        self.horizontalLayout.addWidget(self.select_scenario_items_button)
 
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
@@ -68,6 +68,20 @@ class Ui_Form(object):
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.deselect_all_button = QPushButton(self.groupBox)
+        self.deselect_all_button.setObjectName(u"deselect_all_button")
+
+        self.horizontalLayout_2.addWidget(self.deselect_all_button)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
 
 
         self.verticalLayout.addWidget(self.groupBox)
@@ -82,16 +96,20 @@ class Ui_Form(object):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.groupBox.setTitle(QCoreApplication.translate("Form", u"Items", None))
 #if QT_CONFIG(tooltip)
-        self.select_all_button.setToolTip(QCoreApplication.translate("Form", u"Select all items.", None))
+        self.select_all_button.setToolTip(QCoreApplication.translate("Form", u"Selects all items.", None))
 #endif // QT_CONFIG(tooltip)
         self.select_all_button.setText(QCoreApplication.translate("Form", u"Select all", None))
 #if QT_CONFIG(tooltip)
-        self.deselect_all_button.setToolTip(QCoreApplication.translate("Form", u"Deselect all items.", None))
+        self.select_data_items_button.setToolTip(QCoreApplication.translate("Form", u"Selects the entity and parameter value items.", None))
+#endif // QT_CONFIG(tooltip)
+        self.select_data_items_button.setText(QCoreApplication.translate("Form", u"Select entity and value items", None))
+#if QT_CONFIG(tooltip)
+        self.select_scenario_items_button.setToolTip(QCoreApplication.translate("Form", u"Selects the scenario and alternative items.", None))
+#endif // QT_CONFIG(tooltip)
+        self.select_scenario_items_button.setText(QCoreApplication.translate("Form", u"Select scenario items", None))
+#if QT_CONFIG(tooltip)
+        self.deselect_all_button.setToolTip(QCoreApplication.translate("Form", u"Deselects all items.", None))
 #endif // QT_CONFIG(tooltip)
         self.deselect_all_button.setText(QCoreApplication.translate("Form", u"Deselect all", None))
-#if QT_CONFIG(tooltip)
-        self.select_data_items_button.setToolTip(QCoreApplication.translate("Form", u"Selects entity and parameter data items.", None))
-#endif // QT_CONFIG(tooltip)
-        self.select_data_items_button.setText(QCoreApplication.translate("Form", u"Select data items", None))
     # retranslateUi
 

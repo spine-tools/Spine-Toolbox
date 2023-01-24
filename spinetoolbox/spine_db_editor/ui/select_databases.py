@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 ################################################################################
-## Form generated from reading UI file 'select_database_items_dialog.ui'
+## Form generated from reading UI file 'select_databases.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.4.1
 ##
@@ -25,18 +25,18 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
-    QGridLayout, QGroupBox, QHBoxLayout, QPushButton,
-    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QHBoxLayout,
+    QPushButton, QSizePolicy, QSpacerItem, QVBoxLayout,
+    QWidget)
 
-class Ui_Dialog(object):
-    def setupUi(self, Dialog):
-        if not Dialog.objectName():
-            Dialog.setObjectName(u"Dialog")
-        Dialog.resize(400, 300)
-        self.root_layout = QVBoxLayout(Dialog)
-        self.root_layout.setObjectName(u"root_layout")
-        self.databases_group_box = QGroupBox(Dialog)
+class Ui_Form(object):
+    def setupUi(self, Form):
+        if not Form.objectName():
+            Form.setObjectName(u"Form")
+        Form.resize(400, 300)
+        self.verticalLayout = QVBoxLayout(Form)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.databases_group_box = QGroupBox(Form)
         self.databases_group_box.setObjectName(u"databases_group_box")
         self.verticalLayout_2 = QVBoxLayout(self.databases_group_box)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
@@ -65,37 +65,24 @@ class Ui_Dialog(object):
         self.verticalLayout_2.addLayout(self.horizontalLayout)
 
 
-        self.root_layout.addWidget(self.databases_group_box)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.root_layout.addItem(self.verticalSpacer)
-
-        self.button_box = QDialogButtonBox(Dialog)
-        self.button_box.setObjectName(u"button_box")
-        self.button_box.setOrientation(Qt.Horizontal)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-
-        self.root_layout.addWidget(self.button_box)
+        self.verticalLayout.addWidget(self.databases_group_box)
 
 
-        self.retranslateUi(Dialog)
-        self.button_box.accepted.connect(Dialog.accept)
-        self.button_box.rejected.connect(Dialog.reject)
+        self.retranslateUi(Form)
 
-        QMetaObject.connectSlotsByName(Dialog)
+        QMetaObject.connectSlotsByName(Form)
     # setupUi
 
-    def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Dialog", None))
-        self.databases_group_box.setTitle(QCoreApplication.translate("Dialog", u"Databases", None))
+    def retranslateUi(self, Form):
+        Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.databases_group_box.setTitle(QCoreApplication.translate("Form", u"Databases", None))
 #if QT_CONFIG(tooltip)
-        self.select_all_button.setToolTip(QCoreApplication.translate("Dialog", u"Select all databases.", None))
+        self.select_all_button.setToolTip(QCoreApplication.translate("Form", u"Select all databases.", None))
 #endif // QT_CONFIG(tooltip)
-        self.select_all_button.setText(QCoreApplication.translate("Dialog", u"Select all", None))
+        self.select_all_button.setText(QCoreApplication.translate("Form", u"Select all", None))
 #if QT_CONFIG(tooltip)
-        self.deselect_all_button.setToolTip(QCoreApplication.translate("Dialog", u"Deselect all databases.", None))
+        self.deselect_all_button.setToolTip(QCoreApplication.translate("Form", u"Deselect all databases.", None))
 #endif // QT_CONFIG(tooltip)
-        self.deselect_all_button.setText(QCoreApplication.translate("Dialog", u"Deselect all", None))
+        self.deselect_all_button.setText(QCoreApplication.translate("Form", u"Deselect all", None))
     # retranslateUi
 

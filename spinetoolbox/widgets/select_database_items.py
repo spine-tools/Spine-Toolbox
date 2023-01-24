@@ -63,6 +63,7 @@ class SelectDatabaseItems(QWidget):
         "entity_metadata",
         "parameter_value_metadata",
     )
+    _SCENARIO_ITEMS = ("alternative", "scenario", "scenario_alternative")
 
     def __init__(self, checked_states=None, parent=None):
         """
@@ -76,6 +77,7 @@ class SelectDatabaseItems(QWidget):
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self._ui.select_data_items_button.clicked.connect(self._select_data_items)
+        self._ui.select_scenario_items_button.clicked.connect(self._select_scenario_items)
         checked_states = (
             checked_states if checked_states is not None else {item: False for item in DatabaseMappingBase.ITEM_TYPES}
         )
@@ -98,15 +100,31 @@ class SelectDatabaseItems(QWidget):
         return {item: box.isChecked() for item, box in self._item_check_boxes.items()}
 
     def any_checked(self):
-        """Checks if any of the check boxes is checked.
+        """Checks if any of the checkboxes is checked.
 
         Returns:
             bool: True if any check box is checked, False otherwise
         """
         return any(box.isChecked() for box in self._item_check_boxes.values())
 
+    def any_structural_item_checked(self):
+        non_structural_items = set(self._DATA_ITEMS + self._SCENARIO_ITEMS)
+        structural_item_check_boxes = (
+            widget for item_type, widget in self._item_check_boxes.items() if item_type not in non_structural_items
+        )
+        for check_box in structural_item_check_boxes:
+            if check_box.isChecked():
+                return True
+        return False
+
     @Slot(bool)
     def _select_data_items(self, _=False):
         """Checks all data items."""
         for item_name in self._DATA_ITEMS:
+            self._item_check_boxes[item_name].setChecked(True)
+
+    @Slot(bool)
+    def _select_scenario_items(self, _=False):
+        """Checks all scenario items."""
+        for item_name in self._SCENARIO_ITEMS:
             self._item_check_boxes[item_name].setChecked(True)

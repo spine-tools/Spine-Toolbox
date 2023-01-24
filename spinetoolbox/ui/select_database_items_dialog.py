@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 ################################################################################
-## Form generated from reading UI file 'purge_settings_dialog.ui'
+## Form generated from reading UI file 'select_database_items_dialog.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.4.1
 ##
@@ -26,18 +26,25 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
-    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
+    QLabel, QSizePolicy, QSpacerItem, QVBoxLayout,
+    QWidget)
 
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(400, 300)
+        Dialog.resize(400, 307)
         self.root_layout = QVBoxLayout(Dialog)
         self.root_layout.setObjectName(u"root_layout")
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.root_layout.addItem(self.verticalSpacer)
+
+        self.warning_label = QLabel(Dialog)
+        self.warning_label.setObjectName(u"warning_label")
+        self.warning_label.setStyleSheet(u"QLabel  { color : red; }")
+
+        self.root_layout.addWidget(self.warning_label)
 
         self.button_box = QDialogButtonBox(Dialog)
         self.button_box.setObjectName(u"button_box")
@@ -56,5 +63,6 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Dialog", None))
+        self.warning_label.setText("")
     # retranslateUi
 
