@@ -72,6 +72,7 @@ class TreeItem:
         self._parent_item = parent_item
         if parent_item is not None:
             self._model = parent_item.model
+            self._model.destroyed.connect(lambda obj=None: self.tear_down())
 
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
