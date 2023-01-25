@@ -163,7 +163,8 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         if self._purge_settings_dialog is not None:
             self._purge_settings_dialog.raise_()
             return
-        self._purge_settings_dialog = PurgeSettingsDialog(self._connection.purge_settings, self._toolbox)
+        self._purge_settings_dialog = PurgeSettingsDialog(self._connection.purge_settings, parent=self._toolbox)
+        self._purge_settings_dialog.setWindowTitle(f"Purge settings for connection {self._connection.link.name}")
         self._purge_settings_dialog.accepted.connect(self._handle_purge_settings_changed)
         self._purge_settings_dialog.destroyed.connect(self._clean_up_purge_settings_dialog)
         self._purge_settings_dialog.show()
@@ -171,7 +172,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
     @Slot()
     def _handle_purge_settings_changed(self):
         """Pushes a command that sets new purge settings onto undo stack."""
-        purge_settings = self._purge_settings_dialog.get_purge_settings()
+        purge_settings = self._purge_settings_dialog.get_checked_states()
         if self._connection.purge_settings == purge_settings:
             return
         options = {"purge_settings": purge_settings}

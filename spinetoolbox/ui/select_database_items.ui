@@ -18,7 +18,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
+    <width>409</width>
     <height>300</height>
    </rect>
   </property>
@@ -40,7 +40,7 @@
         <item>
          <widget class="QPushButton" name="select_all_button">
           <property name="toolTip">
-           <string>Select all items.</string>
+           <string>Selects all items.</string>
           </property>
           <property name="text">
            <string>Select all</string>
@@ -48,9 +48,46 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="select_data_items_button">
+          <property name="toolTip">
+           <string>Selects the entity and parameter value items.</string>
+          </property>
+          <property name="text">
+           <string>Select entity and value items</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="select_scenario_items_button">
+          <property name="toolTip">
+           <string>Selects the scenario and alternative items.</string>
+          </property>
+          <property name="text">
+           <string>Select scenario items</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
          <widget class="QPushButton" name="deselect_all_button">
           <property name="toolTip">
-           <string>Deselect all items.</string>
+           <string>Deselects all items.</string>
           </property>
           <property name="text">
            <string>Deselect all</string>
@@ -58,17 +95,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="select_data_items_button">
-          <property name="toolTip">
-           <string>Selects entity and parameter data items.</string>
-          </property>
-          <property name="text">
-           <string>Select data items</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="horizontalSpacer">
+         <spacer name="horizontalSpacer_2">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>

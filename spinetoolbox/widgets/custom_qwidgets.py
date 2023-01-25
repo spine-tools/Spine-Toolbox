@@ -113,7 +113,10 @@ class FilterWidget(QWidget):
         """Init class.
 
         Args:
-            parent (QWidget)
+            parent (QWidget, optional): parent widget
+            make_filter_model (Callable): callable that constructs the filter model
+            *args: arguments forwarded to ``make_filter_model``
+            **kwargs: keyword arguments forwarded to ``make_filter_model``
         """
         super().__init__(parent)
         # parameters
@@ -700,16 +703,20 @@ class PropertyQSpinBox(UndoRedoMixin, QSpinBox):
     """A spinbox where undo and redo key strokes apply to the project."""
 
 
-class PurgeSettingsDialog(QDialog):
-    """Purge settings dialog."""
+class SelectDatabaseItemsDialog(QDialog):
+    """Dialog that lets selecting database items."""
 
-    def __init__(self, purge_settings, parent=None):
+    _warn_checked_non_data_items = True
+    _ok_button_can_be_disabled = True
+
+    def __init__(self, checked_states, ok_button_text=None, parent=None):
         """
         Args:
-            purge_settings (dict): purge settings
+            checked_states (dict, optional): checked states for each item
+            ok_button_text (str, optional): alternative label for the OK button
             parent (QWidget, optional): parent widget
         """
-        from ..ui.purge_settings_dialog import Ui_Dialog  # pylint: disable=import-outside-toplevel
+        from ..ui.select_database_items_dialog import Ui_Dialog  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self.setWindowTitle("Database purge settings")
@@ -717,16 +724,41 @@ class PurgeSettingsDialog(QDialog):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self._ui = Ui_Dialog()
         self._ui.setupUi(self)
-        self._item_check_boxes_widget = SelectDatabaseItems(purge_settings, self)
+        if ok_button_text is not None:
+            self._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).setText(ok_button_text)
+        self._item_check_boxes_widget = SelectDatabaseItems(checked_states, self)
         self._ui.root_layout.insertWidget(0, self._item_check_boxes_widget)
+        self._item_check_boxes_widget.checked_state_changed.connect(self._handle_check_box_state_changed)
 
-    def get_purge_settings(self):
-        """Returns current purge settings.
+    def show(self):
+        """Sets the OK button enabled before showing the dialog"""
+        self._handle_check_box_state_changed(False)
+        super().show()
+
+    def get_checked_states(self):
+        """Returns current item checked states.
 
         Returns:
-            dict: mapping from purgeable database item name to purge flag
+            dict: mapping from database item name to checked flag
         """
         return self._item_check_boxes_widget.checked_states()
+
+    @Slot(int)
+    def _handle_check_box_state_changed(self, _checked):
+        if self._ok_button_can_be_disabled:
+            self._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
+                self._item_check_boxes_widget.any_checked()
+            )
+        if self._warn_checked_non_data_items:
+            if self._item_check_boxes_widget.any_structural_item_checked():
+                self._ui.warning_label.setText("Warning! Structural data items selected.")
+            else:
+                self._ui.warning_label.clear()
+
+
+class PurgeSettingsDialog(SelectDatabaseItemsDialog):
+
+    _ok_button_can_be_disabled = False
 
 
 class ResizingViewMixin:
