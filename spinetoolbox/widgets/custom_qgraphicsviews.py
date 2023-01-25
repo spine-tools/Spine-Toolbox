@@ -86,7 +86,7 @@ class CustomQGraphicsView(QGraphicsView):
             if event.modifiers() & Qt.ControlModifier:
                 self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
                 self.viewport().setCursor(Qt.CrossCursor)
-            if event.button() == Qt.MidButton:
+            if event.button() == Qt.MiddleButton:
                 self.reset_zoom()
         super().mousePressEvent(event)
 

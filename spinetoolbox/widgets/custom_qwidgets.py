@@ -317,6 +317,7 @@ class MenuItemToolBarWidget(ToolBarWidgetBase):
             QStyle.PixelMetric.PM_ToolBarIconSize
         )  # pylint: disable=undefined-variable
         spacing = text_width + 3 * icon_width
+        self.option.rect.setWidth(spacing)
         self.layout().insertSpacing(0, spacing)
 
     def paintEvent(self, event):
