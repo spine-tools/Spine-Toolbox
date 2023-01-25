@@ -322,6 +322,7 @@ class _TextIcon(_IconBase):
         self._text_item = QGraphicsTextItem(self)
         font = QFont('Font Awesome 5 Free Solid', weight=QFont.Bold)
         self._text_item.setFont(font)
+        self._text_item.setDefaultTextColor(self._fg_color)
         self._text_item.setPlainText(char)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
         self.setPen(Qt.NoPen)
