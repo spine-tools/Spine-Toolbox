@@ -38,8 +38,8 @@ def create_toolboxui():
 def create_project(toolbox, project_dir):
     """Creates a project for the given ToolboxUI."""
     with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
-        "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
-    ):
+        "spinetoolbox.ui_main.QSettings.setValue"
+    ), mock.patch("spinetoolbox.ui_main.QSettings.sync"):
         toolbox.create_project(project_dir)
 
 
@@ -47,9 +47,9 @@ def create_toolboxui_with_project(project_dir):
     """Returns ToolboxUI with a project instance where
     QSettings among others has been mocked."""
     with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
-        "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
-    ), mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, mock.patch(
-        "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
+        "spinetoolbox.ui_main.QSettings.value"
+    ) as mock_qsettings_value, mock.patch("spinetoolbox.ui_main.QSettings.setValue"), mock.patch(
+        "spinetoolbox.ui_main.QSettings.sync"
     ), mock.patch(
         "spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"
     ), mock.patch(

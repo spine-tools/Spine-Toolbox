@@ -242,8 +242,8 @@ class TestToolboxUI(unittest.TestCase):
 
     def test_new_project(self):
         self._temp_dir = TemporaryDirectory()
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
-            "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.remove_directory_from_recents"
+        with mock.patch("spinetoolbox.ui_main.QSettings.setValue"), mock.patch(
+            "spinetoolbox.ui_main.QSettings.sync"
         ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
@@ -252,8 +252,8 @@ class TestToolboxUI(unittest.TestCase):
 
     def test_save_project(self):
         self._temp_dir = TemporaryDirectory()
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
-            "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.remove_directory_from_recents"
+        with mock.patch("spinetoolbox.ui_main.QSettings.setValue"), mock.patch(
+            "spinetoolbox.ui_main.QSettings.sync"
         ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
