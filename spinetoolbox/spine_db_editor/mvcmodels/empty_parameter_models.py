@@ -88,7 +88,8 @@ class EmptyParameterModel(EmptyRowModel):
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == DB_MAP_ROLE:
-            return self.db_map
+            database = self.data(index, Qt.ItemDataRole.DisplayRole)
+            return next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
         if self.header[index.column()] == self.value_field and role in (
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.ToolTipRole,
