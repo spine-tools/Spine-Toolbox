@@ -125,7 +125,11 @@ class _CustomLineEdit(QPlainTextEdit):
             if cursor.position() == self.min_pos:
                 return
             if cursor.positionInBlock() == self.new_line_indent:
-                cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.KeepAnchor, n=self.new_line_indent + 1)
+                cursor.movePosition(
+                    QTextCursor.MoveOperation.PreviousCharacter,
+                    QTextCursor.MoveMode.KeepAnchor,
+                    n=self.new_line_indent + 1,
+                )
                 cursor.removeSelectedText()
                 return
         if ev.key() == Qt.Key_Left:
@@ -137,7 +141,9 @@ class _CustomLineEdit(QPlainTextEdit):
         if ev.key() == Qt.Key_Delete:
             cursor = self.textCursor()
             if cursor.atBlockEnd():
-                cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor, n=self.new_line_indent + 1)
+                cursor.movePosition(
+                    QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor, n=self.new_line_indent + 1
+                )
                 cursor.removeSelectedText()
                 return
         if self._console.key_press_event(ev):
