@@ -66,8 +66,7 @@ class ComboBoxDelegate(QStyledItemDelegate):
 
 
 class CheckBoxDelegate(QStyledItemDelegate):
-    """A delegate that places a fully functioning QCheckBox.
-    """
+    """A delegate that places a fully functioning QCheckBox."""
 
     data_committed = Signal("QModelIndex", "QVariant")
 
@@ -91,7 +90,7 @@ class CheckBoxDelegate(QStyledItemDelegate):
             painter.fillRect(option.rect, option.palette.highlight())
         checkbox_style_option = QStyleOptionButton()
         checkbox_style_option.rect = self.get_checkbox_rect(option)
-        if (index.flags() & Qt.ItemIsEditable) > 0:
+        if index.flags() & Qt.ItemIsEditable:
             checkbox_style_option.state |= QStyle.StateFlag.State_Enabled
         else:
             checkbox_style_option.state |= QStyle.StateFlag.State_ReadOnly
@@ -113,7 +112,7 @@ class CheckBoxDelegate(QStyledItemDelegate):
         """Change the data in the model and the state of the checkbox
         when user presses left mouse button and this cell is editable.
         Otherwise do nothing."""
-        if not (index.flags() & Qt.ItemIsEditable) > 0:
+        if not index.flags() & Qt.ItemIsEditable:
             return False
         # Do nothing on double-click
         if event.type() == QEvent.MouseButtonDblClick:
