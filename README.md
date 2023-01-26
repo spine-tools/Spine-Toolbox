@@ -40,38 +40,39 @@ Kiviluoma Juha, Pallonetto Fabiano, Marin Manuel, Savolainen Pekka T., Soininen 
 
 We provide three options for installing Spine Toolbox: 
 [Python/pipx](#installation-with-python-and-pipx), 
-[Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
-and [from source files](#installation-from-sources-using-git).
+[from source files](#installation-from-sources-using-git).
+and [Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
 
 ### Installation with Python and pipx
 
 This works best for users that just want to use Spine Toolbox and keep it updated 
 with new releases. The instructions below are written for Windows, but they also 
-apply to Linux where applicable.
+apply to Linux and Mac where applicable.
 
 1. If you don't have Python installed, please install e.g. **Python 3.9**
    from [Python.org](https://www.python.org/downloads/release/python-3913/).
 
-2. If you want to use Python 3.10 or 3.11, please install **Microsoft Visual C++ 14.0 or greater** on 
+2. If you want to use Python 3.10 or 3.11 on Windows, please install **Microsoft Visual C++ 14.0 or greater** on 
    Windows. Get it with *Microsoft C++ Build Tools*: 
-   https://visualstudio.microsoft.com/visual-cpp-build-tools/.
+   https://visualstudio.microsoft.com/visual-cpp-build-tools/. (Earlier versions of Python use earlier versions of C++ libraries that should be available with Windows.)
+   
+3. If you don't have git, Windows version can be found here: https://git-scm.com/download/win.
 
-3. Open a terminal (e.g., Command Prompt).
+4. Open a terminal (e.g., Command Prompt). Windows: If you will have issues with Python and/or git not found in the path, then you can add them to the environment variables manually. This can be done from Windows Control Panel (use find with 'environmental') or from a command prompt using `set PATH=%PATH%;[path-to-executable]` e.g. `set PATH=%PATH%;C:\Users\my_user_name\AppData\Local\Programs\Git\Cmd`. 
 
-4. Get the latest version of `pip` (pip is a package manager for Python)
+5. Get the latest version of `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-5. Install [pipx](https://pypa.github.io/pipx/). pipx helps in creating an isolated 
+6. Install [pipx](https://pypa.github.io/pipx/). pipx helps in creating an isolated 
    environment for Spine Toolbox to avoid package conflicts.
 
         python -m pip install --user pipx
         python -m pipx ensurepath
 
-6. Restart the terminal or re-login for the changes of the latest command to take effect.
+7. Restart the terminal or re-login for the changes of the latest command to take effect.
 
-7. Choose which Toolbox version to install. Latest *release* version is installed using
-   **NOTE: There is no release version for Python 3.11, yet**. 
+8. Choose which Toolbox version to install (**NOTE: There is no release version for Python 3.11, yet**). Latest *release* version is installed using 
 
         python -m pipx install spinetoolbox
 
@@ -93,21 +94,13 @@ To update Spine Toolbox to the latest available release, open a terminal and run
 Here, replace `spinetoolbox` with `spinetoolbox-dev` if you installed the latest
 development version.
 
-### Windows 64-bit installer package
-
-There are old Windows installer packages available for a quick install, but they are
-at this point (26.1.2023) quite obsolete and cannot be recommended for anything but 
-a quick look at how Spine Toolbox looks and feels (although even that has changed).
-Download the installer package from 
-[here](https://github.com/spine-tools/Spine-Toolbox/releases),
-run it, and follow the instructions to install Spine Toolbox.
-
-
 ### Installation from sources using Git
 
 This option is for developers and other contributors who want to debug or 
 edit Spine Toolbox source code. First, follow the instructions above to 
 install Python and get the latest version of pip.
+
+0. Make sure you have git: https://git-scm.com/download/win
 
 1. Clone or download the source code from this repository.
    
@@ -118,7 +111,7 @@ install Python and get the latest version of pip.
     Make sure you have the right Python version in the system path, or then use the full path of the Python 
     version you want to use.
 
-    Instead of venv, one can also use a new [conda](https://docs.conda.io/projects/conda/) environment using 
+    Instead of venv, one can also use a new [conda](https://docs.conda.io/projects/conda/) environment using e.g.
 
         conda create -n spinetoolbox python=3.9
     
@@ -149,6 +142,14 @@ and run (to upgrade the other Spine Toolbox packages)
 
     python -m pip install -U -r requirements.txt
 
+### Windows 64-bit installer package
+
+There are old Windows installer packages available for a quick install, but they are
+at this point (26.1.2023) quite obsolete and cannot be recommended for anything but 
+a quick look at how Spine Toolbox looks and feels (although even that has changed).
+Download the installer package from 
+[here](https://github.com/spine-tools/Spine-Toolbox/releases),
+run it, and follow the instructions to install Spine Toolbox.
 
 ### About requirements
 
