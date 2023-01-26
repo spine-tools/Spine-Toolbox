@@ -94,7 +94,9 @@ class MassSelectItemsDialog(SelectDatabaseItemsDialog):
         """Enables or disables the OK button."""
         super()._handle_check_box_state_changed(_checked)
         if self._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).isEnabled():
-            self._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).setEnabled(self._database_check_boxes_widget.any_checked())
+            self._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).setEnabled(
+                self._database_check_boxes_widget.any_checked()
+            )
 
     def accept(self):
         super().accept()
