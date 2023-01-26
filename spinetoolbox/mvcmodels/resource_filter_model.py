@@ -103,7 +103,7 @@ class ResourceFilterModel(QStandardItemModel):
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         if role != Qt.ItemDataRole.CheckStateRole:
             return super().setData(index, value, role)
-        self._change_filter_checked_state(index, value == Qt.CheckState.Checked)
+        self._change_filter_checked_state(index, value == Qt.CheckState.Checked.value)
         return True
 
     def _change_filter_checked_state(self, index, is_on):
