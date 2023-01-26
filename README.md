@@ -39,9 +39,9 @@ Kiviluoma Juha, Pallonetto Fabiano, Marin Manuel, Savolainen Pekka T., Soininen 
 ## Installation
 
 We provide three options for installing Spine Toolbox: 
-[Python/pipx](#installation-with-python-and-pipx), (we intent to make stable releases every month or so)
-[from source files](#installation-from-sources-using-git) (this is the cutting edge - and more likely to have bugs)
-and [Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
+- [Python/pipx](#installation-with-python-and-pipx) (we intent to make stable releases every month or so)
+- [From source files](#installation-from-sources-using-git) (this is the cutting edge - and more likely to have bugs)
+- [Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
 
 ### Installation with Python and pipx
 
