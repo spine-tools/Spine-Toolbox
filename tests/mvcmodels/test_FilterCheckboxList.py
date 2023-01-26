@@ -148,7 +148,8 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         self.model.set_filter('b')
         self.assertFalse(self.model._add_to_selection)
         self.assertEqual(
-            self.model.data(self.model.index(len(self.model._action_rows) - 1, 0), Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Unchecked
+            self.model.data(self.model.index(len(self.model._action_rows) - 1, 0), Qt.ItemDataRole.CheckStateRole),
+            Qt.CheckState.Unchecked,
         )
 
     def test_selected_when_filtered(self):
