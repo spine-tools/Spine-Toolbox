@@ -1277,7 +1277,7 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             "scenario",
             handle_items_added=self._handle_scenarios_added,
             handle_items_removed=self._handle_scenarios_removed,
-            handle_items_updated=self._handle_scenarios_updated,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
             owner=self,
         )
         self._alternative_fetch_parent = FlexibleFetchParent(
@@ -1289,9 +1289,8 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         )
         self._scenario_alternative_fetch_parent = FlexibleFetchParent(
             "scenario_alternative",
-            handle_items_added=lambda _: self._parent.refresh_views(),
-            handle_items_removed=lambda _: self._parent.refresh_views(),
-            handle_items_updated=lambda _: self._parent.refresh_views(),
+            handle_items_added=self._handle_scenario_alternatives_changed,
+            handle_items_removed=self._handle_scenario_alternatives_changed,
             owner=self,
             chunk_size=None,
         )
@@ -1312,8 +1311,12 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         data = self._parent.load_scenario_alternative_data(db_map_alternatives=db_map_data)
         self.remove_from_model(data)
 
-    def _handle_scenarios_updated(self, db_map_data):
-        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
+    def _handle_scenario_alternatives_changed(self, db_map_data):
+        db_map_scenarios = {
+            db_map: [self.db_mngr.get_item(db_map, "scenario", x["scenario_id"]) for x in items]
+            for db_map, items in db_map_data.items()
+        }
+        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_scenarios)
         self.update_model(data)
 
     @property
