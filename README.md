@@ -16,10 +16,11 @@ Spine Toolbox is an open source Python package to manage data, scenarios and wor
 
 - Python 3.8
 - Python 3.9
-- Python 3.10 (requires Microsoft Visual C++ 14.0 or greater on Windows)
-- Python 3.11 (experimental)
+- Python 3.10
+- Python 3.11
 
-Python 3.8.0 is not supported (use Python 3.8.1 or later).
+Python 3.8.0 is not supported (use Python 3.8.1 or later). Python 3.10 and Python 3.11 require Microsoft Visual 
+C++ 14.0 or greater on Windows.
 
 ## License
 
@@ -44,24 +45,25 @@ and [from source files](#installation-from-sources-using-git).
 
 ### Installation with Python and pipx
 
-This works best for users that want to just use Spine Toolbox but also keep it 
-updated with new releases.
+This works best for users that just want to use Spine Toolbox and keep it updated 
+with new releases. The instructions below are written for Windows, but they also 
+apply to Linux where applicable.
 
-1. If you don't yet have Python installed, the recommended version is the latest **Python 3.9** release
+1. If you don't have Python installed, please install e.g. **Python 3.9**
    from [Python.org](https://www.python.org/downloads/release/python-3913/).
 
-2. Python 3.10 and 3.11 supports are in experimental stage. If you want to try them out, please
-   install **Microsoft Visual C++ 14.0 or greater** on Windows. Get it with *Microsoft C++ 
-   Build Tools*: https://visualstudio.microsoft.com/visual-cpp-build-tools/.
+2. If you want to use Python 3.10 or 3.11, please install **Microsoft Visual C++ 14.0 or greater** on 
+   Windows. Get it with *Microsoft C++ Build Tools*: 
+   https://visualstudio.microsoft.com/visual-cpp-build-tools/.
 
-3. Open a terminal (e.g., Command Prompt on Windows).
+3. Open a terminal (e.g., Command Prompt).
 
 4. Get the latest version of `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-5. Install [pipx](https://pypa.github.io/pipx/) (pipx allows to create an isolated 
-   environment for Spine Toolbox to avoid package conflicts with other Python tools)
+5. Install [pipx](https://pypa.github.io/pipx/). pipx helps in creating an isolated 
+   environment for Spine Toolbox to avoid package conflicts.
 
         python -m pip install --user pipx
         python -m pipx ensurepath
@@ -69,6 +71,7 @@ updated with new releases.
 6. Restart the terminal or re-login for the changes of the latest command to take effect.
 
 7. Choose which Toolbox version to install. Latest *release* version is installed using
+   **NOTE: There is no release version for Python 3.11, yet**. 
 
         python -m pipx install spinetoolbox
 
@@ -90,11 +93,10 @@ To update Spine Toolbox to the latest available release, open a terminal and run
 Here, replace `spinetoolbox` with `spinetoolbox-dev` if you installed the latest
 development version.
 
-
 ### Windows 64-bit installer package
 
 There are old Windows installer packages available for a quick install, but they are
-at this point (3.11.2022) quite obsolete and cannot be recommended for anything but 
+at this point (26.1.2023) quite obsolete and cannot be recommended for anything but 
 a quick look at how Spine Toolbox looks and feels (although even that has changed).
 Download the installer package from 
 [here](https://github.com/spine-tools/Spine-Toolbox/releases),
@@ -113,7 +115,8 @@ install Python and get the latest version of pip.
 
         python -m venv .venv
     
-    Make sure you have the right Python version in the system path, or then use the full path of the Python version you want to use.
+    Make sure you have the right Python version in the system path, or then use the full path of the Python 
+    version you want to use.
 
     Instead of venv, one can also use a new [conda](https://docs.conda.io/projects/conda/) environment using 
 
