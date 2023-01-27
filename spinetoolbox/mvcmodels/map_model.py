@@ -154,18 +154,16 @@ class MapModel(QAbstractTableModel):
             if self._is_in_expanse(row_index, column_index):
                 return ""
             data = self._rows[row_index][column_index]
+            if isinstance(data, (float, int, Duration)):
+                return str(data)
             if isinstance(data, DateTime):
                 return str(data.value)
-            if isinstance(data, Duration):
-                return str(data)
             if isinstance(data, TimeSeries):
                 return "Time series"
             if isinstance(data, TimePattern):
                 return "Time pattern"
             if isinstance(data, Array):
                 return "Array"
-            if isinstance(data, Number):
-                return float(data)
             if data is None:
                 return "None"
             if data is empty:

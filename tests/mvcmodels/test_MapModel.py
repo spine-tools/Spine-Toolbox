@@ -37,9 +37,9 @@ class TestMapModel(unittest.TestCase):
         model.append_column()
         self.assertEqual(model.columnCount(), 5)
         expected_table = [
-            ["A", -1.1, "", "", ""],
-            ["B", "a", 1.1, "", ""],
-            ["B", "b", 2.2, "", ""],
+            ["A", "-1.1", "", "", ""],
+            ["B", "a", "1.1", "", ""],
+            ["B", "b", "2.2", "", ""],
             ["", "", "", "", ""],
         ]
         for y, row in enumerate(expected_table):
@@ -70,7 +70,7 @@ class TestMapModel(unittest.TestCase):
         model.convert_leaf_maps()
         self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.index(0, 0).data(), 1.0)
+        self.assertEqual(model.index(0, 0).data(), str(1.0))
         self.assertEqual(model.index(0, 1).data(), "Time series")
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "")
@@ -83,8 +83,8 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(0, 0).data(), "a")
         self.assertEqual(model.index(1, 0).data(), "b")
         self.assertEqual(model.index(2, 0).data(), "")
-        self.assertEqual(model.index(0, 1).data(), 1.1)
-        self.assertEqual(model.index(1, 1).data(), 2.2)
+        self.assertEqual(model.index(0, 1).data(), str(1.1))
+        self.assertEqual(model.index(1, 1).data(), str(2.2))
         self.assertEqual(model.index(2, 1).data(), "")
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 2).data(), "")
@@ -127,13 +127,13 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(1, 0).data(), "B")
         self.assertEqual(model.index(2, 0).data(), "B")
         self.assertEqual(model.index(3, 0).data(), "")
-        self.assertEqual(model.index(0, 1).data(), -1.1)
+        self.assertEqual(model.index(0, 1).data(), str(-1.1))
         self.assertEqual(model.index(1, 1).data(), "a")
         self.assertEqual(model.index(2, 1).data(), "b")
         self.assertEqual(model.index(3, 1).data(), "")
         self.assertEqual(model.index(0, 2).data(), "")
-        self.assertEqual(model.index(1, 2).data(), 1.1)
-        self.assertEqual(model.index(2, 2).data(), 2.2)
+        self.assertEqual(model.index(1, 2).data(), str(1.1))
+        self.assertEqual(model.index(2, 2).data(), str(2.2))
         self.assertEqual(model.index(3, 2).data(), "")
         self.assertEqual(model.index(0, 3).data(), "")
         self.assertEqual(model.index(1, 3).data(), "")
@@ -194,7 +194,7 @@ class TestMapModel(unittest.TestCase):
         nested_map = Map(["A"], [leaf_map])
         root_map = Map(["root"], [nested_map])
         model = MapModel(root_map, self._parent)
-        expected_data = [["root", "A", "a", 1.1], ["root", "A", "b", 2.2]]
+        expected_data = [["root", "A", "a", str(1.1)], ["root", "A", "b", str(2.2)]]
         for row in range(2):
             for column in range(4):
                 index = model.index(row, column)
@@ -248,7 +248,7 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), "")
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "a")
-        self.assertEqual(model.index(1, 1).data(), 1.1)
+        self.assertEqual(model.index(1, 1).data(), str(1.1))
         self.assertEqual(model.index(1, 2).data(), "")
         self.assertEqual(model.index(2, 0).data(), "")
         self.assertEqual(model.index(2, 1).data(), "")
@@ -260,10 +260,10 @@ class TestMapModel(unittest.TestCase):
         self.assertTrue(model.insertRows(1, 1))
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.index(0, 0).data(), "a")
-        self.assertEqual(model.index(0, 1).data(), 1.1)
+        self.assertEqual(model.index(0, 1).data(), str(1.1))
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "a")
-        self.assertEqual(model.index(1, 1).data(), 1.1)
+        self.assertEqual(model.index(1, 1).data(), str(1.1))
         self.assertEqual(model.index(1, 2).data(), "")
 
     def test_insertRows_to_middle_of_nested_map(self):
@@ -272,7 +272,12 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value, self._parent)
         self.assertTrue(model.insertRows(1, 1))
         self.assertEqual(model.rowCount(), 4)
-        expected_table = [["A", "a", 1.1, ""], ["A", "a", 1.1, ""], ["A", "b", 2.2, ""], ["", "", "", ""]]
+        expected_table = [
+            ["A", "a", str(1.1), ""],
+            ["A", "a", str(1.1), ""],
+            ["A", "b", str(2.2), ""],
+            ["", "", "", ""],
+        ]
         for y, row in enumerate(expected_table):
             for x, expected in enumerate(row):
                 self.assertEqual(model.index(y, x).data(), expected)
@@ -307,7 +312,7 @@ class TestMapModel(unittest.TestCase):
         self.assertTrue(model.removeRows(0, 1))
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.index(0, 0).data(), "b")
-        self.assertEqual(model.index(0, 1).data(), 2.2)
+        self.assertEqual(model.index(0, 1).data(), str(2.2))
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "")
         self.assertEqual(model.index(1, 1).data(), "")
@@ -319,7 +324,7 @@ class TestMapModel(unittest.TestCase):
         self.assertTrue(model.removeRows(0, 1))
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.index(0, 0).data(), "b")
-        self.assertEqual(model.index(0, 1).data(), 2.2)
+        self.assertEqual(model.index(0, 1).data(), str(2.2))
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "")
         self.assertEqual(model.index(1, 1).data(), "")
@@ -331,7 +336,7 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value, self._parent)
         self.assertTrue(model.removeRows(1, 1))
         self.assertEqual(model.rowCount(), 3)
-        expected_table = [["A", "a", 1.1, ""], ["A", "c", 3.3, ""], ["", "", "", ""]]
+        expected_table = [["A", "a", str(1.1), ""], ["A", "c", str(3.3), ""], ["", "", "", ""]]
         for y, row in enumerate(expected_table):
             for x, expected in enumerate(row):
                 self.assertEqual(model.index(y, x).data(), expected)
@@ -365,10 +370,10 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.index(0, 0).data(), "1M")
-        self.assertEqual(model.index(0, 1).data(), 1.1)
+        self.assertEqual(model.index(0, 1).data(), str(1.1))
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "1M")
-        self.assertEqual(model.index(1, 1).data(), 2.2)
+        self.assertEqual(model.index(1, 1).data(), str(2.2))
         self.assertEqual(model.index(1, 2).data(), "")
         self.assertEqual(model.index(2, 0).data(), "")
         self.assertEqual(model.index(2, 1).data(), "")
@@ -393,7 +398,7 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 1 + 1)
         self.assertEqual(model.columnCount(), 2 + 1)
         self.assertEqual(model.index(0, 0).data(), "idx")
-        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 1).data(), str(0.0))
 
     def test_init_converts_numpy_strings_to_real_strings(self):
         map_value = Map(["a"], [1.1])
@@ -559,7 +564,7 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.headerData(3, Qt.Orientation.Horizontal), None)
         self.assertEqual(model.index(0, 0).data(), "")
         self.assertEqual(model.index(0, 1).data(), "A")
-        self.assertEqual(model.index(0, 2).data(), 1.0)
+        self.assertEqual(model.index(0, 2).data(), str(1.0))
         self.assertEqual(model.index(0, 3).data(), "")
         self.assertEqual(model.index(1, 0).data(), "")
         self.assertEqual(model.index(1, 1).data(), "")

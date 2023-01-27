@@ -44,7 +44,7 @@ class TestIndexedValueTableModel(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        self._value = MockValue(['a', 'b', 'c'], [7, 5, 3])
+        self._value = MockValue(["a", "b", "c"], [7, 5, 3])
         self._model = IndexedValueTableModel(self._value, None)
 
     def test_column_count_is_2(self):
@@ -52,34 +52,34 @@ class TestIndexedValueTableModel(unittest.TestCase):
 
     def test_data(self):
         model_index = self._model.index(0, 0)
-        self.assertEqual(self._model.data(model_index), 'a')
+        self.assertEqual(self._model.data(model_index), "a")
         model_index = self._model.index(2, 0)
-        self.assertEqual(self._model.data(model_index), 'c')
+        self.assertEqual(self._model.data(model_index), "c")
         model_index = self._model.index(0, 1)
-        self.assertEqual(self._model.data(model_index), 7)
+        self.assertEqual(self._model.data(model_index), "7")
         model_index = self._model.index(2, 1)
-        self.assertEqual(self._model.data(model_index), 3)
+        self.assertEqual(self._model.data(model_index), "3")
 
     def test_horizontal_header_data(self):
-        self.assertEqual(self._model.headerData(0), 'idx')
-        self.assertEqual(self._model.headerData(1), 'Value')
+        self.assertEqual(self._model.headerData(0), "idx")
+        self.assertEqual(self._model.headerData(1), "Value")
 
     def test_set_horizontal_header_data(self):
         self._model.setHeaderData(0, Qt.Orientation.Horizontal, "new idx")
-        self.assertEqual(self._model.headerData(0), 'new idx')
+        self.assertEqual(self._model.headerData(0), "new idx")
 
     def test_vertical_header_data_is_row_number(self):
         for row in range(3):
             self.assertEqual(self._model.headerData(row, orientation=Qt.Orientation.Vertical), row + 1)
 
     def test_reset(self):
-        new_value = MockValue(['d'], [1])
+        new_value = MockValue(["d"], [1])
         self._model.reset(new_value)
         self.assertEqual(self._model.rowCount(), 2)
         model_index = self._model.index(0, 0)
-        self.assertEqual(self._model.data(model_index), 'd')
+        self.assertEqual(self._model.data(model_index), "d")
         model_index = self._model.index(0, 1)
-        self.assertEqual(self._model.data(model_index), 1)
+        self.assertEqual(self._model.data(model_index), "1")
 
     def test_row_count(self):
         self.assertEqual(self._model.rowCount(), 4)
