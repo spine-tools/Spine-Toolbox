@@ -131,27 +131,26 @@ class ArrayModel(QAbstractTableModel):
             return None
         row = index.row()
         column = index.column()
-        if role == Qt.ItemDataRole.DisplayRole:
-            if column == 0:
+        if column == 0:
+            if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                 return row + 1
+            else:
+                return None
+        if role == Qt.ItemDataRole.DisplayRole:
+            if row == len(self._data):
+                return None
+            return str(self._data[row])
+        if role == Qt.ItemDataRole.EditRole:
+            if row == len(self._data):
+                return self._data_type()
+            return self._data[row]
+        if role == Qt.ItemDataRole.ToolTipRole:
             if row == len(self._data):
                 return None
             element = self._data[row]
-            if isinstance(element, (float, str)):
-                return element
             return str(element)
-        if column == 1:
-            if role == Qt.ItemDataRole.EditRole:
-                if row == len(self._data):
-                    return self._data_type()
-                return self._data[row]
-            if role == Qt.ItemDataRole.ToolTipRole:
-                if row == len(self._data):
-                    return None
-                element = self._data[row]
-                return str(element)
-            if role == Qt.ItemDataRole.BackgroundRole and row == len(self._data):
-                return EXPANSE_COLOR
+        if role == Qt.ItemDataRole.BackgroundRole and row == len(self._data):
+            return EXPANSE_COLOR
         return None
 
     def flags(self, index):

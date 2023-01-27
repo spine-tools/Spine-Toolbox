@@ -50,8 +50,8 @@ class TestArrayTableContextMenu(unittest.TestCase):
         self.assertIsNotNone(insert_action)
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
-        self.assertEqual(model.index(0, 1).data(), -1.0)
-        self.assertEqual(model.index(1, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 1).data(), str(-1.0))
+        self.assertEqual(model.index(1, 1).data(), str(0.0))
         editor.deleteLater()
 
     def test_insert_row_before(self):
@@ -66,8 +66,8 @@ class TestArrayTableContextMenu(unittest.TestCase):
         self.assertIsNotNone(insert_action)
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
-        self.assertEqual(model.index(0, 1).data(), 0.0)
-        self.assertEqual(model.index(1, 1).data(), -1.0)
+        self.assertEqual(model.index(0, 1).data(), str(0.0))
+        self.assertEqual(model.index(1, 1).data(), str(-1.0))
         editor.deleteLater()
 
     def test_remove_rows(self):
@@ -82,7 +82,7 @@ class TestArrayTableContextMenu(unittest.TestCase):
         self.assertIsNotNone(remove_action)
         remove_action.trigger()
         self.assertEqual(model.rowCount(), 1 + 1)
-        self.assertEqual(model.index(0, 1).data(), -2.0)
+        self.assertEqual(model.index(0, 1).data(), str(-2.0))
         editor.deleteLater()
 
     def test_show_value_editor(self):
@@ -119,9 +119,9 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
         self.assertEqual(model.index(0, 0).data(), "D1-2")
-        self.assertEqual(model.index(0, 1).data(), -1.1)
+        self.assertEqual(model.index(0, 1).data(), str(-1.1))
         self.assertEqual(model.index(1, 0).data(), "")
-        self.assertEqual(model.index(1, 1).data(), 0.0)
+        self.assertEqual(model.index(1, 1).data(), str(0.0))
         editor.deleteLater()
 
     def test_insert_row_after_with_time_series_fixed_resolution_editor(self):
@@ -137,9 +137,9 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
         self.assertEqual(model.index(0, 0).data(), "2020-11-11T14:25:00")
-        self.assertEqual(model.index(0, 1).data(), -1.1)
+        self.assertEqual(model.index(0, 1).data(), str(-1.1))
         self.assertEqual(model.index(1, 0).data(), "2020-11-12T14:25:00")
-        self.assertEqual(model.index(1, 1).data(), 0.0)
+        self.assertEqual(model.index(1, 1).data(), str(0.0))
         editor.deleteLater()
 
     def test_insert_row_after_with_time_series_variable_resolution_editor(self):
@@ -155,9 +155,9 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
         self.assertEqual(model.index(0, 0).data(), "2020-11-11T14:25:00")
-        self.assertEqual(model.index(0, 1).data(), -1.1)
+        self.assertEqual(model.index(0, 1).data(), str(-1.1))
         self.assertEqual(model.index(1, 0).data(), "2020-11-11T15:25:00")
-        self.assertEqual(model.index(1, 1).data(), 0.0)
+        self.assertEqual(model.index(1, 1).data(), str(0.0))
         editor.deleteLater()
 
     def test_insert_row_before_with_time_pattern_editor(self):
@@ -173,9 +173,9 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
         self.assertEqual(model.index(0, 0).data(), "")
-        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 1).data(), str(0.0))
         self.assertEqual(model.index(1, 0).data(), "D1-2")
-        self.assertEqual(model.index(1, 1).data(), -1.1)
+        self.assertEqual(model.index(1, 1).data(), str(-1.1))
         editor.deleteLater()
 
     def test_insert_row_before_with_time_series_fixed_resolution_editor(self):
@@ -191,9 +191,9 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
         self.assertEqual(model.index(0, 0).data(), "2020-11-11T14:25:00")
-        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 1).data(), str(0.0))
         self.assertEqual(model.index(1, 0).data(), "2020-11-12T14:25:00")
-        self.assertEqual(model.index(1, 1).data(), -1.1)
+        self.assertEqual(model.index(1, 1).data(), str(-1.1))
         editor.deleteLater()
 
     def test_insert_row_before_with_time_series_variable_resolution_editor(self):
@@ -209,9 +209,9 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
         self.assertEqual(model.index(0, 0).data(), "2020-11-11T13:25:00")
-        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 1).data(), str(0.0))
         self.assertEqual(model.index(1, 0).data(), "2020-11-11T14:25:00")
-        self.assertEqual(model.index(1, 1).data(), -1.1)
+        self.assertEqual(model.index(1, 1).data(), str(-1.1))
         editor.deleteLater()
 
     def test_remove_rows_with_time_pattern_editor(self):
@@ -227,7 +227,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         remove_action.trigger()
         self.assertEqual(model.rowCount(), 1 + 1)
         self.assertEqual(model.index(0, 0).data(), "D3-4")
-        self.assertEqual(model.index(0, 1).data(), -2.2)
+        self.assertEqual(model.index(0, 1).data(), str(-2.2))
         editor.deleteLater()
 
     def test_remove_rows_with_time_series_fixed_resolution_editor(self):
@@ -243,7 +243,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         remove_action.trigger()
         self.assertEqual(model.rowCount(), 1 + 1)
         self.assertEqual(model.index(0, 0).data(), "2020-11-11T14:25:00")
-        self.assertEqual(model.index(0, 1).data(), -2.2)
+        self.assertEqual(model.index(0, 1).data(), str(-2.2))
         editor.deleteLater()
 
     def test_remove_rows_with_time_series_variable_resolution_editor(self):
@@ -261,7 +261,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         remove_action.trigger()
         self.assertEqual(model.rowCount(), 1 + 1)
         self.assertEqual(model.index(0, 0).data(), "2020-11-12T14:25:00")
-        self.assertEqual(model.index(0, 1).data(), -2.2)
+        self.assertEqual(model.index(0, 1).data(), str(-2.2))
         editor.deleteLater()
 
 
@@ -285,7 +285,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertEqual(model.columnCount(), 3 + 1)
         self.assertEqual(model.index(0, 0).data(), "a")
         self.assertEqual(model.index(0, 1).data(), "")
-        self.assertEqual(model.index(0, 2).data(), -1.0)
+        self.assertEqual(model.index(0, 2).data(), str(-1.0))
         editor.deleteLater()
 
     def test_insert_column_before(self):
@@ -302,7 +302,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertEqual(model.columnCount(), 3 + 1)
         self.assertEqual(model.index(0, 0).data(), "")
         self.assertEqual(model.index(0, 1).data(), "a")
-        self.assertEqual(model.index(0, 2).data(), -1.0)
+        self.assertEqual(model.index(0, 2).data(), str(-1.0))
         editor.deleteLater()
 
     def test_insert_row_after(self):
@@ -318,9 +318,9 @@ class TestMapTableContextMenu(unittest.TestCase):
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
         self.assertEqual(model.index(0, 0).data(), "a")
-        self.assertEqual(model.index(0, 1).data(), -1.0)
+        self.assertEqual(model.index(0, 1).data(), str(-1.0))
         self.assertEqual(model.index(1, 0).data(), "a")
-        self.assertEqual(model.index(1, 1).data(), -1.0)
+        self.assertEqual(model.index(1, 1).data(), str(-1.0))
         editor.deleteLater()
 
     def test_insert_row_before(self):
@@ -338,7 +338,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 0).data(), "")
         self.assertEqual(model.index(0, 1).data(), "")
         self.assertEqual(model.index(1, 0).data(), "a")
-        self.assertEqual(model.index(1, 1).data(), -1.0)
+        self.assertEqual(model.index(1, 1).data(), str(-1.0))
         editor.deleteLater()
 
     def test_remove_columns(self):
@@ -353,7 +353,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertIsNotNone(insert_action)
         insert_action.trigger()
         self.assertEqual(model.columnCount(), 1 + 1)
-        self.assertEqual(model.index(0, 0).data(), -1.0)
+        self.assertEqual(model.index(0, 0).data(), str(-1.0))
         editor.deleteLater()
 
     def test_remove_rows(self):

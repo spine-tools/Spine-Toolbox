@@ -46,7 +46,8 @@ class IndexedValueTableModel(QAbstractTableModel):
                 return None
             if index.column() == 0:
                 return str(self._value.indexes[index.row()])
-            return float(self._value.values[index.row()])
+            value = self._value.values[index.row()]
+            return str(value) if role == Qt.ItemDataRole.DisplayRole else value
         if role == Qt.ItemDataRole.BackgroundRole:
             if index.row() == len(self._value):
                 return EXPANSE_COLOR
