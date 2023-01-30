@@ -733,9 +733,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if event.modifiers() != Qt.ShiftModifier:
             super().wheelEvent(event)
             return
-        if event.orientation() != Qt.Orientation.Vertical:
-            event.ignore()
-            return
         event.accept()
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         if smooth_rotation == "true":
