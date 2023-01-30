@@ -15,7 +15,7 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide6.QtCore import Qt, Slot, QTimer, Signal, QRect, QSize
+from PySide6.QtCore import Qt, Slot, QTimer, Signal, QRect
 from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy
 from PySide6.QtGui import (
     QFontDatabase,
@@ -112,9 +112,6 @@ class _CustomLineEdit(QPlainTextEdit):
             cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, n=self.new_line_indent)
         self.setTextCursor(cursor)
         self._updating = False
-
-    def sizeHint(self):
-        return QSize(self._console.width(), 16777215)
 
     def keyPressEvent(self, ev):
         if ev.matches(QKeySequence.Copy):
@@ -329,15 +326,27 @@ class PersistentConsoleWidget(QPlainTextEdit):
     def _handle_update_request(self, _rect, _dy):
         """Move line edit to input start pos."""
         if not self._updating:
-            self._move_line_edit()
+            self._move_and_resize_line_edit()
 
-    def _move_line_edit(self):
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        if not self._updating:
+            self._move_and_resize_line_edit()
+
+    def _move_and_resize_line_edit(self):
         if self._prompt_block is None:
             return
         cursor = self.textCursor()
         cursor.setPosition(self._prompt_block.position())
         rect = self.cursorRect(cursor)
         self._line_edit.move(rect.topLeft())
+        width = self.geometry().width()
+        scrollbar = self.verticalScrollBar()
+        if scrollbar.isVisible():
+            width -= scrollbar.width()
+        cursor_width = self._line_edit.cursorWidth()
+        width = (width // cursor_width) * cursor_width
+        self._line_edit.setFixedWidth(width)
 
     @Slot()
     def _update_user_input(self):
@@ -349,6 +358,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor.insertText(text)
         self._highlight_current_input()
         self._updating = False
+        self._move_and_resize_line_edit()
 
     @Slot()
     def _start_flush_timer(self):
@@ -406,7 +416,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor.movePosition(QTextCursor.MoveOperation.End)
         self._current_prompt = prompt
         self._line_edit.reset(self._current_prompt)
-        self._move_line_edit()
+        self._move_and_resize_line_edit()
 
     def _insert_stdin_text(self, cursor, text):
         """Inserts highlighted text.
