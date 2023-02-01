@@ -1008,7 +1008,8 @@ def make_icon_background(color):
 def make_icon_toolbar_ss(color):
     icon_background = make_icon_background(color)
     # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
-    return f"QToolBar{{spacing: 0px; background: {icon_background}; padding: 3px; border-style: solid;}}"
+    # return f"QToolBar{{spacing: 0px; background: {icon_background}; padding: 3px; border-style: solid;}}"
+    return ""
 
 
 def color_from_index(i, count, base_hue=0.0, saturation=1.0):

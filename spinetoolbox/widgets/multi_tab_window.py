@@ -508,10 +508,12 @@ class TabBarPlus(QTabBar):
 
     def mouseMoveEvent(self, event):
         """Detaches a tab either if the user moves beyond the limits of the tab bar, or if it's the only one."""
+        print(f"mouseTracking:{self.hasMouseTracking()}")
         if self.count() > 0:
             self._plus_button.hide()
         if self.count() == 1:
             self._send_release_event(event.position().toPoint())
+            print(f"_hot_spot_y:{self._hot_spot_y}")
             hot_spot = QPoint(event.position().toPoint().x(), self._hot_spot_y)
             self._parent.start_drag(hot_spot)
             return

@@ -57,6 +57,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
 )
+import qdarktheme
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .project_item_icon import ProjectItemIcon
@@ -155,7 +156,7 @@ class ToolboxUI(QMainWindow):
         self._share_item_edit_actions()
         self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
         # Set style sheets
-        self.setStyleSheet(MAINWINDOW_SS)
+        # self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
         self._item_categories = dict()
@@ -235,6 +236,7 @@ class ToolboxUI(QMainWindow):
                   "Please install Spine Toolbox on Python 3.8 or greater."
             logging.warning(msg)
             self.msg_warning.emit(msg)
+        qdarktheme.setup_theme("auto")
 
     def python_version_is_37(self):
         """Returns True if on Python 3.7, False Otherwise.
