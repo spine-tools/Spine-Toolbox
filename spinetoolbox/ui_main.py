@@ -366,6 +366,17 @@ class ToolboxUI(QMainWindow):
         for old, new in old_new.items():
             if not self._qsettings.contains(new) and self._qsettings.contains(old):
                 self._qsettings.setValue(new, self._qsettings.value(old))
+                self._qsettings.remove(old)
+        if self._qsettings.contains("appSettings/saveAtExit"):
+            try:
+                old_value = int(self._qsettings.value("appSettings/saveAtExit"))
+            except ValueError:
+                # Old value is already of correct form.
+                pass
+            else:
+                new_value = {0: "prompt", 1: "prompt", 2: "automatic"}[old_value]
+                self._qsettings.setValue("appSettings/saveAtExit", new_value)
+
 
     def _update_execute_enabled(self):
         first_index = next(self.project_item_model.leaf_indexes(), None)
@@ -696,15 +707,11 @@ class ToolboxUI(QMainWindow):
         """
         if not self._project:
             return True
-        if ask_confirmation:
-            save_at_exit = (
-                int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
-                if not self.undo_stack.isClean()
-                else 0
-            )
-            if save_at_exit == 1 and not self._confirm_save_and_exit():
+        if ask_confirmation and not self.undo_stack.isClean():
+            save_at_exit = self._qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
+            if save_at_exit == "prompt" and not self._confirm_save_and_exit():
                 return False
-            if save_at_exit == 2 and not self.save_project():
+            elif save_at_exit == "automatic" and not self.save_project():
                 return False
         if not self.undo_critical_commands():
             return False
@@ -1779,19 +1786,18 @@ class ToolboxUI(QMainWindow):
         Returns:
             a list containing zero or more tasks
         """
-        show_confirm_exit = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
         save_at_exit = (
-            int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
+            self._qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
             if self._project is not None and not self.undo_stack.isClean()
-            else 0
+            else None
         )
-        if save_at_exit == 1:
-            # Ignore show_confirm_exit...
+        if save_at_exit == "prompt":
             return ["prompt save"]
+        show_confirm_exit = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
         tasks = []
         if show_confirm_exit == 2:
             tasks.append("prompt exit")
-        if save_at_exit == 2:
+        if save_at_exit == "automatic":
             tasks.append("save")
         return tasks
 
@@ -1833,7 +1839,7 @@ class ToolboxUI(QMainWindow):
         answer = msg.exec()  # Show message box
         if answer == QMessageBox.StandardButton.Ok:
             # Update conf file according to checkbox status
-            if not chkbox.checkState():
+            if not chkbox.isChecked():
                 show_prompt = "2"  # 2 as in True
             else:
                 show_prompt = "0"  # 0 as in False
@@ -1855,20 +1861,11 @@ class ToolboxUI(QMainWindow):
         msg.setStandardButtons(QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel)
         msg.button(QMessageBox.StandardButton.Save).setText("Save and exit")
         msg.button(QMessageBox.StandardButton.Discard).setText("Exit without saving")
-        chkbox = QCheckBox()
-        chkbox.setText("Do not ask me again")
-        msg.setCheckBox(chkbox)
         answer = msg.exec()
         if answer == QMessageBox.StandardButton.Cancel:
             return False
         if answer == QMessageBox.StandardButton.Save:
             self.save_project()
-        chk = chkbox.checkState()
-        if chk == 2:
-            if answer == QMessageBox.StandardButton.Save:
-                self._qsettings.setValue("appSettings/saveAtExit", "2")
-            elif answer == QMessageBox.StandardButton.Discard:
-                self._qsettings.setValue("appSettings/saveAtExit", "0")
         return True
 
     def remove_path_from_recent_projects(self, p):
