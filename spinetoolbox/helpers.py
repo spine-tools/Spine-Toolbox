@@ -101,7 +101,7 @@ def format_log_message(msg_type, message, show_datetime=True):
     Returns:
         str: formatted message
     """
-    color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
+    color = {"msg": "", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
     open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"

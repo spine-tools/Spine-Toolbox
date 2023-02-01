@@ -26,7 +26,6 @@ from ...widgets.multi_tab_window import MultiTabWindow
 from ...helpers import CharIconEngine, open_url
 from ...config import ONLINE_DOCUMENTATION_URL
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
-from ...config import MAINWINDOW_SS
 
 
 class MultiSpineDBEditor(MultiTabWindow):
@@ -44,7 +43,6 @@ class MultiSpineDBEditor(MultiTabWindow):
         self.db_mngr.fetcher_waiting_over.connect(self._close_waiting_for_fetcher)
         self._waiting_box = None
         self.settings_form = SpineDBEditorSettingsWidget(self)
-        self.setStyleSheet(MAINWINDOW_SS)
         self.setWindowTitle("Spine DB Editor")
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStatusBar(_CustomStatusBar(self))
