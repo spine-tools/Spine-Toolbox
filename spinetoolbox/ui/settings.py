@@ -129,12 +129,6 @@ class Ui_SettingsForm(object):
         self.gridLayout = QGridLayout(self.groupBox_general)
         self.gridLayout.setSpacing(6)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.checkBox_exit_prompt = QCheckBox(self.groupBox_general)
-        self.checkBox_exit_prompt.setObjectName(u"checkBox_exit_prompt")
-        self.checkBox_exit_prompt.setTristate(False)
-
-        self.gridLayout.addWidget(self.checkBox_exit_prompt, 1, 0, 1, 1)
-
         self.horizontalLayout_6 = QHBoxLayout()
         self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
         self.label = QLabel(self.groupBox_general)
@@ -165,6 +159,40 @@ class Ui_SettingsForm(object):
 
         self.gridLayout.addLayout(self.horizontalLayout_6, 13, 0, 1, 1)
 
+        self.formLayout_2 = QFormLayout()
+        self.formLayout_2.setObjectName(u"formLayout_2")
+        self.label_2 = QLabel(self.groupBox_general)
+        self.label_2.setObjectName(u"label_2")
+
+        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.label_2)
+
+        self.project_save_options_combo_box = QComboBox(self.groupBox_general)
+        self.project_save_options_combo_box.addItem("")
+        self.project_save_options_combo_box.addItem("")
+        self.project_save_options_combo_box.setObjectName(u"project_save_options_combo_box")
+
+        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.project_save_options_combo_box)
+
+
+        self.gridLayout.addLayout(self.formLayout_2, 5, 0, 1, 1)
+
+        self.checkBox_custom_open_project_dialog = QCheckBox(self.groupBox_general)
+        self.checkBox_custom_open_project_dialog.setObjectName(u"checkBox_custom_open_project_dialog")
+        self.checkBox_custom_open_project_dialog.setChecked(False)
+
+        self.gridLayout.addWidget(self.checkBox_custom_open_project_dialog, 1, 0, 1, 1)
+
+        self.checkBox_delete_data = QCheckBox(self.groupBox_general)
+        self.checkBox_delete_data.setObjectName(u"checkBox_delete_data")
+
+        self.gridLayout.addWidget(self.checkBox_delete_data, 2, 0, 1, 1)
+
+        self.checkBox_exit_prompt = QCheckBox(self.groupBox_general)
+        self.checkBox_exit_prompt.setObjectName(u"checkBox_exit_prompt")
+        self.checkBox_exit_prompt.setTristate(False)
+
+        self.gridLayout.addWidget(self.checkBox_exit_prompt, 4, 0, 1, 1)
+
         self.checkBox_open_previous_project = QCheckBox(self.groupBox_general)
         self.checkBox_open_previous_project.setObjectName(u"checkBox_open_previous_project")
         sizePolicy5 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -173,24 +201,7 @@ class Ui_SettingsForm(object):
         sizePolicy5.setHeightForWidth(self.checkBox_open_previous_project.sizePolicy().hasHeightForWidth())
         self.checkBox_open_previous_project.setSizePolicy(sizePolicy5)
 
-        self.gridLayout.addWidget(self.checkBox_open_previous_project, 4, 0, 1, 1)
-
-        self.checkBox_delete_data = QCheckBox(self.groupBox_general)
-        self.checkBox_delete_data.setObjectName(u"checkBox_delete_data")
-
-        self.gridLayout.addWidget(self.checkBox_delete_data, 3, 0, 1, 1)
-
-        self.checkBox_custom_open_project_dialog = QCheckBox(self.groupBox_general)
-        self.checkBox_custom_open_project_dialog.setObjectName(u"checkBox_custom_open_project_dialog")
-        self.checkBox_custom_open_project_dialog.setChecked(False)
-
-        self.gridLayout.addWidget(self.checkBox_custom_open_project_dialog, 2, 0, 1, 1)
-
-        self.checkBox_save_project_before_closing = QCheckBox(self.groupBox_general)
-        self.checkBox_save_project_before_closing.setObjectName(u"checkBox_save_project_before_closing")
-        self.checkBox_save_project_before_closing.setTristate(True)
-
-        self.gridLayout.addWidget(self.checkBox_save_project_before_closing, 5, 0, 1, 1)
+        self.gridLayout.addWidget(self.checkBox_open_previous_project, 3, 0, 1, 1)
 
 
         self.verticalLayout_6.addWidget(self.groupBox_general)
@@ -884,11 +895,9 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_7.addWidget(self.buttonBox)
 
-        QWidget.setTabOrder(self.checkBox_exit_prompt, self.checkBox_custom_open_project_dialog)
         QWidget.setTabOrder(self.checkBox_custom_open_project_dialog, self.checkBox_delete_data)
         QWidget.setTabOrder(self.checkBox_delete_data, self.checkBox_open_previous_project)
-        QWidget.setTabOrder(self.checkBox_open_previous_project, self.checkBox_save_project_before_closing)
-        QWidget.setTabOrder(self.checkBox_save_project_before_closing, self.checkBox_datetime)
+        QWidget.setTabOrder(self.checkBox_open_previous_project, self.checkBox_datetime)
         QWidget.setTabOrder(self.checkBox_datetime, self.checkBox_color_toolbar_icons)
         QWidget.setTabOrder(self.checkBox_color_toolbar_icons, self.checkBox_use_smooth_zoom)
         QWidget.setTabOrder(self.checkBox_use_smooth_zoom, self.checkBox_use_curved_links)
@@ -975,10 +984,6 @@ class Ui_SettingsForm(object):
         self.listWidget.setSortingEnabled(__sortingEnabled)
 
         self.groupBox_general.setTitle(QCoreApplication.translate("SettingsForm", u"Main", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_exit_prompt.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Checking this shows the 'confirm exit' question box when quitting the app</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_exit_prompt.setText(QCoreApplication.translate("SettingsForm", u"Confirm exit", None))
         self.label.setText(QCoreApplication.translate("SettingsForm", u"Work directory", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_work_dir.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Work directory location. Leave empty to use default (\\work).</p></body></html>", None))
@@ -987,22 +992,26 @@ class Ui_SettingsForm(object):
 #if QT_CONFIG(tooltip)
         self.toolButton_browse_work.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Work directory with file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(tooltip)
-        self.checkBox_open_previous_project.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, application opens the project at startup that was open the last time the application was quit</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_open_previous_project.setText(QCoreApplication.translate("SettingsForm", u"Open previous project at startup", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_delete_data.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_delete_data.setText(QCoreApplication.translate("SettingsForm", u"Delete data when project item is removed from project", None))
+        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"When there are unsaved changes:", None))
+        self.project_save_options_combo_box.setItemText(0, QCoreApplication.translate("SettingsForm", u"Ask what to do", None))
+        self.project_save_options_combo_box.setItemText(1, QCoreApplication.translate("SettingsForm", u"Automatically save project", None))
+
 #if QT_CONFIG(tooltip)
         self.checkBox_custom_open_project_dialog.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select the type of dialog used in File-&gt;Open project...</p><p>Checking this box shows a custom dialog. Unchecking this box shows the OS provided 'select folder' dialog.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_custom_open_project_dialog.setText(QCoreApplication.translate("SettingsForm", u"Custom open project dialog", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_save_project_before_closing.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select what to do if there are unsaved changes when closing a project or when quitting the app.</p><p>Unchecked: Don't save project and don't show question box</p><p>Partially checked: Show question box</p><p>Checked: Save project and don't show question box</p><p><br/></p></body></html>", None))
+        self.checkBox_delete_data.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.checkBox_save_project_before_closing.setText(QCoreApplication.translate("SettingsForm", u"Save project before closing", None))
+        self.checkBox_delete_data.setText(QCoreApplication.translate("SettingsForm", u"Delete data when project item is removed from project", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_exit_prompt.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Checking this shows the 'confirm exit' question box when quitting the app</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_exit_prompt.setText(QCoreApplication.translate("SettingsForm", u"Always confirm exit", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_open_previous_project.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, application opens the project at startup that was open the last time the application was quit</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_open_previous_project.setText(QCoreApplication.translate("SettingsForm", u"Open previous project at startup", None))
         self.groupBox_ui.setTitle(QCoreApplication.translate("SettingsForm", u"UI", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_use_smooth_zoom.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None))

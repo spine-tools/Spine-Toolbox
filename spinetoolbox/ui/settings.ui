@@ -216,19 +216,6 @@
            <property name="spacing">
             <number>6</number>
            </property>
-           <item row="1" column="0">
-            <widget class="QCheckBox" name="checkBox_exit_prompt">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Checking this shows the 'confirm exit' question box when quitting the app&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Confirm exit</string>
-             </property>
-             <property name="tristate">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
            <item row="13" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_6">
              <item>
@@ -276,33 +263,32 @@
              </item>
             </layout>
            </item>
-           <item row="4" column="0">
-            <widget class="QCheckBox" name="checkBox_open_previous_project">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, application opens the project at startup that was open the last time the application was quit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Open previous project at startup</string>
-             </property>
-            </widget>
+           <item row="5" column="0">
+            <layout class="QFormLayout" name="formLayout_2">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>When there are unsaved changes:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="project_save_options_combo_box">
+               <item>
+                <property name="text">
+                 <string>Ask what to do</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Automatically save project</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
            </item>
-           <item row="3" column="0">
-            <widget class="QCheckBox" name="checkBox_delete_data">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Delete data when project item is removed from project</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
+           <item row="1" column="0">
             <widget class="QCheckBox" name="checkBox_custom_open_project_dialog">
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the type of dialog used in File-&amp;gt;Open project...&lt;/p&gt;&lt;p&gt;Checking this box shows a custom dialog. Unchecking this box shows the OS provided 'select folder' dialog.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -315,16 +301,42 @@
              </property>
             </widget>
            </item>
-           <item row="5" column="0">
-            <widget class="QCheckBox" name="checkBox_save_project_before_closing">
+           <item row="2" column="0">
+            <widget class="QCheckBox" name="checkBox_delete_data">
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select what to do if there are unsaved changes when closing a project or when quitting the app.&lt;/p&gt;&lt;p&gt;Unchecked: Don't save project and don't show question box&lt;/p&gt;&lt;p&gt;Partially checked: Show question box&lt;/p&gt;&lt;p&gt;Checked: Save project and don't show question box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Save project before closing</string>
+              <string>Delete data when project item is removed from project</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QCheckBox" name="checkBox_exit_prompt">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Checking this shows the 'confirm exit' question box when quitting the app&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Always confirm exit</string>
              </property>
              <property name="tristate">
-              <bool>true</bool>
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="checkBox_open_previous_project">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, application opens the project at startup that was open the last time the application was quit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Open previous project at startup</string>
              </property>
             </widget>
            </item>
@@ -1519,11 +1531,9 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>checkBox_exit_prompt</tabstop>
   <tabstop>checkBox_custom_open_project_dialog</tabstop>
   <tabstop>checkBox_delete_data</tabstop>
   <tabstop>checkBox_open_previous_project</tabstop>
-  <tabstop>checkBox_save_project_before_closing</tabstop>
   <tabstop>checkBox_datetime</tabstop>
   <tabstop>checkBox_color_toolbar_icons</tabstop>
   <tabstop>checkBox_use_smooth_zoom</tabstop>
@@ -1605,7 +1615,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="engine_processes_button_group"/>
   <buttongroup name="persistent_processes_button_group"/>
+  <buttongroup name="engine_processes_button_group"/>
  </buttongroups>
 </ui>
