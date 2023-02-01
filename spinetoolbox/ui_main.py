@@ -231,20 +231,6 @@ class ToolboxUI(QMainWindow):
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
-        if self.python_version_is_37():
-            msg = "Python 3.7 support will be dropped in the near future. " \
-                  "Please install Spine Toolbox on Python 3.8 or greater."
-            logging.warning(msg)
-            self.msg_warning.emit(msg)
-        qdarktheme.setup_theme("auto")
-
-    def python_version_is_37(self):
-        """Returns True if on Python 3.7, False Otherwise.
-        Remove when PySide6 port is in master."""
-        v = platform.python_version_tuple()
-        if v[0] == "3" and v[1] == "7":
-            return True
-        return False
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists

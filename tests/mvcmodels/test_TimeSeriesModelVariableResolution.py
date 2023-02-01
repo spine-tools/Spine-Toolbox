@@ -44,7 +44,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             model_index = model.index(0, 0)
             self.assertEqual(model.data(model_index, role), "2019-07-05T12:00:00")
             model_index = model.index(0, 1)
-            self.assertEqual(model.data(model_index, role), -5.0)
+            expected = str(-5.0) if role == Qt.ItemDataRole.DisplayRole else -5.0
+            self.assertEqual(model.data(model_index, role), expected)
 
     def test_flags(self):
         model = TimeSeriesModelVariableResolution(

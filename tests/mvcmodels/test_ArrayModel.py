@@ -58,7 +58,7 @@ class TestArrayModel(unittest.TestCase):
         self.assertTrue(model.insertRows(0, 2))
         self.assertEqual(model.rowCount(), 3)
         expected_index = [1, 2, 3]
-        expected_data = [0.0, 0.0, None]
+        expected_data = ["0.0", "0.0", None]
         for row, (index, data) in enumerate(zip(expected_index, expected_data)):
             self.assertEqual(model.index(row, 0).data(), index)
             self.assertEqual(model.index(row, 1).data(), data)
@@ -81,14 +81,14 @@ class TestArrayModel(unittest.TestCase):
         model.batch_set_data([model.index(0, 0)], ["2.3"])
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.index(0, 0).data(), 1)
-        self.assertEqual(model.index(0, 1).data(), 2.3)
+        self.assertEqual(model.index(0, 1).data(), "2.3")
 
     def test_batch_set_data_on_last_row_extends_table(self):
         model = ArrayModel(self._parent)
         model.reset(Array([5.0]))
         model.batch_set_data([model.index(1, 0)], ["2.3"])
         self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.index(0, 1).data(), 5.0)
+        self.assertEqual(model.index(0, 1).data(), "5.0")
 
     def test_set_array_type_converts_existing_data(self):
         model = ArrayModel(self._parent)
@@ -102,15 +102,15 @@ class TestArrayModel(unittest.TestCase):
         model.reset(Array([5.0]))
         self.assertTrue(model.setData(model.index(0, 0), 2.3))
         self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.index(0, 1).data(), 2.3)
+        self.assertEqual(model.index(0, 1).data(), "2.3")
 
     def test_setData_on_last_row_extends_array(self):
         model = ArrayModel(self._parent)
         model.reset(Array([5.0]))
         self.assertTrue(model.setData(model.index(1, 0), 2.3))
         self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.index(0, 1).data(), 5.0)
-        self.assertEqual(model.index(1, 1).data(), 2.3)
+        self.assertEqual(model.index(0, 1).data(), "5.0")
+        self.assertEqual(model.index(1, 1).data(), "2.3")
 
     def test_index_type_is_in_header(self):
         model = ArrayModel(self._parent)

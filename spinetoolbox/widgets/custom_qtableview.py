@@ -354,7 +354,7 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
         data_indexes = row_count * [None]
         data_values = row_count * [None]
         for selected_index in selected_indexes:
-            data = data_model.data(selected_index)
+            data = data_model.data(selected_index, Qt.ItemDataRole.EditRole)
             row = selected_index.row()
             if selected_index.column() == 0:
                 data_indexes[row - row_first] = data
@@ -614,14 +614,30 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
         model = self.model()
         selected_indexes = [i for i in selection_model.selectedIndexes() if not model.is_expanse_row(i.row())]
         selected_indexes.sort(key=methodcaller("row"))
-        values = [index.data() for index in selected_indexes]
-        with system_lc_numeric():
-            with io.StringIO() as output:
-                writer = csv.writer(output, delimiter='\t')
-                for value in values:
-                    value = locale.str(value) if isinstance(value, Number) else value
-                    writer.writerow([value])
-                QApplication.clipboard().setText(output.getvalue())
+        first_column = selected_indexes[0].column()
+        if any(index.column() != first_column for index in selected_indexes):
+            values = {}
+            for index in selected_indexes:
+                row = index.row()
+                row_values = values.setdefault(row, {})
+                row_values["x" if index.column() == 0 else "y"] = index.data(Qt.ItemDataRole.EditRole)
+            with system_lc_numeric():
+                with io.StringIO() as output:
+                    writer = csv.writer(output, delimiter='\t')
+                    for row_values in values.values():
+                        x = row_values.get("x", "")
+                        y = row_values.get("y", "")
+                        y = locale.str(y) if isinstance(y, Number) else y
+                        writer.writerow([x, y])
+                    QApplication.clipboard().setText(output.getvalue())
+        else:
+            with system_lc_numeric():
+                with io.StringIO() as output:
+                    writer = csv.writer(output, delimiter='\t')
+                    for index in selected_indexes:
+                        y = index.data(Qt.ItemDataRole.EditRole)
+                        writer.writerow([locale.str(y) if isinstance(y, Number) else y])
+                    QApplication.clipboard().setText(output.getvalue())
         return True
 
     @Slot(bool)
