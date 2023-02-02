@@ -119,6 +119,16 @@ class TestProjectUpgrader(unittest.TestCase):
         p["items"] = dict()
         self.assertFalse(project_upgrader.is_valid(9, p))
 
+    def test_is_valid_v10(self):
+        p = make_v10_project_dict()
+        project_upgrader = ProjectUpgrader(self.toolbox)
+        self.assertTrue(project_upgrader.is_valid(10, p))
+        # Test that an invalid v10 project dict is not valid
+        p = dict()
+        p["project"] = dict()
+        p["items"] = dict()
+        self.assertFalse(project_upgrader.is_valid(10, p))
+
     def test_upgrade_v1_to_v2(self):
         pu = ProjectUpgrader(self.toolbox)
         proj_v1 = make_v1_project_dict()
@@ -245,6 +255,46 @@ class TestProjectUpgrader(unittest.TestCase):
                             self.assertTrue(name in v5_items.keys())
                             self.assertIsInstance(v5_items[name], dict)
 
+    def test_upgrade_v9_to_v10(self):
+        pu = ProjectUpgrader(self.toolbox)
+        proj_v9 = make_v9_project_dict()
+        self.assertTrue(pu.is_valid(9, proj_v9))
+        with TemporaryDirectory() as project_dir:
+            with mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
+            ) as mock_backup, mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
+            ) as mock_force_save, mock.patch(
+                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 10
+            ):
+                os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
+                # Make temp preprocessing_tool.json tool spec file
+                spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
+                with open(spec_file_path, "w", encoding="utf-8") as tmp_spec_file:
+                    tmp_spec_file.write("hello")
+                    # Upgrade to version 10
+                    proj_v10 = pu.upgrade(proj_v9, project_dir)
+                    mock_backup.assert_called_once()
+                    mock_force_save.assert_called_once()
+                    self.assertTrue(pu.is_valid(10, proj_v10))
+                    v10_items = proj_v10["items"]
+                    # Make a list of Gimlet and GdxExporter names in v9
+                    names = list()
+                    for name, d in proj_v9["items"].items():
+                        if d["type"] in ["Gimlet", "GdxExporter"]:
+                            names.append(name)
+                    self.assertEqual(4, len(names))  # Old should have 3 Gimlets, 1 GdxExporter
+                    # Check that connections have been removed
+                    for conn in proj_v10["project"]["connections"]:
+                        for name in names:
+                            self.assertTrue(name not in conn["from"] and name not in conn["to"])
+                    # Check that gimlet and GdxExporter dicts are gone from items
+                    for item_name in v10_items.keys():
+                        self.assertTrue(item_name not in names)
+                    # Check number of connections
+                    self.assertEqual(8, len(proj_v9["project"]["connections"]))
+                    self.assertEqual(1, len(proj_v10["project"]["connections"]))
+
     def test_upgrade_v1_to_latest(self):
         pu = ProjectUpgrader(self.toolbox)
         proj_v1 = make_v1_project_dict()
@@ -276,7 +326,7 @@ class TestProjectUpgrader(unittest.TestCase):
 
     def test_upgrade_with_too_recent_project_version(self):
         """Tests that projects with too recent versions are not opened."""
-        project_dict = make_v9_project_dict()
+        project_dict = make_v10_project_dict()
         project_dict["project"]["version"] = LATEST_PROJECT_VERSION + 1
         pu = ProjectUpgrader(self.toolbox)
         self.assertFalse(pu.upgrade(project_dict, project_dir=""))
@@ -930,6 +980,307 @@ def make_v9_project_dict():
         "project": {
             "version": 9,
             "description": "",
+            "specifications": {
+                "Tool": [
+                    {
+                        "type": "path",
+                        "relative": true,
+                        "path": "tool_specs/python_tool.json"
+                    },
+                    {
+                        "type": "path",
+                        "relative": true,
+                        "path": ".spinetoolbox/specifications/Tool/run_python_script.json"
+                    }
+                ],
+                "Exporter": [
+                    {
+                        "type": "path",
+                        "relative": true,
+                        "path": ".spinetoolbox/specifications/Exporter/pekka.json"
+                    }
+                ]
+            },
+            "connections": [
+                {
+                    "from": [
+                        "Gimlet 2",
+                        "right"
+                    ],
+                    "to": [
+                        "Output Data Store",
+                        "left"
+                    ]
+                },
+                {
+                    "from": [
+                        "Data Store 1",
+                        "right"
+                    ],
+                    "to": [
+                        "Gimlet 2",
+                        "left"
+                    ]
+                },
+                {
+                    "from": [
+                        "Gimlet 2",
+                        "right"
+                    ],
+                    "to": [
+                        "Input files",
+                        "left"
+                    ]
+                },
+                {
+                    "from": [
+                        "Data Connection 1",
+                        "right"
+                    ],
+                    "to": [
+                        "Gimlet 2",
+                        "left"
+                    ]
+                },
+                {
+                    "from": [
+                        "Input files",
+                        "right"
+                    ],
+                    "to": [
+                        "Gimlet 1",
+                        "left"
+                    ]
+                },
+                {
+                    "from": [
+                        "Gimlet 1",
+                        "right"
+                    ],
+                    "to": [
+                        "Importer 1",
+                        "left"
+                    ]
+                },
+                {
+                    "from": [
+                        "Input files",
+                        "right"
+                    ],
+                    "to": [
+                        "Tool 1",
+                        "left"
+                    ]
+                },
+                {
+                    "from": [
+                        "Tool 1",
+                        "right"
+                    ],
+                    "to": [
+                        "Exporter 1",
+                        "left"
+                    ]
+                }
+            ],
+            "jumps": []
+        },
+        "items": {
+            "Data Store 1": {
+                "type": "Data Store",
+                "description": "",
+                "x": -263.6394742868821,
+                "y": 176.8323524857541,
+                "url": {
+                    "dialect": "sqlite",
+                    "username": "",
+                    "password": "",
+                    "host": "",
+                    "port": "",
+                    "database": {
+                        "type": "path",
+                        "relative": true,
+                        "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite"
+                    }
+                },
+                "cancel_on_error": true
+            },
+            "Output Data Store": {
+                "type": "Data Store",
+                "description": "",
+                "x": -13.218981361948352,
+                "y": -105.53784602361065,
+                "url": {
+                    "dialect": "sqlite",
+                    "username": "",
+                    "password": "",
+                    "host": "",
+                    "port": "",
+                    "database": {
+                        "type": "path",
+                        "relative": true,
+                        "path": ".spinetoolbox/items/output_data_store/Data Store 2.sqlite"
+                    }
+                },
+                "cancel_on_error": true
+            },
+            "Input files": {
+                "type": "Data Connection",
+                "description": "",
+                "x": 10.576156345791162,
+                "y": 20.627396591609312,
+                "references": []
+            },
+            "Data Connection 1": {
+                "type": "Data Connection",
+                "description": "",
+                "x": -280.12202511130465,
+                "y": -63.47899907065667,
+                "references": []
+            },
+            "Tool 1": {
+                "type": "Tool",
+                "description": "",
+                "x": 291.62202511130465,
+                "y": -1.1880399099676993,
+                "specification": "Python Tool",
+                "execute_in_work": false,
+                "cmd_line_args": []
+            },
+            "Gimlet 1": {
+                "type": "Gimlet",
+                "description": "",
+                "x": 150.10969114880783,
+                "y": -82.95482379567305,
+                "use_shell": true,
+                "shell_index": 0,
+                "cmd": "dir",
+                "file_selection": [
+                    [
+                        "a.txt",
+                        true
+                    ],
+                    [
+                        "b.txt",
+                        true
+                    ]
+                ],
+                "work_dir_mode": false,
+                "cmd_line_args": []
+            },
+            "Gimlet 2": {
+                "type": "Gimlet",
+                "description": "",
+                "x": -144.68627461687544,
+                "y": 13.84376228227775,
+                "use_shell": true,
+                "shell_index": 0,
+                "cmd": "type",
+                "file_selection": [
+                    [
+                        "db_url@Data Store 1",
+                        true
+                    ],
+                    [
+                        "a.txt",
+                        true
+                    ],
+                    [
+                        "b.txt",
+                        true
+                    ],
+                    [
+                        "c.txt",
+                        true
+                    ],
+                    [
+                        "db_url@Output Data Store",
+                        true
+                    ]
+                ],
+                "work_dir_mode": true,
+                "cmd_line_args": [
+                    {
+                        "type": "resource",
+                        "arg": "a.txt"
+                    }
+                ]
+            },
+            "Gimlet 3": {
+                "type": "Gimlet",
+                "description": "",
+                "x": 28.650658811521936,
+                "y": 172.10664471911343,
+                "use_shell": false,
+                "shell_index": 0,
+                "cmd": "C:/Python38/python.exe script.py",
+                "file_selection": [],
+                "work_dir_mode": true,
+                "cmd_line_args": []
+            },
+            "Importer 1": {
+                "type": "Importer",
+                "description": "",
+                "x": 290.52669175211753,
+                "y": -172.3323524857541,
+                "specification": "",
+                "cancel_on_error": true,
+                "file_selection": [
+                    [
+                        "a.txt",
+                        true
+                    ],
+                    [
+                        "b.txt",
+                        true
+                    ]
+                ]
+            },
+            "Exporter 1": {
+                "type": "GdxExporter",
+                "description": "",
+                "x": 288.4970615986198,
+                "y": 170.40712704565672,
+                "databases": [],
+                "output_time_stamps": false,
+                "cancel_on_error": true,
+                "settings_pack": {
+                    "settings": null,
+                    "indexing_settings": null,
+                    "merging_settings": {},
+                    "none_fallback": 0,
+                    "none_export": 0
+                }
+            },
+            "Pekka 1": {
+                "type": "Exporter",
+                "description": "",
+                "x": -260.724401315556,
+                "y": -165.58749767665375,
+                "databases": [],
+                "output_time_stamps": false,
+                "cancel_on_error": true,
+                "specification": "Pekka"
+            },
+            "Run Python Script": {
+                "type": "Tool",
+                "description": "",
+                "x": 134.2282701407487,
+                "y": 128.90175148436978,
+                "specification": "run python script",
+                "execute_in_work": false,
+                "cmd_line_args": []
+            }
+        }
+    }"""
+    return json.loads(p)
+
+def make_v10_project_dict():
+    p = """
+    {
+        "project": {
+            "version": 10,
+            "description": "",
             "specifications": {},
             "connections": []
         },
@@ -937,3 +1288,4 @@ def make_v9_project_dict():
     }
     """
     return json.loads(p)
+

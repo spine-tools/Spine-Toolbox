@@ -29,8 +29,8 @@ from PySide6.QtGui import (
 )
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
-from spinetoolbox.server.engine_client import RemoteEngineInitFailed
 from spinetoolbox.qthread_pool_executor import QtBasedThreadPoolExecutor
+from spine_engine.exception import RemoteEngineInitFailed
 
 
 class _CustomLineEdit(QPlainTextEdit):
