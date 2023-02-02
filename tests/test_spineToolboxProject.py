@@ -42,7 +42,6 @@ from tests.mock_helpers import (
     add_tool,
     add_view,
     add_importer,
-    add_gdx_exporter,
     add_gimlet,
     add_exporter,
     add_data_transformer,
@@ -132,7 +131,7 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_all_available_items(self):
         """Test that adding multiple items works as expected.
-        Multiple items are added in order DS, DC, DT, Tool, Gimlet, View, Importer, Exporter, GdxExporter."""
+        Multiple items are added in order DS, DC, DT, Tool, Gimlet, View, Importer, Exporter."""
         p = self.toolbox.project()
         # Add items
         ds_name = "DS"
@@ -143,7 +142,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         view_name = "View"
         imp_name = "Importer"
         exporter_name = "Exporter"
-        gdx_exporter_name = "GdxExporter"
         add_ds(p, self.toolbox.item_factories, ds_name)
         add_dc(p, self.toolbox.item_factories, dc_name)
         add_data_transformer(p, self.toolbox.item_factories, dt_name)
@@ -152,7 +150,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_view(p, self.toolbox.item_factories, view_name)
         add_importer(p, self.toolbox.item_factories, imp_name)
         add_exporter(p, self.toolbox.item_factories, exporter_name)
-        add_gdx_exporter(p, self.toolbox.item_factories, gdx_exporter_name)
         # Check that the items are found from project item model
         ds = p.get_item(ds_name)
         self.assertEqual(ds_name, ds.name)
@@ -170,11 +167,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(imp_name, importer.name)
         exporter = p.get_item(exporter_name)
         self.assertEqual(exporter_name, exporter.name)
-        gdx_exporter = p.get_item(gdx_exporter_name)
-        self.assertEqual(gdx_exporter_name, gdx_exporter.name)
         # DAG handler should now have six graphs, each with one item
         n_dags = len(self.toolbox.project().dags())
-        self.assertEqual(9, n_dags)
+        self.assertEqual(8, n_dags)
         # Check that all created items are in graphs
         ds_graph = self.toolbox.project().dag_with_node(ds_name)
         self.assertIsNotNone(ds_graph)
@@ -192,8 +187,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertIsNotNone(importer_graph)
         exporter_graph = self.toolbox.project().dag_with_node(exporter_name)
         self.assertIsNotNone(exporter_graph)
-        gdx_exporter_graph = self.toolbox.project().dag_with_node(gdx_exporter_name)
-        self.assertIsNotNone(gdx_exporter_graph)
 
     def test_remove_item_by_name(self):
         view_name = "View"
