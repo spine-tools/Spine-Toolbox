@@ -39,7 +39,6 @@ class TestLoadProjectItems(unittest.TestCase):
             "GdxExporter": "Exporters",
             "Tool": "Tools",
             "View": "Views",
-            "Gimlet": "Tools",
         }
         self.assertEqual(categories, expected_categories)
         self.assertEqual(len(factories), len(expected_categories))

@@ -147,15 +147,11 @@ class MainToolBar(ToolBar):
         icon_ordering = self._toolbox.qsettings().value("appSettings/toolbarIconOrdering", defaultValue="")
         ordered_item_types = icon_ordering.split(self._SEPARATOR)
         for item_type in ordered_item_types:
-            if item_type == "Gimlet":  # Do not allow creating new Gimlets
-                continue
             factory = self._toolbox.item_factories.get(item_type)
             if factory is None:
                 continue
             self._add_project_item_button(item_type, factory, colored)
         for item_type, factory in self._toolbox.item_factories.items():
-            if item_type == "Gimlet":
-                continue
             if item_type in ordered_item_types:
                 continue
             self._add_project_item_button(item_type, factory, colored)
