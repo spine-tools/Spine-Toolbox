@@ -31,11 +31,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Scenario filters now filter unrelated scenarios and alternatives as well.
 
 ### Deprecated
-- Gimlet project items are deprecated and will be removed in the future.
 
 ### Removed
 - Python 3.7 support
-- GdxExporter
+- GdxExporter project item
+- Gimlet project item
 
 ### Fixed
 

@@ -101,6 +101,8 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v7_to_v8(project_dict)
             elif v == 8:
                 project_dict = self.upgrade_v8_to_v9(project_dict)
+            elif v == 9:
+                project_dict = self.upgrade_v9_to_v10(project_dict)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -193,12 +195,10 @@ class ProjectUpgrader:
                     factories[item_type].item_class().upgrade_v2_to_v3(item_name, old_item_dict, self)
                 )
             except KeyError:
-                # This happens when a Combiner is encountered.
+                # This happens when an unknown item type is encountered.
                 # Factories do not contain 'Combiner' anymore
                 if item_type == "Combiner":
                     new["items"][item_name] = old_item_dict
-                else:
-                    print(f"Some unknown item_type encountered: {item_type}")
             if item_type == "Importer":
                 mappings = old_item_dict.get("mappings")
                 # Sanitize old mappings, as we use to do in Importer.from_dict
@@ -472,6 +472,40 @@ class ProjectUpgrader:
         return new
 
     @staticmethod
+    def upgrade_v9_to_v10(old):
+        """Upgrades version 9 project dictionary to version 10.
+
+        Changes:
+            1. Remove connections from Gimlets and GDXExporters
+            2. Remove Gimlet items
+
+        Args:
+            old (dict): Version 9 project dictionary
+
+        Returns:
+            dict: Version 10 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 10
+        names_to_remove = list()  # Gimlet and GdxExporter item names
+        # Get Gimlet and GdxExporter names and remove connections
+        for name, item_dict in new["items"].items():
+            if item_dict["type"] in ["Gimlet", "GdxExporter"]:
+                names_to_remove.append(name)
+        # Get list of connections to remove
+        connections_to_remove = list()
+        for conn in new["project"]["connections"]:
+            for name_to_remove in names_to_remove:
+                if name_to_remove in conn["from"] or name_to_remove in conn["to"]:
+                    connections_to_remove.append(conn)
+        for conn_to_remove in connections_to_remove:
+            new["project"]["connections"].remove(conn_to_remove)
+        # Remove Gimlet and GdxExporter item dictionaries
+        for name in names_to_remove:
+            new["items"].pop(name)
+        return new
+
+    @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
 
@@ -517,8 +551,8 @@ class ProjectUpgrader:
             return self.is_valid_v1(p)
         if 2 <= v <= 8:
             return self.is_valid_v2_to_v8(p, v)
-        if v == 9:
-            return self.is_valid_v9(p)
+        if 9 <= v <= 10:
+            return self.is_valid_v9_to_v10(p)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -614,9 +648,9 @@ class ProjectUpgrader:
             return False
         return True
 
-    def is_valid_v9(self, p):
+    def is_valid_v9_to_v10(self, p):
         """Checks that the given project JSON dictionary contains
-        a valid version 9 Spine Toolbox project. Valid meaning, that
+        a valid version 9 or 10 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct
         type.
 
@@ -624,7 +658,7 @@ class ProjectUpgrader:
             p (dict): Project information JSON
 
         Returns:
-            bool: True if project is a valid version 9 project, False if it is not
+            bool: True if project is a valid version 9 and 10 project, False otherwise
         """
         if "project" not in p.keys():
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")

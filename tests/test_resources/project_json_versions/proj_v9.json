@@ -1,0 +1,297 @@
+{
+    "project": {
+        "version": 9,
+        "description": "",
+        "specifications": {
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": "tool_specs/python_tool.json"
+                },
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/run_python_script.json"
+                }
+            ],
+            "Exporter": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Exporter/pekka.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "from": [
+                    "Gimlet 2",
+                    "right"
+                ],
+                "to": [
+                    "Output Data Store",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Data Store 1",
+                    "right"
+                ],
+                "to": [
+                    "Gimlet 2",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Gimlet 2",
+                    "right"
+                ],
+                "to": [
+                    "Input files",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Data Connection 1",
+                    "right"
+                ],
+                "to": [
+                    "Gimlet 2",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Input files",
+                    "right"
+                ],
+                "to": [
+                    "Gimlet 1",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Gimlet 1",
+                    "right"
+                ],
+                "to": [
+                    "Importer 1",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Input files",
+                    "right"
+                ],
+                "to": [
+                    "Tool 1",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Tool 1",
+                    "right"
+                ],
+                "to": [
+                    "Exporter 1",
+                    "left"
+                ]
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Data Store 1": {
+            "type": "Data Store",
+            "description": "",
+            "x": -263.6394742868821,
+            "y": 176.8323524857541,
+            "url": {
+                "dialect": "sqlite",
+                "username": "",
+                "password": "",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite"
+                }
+            },
+            "cancel_on_error": true
+        },
+        "Output Data Store": {
+            "type": "Data Store",
+            "description": "",
+            "x": -13.218981361948352,
+            "y": -105.53784602361065,
+            "url": {
+                "dialect": "sqlite",
+                "username": "",
+                "password": "",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/output_data_store/Data Store 2.sqlite"
+                }
+            },
+            "cancel_on_error": true
+        },
+        "Input files": {
+            "type": "Data Connection",
+            "description": "",
+            "x": 10.576156345791162,
+            "y": 20.627396591609312,
+            "references": []
+        },
+        "Data Connection 1": {
+            "type": "Data Connection",
+            "description": "",
+            "x": -280.12202511130465,
+            "y": -63.47899907065667,
+            "references": []
+        },
+        "Tool 1": {
+            "type": "Tool",
+            "description": "",
+            "x": 291.62202511130465,
+            "y": -1.1880399099676993,
+            "specification": "Python Tool",
+            "execute_in_work": false,
+            "cmd_line_args": []
+        },
+        "Gimlet 1": {
+            "type": "Gimlet",
+            "description": "",
+            "x": 150.10969114880783,
+            "y": -82.95482379567305,
+            "use_shell": true,
+            "shell_index": 0,
+            "cmd": "dir",
+            "file_selection": [
+                [
+                    "a.txt",
+                    true
+                ],
+                [
+                    "b.txt",
+                    true
+                ]
+            ],
+            "work_dir_mode": false,
+            "cmd_line_args": []
+        },
+        "Gimlet 2": {
+            "type": "Gimlet",
+            "description": "",
+            "x": -144.68627461687544,
+            "y": 13.84376228227775,
+            "use_shell": true,
+            "shell_index": 0,
+            "cmd": "type",
+            "file_selection": [
+                [
+                    "db_url@Data Store 1",
+                    true
+                ],
+                [
+                    "a.txt",
+                    true
+                ],
+                [
+                    "b.txt",
+                    true
+                ],
+                [
+                    "c.txt",
+                    true
+                ],
+                [
+                    "db_url@Output Data Store",
+                    true
+                ]
+            ],
+            "work_dir_mode": true,
+            "cmd_line_args": [
+                {
+                    "type": "resource",
+                    "arg": "a.txt"
+                }
+            ]
+        },
+        "Gimlet 3": {
+            "type": "Gimlet",
+            "description": "",
+            "x": 28.650658811521936,
+            "y": 172.10664471911343,
+            "use_shell": false,
+            "shell_index": 0,
+            "cmd": "C:/Python38/python.exe script.py",
+            "file_selection": [],
+            "work_dir_mode": true,
+            "cmd_line_args": []
+        },
+        "Importer 1": {
+            "type": "Importer",
+            "description": "",
+            "x": 290.52669175211753,
+            "y": -172.3323524857541,
+            "specification": "",
+            "cancel_on_error": true,
+            "file_selection": [
+                [
+                    "a.txt",
+                    true
+                ],
+                [
+                    "b.txt",
+                    true
+                ]
+            ]
+        },
+        "Exporter 1": {
+            "type": "GdxExporter",
+            "description": "",
+            "x": 288.4970615986198,
+            "y": 170.40712704565672,
+            "databases": [],
+            "output_time_stamps": false,
+            "cancel_on_error": true,
+            "settings_pack": {
+                "settings": null,
+                "indexing_settings": null,
+                "merging_settings": {},
+                "none_fallback": 0,
+                "none_export": 0
+            }
+        },
+        "Pekka 1": {
+            "type": "Exporter",
+            "description": "",
+            "x": -260.724401315556,
+            "y": -165.58749767665375,
+            "databases": [],
+            "output_time_stamps": false,
+            "cancel_on_error": true,
+            "specification": "Pekka"
+        },
+        "Run Python Script": {
+            "type": "Tool",
+            "description": "",
+            "x": 134.2282701407487,
+            "y": 128.90175148436978,
+            "specification": "run python script",
+            "execute_in_work": false,
+            "cmd_line_args": []
+        }
+    }
+}

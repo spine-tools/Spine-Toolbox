@@ -42,7 +42,6 @@ from tests.mock_helpers import (
     add_tool,
     add_view,
     add_importer,
-    add_gimlet,
     add_exporter,
     add_data_transformer,
     qsettings_value_side_effect,
@@ -131,14 +130,13 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_all_available_items(self):
         """Test that adding multiple items works as expected.
-        Multiple items are added in order DS, DC, DT, Tool, Gimlet, View, Importer, Exporter."""
+        Multiple items are added in order DS, DC, DT, Tool, View, Importer, Exporter."""
         p = self.toolbox.project()
         # Add items
         ds_name = "DS"
         dc_name = "DC"
         dt_name = "DT"
         tool_name = "Tool"
-        gimlet_name = "Gimlet"
         view_name = "View"
         imp_name = "Importer"
         exporter_name = "Exporter"
@@ -146,7 +144,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_dc(p, self.toolbox.item_factories, dc_name)
         add_data_transformer(p, self.toolbox.item_factories, dt_name)
         add_tool(p, self.toolbox.item_factories, tool_name)
-        add_gimlet(p, self.toolbox.item_factories, gimlet_name)
         add_view(p, self.toolbox.item_factories, view_name)
         add_importer(p, self.toolbox.item_factories, imp_name)
         add_exporter(p, self.toolbox.item_factories, exporter_name)
@@ -159,17 +156,15 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(dt_name, dt.name)
         tool = p.get_item(tool_name)
         self.assertEqual(tool_name, tool.name)
-        gimlet = p.get_item(gimlet_name)
-        self.assertEqual(gimlet_name, gimlet.name)
         view = p.get_item(view_name)
         self.assertEqual(view_name, view.name)
         importer = p.get_item(imp_name)
         self.assertEqual(imp_name, importer.name)
         exporter = p.get_item(exporter_name)
         self.assertEqual(exporter_name, exporter.name)
-        # DAG handler should now have six graphs, each with one item
+        # DAG handler should now have seven graphs, each with one item
         n_dags = len(self.toolbox.project().dags())
-        self.assertEqual(8, n_dags)
+        self.assertEqual(7, n_dags)
         # Check that all created items are in graphs
         ds_graph = self.toolbox.project().dag_with_node(ds_name)
         self.assertIsNotNone(ds_graph)
@@ -179,8 +174,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertIsNotNone(dt_graph)
         tool_graph = self.toolbox.project().dag_with_node(tool_name)
         self.assertIsNotNone(tool_graph)
-        gimlet_graph = self.toolbox.project().dag_with_node(gimlet_name)
-        self.assertIsNotNone(gimlet_graph)
         view_graph = self.toolbox.project().dag_with_node(view_name)
         self.assertIsNotNone(view_graph)
         importer_graph = self.toolbox.project().dag_with_node(imp_name)
@@ -506,7 +499,7 @@ class TestSpineToolboxProject(unittest.TestCase):
             project_dict,
             {
                 "items": {"test item": {"type": "Tester", "a": {"c": 2}}},
-                "project": {"connections": [], "description": "", "jumps": [], "specifications": {}, "version": 9},
+                "project": {"connections": [], "description": "", "jumps": [], "specifications": {}, "version": 10},
             },
         )
         with Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME).open() as fp:

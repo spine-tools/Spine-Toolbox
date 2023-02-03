@@ -15,8 +15,6 @@
    :width: 16
 .. |folder-open| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
    :width: 16
-.. |gimlet| image:: ../../spinetoolbox/ui/resources/project_item_icons/screwdriver.svg
-   :width: 16
 .. |importer| image:: ../../spinetoolbox/ui/resources/project_item_icons/database-import.svg
    :width: 16
 .. |merger| image:: ../../spinetoolbox/ui/resources/project_item_icons/blender.svg
@@ -90,16 +88,6 @@ Tool |tool|
 Tool is the heart of a DAG. It is usually the actual model to be executed in Spine Toolbox
 but can be an arbitrary script, executable or system command as well.
 A tool is specified by its :ref:`specification <Tool specification editor>`.
-
-Gimlet |gimlet|
-===============
-
-.. note::
-   Gimlet is pending for removal and its use in new projects is discouraged.
-   Use Tool instead.
-
-A Gimlet can execute an arbitrary system command with given command line arguments,
-input files and work directory.
 
 Data Transformer |data_transformer|
 ===================================

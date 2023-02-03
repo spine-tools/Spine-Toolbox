@@ -22,6 +22,7 @@ from unittest import mock
 import logging
 import sys
 import os
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.project_upgrader import ProjectUpgrader
@@ -118,6 +119,16 @@ class TestProjectUpgrader(unittest.TestCase):
         p["project"] = dict()
         p["items"] = dict()
         self.assertFalse(project_upgrader.is_valid(9, p))
+
+    def test_is_valid_v10(self):
+        p = make_v10_project_dict()
+        project_upgrader = ProjectUpgrader(self.toolbox)
+        self.assertTrue(project_upgrader.is_valid(10, p))
+        # Test that an invalid v10 project dict is not valid
+        p = dict()
+        p["project"] = dict()
+        p["items"] = dict()
+        self.assertFalse(project_upgrader.is_valid(10, p))
 
     def test_upgrade_v1_to_v2(self):
         pu = ProjectUpgrader(self.toolbox)
@@ -245,6 +256,46 @@ class TestProjectUpgrader(unittest.TestCase):
                             self.assertTrue(name in v5_items.keys())
                             self.assertIsInstance(v5_items[name], dict)
 
+    def test_upgrade_v9_to_v10(self):
+        pu = ProjectUpgrader(self.toolbox)
+        proj_v9 = make_v9_project_dict()
+        self.assertTrue(pu.is_valid(9, proj_v9))
+        with TemporaryDirectory() as project_dir:
+            with mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
+            ) as mock_backup, mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
+            ) as mock_force_save, mock.patch(
+                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 10
+            ):
+                os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
+                # Make temp preprocessing_tool.json tool spec file
+                spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
+                with open(spec_file_path, "w", encoding="utf-8") as tmp_spec_file:
+                    tmp_spec_file.write("hello")
+                    # Upgrade to version 10
+                    proj_v10 = pu.upgrade(proj_v9, project_dir)
+                    mock_backup.assert_called_once()
+                    mock_force_save.assert_called_once()
+                    self.assertTrue(pu.is_valid(10, proj_v10))
+                    v10_items = proj_v10["items"]
+                    # Make a list of Gimlet and GdxExporter names in v9
+                    names = list()
+                    for name, d in proj_v9["items"].items():
+                        if d["type"] in ["Gimlet", "GdxExporter"]:
+                            names.append(name)
+                    self.assertEqual(4, len(names))  # Old should have 3 Gimlets, 1 GdxExporter
+                    # Check that connections have been removed
+                    for conn in proj_v10["project"]["connections"]:
+                        for name in names:
+                            self.assertTrue(name not in conn["from"] and name not in conn["to"])
+                    # Check that gimlet and GdxExporter dicts are gone from items
+                    for item_name in v10_items.keys():
+                        self.assertTrue(item_name not in names)
+                    # Check number of connections
+                    self.assertEqual(8, len(proj_v9["project"]["connections"]))
+                    self.assertEqual(1, len(proj_v10["project"]["connections"]))
+
     def test_upgrade_v1_to_latest(self):
         pu = ProjectUpgrader(self.toolbox)
         proj_v1 = make_v1_project_dict()
@@ -276,664 +327,44 @@ class TestProjectUpgrader(unittest.TestCase):
 
     def test_upgrade_with_too_recent_project_version(self):
         """Tests that projects with too recent versions are not opened."""
-        project_dict = make_v9_project_dict()
+        project_dict = make_v10_project_dict()
         project_dict["project"]["version"] = LATEST_PROJECT_VERSION + 1
         pu = ProjectUpgrader(self.toolbox)
         self.assertFalse(pu.upgrade(project_dict, project_dir=""))
 
 
 def make_v1_project_dict():
-    p = """
-    {
-        "project": {
-            "version": 1,
-            "name": "UnitTest Project",
-            "description": "Project for testing open_project() method in ToolboxUI.",
-                    "tool_specifications": [
-            {
-                "type": "path",
-                "relative": true,
-                "path": "Specs/python_tool_spec.json"
-            }
-        ],
-            "connections": [
-                {
-                    "from": [
-                        "a",
-                        "right"
-                    ],
-                    "to": [
-                        "b",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "b",
-                        "right"
-                    ],
-                    "to": [
-                        "c",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "c",
-                        "right"
-                    ],
-                    "to": [
-                        "d",
-                        "left"
-                    ]
-                }
-            ],
-            "scene_x": -14.5,
-            "scene_y": -23.0,
-            "scene_w": 464.0,
-            "scene_h": 324.0
-        },
-        "objects": {
-            "Data Stores": {
-                "a": {
-                    "short name": "a",
-                    "description": "",
-                    "x": 38.0,
-                    "y": 100.0,
-                    "url": null
-                }
-            },
-            "Data Connections": {
-                "b": {
-                    "short name": "b",
-                    "description": "",
-                    "x": 155.0,
-                    "y": 101.0,
-                    "references": []
-                }
-            },
-            "Tools": {
-                "c": {
-                    "short name": "c",
-                    "description": "",
-                    "x": 277.0,
-                    "y": 101.0,
-                    "tool": "",
-                    "execute_in_work": true
-                }
-            },
-            "Views": {
-                "d": {
-                    "short name": "d",
-                    "description": "",
-                    "x": 395.0,
-                    "y": 100.0
-                }
-            }
-        }
-    }
-    """
-    return json.loads(p)
+    return _get_project_dict(1)
 
 
 def make_v2_project_dict():
-    p = """
-    {
-        "project": {
-            "version": 2,
-            "name": "Empty",
-            "description": "",
-            "specifications": {
-                "Tool": [
-                    {
-                        "type": "path",
-                        "relative": true,
-                        "path": "tool_specs/preprocessing_tool.json"
-                    }
-                ]
-            },
-            "connections": [
-                {
-                    "from": [
-                        "Preprocessing Tool 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Exporter 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Importer 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Data Store 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Data Store 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Combiner 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Data Store 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Exporter 1",
-                        "left"
-                    ]
-                }
-            ]
-        },
-        "items": {
-            "Data Store 1": {
-                "type": "Data Store",
-                "description": "",
-                "x": -100.20784779809955,
-                "y": -53.86171819147853,
-                "url": {
-                    "dialect": "sqlite",
-                    "username": "",
-                    "password": "",
-                    "host": "",
-                    "port": "",
-                    "database": {
-                        "type": "path",
-                        "relative": true,
-                        "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite"
-                    }
-                }
-            },
-            "Preprocessing Tool 1": {
-                "type": "Tool",
-                "description": "",
-                "x": -95.1974554081946,
-                "y": 71.39809155614594,
-                "specification": "Preprocessing Tool",
-                "execute_in_work": true,
-                "cmd_line_args": []
-            },
-            "Importer 1": {
-                "type": "Importer",
-                "description": "",
-                "x": -226.72025564320035,
-                "y": -47.598727704097286,
-                "mappings": [],
-                "cancel_on_error": true,
-                "mapping_selection": []
-            },
-            "Exporter 1": {
-                "type": "Exporter",
-                "description": "",
-                "x": 105.21824018800457,
-                "y": -5.010392389904993,
-                "settings_packs": [
-                    {
-                        "output_file_name": "output.gdx",
-                        "state": 1,
-                        "settings": {
-                            "domains": {},
-                            "sets": {},
-                            "global_parameters_domain_name": ""
-                        },
-                        "indexing_settings": {},
-                        "merging_settings": {},
-                        "none_fallback": 0,
-                        "none_export": 0,
-                        "scenario": null,
-                        "latest_database_commit": "2020-09-11T15:01:25",
-                        "database_url": {
-                            "type": "file_url",
-                            "relative": true,
-                            "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite",
-                            "scheme": "sqlite"
-                        }
-                    }
-                ],
-                "cancel_on_error": true
-            },
-            "Combiner 1": {
-                "type": "Combiner",
-                "description": "",
-                "x": 141.54358501481573,
-                "y": -171.60593935424555,
-                "cancel_on_error": false
-            }
-        }
-    }
-    """
-    return json.loads(p)
+    return _get_project_dict(2)
 
 
 def make_v3_project_dict():
-    p = """
-    {
-        "project": {
-            "version": 3,
-            "name": "Empty",
-            "description": "",
-            "specifications": {
-                "Tool": [
-                    {
-                        "type": "path",
-                        "relative": true,
-                        "path": "tool_specs/preprocessing_tool.json"
-                    }
-                ],
-                "Data Transformer": [],
-                "Importer": []
-            },
-            "connections": [
-                {
-                    "from": [
-                        "Preprocessing Tool 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Exporter 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Importer 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Data Store 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Data Store 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Combiner 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Data Store 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Exporter 1",
-                        "left"
-                    ]
-                }
-            ]
-        },
-        "items": {
-            "Data Store 1": {
-                "type": "Data Store",
-                "description": "",
-                "x": -100.20784779809955,
-                "y": -53.86171819147853,
-                "url": {
-                    "dialect": "sqlite",
-                    "username": "",
-                    "password": "",
-                    "host": "",
-                    "port": "",
-                    "database": {
-                        "type": "path",
-                        "relative": true,
-                        "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite"
-                    }
-                }
-            },
-            "Preprocessing Tool 1": {
-                "type": "Tool",
-                "description": "",
-                "x": -95.1974554081946,
-                "y": 71.39809155614594,
-                "specification": "Preprocessing Tool",
-                "execute_in_work": true,
-                "cmd_line_args": []
-            },
-            "Importer 1": {
-                "type": "Importer",
-                "description": "",
-                "x": -226.72025564320035,
-                "y": -47.598727704097286,
-                "cancel_on_error": true,
-                "mapping_selection": [],
-                "specification": "",
-                "file_selection": []
-            },
-            "Exporter 1": {
-                "type": "Exporter",
-                "description": "",
-                "x": 105.21824018800457,
-                "y": -5.010392389904993,
-                "settings_packs": [
-                    {
-                        "output_file_name": "output.gdx",
-                        "state": 1,
-                        "settings": {
-                            "domains": {},
-                            "sets": {},
-                            "global_parameters_domain_name": ""
-                        },
-                        "indexing_settings": {},
-                        "merging_settings": {},
-                        "none_fallback": 0,
-                        "none_export": 0,
-                        "scenario": null,
-                        "latest_database_commit": "2020-09-11T15:01:25",
-                        "database_url": {
-                            "type": "file_url",
-                            "relative": true,
-                            "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite",
-                            "scheme": "sqlite"
-                        }
-                    }
-                ],
-                "cancel_on_error": true
-            },
-            "Combiner 1": {
-                "type": "Combiner",
-                "description": "",
-                "x": 141.54358501481573,
-                "y": -171.60593935424555,
-                "cancel_on_error": false
-            }
-        }
-    }
-    """
-    return json.loads(p)
+    return _get_project_dict(3)
 
 
 def make_v4_project_dict():
-    p = """
-    {
-        "project": {
-            "version": 4,
-            "name": "Empty",
-            "description": "",
-            "specifications": {
-                "Tool": [
-                    {
-                        "type": "path",
-                        "relative": true,
-                        "path": "tool_specs/preprocessing_tool.json"
-                    }
-                ],
-                "Data Transformer": [],
-                "Importer": []
-            },
-            "connections": [
-                {
-                    "from": [
-                        "Preprocessing Tool 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Exporter 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Importer 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Data Store 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Data Store 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Combiner 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Data Store 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Exporter 1",
-                        "left"
-                    ]
-                }
-            ]
-        },
-        "items": {
-            "Data Store 1": {
-                "type": "Data Store",
-                "description": "",
-                "x": -100.20784779809955,
-                "y": -53.86171819147853,
-                "url": {
-                    "dialect": "sqlite",
-                    "username": "",
-                    "password": "",
-                    "host": "",
-                    "port": "",
-                    "database": {
-                        "type": "path",
-                        "relative": true,
-                        "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite"
-                    }
-                }
-            },
-            "Preprocessing Tool 1": {
-                "type": "Tool",
-                "description": "",
-                "x": -95.1974554081946,
-                "y": 71.39809155614594,
-                "specification": "Preprocessing Tool",
-                "execute_in_work": true,
-                "cmd_line_args": []
-            },
-            "Importer 1": {
-                "type": "Importer",
-                "description": "",
-                "x": -226.72025564320035,
-                "y": -47.598727704097286,
-                "cancel_on_error": true,
-                "mapping_selection": [],
-                "specification": "",
-                "file_selection": []
-            },
-            "Exporter 1": {
-                "type": "Exporter",
-                "description": "",
-                "x": 105.21824018800457,
-                "y": -5.010392389904993,
-                "settings_packs": [
-                    {
-                        "output_file_name": "output.gdx",
-                        "state": 1,
-                        "settings": {
-                            "domains": {},
-                            "sets": {},
-                            "global_parameters_domain_name": ""
-                        },
-                        "indexing_settings": {},
-                        "merging_settings": {},
-                        "none_fallback": 0,
-                        "none_export": 0,
-                        "scenario": null,
-                        "latest_database_commit": "2020-09-11T15:01:25",
-                        "database_url": {
-                            "type": "file_url",
-                            "relative": true,
-                            "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite",
-                            "scheme": "sqlite"
-                        }
-                    }
-                ],
-                "cancel_on_error": true
-            },
-            "Combiner 1": {
-                "type": "Combiner",
-                "description": "",
-                "x": 141.54358501481573,
-                "y": -171.60593935424555,
-                "cancel_on_error": false
-            }
-        }
-    }
-    """
-    return json.loads(p)
+    return _get_project_dict(4)
 
 
 def make_v5_project_dict():
-    p = """
-    {
-        "project": {
-            "version": 5,
-            "name": "Very Good Project",
-            "description": "",
-            "specifications": {
-                "Tool": [
-                    {
-                        "type": "path",
-                        "relative": true,
-                        "path": "tool_specs/preprocessing_tool.json"
-                    }
-                ],
-                "Data Transformer": [],
-                "Importer": []
-            },
-            "connections": [
-                {
-                    "from": [
-                        "Preprocessing Tool 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Exporter 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Importer 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Data Store 1",
-                        "left"
-                    ]
-                },
-                {
-                    "from": [
-                        "Data Store 1",
-                        "right"
-                    ],
-                    "to": [
-                        "Exporter 1",
-                        "left"
-                    ]
-                }
-            ]
-        },
-        "items": {
-            "Data Store 1": {
-                "type": "Data Store",
-                "description": "",
-                "x": -100.20784779809955,
-                "y": -53.86171819147853,
-                "url": {
-                    "dialect": "sqlite",
-                    "username": "",
-                    "password": "",
-                    "host": "",
-                    "port": "",
-                    "database": {
-                        "type": "path",
-                        "relative": true,
-                        "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite"
-                    }
-                }
-            },
-            "Preprocessing Tool 1": {
-                "type": "Tool",
-                "description": "",
-                "x": -95.1974554081946,
-                "y": 71.39809155614594,
-                "specification": "Preprocessing Tool",
-                "execute_in_work": true,
-                "cmd_line_args": []
-            },
-            "Importer 1": {
-                "type": "Importer",
-                "description": "",
-                "x": -226.72025564320035,
-                "y": -47.598727704097286,
-                "cancel_on_error": true,
-                "mapping_selection": [],
-                "specification": "",
-                "file_selection": []
-            },
-            "Exporter 1": {
-                "type": "Exporter",
-                "description": "",
-                "x": 105.21824018800457,
-                "y": -5.010392389904993,
-                "settings_packs": [
-                    {
-                        "output_file_name": "output.gdx",
-                        "state": 1,
-                        "settings": {
-                            "domains": {},
-                            "sets": {},
-                            "global_parameters_domain_name": ""
-                        },
-                        "indexing_settings": {},
-                        "merging_settings": {},
-                        "none_fallback": 0,
-                        "none_export": 0,
-                        "scenario": null,
-                        "latest_database_commit": "2020-09-11T15:01:25",
-                        "database_url": {
-                            "type": "file_url",
-                            "relative": true,
-                            "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite",
-                            "scheme": "sqlite"
-                        }
-                    }
-                ],
-                "cancel_on_error": true
-            }
-        }
-    }
-    """
-    return json.loads(p)
+    return _get_project_dict(5)
 
 
 def make_v9_project_dict():
-    p = """
-    {
-        "project": {
-            "version": 9,
-            "description": "",
-            "specifications": {},
-            "connections": []
-        },
-        "items": {}
-    }
-    """
-    return json.loads(p)
+    return _get_project_dict(9)
+
+
+def make_v10_project_dict():
+    return _get_project_dict(10)
+
+
+def _get_project_dict(v):
+    """Returns a project dict read from a file according to given version."""
+    project_json_versions_dir = os.path.join(str(Path(__file__).parent), "test_resources", "project_json_versions")
+    f_name = "proj_v" + str(v) + ".json"  # e.g. proj_v1.json
+    with open(os.path.join(project_json_versions_dir, f_name), "r") as fh:
+        project_dict = json.load(fh)
+    return project_dict
