@@ -17,6 +17,7 @@ Unit tests for the TimeSeriesModelVariableResolution class.
 """
 
 import unittest
+import numpy
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
@@ -208,6 +209,32 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             model.value,
             TimeSeriesVariableResolution(["1991-01-01T13:30", "1992-01-01T13:30"], [-4.0, -5.0], True, False),
         )
+
+    def test_setData_sets_value_to_nan_if_conversion_to_float_fails(self):
+        model = TimeSeriesModelVariableResolution(
+            TimeSeriesVariableResolution(["1991-01-01T13:30", "1992-01-01T13:30"], [2.3, -5.0], True, False),
+            self._parent,
+        )
+        model_index = model.index(0, 1)
+        model.setData(model_index, "1,1")
+        self.assertEqual(
+            model.value,
+            TimeSeriesVariableResolution(["1991-01-01T13:30", "1992-01-01T13:30"], [numpy.nan, -5.0], True, False),
+        )
+
+    def test_setData_sets_timestamp_to_nan_if_conversion_to_datetime_fails(self):
+        model = TimeSeriesModelVariableResolution(
+            TimeSeriesVariableResolution(["1991-01-01T13:30", "1992-01-01T13:30"], [2.3, -5.0], True, False),
+            self._parent,
+        )
+        model_index = model.index(0, 0)
+        model.setData(model_index, "what happened to Tuesday")
+        expected = TimeSeriesVariableResolution([numpy.datetime64(), "1992-01-01T13:30"], [2.3, -5.0], True, False)
+        self.assertEqual([str(x) for x in model.value.indexes], [str(x) for x in expected.indexes])
+        self.assertTrue(numpy.array_equal(model.value.values, expected.values))
+        self.assertEqual(model.value.ignore_year, expected.ignore_year)
+        self.assertEqual(model.value.repeat, expected.repeat)
+        self.assertEqual(model.value.index_name, expected.index_name)
 
     def test_batch_set_data(self):
         model = TimeSeriesModelVariableResolution(
