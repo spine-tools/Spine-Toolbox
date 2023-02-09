@@ -36,7 +36,7 @@ class HalfSortedTableModel(MinimalTableModel):
     def reset_model(self, main_data=None):
         """Reset model."""
         if main_data is None:
-            main_data = list()
+            main_data = []
         self.beginResetModel()
         self._main_data = sorted(main_data, key=self._sort_key)
         self.endResetModel()
@@ -70,7 +70,7 @@ class SingleParameterModel(HalfSortedTableModel):
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.entity_class_id = entity_class_id
-        self._auto_filter = dict()  # Maps field to accepted ids for that field
+        self._auto_filter = {}  # Maps field to accepted ids for that field
         self.committed = committed
 
     def __lt__(self, other):
@@ -84,25 +84,12 @@ class SingleParameterModel(HalfSortedTableModel):
         raise NotImplementedError()
 
     @property
-    def entity_class_type(self):
-        """The entity_class type, either 'object_class' or 'relationship_class'."""
-        raise NotImplementedError()
-
-    @property
-    def entity_class_name_field(self):
-        return {"object_class": "object_class_name", "relationship_class": "relationship_class_name"}[
-            self.entity_class_type
-        ]
-
-    @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
+        return self.db_mngr.get_item(self.db_map, "entity_class", self.entity_class_id)["name"]
 
     @property
-    def entity_class_id_key(self):
-        return {"object_class": "object_class_id", "relationship_class": "relationship_class_id"}[
-            self.entity_class_type
-        ]
+    def dimension_id_list(self):
+        return self.db_mngr.get_item(self.db_map, "entity_class", self.entity_class_id)["dimension_id_list"]
 
     @property
     def value_field(self):
@@ -110,20 +97,13 @@ class SingleParameterModel(HalfSortedTableModel):
 
     @property
     def fixed_fields(self):
-        return {
-            "object_class": ["object_class_name", "database"],
-            "relationship_class": ["relationship_class_name", "object_class_name_list", "database"],
-        }[self.entity_class_type]
+        return ["entity_class_name", "dimension_name_list", "database"]
 
     @property
     def group_fields(self):
-        return {
-            "object_class": {"parameter_definition": [], "parameter_value": []},
-            "relationship_class": {
-                "parameter_definition": ["object_class_name_list"],
-                "parameter_value": ["object_name_list"],
-            },
-        }[self.entity_class_type][self.item_type]
+        return {"parameter_definition": ["dimension_name_list"], "parameter_value": ["element_name_list"]}[
+            self.item_type
+        ]
 
     @property
     def parameter_definition_id_key(self):
@@ -182,11 +162,10 @@ class SingleParameterModel(HalfSortedTableModel):
             str, str
         """
         return {
-            "object_class_name": ("object_class_id", "object_class"),
-            "relationship_class_name": ("relationship_class_id", "relationship_class"),
-            "object_class_name_list": ("relationship_class_id", "relationship_class"),
-            "object_name": ("object_id", "object"),
-            "object_name_list": ("relationship_id", "relationship"),
+            "entity_class_name": ("entity_class_id", "entity_class"),
+            "dimension_name_list": ("entity_class_id", "entity_class"),
+            "entity_name": ("entity_id", "entity"),
+            "element_name_list": ("entity_id", "entity"),
             "parameter_name": (self.parameter_definition_id_key, "parameter_definition"),
             "value_list_name": ("value_list_id", "parameter_value_list"),
             "description": ("id", "parameter_definition"),
@@ -245,8 +224,8 @@ class SingleParameterModel(HalfSortedTableModel):
             if data and field in self.group_fields:
                 data = DB_ITEM_SEPARATOR.join(data)
             return data
-        if role == Qt.ItemDataRole.DecorationRole and field == self.entity_class_name_field:
-            return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
+        if role == Qt.ItemDataRole.DecorationRole and field == "entity_class_name":
+            return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_id)
         if role == DB_MAP_ROLE:
             return self.db_map
         return super().data(index, role)
@@ -264,7 +243,7 @@ class SingleParameterModel(HalfSortedTableModel):
 
         if not indexes or not data:
             return False
-        row_data = dict()
+        row_data = {}
         for index, value in zip(indexes, data):
             row_data.setdefault(index.row(), {})[self.header[index.column()]] = split_value(value, index.column())
         items = [dict(id=self._main_data[row], **data) for row, data in row_data.items()]
@@ -303,41 +282,6 @@ class SingleParameterModel(HalfSortedTableModel):
             if self._filter_accepts_row(row):
                 yield row
 
-    def _get_field_item(self, field, id_):
-        """Returns a item from the db_mngr.get_item depending on the field.
-        If a field doesn't correspond to a item in the database then an empty dict is returned.
-        """
-        header_to_id = {
-            "object_class_name": ("entity_class_id", "object_class"),
-            "relationship_class_name": ("entity_class_id", "relationship_class"),
-            "object_name": ("entity_id", "object"),
-            "object_name_list": ("entity_id", "relationship"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter_definition"),
-        }
-        id_field_item_type = header_to_id.get(field)
-        if id_field_item_type is None:
-            return {}
-        id_field, item_type = id_field_item_type
-        data = self.db_mngr.get_item(self.db_map, self.item_type, id_)
-        item_id = data.get(id_field)
-        return self.db_mngr.get_item(self.db_map, item_type, item_id)
-
-
-class SingleObjectParameterMixin:
-    """Associates a parameter model with a single object_class."""
-
-    @property
-    def entity_class_type(self):
-        return "object_class"
-
-
-class SingleRelationshipParameterMixin:
-    """Associates a parameter model with a single relationship_class."""
-
-    @property
-    def entity_class_type(self):
-        return "relationship_class"
-
 
 class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListIdMixin):
     """A parameter_definition model for a single entity_class."""
@@ -357,8 +301,8 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
             items (list): dictionary-items
         """
         self.build_lookup_dictionary({self.db_map: items})
-        param_defs = list()
-        error_log = list()
+        param_defs = []
+        error_log = []
         for item in items:
             param_def, errors = self._convert_to_db(item, self.db_map)
             if tuple(param_def.keys()) != ("id",):
@@ -376,26 +320,18 @@ class SingleParameterValueMixin(
 ):
     """A parameter_value model for a single entity_class."""
 
-    _filter_db_map_class_entity_ids = dict()
-    _filter_alternative_ids = set()
-    _filter_entity_ids = set()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._filter_alternative_ids = set()
+        self._filter_entity_ids = set()
 
     @property
     def item_type(self):
         return "parameter_value"
 
     @property
-    def entity_type(self):
-        """Either 'object' or "relationship'."""
-        raise NotImplementedError()
-
-    @property
     def entity_id_key(self):
         return {"object": "object_id", "relationship": "relationship_id"}[self.entity_type]
-
-    @property
-    def entity_name_key(self):
-        return {"object": "object_name", "relationship": "object_name_list"}[self.entity_type]
 
     @property
     def entity_name_key_in_cache(self):
@@ -403,13 +339,13 @@ class SingleParameterValueMixin(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return tuple(item[k] for k in (self.entity_name_key, "parameter_name", "alternative_name"))
+        return tuple(item[k] for k in ("entity_name", "parameter_name", "alternative_name"))
 
-    def set_filter_entity_ids(self, db_map_class_entity_ids):
-        if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:
+    def set_filter_entity_ids(self, db_map_entity_ids):
+        filter_entity_ids = db_map_entity_ids.get(self.db_map, set())
+        if self._filter_entity_ids == filter_entity_ids:
             return False
-        self._filter_db_map_class_entity_ids = db_map_class_entity_ids
-        self._filter_entity_ids = db_map_class_entity_ids.get((self.db_map, self.entity_class_id), set())
+        self._filter_entity_ids = filter_entity_ids
         return True
 
     def set_filter_alternative_ids(self, db_map_alternative_ids):
@@ -429,10 +365,10 @@ class SingleParameterValueMixin(
 
     def _entity_filter_accepts_item(self, item):
         """Returns the result of the entity filter."""
-        if not self._filter_db_map_class_entity_ids:
+        if not self._filter_entity_ids:
             return True
         entity_id = item["entity_id"]
-        return entity_id in self._filter_entity_ids
+        return entity_id in self._filter_entity_ids or bool(set(item["element_id_list"]) & self._filter_entity_ids)
 
     def _alternative_filter_accepts_item(self, item):
         """Returns the result of the alternative filter."""
@@ -447,9 +383,9 @@ class SingleParameterValueMixin(
         Args:
             items (list): dictionary-items
         """
-        param_vals = list()
-        error_log = list()
-        db_map_data = dict()
+        param_vals = []
+        error_log = []
+        db_map_data = {}
         db_map_data[self.db_map] = items
         self.build_lookup_dictionary(db_map_data)
         for item in items:
@@ -464,36 +400,14 @@ class SingleParameterValueMixin(
             self.db_mngr.error_msg.emit({self.db_map: error_log})
 
 
-class SingleObjectParameterDefinitionModel(
-    SingleObjectParameterMixin, SingleParameterDefinitionMixin, SingleParameterModel
-):
-    """An object parameter_definition model for a single object_class."""
+class SingleParameterDefinitionModel(SingleParameterDefinitionMixin, SingleParameterModel):
+    """A parameter_definition model for a single entity_class."""
 
 
-class SingleRelationshipParameterDefinitionModel(
-    SingleRelationshipParameterMixin, SingleParameterDefinitionMixin, SingleParameterModel
-):
-    """A relationship parameter_definition model for a single relationship_class."""
+class SingleParameterValueModel(MakeRelationshipOnTheFlyMixin, SingleParameterValueMixin, SingleParameterModel):
+    """A parameter_value model for a single entity_class."""
 
-
-class SingleObjectParameterValueModel(SingleObjectParameterMixin, SingleParameterValueMixin, SingleParameterModel):
-    """An object parameter_value model for a single object_class."""
-
-    @property
-    def entity_type(self):
-        return "object"
-
-
-class SingleRelationshipParameterValueModel(
-    SingleRelationshipParameterMixin, MakeRelationshipOnTheFlyMixin, SingleParameterValueMixin, SingleParameterModel
-):
-    """A relationship parameter_value model for a single relationship_class."""
-
-    @property
-    def entity_type(self):
-        return "relationship"
-
-    def update_items_in_db(self, items):
+    def update_items_in_db(self, items):  # FIXME
         """Update items in db.
 
         Args:
@@ -503,8 +417,8 @@ class SingleRelationshipParameterValueModel(
             item["relationship_class_name"] = self.entity_class_name
         db_map_data = {self.db_map: items}
         self.build_lookup_dictionaries(db_map_data)
-        db_map_relationships = dict()
-        db_map_error_log = dict()
+        db_map_relationships = {}
+        db_map_error_log = {}
         for db_map, data in db_map_data.items():
             for item in data:
                 relationship, err = self._make_relationship_on_the_fly(item, db_map)

@@ -23,18 +23,8 @@ from ...helpers import rows_to_row_count_tuples, parameter_identifier
 from ...fetch_parent import FlexibleFetchParent
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
-from .empty_parameter_models import (
-    EmptyObjectParameterDefinitionModel,
-    EmptyObjectParameterValueModel,
-    EmptyRelationshipParameterDefinitionModel,
-    EmptyRelationshipParameterValueModel,
-)
-from .single_parameter_models import (
-    SingleObjectParameterDefinitionModel,
-    SingleObjectParameterValueModel,
-    SingleRelationshipParameterDefinitionModel,
-    SingleRelationshipParameterValueModel,
-)
+from .empty_parameter_models import EmptyParameterDefinitionModel, EmptyParameterValueModel
+from .single_parameter_models import SingleParameterDefinitionModel, SingleParameterValueModel
 
 
 class CompoundParameterModel(CompoundWithEmptyTableModel):
@@ -63,7 +53,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_timer.timeout.connect(self.refresh)
         self._fetch_parent = FlexibleFetchParent(
             self.item_type,
-            accepts_item=self.accepts_item,
             handle_items_added=self.handle_items_added,
             handle_items_removed=self.handle_items_removed,
             handle_items_updated=self.handle_items_updated,
@@ -80,19 +69,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for db_map in self.db_maps:
             self.db_mngr.fetch_more(db_map, self._fetch_parent)
 
-    def accepts_item(self, item, db_map):
-        return item.get(self.entity_class_id_key) is not None
-
     def _make_header(self):
-        raise NotImplementedError()
-
-    @property
-    def entity_class_type(self):
-        """Returns the entity_class type, either 'object_class' or 'relationship_class'.
-
-        Returns:
-            str
-        """
         raise NotImplementedError()
 
     @property
@@ -112,16 +89,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Returns:
             SingleParameterModel
         """
-        return {
-            "object_class": {
-                "parameter_definition": SingleObjectParameterDefinitionModel,
-                "parameter_value": SingleObjectParameterValueModel,
-            },
-            "relationship_class": {
-                "parameter_definition": SingleRelationshipParameterDefinitionModel,
-                "parameter_value": SingleRelationshipParameterValueModel,
-            },
-        }[self.entity_class_type][self.item_type]
+        return {"parameter_definition": SingleParameterDefinitionModel, "parameter_value": SingleParameterValueModel}[
+            self.item_type
+        ]
 
     @property
     def _empty_model_type(self):
@@ -131,27 +101,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Returns:
             EmptyParameterModel
         """
-        return {
-            "object_class": {
-                "parameter_definition": EmptyObjectParameterDefinitionModel,
-                "parameter_value": EmptyObjectParameterValueModel,
-            },
-            "relationship_class": {
-                "parameter_definition": EmptyRelationshipParameterDefinitionModel,
-                "parameter_value": EmptyRelationshipParameterValueModel,
-            },
-        }[self.entity_class_type][self.item_type]
-
-    @property
-    def entity_class_id_key(self):
-        """
-        Returns the key corresponding to the entity_class id (either "object_class_id" or "relationship_class_id")
-
-        Returns:
-            str
-        """
-        return {"object_class": "object_class_id", "relationship_class": "relationship_class_id"}[
-            self.entity_class_type
+        return {"parameter_definition": EmptyParameterDefinitionModel, "parameter_value": EmptyParameterValueModel}[
+            self.item_type
         ]
 
     @property
@@ -182,13 +133,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def _make_auto_filter_menu(self, field):
         if field not in self._auto_filter_menus:
             self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(
-                self._parent,
-                self.db_mngr,
-                self.db_maps,
-                self.item_type,
-                self.entity_class_id_key,
-                field,
-                show_empty=False,
+                self._parent, self.db_mngr, self.db_maps, self.item_type, field, show_empty=False
             )
             menu.filterChanged.connect(self.set_auto_filter)
         return self._auto_filter_menus[field]
@@ -233,7 +178,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def _class_filter_accepts_model(self, model):
         if not self._filter_class_ids:
             return True
-        return model.entity_class_id in self._filter_class_ids.get(model.db_map, set())
+        return model.entity_class_id in self._filter_class_ids.get(model.db_map, set()) or bool(
+            set(model.dimension_id_list) & self._filter_class_ids.get(model.db_map, set())
+        )
 
     def _auto_filter_accepts_model(self, model):
         if None in self._auto_filter.values():
@@ -347,12 +294,12 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Returns:
             dict
         """
-        d = dict()
+        d = {}
         for item in items:
-            entity_class_id = item.get(self.entity_class_id_key)
+            entity_class_id = item.get("entity_class_id")
             if not entity_class_id:
                 continue
-            d.setdefault(entity_class_id, list()).append(item)
+            d.setdefault(entity_class_id, []).append(item)
         return d
 
     def handle_items_added(self, db_map_data):
@@ -368,8 +315,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             existing_ids = set().union(*(m.item_ids() for m in db_map_single_models))
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
-                ids_committed = list()
-                ids_uncommitted = list()
+                ids_committed = []
+                ids_uncommitted = []
                 for item in class_items:
                     is_committed = db_map.commit_id() is None or item["commit_id"] != db_map.commit_id()
                     item_id = item["id"]
@@ -485,15 +432,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if item is None:
             return ""
         database = self.index(index.row(), self.columnCount() - 1).data()
-        name_key = {
-            "parameter_definition": {
-                "object_class": "object_class_name",
-                "relationship_class": "relationship_class_name",
-            },
-            "parameter_value": {"object_class": "object_name", "relationship_class": "object_name_list"},
-        }[self.item_type][self.entity_class_type]
-        name = item[name_key]
-        names = [name] if not isinstance(name, tuple) else list(name)
+        if self.item_type == "parameter_definition":
+            names = [item["entity_class_name"]]
+        elif self.item_type == "parameter_value":
+            names = [item["entity_name"]] if not item["element_name_list"] else list(item["element_name_list"])
+        else:
+            raise ValueError(
+                f"invalid item_type: expected parameter_definition or parameter_value, got {self.item_type}"
+            )
         alternative_name = {"parameter_definition": lambda x: None, "parameter_value": lambda x: x["alternative_name"]}[
             self.item_type
         ](item)
@@ -519,11 +465,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         )
 
     def get_entity_class_id(self, index, db_map):
-        entity_class_name_key = {"object_class": "object_class_name", "relationship_class": "relationship_class_name"}[
-            self.entity_class_type
-        ]
-        entity_class_name = index.sibling(index.row(), self.header.index(entity_class_name_key)).data()
-        entity_class = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", entity_class_name)
+        entity_class_name = index.sibling(index.row(), self.header.index("entity_class_name")).data()
+        entity_class = self.db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class_name)
         return entity_class.get("id")
 
     def filter_by(self, rows_per_column):
@@ -541,22 +484,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             menu.set_filter_rejected_values(rejected_values)
 
 
-class CompoundObjectParameterMixin:
-    """Implements the interface for populating and filtering a compound object parameter model."""
-
-    @property
-    def entity_class_type(self):
-        return "object_class"
-
-
-class CompoundRelationshipParameterMixin:
-    """Implements the interface for populating and filtering a compound relationship parameter model."""
-
-    @property
-    def entity_class_type(self):
-        return "relationship_class"
-
-
 class CompoundParameterDefinitionMixin:
     """Handles signals from db mngr for parameter_definition models."""
 
@@ -568,29 +495,19 @@ class CompoundParameterDefinitionMixin:
 class CompoundParameterValueMixin:
     """Handles signals from db mngr for parameter_value models."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._filter_entity_ids = dict()
-        self._filter_alternative_ids = dict()
-
-    def init_model(self):
-        super().init_model()
-        self._filter_entity_ids = dict()
-        self._filter_alternative_ids = dict()
-
     @property
     def item_type(self):
         return "parameter_value"
 
-    @property
-    def entity_type(self):
-        """Returns the entity type, either 'object' or 'relationship'
-        Used by update_single_main_filter.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._filter_entity_ids = {}
+        self._filter_alternative_ids = {}
 
-        Returns:
-            str
-        """
-        raise NotImplementedError()
+    def init_model(self):
+        super().init_model()
+        self._filter_entity_ids = {}
+        self._filter_alternative_ids = {}
 
     def set_filter_entity_ids(self, entity_ids):
         self._filter_entity_ids = entity_ids
@@ -611,28 +528,15 @@ class CompoundParameterValueMixin:
         return model
 
 
-class CompoundObjectParameterDefinitionModel(
-    CompoundObjectParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
-):
+class CompoundParameterDefinitionModel(CompoundParameterDefinitionMixin, CompoundParameterModel):
     """A model that concatenates several single object parameter_definition models
     and one empty object parameter_definition model.
     """
 
     def _make_header(self):
-        return ["object_class_name", "parameter_name", "value_list_name", "default_value", "description", "database"]
-
-
-class CompoundRelationshipParameterDefinitionModel(
-    CompoundRelationshipParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
-):
-    """A model that concatenates several single relationship parameter_definition models
-    and one empty relationship parameter_definition model.
-    """
-
-    def _make_header(self):
         return [
-            "relationship_class_name",
-            "object_class_name_list",
+            "entity_class_name",
+            "dimension_name_list",
             "parameter_name",
             "value_list_name",
             "default_value",
@@ -641,38 +545,18 @@ class CompoundRelationshipParameterDefinitionModel(
         ]
 
 
-class CompoundObjectParameterValueModel(
-    CompoundObjectParameterMixin, CompoundParameterValueMixin, CompoundParameterModel
-):
+class CompoundParameterValueModel(CompoundParameterValueMixin, CompoundParameterModel):
     """A model that concatenates several single object parameter_value models
     and one empty object parameter_value model.
     """
 
     def _make_header(self):
-        return ["object_class_name", "object_name", "parameter_name", "alternative_name", "value", "database"]
-
-    @property
-    def entity_type(self):
-        return "object"
-
-
-class CompoundRelationshipParameterValueModel(
-    CompoundRelationshipParameterMixin, CompoundParameterValueMixin, CompoundParameterModel
-):
-    """A model that concatenates several single relationship parameter_value models
-    and one empty relationship parameter_value model.
-    """
-
-    def _make_header(self):
         return [
-            "relationship_class_name",
-            "object_name_list",
+            "entity_class_name",
+            "entity_name",
+            "element_name_list",
             "parameter_name",
             "alternative_name",
             "value",
             "database",
         ]
-
-    @property
-    def entity_type(self):
-        return "relationship"

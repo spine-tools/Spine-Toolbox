@@ -24,7 +24,7 @@ from spinetoolbox.fetch_parent import FlexibleFetchParent
 from .multi_db_tree_item import MultiDBTreeItem
 
 
-class EntityRootItem(MultiDBTreeItem):
+class EntityTreeRootItem(MultiDBTreeItem):
 
     item_type = "root"
 
@@ -46,41 +46,49 @@ class EntityRootItem(MultiDBTreeItem):
         """See base class."""
         return False
 
-
-class ObjectTreeRootItem(EntityRootItem):
-    """An object tree root item."""
-
-    item_type = "root"
-
     @property
     def child_item_class(self):
         """Returns ObjectClassItem."""
-        return ObjectClassItem
-
-
-class RelationshipTreeRootItem(EntityRootItem):
-    """A relationship tree root item."""
-
-    item_type = "root"
-
-    @property
-    def child_item_class(self):
-        """Returns RelationshipClassItem."""
-        return RelationshipClassItem
+        return EntityClassItem
 
 
 class EntityClassItem(MultiDBTreeItem):
     """An entity_class item."""
+
+    visual_key = ["name", "dimension_name_list"]
+    item_type = "entity_class"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._entity_group_fetch_parent = FlexibleFetchParent(
+            "entity_group",
+            accepts_item=self._accepts_entity_group_item,
+            handle_items_added=self._handle_entity_group_items_added,
+            handle_items_updated=self._handle_entity_group_items_updated,
+            owner=self,
+        )
 
     @property
     def display_icon(self):
         """Returns class icon."""
         return self._display_icon()
 
+    @property
+    def child_item_class(self):
+        """Returns ObjectItem."""
+        return EntityItem
+
+    @property
+    def _children_sort_key(self):
+        """Reimplemented so groups are above non-groups."""
+        return lambda item: (not item.is_group, item.display_id)
+
     def _display_icon(self, for_group=False):
-        return self.db_mngr.entity_class_icon(
-            self.first_db_map, self.item_type, self.db_map_id(self.first_db_map), for_group=for_group
-        )
+        return self.db_mngr.entity_class_icon(self.first_db_map, self.db_map_id(self.first_db_map), for_group=for_group)
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return dict(entity_class_name=self.display_data, database=self.first_db_map.codename)
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
@@ -96,41 +104,16 @@ class EntityClassItem(MultiDBTreeItem):
         return super().data(column, role)
 
     def accepts_item(self, item, db_map):
-        return item["class_id"] == self.db_map_id(db_map)
+        if item["class_id"] != self.db_map_id(db_map):
+            return False
+        if self.parent_item.item_type != "entity":
+            return True
+        entity_id = self.parent_item.db_map_id(db_map)
+        return entity_id in item["element_id_list"]
 
     def set_data(self, column, value, role):
         """See base class."""
         return False
-
-
-class ObjectClassItem(EntityClassItem):
-    """An object_class item."""
-
-    item_type = "object_class"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._entity_group_fetch_parent = FlexibleFetchParent(
-            "entity_group",
-            accepts_item=self._accepts_entity_group_item,
-            handle_items_added=self._handle_entity_group_items_added,
-            handle_items_updated=self._handle_entity_group_items_updated,
-            owner=self,
-        )
-
-    @property
-    def child_item_class(self):
-        """Returns ObjectItem."""
-        return ObjectItem
-
-    def default_parameter_data(self):
-        """Return data to put as default in a parameter table when this item is selected."""
-        return dict(object_class_name=self.display_data, database=self.first_db_map.codename)
-
-    @property
-    def _children_sort_key(self):
-        """Reimplemented so groups are above non-groups."""
-        return lambda item: (not item.is_group, item.display_id)
 
     def _can_fetch_more_entity_groups(self):
         result = False
@@ -168,98 +151,49 @@ class ObjectClassItem(EntityClassItem):
         self._entity_group_fetch_parent.set_obsolete(True)
 
 
-class RelationshipClassItem(EntityClassItem):
-    """A relationship_class item."""
-
-    visual_key = ["name", "object_class_name_list"]
-    item_type = "relationship_class"
-
-    @property
-    def child_item_class(self):
-        """Returns RelationshipItem."""
-        return RelationshipItem
-
-    def default_parameter_data(self):
-        """Return data to put as default in a parameter table when this item is selected."""
-        return dict(relationship_class_name=self.display_data, database=self.first_db_map.codename)
-
-
-class ObjectRelationshipClassItem(RelationshipClassItem):
-    def set_data(self, column, value, role):
-        """See base class."""
-        return False
-
-    def accepts_item(self, item, db_map):
-        if not super().accepts_item(item, db_map):
-            return False
-        object_id = self.parent_item.db_map_id(db_map)
-        return object_id in item["object_id_list"]
-
-
-class MembersItem(EntityClassItem):
-    """An item to hold members of a group."""
-
-    item_type = "members"
-
-    @property
-    def display_id(self):
-        # Return an empty tuple so we never insert anything above this item (see _insert_children_sorted)
-        return ()
-
-    @property
-    def display_data(self):
-        return "members"
-
-    def db_map_data(self, db_map):
-        """Returns data for this item as if it was indeed an object class."""
-        id_ = self.db_map_id(db_map)
-        return self.db_mngr.get_item(db_map, "object_class", id_)
-
-    def _display_icon(self, for_group=False):
-        """Returns icon for this item as if it was indeed an object class."""
-        return self.db_mngr.entity_class_icon(
-            self.first_db_map, "object_class", self.db_map_id(self.first_db_map), for_group=False
-        )
-
-    def accepts_item(self, item, db_map):
-        return item["group_id"] == self.parent_item.db_map_id(db_map)
-
-    @property
-    def child_item_class(self):
-        """Returns MemberObjectItem."""
-        return MemberObjectItem
-
-    def default_parameter_data(self):
-        """Return data to put as default in a parameter table when this item is selected."""
-        return dict()
-
-    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
-        """Returns data for given column and role."""
-        if role == Qt.ItemDataRole.FontRole and column == 0:
-            bold_font = QFont()
-            bold_font.setBold(True)
-            return bold_font
-        return super().data(column, role)
-
-
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
+
+    visual_key = ["name", "element_name_list"]
+    item_type = "entity"
 
     def __init__(self, *args, is_group=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.is_group = is_group
         self.has_members_item = False
 
-    def update(self, is_group=False):
-        self.is_group = is_group
-
-    def should_be_merged(self):
-        return self.is_group
+    @property
+    def child_item_class(self):
+        """Child class is always :class:`ObjectRelationshipClassItem`."""
+        return EntityClassItem
 
     @property
     def display_icon(self):
         """Returns corresponding class icon."""
         return self.parent_item._display_icon(for_group=self.is_group)
+
+    @property
+    def element_name_list(self):
+        return self.db_map_data_field(self.first_db_map, "element_name_list", default="")
+
+    @property
+    def display_data(self):
+        """Returns the name for display."""
+        if not self.element_name_list:
+            return MultiDBTreeItem.display_data.fget(self)
+        return DB_ITEM_SEPARATOR.join(
+            [x for x in self.element_name_list if x != self.parent_item.parent_item.display_data]
+        )
+
+    @property
+    def edit_data(self):
+        return self.element_name_list
+
+    def update(self, is_group=False):
+        self.is_group = is_group
+
+    def should_be_merged(self):
+        return self.is_group
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.ToolTipRole:
@@ -286,34 +220,73 @@ class EntityItem(MultiDBTreeItem):
         super().fetch_more()
         self._fetch_members_item()
 
-
-class ObjectItem(EntityItem):
-    """An object item."""
-
-    item_type = "object"
-
-    @property
-    def child_item_class(self):
-        """Child class is always :class:`ObjectRelationshipClassItem`."""
-        return ObjectRelationshipClassItem
-
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
-            object_class_name=self.db_map_data_field(self.first_db_map, "class_name"),
-            object_name=self.display_data,
+            entity_class_name=self.db_map_data_field(self.first_db_map, "class_name"),
+            entity_name=self.display_data,
+            element_name_list=DB_ITEM_SEPARATOR.join(self.db_map_data_field(self.first_db_map, "element_name_list")),
             database=self.first_db_map.codename,
         )
 
     def accepts_item(self, item, db_map):
-        if not super().accepts_item(item, db_map):
-            return False
-        object_class_id = self.db_map_data_field(db_map, 'class_id')
-        return object_class_id in item["object_class_id_list"]
+        class_id = self.db_map_data_field(db_map, 'class_id')
+        return class_id in item["dimension_id_list"]
+
+    def is_valid(self):
+        """Checks that the grand parent object is still in the relationship."""
+        grand_parent = self.parent_item.parent_item
+        if grand_parent.item_type == "root":
+            return True
+        return grand_parent.display_data in self.element_name_list
 
 
-class MemberObjectItem(ObjectItem):
-    """A member object item."""
+class MembersItem(EntityClassItem):
+    """An item to hold members of a group."""
+
+    item_type = "members"
+
+    @property
+    def display_id(self):
+        # Return an empty tuple so we never insert anything above this item (see _insert_children_sorted)
+        return ()
+
+    @property
+    def display_data(self):
+        return "members"
+
+    def db_map_data(self, db_map):
+        """Returns data for this item as if it was indeed an entity class."""
+        id_ = self.db_map_id(db_map)
+        return self.db_mngr.get_item(db_map, "entity_class", id_)
+
+    def _display_icon(self, for_group=False):
+        """Returns icon for this item as if it was indeed an object class."""
+        return self.db_mngr.entity_class_icon(self.first_db_map, self.db_map_id(self.first_db_map), for_group=False)
+
+    def accepts_item(self, item, db_map):
+        return item["group_id"] == self.parent_item.db_map_id(db_map)
+
+    @property
+    def child_item_class(self):
+        """Returns MemberEntityItem."""
+        return MemberEntityItem
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return {}
+
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        """Returns data for given column and role."""
+        if role == Qt.ItemDataRole.FontRole and column == 0:
+            bold_font = QFont()
+            bold_font.setBold(True)
+            return bold_font
+        return super().data(column, role)
+
+
+class MemberEntityItem(EntityItem):
+    """A member entity item."""
 
     item_type = "entity_group"
     visual_key = ["member_name"]
@@ -332,51 +305,3 @@ class MemberObjectItem(ObjectItem):
 
     def can_fetch_more(self):
         return False
-
-
-class RelationshipItem(EntityItem):
-    """A relationship item."""
-
-    visual_key = ["name", "object_name_list"]
-    item_type = "relationship"
-
-    def __init__(self, *args, **kwargs):
-        """Overridden method to make sure we never try to fetch this item."""
-        super().__init__(*args, **kwargs)
-        self._fetched = True
-
-    @property
-    def object_name_list(self):
-        return self.db_map_data_field(self.first_db_map, "object_name_list", default="")
-
-    @property
-    def display_data(self):
-        """ "Returns the name for display."""
-        return DB_ITEM_SEPARATOR.join(
-            [x for x in self.object_name_list if x != self.parent_item.parent_item.display_data]
-        )
-
-    @property
-    def edit_data(self):
-        return self.object_name_list
-
-    def default_parameter_data(self):
-        """Return data to put as default in a parameter table when this item is selected."""
-        return dict(
-            relationship_class_name=self.parent_item.display_data,
-            object_name_list=DB_ITEM_SEPARATOR.join(self.db_map_data_field(self.first_db_map, "object_name_list")),
-            database=self.first_db_map.codename,
-        )
-
-    def has_children(self):
-        return False
-
-    def can_fetch_more(self):
-        return False
-
-    def is_valid(self):
-        """Checks that the grand parent object is still in the relationship."""
-        grand_parent = self.parent_item.parent_item
-        if grand_parent.item_type == "root":
-            return True
-        return grand_parent.display_data in self.object_name_list

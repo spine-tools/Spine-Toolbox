@@ -53,23 +53,6 @@ class EmptyParameterModel(EmptyRowModel):
         raise NotImplementedError()
 
     @property
-    def entity_class_type(self):
-        """Either 'object_class' or 'relationship_class'."""
-        raise NotImplementedError()
-
-    @property
-    def entity_class_id_key(self):
-        return {"object_class": "object_class_id", "relationship_class": "relationship_class_id"}[
-            self.entity_class_type
-        ]
-
-    @property
-    def entity_class_name_key(self):
-        return {"object_class": "object_class_name", "relationship_class": "relationship_class_name"}[
-            self.entity_class_type
-        ]
-
-    @property
     def can_be_filtered(self):
         return False
 
@@ -102,7 +85,7 @@ class EmptyParameterModel(EmptyRowModel):
 
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
-        return (item.get(self.entity_class_name_key), item.get("parameter_name"))
+        return (item.get("entity_class_name"), item.get("parameter_name"))
 
     def handle_items_added(self, db_map_data):
         """Runs when parameter definitions or values are added.
@@ -154,7 +137,7 @@ class EmptyParameterModel(EmptyRowModel):
             dict: mapping DiffDatabaseMapping instance to list of items
         """
         items = [self._make_item(row) for row in rows]
-        db_map_data = dict()
+        db_map_data = {}
         for item in items:
             database = item.pop("database")
             db_map = next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)

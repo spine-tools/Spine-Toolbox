@@ -17,7 +17,7 @@ Contains machinery to deal with item metadata editor.
 """
 from PySide6.QtCore import Slot, QModelIndex
 
-from ..mvcmodels.entity_tree_item import ObjectItem, MemberObjectItem, RelationshipItem
+from ..mvcmodels.entity_tree_item import EntityItem
 from ..mvcmodels.item_metadata_table_model import ItemMetadataTableModel
 
 
@@ -46,10 +46,8 @@ class ItemMetadataEditor:
         Args:
             ui (Ui_MainWindow): DB editor's user interface
         """
-        ui.treeView_object.selectionModel().currentChanged.connect(self._reload_entity_metadata)
-        ui.treeView_relationship.selectionModel().currentChanged.connect(self._reload_entity_metadata)
-        ui.tableView_object_parameter_value.selectionModel().currentChanged.connect(self._reload_value_metadata)
-        ui.tableView_relationship_parameter_value.selectionModel().currentChanged.connect(self._reload_value_metadata)
+        ui.treeView_entity.selectionModel().currentChanged.connect(self._reload_entity_metadata)
+        ui.tableView_parameter_value.selectionModel().currentChanged.connect(self._reload_value_metadata)
 
     def init_models(self, db_maps):
         """Initializes editor's models.
@@ -72,7 +70,7 @@ class ItemMetadataEditor:
         if not current_index.isValid():
             return
         item = current_index.model().item_from_index(current_index)
-        if not isinstance(item, (ObjectItem, RelationshipItem, MemberObjectItem)):
+        if not isinstance(item, EntityItem):
             return
         self._item_metadata_table_model.set_entity_ids(item.db_map_ids)
         self._item_metadata_table_view.setEnabled(True)

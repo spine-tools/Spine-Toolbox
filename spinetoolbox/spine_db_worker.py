@@ -395,10 +395,10 @@ class SpineDBWorker(QObject):
     def _populate_commit_cache(self, item_type, items):
         if item_type == "commit":
             return
-        if item_type == "entity_group":  # FIXME: the entity_group table has no commit_id column :(
-            return
         for item in items:
-            self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])
+            commit_id = item.get("commit_id")
+            if commit_id is not None:
+                self.commit_cache.setdefault(commit_id, {}).setdefault(item_type, []).append(item["id"])
 
     def close_db_map(self):
         _ = self._executor.submit(self._close_db_map).result()

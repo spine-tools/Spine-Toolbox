@@ -16,16 +16,14 @@ Models to represent entities in a tree.
 :date:   11.3.2019
 """
 
-from .entity_tree_item import ObjectTreeRootItem, RelationshipTreeRootItem
+from .entity_tree_item import EntityTreeRootItem
 from .multi_db_tree_model import MultiDBTreeModel
 
 
-class ObjectTreeModel(MultiDBTreeModel):
-    """An 'object-oriented' tree model."""
-
+class EntityTreeModel(MultiDBTreeModel):
     @property
     def root_item_type(self):
-        return ObjectTreeRootItem
+        return EntityTreeRootItem
 
     def find_next_relationship_index(self, index):
         """Find and return next occurrence of relationship item."""
@@ -57,11 +55,3 @@ class ObjectTreeModel(MultiDBTreeModel):
                 for item in parent_item.find_children(lambda child: child.display_id == rel_item.display_id):
                     return self.index_from_item(item)
         return None
-
-
-class RelationshipTreeModel(MultiDBTreeModel):
-    """A relationship-oriented tree model."""
-
-    @property
-    def root_item_type(self):
-        return RelationshipTreeRootItem

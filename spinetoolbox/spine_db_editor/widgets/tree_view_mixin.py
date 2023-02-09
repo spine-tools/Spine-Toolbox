@@ -35,7 +35,7 @@ from .edit_or_remove_items_dialogs import (
 from ..mvcmodels.tool_feature_model import ToolFeatureModel
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.alternative_scenario_model import AlternativeScenarioModel
-from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
+from ..mvcmodels.entity_tree_models import EntityTreeModel
 from ...spine_db_parcel import SpineDBParcel
 
 
@@ -44,21 +44,18 @@ class TreeViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.object_tree_model = ObjectTreeModel(self, self.db_mngr)
-        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr)
+        self.entity_tree_model = EntityTreeModel(self, self.db_mngr)
         self.tool_feature_model = ToolFeatureModel(self, self.db_mngr)
         self.alternative_scenario_model = AlternativeScenarioModel(self, self.db_mngr)
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr)
         models = (
-            self.object_tree_model,
-            self.relationship_tree_model,
+            self.entity_tree_model,
             self.tool_feature_model,
             self.alternative_scenario_model,
             self.parameter_value_list_model,
         )
         views = (
-            self.ui.treeView_object,
-            self.ui.treeView_relationship,
+            self.ui.treeView_entity,
             self.ui.treeView_tool_feature,
             self.ui.treeView_alternative_scenario,
             self.ui.treeView_parameter_value_list,
@@ -68,18 +65,11 @@ class TreeViewMixin:
             view.connect_spine_db_editor(self)
             view.header().setResizeContentsPrecision(self.visible_rows)
 
-    def connect_signals(self):
-        """Connects signals to slots."""
-        super().connect_signals()
-        self.ui.treeView_object.tree_selection_changed.connect(self.ui.treeView_relationship.clear_any_selections)
-        self.ui.treeView_relationship.tree_selection_changed.connect(self.ui.treeView_object.clear_any_selections)
-
     def init_models(self):
         """Initializes models."""
         super().init_models()
         for view in (
-            self.ui.treeView_object,
-            self.ui.treeView_relationship,
+            self.ui.treeView_entity,
             self.ui.treeView_tool_feature,
             self.ui.treeView_alternative_scenario,
             self.ui.treeView_parameter_value_list,
@@ -97,9 +87,13 @@ class TreeViewMixin:
         Returns:
             dict: lists of dictionary items keyed by DiffDatabaseMapping
         """
-        d = dict()
+        d = {}
         for index in indexes:
+            if index.model() is None:
+                continue
             item = index.model().item_from_index(index)
+            if item.item_type == "root":
+                continue
             for db_map in item.db_maps:
                 d.setdefault(db_map, []).append(item.db_map_data(db_map))
         return d

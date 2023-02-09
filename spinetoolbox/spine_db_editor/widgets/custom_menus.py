@@ -52,27 +52,24 @@ class ParameterViewFilterMenu(FilterMenuBase):
 
     filterChanged = Signal(str, object)
 
-    def __init__(self, parent, db_mngr, db_maps, item_type, entity_class_id_key, field, show_empty=True):
+    def __init__(self, parent, db_mngr, db_maps, item_type, field, show_empty=True):
         """
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (Sequence of DatabaseMapping)
             item_type (str)
-            entity_class_id_key (str)
             field (str): the field name
         """
         super().__init__(parent)
         self._item_type = item_type
         self._db_mngr = db_mngr
-        self._entity_class_id_key = entity_class_id_key
         self._field = field
-        self._menu_data = dict()  # Maps display value to set of (db map, entity_class_id, actual value) tuples
+        self._menu_data = {}  # Maps display value to set of (db map, entity_class_id, actual value) tuples
         fetch_parent = FlexibleFetchParent(
             self._item_type,
             handle_items_added=self._handle_items_added,
             handle_items_removed=self._handle_items_removed,
-            accepts_item=self._accepts_item,
             owner=self,
             chunk_size=None,
         )
@@ -98,12 +95,9 @@ class ParameterViewFilterMenu(FilterMenuBase):
     def _get_display_value(self, item, db_map):
         if self._field in ("value", "default_value"):
             return self._db_mngr.get_value(db_map, self._item_type, item["id"], role=Qt.DisplayRole)
-        if self._field in ("object_class_name_list", "object_name_list"):
+        if self._field in ("dimension_name_list", "element_name_list"):
             return DB_ITEM_SEPARATOR.join(item[self._field])
         return self._get_value(item, db_map) or "(empty)"
-
-    def _accepts_item(self, item, db_map):
-        return item.get(self._entity_class_id_key) is not None
 
     def _handle_items_added(self, db_map_data):
         to_add = set()

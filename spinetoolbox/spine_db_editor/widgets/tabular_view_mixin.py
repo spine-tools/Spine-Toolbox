@@ -231,7 +231,7 @@ class TabularViewMixin:
     @Slot(dict)
     def _handle_object_tree_selection_changed(self, selected_indexes):
         super()._handle_object_tree_selection_changed(selected_indexes)
-        current = self.ui.treeView_object.currentIndex()
+        current = self.ui.treeView_entity.currentIndex()
         self._handle_entity_tree_current_changed(current)
 
     @Slot(dict)

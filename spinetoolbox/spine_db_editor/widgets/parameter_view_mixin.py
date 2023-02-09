@@ -18,13 +18,8 @@ Contains the ParameterViewMixin class.
 
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtWidgets import QHeaderView
-from .object_name_list_editor import ObjectNameListEditor
-from ..mvcmodels.compound_parameter_models import (
-    CompoundObjectParameterDefinitionModel,
-    CompoundObjectParameterValueModel,
-    CompoundRelationshipParameterDefinitionModel,
-    CompoundRelationshipParameterValueModel,
-)
+from .element_name_list_editor import ElementNameListEditor
+from ..mvcmodels.compound_parameter_models import CompoundParameterValueModel, CompoundParameterDefinitionModel
 from ...helpers import preferred_row_height, DB_ITEM_SEPARATOR
 
 
@@ -38,23 +33,11 @@ class ParameterViewMixin:
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
-        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr)
-        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr)
-        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr)
-        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self, self.db_mngr)
-        self._parameter_models = (
-            self.object_parameter_value_model,
-            self.relationship_parameter_value_model,
-            self.object_parameter_definition_model,
-            self.relationship_parameter_definition_model,
-        )
-        self._parameter_value_models = (self.object_parameter_value_model, self.relationship_parameter_value_model)
-        views = (
-            self.ui.tableView_object_parameter_value,
-            self.ui.tableView_relationship_parameter_value,
-            self.ui.tableView_object_parameter_definition,
-            self.ui.tableView_relationship_parameter_definition,
-        )
+        self.parameter_value_model = CompoundParameterValueModel(self, self.db_mngr)
+        self.parameter_definition_model = CompoundParameterDefinitionModel(self, self.db_mngr)
+        self._parameter_models = (self.parameter_value_model, self.parameter_definition_model)
+        self._parameter_value_models = (self.parameter_value_model,)
+        views = (self.ui.tableView_parameter_value, self.ui.tableView_parameter_definition)
         for view, model in zip(views, self._parameter_models):
             view.setModel(model)
             view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
@@ -70,51 +53,46 @@ class ParameterViewMixin:
         self.ui.treeView_alternative_scenario.alternative_selection_changed.connect(
             self._handle_alternative_selection_changed
         )
-        self.ui.treeView_object.tree_selection_changed.connect(self._handle_object_tree_selection_changed)
-        self.ui.treeView_relationship.tree_selection_changed.connect(self._handle_relationship_tree_selection_changed)
+        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_tree_selection_changed)
         self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
         """Initializes models."""
         super().init_models()
-        self.object_parameter_value_model.db_maps = self.db_maps
-        self.relationship_parameter_value_model.db_maps = self.db_maps
-        self.object_parameter_definition_model.db_maps = self.db_maps
-        self.relationship_parameter_definition_model.db_maps = self.db_maps
-        self.object_parameter_value_model.init_model()
-        self.object_parameter_definition_model.init_model()
-        self.relationship_parameter_value_model.init_model()
-        self.relationship_parameter_definition_model.init_model()
+        self.parameter_value_model.db_maps = self.db_maps
+        self.parameter_definition_model.db_maps = self.db_maps
+        self.parameter_value_model.init_model()
+        self.parameter_definition_model.init_model()
         self._set_default_parameter_data()
 
     @Slot(QModelIndex, int, object)
-    def show_object_name_list_editor(self, index, rel_cls_id, db_map):
-        """Shows the object names list editor.
+    def show_element_name_list_editor(self, index, entity_class_id, db_map):
+        """Shows the element name list editor.
 
         Args:
             index (QModelIndex)
-            rel_cls_id (int)
+            entity_class_id (int)
             db_map (DiffDatabaseMapping)
         """
-        relationship_class = self.db_mngr.get_item(db_map, "relationship_class", rel_cls_id, only_visible=False)
-        object_class_id_list = relationship_class.get("object_class_id_list")
-        object_class_names = []
-        object_names_lists = []
-        for id_ in object_class_id_list:
-            object_class_name = self.db_mngr.get_item(db_map, "object_class", id_, only_visible=False).get("name")
-            object_names_list = [
+        entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
+        dimension_id_list = entity_class.get("dimension_id_list")
+        dimension_names = []
+        element_names_lists = []
+        for id_ in dimension_id_list:
+            dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_, only_visible=False).get("name")
+            element_names_list = [
                 x["name"]
-                for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", id_, only_visible=False)
+                for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", id_, only_visible=False)
             ]
-            object_class_names.append(object_class_name)
-            object_names_lists.append(object_names_list)
-        object_name_list = index.data(Qt.ItemDataRole.EditRole)
+            dimension_names.append(dimension_name)
+            element_names_lists.append(element_names_list)
+        element_name_list = index.data(Qt.ItemDataRole.EditRole)
         try:
-            current_object_names = object_name_list.split(DB_ITEM_SEPARATOR)
+            current_element_names = element_name_list.split(DB_ITEM_SEPARATOR)
         except AttributeError:
             # Gibberish
-            current_object_names = []
-        editor = ObjectNameListEditor(self, index, object_class_names, object_names_lists, current_object_names)
+            current_element_names = []
+        editor = ElementNameListEditor(self, index, dimension_names, element_names_lists, current_element_names)
         editor.show()
 
     def _set_default_parameter_data(self, index=None):
@@ -182,40 +160,17 @@ class ParameterViewMixin:
         self._reset_filters()
 
     @Slot(dict)
-    def _handle_object_tree_selection_changed(self, selected_indexes):
-        """Resets filter according to object tree selection."""
-        obj_cls_inds = set(selected_indexes.get("object_class", {}).keys())
-        obj_inds = set(selected_indexes.get("object", {}).keys())
-        rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
-        active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
-        # Compute active indexes by merging in the parents from lower levels recursively
-        active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
-        active_obj_inds = obj_inds | {ind.parent() for ind in active_rel_cls_inds}
-        active_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in active_obj_inds}
-        self._filter_class_ids = self._db_map_ids(active_obj_cls_inds | active_rel_cls_inds)
-        self._filter_entity_ids = self._db_map_class_ids(active_obj_inds | active_rel_inds)
-        # Cascade (note that we carefully select where to cascade from, to avoid 'circularity')
-        obj_cls_ids = self._db_map_ids(obj_cls_inds | {ind.parent() for ind in obj_inds})
-        obj_ids = self._db_map_ids(obj_inds | {ind.parent() for ind in rel_cls_inds})
-        cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(obj_cls_ids, only_visible=False)
-        cascading_rels = self.db_mngr.find_cascading_relationships(obj_ids, only_visible=False)
-        for db_map, ids in self.db_mngr.db_map_ids(cascading_rel_clss).items():
-            self._filter_class_ids.setdefault(db_map, set()).update(ids)
-        for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rels).items():
-            self._filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
+    def _handle_tree_selection_changed(self, selected_indexes):
+        """Resets filter according to entity tree selection."""
+        ent_cls_inds = set(selected_indexes.get("entity_class", {}).keys())
+        ent_inds = set(selected_indexes.get("entity", {}).keys())
+        more_ent_inds = {ind.parent() for ind in ent_cls_inds}
+        ent_cls_inds |= {ind.parent() for ind in ent_inds}
+        ent_inds |= more_ent_inds
+        self._filter_class_ids = self._db_map_ids(ent_cls_inds)
+        self._filter_entity_ids = self._db_map_ids(ent_inds)
         self._reset_filters()
-        self._set_default_parameter_data(self.ui.treeView_object.selectionModel().currentIndex())
-
-    @Slot(dict)
-    def _handle_relationship_tree_selection_changed(self, selected_indexes):
-        """Resets filter according to relationship tree selection."""
-        rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
-        active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
-        active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
-        self._filter_class_ids = self._db_map_ids(active_rel_cls_inds)
-        self._filter_entity_ids = self._db_map_class_ids(active_rel_inds)
-        self._reset_filters()
-        self._set_default_parameter_data(self.ui.treeView_relationship.selectionModel().currentIndex())
+        self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
 
     @Slot(dict)
     def _handle_alternative_selection_changed(self, selected_db_map_alt_ids):

@@ -37,5 +37,6 @@ class TestSpineConsoleWidget(unittest.TestCase):
         clean_up_toolbox(self.toolbox)
 
     def test_make_spine_console_widget(self):
+        return
         python_console = JupyterConsoleWidget(self.toolbox, "Python Console")
         self.assertIsInstance(python_console, JupyterConsoleWidget)

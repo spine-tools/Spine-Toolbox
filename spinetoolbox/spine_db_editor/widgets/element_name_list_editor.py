@@ -25,7 +25,7 @@ from ...widgets.custom_editors import SearchBarEditor
 
 
 class SearchBarDelegate(QItemDelegate):
-    """A custom delegate to use with ObjectNameListEditor."""
+    """A custom delegate to use with ElementNameListEditor."""
 
     data_committed = Signal("QModelIndex", "QVariant")
 
@@ -54,24 +54,24 @@ class SearchBarDelegate(QItemDelegate):
         return super().eventFilter(editor, event)
 
 
-class ObjectNameListEditor(ManageItemsDialog):
-    """A dialog to select the object name list for a relationship using Google-like search bars."""
+class ElementNameListEditor(ManageItemsDialog):
+    """A dialog to select the element name list for an entity using Google-like search bars."""
 
-    def __init__(self, parent, index, object_class_names, object_names_lists, current_object_names):
+    def __init__(self, parent, index, entity_class_names, element_names_lists, current_element_names):
         """Initializes widget.
 
         Args:
             parent (SpineDBEditor)
             index (QModelIndex)
-            object_class_names (list): string object_class names
-            object_names_lists (list): lists of string object names
-            current_object_names (list)
+            entity_class_names (list): string entity_class names
+            element_names_lists (list): lists of string element names
+            current_element_names (list)
         """
         super().__init__(parent, None)
         self.setWindowTitle("Select objects")
         self._index = index
         self.model = QStandardItemModel(self)
-        self.init_model(object_class_names, object_names_lists, current_object_names)
+        self.init_model(entity_class_names, element_names_lists, current_element_names)
         self.table_view.setModel(self.model)
         self.resize_window_to_columns()
         self.table_view.verticalHeader().hide()
@@ -79,12 +79,12 @@ class ObjectNameListEditor(ManageItemsDialog):
         self.table_view.setItemDelegate(delegate)
         self.connect_signals()
 
-    def init_model(self, object_class_names, object_names_lists, current_object_names):
-        self.model.setHorizontalHeaderLabels(object_class_names)
+    def init_model(self, entity_class_names, element_names_lists, current_element_names):
+        self.model.setHorizontalHeaderLabels(entity_class_names)
         item_list = []
-        for k, object_names_list in enumerate(object_names_lists):
+        for k, object_names_list in enumerate(entity_class_names):
             try:
-                obj_name = current_object_names[k]
+                obj_name = current_element_names[k]
             except IndexError:
                 obj_name = None
             qitem = QStandardItem(obj_name)

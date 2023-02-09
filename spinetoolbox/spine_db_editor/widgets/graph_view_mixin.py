@@ -112,8 +112,7 @@ class GraphViewMixin:
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
-        self.ui.treeView_object.tree_selection_changed.connect(self._handle_tree_selection_changed)
-        self.ui.treeView_relationship.tree_selection_changed.connect(self._handle_tree_selection_changed)
+        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_tree_selection_changed)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
         self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
         self.db_mngr.items_added.connect(self._refresh_icons)
@@ -287,6 +286,7 @@ class GraphViewMixin:
     @Slot(dict)
     def _handle_tree_selection_changed(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
+        super()._handle_tree_selection_changed(selected)
         self._renew_fetch_parents()
         self.selected_tree_inds = selected
         self.added_db_map_relationship_ids.clear()

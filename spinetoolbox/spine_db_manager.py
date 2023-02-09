@@ -210,7 +210,7 @@ class SpineDBManager(QObject):
             dict: mapping db_map to added cache items
         """
         new_db_map_data = {}
-        if item_type in ("object_class", "relationship_class"):
+        if item_type == "entity_class":
             self.update_icons(db_map_data)
         for db_map, items in db_map_data.items():
             try:
@@ -229,7 +229,7 @@ class SpineDBManager(QObject):
             item_type (str)
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
-        if item_type in ("object_class", "relationship_class"):
+        if item_type == "entity_class":
             self.update_icons(db_map_data)
         for db_map, items in db_map_data.items():
             db_cache = self._cache.get(db_map)
@@ -615,43 +615,36 @@ class SpineDBManager(QObject):
                 continue
             worker.reset_queries()
 
-    def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
+    def entity_class_renderer(self, db_map, entity_class_id, for_group=False):
         """Returns an icon renderer for a given entity class.
 
         Args:
             db_map (DiffDatabaseMapping): database map
-            entity_type (str): either 'object_class' or 'relationship_class'
             entity_class_id (int): entity class' id
             for_group (bool): if True, return the group object icon instead
 
         Returns:
             QSvgRenderer: requested renderer or None if no entity class was found
         """
-        entity_class = self.get_item(db_map, entity_type, entity_class_id)
+        entity_class = self.get_item(db_map, "entity_class", entity_class_id)
         if not entity_class:
             return None
-        if entity_type == "object_class":
-            if for_group:
-                return self.get_icon_mngr(db_map).group_renderer(entity_class["name"])
-            return self.get_icon_mngr(db_map).class_renderer(entity_class["name"])
-        if entity_type == "relationship_class":
-            return self.get_icon_mngr(db_map).relationship_class_renderer(
-                entity_class["name"], entity_class["object_class_name_list"]
-            )
+        if for_group:
+            return self.get_icon_mngr(db_map).group_renderer(entity_class)
+        return self.get_icon_mngr(db_map).class_renderer(entity_class)
 
-    def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
+    def entity_class_icon(self, db_map, entity_class_id, for_group=False):
         """Returns an appropriate icon for a given entity class.
 
         Args:
             db_map (DiffDatabaseMapping): database map
-            entity_type (str): either 'object_class' or 'relationship_class'
             entity_class_id (int): entity class' id
             for_group (bool): if True, return the group object icon instead
 
         Returns:
             QIcon: requested icon or None if no entity class was found
         """
-        renderer = self.entity_class_renderer(db_map, entity_type, entity_class_id, for_group=for_group)
+        renderer = self.entity_class_renderer(db_map, entity_class_id, for_group=for_group)
         return SpineDBIconManager.icon_from_renderer(renderer) if renderer is not None else None
 
     def get_item(self, db_map, item_type, id_, only_visible=True):

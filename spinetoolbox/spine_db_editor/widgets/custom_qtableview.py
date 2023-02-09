@@ -51,10 +51,9 @@ from .custom_delegates import (
     ValueListDelegate,
     ParameterValueDelegate,
     ParameterNameDelegate,
-    ObjectClassNameDelegate,
-    ObjectNameDelegate,
-    RelationshipClassNameDelegate,
-    ObjectNameListDelegate,
+    EntityClassNameDelegate,
+    EntityNameDelegate,
+    ElementNameListDelegate,
     AlternativeNameDelegate,
     ItemMetadataDelegate,
 )
@@ -114,6 +113,7 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
     def create_delegates(self):
         """Creates delegates for this view"""
         self._make_delegate("database", DatabaseNameDelegate)
+        self._make_delegate("entity_class_name", EntityClassNameDelegate)
 
     def open_in_editor(self):
         """Opens the current index in a parameter_value editor using the connected Spine db editor."""
@@ -235,14 +235,14 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
     def remove_selected(self):
         """Removes selected indexes."""
         selection = self.selectionModel().selection()
-        rows = list()
+        rows = []
         while not selection.isEmpty():
             current = selection.takeAt(0)
             top = current.top()
             bottom = current.bottom()
             rows += range(top, bottom + 1)
         # Get parameter data grouped by db_map
-        db_map_typed_data = dict()
+        db_map_typed_data = {}
         model = self.model()
         empty_model = model.empty_model
         for row in sorted(rows, reverse=True):
@@ -266,18 +266,6 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         self._spine_db_editor.refresh_copy_paste_actions()
 
 
-class ObjectParameterTableMixin:
-    def create_delegates(self):
-        super().create_delegates()
-        self._make_delegate("object_class_name", ObjectClassNameDelegate)
-
-
-class RelationshipParameterTableMixin:
-    def create_delegates(self):
-        super().create_delegates()
-        self._make_delegate("relationship_class_name", RelationshipClassNameDelegate)
-
-
 class ParameterDefinitionTableView(ParameterTableView):
     value_column_header = "default_value"
 
@@ -289,7 +277,17 @@ class ParameterDefinitionTableView(ParameterTableView):
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
-        raise NotImplementedError()
+        header_sections = [
+            ParameterTableHeaderSection(label)
+            for label in ("database", "entity_class_name", "dimension_name_list", "parameter_name")
+        ]
+        for i, section in enumerate(header_sections):
+            if section.label == "dimension_name_list":
+                header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
+                break
+        return plot_parameter_table_selection(
+            self.model(), selection, header_sections, self.value_column_header, plot_widget
+        )
 
 
 class ParameterValueTableView(ParameterTableView):
@@ -305,6 +303,9 @@ class ParameterValueTableView(ParameterTableView):
         self._make_delegate("alternative_name", AlternativeNameDelegate)
         delegate = self._make_delegate("value", ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+        self._make_delegate("entity_name", EntityNameDelegate)
+        delegate = self._make_delegate("element_name_list", ElementNameListDelegate)
+        delegate.editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
 
     def _update_pinned_values(self, _selected, _deselected):
         row_pinned_value_iter = ((index.row(), self._make_pinned_value(index)) for index in self.selectedIndexes())
@@ -312,10 +313,6 @@ class ParameterValueTableView(ParameterTableView):
             {row: pinned_value for row, pinned_value in row_pinned_value_iter if pinned_value is not None}.values()
         )
         self._spine_db_editor.emit_pinned_values_updated()
-
-    @property
-    def _pk_fields(self):
-        raise NotImplementedError()
 
     def _make_pinned_value(self, index):
         db_map, _ = self.model().db_map_id(index)
@@ -326,78 +323,15 @@ class ParameterValueTableView(ParameterTableView):
             return None
         return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
 
-    def _plot_selection(self, selection, plot_widget=None):
-        """See base class"""
-        raise NotImplementedError()
-
-
-class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the object parameter_definition pane in Spine db editor."""
-
-    def _plot_selection(self, selection, plot_widget=None):
-        """See base class"""
-        header_sections = [
-            ParameterTableHeaderSection(label) for label in ("database", "object_class_name", "parameter_name")
-        ]
-        return plot_parameter_table_selection(
-            self.model(), selection, header_sections, self.value_column_header, plot_widget
-        )
-
-
-class RelationshipParameterDefinitionTableView(RelationshipParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the relationship parameter_definition pane in Spine db editor."""
-
-    def _plot_selection(self, selection, plot_widget=None):
-        """See base class"""
-        header_sections = [
-            ParameterTableHeaderSection(label)
-            for label in ("database", "relationship_class_name", "object_class_name_list", "parameter_name")
-        ]
-        for i, section in enumerate(header_sections):
-            if section.label == "object_class_name_list":
-                header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
-                break
-        return plot_parameter_table_selection(
-            self.model(), selection, header_sections, self.value_column_header, plot_widget
-        )
-
-
-class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the object parameter_value pane in Spine db editor."""
-
-    def create_delegates(self):
-        super().create_delegates()
-        self._make_delegate("object_name", ObjectNameDelegate)
-
     @property
     def _pk_fields(self):
-        return "object_class_name", "object_name", "parameter_name", "alternative_name"
-
-    def _plot_selection(self, selection, plot_widget=None):
-        """See base class."""
-        header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._pk_fields]
-        return plot_parameter_table_selection(
-            self.model(), selection, header_sections, self.value_column_header, plot_widget
-        )
-
-
-class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the relationship parameter_value pane in Spine db editor."""
-
-    def create_delegates(self):
-        super().create_delegates()
-        delegate = self._make_delegate("object_name_list", ObjectNameListDelegate)
-        delegate.object_name_list_editor_requested.connect(self._spine_db_editor.show_object_name_list_editor)
-
-    @property
-    def _pk_fields(self):
-        return "relationship_class_name", "object_name_list", "parameter_name", "alternative_name"
+        return "entity_class_name", "entity_name", "element_name_list", "parameter_name", "alternative_name"
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class."""
         header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._pk_fields]
         for i, section in enumerate(header_sections):
-            if section.label == "object_name_list":
+            if section.label == "element_name_list":
                 header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
                 break
         return plot_parameter_table_selection(
