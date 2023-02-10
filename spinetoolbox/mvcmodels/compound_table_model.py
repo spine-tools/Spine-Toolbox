@@ -339,12 +339,17 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         row_map = self._row_map_for_model(model)
         if not row_map:
             return
-        first = self._inv_row_map[row_map[0]]
+        try:
+            first = self._inv_row_map[row_map[0]]
+        except KeyError:
+            # Sometimes the submodel may get reset before it has been added to the inverted row map.
+            # In this case there are no rows to remove, so we can bail out here.
+            return
         last = first + len(row_map) - 1
         tail_row_map = self._row_map[last + 1 :]
         self.beginRemoveRows(QModelIndex(), first, last)
         for key in self._row_map[first:]:
-            self._inv_row_map.pop(key)
+            del self._inv_row_map[key]
         self._row_map[first:] = []
         self._append_row_map(tail_row_map)
         self.endRemoveRows()
@@ -374,7 +379,12 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         for model in self.sub_models[pos:]:
             first_row_map_item = next(self._row_map_iterator_for_model(model), None)
             if first_row_map_item is not None:
-                return self._inv_row_map[first_row_map_item]
+                try:
+                    return self._inv_row_map[first_row_map_item]
+                except KeyError:
+                    # Sometimes the submodel is not yet in the inverted row map.
+                    # In this case we just skip it and try another insertion point.
+                    pass
         return self.rowCount()
 
     def _insert_row_map(self, pos, single_row_map):
