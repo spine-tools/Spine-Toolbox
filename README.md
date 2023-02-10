@@ -56,7 +56,7 @@ apply to Linux and Mac where applicable.
    Windows. Get it with *Microsoft C++ Build Tools*: 
    https://visualstudio.microsoft.com/visual-cpp-build-tools/. (Earlier versions of Python use earlier versions of C++ libraries that should be available with Windows.)
    
-3. If you don't have git, Windows version can be found here: https://git-scm.com/download/win.
+3. If you don't have Git, Windows version can be found here: https://git-scm.com/download/win.
 
 4. Open a terminal (e.g., Command Prompt). Windows: If you will have issues with Python and/or git not found in the path, then you can add them to the environment variables manually. This can be done from Windows Control Panel (use find with 'environmental') or from a command prompt using `set PATH=%PATH%;[path-to-executable]` e.g. `set PATH=%PATH%;C:\Users\my_user_name\AppData\Local\Programs\Git\Cmd`. 
 
@@ -183,6 +183,18 @@ Please make sure you are using Python 3.8, 3.9, 3.10, or 3.11 to install the req
 
 If you are on **Python 3.10 or 3.11**, please install **Microsoft Visual C++ 14.0 or greater** on Windows. 
 Get it with *Microsoft C++ Build Tools*: https://visualstudio.microsoft.com/visual-cpp-build-tools/.
+
+#### 'No Python' error when installing with pipx
+
+If you see the following error when running the command `python -m pipx install spinetoolbox`
+
+```
+No Python at 'c:\python38\python.exe'
+Fatal error from pip prevented installation. Full pip output in file:
+```
+
+Where c:\python38\python.exe may be some other path. To fix this, delete the folder 
+`C:\Users\<user name>\.local\pipx\shared` and run the `python -m pipx install spinetoolbox` command again.
 
 #### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 
