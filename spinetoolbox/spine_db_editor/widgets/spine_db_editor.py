@@ -1130,7 +1130,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.begin_style_change()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Orientation.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_entity_graph, Qt.Orientation.Horizontal)
         self.splitDockWidget(
             self.ui.dockWidget_entity_graph, self.ui.dockWidget_alternative_scenario_tree, Qt.Orientation.Horizontal
         )
@@ -1148,12 +1148,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         # left
         self.splitDockWidget(
-            self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Vertical
-        )
-        self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_relationship_parameter_value,
-            Qt.Orientation.Vertical,
+            self.ui.dockWidget_entity_graph, self.ui.dockWidget_parameter_value, Qt.Orientation.Vertical
         )
         self.splitDockWidget(
             self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
@@ -1161,21 +1156,12 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(
             self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
         )
-        self.tabify_and_raise(
-            [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
-        )
-        self.tabify_and_raise(
-            [self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition]
-        )
-        docks = [
-            self.ui.dockWidget_entity_graph,
-            self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_relationship_parameter_value,
-        ]
+        self.tabify_and_raise([self.ui.dockWidget_parameter_value, self.ui.dockWidget_parameter_definition])
+        docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_parameter_value]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.6 * height, 0.2 * height, 0.2 * height], Qt.Orientation.Vertical)
+        self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Orientation.Vertical)
         docks = [
-            self.ui.dockWidget_object_tree,
+            self.ui.dockWidget_entity_tree,
             self.ui.dockWidget_entity_graph,
             self.ui.dockWidget_alternative_scenario_tree,
         ]

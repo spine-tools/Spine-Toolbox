@@ -24,7 +24,7 @@ from PySide6.QtPrintSupport import QPrinter
 from ...helpers import CharIconEngine
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
-from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, CrossHairsArcItem, make_figure_graphics_item
+from ..graphics_items import EntityItem, CrossHairsArcItem, make_figure_graphics_item
 from .select_position_parameters_dialog import SelectPositionParametersDialog
 from .graph_layout_generator import make_heat_map
 
