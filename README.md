@@ -14,13 +14,13 @@ Spine Toolbox is an open source Python package to manage data, scenarios and wor
 
 ## Programming language
 
-- Python 3.8
+- Python 3.8*
 - Python 3.9
-- Python 3.10
-- Python 3.11
+- Python 3.10**
+- Python 3.11**
 
-Python 3.8.0 is not supported (use Python 3.8.1 or later). Python 3.10 and Python 3.11 require Microsoft Visual 
-C++ 14.0 or greater on Windows.
+*Python 3.8.0 is not supported (use Python 3.8.1 or later).<br>
+**Python 3.10 and Python 3.11 require Microsoft Visual C++ 14.0 or greater on Windows.
 
 ## License
 
