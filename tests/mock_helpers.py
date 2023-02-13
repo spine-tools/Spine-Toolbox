@@ -190,24 +190,6 @@ def add_importer(project, item_factories, name, x=0, y=0):
     return project.get_item(name)
 
 
-def add_gimlet(project, item_factories, name, x=0, y=0):
-    """Helper function to create a Gimlet to given project.
-
-    Args:
-        project (SpineToolboxProject): project where to add the item
-        item_factories (dict): mapping from item type to ProjectItemFactory
-        name (str): item's name
-        x (float): item's x coordinate
-        y (float): item's y coordinate
-
-    Returns:
-        Gimlet: added project item
-    """
-    item = {name: {"type": "Gimlet", "description": "", "x": x, "y": y}}
-    project.restore_project_items(item, item_factories, silent=True)
-    return project.get_item(name)
-
-
 def add_data_transformer(project, item_factories, name, x=0, y=0):
     """Helper function to create a Data Transformer to given project.
 
@@ -240,24 +222,6 @@ def add_exporter(project, item_factories, name, x=0, y=0):
         Exporter: added project item
     """
     item = {name: {"type": "Exporter", "description": "", "x": x, "y": y, "specification": None}}
-    project.restore_project_items(item, item_factories, silent=True)
-    return project.get_item(name)
-
-
-def add_gdx_exporter(project, item_factories, name, x=0, y=0):
-    """Helper function to create a GdxExporter to given project.
-
-    Args:
-        project (SpineToolboxProject): project where to add the item
-        item_factories (dict): mapping from item type to ProjectItemFactory
-        name (str): item's name
-        x (float): item's x coordinate
-        y (float): item's y coordinate
-
-    Returns:
-        GdxExporter: added project item
-    """
-    item = {name: {"type": "GdxExporter", "description": "", "x": x, "y": y, "settings_packs": None}}
     project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 

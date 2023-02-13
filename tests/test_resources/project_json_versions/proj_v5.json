@@ -1,0 +1,119 @@
+{
+    "project": {
+        "version": 5,
+        "name": "Very Good Project",
+        "description": "",
+        "specifications": {
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": "tool_specs/preprocessing_tool.json"
+                }
+            ],
+            "Data Transformer": [],
+            "Importer": []
+        },
+        "connections": [
+            {
+                "from": [
+                    "Preprocessing Tool 1",
+                    "right"
+                ],
+                "to": [
+                    "Exporter 1",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Importer 1",
+                    "right"
+                ],
+                "to": [
+                    "Data Store 1",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Data Store 1",
+                    "right"
+                ],
+                "to": [
+                    "Exporter 1",
+                    "left"
+                ]
+            }
+        ]
+    },
+    "items": {
+        "Data Store 1": {
+            "type": "Data Store",
+            "description": "",
+            "x": -100.20784779809955,
+            "y": -53.86171819147853,
+            "url": {
+                "dialect": "sqlite",
+                "username": "",
+                "password": "",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite"
+                }
+            }
+        },
+        "Preprocessing Tool 1": {
+            "type": "Tool",
+            "description": "",
+            "x": -95.1974554081946,
+            "y": 71.39809155614594,
+            "specification": "Preprocessing Tool",
+            "execute_in_work": true,
+            "cmd_line_args": []
+        },
+        "Importer 1": {
+            "type": "Importer",
+            "description": "",
+            "x": -226.72025564320035,
+            "y": -47.598727704097286,
+            "cancel_on_error": true,
+            "mapping_selection": [],
+            "specification": "",
+            "file_selection": []
+        },
+        "Exporter 1": {
+            "type": "Exporter",
+            "description": "",
+            "x": 105.21824018800457,
+            "y": -5.010392389904993,
+            "settings_packs": [
+                {
+                    "output_file_name": "output.gdx",
+                    "state": 1,
+                    "settings": {
+                        "domains": {},
+                        "sets": {},
+                        "global_parameters_domain_name": ""
+                    },
+                    "indexing_settings": {},
+                    "merging_settings": {},
+                    "none_fallback": 0,
+                    "none_export": 0,
+                    "scenario": null,
+                    "latest_database_commit": "2020-09-11T15:01:25",
+                    "database_url": {
+                        "type": "file_url",
+                        "relative": true,
+                        "path": ".spinetoolbox/items/data_store_1/Data Store 1.sqlite",
+                        "scheme": "sqlite"
+                    }
+                }
+            ],
+            "cancel_on_error": true
+        }
+    }
+}

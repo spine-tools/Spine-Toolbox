@@ -257,8 +257,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.stackedWidget.setCurrentIndex(0)
         self.ui.listWidget.setFocus()
         self.ui.listWidget.setCurrentRow(0)
-        self._toolbox = toolbox  # QWidget parent
-        self._project = self._toolbox.project()
+        self._toolbox = toolbox
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self._kernel_editor = None
         self._remote_host = ""
@@ -532,7 +531,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         super().read_settings()
         open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
         show_exit_prompt = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
-        save_at_exit = int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))  # tri-state
+        save_at_exit = self._qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
         datetime = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
         custom_open_project_dialog = self._qsettings.value("appSettings/customOpenProjectDialog", defaultValue="true")
@@ -562,12 +561,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_open_previous_project.setCheckState(Qt.CheckState.Checked)
         if show_exit_prompt == 2:
             self.ui.checkBox_exit_prompt.setCheckState(Qt.CheckState.Checked)
-        if save_at_exit == 0:  # Not needed but makes the code more readable.
-            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.CheckState.Unchecked)
-        elif save_at_exit == 1:
-            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.PartiallyChecked)
-        else:  # save_at_exit == 2:
-            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.CheckState.Checked)
+        self.ui.project_save_options_combo_box.setCurrentIndex({"prompt": 0, "automatic": 1}[save_at_exit])
         if datetime == 2:
             self.ui.checkBox_datetime.setCheckState(Qt.CheckState.Checked)
         if delete_data == 2:
@@ -701,7 +695,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)
         exit_prompt = str(self.ui.checkBox_exit_prompt.checkState().value)
         self._qsettings.setValue("appSettings/showExitPrompt", exit_prompt)
-        save_at_exit = str(self.ui.checkBox_save_project_before_closing.checkState().value)
+        save_at_exit = {0: "prompt", 1: "automatic"}[self.ui.project_save_options_combo_box.currentIndex()]
         self._qsettings.setValue("appSettings/saveAtExit", save_at_exit)
         datetime = str(self.ui.checkBox_datetime.checkState().value)
         self._qsettings.setValue("appSettings/dateTime", datetime)

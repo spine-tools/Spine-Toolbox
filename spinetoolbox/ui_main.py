@@ -95,7 +95,8 @@ from .helpers import (
     format_log_message,
     color_from_index,
     load_specification_from_file,
-    load_specification_local_data, same_path,
+    load_specification_local_data,
+    same_path,
 )
 from .project_commands import (
     AddSpecificationCommand,
@@ -230,19 +231,6 @@ class ToolboxUI(QMainWindow):
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
-        if self.python_version_is_37():
-            msg = "Python 3.7 support will be dropped in the near future. " \
-                  "Please install Spine Toolbox on Python 3.8 or greater."
-            logging.warning(msg)
-            self.msg_warning.emit(msg)
-
-    def python_version_is_37(self):
-        """Returns True if on Python 3.7, False Otherwise.
-        Remove when PySide6 port is in master."""
-        v = platform.python_version_tuple()
-        if v[0] == "3" and v[1] == "7":
-            return True
-        return False
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
@@ -366,6 +354,16 @@ class ToolboxUI(QMainWindow):
         for old, new in old_new.items():
             if not self._qsettings.contains(new) and self._qsettings.contains(old):
                 self._qsettings.setValue(new, self._qsettings.value(old))
+                self._qsettings.remove(old)
+        if self._qsettings.contains("appSettings/saveAtExit"):
+            try:
+                old_value = int(self._qsettings.value("appSettings/saveAtExit"))
+            except ValueError:
+                # Old value is already of correct form.
+                pass
+            else:
+                new_value = {0: "prompt", 1: "prompt", 2: "automatic"}[old_value]
+                self._qsettings.setValue("appSettings/saveAtExit", new_value)
 
     def _update_execute_enabled(self):
         first_index = next(self.project_item_model.leaf_indexes(), None)
@@ -455,7 +453,9 @@ class ToolboxUI(QMainWindow):
         )
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
-            if open_previous_project != Qt.CheckState.Checked.value:  # 2: Qt.CheckState.Checked, ie. open_previous_project==True
+            if (
+                open_previous_project != Qt.CheckState.Checked.value
+            ):  # 2: Qt.CheckState.Checked, ie. open_previous_project==True
                 self.msg.emit(welcome_msg)
                 return
             # Get previous project (directory)
@@ -691,20 +691,19 @@ class ToolboxUI(QMainWindow):
     def close_project(self, ask_confirmation=True):
         """Closes the current project.
 
+        Args:
+            ask_confirmation (bool): if False, no confirmation whatsoever is asked from user
+
         Returns:
             bool: True when no project open or when it's closed successfully, False otherwise.
         """
         if not self._project:
             return True
-        if ask_confirmation:
-            save_at_exit = (
-                int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
-                if not self.undo_stack.isClean()
-                else 0
-            )
-            if save_at_exit == 1 and not self._confirm_save_and_exit():
+        if ask_confirmation and not self.undo_stack.isClean():
+            save_at_exit = self._qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
+            if save_at_exit == "prompt" and not self._confirm_project_close():
                 return False
-            if save_at_exit == 2 and not self.save_project():
+            elif save_at_exit == "automatic" and not self.save_project():
                 return False
         if not self.undo_critical_commands():
             return False
@@ -868,7 +867,11 @@ class ToolboxUI(QMainWindow):
                     "Would you like to overwrite the existing project?".format(project_dir)
                 )
                 box1 = QMessageBox(
-                    QMessageBox.Icon.Question, "Overwrite?", msg1, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
+                    QMessageBox.Icon.Question,
+                    "Overwrite?",
+                    msg1,
+                    buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                    parent=self,
                 )
                 box1.button(QMessageBox.StandardButton.Ok).setText("Overwrite")
                 answer1 = box1.exec()
@@ -880,7 +883,11 @@ class ToolboxUI(QMainWindow):
                     "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
                 )
                 box2 = QMessageBox(
-                    QMessageBox.Icon.Question, "Not empty", msg2, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
+                    QMessageBox.Icon.Question,
+                    "Not empty",
+                    msg2,
+                    buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                    parent=self,
                 )
                 box2.button(QMessageBox.StandardButton.Ok).setText("Go ahead")
                 answer2 = box2.exec()
@@ -1102,7 +1109,7 @@ class ToolboxUI(QMainWindow):
             "Remove All Items",
             msg,
             buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            parent=self
+            parent=self,
         )
         message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Items")
         answer = message_box.exec()
@@ -1616,12 +1623,15 @@ class ToolboxUI(QMainWindow):
         self.msg.emit(f"Retrieving project {job_id} from server and extracting to: {project_dir}")
         host, port, sec_model, sec_folder = self.engine_server_settings()
         if not host:
-            self.msg_error.emit("Spine Engine Server <b>host address</b> missing. "
-                                "Please enter host in <b>File->Settings->Engine</b>.")
+            self.msg_error.emit(
+                "Spine Engine Server <b>host address</b> missing. "
+                "Please enter host in <b>File->Settings->Engine</b>."
+            )
             return
         elif not port:
-            self.msg_error.emit("Spine Engine Server <b>port</b> missing. "
-                                "Please select port in <b>File->Settings->Engine</b>.")
+            self.msg_error.emit(
+                "Spine Engine Server <b>port</b> missing. " "Please select port in <b>File->Settings->Engine</b>."
+            )
             return
         self.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
         try:
@@ -1738,7 +1748,10 @@ class ToolboxUI(QMainWindow):
         can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
         has_items = self.project_item_model.n_items() > 0
         selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
-        _methods = [getattr(self.project_item_model.get_item(x.name()).project_item, "copy_local_data") for x in selected_project_items]
+        _methods = [
+            getattr(self.project_item_model.get_item(x.name()).project_item, "copy_local_data")
+            for x in selected_project_items
+        ]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
         self.ui.actionCopy.setEnabled(can_copy)
         self.ui.actionPaste.setEnabled(can_paste)
@@ -1779,19 +1792,18 @@ class ToolboxUI(QMainWindow):
         Returns:
             a list containing zero or more tasks
         """
-        show_confirm_exit = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
         save_at_exit = (
-            int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
+            self._qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
             if self._project is not None and not self.undo_stack.isClean()
-            else 0
+            else None
         )
-        if save_at_exit == 1:
-            # Ignore show_confirm_exit...
+        if save_at_exit == "prompt":
             return ["prompt save"]
+        show_confirm_exit = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
         tasks = []
         if show_confirm_exit == 2:
             tasks.append("prompt exit")
-        if save_at_exit == 2:
+        if save_at_exit == "automatic":
             tasks.append("save")
         return tasks
 
@@ -1808,7 +1820,7 @@ class ToolboxUI(QMainWindow):
                 if not self._confirm_exit():
                     return False
             elif task == "prompt save":
-                if not self._confirm_save_and_exit():
+                if not self._confirm_project_close():
                     return False
             elif task == "save":
                 self.save_project()
@@ -1833,7 +1845,7 @@ class ToolboxUI(QMainWindow):
         answer = msg.exec()  # Show message box
         if answer == QMessageBox.StandardButton.Ok:
             # Update conf file according to checkbox status
-            if not chkbox.checkState():
+            if not chkbox.isChecked():
                 show_prompt = "2"  # 2 as in True
             else:
                 show_prompt = "0"  # 0 as in False
@@ -1841,7 +1853,7 @@ class ToolboxUI(QMainWindow):
             return True
         return False
 
-    def _confirm_save_and_exit(self):
+    def _confirm_project_close(self):
         """
         Confirms exit from user and saves the project if requested.
 
@@ -1850,25 +1862,16 @@ class ToolboxUI(QMainWindow):
         """
         msg = QMessageBox(parent=self)
         msg.setIcon(QMessageBox.Icon.Question)
-        msg.setWindowTitle("Save project before leaving")
-        msg.setText("The project has unsaved changes. Do you want to save them before closing?")
-        msg.setStandardButtons(QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel)
-        msg.button(QMessageBox.StandardButton.Save).setText("Save and exit")
-        msg.button(QMessageBox.StandardButton.Discard).setText("Exit without saving")
-        chkbox = QCheckBox()
-        chkbox.setText("Do not ask me again")
-        msg.setCheckBox(chkbox)
+        msg.setWindowTitle("Confirm project close")
+        msg.setText("Current project has unsaved changes.")
+        msg.setStandardButtons(
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
+        )
         answer = msg.exec()
         if answer == QMessageBox.StandardButton.Cancel:
             return False
         if answer == QMessageBox.StandardButton.Save:
             self.save_project()
-        chk = chkbox.checkState()
-        if chk == 2:
-            if answer == QMessageBox.StandardButton.Save:
-                self._qsettings.setValue("appSettings/saveAtExit", "2")
-            elif answer == QMessageBox.StandardButton.Discard:
-                self._qsettings.setValue("appSettings/saveAtExit", "0")
         return True
 
     def remove_path_from_recent_projects(self, p):
@@ -1896,7 +1899,13 @@ class ToolboxUI(QMainWindow):
         """Clears recent projects list in File->Open recent menu."""
         msg = "Are you sure?"
         title = "Clear recent projects?"
-        message_box = QMessageBox(QMessageBox.Icon.Question, title, msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, parent=self)
+        message_box = QMessageBox(
+            QMessageBox.Icon.Question,
+            title,
+            msg,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            parent=self,
+        )
         answer = message_box.exec()
         if answer == QMessageBox.StandardButton.No:
             return
@@ -2261,7 +2270,11 @@ class ToolboxUI(QMainWindow):
                 msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
             # noinspection PyCallByClass, PyTypeChecker
             message_box = QMessageBox(
-                QMessageBox.Icon.Question, "Remove Item", msg, buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel, parent=self
+                QMessageBox.Icon.Question,
+                "Remove Item",
+                msg,
+                buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self,
             )
             message_box.button(QMessageBox.StandardButton.Ok).setText("Remove Item")
             answer = message_box.exec()

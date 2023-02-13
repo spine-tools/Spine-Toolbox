@@ -144,10 +144,6 @@ The table below lists the resources each project item type provides during execu
 +------------------+-------+-------------------------+----------------------------+
 | Exporter         |       | n/a                     | File URLs                  |
 +------------------+-------+-------------------------+----------------------------+
-| GdxExporter      |       | n/a                     | File URLs                  |
-+------------------+-------+-------------------------+----------------------------+
-| Gimlet           |       | n/a                     | Resources from predecessor |
-+------------------+-------+-------------------------+----------------------------+
 | Importer         |       | n/a                     | n/a                        |
 +------------------+-------+-------------------------+----------------------------+
 | Tool             | [#]_  | n/a                     | File URLs                  |
@@ -175,10 +171,6 @@ The table below lists the resources that might be used by each item type during 
 +------------------+-------+---------------------------+------------------------+
 | Exporter         |       | Database URL              | n/a                    |
 +------------------+-------+---------------------------+------------------------+
-| GdxExporter      |       | Database URL              | n/a                    |
-+------------------+-------+---------------------------+------------------------+
-| Gimlet           | [#]_  | File URLs, database URLs  | Database URLs          |
-+------------------+-------+---------------------------+------------------------+
 | Importer         | [#]_  | File URLs                 | Database URL           |
 +------------------+-------+---------------------------+------------------------+
 | Tool             | [#]_  | File URLs, database URLs  | Database URLs          |
@@ -186,7 +178,6 @@ The table below lists the resources that might be used by each item type during 
 | View             |       | Database URLs             | n/a                    |
 +------------------+-------+---------------------------+------------------------+
 
-.. [#] Gimlet's resources can be passed to the command as command line arguments but are otherwise ignored.
 .. [#] Importer requires a database URL from its successor for writing the mapped data.
    This can be provided by a Data Store.
 .. [#] *Tool specification* specifies tool's optional and required input files.

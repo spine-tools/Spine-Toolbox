@@ -1,0 +1,88 @@
+{
+    "project": {
+        "version": 1,
+        "name": "UnitTest Project",
+        "description": "Project for testing open_project() method in ToolboxUI.",
+                "tool_specifications": [
+        {
+            "type": "path",
+            "relative": true,
+            "path": "Specs/python_tool_spec.json"
+        }
+    ],
+        "connections": [
+            {
+                "from": [
+                    "a",
+                    "right"
+                ],
+                "to": [
+                    "b",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "b",
+                    "right"
+                ],
+                "to": [
+                    "c",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "c",
+                    "right"
+                ],
+                "to": [
+                    "d",
+                    "left"
+                ]
+            }
+        ],
+        "scene_x": -14.5,
+        "scene_y": -23.0,
+        "scene_w": 464.0,
+        "scene_h": 324.0
+    },
+    "objects": {
+        "Data Stores": {
+            "a": {
+                "short name": "a",
+                "description": "",
+                "x": 38.0,
+                "y": 100.0,
+                "url": null
+            }
+        },
+        "Data Connections": {
+            "b": {
+                "short name": "b",
+                "description": "",
+                "x": 155.0,
+                "y": 101.0,
+                "references": []
+            }
+        },
+        "Tools": {
+            "c": {
+                "short name": "c",
+                "description": "",
+                "x": 277.0,
+                "y": 101.0,
+                "tool": "",
+                "execute_in_work": true
+            }
+        },
+        "Views": {
+            "d": {
+                "short name": "d",
+                "description": "",
+                "x": 395.0,
+                "y": 100.0
+            }
+        }
+    }
+}

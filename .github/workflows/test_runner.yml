@@ -5,10 +5,11 @@ name: Test suite
 on:
   push:
     paths:
-      - '**.py'
-      - '.github/workflows/*.yml'
-      - 'requirements.txt'
-      - 'setup.cfg'
+      - "**.py"
+      - ".github/workflows/*.yml"
+      - "requirements.txt"
+      - "setup.cfg"
+      - "execution_tests/**"
 
 jobs:
   unit-tests:

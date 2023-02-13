@@ -188,6 +188,17 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         )
         model.deleteLater()
 
+    def test_setData_sets_value_to_nan_if_conversion_to_float_fails(self):
+        model = TimeSeriesModelFixedResolution(
+            TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, -5.0], True, False), None
+        )
+        model_index = model.index(0, 1)
+        model.setData(model_index, "1,1")
+        self.assertEqual(
+            model.value, TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [np.nan, -5.0], True, False)
+        )
+        model.deleteLater()
+
     def test_set_resolution_updates_indexes(self):
         model = TimeSeriesModelFixedResolution(
             TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, -5.0], True, False), None

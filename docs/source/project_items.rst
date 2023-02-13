@@ -15,10 +15,6 @@
    :width: 16
 .. |folder-open| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
    :width: 16
-.. |gdx-exporter| image:: ../../spinetoolbox/ui/resources/project_item_icons/database-export-gdx.svg
-   :width: 16
-.. |gimlet| image:: ../../spinetoolbox/ui/resources/project_item_icons/screwdriver.svg
-   :width: 16
 .. |importer| image:: ../../spinetoolbox/ui/resources/project_item_icons/database-import.svg
    :width: 16
 .. |merger| image:: ../../spinetoolbox/ui/resources/project_item_icons/blender.svg
@@ -93,16 +89,6 @@ Tool is the heart of a DAG. It is usually the actual model to be executed in Spi
 but can be an arbitrary script, executable or system command as well.
 A tool is specified by its :ref:`specification <Tool specification editor>`.
 
-Gimlet |gimlet|
-===============
-
-.. note::
-   Gimlet is pending for removal and its use in new projects is discouraged.
-   Use Tool instead.
-
-A Gimlet can execute an arbitrary system command with given command line arguments,
-input files and work directory.
-
 Data Transformer |data_transformer|
 ===================================
 
@@ -130,13 +116,3 @@ Exporter |exporter|
 
 Exporter outputs database data into tabulated file formats that can be consumed by Tool or used e.g.
 by external software for analysis. See :ref:`Importing and exporting data` for more information.
-
-GdxExporter |gdx-exporter|
-==========================
-
-.. note::
-   GdxExporter is pending for removal and its use in new projects is discouraged.
-   Use Exporter instead.
-
-This item exports databases contained in a *Data Store* into :literal:`.gdx` format for GAMS Tools.
-See :ref:`Importing and exporting data` for more information.
