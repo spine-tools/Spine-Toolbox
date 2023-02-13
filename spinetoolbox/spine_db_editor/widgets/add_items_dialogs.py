@@ -725,7 +725,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     def reset_model(self, index):
         """Setup model according to current relationship_class selected in combobox."""
         self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
-        object_class_name_list = self.object_class_name_list.split(",")
+        object_class_name_list = self.object_class_name_list
         self.model.set_horizontal_header_labels(object_class_name_list)
         self.existing_items_model.set_horizontal_header_labels(object_class_name_list)
         self.new_items_model.set_horizontal_header_labels(object_class_name_list)
