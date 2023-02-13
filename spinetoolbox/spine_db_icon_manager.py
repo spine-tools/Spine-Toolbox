@@ -140,6 +140,9 @@ class SpineDBIconManager:
             if name not in self._class_renderers:
                 self._create_class_renderer(name)
             return self._class_renderers[name]
+        return self.multi_class_renderer(dimension_name_list)
+
+    def multi_class_renderer(self, dimension_name_list):
         if dimension_name_list not in self._multi_class_renderers:
             self._create_multi_class_renderer(dimension_name_list)
         return self._multi_class_renderers[dimension_name_list]

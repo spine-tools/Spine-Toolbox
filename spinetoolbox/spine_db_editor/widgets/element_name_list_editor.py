@@ -68,7 +68,7 @@ class ElementNameListEditor(ManageItemsDialog):
             current_element_names (list)
         """
         super().__init__(parent, None)
-        self.setWindowTitle("Select objects")
+        self.setWindowTitle("Select elements")
         self._index = index
         self.model = QStandardItemModel(self)
         self.init_model(entity_class_names, element_names_lists, current_element_names)

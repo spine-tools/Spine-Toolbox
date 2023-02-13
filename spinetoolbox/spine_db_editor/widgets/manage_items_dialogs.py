@@ -119,17 +119,20 @@ class ManageItemsDialog(ManageItemsDialogBase):
         self.resize_window_to_columns()
 
 
-class GetObjectClassesMixin:
-    """Provides a method to retrieve object classes for AddObjectsDialog and AddRelationshipClassesDialog."""
+class GetEntityClassesMixin:
+    """Provides a method to retrieve entity classes for AddEntitiesDialog and AddEntityClassesDialog."""
 
-    def make_db_map_obj_cls_lookup(self):
+    def make_db_map_ent_cls_lookup(self):
         return {
-            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "object_class", only_visible=False)}
+            db_map: {
+                (x["name"], x["dimension_name_list"]): x
+                for x in self.db_mngr.get_items(db_map, "entity_class", only_visible=False)
+            }
             for db_map in self.db_maps
         }
 
-    def object_class_name_list(self, row):
-        """Return a list of object_class names present in all databases selected for given row.
+    def entity_class_name_list(self, row):
+        """Return a list of entity class names present in all databases selected for given row.
         Used by `ManageObjectsDelegate`.
         """
         db_column = self.model.header.index('databases')
@@ -139,58 +142,47 @@ class GetObjectClassesMixin:
         if not db_map:
             return []
         # Initalize list from first db_map
-        object_class_name_list = list(self.db_map_obj_cls_lookup[db_map])
+        entity_class_name_list = [name for name, _ in self.db_map_ent_cls_lookup[db_map]]
         # Update list from remaining db_maps
         for db_map in db_maps:
-            object_class_name_list = [x for x in self.db_map_obj_cls_lookup[db_map] if x in object_class_name_list]
-        return object_class_name_list
+            entity_class_name_list = [
+                name for name, _ in self.db_map_ent_cls_lookup[db_map] if name in entity_class_name_list
+            ]
+        return entity_class_name_list
 
 
-class GetObjectsMixin:
-    """Provides a method to retrieve objects for AddRelationshipsDialog and EditRelationshipsDialog."""
+class GetEntitiesMixin:
+    """Provides a method to retrieve entities for AddEntitiesDialog and EditEntitiesDialog."""
 
-    def make_db_map_obj_lookup(self):
+    def make_db_map_ent_lookup(self):
         return {
             db_map: {
-                (x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "object", only_visible=False)
+                (x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)
             }
             for db_map in self.db_maps
         }
 
-    def object_name_list(self, row, column):
-        """Return a list of object names present in all databases selected for given row.
-        Used by `ManageRelationshipsDelegate`.
+    def entity_name_list(self, row, column):
+        """Return a list of entity names present in all databases selected for given row.
+        Used by `ManageEntitiesDelegate`.
         """
         db_column = self.model.header.index('databases')
         db_names = self.model._main_data[row][db_column]
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
-        rel_cls_key = (self.class_name, self.object_class_name_list)
-        object_name_lists = []
+        ent_cls_key = (self.class_name, self.dimension_name_list)
+        entity_name_lists = []
         for db_map in db_maps:
-            relationship_classes = self.db_map_rel_cls_lookup[db_map]
-            if rel_cls_key not in relationship_classes:
+            entity_classes = self.db_map_ent_cls_lookup[db_map]
+            if ent_cls_key not in entity_classes:
                 continue
-            rel_cls = relationship_classes[rel_cls_key]
-            object_class_id_list = rel_cls["object_class_id_list"]
-            object_class_id = object_class_id_list[column]
-            objects = self.db_map_obj_lookup[db_map]
-            object_name_lists.append([name for (class_id, name) in objects if class_id == object_class_id])
-        if not object_name_lists:
+            ent_cls = entity_classes[ent_cls_key]
+            dimension_id_list = ent_cls["dimension_id_list"]
+            dimension_id = dimension_id_list[column]
+            entities = self.db_map_ent_lookup[db_map]
+            entity_name_lists.append([name for (class_id, name) in entities if class_id == dimension_id])
+        if not entity_name_lists:
             return []
-        return list(reduce(lambda x, y: set(x) & set(y), object_name_lists))
-
-
-class GetRelationshipClassesMixin:
-    """Provides a method to retrieve relationship classes for AddRelationshipsDialog and EditRelationshipsDialog."""
-
-    def make_db_map_rel_cls_lookup(self):
-        return {
-            db_map: {
-                (x["name"], x["object_class_name_list"]): x
-                for x in self.db_mngr.get_items(db_map, "relationship_class", only_visible=False)
-            }
-            for db_map in self.db_maps
-        }
+        return list(reduce(lambda x, y: set(x) & set(y), entity_name_lists))
 
 
 class ShowIconColorEditorMixin:

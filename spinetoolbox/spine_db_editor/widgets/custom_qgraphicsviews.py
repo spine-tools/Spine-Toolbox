@@ -32,7 +32,7 @@ from .graph_layout_generator import make_heat_map
 class EntityQGraphicsView(CustomQGraphicsView):
     """QGraphicsView for the Entity Graph View."""
 
-    graph_selection_changed = Signal(dict)
+    graph_selection_changed = Signal(list)
 
     def __init__(self, parent):
         """
@@ -51,8 +51,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.pruned_db_map_entity_ids = dict()
         self.heat_map_items = list()
         self._point_value_tuples_per_parameter_name = dict()  # Used in the heat map menu
-        self._hovered_obj_item = None
-        self.relationship_class = None
+        self._hovered_ent_item = None
+        self.entity_class = None
         self.cross_hairs_items = []
         self.auto_expand_objects = None
         self.merge_dbs = None
@@ -102,13 +102,10 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Filters parameters by selected objects in the graph."""
         if self.scene() is None:
             return
-        selected_items = self.scene().selectedItems()
-        selected_objs = [x for x in selected_items if isinstance(x, ObjectItem)]
-        selected_rels = [x for x in selected_items if isinstance(x, RelationshipItem)]
-        self.selected_items = selected_objs + selected_rels
-        self.graph_selection_changed.emit({"object": selected_objs, "relationship": selected_rels})
-        default_data = selected_items[0].default_parameter_data() if len(selected_items) == 1 else {}
-        default_db_map = selected_items[0].first_db_map if len(selected_items) == 1 else None
+        self.selected_items = [x for x in self.scene().selectedItems() if isinstance(x, EntityItem)]
+        self.graph_selection_changed.emit(self.selected_items)
+        default_data = self.selected_items[0].default_parameter_data() if len(self.selected_items) == 1 else {}
+        default_db_map = self.selected_items[0].first_db_map if len(self.selected_items) == 1 else None
         self._spine_db_editor.set_default_parameter_data(default_data, default_db_map)
 
     def connect_spine_db_editor(self, spine_db_editor):
@@ -570,14 +567,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self.scene().removeItem(item)
         self.heat_map_items.clear()
 
-    def set_cross_hairs_items(self, relationship_class, cross_hairs_items):
-        """Sets 'cross_hairs' items for relationship creation.
+    def set_cross_hairs_items(self, entity_class, cross_hairs_items):
+        """Sets 'cross_hairs' items for connecting entities.
 
         Args:
-            relationship_class (dict)
+            entity_class (dict)
             cross_hairs_items (list(QGraphicsItems))
         """
-        self.relationship_class = relationship_class
+        self.entity_class = entity_class
         self.cross_hairs_items = cross_hairs_items
         for item in cross_hairs_items:
             self.scene().addItem(item)
@@ -587,7 +584,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.viewport().setCursor(Qt.BlankCursor)
 
     def clear_cross_hairs_items(self):
-        self.relationship_class = None
+        self.entity_class = None
         for item in self.cross_hairs_items:
             item.hide()
             item.scene().removeItem(item)
@@ -595,8 +592,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.viewport().unsetCursor()
 
     def _cross_hairs_has_valid_target(self):
-        db_map = self.relationship_class["db_map"]
-        return self._hovered_obj_item.entity_class_id(db_map) in self.relationship_class["object_class_ids_to_go"]
+        db_map = self.entity_class["db_map"]
+        return self._hovered_ent_item.entity_class_id(db_map) in self.entity_class["dimension_ids_to_go"]
 
     def mousePressEvent(self, event):
         """Handles relationship creation if one it's in process."""
@@ -604,26 +601,26 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if not self.cross_hairs_items:
             super().mousePressEvent(event)
             return
-        if event.buttons() & Qt.RightButton or not self._hovered_obj_item:
+        if event.buttons() & Qt.RightButton or not self._hovered_ent_item:
             self.clear_cross_hairs_items()
             return
         if self._cross_hairs_has_valid_target():
-            db_map = self.relationship_class["db_map"]
-            self.relationship_class["object_class_ids_to_go"].remove(self._hovered_obj_item.entity_class_id(db_map))
-            if self.relationship_class["object_class_ids_to_go"]:
+            db_map = self.entity_class["db_map"]
+            self.entity_class["dimension_ids_to_go"].remove(self._hovered_ent_item.entity_class_id(db_map))
+            if self.entity_class["dimension_ids_to_go"]:
                 # Add hovered as member and keep going, we're not done yet
-                ch_rel_item = self.cross_hairs_items[1]
-                ch_arc_item = CrossHairsArcItem(ch_rel_item, self._hovered_obj_item, self._spine_db_editor._ARC_WIDTH)
-                ch_rel_item.refresh_icon()
+                ch_ent_item = self.cross_hairs_items[1]
+                ch_arc_item = CrossHairsArcItem(ch_ent_item, self._hovered_ent_item, self._spine_db_editor._ARC_WIDTH)
+                ch_ent_item.refresh_icon()
                 self.scene().addItem(ch_arc_item)
                 ch_arc_item.apply_zoom(self.zoom_factor)
                 self.cross_hairs_items.append(ch_arc_item)
                 return
             # Here we're done, add the relationships between the hovered and the members
             ch_item, _, *ch_arc_items = self.cross_hairs_items
-            obj_items = [arc_item.obj_item for arc_item in ch_arc_items]
-            obj_items.remove(ch_item)
-            self._spine_db_editor.finalize_relationship(self.relationship_class, self._hovered_obj_item, *obj_items)
+            ent_items = [arc_item.el_item for arc_item in ch_arc_items]
+            ent_items.remove(ch_item)
+            self._spine_db_editor.finalize_connecting_entities(self.entity_class, self._hovered_ent_item, *ent_items)
             self.clear_cross_hairs_items()
 
     def mouseMoveEvent(self, event):
@@ -652,12 +649,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
         scene_pos = self.mapToScene(pos)
         delta = scene_pos - cross_hairs_item.scenePos()
         cross_hairs_item.block_move_by(delta.x(), delta.y())
-        self._hovered_obj_item = None
-        obj_items = [item for item in self.items(pos) if isinstance(item, ObjectItem)]
-        self._hovered_obj_item = next(iter(obj_items), None)
-        if self._hovered_obj_item is not None:
+        self._hovered_ent_item = None
+        ent_items = [
+            item for item in self.items(pos) if isinstance(item, EntityItem) and item is not self.cross_hairs_items[0]
+        ]
+        self._hovered_ent_item = next(iter(ent_items), None)
+        if self._hovered_ent_item is not None:
             if self._cross_hairs_has_valid_target():
-                if len(self.relationship_class["object_class_ids_to_go"]) == 1:
+                if len(self.entity_class["dimension_ids_to_go"]) == 1:
                     self.cross_hairs_items[0].set_check_icon()
                 else:
                     self.cross_hairs_items[0].set_plus_icon()

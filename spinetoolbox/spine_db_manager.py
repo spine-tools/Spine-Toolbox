@@ -620,7 +620,7 @@ class SpineDBManager(QObject):
 
         Args:
             db_map (DiffDatabaseMapping): database map
-            entity_class_id (int): entity class' id
+            entity_class_id (int): entity class id
             for_group (bool): if True, return the group object icon instead
 
         Returns:
@@ -1406,21 +1406,21 @@ class SpineDBManager(QObject):
                 d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
         return d
 
-    def find_cascading_relationship_classes(self, db_map_ids, only_visible=True):
-        """Finds and returns cascading relationship classes for the given object_class ids."""
+    def find_cascading_entity_classes(self, db_map_ids, only_visible=True):
+        """Finds and returns cascading entity classes for the given dimension ids."""
         db_map_cascading_data = dict()
-        for db_map, object_class_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "relationship_class", only_visible=only_visible):
-                if set(item["object_class_id_list"]) & set(object_class_ids):
+        for db_map, dimension_ids in db_map_ids.items():
+            for item in self.get_items(db_map, "entity_class", only_visible=only_visible):
+                if set(item["dimension_id_list"]) & set(dimension_ids):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_relationships(self, db_map_ids, only_visible=True):
-        """Finds and returns cascading relationships for the given object ids."""
+    def find_cascading_entities(self, db_map_ids, only_visible=True):
+        """Finds and returns cascading entities for the given element ids."""
         db_map_cascading_data = dict()
-        for db_map, object_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "relationship", only_visible=only_visible):
-                if set(item["object_id_list"]) & set(object_ids):
+        for db_map, element_ids in db_map_ids.items():
+            for item in self.get_items(db_map, "entity", only_visible=only_visible):
+                if set(item["element_id_list"]) & set(element_ids):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
@@ -1481,7 +1481,7 @@ class SpineDBManager(QObject):
         }
         self.import_data({db_map: data}, command_text="Duplicate scenario")
 
-    def duplicate_object(self, object_data, orig_name, dup_name, db_maps):
+    def duplicate_entity(self, object_data, orig_name, dup_name, db_maps):
         _replace_name = lambda name_list: [name if name != orig_name else dup_name for name in name_list]
         data = self._get_data_for_export(object_data)
         data = {

@@ -607,7 +607,7 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_tool_feature_method_ids(db_map_tool_feat_meth_ids)
         self.export_data(parcel.data)
 
-    def duplicate_object(self, object_item):
+    def duplicate_entity(self, object_item):
         """
         Duplicates an object.
 
@@ -623,7 +623,7 @@ class SpineDBEditorBase(QMainWindow):
         parcel = SpineDBParcel(self.db_mngr)
         db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
         parcel.inner_push_object_ids(db_map_obj_ids)
-        self.db_mngr.duplicate_object(parcel.data, orig_name, dup_name, object_item.db_maps)
+        self.db_mngr.duplicate_entity(parcel.data, orig_name, dup_name, object_item.db_maps)
 
     def duplicate_scenario(self, db_map, scen_id):
         """
@@ -971,12 +971,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.load_db_urls(db_url_codenames)
 
     def emit_pinned_values_updated(self):
-        pinned_values = [
-            value
-            for view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value)
-            for value in view.pinned_values
-        ]
-        self.pinned_values_updated.emit(pinned_values)
+        self.pinned_values_updated.emit(self.ui.tableView_parameter_value.pinned_values)
 
     def connect_signals(self):
         super().connect_signals()

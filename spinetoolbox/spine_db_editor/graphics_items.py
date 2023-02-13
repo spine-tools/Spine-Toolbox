@@ -15,7 +15,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide6.QtCore import Qt, Signal, Slot, QLineF
+from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -78,7 +78,7 @@ class EntityItem(QGraphicsRectItem):
         self._db_map_ids = db_map_ids
         self._removed_db_map_ids = ()
         self.arc_items = []
-        self._extent = extent
+        self._extent = (0.5 if self.has_dimensions else 1) * extent
         self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
         self.setPen(Qt.NoPen)
         self._svg_item = QGraphicsSvgItem(self)
@@ -99,31 +99,15 @@ class EntityItem(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.ArrowCursor)
         self.setToolTip(self._make_tool_tip())
-        self._db_map_relationship_class_lists = {}
-        self.label_item = ObjectLabelItem(self)
+        self._db_map_entity_class_lists = {}
+        self.label_item = EntityLabelItem(self)
+        self.label_item.setVisible(not self.has_dimensions)
         self.setZValue(0.5)
         self.update_name()
 
-    def _make_tool_tip(self):
-        if not self.first_id:
-            return None
-        return (
-            f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
-            f"""{self.entity_name}<br>"""
-            f"""{DB_ITEM_SEPARATOR.join(self.element_name_list)}<br>"""
-            f"""@{self.display_database}</p></html>"""
-        )
-
-    def default_parameter_data(self):
-        """Return data to put as default in a parameter table when this item is selected."""
-        if not self.db_map_ids:
-            return {}
-        return dict(
-            entity_class_name=self.entity_class_name,
-            entity_name=self.entity_name,
-            element_name_list=DB_ITEM_SEPARATOR.join(self.element_name_list),
-            database=self.first_db_map.codename,
-        )
+    @property
+    def has_dimensions(self):
+        return self.element_id_list(self.first_db_map)
 
     @property
     def db_map_ids(self):
@@ -190,11 +174,11 @@ class EntityItem(QGraphicsRectItem):
         return dict(self.db_map_ids).get(db_map)
 
     def db_map_data(self, db_map):
-        # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
+        # NOTE: Needed by EditEntitiesDialog
         return self.db_mngr.get_item(db_map, "entity", self.entity_id(db_map))
 
     def db_map_id(self, db_map):
-        # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
+        # NOTE: Needed by EditEntitiesDialog
         return self.entity_id(db_map)
 
     def db_representation(self, db_map):
@@ -211,6 +195,27 @@ class EntityItem(QGraphicsRectItem):
     def moveBy(self, dx, dy):
         super().moveBy(dx, dy)
         self.update_arcs_line()
+
+    def _make_tool_tip(self):
+        if not self.first_id:
+            return None
+        return (
+            f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
+            f"""{self.entity_name}<br>"""
+            f"""{DB_ITEM_SEPARATOR.join(self.element_name_list)}<br>"""
+            f"""@{self.display_database}</p></html>"""
+        )
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        if not self.db_map_ids:
+            return {}
+        return dict(
+            entity_class_name=self.entity_class_name,
+            entity_name=self.entity_name,
+            element_name_list=DB_ITEM_SEPARATOR.join(self.element_name_list),
+            database=self.first_db_map.codename,
+        )
 
     def _init_bg(self):
         if not self.element_id_list(self.first_db_map):
@@ -294,17 +299,17 @@ class EntityItem(QGraphicsRectItem):
 
     def block_move_by(self, dx, dy):
         self.moveBy(dx, dy)
-        rel_items_follow = self._spine_db_editor.qsettings.value(
+        ent_items_follow = self._spine_db_editor.qsettings.value(
             "appSettings/relationshipItemsFollow", defaultValue="true"
         )
-        if rel_items_follow == "false":
+        if ent_items_follow == "false":
             return
-        rel_items = {arc_item.rel_item for arc_item in self.arc_items}
-        for rel_item in rel_items:
-            if rel_item.isSelected():
+        ent_items = {arc_item.ent_item for arc_item in self.arc_items}
+        for ent_item in ent_items:
+            if ent_item.isSelected():
                 # The item will move with the selection, so no need to follow the objects
                 continue
-            rel_item.follow_object_by(dx, dy)
+            ent_item.follow_element_by(dx, dy)
 
     def mouseMoveEvent(self, event):
         """Moves the item and all connected arcs.
@@ -351,7 +356,7 @@ class EntityItem(QGraphicsRectItem):
         """
         super().setVisible(on)
         for arc_item in self.arc_items:
-            arc_item.setVisible(arc_item.obj_item.isVisible() and arc_item.rel_item.isVisible())
+            arc_item.setVisible(arc_item.el_item.isVisible() and arc_item.ent_item.isVisible())
 
     def _make_menu(self):
         menu = self._spine_db_editor.ui.graphicsView.make_items_menu()
@@ -359,9 +364,9 @@ class EntityItem(QGraphicsRectItem):
         expand_menu.triggered.connect(self._expand)
         collapse_menu = QMenu("Collapse", menu)
         collapse_menu.triggered.connect(self._collapse)
-        connect_entities_menu = QMenu("Add relationships", menu)
-        connect_entities_menu.triggered.connect(self._start_relationship)
-        self._refresh_relationship_classes()
+        connect_entities_menu = QMenu("Connect entities", menu)
+        connect_entities_menu.triggered.connect(self._start_connecting_entities)
+        self._refresh_entity_class_lists()
         self._populate_expand_collapse_menu(expand_menu)
         self._populate_expand_collapse_menu(collapse_menu)
         self._populate_connect_entities_menu(connect_entities_menu)
@@ -399,8 +404,8 @@ class EntityItem(QGraphicsRectItem):
                 self._removed_db_map_ids = tuple(x for x in self._removed_db_map_ids if x != db_map_id)
         self.setToolTip(self._make_tool_tip())
 
-    def follow_object_by(self, dx, dy):
-        factor = 1.0 / len(set(arc.obj_item for arc in self.arc_items))
+    def follow_element_by(self, dx, dy):
+        factor = 1.0 / len(set(arc.el_item for arc in self.arc_items))
         self.moveBy(factor * dx, factor * dy)
 
     def _rotate_svg_item(self):
@@ -408,7 +413,7 @@ class EntityItem(QGraphicsRectItem):
             self._svg_item.setRotation(0)
             return
         arc1, arc2 = self.arc_items  # pylint: disable=unbalanced-tuple-unpacking
-        obj1, obj2 = arc1.obj_item, arc2.obj_item
+        obj1, obj2 = arc1.el_item, arc2.el_item
         line = QLineF(obj1.pos(), obj2.pos())
         self._svg_item.setRotation(-line.angle())
 
@@ -430,28 +435,28 @@ class EntityItem(QGraphicsRectItem):
         connect_entities_menu = QMenu(self._spine_db_editor)
         title = TitleWidgetAction("Connect entities", self._spine_db_editor)
         connect_entities_menu.addAction(title)
-        connect_entities_menu.triggered.connect(self._start_relationship)
-        self._refresh_relationship_classes()
+        connect_entities_menu.triggered.connect(self._start_connecting_entities)
+        self._refresh_entity_class_lists()
         self._populate_connect_entities_menu(connect_entities_menu)
         connect_entities_menu.popup(e.screenPos())
 
     def _duplicate(self):
-        self._spine_db_editor.duplicate_object(self)
+        self._spine_db_editor.duplicate_entity(self)
 
-    def _refresh_relationship_classes(self):
-        self._db_map_relationship_class_lists.clear()
-        db_map_object_ids = {db_map: {id_} for db_map, id_ in self.db_map_ids}
-        relationship_ids_per_class = {}
-        for db_map, rels in self.db_mngr.find_cascading_relationships(db_map_object_ids).items():
-            for rel in rels:
-                relationship_ids_per_class.setdefault((db_map, rel["class_id"]), set()).add(rel["id"])
-        db_map_object_class_ids = {db_map: {self.entity_class_id(db_map)} for db_map in self.db_maps}
-        for db_map, rel_clss in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).items():
-            for rel_cls in rel_clss:
-                rel_cls = rel_cls.copy()
-                rel_cls["object_class_id_list"] = list(rel_cls["object_class_id_list"])
-                rel_cls["relationship_ids"] = relationship_ids_per_class.get((db_map, rel_cls["id"]), set())
-                self._db_map_relationship_class_lists.setdefault(rel_cls["name"], []).append((db_map, rel_cls))
+    def _refresh_entity_class_lists(self):
+        self._db_map_entity_class_lists.clear()
+        db_map_entity_ids = {db_map: {id_} for db_map, id_ in self.db_map_ids}
+        entity_ids_per_class = {}
+        for db_map, ents in self.db_mngr.find_cascading_entities(db_map_entity_ids).items():
+            for ent in ents:
+                entity_ids_per_class.setdefault((db_map, ent["class_id"]), set()).add(ent["id"])
+        db_map_entity_class_ids = {db_map: {self.entity_class_id(db_map)} for db_map in self.db_maps}
+        for db_map, ent_clss in self.db_mngr.find_cascading_entity_classes(db_map_entity_class_ids).items():
+            for ent_cls in ent_clss:
+                ent_cls = ent_cls.copy()
+                ent_cls["dimension_id_list"] = list(ent_cls["dimension_id_list"])
+                ent_cls["entity_ids"] = entity_ids_per_class.get((db_map, ent_cls["id"]), set())
+                self._db_map_entity_class_lists.setdefault(ent_cls["name"], []).append((db_map, ent_cls))
 
     def _populate_expand_collapse_menu(self, menu):
         """
@@ -460,17 +465,17 @@ class EntityItem(QGraphicsRectItem):
         Args:
             menu (QMenu)
         """
-        if not self._db_map_relationship_class_lists:
+        if not self._db_map_entity_class_lists:
             menu.setEnabled(False)
             return
         menu.setEnabled(True)
         menu.addAction("All")
         menu.addSeparator()
-        for name, db_map_rel_cls_lst in sorted(self._db_map_relationship_class_lists.items()):
-            db_map, rel_cls = next(iter(db_map_rel_cls_lst))
-            icon = self.db_mngr.entity_class_icon(db_map, rel_cls["id"])
+        for name, db_map_ent_cls_lst in sorted(self._db_map_entity_class_lists.items()):
+            db_map, ent_cls = next(iter(db_map_ent_cls_lst))
+            icon = self.db_mngr.entity_class_icon(db_map, ent_cls["id"])
             menu.addAction(icon, name).setEnabled(
-                any(rel_cls["relationship_ids"] for (db_map, rel_cls) in db_map_rel_cls_lst)
+                any(rel_cls["entity_ids"] for (db_map, rel_cls) in db_map_ent_cls_lst)
             )
 
     def _populate_connect_entities_menu(self, menu):
@@ -487,69 +492,69 @@ class EntityItem(QGraphicsRectItem):
             for db_map in item.db_maps:
                 entity_class_ids_in_graph.setdefault(db_map, set()).add(item.entity_class_id(db_map))
         action_name_icon_enabled = []
-        for name, db_map_rel_cls_lst in self._db_map_relationship_class_lists.items():
-            for db_map, rel_cls in db_map_rel_cls_lst:
-                icon = self.db_mngr.entity_class_icon(db_map, "entity_class", rel_cls["id"])
+        for name, db_map_ent_cls_lst in self._db_map_entity_class_lists.items():
+            for db_map, ent_cls in db_map_ent_cls_lst:
+                icon = self.db_mngr.entity_class_icon(db_map, ent_cls["id"])
                 action_name = name + "@" + db_map.codename
-                enabled = set(rel_cls["dimension_id_list"]) <= entity_class_ids_in_graph.get(db_map, set())
+                enabled = set(ent_cls["dimension_id_list"]) <= entity_class_ids_in_graph.get(db_map, set())
                 action_name_icon_enabled.append((action_name, icon, enabled))
         for action_name, icon, enabled in sorted(action_name_icon_enabled):
             menu.addAction(icon, action_name).setEnabled(enabled)
-        menu.setEnabled(bool(self._db_map_relationship_class_lists))
+        menu.setEnabled(bool(self._db_map_entity_class_lists))
 
-    def _get_db_map_relationship_ids_to_expand_or_collapse(self, action):
-        db_map_rel_clss = self._db_map_relationship_class_lists.get(action.text())
-        if db_map_rel_clss is not None:
-            return {(db_map, id_) for db_map, rel_cls in db_map_rel_clss for id_ in rel_cls["relationship_ids"]}
+    def _get_db_map_entity_ids_to_expand_or_collapse(self, action):
+        db_map_ent_clss = self._db_map_entity_class_lists.get(action.text())
+        if db_map_ent_clss is not None:
+            return {(db_map, id_) for db_map, ent_cls in db_map_ent_clss for id_ in ent_cls["entity_ids"]}
         return {
             (db_map, id_)
-            for class_list in self._db_map_relationship_class_lists.values()
-            for db_map, rel_cls in class_list
-            for id_ in rel_cls["relationship_ids"]
+            for class_list in self._db_map_entity_class_lists.values()
+            for db_map, ent_cls in class_list
+            for id_ in ent_cls["entity_ids"]
         }
 
     @Slot(QAction)
     def _expand(self, action):
-        db_map_relationship_ids = self._get_db_map_relationship_ids_to_expand_or_collapse(action)
-        self._spine_db_editor.added_db_map_relationship_ids.update(db_map_relationship_ids)
+        db_map_entity_ids = self._get_db_map_entity_ids_to_expand_or_collapse(action)
+        self._spine_db_editor.added_db_map_entity_ids.update(db_map_entity_ids)
         self._spine_db_editor.build_graph(persistent=True)
 
     @Slot(QAction)
     def _collapse(self, action):
-        db_map_relationship_ids = self._get_db_map_relationship_ids_to_expand_or_collapse(action)
-        self._spine_db_editor.added_db_map_relationship_ids.difference_update(db_map_relationship_ids)
+        db_map_entity_ids = self._get_db_map_entity_ids_to_expand_or_collapse(action)
+        self._spine_db_editor.added_db_map_entity_ids.difference_update(db_map_entity_ids)
         self._spine_db_editor.build_graph(persistent=True)
 
     @Slot(QAction)
-    def _start_relationship(self, action):
+    def _start_connecting_entities(self, action):
         class_name, db_name = action.text().split("@")
-        db_map_rel_cls_lst = self._db_map_relationship_class_lists[class_name]
-        db_map, rel_cls = next(
-            iter((db_map, rel_cls) for db_map, rel_cls in db_map_rel_cls_lst if db_map.codename == db_name)
+        db_map_ent_cls_lst = self._db_map_entity_class_lists[class_name]
+        db_map, ent_cls = next(
+            iter((db_map, ent_cls) for db_map, ent_cls in db_map_ent_cls_lst if db_map.codename == db_name)
         )
-        self._spine_db_editor.start_relationship(db_map, rel_cls, self)
+        self._spine_db_editor.start_connecting_entities(db_map, ent_cls, self)
 
 
 class ArcItem(QGraphicsPathItem):
     """Connects a two EntityItems."""
 
-    def __init__(self, rel_item, obj_item, width):
+    def __init__(self, ent_item, el_item, width):
         """Initializes item.
 
         Args:
-            rel_item (spinetoolbox.widgets.graph_view_graphics_items.RelationshipItem): relationship item
-            obj_item (spinetoolbox.widgets.graph_view_graphics_items.ObjectItem): object item
+            ent_item (spinetoolbox.widgets.graph_view_graphics_items.EntityItem): entity item
+            el_item (spinetoolbox.widgets.graph_view_graphics_items.EntityItem): element item
             width (float): Preferred line width
         """
         super().__init__()
-        self.rel_item = rel_item
-        self.obj_item = obj_item
+        self.ent_item = ent_item
+        self.el_item = el_item
         self._width = float(width)
         self._pen = self._make_pen()
         self.setPen(self._pen)
         self.setZValue(-2)
-        rel_item.add_arc_item(self)
-        obj_item.add_arc_item(self)
+        ent_item.add_arc_item(self)
+        el_item.add_arc_item(self)
         self.setCursor(Qt.ArrowCursor)
         self.update_line()
 
@@ -567,21 +572,21 @@ class ArcItem(QGraphicsPathItem):
         """Does nothing. This item is not moved the regular way, but follows the EntityItems it connects."""
 
     def update_line(self):
-        overlapping_arcs = [arc for arc in self.rel_item.arc_items if arc.obj_item == self.obj_item]
+        overlapping_arcs = [arc for arc in self.ent_item.arc_items if arc.el_item == self.el_item]
         count = len(overlapping_arcs)
-        path = QPainterPath(self.rel_item.pos())
+        path = QPainterPath(self.ent_item.pos())
         if count == 1:
-            path.lineTo(self.obj_item.pos())
+            path.lineTo(self.el_item.pos())
         else:
             rank = overlapping_arcs.index(self)
-            line = QLineF(self.rel_item.pos(), self.obj_item.pos())
+            line = QLineF(self.ent_item.pos(), self.el_item.pos())
             line.setP1(line.center())
             line = line.normalVector()
             line.setLength(self._width * count)
             line.setP1(2 * line.p1() - line.p2())
             t = rank / (count - 1)
             ctrl_point = line.pointAt(t)
-            path.quadTo(ctrl_point, self.obj_item.pos())
+            path.quadTo(ctrl_point, self.el_item.pos())
         self.setPath(path)
 
     def mousePressEvent(self, event):
@@ -589,7 +594,7 @@ class ArcItem(QGraphicsPathItem):
         event.accept()
 
     def other_item(self, item):
-        return {self.rel_item: self.obj_item, self.obj_item: self.rel_item}.get(item)
+        return {self.ent_item: self.el_item, self.el_item: self.ent_item}.get(item)
 
     def apply_zoom(self, factor):
         """Applies zoom.
@@ -597,8 +602,7 @@ class ArcItem(QGraphicsPathItem):
         Args:
             factor (float): The zoom factor.
         """
-        if factor < 1:
-            factor = 1
+        factor = max(factor, 1)
         scaled_width = self._width / factor
         self._pen.setWidthF(scaled_width)
         self.setPen(self._pen)
@@ -623,6 +627,9 @@ class CrossHairsItem(EntityItem):
 
     def _make_tool_tip(self):
         return "<p>Click on an object to add it to the relationship.</p>"
+
+    def update_name(self):
+        pass
 
     def refresh_icon(self):
         renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer("\uf05b", 0)
@@ -654,15 +661,15 @@ class CrossHairsItem(EntityItem):
 
     def block_move_by(self, dx, dy):
         self.moveBy(dx, dy)
-        rel_items = {arc_item.rel_item for arc_item in self.arc_items}
-        for rel_item in rel_items:
-            rel_item.follow_object_by(dx, dy)
+        ent_items = {arc_item.ent_item for arc_item in self.arc_items}
+        for ent_item in ent_items:
+            ent_item.follow_element_by(dx, dy)
 
     def contextMenuEvent(self, e):
         e.accept()
 
 
-class CrossHairsRelationshipItem(EntityItem):
+class CrossHairsEntityItem(EntityItem):
     """Represents the relationship that's being created using the CrossHairsItem."""
 
     def __init__(self, *args, **kwargs):
@@ -672,15 +679,16 @@ class CrossHairsRelationshipItem(EntityItem):
     def _make_tool_tip(self):
         return None
 
+    def update_name(self):
+        pass
+
     def refresh_icon(self):
         """Refreshes the icon."""
-        obj_items = [arc_item.obj_item for arc_item in self.arc_items]
-        object_class_name_list = tuple(
-            obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
+        el_items = [arc_item.el_item for arc_item in self.arc_items]
+        dimension_name_list = tuple(
+            el_item.entity_class_name for el_item in el_items if not isinstance(el_item, CrossHairsItem)
         )
-        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).relationship_class_renderer(
-            None, object_class_name_list
-        )
+        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).multi_class_renderer(dimension_name_list)
         self._set_renderer(renderer)
 
     def contextMenuEvent(self, e):
@@ -688,7 +696,7 @@ class CrossHairsRelationshipItem(EntityItem):
 
 
 class CrossHairsArcItem(ArcItem):
-    """Connects a CrossHairsRelationshipItem with the CrossHairsItem,
+    """Connects a CrossHairsEntityItem with the CrossHairsItem,
     and with all the ObjectItem's in the relationship so far.
     """
 
@@ -701,7 +709,7 @@ class CrossHairsArcItem(ArcItem):
         return pen
 
 
-class ObjectLabelItem(QGraphicsTextItem):
+class EntityLabelItem(QGraphicsTextItem):
     """Provides a label for ObjectItem's."""
 
     entity_name_edited = Signal(str)
@@ -725,6 +733,11 @@ class ObjectLabelItem(QGraphicsTextItem):
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
+
+    def boundingRect(self):
+        if self.entity_item.has_dimensions:
+            return QRectF()
+        return super().boundingRect()
 
     def setPlainText(self, text):
         """Set texts and resets position.

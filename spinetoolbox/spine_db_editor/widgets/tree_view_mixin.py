@@ -17,21 +17,13 @@ Contains the TreeViewMixin class.
 """
 from PySide6.QtCore import Slot
 from .add_items_dialogs import (
-    AddObjectClassesDialog,
-    AddObjectsDialog,
-    AddRelationshipClassesDialog,
-    AddRelationshipsDialog,
-    AddObjectGroupDialog,
-    ManageRelationshipsDialog,
+    AddEntityClassesDialog,
+    AddEntitiesDialog,
+    AddEntityGroupDialog,
+    ManageElementsDialog,
     ManageMembersDialog,
 )
-from .edit_or_remove_items_dialogs import (
-    EditObjectClassesDialog,
-    EditObjectsDialog,
-    EditRelationshipClassesDialog,
-    EditRelationshipsDialog,
-    RemoveEntitiesDialog,
-)
+from .edit_or_remove_items_dialogs import EditEntityClassesDialog, EditEntitiesDialog, RemoveEntitiesDialog
 from ..mvcmodels.tool_feature_model import ToolFeatureModel
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.alternative_scenario_model import AlternativeScenarioModel
@@ -121,81 +113,55 @@ class TreeViewMixin:
         parcel.full_push_relationship_ids(db_map_rel_ids)
         self.export_data(parcel.data)
 
-    def show_add_object_classes_form(self):
-        """Shows dialog to add new object classes."""
-        dialog = AddObjectClassesDialog(self, self.db_mngr, *self.db_maps)
+    def show_add_entity_classes_form(self, parent_item):
+        """Shows dialog to add new entity classes."""
+        dialog = AddEntityClassesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_objects_form(self, parent_item):
-        """Shows dialog to add new objects."""
-        dialog = AddObjectsDialog(self, parent_item, self.db_mngr, *self.db_maps)
+    def show_add_entities_form(self, parent_item):
+        """Shows dialog to add new entities."""
+        dialog = AddEntitiesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_object_group_form(self, object_class_item):
-        """Shows dialog to add new object group."""
-        dialog = AddObjectGroupDialog(self, object_class_item, self.db_mngr, *self.db_maps)
+    def show_add_entity_group_form(self, entity_class_item):
+        """Shows dialog to add new entity group."""
+        dialog = AddEntityGroupDialog(self, entity_class_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_manage_members_form(self, object_item):
-        """Shows dialog to manage an object group."""
-        dialog = ManageMembersDialog(self, object_item, self.db_mngr, *self.db_maps)
+    def show_manage_members_form(self, entity_item):
+        """Shows dialog to manage an entity group."""
+        dialog = ManageMembersDialog(self, entity_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_relationship_classes_form(self, parent_item):
-        """Shows dialog to add new relationship_class."""
-        dialog = AddRelationshipClassesDialog(self, parent_item, self.db_mngr, *self.db_maps)
-        dialog.show()
-
-    def show_add_relationships_form(self, parent_item):
-        """Shows dialog to add new relationships."""
-        dialog = AddRelationshipsDialog(self, parent_item, self.db_mngr, *self.db_maps)
-        dialog.show()
-
-    def show_manage_relationships_form(self, parent_item):
-        dialog = ManageRelationshipsDialog(self, parent_item, self.db_mngr, *self.db_maps)
+    def show_manage_elements_form(self, parent_item):
+        dialog = ManageElementsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def edit_entity_tree_items(self, selected_indexes):
         """Starts editing given indexes."""
-        obj_cls_items = {ind.internalPointer() for ind in selected_indexes.get("object_class", {})}
-        obj_items = {ind.internalPointer() for ind in selected_indexes.get("object", {})}
-        rel_cls_items = {ind.internalPointer() for ind in selected_indexes.get("relationship_class", {})}
-        rel_items = {ind.internalPointer() for ind in selected_indexes.get("relationship", {})}
-        self.show_edit_object_classes_form(obj_cls_items)
-        self.show_edit_objects_form(obj_items)
-        self.show_edit_relationship_classes_form(rel_cls_items)
-        self.show_edit_relationships_form(rel_items)
+        ent_cls_items = {ind.internalPointer() for ind in selected_indexes.get("entity_class", {})}
+        ent_items = {ind.internalPointer() for ind in selected_indexes.get("entity", {})}
+        self.show_edit_entity_classes_form(ent_cls_items)
+        self.show_edit_entities_form(ent_items)
 
-    def show_edit_object_classes_form(self, items):
+    def show_edit_entity_classes_form(self, items):
         if not items:
             return
-        dialog = EditObjectClassesDialog(self, self.db_mngr, items)
+        dialog = EditEntityClassesDialog(self, self.db_mngr, items)
         dialog.show()
 
-    def show_edit_objects_form(self, items):
-        if not items:
-            return
-        dialog = EditObjectsDialog(self, self.db_mngr, items)
-        dialog.show()
-
-    def show_edit_relationship_classes_form(self, items):
-        if not items:
-            return
-        dialog = EditRelationshipClassesDialog(self, self.db_mngr, items)
-        dialog.show()
-
-    def show_edit_relationships_form(self, items):
+    def show_edit_entities_form(self, items):
         if not items:
             return
         items_by_class = {}
         for item in items:
             data = item.db_map_data(item.first_db_map)
-            relationship_class_name = data["class_name"]
-            object_class_name_list = data["object_class_name_list"]
-            class_key = (relationship_class_name, object_class_name_list)
+            class_name = data["class_name"]
+            dimension_name_list = data["dimension_name_list"]
+            class_key = (class_name, dimension_name_list)
             items_by_class.setdefault(class_key, set()).add(item)
         for class_key, classed_items in items_by_class.items():
-            dialog = EditRelationshipsDialog(self, self.db_mngr, classed_items, class_key)
+            dialog = EditEntitiesDialog(self, self.db_mngr, classed_items, class_key)
             dialog.show()
 
     @Slot(dict)

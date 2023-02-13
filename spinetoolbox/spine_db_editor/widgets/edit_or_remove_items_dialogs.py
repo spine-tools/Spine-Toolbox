@@ -18,17 +18,11 @@ Classes for custom QDialogs to edit items in databases.
 
 from PySide6.QtCore import Slot
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from .custom_delegates import (
-    ManageObjectClassesDelegate,
-    ManageObjectsDelegate,
-    ManageRelationshipClassesDelegate,
-    ManageRelationshipsDelegate,
-    RemoveEntitiesDelegate,
-)
+from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate, RemoveEntitiesDelegate
 from .manage_items_dialogs import (
     ShowIconColorEditorMixin,
-    GetObjectsMixin,
-    GetRelationshipClassesMixin,
+    GetEntitiesMixin,
+    GetEntityClassesMixin,
     ManageItemsDialog,
 )
 from ...helpers import default_icon_id
@@ -61,9 +55,9 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit object classes")
         self.model = MinimalTableModel(self)
-        self.model.set_horizontal_header_labels(['object_class name', 'description', 'display icon', 'databases'])
+        self.model.set_horizontal_header_labels(['entity class name', 'description', 'display icon', 'databases'])
         self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
+        self.table_view.setItemDelegate(ManageEntityClassesDelegate(self))
         self.connect_signals()
         self.orig_data = list()
         self.default_display_icon = default_icon_id()
@@ -190,8 +184,8 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
         super().accept()
 
 
-class EditRelationshipClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog):
-    """A dialog to query user's preferences for updating relationship classes."""
+class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog):
+    """A dialog to query user's preferences for updating entity classes."""
 
     def __init__(self, parent, db_mngr, selected):
         """Init class.
@@ -199,15 +193,15 @@ class EditRelationshipClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsD
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
-            selected (set): set of RelationshipClassItem instances to edit
+            selected (set): set of EntityClassItem instances to edit
         """
         super().__init__(parent, db_mngr)
-        self.setWindowTitle("Edit relationship classes")
+        self.setWindowTitle("Edit entity classes")
         self.model = MinimalTableModel(self)
         self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(ManageRelationshipClassesDelegate(self))
+        self.table_view.setItemDelegate(ManageEntityClassesDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['relationship_class name', 'description', 'display icon', 'databases'])
+        self.model.set_horizontal_header_labels(['entity class name', 'description', 'display icon', 'databases'])
         self.orig_data = list()
         model_data = list()
         for item in selected:
@@ -258,12 +252,12 @@ class EditRelationshipClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsD
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to update")
             return
-        self.db_mngr.update_relationship_classes(db_map_data)
+        self.db_mngr.update_entity_classes(db_map_data)
         super().accept()
 
 
-class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, EditOrRemoveItemsDialog):
-    """A dialog to query user's preferences for updating relationships."""
+class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveItemsDialog):
+    """A dialog to query user's preferences for updating entities."""
 
     def __init__(self, parent, db_mngr, selected, class_key):
         """Init class.
@@ -271,18 +265,18 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
-            selected (set): set of RelationshipItem instances to edit
-            class_key (tuple): (class_name, object_class_name_list) for identifying the relationship_class
+            selected (set): set of EntityItem instances to edit
+            class_key (tuple): (class_name, dimension_name_list) for identifying the entity class
         """
         super().__init__(parent, db_mngr)
-        self.setWindowTitle("Edit relationships")
+        self.setWindowTitle("Edit entities")
         self.model = MinimalTableModel(self)
         self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(ManageRelationshipsDelegate(self))
+        self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
         self.connect_signals()
-        self.class_name, self.object_class_name_list = class_key
+        self.class_name, self.dimension_name_list = class_key
         self.model.set_horizontal_header_labels(
-            [x + ' name' for x in self.object_class_name_list] + ['relationship name', 'databases']
+            [x + ' name' for x in self.dimension_name_list] + ['entity name', 'databases']
         )
         self.orig_data = list()
         model_data = list()
@@ -290,26 +284,26 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
         for item in selected:
             self.db_maps.update(item.db_maps)
             data = item.db_map_data(item.first_db_map)
-            row_data = [*item.object_name_list, data["name"]]
+            row_data = [*item.element_name_list, data["name"]]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
             self.items.append(item)
         self.model.reset_model(model_data)
         self.keyed_db_maps = {x.codename: x for x in self.db_maps}
-        self.db_map_obj_lookup = self.make_db_map_obj_lookup()
-        self.db_map_rel_cls_lookup = self.make_db_map_rel_cls_lookup()
+        self.db_map_ent_lookup = self.make_db_map_ent_lookup()
+        self.db_map_ent_cls_lookup = self.make_db_map_ent_cls_lookup()
 
     @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
-        name_column = self.model.horizontal_header_labels().index("relationship name")
+        name_column = self.model.horizontal_header_labels().index("entity name")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount()):
             row_data = self.model.row_data(i)
             item = self.items[i]
-            object_name_list = [row_data[column] for column in range(name_column)]
+            element_name_list = [row_data[column] for column in range(name_column)]
             name = row_data[name_column]
             db_names = row_data[db_column]
             if db_names is None:
@@ -325,40 +319,40 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
                 self.parent().msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
-            if [*object_name_list, name] == orig_row:
+            if [*element_name_list, name] == orig_row:
                 continue
             pre_db_item = {'name': name}
             for db_map in db_maps:
                 id_ = item.db_map_id(db_map)
-                # Find object_class_id_list
-                relationship_classes = self.db_map_rel_cls_lookup[db_map]
-                if (self.class_name, self.object_class_name_list) not in relationship_classes:
+                # Find dimension_id_list
+                entity_classes = self.db_map_ent_cls_lookup[db_map]
+                if (self.class_name, self.dimension_name_list) not in entity_classes:
                     self.parent().msg_error.emit(
-                        "Invalid relationship_class '{}' for db '{}' at row {}".format(
+                        "Invalid entity class '{}' for db '{}' at row {}".format(
                             self.class_name, db_map.codename, i + 1
                         )
                     )
                     return
-                rel_cls = relationship_classes[self.class_name, self.object_class_name_list]
-                object_class_id_list = rel_cls["object_class_id_list"]
-                objects = self.db_map_obj_lookup[db_map]
-                # Find object_id_list
-                object_id_list = list()
-                for object_class_id, object_name in zip(object_class_id_list, object_name_list):
-                    if (object_class_id, object_name) not in objects:
+                ent_cls = entity_classes[self.class_name, self.dimension_name_list]
+                dimension_id_list = ent_cls["dimension_id_list"]
+                entities = self.db_map_ent_lookup[db_map]
+                # Find element_id_list
+                element_id_list = list()
+                for dimension_id, element_name in zip(dimension_id_list, element_name_list):
+                    if (dimension_id, element_name) not in entities:
                         self.parent().msg_error.emit(
-                            "Invalid object '{}' for db '{}' at row {}".format(object_name, db_map.codename, i + 1)
+                            "Invalid entity '{}' for db '{}' at row {}".format(element_name, db_map.codename, i + 1)
                         )
                         return
-                    object_id = objects[object_class_id, object_name]["id"]
-                    object_id_list.append(object_id)
+                    element_id = entities[dimension_id, element_name]["id"]
+                    element_id_list.append(element_id)
                 db_item = pre_db_item.copy()
-                db_item.update({'id': id_, 'object_id_list': object_id_list, 'name': name})
+                db_item.update({'id': id_, 'element_id_list': element_id_list, 'name': name})
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to update")
             return
-        self.db_mngr.update_relationships(db_map_data)
+        self.db_mngr.update_entities(db_map_data)
         super().accept()
 
 

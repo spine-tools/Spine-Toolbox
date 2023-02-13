@@ -205,13 +205,13 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
         db_map_names = dict()
         for db_map, items in db_map_data.items():
             for item in items:
-                entity_class_name = item.get(self.entity_class_name_key)
+                entity_class_name = item.get("entity_class_name")
                 db_map_names.setdefault(db_map, set()).add(entity_class_name)
         # Build lookup dict
         self._db_map_ent_cls_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", name, only_visible=False)
+                item = self.db_mngr.get_item_by_field(db_map, "entity_class", "name", name, only_visible=False)
                 if item:
                     self._db_map_ent_cls_lookup.setdefault(db_map, {})[name] = item
 
@@ -225,11 +225,11 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
         Returns:
             list: error log
         """
-        entity_class_name = item.pop(self.entity_class_name_key, None)
+        entity_class_name = item.pop("entity_class_name", None)
         entity_class = self._db_map_ent_cls_lookup.get(db_map, {}).get(entity_class_name)
         if not entity_class:
             return [f"Unknown entity_class {entity_class_name}"] if entity_class_name else []
-        item[self.entity_class_id_key] = entity_class.get("id")
+        item["entity_class_id"] = entity_class.get("id")
         return []
 
     def _convert_to_db(self, item, db_map):
@@ -251,8 +251,6 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
 class FillInEntityIdsMixin(ConvertToDBMixin):
     """Fills in entity ids."""
 
-    _add_entities_on_the_fly = False
-
     def __init__(self, *args, **kwargs):
         """Initializes lookup dicts."""
         super().__init__(*args, **kwargs)
@@ -266,18 +264,20 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         """
         super().build_lookup_dictionary(db_map_data)
         # Group data by name
-        db_map_names = dict()
+        db_map_keys = dict()
         for db_map, items in db_map_data.items():
             for item in items:
-                name = item.get(self.entity_name_key)
-                db_map_names.setdefault(db_map, set()).add(name)
+                key = (item.get("name"), item.get("element_name_list"))
+                db_map_keys.setdefault(db_map, set()).add(key)
         # Build lookup dict
         self._db_map_ent_lookup.clear()
-        for db_map, names in db_map_names.items():
-            for name in names:
-                items = self.db_mngr.get_items_by_field(
-                    db_map, self.entity_type, self.entity_name_key_in_cache, name, only_visible=False
-                )
+        for db_map, keys in db_map_keys.items():
+            for (name, element_name_list) in keys:
+                items = [
+                    x
+                    for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)
+                    if x["name"] == name and x["element_name_list"] == element_name_list
+                ]
                 if items:
                     self._db_map_ent_lookup.setdefault(db_map, {})[name] = items
 
@@ -292,10 +292,10 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         Returns:
             list: error log
         """
-        name = item.pop(self.entity_name_key, None)
-        items = self._db_map_ent_lookup.get(db_map, {}).get(name)
+        name, element_name_list = item.pop("name", None), item.pop("element_name_list", None)
+        items = self._db_map_ent_lookup.get(db_map, {}).get((name, element_name_list))
         if not items:
-            return [f"Unknown entity {name}"] if name and not self._add_entities_on_the_fly else []
+            return [f"Unknown entity {name} with elements {element_name_list}"] if name or element_name_list else []
         item["entity_ids"] = {x["class_id"]: x["id"] for x in items}
         return []
 
@@ -433,7 +433,7 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
                 db_map, self.entity_class_type, entity_class_id, only_visible=False
             )["name"]
             # TODO: Try to find a better place for this, and emit dataChanged
-            self._main_data[row][self.header.index(self.entity_class_name_key)] = entity_class_name
+            self._main_data[row][self.header.index("entity_class_name")] = entity_class_name
         # At this point we're sure the entity_class_id is there
         entity_class_id = item[self.entity_class_id_key]
         entity_id = entity_ids.get(entity_class_id)
@@ -484,7 +484,7 @@ class ImposeEntityClassIdMixin(ConvertToDBMixin):
         return []
 
 
-class MakeRelationshipOnTheFlyMixin:
+class MakeEntityOnTheFlyMixin:
     """Makes relationships on the fly."""
 
     def __init__(self, *args, **kwargs):
@@ -536,7 +536,7 @@ class MakeRelationshipOnTheFlyMixin:
             for db_map in self._db_map_obj_lookup.keys() | self._db_map_rel_cls_lookup.keys()
         }
 
-    def _make_relationship_on_the_fly(self, item, db_map):
+    def _make_entity_on_the_fly(self, item, db_map):
         """Returns a database relationship item (id-based) from the given model parameter_value item (name-based).
 
         Args:

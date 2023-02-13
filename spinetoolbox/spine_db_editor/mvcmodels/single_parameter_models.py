@@ -22,7 +22,7 @@ from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
     FillInParameterNameMixin,
     FillInValueListIdMixin,
-    MakeRelationshipOnTheFlyMixin,
+    MakeEntityOnTheFlyMixin,
     FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
@@ -329,14 +329,6 @@ class SingleParameterValueMixin(
     def item_type(self):
         return "parameter_value"
 
-    @property
-    def entity_id_key(self):
-        return {"object": "object_id", "relationship": "relationship_id"}[self.entity_type]
-
-    @property
-    def entity_name_key_in_cache(self):
-        return {"object": "name", "relationship": "object_name_list"}[self.entity_type]
-
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
         return tuple(item[k] for k in ("entity_name", "parameter_name", "alternative_name"))
@@ -404,7 +396,7 @@ class SingleParameterDefinitionModel(SingleParameterDefinitionMixin, SingleParam
     """A parameter_definition model for a single entity_class."""
 
 
-class SingleParameterValueModel(MakeRelationshipOnTheFlyMixin, SingleParameterValueMixin, SingleParameterModel):
+class SingleParameterValueModel(MakeEntityOnTheFlyMixin, SingleParameterValueMixin, SingleParameterModel):
     """A parameter_value model for a single entity_class."""
 
     def update_items_in_db(self, items):  # FIXME
@@ -414,20 +406,20 @@ class SingleParameterValueModel(MakeRelationshipOnTheFlyMixin, SingleParameterVa
             items (list): dictionary-items
         """
         for item in items:
-            item["relationship_class_name"] = self.entity_class_name
+            item["entity_class_name"] = self.entity_class_name
         db_map_data = {self.db_map: items}
         self.build_lookup_dictionaries(db_map_data)
-        db_map_relationships = {}
+        db_map_entities = {}
         db_map_error_log = {}
         for db_map, data in db_map_data.items():
             for item in data:
-                relationship, err = self._make_relationship_on_the_fly(item, db_map)
-                if relationship:
-                    db_map_relationships.setdefault(db_map, []).append(relationship)
+                entity, err = self._make_entity_on_the_fly(item, db_map)
+                if entity:
+                    db_map_entities.setdefault(db_map, []).append(entity)
                 if err:
                     db_map_error_log.setdefault(db_map, []).extend(err)
-        if any(db_map_relationships.values()):
-            self.db_mngr.add_relationships(db_map_relationships)
+        if any(db_map_entities.values()):
+            self.db_mngr.add_entities(db_map_entities)
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
         super().update_items_in_db(items)

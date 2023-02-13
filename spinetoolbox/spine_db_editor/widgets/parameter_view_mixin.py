@@ -134,29 +134,17 @@ class ParameterViewMixin:
             model.set_filter_entity_ids(self._filter_entity_ids)
             model.set_filter_alternative_ids(self._filter_alternative_ids)
 
-    @Slot(dict)
+    @Slot(list)
     def _handle_graph_selection_changed(self, selected_items):
         """Resets filter according to graph selection."""
-        obj_items = selected_items["object"]
-        rel_items = selected_items["relationship"]
-        active_objs = {}
-        for x in obj_items:
+        active_items = {}
+        for x in selected_items:
             for db_map in x.db_maps:
-                active_objs.setdefault(db_map, []).append(x.db_representation(db_map))
-        cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr.db_map_ids(active_objs))
-        active_rels = {}
-        for x in rel_items:
-            for db_map in x.db_maps:
-                active_rels.setdefault(db_map, []).append(x.db_representation(db_map))
-        for db_map, rels in cascading_rels.items():
-            active_rels.setdefault(db_map, []).extend(rels)
+                active_items.setdefault(db_map, []).append(x.db_representation(db_map))
         self._filter_class_ids = {}
-        for db_map, items in active_objs.items():
+        for db_map, items in active_items.items():
             self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        for db_map, items in active_rels.items():
-            self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_objs)
-        self._filter_entity_ids.update(self.db_mngr.db_map_class_ids(active_rels))
+        self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
         self._reset_filters()
 
     @Slot(dict)

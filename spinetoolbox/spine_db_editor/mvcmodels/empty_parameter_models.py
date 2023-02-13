@@ -19,7 +19,7 @@ from PySide6.QtCore import Qt
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from .parameter_mixins import (
     FillInParameterNameMixin,
-    MakeRelationshipOnTheFlyMixin,
+    MakeEntityOnTheFlyMixin,
     InferEntityClassIdMixin,
     FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
@@ -157,10 +157,12 @@ class EmptyParameterDefinitionModel(
     def item_type(self):
         return "parameter_definition"
 
-    @property
-    def entity_class_type(self):
-        """See base class."""
-        raise NotImplementedError()
+    def flags(self, index):
+        """Reimplemented to make the dimension_name_list column non-editable."""
+        flags = super().flags(index)
+        if self.header[index.column()] == "dimension_name_list":
+            flags &= ~Qt.ItemIsEditable
+        return flags
 
     def add_items_to_db(self, db_map_data):
         """See base class."""
@@ -181,33 +183,11 @@ class EmptyParameterDefinitionModel(
 
     def _check_item(self, item):
         """Checks if a db item is ready to be inserted."""
-        return self.entity_class_id_key in item and "name" in item
-
-
-class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
-    """An empty object parameter_definition model."""
-
-    @property
-    def entity_class_type(self):
-        return "object_class"
-
-
-class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
-    """An empty relationship parameter_definition model."""
-
-    @property
-    def entity_class_type(self):
-        return "relationship_class"
-
-    def flags(self, index):
-        """Additional hack to make the object_class_name_list column non-editable."""
-        flags = super().flags(index)
-        if self.header[index.column()] == "object_class_name_list":
-            flags &= ~Qt.ItemIsEditable
-        return flags
+        return "entity_class_id" in item and "name" in item
 
 
 class EmptyParameterValueModel(
+    MakeEntityOnTheFlyMixin,
     InferEntityClassIdMixin,
     FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
@@ -221,29 +201,10 @@ class EmptyParameterValueModel(
     def item_type(self):
         return "parameter_value"
 
-    @property
-    def entity_type(self):
-        """Either 'object' or "relationship'."""
-        raise NotImplementedError()
-
-    @property
-    def entity_id_key(self):
-        return {"object": "object_id", "relationship": "relationship_id"}[self.entity_type]
-
-    @property
-    def entity_name_key(self):
-        return {"object": "object_name", "relationship": "object_name_list"}[self.entity_type]
-
-    @property
-    def entity_name_key_in_cache(self):
-        return {"object": "name", "relationship": "object_name_list"}[self.entity_type]
-
-    def _make_unique_id(self, item):
-        """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
-        return (*super()._make_unique_id(item), item.get("alternative_name"))
-
     def add_items_to_db(self, db_map_data):
         """See base class."""
+        # First add whatever is ready.
+        # This will fill the entity_class_name as a side effect
         self.build_lookup_dictionary(db_map_data)
         db_map_param_val = dict()
         db_map_error_log = dict()
@@ -258,78 +219,42 @@ class EmptyParameterValueModel(
             self.db_mngr.add_parameter_values(db_map_param_val)
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
+        # Now we try to add entities on the fly
+        self.build_lookup_dictionaries(db_map_data)
+        db_map_entities = dict()
+        db_map_error_log = dict()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                entity, err = self._make_entity_on_the_fly(item, db_map)
+                if entity:
+                    db_map_entities.setdefault(db_map, []).append(entity)
+                if err:
+                    db_map_error_log.setdefault(db_map, []).extend(err)
+        if any(db_map_entities.values()):
+            self.db_mngr.add_entities(db_map_entities)
+            # Something might have become ready after adding the entity(ies), so we do one more pass
+            super().add_items_to_db(db_map_data)
+        if db_map_error_log:
+            self.db_mngr.error_msg.emit(db_map_error_log)
 
     def _check_item(self, db_map, item):
         """Checks if a db item is ready to be inserted."""
-        return (
-            self.entity_class_id_key in item
-            and self.entity_id_key in item
-            and "parameter_definition_id" in item
-            and "alternative_id" in item
-            and "value" in item
+        return all(
+            key in item
+            for key in ("entity_class_id", "entity_id", "parameter_definition_id", "alternative_id", "value")
         )
 
-
-class EmptyObjectParameterValueModel(EmptyParameterValueModel):
-    """An empty object parameter_value model."""
-
-    @property
-    def entity_class_type(self):
-        return "object_class"
-
-    @property
-    def entity_type(self):
-        return "object"
-
     def _make_unique_id(self, item):
-        return (*super()._make_unique_id(item), item.get("name"))
-
-
-class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyParameterValueModel):
-    """An empty relationship parameter_value model."""
-
-    _add_entities_on_the_fly = True
-
-    @property
-    def entity_class_type(self):
-        return "relationship_class"
-
-    @property
-    def entity_type(self):
-        return "relationship"
-
-    def _make_unique_id(self, item):
-        object_name_list = item.get("object_name_list")
+        element_name_list = item.get("element_name_list")
         return (
             *super()._make_unique_id(item),
-            DB_ITEM_SEPARATOR.join(object_name_list) if object_name_list is not None else None,
+            item.get("name"),
+            DB_ITEM_SEPARATOR.join(element_name_list) if element_name_list is not None else None,
+            item.get("alternative_name"),
         )
 
     def _make_item(self, row):
         item = super()._make_item(row)
-        if item["object_name_list"]:
-            item["object_name_list"] = tuple(item["object_name_list"].split(DB_ITEM_SEPARATOR))
+        if item["element_name_list"]:
+            item["element_name_list"] = tuple(item["element_name_list"].split(DB_ITEM_SEPARATOR))
         return item
-
-    def add_items_to_db(self, db_map_data):
-        """See base class."""
-        # Call the super method to add whatever is ready.
-        # This will fill the relationship_class_name as a side effect
-        super().add_items_to_db(db_map_data)
-        # Now we try to add relationships
-        self.build_lookup_dictionaries(db_map_data)
-        db_map_relationships = dict()
-        db_map_error_log = dict()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                relationship, err = self._make_relationship_on_the_fly(item, db_map)
-                if relationship:
-                    db_map_relationships.setdefault(db_map, []).append(relationship)
-                if err:
-                    db_map_error_log.setdefault(db_map, []).extend(err)
-        if any(db_map_relationships.values()):
-            self.db_mngr.add_relationships(db_map_relationships)
-            # Something might have become ready after adding the relationship(s), so we do one more pass
-            super().add_items_to_db(db_map_data)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)

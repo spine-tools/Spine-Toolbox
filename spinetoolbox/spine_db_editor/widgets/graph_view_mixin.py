@@ -25,9 +25,9 @@ from spinedb_api import from_database
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
 from ...helpers import get_save_file_name_in_last_dir
 from ...fetch_parent import FlexibleFetchParent
-from ..graphics_items import EntityItem, ArcItem, CrossHairsItem, CrossHairsRelationshipItem, CrossHairsArcItem
+from ..graphics_items import EntityItem, ArcItem, CrossHairsItem, CrossHairsEntityItem, CrossHairsArcItem
 from .graph_layout_generator import GraphLayoutGeneratorRunnable, ProgressBarWidget
-from .add_items_dialogs import AddObjectsDialog, AddReadyRelationshipsDialog
+from .add_items_dialogs import AddEntitiesDialog, AddReadyEntitiesDialog
 
 
 class GraphViewMixin:
@@ -53,11 +53,11 @@ class GraphViewMixin:
         self.arc_items = []
         self.selected_tree_inds = {}
         self.db_map_entity_id_sets = []
-        self.src_inds = []
-        self.dst_inds = []
-        self._adding_relationships = False
+        self.entity_inds = []
+        self.element_inds = []
+        self._connecting_entities = False
         self._pos_for_added_objects = None
-        self.added_db_map_relationship_ids = set()
+        self.added_db_map_entity_ids = set()
         self._thread_pool = QThreadPool()
         self.layout_gens = {}
         self._layout_gen_id = None
@@ -145,11 +145,11 @@ class GraphViewMixin:
         new_db_map_id_sets = self.add_db_map_ids_to_items(db_map_data)
         if not new_db_map_id_sets:
             return
-        if self._adding_relationships:
+        if self._connecting_entities:
             for db_map_ids in new_db_map_id_sets:
-                self.added_db_map_relationship_ids.update(db_map_ids)
+                self.added_db_map_entity_ids.update(db_map_ids)
             self.build_graph(persistent=True)
-            self._end_add_relationships()
+            self._end_connect_entities()
         elif self._extending_graph:
             self._extend_graph_timer.start()
 
@@ -212,7 +212,7 @@ class GraphViewMixin:
         """Hides removed entities while saving them into a set.
         This allows entities to be restored in case the user undoes the operation."""
         removed_db_map_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
-        self.added_db_map_relationship_ids -= removed_db_map_ids
+        self.added_db_map_entity_ids -= removed_db_map_ids
         removed_items = set()
         for item in self.ui.graphicsView.items():
             if not isinstance(item, EntityItem):
@@ -243,7 +243,7 @@ class GraphViewMixin:
         super()._handle_tree_selection_changed(selected)
         self._renew_fetch_parents()
         self.selected_tree_inds = selected
-        self.added_db_map_relationship_ids.clear()
+        self.added_db_map_entity_ids.clear()
         self._extending_graph = True
         self.build_graph()
 
@@ -343,7 +343,7 @@ class GraphViewMixin:
     def _update_graph_data(self):
         """Updates data for graph according to selection in trees."""
         db_map_entity_ids = self._get_selected_db_map_entity_ids()
-        db_map_entity_ids.update(self.added_db_map_relationship_ids)
+        db_map_entity_ids.update(self.added_db_map_entity_ids)
         db_map_entities = self._get_db_map_entities_for_graph(db_map_entity_ids)
         pruned_db_map_entity_ids = {
             id_ for ids in self.ui.graphicsView.pruned_db_map_entity_ids.values() for id_ in ids
@@ -374,7 +374,7 @@ class GraphViewMixin:
         if new_db_map_entity_id_sets == self.db_map_entity_id_sets:
             return False
         self.db_map_entity_id_sets = new_db_map_entity_id_sets
-        self._update_src_dst_inds(db_map_element_id_lists)
+        self._update_entity_element_inds(db_map_element_id_lists)
         return True
 
     def _get_entity_key(self, db_map_entity_id):
@@ -385,9 +385,9 @@ class GraphViewMixin:
             key += (db_map.codename,)
         return key
 
-    def _update_src_dst_inds(self, db_map_element_id_lists):
-        self.src_inds = []
-        self.dst_inds = []
+    def _update_entity_element_inds(self, db_map_element_id_lists):
+        self.entity_inds = []
+        self.element_inds = []
         ent_ind_lookup = {
             db_map_ent_id: k
             for k, db_map_ent_ids in enumerate(self.db_map_entity_id_sets)
@@ -395,13 +395,13 @@ class GraphViewMixin:
         }
         edges = {}
         for db_map_entity_id, db_map_element_id_list in db_map_element_id_lists.items():
-            src_inds = [ent_ind_lookup[db_map_el_id] for db_map_el_id in db_map_element_id_list]
-            dst_ind = ent_ind_lookup[db_map_entity_id]
-            for src_ind in src_inds:
-                edges[src_ind, dst_ind] = None
-        for src, dst in edges:  # pylint: disable=dict-iter-missing-items
-            self.src_inds.append(src)
-            self.dst_inds.append(dst)
+            el_inds = [ent_ind_lookup[db_map_el_id] for db_map_el_id in db_map_element_id_list]
+            ent_ind = ent_ind_lookup[db_map_entity_id]
+            for el_ind in el_inds:
+                edges[ent_ind, el_ind] = None
+        for ent_ind, el_ind in edges:  # pylint: disable=dict-iter-missing-items
+            self.entity_inds.append(ent_ind)
+            self.element_inds.append(el_ind)
 
     def _get_parameter_positions(self, parameter_name):
         if not parameter_name:
@@ -438,8 +438,8 @@ class GraphViewMixin:
         return GraphLayoutGeneratorRunnable(
             self._layout_gen_id,
             len(self.db_map_entity_id_sets),
-            self.src_inds,
-            self.dst_inds,
+            self.entity_inds,
+            self.element_inds,
             self._ARC_LENGTH_HINT,
             heavy_positions=heavy_positions,
         )
@@ -456,8 +456,8 @@ class GraphViewMixin:
             for i, db_map_entity_ids in enumerate(self.db_map_entity_id_sets)
         ]
         self.arc_items = [
-            ArcItem(self.entity_items[rel_ind], self.entity_items[obj_ind], self._ARC_WIDTH)
-            for obj_ind, rel_ind in zip(self.src_inds, self.dst_inds)
+            ArcItem(self.entity_items[ent_id], self.entity_items[el_ind], self._ARC_WIDTH)
+            for ent_id, el_ind in zip(self.entity_inds, self.element_inds)
         ]
         return any(self.entity_items)
 
@@ -465,60 +465,58 @@ class GraphViewMixin:
         for item in self.entity_items + self.arc_items:
             self.scene.addItem(item)
 
-    def start_relationship(self, db_map, relationship_class, obj_item):
-        """Starts a relationship from the given object item.
+    def start_connecting_entities(self, db_map, entity_class, ent_item):
+        """Starts connecting entites with the given entity item.
 
         Args:
             db_map (DiffDatabaseMapping)
-            relationship_class (dict)
-            obj_item (..graphics_items.ObjectItem)
+            entity_class (dict)
+            ent_item (..graphics_items.EntityItem)
         """
-        object_class_ids_to_go = relationship_class["object_class_id_list"].copy()
-        object_class_ids_to_go.remove(obj_item.entity_class_id(db_map))
-        relationship_class["object_class_ids_to_go"] = object_class_ids_to_go
-        relationship_class["db_map"] = db_map
+        dimension_ids_to_go = entity_class["dimension_id_list"].copy()
+        dimension_ids_to_go.remove(ent_item.entity_class_id(db_map))
+        entity_class["dimension_ids_to_go"] = dimension_ids_to_go
+        entity_class["db_map"] = db_map
         db_map_ids = ((db_map, None),)
         ch_item = CrossHairsItem(
-            self, obj_item.pos().x(), obj_item.pos().y(), 0.8 * self.VERTEX_EXTENT, db_map_ids=db_map_ids
+            self, ent_item.pos().x(), ent_item.pos().y(), 0.8 * self.VERTEX_EXTENT, db_map_ids=db_map_ids
         )
-        ch_rel_item = CrossHairsRelationshipItem(
-            self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self.VERTEX_EXTENT, db_map_ids=db_map_ids
+        ch_ent_item = CrossHairsEntityItem(
+            self, ent_item.pos().x(), ent_item.pos().y(), 0.5 * self.VERTEX_EXTENT, db_map_ids=db_map_ids
         )
-        ch_arc_item1 = CrossHairsArcItem(ch_rel_item, obj_item, self._ARC_WIDTH)
-        ch_arc_item2 = CrossHairsArcItem(ch_rel_item, ch_item, self._ARC_WIDTH)
-        ch_rel_item.refresh_icon()
-        self.ui.graphicsView.set_cross_hairs_items(
-            relationship_class, [ch_item, ch_rel_item, ch_arc_item1, ch_arc_item2]
-        )
+        ch_arc_item1 = CrossHairsArcItem(ch_ent_item, ent_item, self._ARC_WIDTH)
+        ch_arc_item2 = CrossHairsArcItem(ch_ent_item, ch_item, self._ARC_WIDTH)
+        ch_ent_item.refresh_icon()
+        self.ui.graphicsView.set_cross_hairs_items(entity_class, [ch_item, ch_ent_item, ch_arc_item1, ch_arc_item2])
 
-    def finalize_relationship(self, relationship_class, *object_items):
-        """Tries to add relationships between the given object items.
+    def finalize_connecting_entities(self, entity_class, *entity_items):
+        """Tries to add multi dimensional entity with the given entity items as elements.
 
         Args:
-            relationship_class (dict)
-            object_items (..graphics_items.ObjectItem)
+            entity_class (dict)
+            entity_items (..graphics_items.EntityItem)
         """
-        db_map = relationship_class["db_map"]
-        relationships = set()
-        object_class_id_list = relationship_class["object_class_id_list"]
-        for item_permutation in itertools.permutations(object_items):
-            if [item.entity_class_id(db_map) for item in item_permutation] == object_class_id_list:
-                relationship = tuple(item.entity_name for item in item_permutation)
-                relationships.add(relationship)
-        dialog = AddReadyRelationshipsDialog(self, relationship_class, list(relationships), self.db_mngr, db_map)
-        dialog.accepted.connect(self._begin_add_relationships)
+        db_map = entity_class["db_map"]
+        entities = set()
+        dimension_id_list = entity_class["dimension_id_list"]
+        for item_permutation in itertools.permutations(entity_items):
+            if [item.entity_class_id(db_map) for item in item_permutation] == dimension_id_list:
+                entity = tuple(item.entity_name for item in item_permutation)
+                entities.add(entity)
+        dialog = AddReadyEntitiesDialog(self, entity_class, list(entities), self.db_mngr, db_map)
+        dialog.accepted.connect(self._begin_connect_entities)
         dialog.show()
 
-    def _begin_add_relationships(self):
-        self._adding_relationships = True
+    def _begin_connect_entities(self):
+        self._connecting_entities = True
 
-    def _end_add_relationships(self):
-        self._adding_relationships = False
+    def _end_connect_entities(self):
+        self._connecting_entities = False
 
     def add_objects_at_position(self, pos):
         self._pos_for_added_objects = pos
-        parent_item = self.object_tree_model.root_item
-        dialog = AddObjectsDialog(self, parent_item, self.db_mngr, *self.db_maps)
+        parent_item = self.entity_tree_model.root_item
+        dialog = AddEntitiesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def get_pdf_file_path(self):

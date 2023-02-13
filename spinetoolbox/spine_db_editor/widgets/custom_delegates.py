@@ -712,6 +712,10 @@ class ManageItemsDelegate(QStyledItemDelegate):
 
 
 class ManageEntityClassesDelegate(ManageItemsDelegate):
+    """A delegate for the model and view in {Add/Edit}RelationshipClassesDialog."""
+
+    icon_color_editor_requested = Signal(QModelIndex)
+
     def paint(self, painter, option, index):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         header = index.model().horizontal_header_labels()
@@ -721,77 +725,32 @@ class ManageEntityClassesDelegate(ManageItemsDelegate):
         else:
             super().paint(painter, option, index)
 
-
-class ManageObjectClassesDelegate(ManageEntityClassesDelegate):
-    """A delegate for the model and view in {Add/Edit}ObjectClassesDialog."""
-
-    icon_color_editor_requested = Signal(QModelIndex)
-
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'display icon':
             self.icon_color_editor_requested.emit(index)
             editor = None
-        elif header[index.column()] == 'databases':
-            editor = self._create_database_editor(parent, option, index)
-        else:
-            editor = CustomLineEditor(parent)
-            editor.set_data(index.data(Qt.ItemDataRole.EditRole))
-        self.connect_editor_signals(editor, index)
-        return editor
-
-
-class ManageObjectsDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in {Add/Edit}ObjectsDialog."""
-
-    def createEditor(self, parent, option, index):
-        """Return editor."""
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'object_class name':
-            editor = SearchBarEditor(parent)
-            object_class_name_list = self.parent().object_class_name_list(index.row())
-            editor.set_data(index.data(Qt.ItemDataRole.EditRole), object_class_name_list)
-        elif header[index.column()] == 'databases':
-            editor = self._create_database_editor(parent, option, index)
-        else:
-            editor = CustomLineEditor(parent)
-            editor.set_data(index.data(Qt.ItemDataRole.EditRole))
-        self.connect_editor_signals(editor, index)
-        return editor
-
-
-class ManageRelationshipClassesDelegate(ManageEntityClassesDelegate):
-    """A delegate for the model and view in {Add/Edit}RelationshipClassesDialog."""
-
-    icon_color_editor_requested = Signal(QModelIndex)
-
-    def createEditor(self, parent, option, index):
-        """Return editor."""
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'display icon':
-            self.icon_color_editor_requested.emit(index)
-            editor = None
-        elif header[index.column()] in ('relationship_class name', 'description'):
+        elif header[index.column()] in ('entity class name', 'description'):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
         elif header[index.column()] == 'databases':
             editor = self._create_database_editor(parent, option, index)
         else:
             editor = SearchBarEditor(parent)
-            object_class_name_list = self.parent().object_class_name_list(index.row())
-            editor.set_data(index.data(Qt.ItemDataRole.EditRole), object_class_name_list)
+            entity_class_name_list = self.parent().entity_class_name_list(index.row())
+            editor.set_data(index.data(Qt.ItemDataRole.EditRole), entity_class_name_list)
         self.connect_editor_signals(editor, index)
         return editor
 
 
-class ManageRelationshipsDelegate(ManageItemsDelegate):
+class ManageEntitiesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}RelationshipsDialog."""
 
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'relationship name':
+        if header[index.column()] == 'entity name':
             editor = CustomLineEditor(parent)
             data = index.data(Qt.ItemDataRole.EditRole)
             editor.set_data(data)
@@ -799,8 +758,8 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
             editor = self._create_database_editor(parent, option, index)
         else:
             editor = SearchBarEditor(parent)
-            object_name_list = self.parent().object_name_list(index.row(), index.column())
-            editor.set_data(index.data(Qt.ItemDataRole.EditRole), object_name_list)
+            entity_name_list = self.parent().entity_name_list(index.row(), index.column())
+            editor.set_data(index.data(Qt.ItemDataRole.EditRole), entity_name_list)
         self.connect_editor_signals(editor, index)
         return editor
 
