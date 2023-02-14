@@ -607,23 +607,23 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_tool_feature_method_ids(db_map_tool_feat_meth_ids)
         self.export_data(parcel.data)
 
-    def duplicate_entity(self, object_item):
+    def duplicate_entity(self, entity_item):
         """
-        Duplicates an object.
+        Duplicates an entity.
 
         Args:
-            object_item (ObjectTreeItem of ObjectItem)
+            entity_item (EntityTreeItem of EntityItem)
         """
-        orig_name = object_item.display_data
+        orig_name = entity_item.display_data
         dup_name, ok = QInputDialog.getText(
-            self, "Duplicate object", "Enter a name for the duplicate object:", text=orig_name + "_copy"
+            self, "Duplicate entity", "Enter a name for the duplicate:", text=orig_name + "_copy"
         )
         if not ok:
             return
         parcel = SpineDBParcel(self.db_mngr)
-        db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
-        parcel.inner_push_object_ids(db_map_obj_ids)
-        self.db_mngr.duplicate_entity(parcel.data, orig_name, dup_name, object_item.db_maps)
+        db_map_ent_ids = {db_map: {entity_item.db_map_id(db_map)} for db_map in entity_item.db_maps}
+        parcel.inner_push_entity_ids(db_map_ent_ids)
+        self.db_mngr.duplicate_entity(parcel.data, orig_name, dup_name, entity_item.db_maps)
 
     def duplicate_scenario(self, db_map, scen_id):
         """

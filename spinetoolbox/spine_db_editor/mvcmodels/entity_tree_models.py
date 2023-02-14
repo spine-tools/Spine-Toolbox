@@ -25,33 +25,35 @@ class EntityTreeModel(MultiDBTreeModel):
     def root_item_type(self):
         return EntityTreeRootItem
 
-    def find_next_relationship_index(self, index):
+    def find_next_entity_index(self, index):
         """Find and return next occurrence of relationship item."""
         if not index.isValid():
             return None
-        rel_item = self.item_from_index(index)
-        if not rel_item.item_type == "relationship":
+        ent_item = self.item_from_index(index)
+        if not (ent_item.item_type == "entity" and ent_item.element_name_list):
             return None
         # Get all ancestors
-        rel_cls_item = rel_item.parent_item
-        obj_item = rel_cls_item.parent_item
-        for db_map in rel_item.db_maps:
+        ent_cls_item = ent_item.parent_item
+        el_item = ent_cls_item.parent_item
+        if el_item.item_type != "entity":
+            return
+        for db_map in ent_item.db_maps:
             # Get data from ancestors
-            rel_data = rel_item.db_map_data(db_map)
-            rel_cls_data = rel_cls_item.db_map_data(db_map)
-            obj_data = obj_item.db_map_data(db_map)
+            ent_data = ent_item.db_map_data(db_map)
+            ent_cls_data = ent_cls_item.db_map_data(db_map)
+            el_data = el_item.db_map_data(db_map)
             # Get specific data for our searches
-            rel_cls_id = rel_cls_data['id']
-            obj_id = obj_data['id']
-            object_ids = list(reversed(rel_data['object_id_list']))
-            object_class_ids = list(reversed(rel_cls_data['object_class_id_list']))
-            # Find position in the relationship of the (grand parent) object,
-            # then use it to determine object_class and object id to look for
-            pos = object_ids.index(obj_id) - 1
-            object_id = object_ids[pos]
-            object_class_id = object_class_ids[pos]
+            ent_cls_id = ent_cls_data['id']
+            el_id = el_data['id']
+            element_ids = list(reversed(ent_data['element_id_list']))
+            dimension_ids = list(reversed(ent_cls_data['dimension_id_list']))
+            # Find position in the entity of the (grand parent) element,
+            # then use it to determine dimension and element id to look for
+            pos = element_ids.index(el_id) - 1
+            element_id = element_ids[pos]
+            dimension_id = dimension_ids[pos]
             # Return first node that passes all cascade filters
-            for parent_item in self.find_items(db_map, (object_class_id, object_id, rel_cls_id), fetch=True):
-                for item in parent_item.find_children(lambda child: child.display_id == rel_item.display_id):
+            for parent_item in self.find_items(db_map, (dimension_id, element_id, ent_cls_id), fetch=True):
+                for item in parent_item.find_children(lambda child: child.display_id == ent_item.display_id):
                     return self.index_from_item(item)
         return None

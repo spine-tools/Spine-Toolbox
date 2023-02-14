@@ -99,18 +99,12 @@ class TreeViewMixin:
     def export_selected(self, selected_indexes):
         """Exports data from given indexes in the entity tree."""
         parcel = SpineDBParcel(self.db_mngr)
-        obj_cls_inds = set(selected_indexes.get("object_class", {}).keys())
-        obj_inds = set(selected_indexes.get("object", {}).keys())
-        rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
-        rel_inds = set(selected_indexes.get("relationship", {}).keys())
-        db_map_obj_cls_ids = self._db_map_ids(obj_cls_inds)
-        db_map_obj_ids = self._db_map_ids(obj_inds)
-        db_map_rel_cls_ids = self._db_map_ids(rel_cls_inds)
-        db_map_rel_ids = self._db_map_ids(rel_inds)
-        parcel.full_push_object_class_ids(db_map_obj_cls_ids)
-        parcel.full_push_object_ids(db_map_obj_ids)
-        parcel.full_push_relationship_class_ids(db_map_rel_cls_ids)
-        parcel.full_push_relationship_ids(db_map_rel_ids)
+        ent_cls_inds = set(selected_indexes.get("entity_class", {}).keys())
+        ent_inds = set(selected_indexes.get("entity", {}).keys())
+        db_map_ent_cls_ids = self._db_map_ids(ent_cls_inds)
+        db_map_ent_ids = self._db_map_ids(ent_inds)
+        parcel.full_push_entity_class_ids(db_map_ent_cls_ids)
+        parcel.full_push_entity_ids(db_map_ent_ids)
         self.export_data(parcel.data)
 
     def show_add_entity_classes_form(self, parent_item):

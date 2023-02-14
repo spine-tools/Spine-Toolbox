@@ -98,7 +98,7 @@ class EntityTreeView(ResizableTreeView):
         self._manage_members_action = self._menu.addAction(self._cube_pen_icon, "Manage members", self.manage_members)
         self._menu.addSeparator()
         self._find_next_action = self._menu.addAction(
-            QIcon(CharIconEngine("\uf141")), "Find next entity", self.find_next_entity
+            QIcon(CharIconEngine("\uf141")), "Find next occurrence", self.find_next_entity
         )
 
     def _create_context_menu(self):
@@ -137,7 +137,7 @@ class EntityTreeView(ResizableTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
-        self._do_find_next_entity()  # FIXME: Why??
+        QTimer.singleShot(20, self._do_find_next_entity)  # Keep looking for the next entity after new rows are inserted
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)
@@ -264,14 +264,18 @@ class EntityTreeView(ResizableTreeView):
         self._add_entity_classes_action.setEnabled(item.item_type in ("root", "entity_class"))
         self._add_entities_action.setEnabled(item.item_type in ("root", "entity_class"))
         self._add_entity_group_action.setEnabled(item.item_type == "entity_class")
-        self._duplicate_entity_action.setEnabled(item.item_type == "entity" and not item.is_group)
+        self._duplicate_entity_action.setEnabled(
+            item.item_type == "entity" and not item.is_group and not item.element_name_list
+        )
         self._manage_members_action.setEnabled(item.item_type == "members")
         self._manage_elements_action.setEnabled(item.item_type in ("root", "entity_class"))
         read_only = item.item_type in ("root", "members")
         self._export_action.setEnabled(not read_only)
         self._edit_action.setEnabled(not read_only)
         self._remove_action.setEnabled(not read_only)
-        self._find_next_action.setEnabled(item.item_type == "entity")
+        self._find_next_action.setEnabled(
+            item.item_type == "entity" and item.parent_item.parent_item.item_type == "entity"
+        )
 
     def edit_selected(self):
         """Edits all selected indexes using the connected Spine db editor."""
@@ -291,7 +295,7 @@ class EntityTreeView(ResizableTreeView):
     def _do_find_next_entity(self):
         if self._entity_index is None:
             return
-        next_index = self.model().find_next_relationship_index(self._entity_index)
+        next_index = self.model().find_next_entity_index(self._entity_index)
         if not next_index:
             return
         self._entity_index = None
