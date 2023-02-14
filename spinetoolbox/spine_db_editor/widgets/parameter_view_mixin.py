@@ -77,7 +77,7 @@ class ParameterViewMixin:
         entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
         dimension_id_list = entity_class.get("dimension_id_list")
         dimension_names = []
-        element_names_lists = []
+        element_name_lists = []
         for id_ in dimension_id_list:
             dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_, only_visible=False).get("name")
             element_names_list = [
@@ -85,14 +85,14 @@ class ParameterViewMixin:
                 for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", id_, only_visible=False)
             ]
             dimension_names.append(dimension_name)
-            element_names_lists.append(element_names_list)
+            element_name_lists.append(element_names_list)
         element_name_list = index.data(Qt.ItemDataRole.EditRole)
         try:
             current_element_names = element_name_list.split(DB_ITEM_SEPARATOR)
         except AttributeError:
             # Gibberish
             current_element_names = []
-        editor = ElementNameListEditor(self, index, dimension_names, element_names_lists, current_element_names)
+        editor = ElementNameListEditor(self, index, dimension_names, element_name_lists, current_element_names)
         editor.show()
 
     def _set_default_parameter_data(self, index=None):

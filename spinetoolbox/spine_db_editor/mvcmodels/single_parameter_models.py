@@ -316,7 +316,11 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
 
 
 class SingleParameterValueMixin(
-    FillInAlternativeIdMixin, ImposeEntityClassIdMixin, FillInParameterDefinitionIdsMixin, FillInEntityIdsMixin
+    MakeEntityOnTheFlyMixin,
+    FillInAlternativeIdMixin,
+    ImposeEntityClassIdMixin,
+    FillInParameterDefinitionIdsMixin,
+    FillInEntityIdsMixin,
 ):
     """A parameter_value model for a single entity_class."""
 
@@ -375,6 +379,23 @@ class SingleParameterValueMixin(
         Args:
             items (list): dictionary-items
         """
+        for item in items:
+            item["entity_class_name"] = self.entity_class_name
+        db_map_data = {self.db_map: items}
+        self.build_lookup_dictionary(db_map_data)
+        db_map_entities = {}
+        db_map_error_log = {}
+        for db_map, data in db_map_data.items():
+            for item in data:
+                entity, err = self._make_entity_on_the_fly(item, db_map)
+                if entity:
+                    db_map_entities.setdefault(db_map, []).append(entity)
+                if err:
+                    db_map_error_log.setdefault(db_map, []).extend(err)
+        if any(db_map_entities.values()):
+            self.db_mngr.add_entities(db_map_entities)
+        if db_map_error_log:
+            self.db_mngr.error_msg.emit(db_map_error_log)
         param_vals = []
         error_log = []
         db_map_data = {}
@@ -396,30 +417,5 @@ class SingleParameterDefinitionModel(SingleParameterDefinitionMixin, SingleParam
     """A parameter_definition model for a single entity_class."""
 
 
-class SingleParameterValueModel(MakeEntityOnTheFlyMixin, SingleParameterValueMixin, SingleParameterModel):
+class SingleParameterValueModel(SingleParameterValueMixin, SingleParameterModel):
     """A parameter_value model for a single entity_class."""
-
-    def update_items_in_db(self, items):  # FIXME
-        """Update items in db.
-
-        Args:
-            items (list): dictionary-items
-        """
-        for item in items:
-            item["entity_class_name"] = self.entity_class_name
-        db_map_data = {self.db_map: items}
-        self.build_lookup_dictionaries(db_map_data)
-        db_map_entities = {}
-        db_map_error_log = {}
-        for db_map, data in db_map_data.items():
-            for item in data:
-                entity, err = self._make_entity_on_the_fly(item, db_map)
-                if entity:
-                    db_map_entities.setdefault(db_map, []).append(entity)
-                if err:
-                    db_map_error_log.setdefault(db_map, []).extend(err)
-        if any(db_map_entities.values()):
-            self.db_mngr.add_entities(db_map_entities)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)
-        super().update_items_in_db(items)

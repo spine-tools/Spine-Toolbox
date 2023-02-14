@@ -329,7 +329,7 @@ class GraphViewMixin:
         return db_map_entity_ids
 
     def _get_db_map_entities_for_graph(self, db_map_entity_ids):
-        cond = any if self.ui.graphicsView.auto_expand_objects else all
+        cond = any if self.ui.graphicsView.auto_expand_entities else all
         return [
             (db_map, x)
             for db_map in self.db_maps

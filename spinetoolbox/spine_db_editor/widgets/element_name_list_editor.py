@@ -57,21 +57,21 @@ class SearchBarDelegate(QItemDelegate):
 class ElementNameListEditor(ManageItemsDialog):
     """A dialog to select the element name list for an entity using Google-like search bars."""
 
-    def __init__(self, parent, index, entity_class_names, element_names_lists, current_element_names):
+    def __init__(self, parent, index, entity_class_names, element_name_lists, current_element_names):
         """Initializes widget.
 
         Args:
             parent (SpineDBEditor)
             index (QModelIndex)
             entity_class_names (list): string entity_class names
-            element_names_lists (list): lists of string element names
+            element_name_lists (list): lists of string element names
             current_element_names (list)
         """
         super().__init__(parent, None)
         self.setWindowTitle("Select elements")
         self._index = index
         self.model = QStandardItemModel(self)
-        self.init_model(entity_class_names, element_names_lists, current_element_names)
+        self.init_model(entity_class_names, element_name_lists, current_element_names)
         self.table_view.setModel(self.model)
         self.resize_window_to_columns()
         self.table_view.verticalHeader().hide()
@@ -79,16 +79,16 @@ class ElementNameListEditor(ManageItemsDialog):
         self.table_view.setItemDelegate(delegate)
         self.connect_signals()
 
-    def init_model(self, entity_class_names, element_names_lists, current_element_names):
+    def init_model(self, entity_class_names, element_name_lists, current_element_names):
         self.model.setHorizontalHeaderLabels(entity_class_names)
         item_list = []
-        for k, object_names_list in enumerate(entity_class_names):
+        for k, element_names_list in enumerate(element_name_lists):
             try:
-                obj_name = current_element_names[k]
+                el_name = current_element_names[k]
             except IndexError:
-                obj_name = None
-            qitem = QStandardItem(obj_name)
-            qitem.setData(object_names_list, role=Qt.ItemDataRole.UserRole)
+                el_name = None
+            qitem = QStandardItem(el_name)
+            qitem.setData(element_names_list, role=Qt.ItemDataRole.UserRole)
             item_list.append(qitem)
         self.model.invisibleRootItem().appendRow(item_list)
 

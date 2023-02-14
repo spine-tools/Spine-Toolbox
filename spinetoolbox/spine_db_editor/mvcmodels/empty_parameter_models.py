@@ -115,6 +115,15 @@ class EmptyParameterModel(EmptyRowModel):
         self.add_items_to_db(db_map_data)
         return True
 
+    def _autocomplete_row(self, db_map, item):
+        entity_class_id = item.get("entity_class_id")
+        if entity_class_id:
+            entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
+            self._main_data[item["row"]][self.header.index("entity_class_name")] = entity_class["name"]
+            self._main_data[item["row"]][self.header.index("dimension_name_list")] = DB_ITEM_SEPARATOR.join(
+                entity_class["dimension_name_list"]
+            )
+
     def add_items_to_db(self, db_map_data):
         """Add items to db.
 
@@ -171,11 +180,12 @@ class EmptyParameterDefinitionModel(
         db_map_error_log = dict()
         for db_map, items in db_map_data.items():
             for item in items:
-                def_item, errors = self._convert_to_db(item, db_map)
-                if self._check_item(def_item):
-                    db_map_param_def.setdefault(db_map, []).append(def_item)
+                param_def, errors = self._convert_to_db(item, db_map)
+                if self._check_item(param_def):
+                    db_map_param_def.setdefault(db_map, []).append(param_def)
                 if errors:
                     db_map_error_log.setdefault(db_map, []).extend(errors)
+                self._autocomplete_row(db_map, param_def)
         if any(db_map_param_def.values()):
             self.db_mngr.add_parameter_definitions(db_map_param_def)
         if db_map_error_log:
@@ -203,39 +213,31 @@ class EmptyParameterValueModel(
 
     def add_items_to_db(self, db_map_data):
         """See base class."""
-        # First add whatever is ready.
-        # This will fill the entity_class_name as a side effect
+        # First add whatever is ready and also try to add entities on the fly
         self.build_lookup_dictionary(db_map_data)
         db_map_param_val = dict()
-        db_map_error_log = dict()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                param_val, errors = self._convert_to_db(item, db_map)
-                if self._check_item(db_map, param_val):
-                    db_map_param_val.setdefault(db_map, []).append(param_val)
-                if errors:
-                    db_map_error_log.setdefault(db_map, []).extend(errors)
-        if any(db_map_param_val.values()):
-            self.db_mngr.add_parameter_values(db_map_param_val)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)
-        # Now we try to add entities on the fly
-        self.build_lookup_dictionaries(db_map_data)
         db_map_entities = dict()
         db_map_error_log = dict()
         for db_map, items in db_map_data.items():
             for item in items:
-                entity, err = self._make_entity_on_the_fly(item, db_map)
+                param_val, errors = self._convert_to_db(item, db_map)
+                entity, more_errors = self._make_entity_on_the_fly(item, db_map)
+                if self._check_item(db_map, param_val):
+                    db_map_param_val.setdefault(db_map, []).append(param_val)
                 if entity:
                     db_map_entities.setdefault(db_map, []).append(entity)
-                if err:
-                    db_map_error_log.setdefault(db_map, []).extend(err)
-        if any(db_map_entities.values()):
-            self.db_mngr.add_entities(db_map_entities)
-            # Something might have become ready after adding the entity(ies), so we do one more pass
-            super().add_items_to_db(db_map_data)
+                all_errors = errors + more_errors
+                if all_errors:
+                    db_map_error_log.setdefault(db_map, []).extend(all_errors)
+                self._autocomplete_row(db_map, param_val)
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
+        if any(db_map_param_val.values()):
+            self.db_mngr.add_parameter_values(db_map_param_val)
+        if any(db_map_entities.values()):
+            self.db_mngr.add_entities(db_map_entities)
+            # Something might have become ready after adding the entities, so we do one more pass
+            self.add_items_to_db(db_map_data)
 
     def _check_item(self, db_map, item):
         """Checks if a db item is ready to be inserted."""
@@ -258,3 +260,16 @@ class EmptyParameterValueModel(
         if item["element_name_list"]:
             item["element_name_list"] = tuple(item["element_name_list"].split(DB_ITEM_SEPARATOR))
         return item
+
+    def _autocomplete_row(self, db_map, item):
+        entity_class_id = item.get("entity_class_id")
+        entity_id = item.get("entity_id")
+        if entity_class_id:
+            entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
+            self._main_data[item["row"]][self.header.index("entity_class_name")] = entity_class["name"]
+        if entity_id:
+            entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
+            self._main_data[item["row"]][self.header.index("entity_name")] = entity["name"]
+            self._main_data[item["row"]][self.header.index("element_name_list")] = DB_ITEM_SEPARATOR.join(
+                entity["element_name_list"]
+            )

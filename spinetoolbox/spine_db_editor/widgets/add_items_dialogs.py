@@ -200,7 +200,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         labels = ['dimension name (1)'] if dimension_one_name is not None else []
         labels += ['entity class name', 'description', 'display icon', 'databases']
         self.model.set_horizontal_header_labels(labels)
-        self.db_map_ent_cls_lookup = self.make_db_map_ent_cls_lookup()
+        self.db_map_ent_cls_lookup_by_name = self.make_db_map_ent_cls_lookup_by_name()
         db_names = ",".join(x.codename for x in parent_item.db_maps)
         self.default_display_icon = None
         self.model.set_default_row(
@@ -293,7 +293,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
                 db_map = self.keyed_db_maps[db_name]
-                entity_classes = self.db_map_ent_cls_lookup[db_map]
+                entity_classes = self.db_map_ent_cls_lookup_by_name[db_map]
                 dimension_id_list = list()
                 for column in range(name_column):  # Leave 'name' column outside
                     dimension_name = row_data[column]

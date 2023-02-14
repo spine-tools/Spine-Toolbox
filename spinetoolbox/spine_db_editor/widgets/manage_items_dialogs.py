@@ -131,9 +131,15 @@ class GetEntityClassesMixin:
             for db_map in self.db_maps
         }
 
+    def make_db_map_ent_cls_lookup_by_name(self):
+        return {
+            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "entity_class", only_visible=False)}
+            for db_map in self.db_maps
+        }
+
     def entity_class_name_list(self, row):
         """Return a list of entity class names present in all databases selected for given row.
-        Used by `ManageObjectsDelegate`.
+        Used by `ManageEntityClassesDelegate`.
         """
         db_column = self.model.header.index('databases')
         db_names = self.model._main_data[row][db_column]
@@ -142,11 +148,11 @@ class GetEntityClassesMixin:
         if not db_map:
             return []
         # Initalize list from first db_map
-        entity_class_name_list = [name for name, _ in self.db_map_ent_cls_lookup[db_map]]
+        entity_class_name_list = list(self.db_map_ent_cls_lookup_by_name[db_map])
         # Update list from remaining db_maps
         for db_map in db_maps:
             entity_class_name_list = [
-                name for name, _ in self.db_map_ent_cls_lookup[db_map] if name in entity_class_name_list
+                name for name in self.db_map_ent_cls_lookup_by_name[db_map] if name in entity_class_name_list
             ]
         return entity_class_name_list
 

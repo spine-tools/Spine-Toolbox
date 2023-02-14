@@ -432,10 +432,8 @@ class SpineDBWorker(QObject):
             callback (None or function): something to call with the result
         """
         method_name = {
-            "object_class": "add_object_classes",
-            "object": "add_objects",
-            "relationship_class": "add_wide_relationship_classes",
-            "relationship": "add_wide_relationships",
+            "entity_class": "add_entity_classes",
+            "entity": "add_entities",
             "entity_group": "add_entity_groups",
             "parameter_definition": "add_parameter_definitions",
             "parameter_value": "add_parameter_values",
@@ -492,10 +490,8 @@ class SpineDBWorker(QObject):
             callback (None or function): something to call with the result
         """
         method_name = {
-            "object_class": "update_object_classes",
-            "object": "update_objects",
-            "relationship_class": "update_wide_relationship_classes",
-            "relationship": "update_wide_relationships",
+            "entity_class": "update_entity_classes",
+            "entity": "update_entities",
             "parameter_definition": "update_parameter_definitions",
             "parameter_value": "update_parameter_values",
             "parameter_value_list": "update_parameter_value_lists",

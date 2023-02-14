@@ -41,149 +41,6 @@ class EditOrRemoveItemsDialog(ManageItemsDialog):
         return [db_map.codename for db_map in item.db_maps]
 
 
-class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog):
-    """A dialog to query user's preferences for updating object classes."""
-
-    def __init__(self, parent, db_mngr, selected):
-        """Init class.
-
-        Args:
-            parent (SpineDBEditor): data store widget
-            db_mngr (SpineDBManager): the manager to do the update
-            selected (set): set of ObjectClassItem instances to edit
-        """
-        super().__init__(parent, db_mngr)
-        self.setWindowTitle("Edit object classes")
-        self.model = MinimalTableModel(self)
-        self.model.set_horizontal_header_labels(['entity class name', 'description', 'display icon', 'databases'])
-        self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(ManageEntityClassesDelegate(self))
-        self.connect_signals()
-        self.orig_data = list()
-        self.default_display_icon = default_icon_id()
-        model_data = list()
-        for item in selected:
-            data = item.db_map_data(item.first_db_map)
-            row_data = [item.display_data, data['description'], data['display_icon']]
-            self.orig_data.append(row_data.copy())
-            row_data.append(item.display_database)
-            model_data.append(row_data)
-            self.items.append(item)
-        self.model.reset_model(model_data)
-
-    def connect_signals(self):
-        super().connect_signals()
-        # pylint: disable=unnecessary-lambda
-        self.table_view.itemDelegate().icon_color_editor_requested.connect(
-            lambda index: self.show_icon_color_editor(index)
-        )
-
-    def all_db_maps(self, row):
-        """Returns a list of db maps available for a given row.
-        Used by ShowIconColorEditorMixin.
-        """
-        item = self.items[row]
-        return item.db_maps
-
-    @Slot()
-    def accept(self):
-        """Collect info from dialog and try to update items."""
-        db_map_data = dict()
-        for i in range(self.model.rowCount()):
-            name, description, display_icon, db_names = self.model.row_data(i)
-            if db_names is None:
-                db_names = ""
-            item = self.items[i]
-            db_maps = []
-            for database in db_names.split(","):
-                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
-                if db_map is None:
-                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
-                    return
-                db_maps.append(db_map)
-            if not name:
-                self.parent().msg_error.emit("Object class name missing at row {}".format(i + 1))
-                return
-            orig_row = self.orig_data[i]
-            if [name, description, display_icon] == orig_row:
-                continue
-            if not display_icon:
-                display_icon = self.default_display_icon
-            pre_db_item = {'name': name, 'description': description, 'display_icon': display_icon}
-            for db_map in db_maps:
-                db_item = pre_db_item.copy()
-                db_item['id'] = item.db_map_id(db_map)
-                db_map_data.setdefault(db_map, []).append(db_item)
-        if not db_map_data:
-            self.parent().msg_error.emit("Nothing to update")
-            return
-        self.db_mngr.update_object_classes(db_map_data)
-        super().accept()
-
-
-class EditObjectsDialog(EditOrRemoveItemsDialog):
-    """A dialog to query user's preferences for updating objects."""
-
-    def __init__(self, parent, db_mngr, selected):
-        """Init class.
-
-        Args:
-            parent (SpineDBEditor): data store widget
-            db_mngr (SpineDBManager): the manager to do the update
-            selected (set): set of ObjectItem instances to edit
-        """
-        super().__init__(parent, db_mngr)
-        self.setWindowTitle("Edit objects")
-        self.model = MinimalTableModel(self)
-        self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(ManageObjectsDelegate(self))
-        self.connect_signals()
-        self.model.set_horizontal_header_labels(['object name', 'description', 'databases'])
-        self.orig_data = list()
-        model_data = list()
-        for item in selected:
-            data = item.db_map_data(item.first_db_map)
-            row_data = [item.display_data, data['description']]
-            self.orig_data.append(row_data.copy())
-            row_data.append(item.display_database)
-            model_data.append(row_data)
-            self.items.append(item)
-        self.model.reset_model(model_data)
-
-    @Slot()
-    def accept(self):
-        """Collect info from dialog and try to update items."""
-        db_map_data = dict()
-        for i in range(self.model.rowCount()):
-            name, description, db_names = self.model.row_data(i)
-            if db_names is None:
-                db_names = ""
-            item = self.items[i]
-            db_maps = []
-            for database in db_names.split(","):
-                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
-                if db_map is None:
-                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
-                    return
-                db_maps.append(db_map)
-            if not name:
-                self.parent().msg_error.emit("Object name missing at row {}".format(i + 1))
-                return
-            orig_row = self.orig_data[i]
-            if [name, description] == orig_row:
-                continue
-            pre_db_item = {'name': name, 'description': description}
-            for db_map in db_maps:
-                db_item = pre_db_item.copy()
-                db_item['id'] = item.db_map_id(db_map)
-                db_map_data.setdefault(db_map, []).append(db_item)
-        if not db_map_data:
-            self.parent().msg_error.emit("Nothing to update")
-            return
-        self.db_mngr.update_objects(db_map_data)
-        super().accept()
-
-
 class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog):
     """A dialog to query user's preferences for updating entity classes."""
 
@@ -203,6 +60,7 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         self.connect_signals()
         self.model.set_horizontal_header_labels(['entity class name', 'description', 'display icon', 'databases'])
         self.orig_data = list()
+        self.default_display_icon = default_icon_id()
         model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
@@ -243,7 +101,7 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
             if [name, description] == orig_row:
                 continue
             if not display_icon:
-                display_icon = None
+                display_icon = self.default_display_icon
             pre_db_item = {'name': name, 'description': description, 'display_icon': display_icon}
             for db_map in db_maps:
                 db_item = pre_db_item.copy()

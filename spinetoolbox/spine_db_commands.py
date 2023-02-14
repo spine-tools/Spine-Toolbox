@@ -190,10 +190,8 @@ class SpineDBCommand(AgedUndoCommand):
 
 class AddItemsCommand(SpineDBCommand):
     _add_command_name = {
-        "object_class": "add object classes",
-        "object": "add objects",
-        "relationship_class": "add relationship classes",
-        "relationship": "add relationships",
+        "entity_class": "add entity classes",
+        "entity": "add entities",
         "entity_group": "add entity groups",
         "parameter_definition": "add parameter definitions",
         "parameter_value": "add parameter values",
@@ -263,10 +261,8 @@ class AddItemsCommand(SpineDBCommand):
 
 class UpdateItemsCommand(SpineDBCommand):
     _update_command_name = {
-        "object_class": "update object classes",
-        "object": "update objects",
-        "relationship_class": "update relationship classes",
-        "relationship": "update relationships",
+        "entity_class": "update entity classes",
+        "entity": "update entities",
         "parameter_definition": "update parameter definitions",
         "parameter_value": "update parameter values",
         "parameter_value_list": "update parameter value lists",
@@ -296,7 +292,7 @@ class UpdateItemsCommand(SpineDBCommand):
         if not data:
             self.setObsolete(True)
         undo_data = [self.db_mngr.get_item(self.db_map, item_type, item["id"]).copy() for item in data]
-        redo_data = [{**undo_item, **item} for undo_item, item in zip(undo_data, data)]
+        redo_data = [undo_item.updated(item) for undo_item, item in zip(undo_data, data)]
         if undo_data == redo_data:
             self.setObsolete(True)
         self.redo_db_map_data = {db_map: redo_data}
@@ -328,7 +324,6 @@ class UpdateItemsCommand(SpineDBCommand):
         if not db_map_data.get(self.db_map):
             self.setObsolete(True)
             return
-        self.redo_db_map_data = db_map_data
         self._check = False
 
 

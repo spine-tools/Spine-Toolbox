@@ -995,23 +995,23 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "scenario"))
 
-    def add_object_classes(self, db_map_data):
-        """Adds object classes to db.
+    def add_entity_classes(self, db_map_data):
+        """Adds entity classes to db.
 
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object_class"))
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "entity_class"))
 
-    def add_objects(self, db_map_data):
-        """Adds objects to db.
+    def add_entities(self, db_map_data):
+        """Adds entities to db.
 
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object"))
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "entity"))
 
     def add_object_metadata(self, db_map_data):
         """Adds object metadata to db.
@@ -1021,33 +1021,6 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object_metadata"))
-
-    def add_relationship_classes(self, db_map_data):
-        """Adds relationship classes to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "relationship_class"))
-
-    def add_relationships(self, db_map_data):
-        """Adds relationships to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "relationship"))
-
-    def add_object_groups(self, db_map_data):
-        """Adds object groups to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object group"))
 
     def add_entity_groups(self, db_map_data):
         """Adds entity groups to db.
@@ -1175,41 +1148,23 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "scenario"))
 
-    def update_object_classes(self, db_map_data):
-        """Updates object classes in db.
+    def update_entity_classes(self, db_map_data):
+        """Updates entity classes in db.
 
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "object_class"))
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "entity_class"))
 
-    def update_objects(self, db_map_data):
-        """Updates objects in db.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "object"))
-
-    def update_relationship_classes(self, db_map_data):
-        """Updates relationship classes in db.
+    def update_entities(self, db_map_data):
+        """Updates entities in db.
 
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "relationship_class"))
-
-    def update_relationships(self, db_map_data):
-        """Updates relationships in db.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "relationship"))
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "entity"))
 
     def update_parameter_definitions(self, db_map_data):
         """Updates parameter definitions in db.
