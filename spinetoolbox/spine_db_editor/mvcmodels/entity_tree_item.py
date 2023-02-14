@@ -75,7 +75,6 @@ class EntityClassItem(MultiDBTreeItem):
 
     @property
     def child_item_class(self):
-        """Returns ObjectItem."""
         return EntityItem
 
     @property

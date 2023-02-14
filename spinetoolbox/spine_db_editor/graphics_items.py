@@ -697,7 +697,7 @@ class CrossHairsEntityItem(EntityItem):
 
 class CrossHairsArcItem(ArcItem):
     """Connects a CrossHairsEntityItem with the CrossHairsItem,
-    and with all the ObjectItem's in the relationship so far.
+    and with all the EntityItem's in the relationship so far.
     """
 
     def _make_pen(self):
@@ -710,7 +710,7 @@ class CrossHairsArcItem(ArcItem):
 
 
 class EntityLabelItem(QGraphicsTextItem):
-    """Provides a label for ObjectItem's."""
+    """Provides a label for EntityItem."""
 
     entity_name_edited = Signal(str)
 

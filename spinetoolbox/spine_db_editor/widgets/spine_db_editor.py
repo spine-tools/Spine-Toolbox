@@ -536,11 +536,9 @@ class SpineDBEditorBase(QMainWindow):
     @Slot(bool)
     def export_session(self, checked=False):
         """Exports changes made in the current session as reported by DiffDatabaseMapping."""
-        db_map_diff_ids = {db_map: db_map.diff_ids() for db_map in self.db_maps}
-        db_map_obj_cls_ids = {db_map: diff_ids["object_class"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_rel_cls_ids = {db_map: diff_ids["relationship_class"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_obj_ids = {db_map: diff_ids["object"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_rel_ids = {db_map: diff_ids["relationship"] for db_map, diff_ids in db_map_diff_ids.items()}
+        db_map_diff_ids = {db_map: db_map.diff_ids() for db_map in self.db_maps}  # FIXME: diff_ids()
+        db_map_ent_cls_ids = {db_map: diff_ids["entity_class"] for db_map, diff_ids in db_map_diff_ids.items()}
+        db_map_ent_ids = {db_map: diff_ids["entity"] for db_map, diff_ids in db_map_diff_ids.items()}
         db_map_par_val_lst_ids = {
             db_map: diff_ids["parameter_value_list"] for db_map, diff_ids in db_map_diff_ids.items()
         }
@@ -548,26 +546,20 @@ class SpineDBEditorBase(QMainWindow):
         db_map_par_val_ids = {db_map: diff_ids["parameter_value"] for db_map, diff_ids in db_map_diff_ids.items()}
         db_map_ent_group_ids = {db_map: diff_ids["entity_group"] for db_map, diff_ids in db_map_diff_ids.items()}
         parcel = SpineDBParcel(self.db_mngr)
-        parcel.push_object_class_ids(db_map_obj_cls_ids)
-        parcel.push_object_ids(db_map_obj_ids)
-        parcel.push_relationship_class_ids(db_map_rel_cls_ids)
-        parcel.push_relationship_ids(db_map_rel_ids)
-        parcel.push_parameter_definition_ids(db_map_par_def_ids, "object")
-        parcel.push_parameter_definition_ids(db_map_par_def_ids, "relationship")
-        parcel.push_parameter_value_ids(db_map_par_val_ids, "object")
-        parcel.push_parameter_value_ids(db_map_par_val_ids, "relationship")
+        parcel.push_entity_class_ids(db_map_ent_cls_ids)
+        parcel.push_entity_ids(db_map_ent_ids)
+        parcel.push_parameter_definition_ids(db_map_par_def_ids)
+        parcel.push_parameter_value_ids(db_map_par_val_ids)
         parcel.push_parameter_value_list_ids(db_map_par_val_lst_ids)
-        parcel.push_object_group_ids(db_map_ent_group_ids)
+        parcel.push_entity_group_ids(db_map_ent_group_ids)
         self.export_data(parcel.data)
 
     def mass_export_items(self, db_map_item_types):
         def _ids(t, types):
             return Asterisk if t in types else ()
 
-        db_map_obj_cls_ids = {db_map: _ids("object_class", types) for db_map, types in db_map_item_types.items()}
-        db_map_rel_cls_ids = {db_map: _ids("relationship_class", types) for db_map, types in db_map_item_types.items()}
-        db_map_obj_ids = {db_map: _ids("object", types) for db_map, types in db_map_item_types.items()}
-        db_map_rel_ids = {db_map: _ids("relationship", types) for db_map, types in db_map_item_types.items()}
+        db_map_ent_cls_ids = {db_map: _ids("entity_class", types) for db_map, types in db_map_item_types.items()}
+        db_map_ent_ids = {db_map: _ids("entity", types) for db_map, types in db_map_item_types.items()}
         db_map_par_val_lst_ids = {
             db_map: _ids("parameter_value_list", types) for db_map, types in db_map_item_types.items()
         }
@@ -588,16 +580,12 @@ class SpineDBEditorBase(QMainWindow):
             db_map: _ids("tool_feature_method", types) for db_map, types in db_map_item_types.items()
         }
         parcel = SpineDBParcel(self.db_mngr)
-        parcel.push_object_class_ids(db_map_obj_cls_ids)
-        parcel.push_object_ids(db_map_obj_ids)
-        parcel.push_relationship_class_ids(db_map_rel_cls_ids)
-        parcel.push_relationship_ids(db_map_rel_ids)
-        parcel.push_parameter_definition_ids(db_map_par_def_ids, "object")
-        parcel.push_parameter_definition_ids(db_map_par_def_ids, "relationship")
-        parcel.push_parameter_value_ids(db_map_par_val_ids, "object")
-        parcel.push_parameter_value_ids(db_map_par_val_ids, "relationship")
+        parcel.push_entity_class_ids(db_map_ent_cls_ids)
+        parcel.push_entity_ids(db_map_ent_ids)
+        parcel.push_parameter_definition_ids(db_map_par_def_ids)
+        parcel.push_parameter_value_ids(db_map_par_val_ids)
         parcel.push_parameter_value_list_ids(db_map_par_val_lst_ids)
-        parcel.push_object_group_ids(db_map_ent_group_ids)
+        parcel.push_entity_group_ids(db_map_ent_group_ids)
         parcel.push_alternative_ids(db_map_alt_ids)
         parcel.push_scenario_ids(db_map_scen_ids)
         parcel.push_scenario_alternative_ids(db_map_scen_alt_ids)

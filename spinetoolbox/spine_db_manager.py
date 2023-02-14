@@ -1436,26 +1436,24 @@ class SpineDBManager(QObject):
         }
         self.import_data({db_map: data}, command_text="Duplicate scenario")
 
-    def duplicate_entity(self, object_data, orig_name, dup_name, db_maps):
-        _replace_name = lambda name_list: [name if name != orig_name else dup_name for name in name_list]
-        data = self._get_data_for_export(object_data)
+    def duplicate_entity(self, entity_data, orig_name, dup_name, db_maps):
+        def _replace_name(ent_name):
+            if ent_name == orig_name:
+                return dup_name
+            return tuple(name if name != orig_name else dup_name for name in ent_name)
+
+        data = self._get_data_for_export(entity_data)
         data = {
-            "objects": [
-                (cls_name, dup_name, description) for (cls_name, obj_name, description) in data.get("objects", [])
+            "entities": [
+                (cls_name, _replace_name(ent_name), description)
+                for (cls_name, ent_name, description) in data.get("entities", [])
             ],
-            "relationships": [
-                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data.get("relationships", [])
-            ],
-            "object_parameter_values": [
-                (cls_name, dup_name, param_name, val, alt)
-                for (cls_name, obj_name, param_name, val, alt) in data.get("object_parameter_values", [])
-            ],
-            "relationship_parameter_values": [
-                (cls_name, _replace_name(obj_name_lst), param_name, val, alt)
-                for (cls_name, obj_name_lst, param_name, val, alt) in data.get("relationship_parameter_values", [])
+            "parameter_values": [
+                (cls_name, _replace_name(ent_name), param_name, val, alt)
+                for (cls_name, ent_name, param_name, val, alt) in data.get("parameter_values", [])
             ],
         }
-        self.import_data({db_map: data for db_map in db_maps}, command_text="Duplicate object")
+        self.import_data({db_map: data for db_map in db_maps}, command_text="Duplicate entity")
 
     def _get_data_for_export(self, db_map_item_ids):
         data = {}

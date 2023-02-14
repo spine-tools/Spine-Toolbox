@@ -56,13 +56,13 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.cross_hairs_items = []
         self.auto_expand_entities = None
         self.merge_dbs = None
-        self.max_relationship_dimension = None
+        self.max_entity_dimension = None
         self.disable_max_relationship_dimension = None
         self._auto_expand_entities_action = None
         self._merge_dbs_action = None
         self._max_ent_dim_action = None
-        self._disable_max_rel_dim_action = None
-        self._max_rel_dim_spin_box = None
+        self._disable_max_ent_dim_action = None
+        self._max_ent_dim_spin_box = None
         self._add_entities_action = None
         self._select_pos_param_action = None
         self._save_pos_action = None
@@ -117,13 +117,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
         )
         self.merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
-        self.max_relationship_dimension = int(
-            self._qsettings.value("appSettings/maxRelationshipDimension", defaultValue="2")
-        )
+        self.max_entity_dimension = int(self._qsettings.value("appSettings/maxRelationshipDimension", defaultValue="2"))
         self.disable_max_relationship_dimension = (
             self._qsettings.value("appSettings/disableMaxRelationshipDimension", defaultValue="true") == "true"
         )
-        self._auto_expand_entities_action = self._menu.addAction("Auto-expand objects")
+        self._auto_expand_entities_action = self._menu.addAction("Auto-expand entities")
         self._auto_expand_entities_action.setCheckable(True)
         self._auto_expand_entities_action.setChecked(self.auto_expand_entities)
         self._auto_expand_entities_action.triggered.connect(self._set_auto_expand_objects)
@@ -132,21 +130,21 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._merge_dbs_action.setChecked(self.merge_dbs)
         self._merge_dbs_action.triggered.connect(self._set_merge_dbs)
         self._max_ent_dim_action = ToolBarWidgetAction("Max entity dimension", self._menu, compact=True)
-        self._max_rel_dim_spin_box = HorizontalSpinBox(self)
-        self._max_rel_dim_spin_box.setMinimum(2)
-        self._max_rel_dim_spin_box.setValue(self.max_relationship_dimension)
-        self._max_rel_dim_spin_box.valueChanged.connect(self._set_max_relationship_dimension)
-        self._max_ent_dim_action.tool_bar.addWidget(self._max_rel_dim_spin_box)
+        self._max_ent_dim_spin_box = HorizontalSpinBox(self)
+        self._max_ent_dim_spin_box.setMinimum(2)
+        self._max_ent_dim_spin_box.setValue(self.max_entity_dimension)
+        self._max_ent_dim_spin_box.valueChanged.connect(self._set_max_relationship_dimension)
+        self._max_ent_dim_action.tool_bar.addWidget(self._max_ent_dim_spin_box)
         self._max_ent_dim_action.tool_bar.addSeparator()
-        self._disable_max_rel_dim_action = self._max_ent_dim_action.tool_bar.addAction("\u221E")
-        self._disable_max_rel_dim_action.setCheckable(True)
-        self._disable_max_rel_dim_action.toggled.connect(self._set_disable_max_relationship_dimension)
-        self._disable_max_rel_dim_action.toggled.connect(self._max_rel_dim_spin_box.setDisabled)
-        self._disable_max_rel_dim_action.setToolTip("No limit")
-        self._disable_max_rel_dim_action.setChecked(self.disable_max_relationship_dimension)
+        self._disable_max_ent_dim_action = self._max_ent_dim_action.tool_bar.addAction("\u221E")
+        self._disable_max_ent_dim_action.setCheckable(True)
+        self._disable_max_ent_dim_action.toggled.connect(self._set_disable_max_relationship_dimension)
+        self._disable_max_ent_dim_action.toggled.connect(self._max_ent_dim_spin_box.setDisabled)
+        self._disable_max_ent_dim_action.setToolTip("No limit")
+        self._disable_max_ent_dim_action.setChecked(self.disable_max_relationship_dimension)
         self._menu.addAction(self._max_ent_dim_action)
         self._menu.addSeparator()
-        self._add_entities_action = self._menu.addAction("Add entities", self.add_objects_at_position)
+        self._add_entities_action = self._menu.addAction("Add entities", self.add_entities_at_position)
         self._menu.addSeparator()
         self._select_pos_param_action = self._menu.addAction(
             "Select position parameters...", self.select_position_parameters
@@ -284,7 +282,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     @Slot(bool)
     def _set_disable_max_relationship_dimension(self, _checked=False, save_setting=True):
-        checked = self._disable_max_rel_dim_action.isChecked()
+        checked = self._disable_max_ent_dim_action.isChecked()
         if checked == self.disable_max_relationship_dimension:
             return
         if save_setting:
@@ -293,40 +291,35 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._spine_db_editor.build_graph()
 
     def set_disable_max_relationship_dimension(self, checked):
-        self._disable_max_rel_dim_action.setChecked(checked)
+        self._disable_max_ent_dim_action.setChecked(checked)
         self._set_disable_max_relationship_dimension(save_setting=False)
 
     @Slot(int)
     def _set_max_relationship_dimension(self, _value=None, save_setting=True):
-        value = self._max_rel_dim_spin_box.value()
-        if value == self.max_relationship_dimension:
+        value = self._max_ent_dim_spin_box.value()
+        if value == self.max_entity_dimension:
             return
         if save_setting:
             self._qsettings.setValue("appSettings/maxRelationshipDimension", str(value))
-        self.max_relationship_dimension = value
+        self.max_entity_dimension = value
         self._spine_db_editor.build_graph()
 
     @Slot(bool)
-    def add_objects_at_position(self, checked=False):
-        self._spine_db_editor.add_objects_at_position(self._context_menu_pos)
+    def add_entities_at_position(self, checked=False):
+        self._spine_db_editor.add_entities_at_position(self._context_menu_pos)
 
     @Slot(bool)
     def edit_selected(self, _=False):
         """Edits selected items."""
-        obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
-        rel_items = [item for item in self.selected_items if isinstance(item, RelationshipItem)]
-        self._spine_db_editor.show_edit_objects_form(obj_items)
-        self._spine_db_editor.show_edit_relationships_form(rel_items)
+        ent_items = [item for item in self.selected_items if isinstance(item, EntityItem)]
+        self._spine_db_editor.show_edit_entities_form(ent_items)
 
     @Slot(bool)
     def remove_selected(self, _=False):
         """Removes selected items."""
         if not self.selected_items:
             return
-        selected = {
-            "object": [item for item in self.selected_items if isinstance(item, ObjectItem)],
-            "relationship": [item for item in self.selected_items if isinstance(item, RelationshipItem)],
-        }
+        selected = {"entity": [item for item in self.selected_items if isinstance(item, EntityItem)]}
         self._spine_db_editor.show_remove_entity_tree_items_form(selected)
 
     def _get_selected_entity_names(self):
@@ -395,9 +388,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
             (db_map, x["id"])
             for item in self._items_per_class[key]
             for db_map in item.db_maps
-            for item_type in ("object", "relationship")
             for x in self.db_mngr.get_items_by_field(
-                db_map, item_type, "class_id", item.entity_class_id(db_map), only_visible=False
+                db_map, "entity", "class_id", item.entity_class_id(db_map), only_visible=False
             )
         }
         self._restore_pruned_menu.addAction(key)
