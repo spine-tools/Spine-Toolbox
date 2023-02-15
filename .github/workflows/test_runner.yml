@@ -33,7 +33,6 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y unixodbc-dev
         sudo apt-get install -y libegl1
     - name: Install dependencies
       env:
@@ -76,7 +75,6 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y unixodbc-dev
         sudo apt-get install -y libegl1
     - name: Install dependencies
       env:

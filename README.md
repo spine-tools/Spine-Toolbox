@@ -198,11 +198,10 @@ Where c:\python38\python.exe may be some other path. To fix this, delete the fol
 
 #### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 
-following commands in a terminal may help:
+following command in a terminal may help:
 
 ```shell
 $ sudo apt install libpq-dev
-$ sudo apt-get install unixodbc-dev
 ```
 
 #### Problems in starting the application
