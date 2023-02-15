@@ -475,7 +475,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             """
             return (
                 self._view.source_model.item_type == "parameter_value"
-                and self._db_editor.current_class_type == "relationship_class"
+                and self._db_editor.first_current_entity_class["dimension_id_list"]
             )
 
         def _clear_selection_lists(self):
@@ -505,7 +505,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             db_map_typed_data = {}
             source_model = self._view.source_model
             for index in self._selected_entity_indexes:
-                db_map, object_ids = source_model.db_map_object_ids(index)
+                db_map, object_ids = source_model.db_map_entity_ids(index)
                 object_id_list = ",".join([str(id_) for id_ in object_ids])
                 id_ = db_map_relationship_lookup.get(db_map, {}).get(object_id_list)
                 if id_:

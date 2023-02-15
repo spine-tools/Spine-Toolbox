@@ -428,36 +428,27 @@ class EntityQGraphicsView(CustomQGraphicsView):
             msg = "You haven't selected the position parameters. Please go to Graph -> Select position parameters"
             self._spine_db_editor.msg.emit(msg)
             return
-        obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
-        rel_items = [item for item in self.selected_items if isinstance(item, RelationshipItem)]
-        db_map_class_obj_items = {}
-        db_map_class_rel_items = {}
-        for item in obj_items:
+        ent_items = [item for item in self.selected_items if isinstance(item, EntityItem)]
+        db_map_class_ent_items = {}
+        for item in ent_items:
             for db_map in item.db_maps:
-                db_map_class_obj_items.setdefault(db_map, {}).setdefault(item.entity_class_name, []).append(item)
-        for item in rel_items:
-            for db_map in item.db_maps:
-                db_map_class_rel_items.setdefault(db_map, {}).setdefault(item.entity_class_name, []).append(item)
+                db_map_class_ent_items.setdefault(db_map, {}).setdefault(item.entity_class_name, []).append(item)
         db_map_data = {}
-        for db_map, class_obj_items in db_map_class_obj_items.items():
+        for db_map, class_ent_items in db_map_class_ent_items.items():
             data = db_map_data.setdefault(db_map, {})
-            for class_name, obj_items in class_obj_items.items():
-                data.setdefault("object_parameters", []).extend(
+            for class_name, ent_items in class_ent_items.items():
+                data.setdefault("parameter_definitions", []).extend(
                     [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
                 )
-                data.setdefault("object_parameter_values", []).extend(
-                    [(class_name, item.entity_name, self.pos_x_parameter, item.pos().x()) for item in obj_items]
-                    + [(class_name, item.entity_name, self.pos_y_parameter, item.pos().y()) for item in obj_items]
-                )
-        for db_map, class_rel_items in db_map_class_rel_items.items():
-            data = db_map_data.setdefault(db_map, {})
-            for class_name, rel_items in class_rel_items.items():
-                data.setdefault("relationship_parameters", []).extend(
-                    [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
-                )
-                data.setdefault("relationship_parameter_values", []).extend(
-                    [(class_name, item.object_name_list, self.pos_x_parameter, item.pos().x()) for item in rel_items]
-                    + [(class_name, item.object_name_list, self.pos_y_parameter, item.pos().y()) for item in rel_items]
+                data.setdefault("parameter_values", []).extend(
+                    [
+                        (class_name, item.element_name_list or item.entity_name, self.pos_x_parameter, item.pos().x())
+                        for item in ent_items
+                    ]
+                    + [
+                        (class_name, item.element_name_list or item.entity_name, self.pos_y_parameter, item.pos().y())
+                        for item in ent_items
+                    ]
                 )
         self.db_mngr.import_data(db_map_data)
 

@@ -59,8 +59,8 @@ class TopLeftHeaderItem:
             return item.get("description", "No description")
 
 
-class TopLeftObjectHeaderItem(TopLeftHeaderItem):
-    """A top left header for object_class."""
+class TopLeftEntityHeaderItem(TopLeftHeaderItem):
+    """A top left header for an entity class."""
 
     def __init__(self, model, rank, class_name, class_id):
         super().__init__(model)
@@ -70,19 +70,19 @@ class TopLeftObjectHeaderItem(TopLeftHeaderItem):
 
     @property
     def header_type(self):
-        return "object"
+        return "entity"
 
     @property
     def name(self):
         return self._name
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
-        return self._get_header_data_from_db("object", header_id, "name", role)
+        return self._get_header_data_from_db("entity", header_id, "name", role)
 
     def update_data(self, db_map_data):
         if not db_map_data:
             return False
-        self.db_mngr.update_objects(db_map_data)
+        self.db_mngr.update_entities(db_map_data)
         return True
 
     def add_data(self, names):
@@ -92,7 +92,7 @@ class TopLeftObjectHeaderItem(TopLeftHeaderItem):
             db_map: [{"name": name, "class_id": class_id} for name in names]
             for db_map, class_id in self._class_id.items()
         }
-        self.db_mngr.add_objects(db_map_data)
+        self.db_mngr.add_entities(db_map_data)
         return True
 
 
@@ -735,7 +735,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         super().__init__(parent)
         self._entity_fetch_parent = FlexibleFetchParent(
-            None,
+            "entity",
             handle_items_added=self._handle_entities_added,
             handle_items_removed=self._handle_entities_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
@@ -823,14 +823,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         yield self._parameter_definition_fetch_parent
         yield self._entity_fetch_parent
 
-    def reset_fetch_parents(self):
-        super().reset_fetch_parents()
-        if self._parent.current_class_type == "object_class":
-            self._entity_fetch_parent.fetch_item_type = "object"
-        elif self._parent.current_class_type == "relationship_class":
-            self._entity_fetch_parent.fetch_item_type = "relationship"
-
-    def db_map_object_ids(self, index):
+    def db_map_entity_ids(self, index):
         """
         Returns db_map and object ids for given index. Used by PivotTableView.
 
@@ -839,16 +832,16 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        return self._db_map_object_ids(header_ids)
+        return self._db_map_entity_ids(header_ids)
 
-    def _db_map_object_ids(self, header_ids):
-        object_indexes = [
-            k for k, h in enumerate(self.top_left_headers.values()) if isinstance(h, TopLeftObjectHeaderItem)
+    def _db_map_entity_ids(self, header_ids):
+        entity_indexes = [
+            k for k, h in enumerate(self.top_left_headers.values()) if isinstance(h, TopLeftEntityHeaderItem)
         ]
-        return header_ids[-1], [header_ids[k][1] for k in object_indexes]
+        return header_ids[-1], [header_ids[k][1] for k in entity_indexes]
 
     def all_header_names(self, index):
-        """Returns the object, parameter, alternative, and db names corresponding to the given data index.
+        """Returns the entity, parameter, alternative, and db names corresponding to the given data index.
 
         Args:
             index (QModelIndex)
@@ -861,14 +854,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        _, objects_ids = self._db_map_object_ids(header_ids)
+        _, entity_ids = self._db_map_entity_ids(header_ids)
         _, parameter_id = header_ids[-3]
         _, alternative_id = header_ids[-2]
         db_map = header_ids[-1]
-        object_names = [self.db_mngr.get_item(db_map, "object", id_)["name"] for id_ in objects_ids]
+        entity_names = [self.db_mngr.get_item(db_map, "entity", id_)["name"] for id_ in entity_ids]
         parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id).get("parameter_name", "")
         alternative_name = self.db_mngr.get_item(db_map, "alternative", alternative_id).get("name", "")
-        return object_names, parameter_name, alternative_name, db_map.codename
+        return entity_names, parameter_name, alternative_name, db_map.codename
 
     def index_name(self, index):
         """Returns a string that concatenates the object and parameter names corresponding to the given data index.
@@ -882,8 +875,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         if not self.index_in_data(index):
             return ""
-        object_names, parameter_name, alternative_name, db_name = self.all_header_names(index)
-        return parameter_identifier(db_name, parameter_name, object_names, alternative_name)
+        entity_names, parameter_name, alternative_name, db_name = self.all_header_names(index)
+        return parameter_identifier(db_name, parameter_name, entity_names, alternative_name)
 
     def column_name(self, column):
         """Returns a string that concatenates the object and parameter names corresponding to the given column.
@@ -904,10 +897,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
     def call_reset_model(self, pivot=None):
         """See base class."""
-        object_class_ids = self._parent.current_object_class_ids
+        dimension_ids = self._parent.current_dimension_ids
         data = {}
         top_left_headers = [
-            TopLeftObjectHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+            TopLeftEntityHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(dimension_ids.items())
         ]
         top_left_headers += [TopLeftParameterHeaderItem(self)]
         top_left_headers += [TopLeftAlternativeHeaderItem(self)]
@@ -943,24 +936,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
         return self._batch_set_parameter_value_data(row_map, column_map, data, values)
 
-    def _object_parameter_value_to_add(self, db_map, header_ids, value_and_type):
-        value, value_type = split_value_and_type(value_and_type)
-        return dict(
-            entity_class_id=self._parent.current_class_id[db_map],
-            entity_id=header_ids[0],
-            parameter_definition_id=header_ids[-2],
-            value=value,
-            type=value_type,
-            alternative_id=header_ids[-1],
+    def _entity_parameter_value_to_add(self, db_map, header_ids, value_and_type, ent_id_lookup):
+        entity_id = (
+            header_ids[0] if ent_id_lookup is None else ent_id_lookup[db_map, tuple(id_ for id_ in header_ids[:-2])]
         )
-
-    def _relationship_parameter_value_to_add(self, db_map, header_ids, value_and_type, rel_id_lookup):
-        object_id_list = tuple(id_ for id_ in header_ids[:-2])
-        relationship_id = rel_id_lookup[db_map, object_id_list]
         value, value_type = split_value_and_type(value_and_type)
         return dict(
             entity_class_id=self._parent.current_class_id[db_map],
-            entity_id=relationship_id,
+            entity_id=entity_id,
             parameter_definition_id=header_ids[-2],
             value=value,
             type=value_type,
@@ -968,21 +951,18 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         )
 
     def _make_parameter_value_to_add(self):
-        if self._parent.current_class_type == "object_class":
-            return self._object_parameter_value_to_add
-        if self._parent.current_class_type == "relationship_class":
-            db_map_relationships = {
-                db_map: self.db_mngr.get_items_by_field(db_map, "relationship", "class_id", class_id)
-                for db_map, class_id in self._parent.current_class_id.items()
-            }
-            rel_id_lookup = {
-                (db_map, x["object_id_list"]): x["id"]
-                for db_map, relationships in db_map_relationships.items()
-                for x in relationships
-            }
-            return lambda db_map, header_ids, value, rel_id_lookup=rel_id_lookup: self._relationship_parameter_value_to_add(
-                db_map, header_ids, value, rel_id_lookup
-            )
+        if not self._parent.first_current_entity_class["dimension_id_list"]:
+            return self._entity_parameter_value_to_add
+        db_map_entities = {
+            db_map: self.db_mngr.get_items_by_field(db_map, "entity", "class_id", class_id)
+            for db_map, class_id in self._parent.current_class_id.items()
+        }
+        ent_id_lookup = {
+            (db_map, x["element_id_list"]): x["id"] for db_map, entities in db_map_entities.items() for x in entities
+        }
+        return lambda db_map, header_ids, value, ent_id_lookup=ent_id_lookup: self._entity_parameter_value_to_add(
+            db_map, header_ids, value, ent_id_lookup
+        )
 
     @staticmethod
     def _parameter_value_to_update(id_, header_ids, value_and_type):
@@ -1067,10 +1047,10 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
 
     def call_reset_model(self, pivot=None):
         """See base class."""
-        object_class_ids = self._parent.current_object_class_ids
+        object_class_ids = self._parent.current_dimension_ids
         data = {}
         top_left_headers = [
-            TopLeftObjectHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+            TopLeftEntityHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
         ]
         self._index_top_left_header = TopLeftParameterIndexHeaderItem(self)
         top_left_headers += [
@@ -1147,46 +1127,46 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._relationship_fetch_parent = FlexibleFetchParent(
-            "relationship",
-            handle_items_added=self._handle_relationships_added,
-            handle_items_removed=self._handle_relationships_removed,
+        self._entity_fetch_parent = FlexibleFetchParent(
+            "entity",
+            handle_items_added=self._handle_entities_added,
+            handle_items_removed=self._handle_entities_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
             accepts_item=self._parent.accepts_entity_item,
             owner=self,
             chunk_size=None,
         )
-        self._object_fetch_parent = FlexibleFetchParent(
-            "object",
-            handle_items_added=self._handle_objects_added,
-            handle_items_removed=self._handle_objects_removed,
+        self._element_fetch_parent = FlexibleFetchParent(
+            "entity",
+            handle_items_added=self._handle_elements_added,
+            handle_items_removed=self._handle_elements_removed,
             handle_items_updated=lambda _: self._parent.refresh_views(),
-            accepts_item=self._parent.accepts_member_object_item,
+            accepts_item=self._parent.accepts_element_item,
             owner=self,
         )
 
-    def _handle_relationships_added(self, db_map_data):
-        data = self._parent.load_full_relationship_data(db_map_relationships=db_map_data, action="add")
+    def _handle_entities_added(self, db_map_data):
+        data = self._parent.load_full_element_data(db_map_entities=db_map_data, action="add")
         self.update_model(data)
 
-    def _handle_relationships_removed(self, db_map_data):
-        data = self._parent.load_full_relationship_data(db_map_relationships=db_map_data, action="remove")
+    def _handle_entities_removed(self, db_map_data):
+        data = self._parent.load_full_element_data(db_map_entities=db_map_data, action="remove")
         self.update_model(data)
 
-    def _load_empty_relationship_data(self, db_map_data):
-        db_map_class_objects = dict()
+    def _load_empty_element_data(self, db_map_data):
+        db_map_class_entities = {}
         for db_map, items in db_map_data.items():
-            class_objects = db_map_class_objects[db_map] = dict()
+            class_entities = db_map_class_entities[db_map] = {}
             for item in items:
-                class_objects.setdefault(item["class_id"], []).append(item)
-        return self._parent.load_empty_relationship_data(db_map_class_objects=db_map_class_objects)
+                class_entities.setdefault(item["class_id"], []).append(item)
+        return self._parent.load_empty_element_data(db_map_class_entities=db_map_class_entities)
 
-    def _handle_objects_added(self, db_map_data):
-        data = self._load_empty_relationship_data(db_map_data)
+    def _handle_elements_added(self, db_map_data):
+        data = self._load_empty_element_data(db_map_data)
         self.add_to_model(data)
 
-    def _handle_objects_removed(self, db_map_data):
-        data = self._load_empty_relationship_data(db_map_data)
+    def _handle_elements_removed(self, db_map_data):
+        data = self._load_empty_element_data(db_map_data)
         self.remove_from_model(data)
 
     @property
@@ -1194,15 +1174,15 @@ class RelationshipPivotTableModel(PivotTableModelBase):
         return "relationship"
 
     def _fetch_parents(self):
-        yield self._object_fetch_parent
-        yield self._relationship_fetch_parent
+        yield self._element_fetch_parent
+        yield self._entity_fetch_parent
 
     def call_reset_model(self, pivot=None):
         """See base class."""
-        object_class_ids = self._parent.current_object_class_ids
+        object_class_ids = self._parent.current_dimension_ids
         data = {}
         top_left_headers = [
-            TopLeftObjectHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+            TopLeftEntityHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
         ]
         top_left_headers += [TopLeftDatabaseHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}
@@ -1231,16 +1211,16 @@ class RelationshipPivotTableModel(PivotTableModelBase):
         return bool(data[0][0])
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
-        return self._batch_set_relationship_data(row_map, column_map, data, values)
+        return self._batch_set_entity_data(row_map, column_map, data, values)
 
-    def _batch_set_relationship_data(self, row_map, column_map, data, values):
-        def relationship_to_add(db_map, header_ids):
-            rel_cls_name = self.db_mngr.get_item(
-                db_map, "relationship_class", self._parent.current_class_id.get(db_map)
-            )["name"]
-            object_names = [self.db_mngr.get_item(db_map, "object", id_)["name"] for id_ in header_ids]
-            name = rel_cls_name + "_" + "__".join(object_names)
-            return dict(object_id_list=list(header_ids), class_id=self._parent.current_class_id.get(db_map), name=name)
+    def _batch_set_entity_data(self, row_map, column_map, data, values):
+        def entity_to_add(db_map, header_ids):
+            ent_cls_name = self.db_mngr.get_item(db_map, "entity_class", self._parent.current_class_id.get(db_map))[
+                "name"
+            ]
+            element_names = [self.db_mngr.get_item(db_map, "entity", id_)["name"] for id_ in header_ids]
+            name = ent_cls_name + "_" + "__".join(element_names)
+            return dict(element_id_list=list(header_ids), class_id=self._parent.current_class_id.get(db_map), name=name)
 
         to_add = {}
         to_remove = {}
@@ -1250,15 +1230,15 @@ class RelationshipPivotTableModel(PivotTableModelBase):
                 db_map = header_ids.pop()
                 header_ids = [id_ for _, id_ in header_ids]
                 if data[i][j] is None and values[row, column]:
-                    item = relationship_to_add(db_map, header_ids)
+                    item = entity_to_add(db_map, header_ids)
                     to_add.setdefault(db_map, []).append(item)
                 elif data[i][j] is not None and not values[row, column]:
                     _, id_ = data[i][j]
-                    to_remove.setdefault(db_map, {}).setdefault("relationship", []).append(id_)
+                    to_remove.setdefault(db_map, {}).setdefault("entity", []).append(id_)
         if not to_add and not to_remove:
             return False
         if to_add:
-            self.db_mngr.add_relationships(to_add)
+            self.db_mngr.add_entities(to_add)
         if to_remove:
             self.db_mngr.remove_items(to_remove)
         return True

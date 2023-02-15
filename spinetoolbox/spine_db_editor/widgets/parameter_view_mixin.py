@@ -53,7 +53,7 @@ class ParameterViewMixin:
         self.ui.treeView_alternative_scenario.alternative_selection_changed.connect(
             self._handle_alternative_selection_changed
         )
-        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_tree_selection_changed)
+        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed)
         self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
@@ -148,7 +148,7 @@ class ParameterViewMixin:
         self._reset_filters()
 
     @Slot(dict)
-    def _handle_tree_selection_changed(self, selected_indexes):
+    def _handle_entity_tree_selection_changed(self, selected_indexes):
         """Resets filter according to entity tree selection."""
         ent_cls_inds = set(selected_indexes.get("entity_class", {}).keys())
         ent_inds = set(selected_indexes.get("entity", {}).keys())

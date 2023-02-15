@@ -228,9 +228,9 @@ class GraphViewMixin:
             QTimer.singleShot(100, self.build_graph)
 
     @Slot(dict)
-    def _handle_tree_selection_changed(self, selected):
+    def _handle_entity_tree_selection_changed(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
-        super()._handle_tree_selection_changed(selected)
+        super()._handle_entity_tree_selection_changed(selected)
         self._renew_fetch_parents()
         self.selected_tree_inds = selected
         self.added_db_map_entity_ids.clear()

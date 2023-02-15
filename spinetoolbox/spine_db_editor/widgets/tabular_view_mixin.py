@@ -41,7 +41,7 @@ class TabularViewMixin:
 
     _PARAMETER_VALUE = "&Value"
     _INDEX_EXPANSION = "&Index"
-    _RELATIONSHIP = "Re&lationship"
+    _ELEMENT = "E&lement"
     _SCENARIO_ALTERNATIVE = "&Scenario"
 
     _PARAMETER = "parameter"
@@ -52,11 +52,10 @@ class TabularViewMixin:
         super().__init__(*args, **kwargs)
         self._pivot_table_models = {
             self._PARAMETER_VALUE: ParameterValuePivotTableModel(self),
-            self._RELATIONSHIP: RelationshipPivotTableModel(self),
+            self._ELEMENT: RelationshipPivotTableModel(self),
             self._INDEX_EXPANSION: IndexExpansionPivotTableModel(self),
             self._SCENARIO_ALTERNATIVE: ScenarioAlternativePivotTableModel(self),
         }
-        self.current_class_type = None
         self.current_class_id = {}  # Mapping from db_map to class_id
         self.current_class_name = None
         self.current_input_type = self._PARAMETER_VALUE
@@ -80,7 +79,7 @@ class TabularViewMixin:
             for input_type, icon_code in (
                 (self._PARAMETER_VALUE, "\uf292"),
                 (self._INDEX_EXPANSION, "\uf12c"),
-                (self._RELATIONSHIP, "\uf1b3"),
+                (self._ELEMENT, "\uf1b3"),
                 (self._SCENARIO_ALTERNATIVE, "\uf008"),
             )
         }
@@ -107,7 +106,7 @@ class TabularViewMixin:
                 bottom_right = table_view.model().index(model.rowCount() - 1, model.columnCount() - 1)
             table_view.model().dataChanged.emit(top_left, bottom_right)
 
-    # FIXME MM: this should be called after modifications
+    # FIXME: MM - this should be called after modifications
     @Slot(str)
     def update_filter_menus(self, action):
         for identifier, menu in self.filter_menus.items():
@@ -125,30 +124,14 @@ class TabularViewMixin:
             items = db_map_data.get(db_map)
             if not items:
                 continue
-            if self.current_input_type in (self._PARAMETER_VALUE, self._INDEX_EXPANSION):
-                if item_type in ("object_class", "relationship_class"):
-                    for item in items:
-                        if item["id"] == self.current_class_id.get(db_map):
-                            return True
-                    if item_type == "object_class":
-                        object_class_id_list = {
-                            db_map_class_id.get(db_map) for db_map_class_id in self.current_object_class_id_list
-                        }
-                        for item in items:
-                            if item["id"] in object_class_id_list:
-                                return True
-            elif self.current_input_type == self._RELATIONSHIP:
-                if item_type == "relationship_class":
-                    for item in items:
-                        if item["id"] == self.current_class_id.get(db_map):
-                            return True
-                elif item_type == "object_class":
-                    object_class_id_list = {
-                        db_map_class_id.get(db_map) for db_map_class_id in self.current_object_class_id_list
-                    }
-                    for item in items:
-                        if item["id"] in object_class_id_list:
-                            return True
+            if (
+                self.current_input_type in (self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._ELEMENT)
+                and item_type == "entity_class"
+            ):
+                dimension_id_list = {db_map_class_id.get(db_map) for db_map_class_id in self.current_dimension_id_list}
+                for item in items:
+                    if item["id"] == self.current_class_id.get(db_map) or item["id"] in dimension_id_list:
+                        return True
         return False
 
     @Slot(str, dict)
@@ -174,27 +157,32 @@ class TabularViewMixin:
         self.pivot_table_proxy.setData(index, value)
 
     @property
-    def current_object_class_id_list(self):
-        if self.current_class_type == "object_class":
-            return [self.current_class_id]
-        current_object_class_id_list = [{} for _ in self.current_object_class_name_list]
+    def current_dimension_id_list(self):
+        current_dimension_id_list = [{} for _ in self.current_dimension_name_list]
         for db_map, class_id in self.current_class_id.items():
-            relationship_class = self.db_mngr.get_item(db_map, "relationship_class", class_id)
-            for k, id_ in enumerate(relationship_class["object_class_id_list"]):
-                current_object_class_id_list[k][db_map] = id_
-        return current_object_class_id_list
+            entity_class = self.db_mngr.get_item(db_map, "entity_class", class_id)
+            if not entity_class["dimension_id_list"]:
+                current_dimension_id_list[0][db_map] = class_id
+                continue
+            for k, id_ in enumerate(entity_class["dimension_id_list"]):
+                current_dimension_id_list[k][db_map] = id_
+        return current_dimension_id_list
 
     @property
-    def current_object_class_name_list(self):
+    def first_current_entity_class(self):
         db_map, class_id = next(iter(self.current_class_id.items()))
-        if self.current_class_type == "object_class":
-            return [self.db_mngr.get_item(db_map, "object_class", class_id)["name"]]
-        relationship_class = self.db_mngr.get_item(db_map, "relationship_class", class_id)
-        return fix_name_ambiguity(relationship_class["object_class_name_list"])
+        return self.db_mngr.get_item(db_map, "entity_class", class_id)
 
     @property
-    def current_object_class_ids(self):
-        return dict(zip(self.current_object_class_name_list, self.current_object_class_id_list))
+    def current_dimension_name_list(self):
+        entity_class = self.first_current_entity_class
+        if not entity_class["dimension_id_list"]:
+            return [entity_class["name"]]
+        return fix_name_ambiguity(entity_class["dimension_name_list"])
+
+    @property
+    def current_dimension_ids(self):
+        return dict(zip(self.current_dimension_name_list, self.current_dimension_id_list))
 
     @staticmethod
     def _is_class_index(index):
@@ -210,8 +198,8 @@ class TabularViewMixin:
     @Slot("QAction")
     def _handle_pivot_action_triggered(self, action):
         self.current_input_type = action.text()
-        # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed` with `visible = True`
-        # See `SpineDBEditor` class.
+        # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed`
+        # with `visible = True`. See `SpineDBEditor` class.
 
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
@@ -229,18 +217,9 @@ class TabularViewMixin:
             self.ui.dockWidget_pivot_table.show()
 
     @Slot(dict)
-    def _handle_object_tree_selection_changed(self, selected_indexes):
-        super()._handle_object_tree_selection_changed(selected_indexes)
-        current = self.ui.treeView_entity.currentIndex()
-        self._handle_entity_tree_current_changed(current)
-
-    @Slot(dict)
-    def _handle_relationship_tree_selection_changed(self, selected_indexes):
-        super()._handle_relationship_tree_selection_changed(selected_indexes)
-        current = self.ui.treeView_relationship.currentIndex()
-        self._handle_entity_tree_current_changed(current)
-
-    def _handle_entity_tree_current_changed(self, current_index):
+    def _handle_entity_tree_selection_changed(self, selected_indexes):
+        super()._handle_entity_tree_selection_changed(selected_indexes)
+        current_index = self.ui.treeView_entity.currentIndex()
         self._update_class_attributes(current_index)
         if self.current_input_type != self._SCENARIO_ALTERNATIVE and self.ui.dockWidget_pivot_table.isVisible():
             self.do_reload_pivot_table()
@@ -254,7 +233,6 @@ class TabularViewMixin:
         if self.current_class_id == class_id:
             return
         self.current_class_id = class_id
-        self.current_class_type = current_class_item.item_type
         self.current_class_name = current_class_item.display_data
         self.clear_pivot_table()
 
@@ -264,7 +242,7 @@ class TabularViewMixin:
             return None
         item = current_index.model().item_from_index(current_index)
         while item.item_type != "root":
-            if item.item_type in ("object_class", "relationship_class"):
+            if item.item_type == "entity_class":
                 return item
             item = item.parent_item
         return None
@@ -280,49 +258,48 @@ class TabularViewMixin:
         Returns:
             dict
         """
-        entity_type = {"object_class": "object", "relationship_class": "relationship"}[self.current_class_type]
         return {
-            db_map: self.db_mngr.get_items_by_field(db_map, entity_type, "class_id", class_id)
+            db_map: self.db_mngr.get_items_by_field(db_map, "entity", "class_id", class_id)
             for db_map, class_id in self.current_class_id.items()
         }
 
-    def load_empty_relationship_data(self, db_map_class_objects=None):
-        """Returns a dict containing all possible relationships in the current class.
+    def load_empty_element_data(self, db_map_class_entities=None):
+        """Returns a dict containing all possible entity elements in the current class.
 
         Args:
-            db_map_class_objects (dict)
+            db_map_class_entities (dict)
 
         Returns:
             dict: Key is db_map-object_id tuple, value is None.
         """
-        if db_map_class_objects is None:
-            db_map_class_objects = dict()
-        if self.current_class_type == "object_class":
+        if db_map_class_entities is None:
+            db_map_class_entities = {}
+        if not self.first_current_entity_class["dimension_id_list"]:
             return {}
         data = {}
         for db_map in self.db_maps:
-            object_id_lists = []
+            element_id_lists = []
             all_given_ids = set()
-            for db_map_class_id in self.current_object_class_id_list:
-                class_id = db_map_class_id.get(db_map)
-                objects = self.db_mngr.get_items_by_field(db_map, "object", "class_id", class_id)
-                ids = {item["id"]: None for item in objects}
-                given_objects = db_map_class_objects.get(db_map, {}).get(class_id)
-                if given_objects is not None:
-                    given_ids = {item["id"]: None for item in given_objects}
+            for db_map_dimension_id in self.current_dimension_id_list:
+                dim_id = db_map_dimension_id.get(db_map)
+                elements = self.db_mngr.get_items_by_field(db_map, "entity", "class_id", dim_id)
+                ids = {item["id"]: None for item in elements}
+                given_elements = db_map_class_entities.get(db_map, {}).get(dim_id)
+                if given_elements is not None:
+                    given_ids = {item["id"]: None for item in given_elements}
                     ids.update(given_ids)
                     all_given_ids.update(given_ids.keys())
-                object_id_lists.append(list(ids.keys()))
+                element_id_lists.append(list(ids.keys()))
             db_map_data = {
-                tuple((db_map, id_) for id_ in objects_ids) + (db_map,): None
-                for objects_ids in product(*object_id_lists)
-                if not all_given_ids or all_given_ids.intersection(objects_ids)
+                tuple((db_map, id_) for id_ in element_ids) + (db_map,): None
+                for element_ids in product(*element_id_lists)
+                if not all_given_ids or all_given_ids.intersection(element_ids)
             }
             data.update(db_map_data)
         return data
 
-    def load_full_relationship_data(self, db_map_relationships=None, action="add"):
-        """Returns a dict of relationships in the current class.
+    def load_full_element_data(self, db_map_entities=None, action="add"):
+        """Returns a dict of entity elements in the current class.
 
         Args:
             db_map_relationships (dict)
@@ -330,15 +307,15 @@ class TabularViewMixin:
         Returns:
             dict: Key is db_map-object id tuple, value is relationship id.
         """
-        if self.current_class_type == "object_class":
+        if not self.first_current_entity_class["dimension_id_list"]:
             return {}
-        if db_map_relationships is None:
-            db_map_relationships = self._get_db_map_entities()
+        if db_map_entities is None:
+            db_map_entities = self._get_db_map_entities()
         get_id = self._make_get_id(action)
         return {
-            tuple((db_map, id_) for id_ in rel["object_id_list"]) + (db_map,): get_id(db_map, rel)
-            for db_map, relationships in db_map_relationships.items()
-            for rel in relationships
+            tuple((db_map, id_) for id_ in ent["element_id_list"]) + (db_map,): get_id(db_map, ent)
+            for db_map, entities in db_map_entities.items()
+            for ent in entities
         }
 
     def load_relationship_data(self):
@@ -347,8 +324,8 @@ class TabularViewMixin:
         Returns:
             dict: Key is object id tuple, value is True if a relationship exists, False otherwise.
         """
-        data = self.load_empty_relationship_data()
-        data.update(self.load_full_relationship_data())
+        data = self.load_empty_element_data()
+        data.update(self.load_full_element_data())
         return data
 
     def load_scenario_alternative_data(self, db_map_scenarios=None, db_map_alternatives=None):
@@ -388,11 +365,8 @@ class TabularViewMixin:
         Returns:
             dict
         """
-        class_id_field = {"object_class": "object_class_id", "relationship_class": "relationship_class_id"}[
-            self.current_class_type
-        ]
         return {
-            db_map: [x["id"] for x in self.db_mngr.get_items_by_field(db_map, item_type, class_id_field, class_id)]
+            db_map: [x["id"] for x in self.db_mngr.get_items_by_field(db_map, item_type, "entity_class", class_id)]
             for db_map, class_id in self.current_class_id.items()
         }
 
@@ -436,18 +410,13 @@ class TabularViewMixin:
                 db_map: [(db_map, a["id"]) for a in self.db_mngr.get_items(db_map, "alternative")]
                 for db_map in self.db_maps
             }
-        if self.current_class_type == "relationship_class":
-            db_map_entity_ids = {
-                db_map: [tuple((db_map, id_) for id_ in e["object_id_list"]) for e in entities]
-                for db_map, entities in db_map_entities.items()
-            }
-        else:
-            db_map_entity_ids = {
-                db_map: [((db_map, e["id"]),) for e in entities] for db_map, entities in db_map_entities.items()
-            }
+        db_map_entity_ids = {
+            db_map: [tuple((db_map, id_) for id_ in e["element_id_list"] or (e["id"],)) for e in entities]
+            for db_map, entities in db_map_entities.items()
+        }
         if not db_map_entity_ids:
             db_map_entity_ids = {
-                db_map: [tuple((db_map, None) for _ in self.current_object_class_id_list)] for db_map in self.db_maps
+                db_map: [tuple((db_map, None) for _ in self.current_dimension_id_list)] for db_map in self.db_maps
             }
         if not db_map_parameter_ids:
             db_map_parameter_ids = {db_map: [(db_map, None)] for db_map in self.db_maps}
@@ -472,16 +441,8 @@ class TabularViewMixin:
         if db_map_parameter_values is None:
             db_map_parameter_values = self._get_db_map_parameter_values_or_defs("parameter_value")
         get_id = self._make_get_id(action)
-        if self.current_class_type == "object_class":
-            return {
-                ((db_map, x["object_id"]), (db_map, x["parameter_id"]), (db_map, x["alternative_id"]), db_map): get_id(
-                    db_map, x
-                )
-                for db_map, items in db_map_parameter_values.items()
-                for x in items
-            }
         return {
-            tuple((db_map, id_) for id_ in x["object_id_list"])
+            tuple((db_map, id_) for id_ in x["element_id_list"] or (x["entity_id"],))
             + ((db_map, x["parameter_id"]), (db_map, x["alternative_id"]), db_map): get_id(db_map, x)
             for db_map, items in db_map_parameter_values.items()
             for x in items
@@ -556,7 +517,7 @@ class TabularViewMixin:
         Returns:
             tuple, NoneType: pivot tuple, or None if no preference stored
         """
-        selection_key = (self.current_class_name, self.current_class_type, self.current_input_type)
+        selection_key = (self.current_class_name, self.current_input_type)
         if selection_key in self.class_pivot_preferences:
             rows = self.class_pivot_preferences[selection_key].index
             columns = self.class_pivot_preferences[selection_key].columns
@@ -584,7 +545,7 @@ class TabularViewMixin:
     def _can_build_pivot_table(self):
         if self.current_input_type != self._SCENARIO_ALTERNATIVE and not self.current_class_id:
             return False
-        if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship_class":
+        if self.current_input_type == self._ELEMENT and not self.first_current_entity_class["dimension_id_list"]:
             return False
         return True
 
@@ -657,11 +618,11 @@ class TabularViewMixin:
                 item_type = "parameter_value"
             else:
                 item_type = header.header_type
-            if header.header_type == "object":
+            if header.header_type == "entity":
                 accepts_item = (
-                    self.accepts_entity_item
-                    if self.current_class_type == "object_class"
-                    else lambda item, db_map: self.accepts_ith_member_object_item(header.rank, item, db_map)
+                    lambda item, db_map: self.accepts_ith_element_item(header.rank, item, db_map)
+                    if self.first_current_entity_class["dimension_id_list"]
+                    else self.accepts_entity_item
                 )
             elif header.header_type == "parameter":
                 accepts_item = self.accepts_parameter_item
@@ -735,9 +696,9 @@ class TabularViewMixin:
         frozen_value = self.get_frozen_value(self.ui.frozen_table.currentIndex())
         self.pivot_table_model.set_pivot(rows, columns, frozen, frozen_value)
         # save current pivot
-        self.class_pivot_preferences[
-            (self.current_class_name, self.current_class_type, self.current_input_type)
-        ] = self.PivotPreferences(rows, columns, frozen, frozen_value)
+        self.class_pivot_preferences[(self.current_class_name, self.current_input_type)] = self.PivotPreferences(
+            rows, columns, frozen, frozen_value
+        )
         self.make_pivot_headers()
 
     def get_frozen_value(self, index):
@@ -759,9 +720,7 @@ class TabularViewMixin:
         frozen_value = self.get_frozen_value(current)
         self.pivot_table_model.set_frozen_value(frozen_value)
         # store pivot preferences
-        self.class_pivot_preferences[
-            (self.current_class_name, self.current_class_type, self.current_input_type)
-        ] = self.PivotPreferences(
+        self.class_pivot_preferences[(self.current_class_name, self.current_input_type)] = self.PivotPreferences(
             self.pivot_table_model.model.pivot_rows,
             self.pivot_table_model.model.pivot_columns,
             self.pivot_table_model.model.pivot_frozen,
@@ -816,9 +775,9 @@ class TabularViewMixin:
     def accepts_parameter_item(self, item, db_map):
         return item["entity_class_id"] == self.current_class_id.get(db_map)
 
-    def accepts_member_object_item(self, item, db_map):
-        object_class_id_list = {x[db_map] for x in self.current_object_class_id_list}
-        return item["class_id"] in object_class_id_list
+    def accepts_element_item(self, item, db_map):
+        dimension_id_list = {x[db_map] for x in self.current_dimension_id_list}
+        return item["class_id"] in dimension_id_list
 
-    def accepts_ith_member_object_item(self, i, item, db_map):
-        return item["class_id"] == self.current_object_class_id_list[i][db_map]
+    def accepts_ith_element_item(self, i, item, db_map):
+        return item["class_id"] == self.current_dimension_id_list[i][db_map]
