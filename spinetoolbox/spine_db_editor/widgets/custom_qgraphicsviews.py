@@ -618,7 +618,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self.clear_cross_hairs_items()
 
     def mouseMoveEvent(self, event):
-        """Updates the hovered object item if we're in relationship creation mode."""
+        """Updates the hovered object item if we're in entity creation mode."""
         if self.cross_hairs_items:
             self._update_cross_hairs_pos(event.position().toPoint())
             return

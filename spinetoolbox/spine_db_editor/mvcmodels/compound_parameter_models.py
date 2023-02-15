@@ -394,20 +394,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._do_refresh()
         self.layoutChanged.emit()
 
-    def _emit_data_changed_for_column(self, field):
-        """Lazily emits data changed for an entire column.
-
-        Args:
-            field (str): the column header
-        """
-        try:
-            column = self.header.index(field)
-        except ValueError:
-            return
-        self.dataChanged.emit(
-            self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.ItemDataRole.DisplayRole]
-        )
-
     def db_item(self, index):
         sub_index = self.map_to_sub(index)
         return sub_index.model().db_item(sub_index)

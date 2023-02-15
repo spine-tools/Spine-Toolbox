@@ -375,7 +375,6 @@ class SingleParameterValueMixin(
         Args:
             items (list): dictionary-items
         """
-        # FIXME: simplify this
         for item in items:
             item["entity_class_name"] = self.entity_class_name
         self.build_lookup_dictionary({self.db_map: items})
