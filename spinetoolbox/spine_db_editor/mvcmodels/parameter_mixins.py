@@ -265,23 +265,23 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         """
         super().build_lookup_dictionary(db_map_data)
         # Group data by name
-        db_map_keys = dict()
+        db_map_entity_bynames = dict()
         for db_map, items in db_map_data.items():
             for item in items:
-                key = item.get("entity_name") or item.get("element_name_list")
-                if key:
-                    db_map_keys.setdefault(db_map, set()).add(key)
+                entity_byname = item.get("entity_byname")
+                if entity_byname:
+                    db_map_entity_bynames.setdefault(db_map, set()).add(entity_byname)
         # Build lookup dict
         self._db_map_ent_lookup.clear()
-        for db_map, keys in db_map_keys.items():
-            for key in keys:
+        for db_map, entity_bynames in db_map_entity_bynames.items():
+            for entity_byname in entity_bynames:
                 items = [
                     x
                     for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)
-                    if key in (x["name"], x["element_name_list"])
+                    if x["byname"] == entity_byname
                 ]
                 if items:
-                    self._db_map_ent_lookup.setdefault(db_map, {})[key] = items
+                    self._db_map_ent_lookup.setdefault(db_map, {})[entity_byname] = items
 
     def _fill_in_entity_ids(self, item, db_map):
         """Fills in all possible entity ids keyed by entity_class id in the given db item
@@ -294,11 +294,13 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         Returns:
             list: error log
         """
-        entity_name, element_name_list = item.pop("entity_name", None), item.pop("element_name_list", None)
-        ent_lookup = self._db_map_ent_lookup.get(db_map, {})
-        items = ent_lookup.get(entity_name, []) + ent_lookup.get(element_name_list, [])
+        entity_byname = item.pop("entity_byname", None)
+        items = self._db_map_ent_lookup.get(db_map, {}).get(entity_byname, [])
         if not items:
-            return [f"Unknown entity {entity_name}"] if entity_name else []
+            dimension_id_list = self.db_mngr.get_item(db_map, "entity_class", item.get("entity_class_id")).get(
+                "dimension_id_list"
+            )
+            return [f"Unknown entity {entity_byname[0]}"] if entity_byname and not dimension_id_list else []
         item["entity_ids"] = {x["class_id"]: x["id"] for x in items}
         return []
 
@@ -504,7 +506,7 @@ class MakeEntityOnTheFlyMixin:
         db_map_ent_cls_names = dict()
         for db_map, items in db_map_data.items():
             for item in items:
-                element_name_list = item.get("element_name_list")
+                element_name_list = item.get("entity_byname")
                 if element_name_list:
                     db_map_element_names.setdefault(db_map, set()).update(element_name_list)
                 entity_class_name = item.get("entity_class_name")
@@ -541,7 +543,7 @@ class MakeEntityOnTheFlyMixin:
             list: error log
         """
         entity_class_name = item.get("entity_class_name")
-        element_name_list = item.get("element_name_list")
+        element_name_list = item.get("entity_byname")
         if not element_name_list:
             return None, []
         entities = self._db_map_existing_ents.get(db_map, set())

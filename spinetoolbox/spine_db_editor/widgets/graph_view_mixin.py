@@ -172,6 +172,8 @@ class GraphViewMixin:
         Returns:
             list: tuples (db_map, id) that didn't match any item in the view.
         """
+        # FIXME: It looks like undoing twice and then redoing once restores all the items.
+        # It should only restores the items corresponding to one redo operation at a time
         added_db_map_ids_by_key = {}
         for db_map, entities in db_map_data.items():
             for entity in entities:
@@ -366,7 +368,7 @@ class GraphViewMixin:
     def _get_entity_key(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
         entity = self.db_mngr.get_item(db_map, "entity", entity_id)
-        key = (entity["class_name"], entity["dimension_name_list"], entity["name"], entity["element_name_list"])
+        key = (entity["class_name"], entity["dimension_name_list"], entity["byname"])
         if not self.ui.graphicsView.merge_dbs:
             key += (db_map.codename,)
         return key

@@ -144,7 +144,7 @@ class ParameterViewMixin:
         self._filter_class_ids = {}
         for db_map, items in active_items.items():
             self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
+        self._filter_entity_ids = self.db_mngr.db_map_ids(active_items)
         self._reset_filters()
 
     @Slot(dict)

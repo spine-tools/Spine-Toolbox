@@ -435,7 +435,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if self.item_type == "parameter_definition":
             names = [item["entity_class_name"]]
         elif self.item_type == "parameter_value":
-            names = [item["entity_name"]] if not item["element_name_list"] else list(item["element_name_list"])
+            names = list(item["entity_byname"])
         else:
             raise ValueError(
                 f"invalid item_type: expected parameter_definition or parameter_value, got {self.item_type}"
@@ -536,7 +536,6 @@ class CompoundParameterDefinitionModel(CompoundParameterDefinitionMixin, Compoun
     def _make_header(self):
         return [
             "entity_class_name",
-            "dimension_name_list",
             "parameter_name",
             "value_list_name",
             "default_value",
@@ -553,8 +552,7 @@ class CompoundParameterValueModel(CompoundParameterValueMixin, CompoundParameter
     def _make_header(self):
         return [
             "entity_class_name",
-            "entity_name",
-            "element_name_list",
+            "entity_byname",
             "parameter_name",
             "alternative_name",
             "value",

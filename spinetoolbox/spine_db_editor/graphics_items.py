@@ -133,15 +133,19 @@ class EntityItem(QGraphicsRectItem):
     def dimension_id_list(self):
         # FIXME: where is this used?
         return self.db_mngr.get_item(self.first_db_map, "entity_class", self.first_entity_class_id).get(
-            "dimension_id_list", ""
+            "dimension_id_list", ()
         )
 
     @property
+    def entity_byname(self):
+        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("byname", ())
+
+    @property
     def element_name_list(self):
-        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("element_name_list", "")
+        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("element_name_list", ())
 
     def element_id_list(self, db_map):
-        return self.db_mngr.get_item(db_map, "entity", self.entity_id(db_map)).get("element_id_list", "")
+        return self.db_mngr.get_item(db_map, "entity", self.entity_id(db_map)).get("element_id_list", ())
 
     @property
     def first_db_map_id(self):
@@ -185,6 +189,7 @@ class EntityItem(QGraphicsRectItem):
         return dict(
             class_id=self.entity_class_id(db_map),
             id=self.entity_id(db_map),
+            name=self.entity_name,
             element_id_list=self.element_id_list(db_map),
             element_name_list=self.element_name_list,
         )
@@ -201,8 +206,7 @@ class EntityItem(QGraphicsRectItem):
             return None
         return (
             f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
-            f"""{self.entity_name}<br>"""
-            f"""{DB_ITEM_SEPARATOR.join(self.element_name_list)}<br>"""
+            f"""{DB_ITEM_SEPARATOR.join(self.entity_byname)}<br>"""
             f"""@{self.display_database}</p></html>"""
         )
 
@@ -212,8 +216,7 @@ class EntityItem(QGraphicsRectItem):
             return {}
         return dict(
             entity_class_name=self.entity_class_name,
-            entity_name=self.entity_name,
-            element_name_list=DB_ITEM_SEPARATOR.join(self.element_name_list),
+            entity_byname=DB_ITEM_SEPARATOR.join(self.entity_byname),
             database=self.first_db_map.codename,
         )
 

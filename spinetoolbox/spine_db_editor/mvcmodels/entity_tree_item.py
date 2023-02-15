@@ -153,7 +153,7 @@ class EntityClassItem(MultiDBTreeItem):
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
 
-    visual_key = ["name", "element_name_list"]
+    visual_key = ["byname"]
     item_type = "entity"
 
     def __init__(self, *args, is_group=False, **kwargs):
@@ -178,11 +178,10 @@ class EntityItem(MultiDBTreeItem):
     @property
     def display_data(self):
         """Returns the name for display."""
-        if not self.element_name_list:
-            return MultiDBTreeItem.display_data.fget(self)
-        return DB_ITEM_SEPARATOR.join(
-            [x for x in self.element_name_list if x != self.parent_item.parent_item.display_data]
-        )
+        byname = self.db_map_data_field(self.first_db_map, "byname", default="")
+        if self.parent_item.parent_item.item_type == self.item_type:
+            byname = [x for x in byname if x != self.parent_item.parent_item.display_data]
+        return DB_ITEM_SEPARATOR.join(byname)
 
     @property
     def edit_data(self):
@@ -223,8 +222,7 @@ class EntityItem(MultiDBTreeItem):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
             entity_class_name=self.db_map_data_field(self.first_db_map, "class_name"),
-            entity_name=self.display_data,
-            element_name_list=DB_ITEM_SEPARATOR.join(self.db_map_data_field(self.first_db_map, "element_name_list")),
+            entity_byname=DB_ITEM_SEPARATOR.join(self.db_map_data_field(self.first_db_map, "byname")),
             database=self.first_db_map.codename,
         )
 

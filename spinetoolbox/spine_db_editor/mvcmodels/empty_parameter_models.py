@@ -120,9 +120,6 @@ class EmptyParameterModel(EmptyRowModel):
         if entity_class_id:
             entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
             self._main_data[item["row"]][self.header.index("entity_class_name")] = entity_class["name"]
-            self._main_data[item["row"]][self.header.index("dimension_name_list")] = DB_ITEM_SEPARATOR.join(
-                entity_class["dimension_name_list"]
-            )
 
     def add_items_to_db(self, db_map_data):
         """Add items to db.
@@ -165,13 +162,6 @@ class EmptyParameterDefinitionModel(
     @property
     def item_type(self):
         return "parameter_definition"
-
-    def flags(self, index):
-        """Reimplemented to make the dimension_name_list column non-editable."""
-        flags = super().flags(index)
-        if self.header[index.column()] == "dimension_name_list":
-            flags &= ~Qt.ItemIsEditable
-        return flags
 
     def add_items_to_db(self, db_map_data):
         """See base class."""
@@ -247,29 +237,13 @@ class EmptyParameterValueModel(
         )
 
     def _make_unique_id(self, item):
-        element_name_list = item.get("element_name_list")
-        return (
-            *super()._make_unique_id(item),
-            item.get("name"),
-            DB_ITEM_SEPARATOR.join(element_name_list) if element_name_list is not None else None,
-            item.get("alternative_name"),
-        )
+        entity_byname = item.get("entity_byname")
+        if entity_byname is None:
+            entity_byname = ()
+        return (*super()._make_unique_id(item), DB_ITEM_SEPARATOR.join(entity_byname), item.get("alternative_name"))
 
     def _make_item(self, row):
         item = super()._make_item(row)
-        if item["element_name_list"]:
-            item["element_name_list"] = tuple(item["element_name_list"].split(DB_ITEM_SEPARATOR))
+        if item["entity_byname"]:
+            item["entity_byname"] = tuple(item["entity_byname"].split(DB_ITEM_SEPARATOR))
         return item
-
-    def _autocomplete_row(self, db_map, item):
-        entity_class_id = item.get("entity_class_id")
-        entity_id = item.get("entity_id")
-        if entity_class_id:
-            entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
-            self._main_data[item["row"]][self.header.index("entity_class_name")] = entity_class["name"]
-        if entity_id:
-            entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
-            self._main_data[item["row"]][self.header.index("entity_name")] = entity["name"]
-            self._main_data[item["row"]][self.header.index("element_name_list")] = DB_ITEM_SEPARATOR.join(
-                entity["element_name_list"]
-            )

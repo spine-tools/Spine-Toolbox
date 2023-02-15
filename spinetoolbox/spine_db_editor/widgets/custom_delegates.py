@@ -404,22 +404,28 @@ class ParameterNameDelegate(ParameterDelegate):
         return editor
 
 
-class EntityNameDelegate(ParameterDelegate):
-    """A delegate for the object name."""
+class EntityBynameDelegate(ParameterDelegate):
+    """A delegate for the entity byname."""
+
+    element_name_list_editor_requested = Signal(QModelIndex, int, object)
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = SearchBarEditor(self.parent(), parent)
         entity_class_id = index.model().get_entity_class_id(index, db_map)
         if entity_class_id is not None:
+            entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
+            if entity_class["dimension_id_list"]:
+                self.element_name_list_editor_requested.emit(index, entity_class_id, db_map)
+                return
             entities = self.db_mngr.get_items_by_field(
                 db_map, "entity", "class_id", entity_class_id, only_visible=False
             )
         else:
             entities = self.db_mngr.get_items(db_map, "entity", only_visible=False)
+        editor = SearchBarEditor(self.parent(), parent)
         name_list = list({x["name"]: None for x in entities})
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
@@ -439,24 +445,6 @@ class AlternativeNameDelegate(ParameterDelegate):
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
-
-
-class ElementNameListDelegate(ParameterDelegate):
-    """A delegate for the object name list."""
-
-    editor_requested = Signal(QModelIndex, int, object)
-
-    def createEditor(self, parent, option, index):
-        """Returns editor."""
-        db_map = self._get_db_map(index)
-        if not db_map:
-            return None
-        entity_class_id = index.model().get_entity_class_id(index, db_map)
-        if not entity_class_id:
-            editor = CustomLineEditor(parent)
-            editor.set_data(index.data(Qt.ItemDataRole.EditRole))
-            return editor
-        self.editor_requested.emit(index, entity_class_id, db_map)
 
 
 class ToolFeatureDelegate(QStyledItemDelegate):

@@ -52,8 +52,7 @@ from .custom_delegates import (
     ParameterValueDelegate,
     ParameterNameDelegate,
     EntityClassNameDelegate,
-    EntityNameDelegate,
-    ElementNameListDelegate,
+    EntityBynameDelegate,
     AlternativeNameDelegate,
     ItemMetadataDelegate,
 )
@@ -303,9 +302,8 @@ class ParameterValueTableView(ParameterTableView):
         self._make_delegate("alternative_name", AlternativeNameDelegate)
         delegate = self._make_delegate("value", ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
-        self._make_delegate("entity_name", EntityNameDelegate)
-        delegate = self._make_delegate("element_name_list", ElementNameListDelegate)
-        delegate.editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
+        delegate = self._make_delegate("entity_byname", EntityBynameDelegate)
+        delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
 
     def _update_pinned_values(self, _selected, _deselected):
         row_pinned_value_iter = ((index.row(), self._make_pinned_value(index)) for index in self.selectedIndexes())
@@ -325,13 +323,13 @@ class ParameterValueTableView(ParameterTableView):
 
     @property
     def _pk_fields(self):
-        return "entity_class_name", "entity_name", "element_name_list", "parameter_name", "alternative_name"
+        return "entity_class_name", "entity_byname", "parameter_name", "alternative_name"
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class."""
         header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._pk_fields]
         for i, section in enumerate(header_sections):
-            if section.label == "element_name_list":
+            if section.label == "entity_byname":
                 header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
                 break
         return plot_parameter_table_selection(

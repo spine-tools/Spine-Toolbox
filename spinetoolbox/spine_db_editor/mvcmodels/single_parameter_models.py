@@ -97,13 +97,11 @@ class SingleParameterModel(HalfSortedTableModel):
 
     @property
     def fixed_fields(self):
-        return ["entity_class_name", "dimension_name_list", "database"]
+        return ["entity_class_name", "database"]
 
     @property
     def group_fields(self):
-        return {"parameter_definition": ["dimension_name_list"], "parameter_value": ["element_name_list"]}[
-            self.item_type
-        ]
+        return "entity_byname"
 
     @property
     def parameter_definition_id_key(self):
@@ -163,9 +161,7 @@ class SingleParameterModel(HalfSortedTableModel):
         """
         return {
             "entity_class_name": ("entity_class_id", "entity_class"),
-            "dimension_name_list": ("entity_class_id", "entity_class"),
-            "entity_name": ("entity_id", "entity"),
-            "element_name_list": ("entity_id", "entity"),
+            "entity_label": ("entity_id", "entity"),
             "parameter_name": (self.parameter_definition_id_key, "parameter_definition"),
             "value_list_name": ("value_list_id", "parameter_value_list"),
             "description": ("id", "parameter_definition"),
@@ -379,6 +375,7 @@ class SingleParameterValueMixin(
         Args:
             items (list): dictionary-items
         """
+        # FIXME: simplify this
         for item in items:
             item["entity_class_name"] = self.entity_class_name
         db_map_data = {self.db_map: items}
