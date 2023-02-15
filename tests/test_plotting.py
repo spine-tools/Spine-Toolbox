@@ -289,7 +289,7 @@ class TestPlotPivotTableSelection(TestBase):
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(
-                legend_texts, ["ints | o1", "ints | o2", "ints | o3", "floats | o1", "floats | o2", "floats | o3"]
+                legend_texts, ["floats | o1", "floats | o2", "floats | o3", "ints | o1", "ints | o2", "ints | o3"]
             )
             lines = plot_widget.canvas.axes.get_lines()
             self.assertEqual(len(lines), 3)
@@ -309,15 +309,15 @@ class TestPlotPivotTableSelection(TestBase):
             plot_widget.deleteLater()
 
     def test_x_column(self):
-        self._fill_pivot({"ints": [-3, -1, 2], "floats": [1.1, 1.2, 1.3]})
+        self._fill_pivot({"a-ints": [-3, -1, 2], "b-floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
         model.sourceModel().set_plot_x_column(2, True)
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints | Base")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "floats")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | a-ints | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "b-floats")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "a-ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o2", "o3"])
@@ -333,16 +333,16 @@ class TestPlotPivotTableSelection(TestBase):
             plot_widget.deleteLater()
 
     def test_hidden_x_column_should_disable_it(self):
-        self._fill_pivot({"ints": [-3, -1, 2], "floats": [1.1, 1.2, 1.3]})
+        self._fill_pivot({"a-ints": [-3, -1, 2], "b-floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
         model.sourceModel().set_plot_x_column(2, True)
         model.set_filter("parameter", {(self._db_map, 1)})
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | a-ints")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "a-ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
             self.assertEqual(legend_texts, ["o1", "o2", "o3"])
