@@ -370,9 +370,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Args:
             db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
         """
-        self._emit_data_changed_for_column("parameter_name")
-        # NOTE: parameter_definition names aren't refreshed unless we emit dataChanged,
-        # whereas entity and class names are. Why?
+        self.dataChanged.emit(
+            self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1), [Qt.ItemDataRole.DisplayRole]
+        )
 
     def handle_items_removed(self, db_map_data):
         """Runs when either parameter definitions or values are removed from the dbs.

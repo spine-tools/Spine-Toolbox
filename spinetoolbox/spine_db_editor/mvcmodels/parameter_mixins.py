@@ -297,9 +297,8 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         entity_byname = item.pop("entity_byname", None)
         items = self._db_map_ent_lookup.get(db_map, {}).get(entity_byname, [])
         if not items:
-            dimension_id_list = self.db_mngr.get_item(db_map, "entity_class", item.get("entity_class_id")).get(
-                "dimension_id_list"
-            )
+            entity_class_id = self.entity_class_id or item.get("entity_class_id")
+            dimension_id_list = self.db_mngr.get_item(db_map, "entity_class", entity_class_id).get("dimension_id_list")
             return [f"Unknown entity {entity_byname[0]}"] if entity_byname and not dimension_id_list else []
         item["entity_ids"] = {x["class_id"]: x["id"] for x in items}
         return []
@@ -543,15 +542,17 @@ class MakeEntityOnTheFlyMixin:
             list: error log
         """
         entity_class_name = item.get("entity_class_name")
+        entity_class = self._db_map_ent_cls_lookup.get(db_map, {}).get(entity_class_name)
+        if not entity_class:
+            return None, [f"Unknown entity_class {entity_class_name}"] if entity_class_name else []
+        if not entity_class["dimension_id_list"]:
+            return None, []
         element_name_list = item.get("entity_byname")
         if not element_name_list:
             return None, []
         entities = self._db_map_existing_ents.get(db_map, set())
         if (entity_class_name, element_name_list) in entities:
             return None, []
-        entity_class = self._db_map_ent_cls_lookup.get(db_map, {}).get(entity_class_name)
-        if not entity_class:
-            return None, [f"Unknown entity_class {entity_class_name}"] if entity_class_name else []
         element_id_list = []
         for name in element_name_list:
             element = self._db_map_el_lookup.get(db_map, {}).get(name)

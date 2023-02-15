@@ -378,26 +378,19 @@ class SingleParameterValueMixin(
         # FIXME: simplify this
         for item in items:
             item["entity_class_name"] = self.entity_class_name
-        db_map_data = {self.db_map: items}
-        self.build_lookup_dictionary(db_map_data)
-        db_map_entities = {}
-        db_map_error_log = {}
-        for db_map, data in db_map_data.items():
-            for item in data:
-                entity, err = self._make_entity_on_the_fly(item, db_map)
-                if entity:
-                    db_map_entities.setdefault(db_map, []).append(entity)
-                if err:
-                    db_map_error_log.setdefault(db_map, []).extend(err)
-        if any(db_map_entities.values()):
-            self.db_mngr.add_entities(db_map_entities)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)
+        self.build_lookup_dictionary({self.db_map: items})
+        entities = []
         param_vals = []
         error_log = []
-        db_map_data = {}
-        db_map_data[self.db_map] = items
-        self.build_lookup_dictionary(db_map_data)
+        for item in items:
+            entity, errors = self._make_entity_on_the_fly(item, self.db_map)
+            if entity:
+                entities.append(entity)
+            if errors:
+                error_log.extend(errors)
+        if entities:
+            self.db_mngr.add_entities({self.db_map: entities})
+        self.build_lookup_dictionary({self.db_map: items})
         for item in items:
             param_val, errors = self._convert_to_db(item, self.db_map)
             if tuple(param_val.keys()) != ("id",):
