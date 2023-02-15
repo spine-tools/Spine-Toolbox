@@ -41,6 +41,8 @@ class TestResourceFilterModel(unittest.TestCase):
     def test_setData_changes_checked_state(self):
         connection = mock.MagicMock()
         connection.database_resources = [database_resource("Data Store", "sqlite:///db.sqlite", filterable=True)]
+        project = mock.MagicMock()
+        project.find_connection.return_value = connection
 
         def online_filters(resource_label, resource_type):
             return {SCENARIO_FILTER_TYPE: {}, TOOL_FILTER_TYPE: {}}[resource_type]
@@ -49,7 +51,8 @@ class TestResourceFilterModel(unittest.TestCase):
         connection.get_scenario_names.return_value = ["my_scenario"]
         connection.get_tool_names.return_value = ["my_tool"]
         connection.is_filter_online_by_default = True
-        with resource_filter_model(connection, self._undo_stack, self._logger) as model:
+        with resource_filter_model(connection, project, self._undo_stack, self._logger) as model:
+            connection.resource_filter_model = model
             model.build_tree()
             root_index = model.index(0, 0)
             self.assertEqual(model.rowCount(root_index), 2)
@@ -80,8 +83,8 @@ class TestResourceFilterModel(unittest.TestCase):
 
 
 @contextmanager
-def resource_filter_model(connection, undo_stack, logger):
-    model = ResourceFilterModel(connection, undo_stack, logger)
+def resource_filter_model(connection, project, undo_stack, logger):
+    model = ResourceFilterModel(connection, project, undo_stack, logger)
     try:
         yield model
     finally:

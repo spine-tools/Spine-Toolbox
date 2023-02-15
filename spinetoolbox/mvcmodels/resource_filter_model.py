@@ -29,15 +29,17 @@ class ResourceFilterModel(QStandardItemModel):
     _FILTER_TYPES = {"Scenario filter": SCENARIO_FILTER_TYPE, "Tool filter": TOOL_FILTER_TYPE}
     _FILTER_TYPE_TO_TEXT = dict(zip(_FILTER_TYPES.values(), _FILTER_TYPES.keys()))
 
-    def __init__(self, connection, undo_stack, logger):
+    def __init__(self, connection, project, undo_stack, logger):
         """
         Args:
             connection (LoggingConnection): connection whose resources to model
+            project (SpineToolboxProject): project
             undo_stack (QUndoStack): an undo stack
             logger (LoggerInterface): a logger
         """
         super().__init__()
         self._connection = connection
+        self._project = project
         self._undo_stack = undo_stack
         self._logger = logger
 
@@ -121,9 +123,11 @@ class ResourceFilterModel(QStandardItemModel):
         resource_label = root_item.text()
         if item.text() == self._SELECT_ALL:
             activated = {resource_type_item.child(row).text(): is_on for row in range(1, resource_type_item.rowCount())}
-            cmd = SetFiltersOnlineCommand(self, resource_label, filter_type, activated)
+            cmd = SetFiltersOnlineCommand(self._project, self.connection, resource_label, filter_type, activated)
         else:
-            cmd = SetFiltersOnlineCommand(self, resource_label, filter_type, {item.text(): is_on})
+            cmd = SetFiltersOnlineCommand(
+                self._project, self.connection, resource_label, filter_type, {item.text(): is_on}
+            )
         self._undo_stack.push(cmd)
 
     def set_online(self, resource, filter_type, online):
