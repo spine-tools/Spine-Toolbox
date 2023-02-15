@@ -915,7 +915,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        self.reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, self.top_left_headers, *pivot)
 
     @staticmethod
     def make_delegate(parent):
@@ -1082,7 +1082,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        self.reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, self.top_left_headers, *pivot)
         pivot_rows = pivot[0]
         try:
             x_column = pivot_rows.index(self._index_top_left_header.name)
@@ -1208,7 +1208,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        self.reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, self.top_left_headers, *pivot)
 
     @staticmethod
     def make_delegate(parent):
@@ -1339,7 +1339,7 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot(data)
-        self.reset_model(data, list(self.top_left_headers), *pivot)
+        self.reset_model(data, self.top_left_headers, *pivot)
 
     @staticmethod
     def make_delegate(parent):
