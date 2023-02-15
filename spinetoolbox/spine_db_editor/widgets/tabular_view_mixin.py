@@ -27,7 +27,7 @@ from ...helpers import busy_effect, CharIconEngine, preferred_row_height
 from ..mvcmodels.pivot_table_models import (
     PivotTableSortFilterProxy,
     ParameterValuePivotTableModel,
-    RelationshipPivotTableModel,
+    ElementPivotTableModel,
     IndexExpansionPivotTableModel,
     ScenarioAlternativePivotTableModel,
 )
@@ -52,7 +52,7 @@ class TabularViewMixin:
         super().__init__(*args, **kwargs)
         self._pivot_table_models = {
             self._PARAMETER_VALUE: ParameterValuePivotTableModel(self),
-            self._ELEMENT: RelationshipPivotTableModel(self),
+            self._ELEMENT: ElementPivotTableModel(self),
             self._INDEX_EXPANSION: IndexExpansionPivotTableModel(self),
             self._SCENARIO_ALTERNATIVE: ScenarioAlternativePivotTableModel(self),
         }

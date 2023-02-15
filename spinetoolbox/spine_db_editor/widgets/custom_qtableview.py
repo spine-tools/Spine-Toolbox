@@ -23,7 +23,7 @@ from PySide6.QtGui import QKeySequence, QAction
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels.pivot_table_models import (
     ParameterValuePivotTableModel,
-    RelationshipPivotTableModel,
+    ElementPivotTableModel,
     IndexExpansionPivotTableModel,
     ScenarioAlternativePivotTableModel,
 )
@@ -376,8 +376,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
     class _ContextBase:
         """Base class for pivot table view's contexts."""
 
-        _REMOVE_OBJECT = "Remove objects"
-        _REMOVE_RELATIONSHIP = "Remove relationships"
+        _REMOVE_ENTITY = "Remove entities"
         _REMOVE_PARAMETER = "Remove parameter definitions"
         _REMOVE_ALTERNATIVE = "Remove alternatives"
         _REMOVE_SCENARIO = "Remove scenarios"
@@ -393,7 +392,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             """
             self._view = view
             self._db_editor = db_editor
-            self._selected_alternative_indexes = list()
+            self._selected_alternative_indexes = []
             self._header_selection_lists = {"alternative": self._selected_alternative_indexes}
             self._remove_alternatives_action = None
             self._menu = QMenu(self._view)
@@ -463,20 +462,9 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
                 horizontal_header (QHeaderView): horizontal header
                 vertical_header (QHeaderView): vertical header
             """
-            self._selected_entity_indexes = list()
+            self._selected_entity_indexes = []
             super().__init__(view, db_editor, horizontal_header, vertical_header)
-            self._header_selection_lists["object"] = self._selected_entity_indexes
-
-        def _can_remove_relationships(self):
-            """Checks if it makes sense to remove selected relationships from the database.
-
-            Returns:
-                bool: True if relationships can be removed, False otherwise
-            """
-            return (
-                self._view.source_model.item_type == "parameter_value"
-                and self._db_editor.first_current_entity_class["dimension_id_list"]
-            )
+            self._header_selection_lists["entity"] = self._selected_entity_indexes
 
         def _clear_selection_lists(self):
             """See base class."""
@@ -489,6 +477,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
 
         def remove_objects(self):
             """Removes selected objects from the database."""
+            # FIXME: Add this case to remove_entities below
             db_map_typed_data = {}
             source_model = self._view.source_model
             for index in self._selected_entity_indexes:
@@ -496,20 +485,20 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
                 db_map_typed_data.setdefault(db_map, {}).setdefault("object", set()).add(id_)
             self._db_editor.db_mngr.remove_items(db_map_typed_data)
 
-        def remove_relationships(self):
-            """Removes selected relationships from the database."""
-            db_map_relationship_lookup = {
-                db_map: {rel["object_id_list"]: rel["id"] for rel in rels}
+        def remove_entities(self):
+            """Removes selected entities from the database."""
+            db_map_entity_lookup = {
+                db_map: {rel["element_id_list"]: rel["id"] for rel in rels}
                 for db_map, rels in self._db_editor._get_db_map_entities().items()
             }
             db_map_typed_data = {}
             source_model = self._view.source_model
             for index in self._selected_entity_indexes:
-                db_map, object_ids = source_model.db_map_entity_ids(index)
-                object_id_list = ",".join([str(id_) for id_ in object_ids])
-                id_ = db_map_relationship_lookup.get(db_map, {}).get(object_id_list)
+                db_map, entity_ids = source_model.db_map_entity_ids(index)
+                element_id_list = ",".join([str(id_) for id_ in entity_ids])
+                id_ = db_map_entity_lookup.get(db_map, {}).get(element_id_list)
                 if id_:
-                    db_map_typed_data.setdefault(db_map, {}).setdefault("relationship", set()).add(id_)
+                    db_map_typed_data.setdefault(db_map, {}).setdefault("entity", set()).add(id_)
             self._db_editor.db_mngr.remove_items(db_map_typed_data)
 
         def _update_actions_availability(self):
@@ -530,8 +519,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self._open_in_editor_action = None
             self._remove_values_action = None
             self._remove_parameters_action = None
-            self._remove_objects_action = None
-            self._remove_relationships_action = None
+            self._remove_entities_action = None
             self._plot_action = None
             self._plot_in_window_menu = None
             horizontal_header = ParameterValuePivotHeaderView(Qt.Orientation.Horizontal, "columns", view)
@@ -557,10 +545,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_values_action = self._menu.addAction("Remove parameter values", self.remove_values)
-            self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
-            self._remove_relationships_action = self._menu.addAction(
-                self._REMOVE_RELATIONSHIP, self.remove_relationships
-            )
+            self._remove_entities_action = self._menu.addAction(self._REMOVE_ENTITY, self.remove_entities)
             self._remove_parameters_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
             self._remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
 
@@ -649,16 +634,13 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self._plot_action.setEnabled(bool(self._selected_value_indexes))
             self._remove_values_action.setEnabled(bool(self._selected_value_indexes))
             self._remove_parameters_action.setEnabled(bool(self._selected_parameter_indexes))
-            self._remove_objects_action.setEnabled(bool(self._selected_entity_indexes))
-            self._remove_relationships_action.setEnabled(
-                bool(self._selected_entity_indexes) and self._can_remove_relationships()
-            )
+            self._remove_entities_action.setEnabled(bool(self._selected_entity_indexes))
             self._remove_alternatives_action.setEnabled(bool(self._selected_alternative_indexes))
 
     class _IndexExpansionContext(_ParameterValueContext):
         """Context for expanded parameter values"""
 
-    class _RelationshipContext(_EntityContextBase):
+    class _ElementContext(_EntityContextBase):
         """Context for presenting relationships in the pivot table."""
 
         def __init__(self, view, db_editor):
@@ -667,7 +649,6 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
                 view (PivotTableView): parent view
                 db_editor (SpineDBEditor): database editor
             """
-            self._remove_objects_action = None
             horizontal_header = PivotTableHeaderView(Qt.Orientation.Horizontal, "columns", view)
             vertical_header = PivotTableHeaderView(Qt.Orientation.Vertical, "rows", view)
             super().__init__(view, db_editor, horizontal_header, vertical_header)
@@ -677,11 +658,9 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self._menu.addAction(self._view.copy_action)
             self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
-            self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
 
         def _update_actions_availability(self):
             """See base class."""
-            self._remove_objects_action.setEnabled(bool(self._selected_entity_indexes))
 
     class _ScenarioAlternativeContext(_ContextBase):
         """Context for presenting scenarios and alternatives"""
@@ -805,8 +784,8 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
         model = self._spine_db_editor.pivot_table_proxy.sourceModel()
         if isinstance(model, ParameterValuePivotTableModel):
             self._context = self._ParameterValueContext(self, self._spine_db_editor)
-        elif isinstance(model, RelationshipPivotTableModel):
-            self._context = self._RelationshipContext(self, self._spine_db_editor)
+        elif isinstance(model, ElementPivotTableModel):
+            self._context = self._ElementContext(self, self._spine_db_editor)
         elif isinstance(model, IndexExpansionPivotTableModel):
             self._context = self._IndexExpansionContext(self, self._spine_db_editor)
         elif isinstance(model, ScenarioAlternativePivotTableModel):

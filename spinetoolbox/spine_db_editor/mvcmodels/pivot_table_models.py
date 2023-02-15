@@ -1118,8 +1118,8 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         self.db_mngr.update_expanded_parameter_values(db_map_data)
 
 
-class RelationshipPivotTableModel(PivotTableModelBase):
-    """A model for the pivot table in relationship input type."""
+class ElementPivotTableModel(PivotTableModelBase):
+    """A model for the pivot table in element input type."""
 
     def __init__(self, parent):
         """
