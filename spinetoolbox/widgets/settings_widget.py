@@ -19,7 +19,7 @@ Widget for controlling user settings.
 import os
 from PySide6.QtWidgets import QWidget, QFileDialog, QColorDialog
 from PySide6.QtCore import Slot, Qt, QSize, QSettings
-from PySide6.QtGui import QPixmap, QIntValidator
+from PySide6.QtGui import QPixmap
 from spine_engine.utils.helpers import (
     resolve_python_interpreter,
     resolve_julia_executable,

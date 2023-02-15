@@ -625,7 +625,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         super().mouseMoveEvent(event)
         if (
             not self.itemAt(event.position().toPoint())
-            and (event.buttons() & Qt.LeftButton != 0)
+            and (event.buttons() & Qt.LeftButton)
             and self.dragMode() != QGraphicsView.DragMode.RubberBandDrag
         ):
             if self._previous_mouse_pos is not None:

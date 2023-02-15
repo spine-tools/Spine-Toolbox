@@ -696,16 +696,23 @@ class SpineToolboxProject(MetaObject):
         """
         return [c for c in self._connections if item_name in (c.source, c.destination)]
 
-    def add_connection(self, connection, silent=False):
+    def add_connection(self, *args, silent=False):
         """Adds a connection to the project.
 
+        A single argument is expected to be the ``Logging connection`` instance.
+        Optionally, source name and position, and destination name and position can be provided instead.
+
         Args:
-            connection (Connection): connection to add
+            *args: connection to add
             silent (bool): If False, prints 'Link establ...' msg to Event Log
 
         Returns:
             bool: True if connection was added successfully, False otherwise
         """
+        if len(args) == 1:
+            connection = args[0]
+        else:
+            connection = LoggingConnection(*args, toolbox=self._toolbox)
         if connection in self._connections:
             return False
         if None in (self.dag_with_node(connection.source), self.dag_with_node(connection.destination)):

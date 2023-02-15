@@ -17,7 +17,7 @@ QUndoCommand subclasses for modifying the project.
 """
 
 from PySide6.QtGui import QUndoCommand
-from spine_engine.project_item.connection import Connection, Jump
+from spine_engine.project_item.connection import Jump
 
 
 class SpineToolboxCommand(QUndoCommand):
@@ -252,32 +252,36 @@ class AddConnectionCommand(SpineToolboxCommand):
         """
         super().__init__()
         self._project = project
+        self._source_name = source_name
         self._source_position = source_position
+        self._destination_name = destination_name
         self._destination_position = destination_position
-        self._existing = self._project.find_connection(source_name, destination_name)
-        if self._existing is not None:
-            self._old_source_position = self._existing.source_position
-            self._old_destination_position = self._existing.destination_position
-            action = "update"
+        existing = self._project.find_connection(source_name, destination_name)
+        if existing is not None:
+            self._old_source_position = existing.source_position
+            self._old_destination_position = existing.destination_position
+            self._action = "update"
         else:
-            conn_dict = Connection(source_name, source_position, destination_name, destination_position).to_dict()
-            self._connection = self._project.connection_from_dict(conn_dict)
-            action = "add"
+            self._action = "add"
         connection_name = f"link from {source_name} to {destination_name}"
-        self.setText(f"{action} {connection_name}")
+        self.setText(f"{self._action} {connection_name}")
 
     def redo(self):
-        if self._existing:
-            self._project.update_connection(self._existing, self._source_position, self._destination_position)
+        if self._action == "update":
+            existing = self._project.find_connection(self._source_name, self._destination_name)
+            self._project.update_connection(existing, self._source_position, self._destination_position)
             return
-        if not self._project.add_connection(self._connection):
+        if not self._project.add_connection(
+            self._source_name, self._source_position, self._destination_name, self._destination_position
+        ):
             self.setObsolete(True)
 
     def undo(self):
-        if self._existing:
-            self._project.update_connection(self._existing, self._old_source_position, self._old_destination_position)
+        existing = self._project.find_connection(self._source_name, self._destination_name)
+        if self._action == "update":
+            self._project.update_connection(existing, self._old_source_position, self._old_destination_position)
             return
-        self._project.remove_connection(self._connection)
+        self._project.remove_connection(existing)
 
 
 class RemoveConnectionsCommand(SpineToolboxCommand):
@@ -427,73 +431,88 @@ class UpdateJumpCmdLineArgsCommand(SpineToolboxCommand):
 
 
 class SetFiltersOnlineCommand(SpineToolboxCommand):
-    def __init__(self, resource_filter_model, resource, filter_type, online):
+    def __init__(self, project, connection, resource, filter_type, online):
         """Command to toggle filter value.
 
         Args:
-            resource_filter_model (ResourceFilterModel): filter model
+            project (SpineToolboxProject): project
+            connection (Connection): connection
             resource (str): resource label
             filter_type (str): filter type identifier
             online (dict): mapping from scenario/tool id to online flag
         """
         super().__init__()
-        self._resource_filter_model = resource_filter_model
+        self._project = project
         self._resource = resource
         self._filter_type = filter_type
         self._online = online
-        source_name = self._resource_filter_model.connection.source
-        destination_name = self._resource_filter_model.connection.destination
-        self.setText(f"change {filter_type} for {resource} at link from {source_name} to {destination_name}")
+        self._source_name = connection.source
+        self._destination_name = connection.destination
+        self.setText(
+            f"change {filter_type} for {resource} at link from {self._source_name} to {self._destination_name}"
+        )
 
     def redo(self):
-        self._resource_filter_model.set_online(self._resource, self._filter_type, self._online)
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.resource_filter_model.set_online(self._resource, self._filter_type, self._online)
 
     def undo(self):
         negated_online = {id_: not online for id_, online in self._online.items()}
-        self._resource_filter_model.set_online(self._resource, self._filter_type, negated_online)
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.resource_filter_model.set_online(self._resource, self._filter_type, negated_online)
 
 
 class SetConnectionDefaultFilterOnlineStatus(SpineToolboxCommand):
     """Command to set connection's default filter online status."""
 
-    def __init__(self, connection, default_status):
+    def __init__(self, project, connection, default_status):
         """
         Args:
+            project (SpineToolboxProject): project
             connection (LoggingConnection): connection
             default_status (bool): default filter online status
         """
         super().__init__()
         self.setText(f"change options in connection {connection.name}")
-        self._connection = connection
+        self._project = project
+        self._source_name = connection.source
+        self._destination_name = connection.destination
         self._checked = default_status
 
     def redo(self):
-        self._connection.set_filter_default_online_status(self._checked)
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.set_filter_default_online_status(self._checked)
 
     def undo(self):
-        self._connection.set_filter_default_online_status(not self._checked)
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.set_filter_default_online_status(not self._checked)
 
 
 class SetConnectionOptionsCommand(SpineToolboxCommand):
-    def __init__(self, connection, options):
+    def __init__(self, project, connection, options):
         """Command to set connection options.
 
         Args:
-            connection (LoggingConnection)
+            project (SpineToolboxProject): project
+            connection (LoggingConnection): project
             options (dict): containing options to be set
         """
         super().__init__()
-        self._connection = connection
+        self._project = project
+        self._source_name = connection.source
+        self._destination_name = connection.destination
         self._new_options = connection.options.copy()
         self._new_options.update(options)
         self._old_options = connection.options.copy()
         self.setText(f"change options in connection {connection.name}")
 
     def redo(self):
-        self._connection.set_connection_options(self._new_options)
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.set_connection_options(self._new_options)
 
     def undo(self):
-        self._connection.set_connection_options(self._old_options)
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.set_connection_options(self._old_options)
 
 
 class AddSpecificationCommand(SpineToolboxCommand):
