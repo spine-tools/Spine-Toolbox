@@ -316,6 +316,8 @@ class SpineDBEditorBase(QMainWindow):
         menu.addSeparator()
         menu.addAction(self.ui.actionUser_guide)
         menu.addAction(self.ui.actionSettings)
+        self.ui.actionClose.setShortcut(QKeySequence.Close)
+        menu.addAction(self.ui.actionClose)
         menu_action = self.url_toolbar.add_main_menu(menu)
         actions = [
             self.ui.actionNew_db_file,
@@ -359,7 +361,6 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionView_history.triggered.connect(self._browse_commits)
-        self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
         self.ui.actionOpen_db_file.triggered.connect(self.open_db_file)
         self.ui.actionAdd_db_file.triggered.connect(self.add_db_file)

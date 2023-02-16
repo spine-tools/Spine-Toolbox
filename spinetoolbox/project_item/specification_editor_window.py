@@ -98,7 +98,6 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._populate_main_menu()
         self._spec_toolbar.save_action.triggered.connect(self._save)
         self._spec_toolbar.duplicate_action.triggered.connect(self._duplicate)
-        self._spec_toolbar.close_action.triggered.connect(self.close)
         self._undo_stack.cleanChanged.connect(self._update_window_modified)
 
     @property

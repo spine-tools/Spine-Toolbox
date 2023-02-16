@@ -62,6 +62,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         tab.sqlite_file_exported.connect(self.insert_sqlite_file_open_button)
         tab.ui.actionUser_guide.triggered.connect(self.show_user_guide)
         tab.ui.actionSettings.triggered.connect(self.settings_form.show)
+        tab.ui.actionClose.triggered.connect(self.handle_close_request_from_tab)
         return True
 
     def _disconnect_tab_signals(self, index):
@@ -72,6 +73,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         tab.sqlite_file_exported.disconnect(self.insert_sqlite_file_open_button)
         tab.ui.actionUser_guide.triggered.disconnect(self.show_user_guide)
         tab.ui.actionSettings.triggered.disconnect(self.settings_form.show)
+        tab.ui.actionClose.triggered.disconnect(self.handle_close_request_from_tab)
         return True
 
     def _make_new_tab(self, db_url_codenames=None):  # pylint: disable=arguments-differ
