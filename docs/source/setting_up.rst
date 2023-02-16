@@ -103,14 +103,16 @@ Julia, you either don't have a Julia installation in your PATH, or the Julia pat
 
 GAMS
 ****
-Executing Gams Tools and the GDXExporter Project Item requires an installation of Gams on your system.
+Executing Gams Tools or needing to use the GDX file format requires an installation of Gams on your system.
 You can download Gams from `<https://www.gams.com/download/>`_.
 
 .. note:: You do not need to own a Gams license as the demo version works just as well.
 
-As with Julia, the default Gams is the Gams in your PATH environment variable. You can see the one that is currently
-in use from the `Tools` page in `File->Settings...`. The placeholder text shows the Gams in your PATH if found.
+.. important:: The bitness (32 or 64bit) of Gams has to match the bitness of the Python interpreter.
+
+The default Gams is the Gams defined under ``gams.location`` in Windows registry or in your PATH environment variable.
+You can see the one that is currently in use from the `Tools` page in `File->Settings...`.
+The placeholder text shows the default Gams if found.
 You can also override the default Gams by setting some other gams.exe path to the line edit
 (e.g. `C:\\GAMS\\win64\\28.2\\gams.exe`).
 
-.. important:: The bitness (32 or 64bit) of Gams has to match the bitness of the Python interpreter.

@@ -49,7 +49,6 @@ class MainMenu(QMenu):
 
 
 class ParameterViewFilterMenu(FilterMenuBase):
-
     filterChanged = Signal(str, object)
 
     def __init__(self, parent, db_mngr, db_maps, item_type, field, show_empty=True):

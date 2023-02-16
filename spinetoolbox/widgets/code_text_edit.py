@@ -38,7 +38,7 @@ class CodeTextEdit(QPlainTextEdit):
         self._right_margin = 16
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         self.setFont(font)
-        foreground_color = self._style.styles[Token.Text]
+        foreground_color = self._style.styles[Token]
         self.setStyleSheet(
             f"QPlainTextEdit {{background-color: {self._style.background_color}; color: {foreground_color};}}"
         )

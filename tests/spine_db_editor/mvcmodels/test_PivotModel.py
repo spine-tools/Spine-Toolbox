@@ -19,7 +19,13 @@ Unit tests for PivotModel class.
 import unittest
 from spinetoolbox.spine_db_editor.mvcmodels.pivot_model import PivotModel
 
-INDEX_IDS = ['test1', 'test2', 'test3']
+
+class _Header:
+    def header_data(self, header_id):
+        return header_id
+
+
+INDEX_IDS = {'test1': _Header(), 'test2': _Header(), 'test3': _Header()}
 DATA = {
     ('a', 'aa', 1): 'value_a_aa_1',
     ('a', 'bb', 2): 'value_a_bb_2',
@@ -157,14 +163,13 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(index_header_values, index_set)
 
     def test_add_to_model_replaces_none(self):
-        index_ids = ["test1", "test2", "test3"]
         data = {("a", "aa", 1): None}
         model = PivotModel()
-        model.reset_model(data, index_ids)
+        model.reset_model(data, INDEX_IDS)
         model.set_pivot(["test1"], ["test2"], ["test3"], ["frozen value"])
         model.add_to_model({("a", "aa", 1): 23.0})
         self.assertEqual(model._data, {("a", "aa", 1): 23.0})
-        self.assertEqual(model.index_ids, tuple(index_ids))
+        self.assertEqual(model.index_ids, tuple(INDEX_IDS))
         self.assertEqual(model.pivot_rows, ("test1",))
         self.assertEqual(model.pivot_columns, ("test2",))
         self.assertEqual(model.pivot_frozen, ("test3",))
@@ -173,14 +178,13 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(model._column_data_header, [])
 
     def test_add_to_model_nones_do_not_overwrite_existing_values(self):
-        index_ids = ["test1", "test2", "test3"]
         data = {("a", "aa", 1): 23.0}
         model = PivotModel()
-        model.reset_model(data, index_ids)
+        model.reset_model(data, INDEX_IDS)
         model.set_pivot(["test1"], ["test2"], ["test3"], ["frozen value"])
         model.add_to_model({("a", "aa", 1): None})
         self.assertEqual(model._data, {("a", "aa", 1): 23.0})
-        self.assertEqual(model.index_ids, tuple(index_ids))
+        self.assertEqual(model.index_ids, tuple(INDEX_IDS))
         self.assertEqual(model.pivot_rows, ("test1",))
         self.assertEqual(model.pivot_columns, ("test2",))
         self.assertEqual(model.pivot_frozen, ("test3",))
@@ -189,14 +193,13 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(model._column_data_header, [])
 
     def test_add_to_model_nones_can_be_inserted_to_model(self):
-        index_ids = ["test1", "test2", "test3"]
         data = {("a", "aa", 1): 23.0}
         model = PivotModel()
-        model.reset_model(data, index_ids)
+        model.reset_model(data, INDEX_IDS)
         model.set_pivot(["test1"], ["test2"], ["test3"], ["frozen value"])
         model.add_to_model({("a", "aa", 2): None})
         self.assertEqual(model._data, {("a", "aa", 1): 23.0, ("a", "aa", 2): None})
-        self.assertEqual(model.index_ids, tuple(index_ids))
+        self.assertEqual(model.index_ids, tuple(INDEX_IDS))
         self.assertEqual(model.pivot_rows, ("test1",))
         self.assertEqual(model.pivot_columns, ("test2",))
         self.assertEqual(model.pivot_frozen, ("test3",))

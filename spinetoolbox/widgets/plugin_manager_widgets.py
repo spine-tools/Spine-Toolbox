@@ -34,7 +34,6 @@ class _ManagePluginsModel(_InstallPluginModel):
 
 
 class InstallPluginDialog(QDialog):
-
     item_selected = Signal(str)
 
     def __init__(self, parent):

@@ -23,7 +23,6 @@ from ..project_commands import SetFiltersOnlineCommand
 
 
 class ResourceFilterModel(QStandardItemModel):
-
     tree_built = Signal()
     _SELECT_ALL = "Select all"
     _FILTER_TYPES = {"Scenario filter": SCENARIO_FILTER_TYPE, "Tool filter": TOOL_FILTER_TYPE}

@@ -25,7 +25,6 @@ from .multi_db_tree_item import MultiDBTreeItem
 
 
 class EntityTreeRootItem(MultiDBTreeItem):
-
     item_type = "root"
 
     @property

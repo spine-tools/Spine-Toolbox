@@ -992,7 +992,7 @@ class Ui_SettingsForm(object):
 #if QT_CONFIG(tooltip)
         self.toolButton_browse_work.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Work directory with file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"When there are unsaved changes:", None))
+        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"When there are unsaved changes at exit:", None))
         self.project_save_options_combo_box.setItemText(0, QCoreApplication.translate("SettingsForm", u"Ask what to do", None))
         self.project_save_options_combo_box.setItemText(1, QCoreApplication.translate("SettingsForm", u"Automatically save project", None))
 

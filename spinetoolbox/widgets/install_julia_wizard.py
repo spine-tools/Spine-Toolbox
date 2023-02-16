@@ -52,8 +52,7 @@ class _PageId(IntEnum):
 
 
 class InstallJuliaWizard(QWizard):
-    """A wizard to install julia
-    """
+    """A wizard to install julia"""
 
     julia_exe_selected = Signal(str)
 
