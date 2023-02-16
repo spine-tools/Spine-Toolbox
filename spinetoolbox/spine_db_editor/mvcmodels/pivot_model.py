@@ -52,21 +52,6 @@ class PivotModel:
         self.index_ids = tuple(top_left_headers)
         self.top_left_headers = top_left_headers
         self.set_pivot(rows, columns, frozen, frozen_value)
-        self._sort_data()
-
-    def _sort_data(self):
-        header_names = self.pivot_rows + self.pivot_columns + self.pivot_frozen
-        key_getter = self._index_key_getter(header_names)
-
-        def _key(item):
-            key, _value = item
-            header_ids = key_getter(key)
-            return tuple(
-                self.top_left_headers[header_name].header_data(header_id)
-                for header_name, header_id in zip(header_names, header_ids)
-            )
-
-        self._data = dict(sorted(self._data.items(), key=_key))
 
     def clear_model(self):
         self._data = {}
@@ -82,7 +67,6 @@ class PivotModel:
 
     def update_model(self, data):
         self._data.update(data)
-        self._sort_data()
 
     def add_to_model(self, data):
         """Adds data to model.
@@ -97,7 +81,6 @@ class PivotModel:
         if not addable_data:
             return 0, 0
         self._data.update(addable_data)
-        self._sort_data()
         if not any(self.frozen_value):
             first = next(iter(self._data), None)
             if first is None:
@@ -116,7 +99,6 @@ class PivotModel:
 
     def remove_from_model(self, data):
         self._data = {key: self._data[key] for key in self._data if key not in data}
-        self._sort_data()
         self.index_values = dict(zip(self.index_ids, zip(*self._data.keys())))
         old_row_count = len(self._row_data_header)
         old_column_count = len(self._column_data_header)
@@ -178,7 +160,12 @@ class PivotModel:
             result = {index_getter(k): None for k in self._data if frozen_getter(k) == self.frozen_value}
         else:
             result = {index_getter(k): None for k in self._data}
-        return [x for x in result if None not in x]
+        return sorted(
+            (x for x in result if None not in x),
+            key=lambda x: tuple(
+                self.top_left_headers[header_name].header_data(header_id) for header_name, header_id in zip(indexes, x)
+            ),
+        )
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         """Sets pivot."""
@@ -200,7 +187,6 @@ class PivotModel:
         self._key_getter = tuple_itemgetter(operator.itemgetter(*order), len(order))
         self._row_data_header = self._get_unique_index_values(self.pivot_rows)
         self._column_data_header = self._get_unique_index_values(self.pivot_columns)
-        self._sort_data()
 
     def set_frozen_value(self, value):
         """Sets values for the frozen indexes."""
