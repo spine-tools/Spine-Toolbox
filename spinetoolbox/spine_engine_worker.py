@@ -104,7 +104,6 @@ def _mark_all_items_failed(items):
 
 
 class SpineEngineWorker(QObject):
-
     finished = Signal()
     _dag_execution_started = Signal(list)
     _node_execution_started = Signal(object, object)

@@ -758,7 +758,6 @@ class SelectDatabaseItemsDialog(QDialog):
 
 
 class PurgeSettingsDialog(SelectDatabaseItemsDialog):
-
     _ok_button_can_be_disabled = False
 
 

@@ -22,8 +22,7 @@ from PySide6.QtGui import QAction
 
 
 class CommitDialog(QDialog):
-    """A dialog to query user's preferences for new commit.
-    """
+    """A dialog to query user's preferences for new commit."""
 
     def __init__(self, parent, *db_names):
         """

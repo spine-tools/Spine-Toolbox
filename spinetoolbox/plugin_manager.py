@@ -263,7 +263,6 @@ class PluginWorkFailed(Exception):
 
 
 class _PluginWorker(QObject):
-
     failed = Signal(str)
     finished = Signal()
     succeeded = Signal()

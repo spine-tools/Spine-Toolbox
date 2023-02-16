@@ -32,7 +32,6 @@ from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 
 
 class RelationshipPivotTableDelegate(CheckBoxDelegate):
-
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent):
@@ -84,7 +83,6 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
 
 
 class ScenarioAlternativeTableDelegate(RankDelegate):
-
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent):
@@ -136,7 +134,6 @@ class ScenarioAlternativeTableDelegate(RankDelegate):
 
 
 class ParameterPivotTableDelegate(QStyledItemDelegate):
-
     parameter_value_editor_requested = Signal(QModelIndex)
     data_committed = Signal(QModelIndex, object)
 

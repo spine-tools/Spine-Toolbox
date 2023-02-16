@@ -999,7 +999,6 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
 
 
 class FrozenTableView(QTableView):
-
     header_dropped = Signal(object, object)
 
     @property

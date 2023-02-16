@@ -29,7 +29,6 @@ from ...helpers import preferred_row_height
 
 
 class SelectPositionParametersDialog(QDialog):
-
     selection_made = Signal(str, str)
 
     def __init__(self, parent, pos_x_parameter, pos_y_parameter):
