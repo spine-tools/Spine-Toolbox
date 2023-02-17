@@ -133,7 +133,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         raise NotImplementedError()
 
     def spec_toolbar(self):
-        """Returns Spec Editor Window's toolbar that contains name, description, and hamburger menu."""
+        """Returns spec editor window's toolbar, which contains e.g. the hamburger menu."""
         return self._spec_toolbar
 
     @Slot(str)
