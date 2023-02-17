@@ -56,15 +56,32 @@ class MultiSpineDBEditor(MultiTabWindow):
         return MultiSpineDBEditor(self.db_mngr)
 
     def _connect_tab_signals(self, tab):
+        """Connects Spine Db editor window (tab) signals.
+
+        Args:
+            tab (SpineDBEditor): Spine Db editor window
+
+        Returns:
+            bool: True if ok, False otherwise
+        """
         if not super()._connect_tab_signals(tab):
             return False
         tab.file_exported.connect(self.insert_file_open_button)
         tab.sqlite_file_exported.connect(self.insert_sqlite_file_open_button)
         tab.ui.actionUser_guide.triggered.connect(self.show_user_guide)
         tab.ui.actionSettings.triggered.connect(self.settings_form.show)
+        tab.ui.actionClose.triggered.connect(self.handle_close_request_from_tab)
         return True
 
     def _disconnect_tab_signals(self, index):
+        """Disconnects signals of Spine Db editor window (tab) in given index.
+
+        Args:
+            index (int): Tab index
+
+        Returns:
+            bool: True if ok, False otherwise
+        """
         if not super()._disconnect_tab_signals(index):
             return False
         tab = self.tab_widget.widget(index)
@@ -72,6 +89,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         tab.sqlite_file_exported.disconnect(self.insert_sqlite_file_open_button)
         tab.ui.actionUser_guide.triggered.disconnect(self.show_user_guide)
         tab.ui.actionSettings.triggered.disconnect(self.settings_form.show)
+        tab.ui.actionClose.triggered.disconnect(self.handle_close_request_from_tab)
         return True
 
     def _make_new_tab(self, db_url_codenames=None):  # pylint: disable=arguments-differ

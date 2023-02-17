@@ -346,6 +346,13 @@ class MultiTabWindow(QMainWindow):
         self.tab_widget.setCurrentIndex(index)
         self.tab_bar.start_dragging(index)
 
+    @Slot()
+    def handle_close_request_from_tab(self):
+        """Catches close event triggered by a QAction in tab's QToolBar. Calls
+        QTabWidgets close tabs method to ensure that the last closed tab closes
+        the editor window."""
+        self._close_tab(self.tab_widget.currentIndex())
+
     @Slot(int)
     def _close_tab(self, index):
         """Closes the tab at index.
