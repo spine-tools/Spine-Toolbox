@@ -56,6 +56,14 @@ class MultiSpineDBEditor(MultiTabWindow):
         return MultiSpineDBEditor(self.db_mngr)
 
     def _connect_tab_signals(self, tab):
+        """Connects Spine Db editor window (tab) signals.
+
+        Args:
+            tab (SpineDBEditor): Spine Db editor window
+
+        Returns:
+            bool: True if ok, False otherwise
+        """
         if not super()._connect_tab_signals(tab):
             return False
         tab.file_exported.connect(self.insert_file_open_button)
@@ -66,6 +74,14 @@ class MultiSpineDBEditor(MultiTabWindow):
         return True
 
     def _disconnect_tab_signals(self, index):
+        """Disconnects signals of Spine Db editor window (tab) in given index.
+
+        Args:
+            index (int): Tab index
+
+        Returns:
+            bool: True if ok, False otherwise
+        """
         if not super()._disconnect_tab_signals(index):
             return False
         tab = self.tab_widget.widget(index)
