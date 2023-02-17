@@ -252,7 +252,7 @@ class TabularViewMixin:
         """Returns a function to compute the db_map-id tuple of an item."""
         return {"add": lambda db_map, x: (db_map, x["id"]), "remove": lambda db_map, x: None}[action]
 
-    def _get_db_map_entities(self):
+    def get_db_map_entities(self):
         """Returns a dict mapping db maps to a list of dict entity items in the current class.
 
         Returns:
@@ -310,7 +310,7 @@ class TabularViewMixin:
         if not self.first_current_entity_class["dimension_id_list"]:
             return {}
         if db_map_entities is None:
-            db_map_entities = self._get_db_map_entities()
+            db_map_entities = self.get_db_map_entities()
         get_id = self._make_get_id(action)
         return {
             tuple((db_map, id_) for id_ in ent["element_id_list"]) + (db_map,): get_id(db_map, ent)
@@ -366,7 +366,7 @@ class TabularViewMixin:
             dict
         """
         return {
-            db_map: [x["id"] for x in self.db_mngr.get_items_by_field(db_map, item_type, "entity_class", class_id)]
+            db_map: [x["id"] for x in self.db_mngr.get_items_by_field(db_map, item_type, "entity_class_id", class_id)]
             for db_map, class_id in self.current_class_id.items()
         }
 
@@ -399,7 +399,7 @@ class TabularViewMixin:
             dict: Key is a tuple object_id, ..., parameter_id, value is None.
         """
         if db_map_entities is None:
-            db_map_entities = self._get_db_map_entities()
+            db_map_entities = self.get_db_map_entities()
         if db_map_parameter_ids is None:
             db_map_parameter_ids = {
                 db_map: [(db_map, id_) for id_ in ids]
@@ -414,12 +414,14 @@ class TabularViewMixin:
             db_map: [tuple((db_map, id_) for id_ in e["element_id_list"] or (e["id"],)) for e in entities]
             for db_map, entities in db_map_entities.items()
         }
-        if not db_map_entity_ids:
+        if not any(db_map_entity_ids.values()):
             db_map_entity_ids = {
                 db_map: [tuple((db_map, None) for _ in self.current_dimension_id_list)] for db_map in self.db_maps
             }
-        if not db_map_parameter_ids:
+        if not any(db_map_parameter_ids.values()):
             db_map_parameter_ids = {db_map: [(db_map, None)] for db_map in self.db_maps}
+        if not any(db_map_alternative_ids.values()):
+            db_map_alternative_ids = {db_map: [(db_map, None)] for db_map in self.db_maps}
         return {
             entity_id + (parameter_id, alt_id, db_map): None
             for db_map in self.db_maps

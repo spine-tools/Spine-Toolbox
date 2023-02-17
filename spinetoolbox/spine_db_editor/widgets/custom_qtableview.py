@@ -448,30 +448,14 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             """See base class."""
             raise NotImplementedError()
 
-        def remove_objects(self):
-            """Removes selected objects from the database."""
-            # FIXME: Add this case to remove_entities below
-            db_map_typed_data = {}
-            source_model = self._view.source_model
-            for index in self._selected_entity_indexes:
-                db_map, id_ = source_model._header_id(index)
-                db_map_typed_data.setdefault(db_map, {}).setdefault("object", set()).add(id_)
-            self._db_editor.db_mngr.remove_items(db_map_typed_data)
-
         def remove_entities(self):
             """Removes selected entities from the database."""
-            db_map_entity_lookup = {
-                db_map: {rel["element_id_list"]: rel["id"] for rel in rels}
-                for db_map, rels in self._db_editor._get_db_map_entities().items()
+            db_map_typed_data = {
+                db_map: {"entity": entity_ids}
+                for db_map, entity_ids in self._view.source_model.db_map_entity_ids(
+                    self._selected_entity_indexes
+                ).items()
             }
-            db_map_typed_data = {}
-            source_model = self._view.source_model
-            for index in self._selected_entity_indexes:
-                db_map, entity_ids = source_model.db_map_entity_ids(index)
-                element_id_list = ",".join([str(id_) for id_ in entity_ids])
-                id_ = db_map_entity_lookup.get(db_map, {}).get(element_id_list)
-                if id_:
-                    db_map_typed_data.setdefault(db_map, {}).setdefault("entity", set()).add(id_)
             self._db_editor.db_mngr.remove_items(db_map_typed_data)
 
         def _update_actions_availability(self):

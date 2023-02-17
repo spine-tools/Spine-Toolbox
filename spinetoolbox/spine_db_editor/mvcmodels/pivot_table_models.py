@@ -823,22 +823,37 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         yield self._parameter_definition_fetch_parent
         yield self._entity_fetch_parent
 
-    def db_map_entity_ids(self, index):
-        """
-        Returns db_map and object ids for given index. Used by PivotTableView.
-
-        Returns:
-            DatabaseMapping, list
-        """
-        row, column = self.map_to_pivot(index)
-        header_ids = self._header_ids(row, column)
-        return self._db_map_entity_ids(header_ids)
-
-    def _db_map_entity_ids(self, header_ids):
+    def _db_map_element_ids(self, header_ids):
         entity_indexes = [
             k for k, h in enumerate(self.top_left_headers.values()) if isinstance(h, TopLeftEntityHeaderItem)
         ]
         return header_ids[-1], [header_ids[k][1] for k in entity_indexes]
+
+    def db_map_entity_ids(self, indexes):
+        """
+        Returns db_map and entity ids for given indexes. Used by PivotTableView.
+
+        Args:
+            list(QModelIndex): indexes corresponding to entity items
+
+        Returns:
+            dict: mapping DatabaseMapping to set of entity ids
+        """
+        db_map_entity_lookup = {
+            db_map: {ent["element_id_list"]: ent["id"] for ent in ents}
+            for db_map, ents in self._parent.get_db_map_entities().items()
+        }
+        db_map_entity_ids = {}
+        for index in indexes:
+            row, column = self.map_to_pivot(index)
+            if not self._parent.first_current_entity_class["dimension_id_list"]:
+                db_map, id_ = self._header_id(index)
+            else:
+                header_ids = self._header_ids(row, column)
+                db_map, element_id_list = self._db_map_element_ids(header_ids)
+                id_ = db_map_entity_lookup.get(db_map, {}).get(tuple(element_id_list))
+            db_map_entity_ids.setdefault(db_map, set()).add(id_)
+        return db_map_entity_ids
 
     def all_header_names(self, index):
         """Returns the entity, parameter, alternative, and db names corresponding to the given data index.
@@ -854,7 +869,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        _, entity_ids = self._db_map_entity_ids(header_ids)
+        _, entity_ids = self._db_map_element_ids(header_ids)
         _, parameter_id = header_ids[-3]
         _, alternative_id = header_ids[-2]
         db_map = header_ids[-1]
