@@ -274,6 +274,10 @@ class EmptyChildRootItem(EmptyChildMixin, RootItem):
 
 class LeafItem(StandardTreeItem):
     def __init__(self, identifier=None):
+        """
+        Args:
+            identifier (int, optional): item's database id
+        """
         super().__init__()
         self._id = identifier
 

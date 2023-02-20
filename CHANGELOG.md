@@ -29,6 +29,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Project name is now the project directory name and cannot be changed unless by moving the project to another 
   directory manually or by using the File -> Save project as... menu item.
 - Scenario filters now filter unrelated scenarios and alternatives as well.
+- Alternative/Scenario tree in Database editor has been split into separate Alternative tree and Scenario tree docks.
+  This will hopefully make dragging and dropping alternatives to scenarios easier.
 
 ### Deprecated
 

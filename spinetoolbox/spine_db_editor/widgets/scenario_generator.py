@@ -94,7 +94,7 @@ class ScenarioGenerator(QWidget):
         generated_scenario_names = [
             scenario_prefix + suffix.format(count) for count in range(1, len(scenario_alternatives) + 1)
         ]
-        scenario_items = self._db_editor.scenario_items(self._db_map)
+        scenario_items = self._db_editor.db_mngr.get_items(self._db_map, "scenario", only_visible=False)
         existing_scenario_names = {item.name for item in scenario_items}
         resolution = self._check_existing_scenarios(generated_scenario_names, existing_scenario_names)
         if resolution == _ScenarioNameResolution.CANCEL_OPERATION:
@@ -128,7 +128,7 @@ class ScenarioGenerator(QWidget):
         searchable_scenario_names = set(scenarios_to_modify)
         scenario_definitions_by_id = dict()
         alternative_iter = iter(scenario_alternatives)
-        scenario_items = self._db_editor.scenario_items(self._db_map)
+        scenario_items = self._db_editor.db_mngr.get_items(self._db_map, "scenario", only_visible=False)
         for item in scenario_items:
             if item.name not in searchable_scenario_names:
                 continue

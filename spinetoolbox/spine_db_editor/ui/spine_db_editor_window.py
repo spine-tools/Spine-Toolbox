@@ -33,8 +33,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDockWidget, QFr
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (FrozenTableView, ItemMetadataTableView, MetadataTableView, ObjectParameterDefinitionTableView,
     ObjectParameterValueTableView, PivotTableView, RelationshipParameterDefinitionTableView, RelationshipParameterValueTableView)
-from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeScenarioTreeView, ObjectTreeView, ParameterValueListTreeView, RelationshipTreeView,
-    ToolFeatureTreeView)
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, ObjectTreeView, ParameterValueListTreeView, RelationshipTreeView,
+    ScenarioTreeView, ToolFeatureTreeView)
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindow(object):
@@ -162,31 +162,29 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
         self.centralwidget.setSizePolicy(sizePolicy)
         MainWindow.setCentralWidget(self.centralwidget)
-        self.dockWidget_alternative_scenario_tree = QDockWidget(MainWindow)
-        self.dockWidget_alternative_scenario_tree.setObjectName(u"dockWidget_alternative_scenario_tree")
-        self.dockWidget_alternative_scenario_tree.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self.alternative_dock_widget = QDockWidget(MainWindow)
+        self.alternative_dock_widget.setObjectName(u"alternative_dock_widget")
+        self.alternative_dock_widget.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.dockWidgetContents_15 = QWidget()
         self.dockWidgetContents_15.setObjectName(u"dockWidgetContents_15")
         self.verticalLayout_18 = QVBoxLayout(self.dockWidgetContents_15)
         self.verticalLayout_18.setSpacing(0)
         self.verticalLayout_18.setObjectName(u"verticalLayout_18")
         self.verticalLayout_18.setContentsMargins(0, 0, 0, 0)
-        self.treeView_alternative_scenario = AlternativeScenarioTreeView(self.dockWidgetContents_15)
-        self.treeView_alternative_scenario.setObjectName(u"treeView_alternative_scenario")
-        self.treeView_alternative_scenario.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.treeView_alternative_scenario.setAcceptDrops(False)
-        self.treeView_alternative_scenario.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
-        self.treeView_alternative_scenario.setDragEnabled(True)
-        self.treeView_alternative_scenario.setDragDropMode(QAbstractItemView.InternalMove)
-        self.treeView_alternative_scenario.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.treeView_alternative_scenario.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.treeView_alternative_scenario.setIconSize(QSize(20, 20))
-        self.treeView_alternative_scenario.setUniformRowHeights(True)
+        self.alternative_tree_view = AlternativeTreeView(self.dockWidgetContents_15)
+        self.alternative_tree_view.setObjectName(u"alternative_tree_view")
+        self.alternative_tree_view.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
+        self.alternative_tree_view.setDragEnabled(True)
+        self.alternative_tree_view.setDragDropMode(QAbstractItemView.DragDrop)
+        self.alternative_tree_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.alternative_tree_view.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.alternative_tree_view.setIconSize(QSize(20, 20))
+        self.alternative_tree_view.setUniformRowHeights(True)
 
-        self.verticalLayout_18.addWidget(self.treeView_alternative_scenario)
+        self.verticalLayout_18.addWidget(self.alternative_tree_view)
 
-        self.dockWidget_alternative_scenario_tree.setWidget(self.dockWidgetContents_15)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_alternative_scenario_tree)
+        self.alternative_dock_widget.setWidget(self.dockWidgetContents_15)
+        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.alternative_dock_widget)
         self.dockWidget_parameter_value_list = QDockWidget(MainWindow)
         self.dockWidget_parameter_value_list.setObjectName(u"dockWidget_parameter_value_list")
         self.dockWidgetContents = QWidget()
@@ -410,7 +408,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_13.addWidget(self.pivot_table)
 
         self.dockWidget_pivot_table.setWidget(self.dockWidgetContents_10)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_pivot_table)
+        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_pivot_table)
         self.dockWidget_frozen_table = QDockWidget(MainWindow)
         self.dockWidget_frozen_table.setObjectName(u"dockWidget_frozen_table")
         self.dockWidgetContents_11 = QWidget()
@@ -430,7 +428,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_14.addWidget(self.frozen_table)
 
         self.dockWidget_frozen_table.setWidget(self.dockWidgetContents_11)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_frozen_table)
+        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_frozen_table)
         self.dockWidget_exports = QDockWidget(MainWindow)
         self.dockWidget_exports.setObjectName(u"dockWidget_exports")
         self.dockWidget_exports.setMaximumSize(QSize(524287, 64))
@@ -508,6 +506,28 @@ class Ui_MainWindow(object):
 
         self.item_metadata_dock_widget.setWidget(self.item_metadata_dock_contents)
         MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.item_metadata_dock_widget)
+        self.scenario_dock_widget = QDockWidget(MainWindow)
+        self.scenario_dock_widget.setObjectName(u"scenario_dock_widget")
+        self.dockWidgetContents_9 = QWidget()
+        self.dockWidgetContents_9.setObjectName(u"dockWidgetContents_9")
+        self.verticalLayout_12 = QVBoxLayout(self.dockWidgetContents_9)
+        self.verticalLayout_12.setSpacing(0)
+        self.verticalLayout_12.setObjectName(u"verticalLayout_12")
+        self.verticalLayout_12.setContentsMargins(0, 0, 0, 0)
+        self.scenario_tree_view = ScenarioTreeView(self.dockWidgetContents_9)
+        self.scenario_tree_view.setObjectName(u"scenario_tree_view")
+        self.scenario_tree_view.setAcceptDrops(True)
+        self.scenario_tree_view.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
+        self.scenario_tree_view.setDragEnabled(True)
+        self.scenario_tree_view.setDragDropMode(QAbstractItemView.DragDrop)
+        self.scenario_tree_view.setDefaultDropAction(Qt.MoveAction)
+        self.scenario_tree_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.scenario_tree_view.setUniformRowHeights(True)
+
+        self.verticalLayout_12.addWidget(self.scenario_tree_view)
+
+        self.scenario_dock_widget.setWidget(self.dockWidgetContents_9)
+        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.scenario_dock_widget)
 
         self.retranslateUi(MainWindow)
 
@@ -581,9 +601,9 @@ class Ui_MainWindow(object):
         self.actionAdd_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"Add database file to the current view", None))
 #endif // QT_CONFIG(tooltip)
         self.actionVacuum.setText(QCoreApplication.translate("MainWindow", u"Vacuum", None))
-        self.dockWidget_alternative_scenario_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative/Scenario tree", None))
+        self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative tree", None))
 #if QT_CONFIG(accessibility)
-        self.treeView_alternative_scenario.setAccessibleName(QCoreApplication.translate("MainWindow", u"alternative tree", None))
+        self.alternative_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"alternative tree", None))
 #endif // QT_CONFIG(accessibility)
         self.dockWidget_parameter_value_list.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter value list", None))
 #if QT_CONFIG(accessibility)
@@ -620,5 +640,9 @@ class Ui_MainWindow(object):
         self.dockWidget_tool_feature_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Tool/Feature tree", None))
         self.metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Metadata", None))
         self.item_metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Item metadata", None))
+        self.scenario_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scenario tree", None))
+#if QT_CONFIG(accessibility)
+        self.scenario_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"scenario tree", None))
+#endif // QT_CONFIG(accessibility)
     # retranslateUi
 

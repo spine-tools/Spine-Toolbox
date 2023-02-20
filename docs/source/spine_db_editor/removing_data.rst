@@ -79,34 +79,65 @@ Select the databases from where you want to remove the items under *Databases*,
 and the type of items you want to remove under *Items*.
 Then, press **Ok**.
 
-Removing alternatives and scenarios
-===================================
+Removing alternatives
+=====================
+
+From *Pivot table*
+~~~~~~~~~~~~~~~~~~
+
+Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table`).
+To remove alternatives, just edit the proper cells in the **alternative** header,
+right-click on the selection and choose **Remove** from the context menu.
+
+From *Alternative tree*
+~~~~~~~~~~~~~~~~~~~~~~~
+
+To remove an alternative, just select the correspoding items in *Alternative tree*,
+right-click on the selection and choose **Remove** from the context menu.
+
+
+Removing scenarios
+==================
 
 From *Pivot table*
 ~~~~~~~~~~~~~~~~~~
 
 Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table`).
 To remove scenarios, just select the proper cells in the **scenario** header,
-right-click on the selection and chose **Remove** from the context menu.
-To remove alternatives, just edit the proper cells in the **alternative** header,
-right-click on the selection and chose **Remove** from the context menu.
+right-click on the selection and choose **Remove** from the context menu.
 
-From *Alternative/Scenario tree*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+From *Scenario tree*
+~~~~~~~~~~~~~~~~~~~~
 
-To remove a scenario or alternative, just select the correspoding items in *Alternative/Scenario tree*,
-right-click on the selection and chose **Remove** from the context menu.
+To remove a scenario, just select the corresponding items in *Scenario tree*,
+right-click on the selection and choose **Remove** from the context menu.
 
+To remove a scenario alternative, select the corresponding alternative items in *Scenario tree*,
+right-click  on the selection and choose **Remove** from the context menu.
 
 Removing tools and features
 ===========================
 
 To remove a feature, tool, or method, just select the correspoding items in *Tool/Feature tree*,
-right-click on the selection and chose **Remove** from the context menu.
+right-click on the selection and choose **Remove** from the context menu.
 
 
 Removing parameter value lists
 ==============================
 
 To remove a parameter value list or any of its values, just select the correspoding items in *Parameter value list*,
-right-click on the selection and chose **Remove** from the context menu.
+right-click on the selection and choose **Remove** from the context menu.
+
+
+Removing metadata
+=================
+
+Select the corresponding items in *Metadata*, right-click on the selection and choose **Remove row(s)**
+from the context menu.
+
+
+Removing item metadata
+======================
+
+Select the corresponding items in *Item metadata*, right-click on the selection and choose **Remove row(s)**
+from the context menu.
