@@ -57,3 +57,27 @@ class AlternativeModel(TreeModelBase):
         mime.setText(two_column_as_csv(indexes))
         mime.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(d))
         return mime
+
+    def paste_alternative_mime_data(self, mime_data, database_item):
+        """Pastes alternatives from mime data into model.
+
+        Args:
+            mime_data (QMimeData): mime data
+            database_item (DBItem): target database item
+        """
+        alternative_data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA))
+        names_to_descriptions = {}
+        for db_key, alternative_ids in alternative_data.items():
+            db_map = self.db_mngr.db_map_from_key(db_key)
+            items = self.db_mngr.get_items(db_map, "alternative", only_visible=False)
+            names_to_descriptions.update({i.name: i.description for i in items})
+        existing_names = {
+            item.name for item in self.db_mngr.get_items(database_item.db_map, "alternative", only_visible=False)
+        }
+        alternative_db_items = []
+        for name, description in names_to_descriptions.items():
+            if name in existing_names:
+                continue
+            alternative_db_items.append({"name": name, "description": description})
+        if alternative_db_items:
+            self.db_mngr.add_alternatives({database_item.db_map: alternative_db_items})

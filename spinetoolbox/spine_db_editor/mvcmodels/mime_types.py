@@ -11,3 +11,4 @@
 """Contains mime types used by the models."""
 
 ALTERNATIVE_DATA = "application/vnd.spinetoolbox.alternative"
+SCENARIO_DATA = "application/vnd.spinetoolbox.scenario"

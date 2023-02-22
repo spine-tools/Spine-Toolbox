@@ -248,6 +248,7 @@ From *Alternative tree*
 To add a new alternative, just select the last item appropriate database,
 and enter the name of the alternative.
 
+You can also copy and paste alternatives between different databases.
 
 From *Pivot table*
 ~~~~~~~~~~~~~~~~~~
@@ -255,8 +256,12 @@ From *Pivot table*
 Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table`).
 To add a new alternative, enter a name in the last cell of the **alternative** header.
 
+
 Adding scenarios
 ================
+
+From *Scenario tree*
+~~~~~~~~~~~~~~~~~~~~
 
 To add a new scenario, just select the last item under the appropriate database,
 and enter the name of the scenario.
@@ -264,10 +269,16 @@ and enter the name of the scenario.
 To add an alternative for a particular scenario, drag the alternative item from *Alternative tree*
 and drop it under the corresponding scenario.
 The position where you drop it determines the alternative's *rank* within the scenario.
+Alternatives can also be copied from *Alternative tree*
+and pasted at the appropriate position in *Scenario tree*.
 
 .. note:: Alternatives with higher rank have priority when determining the parameter value for a certain scenario.
    If the parameter value is specified for two alternatives, and both of them happen to coexist in a same scenario,
    the value from the alternative with the higher rank is picked.
+
+If it is desirable to base a scenario on an existing one, scenarios can be duplicated
+using the **Duplicate** item in the right-click context menu, or by pressing **Ctrl+D**.
+It is also possible to copy and paste scenarios between databases.
 
 From *Pivot table*
 ~~~~~~~~~~~~~~~~~~
@@ -292,6 +303,7 @@ Select appropriate operation from the combo box.
 Checking the **Use base alternative** check box will add the selected alternative to
 all generated scenarios as the lowest rank alternative.
 The **Alternative by rank** list allows reordering the ranks of the alternatives.
+
 
 Adding parameter value lists
 ============================
