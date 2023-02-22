@@ -239,32 +239,59 @@ To add a new method for a tool-feature, select the last item under *tool_feature
 start typing or press **F2** to display available methods, and select the one you want to add.
 
 
-Adding alternatives and scenarios
-=================================
+Adding alternatives
+===================
 
-From *Alternative/Scenario tree*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+From *Alternative tree*
+~~~~~~~~~~~~~~~~~~~~~~~
 
-To add a new alternative, just select the last item under **alternative** in the appropriate database,
+To add a new alternative, just select the last item appropriate database,
 and enter the name of the alternative.
-
-To add a new scenario, just select the last item under **scenario** in the appropriate database,
-and enter the name of the scenario.
-
-To add an alternative for a particular scenario, drag the alternative item and drop it over the **scenario_alternative** list
-under the corresponding scenario. The position where you drop it determines the alternative's *rank* within the scenario.
-
-.. note:: Alternatives with higher rank have priority when determining the parameter value for a certain scenario.
-   If the parameter value is specified for two alternatives, and both of them happen to coexist in a same scenario,
-   the value from the alternative with the higher rank is picked.
 
 
 From *Pivot table*
 ~~~~~~~~~~~~~~~~~~
 
 Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table`).
-To add a new scenario, enter a name in the last cell of the **scenario** header.
 To add a new alternative, enter a name in the last cell of the **alternative** header.
+
+Adding scenarios
+================
+
+To add a new scenario, just select the last item under the appropriate database,
+and enter the name of the scenario.
+
+To add an alternative for a particular scenario, drag the alternative item from *Alternative tree*
+and drop it under the corresponding scenario.
+The position where you drop it determines the alternative's *rank* within the scenario.
+
+.. note:: Alternatives with higher rank have priority when determining the parameter value for a certain scenario.
+   If the parameter value is specified for two alternatives, and both of them happen to coexist in a same scenario,
+   the value from the alternative with the higher rank is picked.
+
+From *Pivot table*
+~~~~~~~~~~~~~~~~~~
+
+Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table`).
+To add a new scenario, enter a name in the last cell of the **scenario** header.
+
+From *Generate scenarios*
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Scenarios can be added also by automatically generating them from existing alternatives.
+Select the alternatives in *Alternative tree* (using **Ctrl** and **Shift** while clicking the items),
+then right click to open a context menu.
+Select **Generate scenarios...**
+
+.. image:: img/generate_scenarios.png
+   :align: center
+
+Give the scenario names a prefix.
+An index will be appended to the prefix automatically: **prefix01**, **prefix02**,...
+Select appropriate operation from the combo box.
+Checking the **Use base alternative** check box will add the selected alternative to
+all generated scenarios as the lowest rank alternative.
+The **Alternative by rank** list allows reordering the ranks of the alternatives.
 
 Adding parameter value lists
 ============================
@@ -279,8 +306,12 @@ list item, and enter the value. To enter a complex value, right-click on the emp
 .. note:: To be actually added to the database, a parameter value list must have at least one value.
 
 
-Adding parameter tags
-============================
+Adding metadata and item metadata
+=================================
 
-To add a new parameter tag, go to *Parameter tag* and select the last item under the appropriate database,
-and enter the tag's name.
+To add new metadata go to *Metadata* and add a new name and value to the last row.
+
+To add a new link metadata for an item,
+select an entity from one of the entity trees
+or a parameter value from one of the parameter value tables.
+Then go to *Item metadata* and select the appropriate metadata name and value on the last row.

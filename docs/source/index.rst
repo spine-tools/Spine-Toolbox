@@ -31,6 +31,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    Spine database editor <spine_db_editor/index>
    plotting
    parameter_value_editor
+   metadata_description
    data_import_export
    spine_engine_server
    terminology

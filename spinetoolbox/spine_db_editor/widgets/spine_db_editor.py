@@ -269,7 +269,8 @@ class SpineDBEditorBase(QMainWindow):
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_tool_feature_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_alternative_scenario_tree.toggleViewAction())
+        menu.addAction(self.ui.alternative_dock_widget.toggleViewAction())
+        menu.addAction(self.ui.scenario_dock_widget.toggleViewAction())
         menu.addAction(self.ui.metadata_dock_widget.toggleViewAction())
         menu.addAction(self.ui.item_metadata_dock_widget.toggleViewAction())
         menu.addSeparator()
@@ -923,30 +924,6 @@ class SpineDBEditorBase(QMainWindow):
         self.save_window_state()
         super().closeEvent(event)
 
-    def scenario_items(self, db_map):
-        """Gathers scenario items from alternative scenario tree for given database.
-
-        Args:
-            db_map (DiffDatabaseMapping): database map
-
-        Returns:
-            list of CachedItem: scenario items
-        """
-        model = self.ui.treeView_alternative_scenario.model()
-        db_index = None
-        for row in range(model.rowCount()):
-            db_index = model.index(row, 0)
-            item = model.item_from_index(db_index)
-            if item.db_map is db_map:
-                break
-        if db_index is None:
-            raise RuntimeError("Database item not found in alternative/scenario model.")
-        scenario_root_index = model.index(1, 0, db_index)
-        return [
-            model.item_from_index(model.index(row, 0, scenario_root_index))
-            for row in range(model.rowCount(scenario_root_index))
-        ]
-
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
@@ -1073,24 +1050,20 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Horizontal
         )
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_alternative_scenario_tree,
-            Qt.Orientation.Horizontal,
+            self.ui.dockWidget_object_parameter_value, self.ui.alternative_dock_widget, Qt.Orientation.Horizontal
+        )
+        self.splitDockWidget(
+            self.ui.alternative_dock_widget, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Horizontal
         )
         self.splitDockWidget(
             self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
         )
         # right-side
+        self.splitDockWidget(self.ui.alternative_dock_widget, self.ui.scenario_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical
+            self.ui.dockWidget_tool_feature_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical
         )
-        self.tabify_and_raise(
-            [
-                self.ui.dockWidget_alternative_scenario_tree,
-                self.ui.dockWidget_tool_feature_tree,
-                self.ui.dockWidget_parameter_value_list,
-            ]
-        )
+        self.tabify_and_raise([self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list])
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         # center
         self.splitDockWidget(
@@ -1110,10 +1083,11 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [
             self.ui.dockWidget_object_tree,
             self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_alternative_scenario_tree,
+            self.ui.alternative_dock_widget,
+            self.ui.dockWidget_tool_feature_tree,
         ]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Orientation.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.15 * width, 0.15 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
 
     @Slot(QAction)
@@ -1125,11 +1099,10 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(
             self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
         )
+        self.splitDockWidget(self.ui.dockWidget_frozen_table, self.ui.alternative_dock_widget, Qt.Orientation.Vertical)
+        self.splitDockWidget(self.ui.alternative_dock_widget, self.ui.scenario_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_frozen_table, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
-        )
-        self.splitDockWidget(
-            self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_alternative_scenario_tree, Qt.Orientation.Vertical
+            self.ui.scenario_dock_widget, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
         )
         self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_object_parameter_value.hide()
@@ -1141,7 +1114,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.item_metadata_dock_widget.hide()
         docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Orientation.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.65 * width, 0.15 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
 
     @Slot(bool)
@@ -1152,20 +1125,21 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_frozen_table.hide()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Orientation.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_entity_graph, self.ui.dockWidget_alternative_scenario_tree, Qt.Orientation.Horizontal
+            self.ui.dockWidget_entity_graph, self.ui.alternative_dock_widget, Qt.Orientation.Horizontal
         )
         # right-side
+        self.splitDockWidget(self.ui.alternative_dock_widget, self.ui.scenario_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical
+            self.ui.scenario_dock_widget, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
         )
         self.tabify_and_raise(
             [
-                self.ui.dockWidget_alternative_scenario_tree,
                 self.ui.dockWidget_tool_feature_tree,
                 self.ui.dockWidget_parameter_value_list,
+                self.ui.item_metadata_dock_widget,
+                self.ui.metadata_dock_widget,
             ]
         )
-        self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         # left
         self.splitDockWidget(
             self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
@@ -1177,12 +1151,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_object_parameter_value,
             self.ui.dockWidget_relationship_parameter_value,
             Qt.Orientation.Vertical,
-        )
-        self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
-        )
-        self.splitDockWidget(
-            self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
         )
         self.tabify_and_raise(
             [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
@@ -1197,13 +1165,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         ]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.6 * height, 0.2 * height, 0.2 * height], Qt.Orientation.Vertical)
-        docks = [
-            self.ui.dockWidget_object_tree,
-            self.ui.dockWidget_entity_graph,
-            self.ui.dockWidget_alternative_scenario_tree,
-        ]
+        docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, self.ui.alternative_dock_widget]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Orientation.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.65 * width, 0.15 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 

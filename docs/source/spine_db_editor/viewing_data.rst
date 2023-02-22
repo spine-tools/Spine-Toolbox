@@ -242,17 +242,26 @@ select the corresponding row in *Frozen table*.
 Viewing alternatives and scenarios
 ==================================
 
-You can find alternatives and scenarios from all databases under *Alternative/Scenario tree*:
+You can find alternatives from all databases under *Alternative tree*:
 
-.. image:: img/alternative_scenario_tree.png
+.. image:: img/alternative_tree.png
    :align: center
 
-To view the alternatives and scenarios from each database, 
+To view the alternatives from each database,
 expand the root item for that database.
-To view all alternatives, expand the **alternative** item.
-To view all scenarios, expand the **scenario** item.
-To view the alternatives for a particular scenario, expand the **scenario_alternative** item under the corresponding
-scenario item.
+
+Viewing scenarios
+=================
+
+You can find scenarios from all databases under *Scenario tree*:
+
+.. image:: img/scenario_tree.png
+   :align: center
+
+To view the scenarios from each database,
+expand the root item for that database.
+To view the alternatives for a particular scenario,
+expand the corresponding scenario item.
 
 Viewing tools and features
 ==========================
@@ -285,13 +294,20 @@ expand the root item for that database.
 To view the values for each list, expand the corresponding list item.
 
 
-Viewing parameter tags
-======================
+Viewing metadata
+================
 
-You can find parameter tags from all databases under *Parameter tag*:
+You can find metadata from all databases under *Metadata*:
 
-.. image:: img/parameter_tag.png
+.. image:: img/metadata.png
    :align: center
 
-To view the tags from each database, 
-expand the root item for that database.
+See also :ref:`Metadata description`.
+
+Viewing item metadata
+=====================
+
+You can find metadata for currently selected entities or parameter values under *Item metadata*:
+
+.. image:: img/item_metadata.png
+   :align: center
