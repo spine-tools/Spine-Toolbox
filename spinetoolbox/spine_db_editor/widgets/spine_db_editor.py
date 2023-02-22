@@ -1032,19 +1032,22 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(
             self.ui.dockWidget_parameter_value, self.ui.alternative_dock_widget, Qt.Orientation.Horizontal
         )
-        self.splitDockWidget(
-            self.ui.alternative_dock_widget, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Horizontal
-        )
+        self._finish_stacked_style()
+        self.ui.dockWidget_entity_graph.hide()
+        self.end_style_change()
+
+    def _finish_stacked_style(self):
         # right-side
         self.splitDockWidget(self.ui.alternative_dock_widget, self.ui.scenario_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_tool_feature_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical
+            self.ui.scenario_dock_widget, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
         )
-        self.tabify_and_raise([self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list])
+        self.tabify_and_raise([self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_tool_feature_tree])
+        self.tabify_and_raise([self.ui.dockWidget_tool_feature_tree, self.ui.metadata_dock_widget])
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
+        self.ui.dockWidget_parameter_value_list.raise_()
         # center
         self.tabify_and_raise([self.ui.dockWidget_parameter_value, self.ui.dockWidget_parameter_definition])
-        self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
         docks = [
@@ -1055,7 +1058,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         ]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.15 * width, 0.15 * width], Qt.Orientation.Horizontal)
-        self.end_style_change()
 
     @Slot(QAction)
     def apply_pivot_style(self, _action):
@@ -1066,12 +1068,12 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_frozen_table, self.ui.alternative_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(self.ui.alternative_dock_widget, self.ui.scenario_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(
-            self.ui.scenario_dock_widget, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
+            self.ui.scenario_dock_widget, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
         )
         self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_parameter_value.hide()
         self.ui.dockWidget_parameter_definition.hide()
-        self.ui.dockWidget_parameter_value_list.hide()
+        self.ui.dockWidget_tool_feature_tree.hide()
         self.ui.metadata_dock_widget.hide()
         self.ui.item_metadata_dock_widget.hide()
         docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
@@ -1083,46 +1085,18 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
     def apply_graph_style(self, checked=False):
         """Applies the graph style, inspired in the former graph view."""
         self.begin_style_change()
-        self.ui.dockWidget_pivot_table.hide()
-        self.ui.dockWidget_frozen_table.hide()
         self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_entity_graph, Qt.Orientation.Horizontal)
         self.splitDockWidget(
             self.ui.dockWidget_entity_graph, self.ui.alternative_dock_widget, Qt.Orientation.Horizontal
         )
-        # right-side
-        self.splitDockWidget(self.ui.alternative_dock_widget, self.ui.scenario_dock_widget, Qt.Orientation.Vertical)
-        self.splitDockWidget(
-            self.ui.scenario_dock_widget, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
-        )
-        self.tabify_and_raise(
-            [
-                self.ui.dockWidget_tool_feature_tree,
-                self.ui.dockWidget_parameter_value_list,
-                self.ui.item_metadata_dock_widget,
-                self.ui.metadata_dock_widget,
-            ]
-        )
-        # left
         self.splitDockWidget(
             self.ui.dockWidget_entity_graph, self.ui.dockWidget_parameter_value, Qt.Orientation.Vertical
         )
-        self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
-        )
-        self.splitDockWidget(
-            self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
-        )
-        self.tabify_and_raise([self.ui.dockWidget_parameter_value, self.ui.dockWidget_parameter_definition])
+        self._finish_stacked_style()
+        self.ui.dockWidget_entity_graph.show()
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Orientation.Vertical)
-        docks = [
-            self.ui.dockWidget_entity_tree,
-            self.ui.dockWidget_entity_graph,
-            self.ui.alternative_dock_widget,
-        ]
-        width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.65 * width, 0.15 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 
