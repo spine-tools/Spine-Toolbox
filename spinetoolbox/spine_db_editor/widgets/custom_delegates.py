@@ -536,7 +536,7 @@ class ToolFeatureDelegate(QStyledItemDelegate):
         self.setModelData(editor, index.model(), index)
 
 
-class AlternativeScenarioDelegate(QStyledItemDelegate):
+class AlternativeDelegate(QStyledItemDelegate):
     """A delegate for the alternative scenario tree."""
 
     data_committed = Signal(QModelIndex, object)
@@ -548,7 +548,46 @@ class AlternativeScenarioDelegate(QStyledItemDelegate):
     def setModelData(self, editor, model, index):
         """Send signal."""
         item = index.model().item_from_index(index)
-        index_data = self._get_index_data(item, index)
+        index_data = index.data(Qt.ItemDataRole.EditRole)
+        editor_data = editor.data()
+        if editor_data == index_data:
+            return
+        self.data_committed.emit(index, editor_data)
+
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        model = index.model()
+        item = model.item_from_index(index)
+        editor = CustomLineEditor(parent)
+        editor.set_data(index.data(Qt.ItemDataRole.EditRole))
+        return editor
+
+    def updateEditorGeometry(self, editor, option, index):
+        super().updateEditorGeometry(editor, option, index)
+        item = index.model().item_from_index(index)
+
+    def _close_editor(self, editor, index):
+        """Closes editor. Needed by SearchBarEditor."""
+        self.closeEditor.emit(editor)
+        self.setModelData(editor, index.model(), index)
+
+
+class ScenarioDelegate(QStyledItemDelegate):
+    """A delegate for the scenario tree."""
+
+    data_committed = Signal(QModelIndex, object)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._alternative_ids = {}
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        item = index.model().item_from_index(index)
+        index_data = index.data(Qt.ItemDataRole.EditRole)
         editor_data = editor.data()
         if editor_data == index_data:
             return
@@ -561,32 +600,22 @@ class AlternativeScenarioDelegate(QStyledItemDelegate):
     def setEditorData(self, editor, index):
         """Do nothing. We're setting editor data right away in createEditor."""
 
-    def _get_names(self, item, model):
-        if item.item_type == "scenario_alternative":
-            self._alternative_ids = {
-                x["name"]: x["id"]
-                for x in item.db_mngr.get_items(item.db_map, "alternative", only_visible=False)
-                if x["id"] not in item.parent_item.alternative_id_list
-            }
-            return list(self._alternative_ids)
-        if item.item_type == "scenario active":
-            return ["yes", "no"]
-
-    @staticmethod
-    def _get_index_data(item, index):
-        index_data = index.data(Qt.ItemDataRole.EditRole)
-        if item.item_type == "scenario active":
-            return index_data.split(": ")[1]
-        return index_data
+    def _get_names(self, item):
+        self._alternative_ids = {
+            x["name"]: x["id"]
+            for x in item.db_mngr.get_items(item.db_map, "alternative", only_visible=False)
+            if x["id"] not in item.parent_item.alternative_id_list
+        }
+        return list(self._alternative_ids)
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
         model = index.model()
         item = model.item_from_index(index)
-        if item.item_type in ("scenario active", "scenario_alternative"):
+        if item.item_type == "scenario_alternative":
             editor = SearchBarEditor(self.parent(), parent)
-            index_data = self._get_index_data(item, index)
-            names = self._get_names(item, model)
+            index_data = index.data(Qt.ItemDataRole.EditRole)
+            names = self._get_names(item)
             if names is None:
                 return None
             editor.set_data(index_data, names)
@@ -599,13 +628,7 @@ class AlternativeScenarioDelegate(QStyledItemDelegate):
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
         item = index.model().item_from_index(index)
-        if item.item_type in ("scenario active", "scenario_alternative"):
-            if item.item_type == "scenario active":
-                font = index.data(Qt.ItemDataRole.FontRole)
-                if not font:
-                    font = QFont()  # App default font
-                dx = QFontMetrics(font).horizontalAdvance("active:")
-                editor.set_base_offset(QPoint(dx, 0))
+        if item.item_type == "scenario_alternative":
             editor.update_geometry(option)
 
     def _close_editor(self, editor, index):

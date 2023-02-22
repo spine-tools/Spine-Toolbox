@@ -19,12 +19,14 @@ Classes for custom QTreeView.
 from PySide6.QtWidgets import QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
 from PySide6.QtGui import QMouseEvent, QIcon
+
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
 from spinetoolbox.widgets.custom_qwidgets import ResizingViewMixin
-from .custom_delegates import ToolFeatureDelegate, AlternativeScenarioDelegate, ParameterValueListDelegate
+from .custom_delegates import ScenarioDelegate, ToolFeatureDelegate, AlternativeDelegate, ParameterValueListDelegate
 from .scenario_generator import ScenarioGenerator
-from ..mvcmodels.alternative_scenario_item import AlternativeLeafItem
+from ..mvcmodels.alternative_item import AlternativeItem
+from ..mvcmodels.scenario_item import ScenarioAlternativeItem, ScenarioItem
 
 
 class ResizableTreeView(ResizingViewMixin, CopyTreeView):
@@ -436,21 +438,27 @@ class ToolFeatureTreeView(ItemTreeView):
             event.accept()
 
 
-class AlternativeScenarioTreeView(ItemTreeView):
-    """Custom QTreeView class for the alternative scenario tree in SpineDBEditor."""
+class AlternativeTreeView(ItemTreeView):
+    """Custom QTreeView for the alternative tree in SpineDBEditor."""
 
     alternative_selection_changed = Signal(dict)
 
     def __init__(self, parent):
-        """Initialize the view."""
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent=parent)
         self._selected_alternative_ids = dict()
         self._generate_scenarios_action = None
-        self.setMouseTracking(True)
+
+    @property
+    def selected_alternative_ids(self):
+        return self._selected_alternative_ids
 
     def reset(self):
         super().reset()
-        self._selected_alternative_ids = dict()
+        self._selected_alternative_ids.clear()
 
     def connect_signals(self):
         """Connects signals."""
@@ -460,7 +468,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
     def connect_spine_db_editor(self, spine_db_editor):
         """see base class"""
         super().connect_spine_db_editor(spine_db_editor)
-        delegate = AlternativeScenarioDelegate(self._spine_db_editor)
+        delegate = AlternativeDelegate(self._spine_db_editor)
         delegate.data_committed.connect(self.model().setData)
         self.setItemDelegateForColumn(0, delegate)
 
@@ -476,20 +484,8 @@ class AlternativeScenarioTreeView(ItemTreeView):
             if index.column() != 0:
                 continue
             item = self.model().item_from_index(index)
-            if item.item_type == "alternative" and hasattr(item, "id") and item.id:
+            if isinstance(item, AlternativeItem) and item.id is not None:
                 db_map_ids.setdefault(item.db_map, set()).add(item.id)
-            if item.item_type == "scenario_alternative" and hasattr(item, "alternative_id") and item.alternative_id:
-                db_map_ids.setdefault(item.db_map, set()).add(item.alternative_id)
-        return db_map_ids
-
-    def _db_map_scen_alt_ids_from_selection(self, selection):
-        db_map_ids = {}
-        for index in selection.indexes():
-            if index.column() != 0:
-                continue
-            item = self.model().item_from_index(index)
-            if item.item_type == "scenario_alternative" and hasattr(item, "alternative_id_list"):
-                db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
         return db_map_ids
 
     @Slot(QItemSelection, QItemSelection)
@@ -497,17 +493,116 @@ class AlternativeScenarioTreeView(ItemTreeView):
         """Emits alternative_selection_changed with the current selection."""
         selected_db_map_alt_ids = self._db_map_alt_ids_from_selection(selected)
         deselected_db_map_alt_ids = self._db_map_alt_ids_from_selection(deselected)
-        selected_db_map_scen_alt_ids = self._db_map_scen_alt_ids_from_selection(selected)
-        deselected_db_map_scen_alt_ids = self._db_map_scen_alt_ids_from_selection(deselected)
-        # NOTE: remove deselected scenario alternatives *before* adding selected alternatives, for obvious reasons
         for db_map, ids in deselected_db_map_alt_ids.items():
-            self._selected_alternative_ids[db_map].difference_update(ids)
-        for db_map, ids in deselected_db_map_scen_alt_ids.items():
             self._selected_alternative_ids[db_map].difference_update(ids)
         for db_map, ids in selected_db_map_alt_ids.items():
             self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
-        for db_map, ids in selected_db_map_scen_alt_ids.items():
-            self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
+        self.alternative_selection_changed.emit(self._selected_alternative_ids)
+
+    def remove_selected(self):
+        """See base class."""
+        if not self.selectionModel().hasSelection():
+            return
+        db_map_typed_data_to_rm = {}
+        items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
+        for db_item in self.model()._invisible_root_item.children:
+            db_map_typed_data_to_rm[db_item.db_map] = {"alternative": set()}
+            for alt_item in db_item.children[:-1]:
+                if alt_item in items:
+                    db_map_typed_data_to_rm[db_item.db_map]["alternative"].add(alt_item.id)
+        self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
+        self.selectionModel().clearSelection()
+
+    def update_actions_availability(self, item):
+        """See base class."""
+        self._generate_scenarios_action.setEnabled(
+            isinstance(item, AlternativeItem) and bool(self._selected_alternative_ids.get(item.db_map))
+        )
+
+    def _open_scenario_generator(self):
+        """Opens the scenario generator dialog."""
+        item = self.model().item_from_index(self.currentIndex())
+        if not isinstance(item, AlternativeItem):
+            return
+        included_ids = set()
+        alternatives = list()
+        db_map = item.db_map
+        for id_ in self._selected_alternative_ids.get(db_map, ()):
+            if id_ not in included_ids:
+                alternatives.append(self._spine_db_editor.db_mngr.get_item(db_map, "alternative", id_))
+                included_ids.add(id_)
+        generator = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
+        generator.show()
+
+
+class ScenarioTreeView(ItemTreeView):
+    """Custom QTreeView for the scenario tree in SpineDBEditor."""
+
+    alternative_selection_changed = Signal(dict)
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
+        super().__init__(parent=parent)
+        self._selected_alternative_ids = dict()
+
+    @property
+    def selected_alternative_ids(self):
+        return self._selected_alternative_ids
+
+    def reset(self):
+        super().reset()
+        self._selected_alternative_ids.clear()
+
+    def connect_signals(self):
+        """Connects signals."""
+        super().connect_signals()
+        self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
+
+    def connect_spine_db_editor(self, spine_db_editor):
+        """see base class"""
+        super().connect_spine_db_editor(spine_db_editor)
+        delegate = ScenarioDelegate(self._spine_db_editor)
+        delegate.data_committed.connect(self.model().setData)
+        self.setItemDelegateForColumn(0, delegate)
+
+    def populate_context_menu(self):
+        """See base class."""
+        self._menu.addSeparator()
+        super().populate_context_menu()
+
+    def _db_map_alternative_ids_from_selection(self, selection):
+        """Collects database maps and alternative ids within given selection.
+
+        Args:
+            selection (Sequence of QModelIndex): selection indices
+
+        Returns:
+            dict: mapping from database map to set of alternative ids
+        """
+        db_map_ids = {}
+        for index in selection.indexes():
+            if index.column() != 0:
+                continue
+            item = self.model().item_from_index(index)
+            if isinstance(item, ScenarioItem) and item.id is not None:
+                db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
+            elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
+                db_map_ids.setdefault(item.db_map, set()).add(item.alternative_id)
+        return db_map_ids
+
+    @Slot(QItemSelection, QItemSelection)
+    def _handle_selection_changed(self, selected, deselected):
+        """Emits alternative_selection_changed with the current selection."""
+        self._selected_alternative_ids.clear()
+        for index in self.selectionModel().selectedRows(column=0):
+            item = self.model().item_from_index(index)
+            if isinstance(item, ScenarioItem) and item.id is not None:
+                self._selected_alternative_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
+            elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
+                self._selected_alternative_ids.setdefault(item.db_map, set()).add(item.alternative_id)
         self.alternative_selection_changed.emit(self._selected_alternative_ids)
 
     def remove_selected(self):
@@ -518,22 +613,18 @@ class AlternativeScenarioTreeView(ItemTreeView):
         db_map_scen_alt_data = {}
         items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
         for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"alternative": set(), "scenario": set()}
+            db_map_typed_data_to_rm[db_item.db_map] = {"scenario": set()}
             db_map_scen_alt_data[db_item.db_map] = []
-            for alt_item in reversed(db_item.child(0).children[:-1]):
-                if alt_item in items:
-                    db_map_typed_data_to_rm[db_item.db_map]["alternative"].add(alt_item.id)
-            for scen_item in reversed(db_item.child(1).children[:-1]):
+            for scen_item in db_item.children[:-1]:
                 if scen_item in items:
                     db_map_typed_data_to_rm[db_item.db_map]["scenario"].add(scen_item.id)
                     continue
-                scen_alt_root_item = scen_item.scenario_alternative_root_item
-                if not scen_alt_root_item.non_empty_children:
+                if not scen_item.non_empty_children:
                     continue
-                curr_alt_id_list = list(scen_alt_root_item.alternative_id_list)
+                curr_alt_id_list = list(scen_item.alternative_id_list)
                 new_alt_id_list = [
                     id_
-                    for alt_item, id_ in zip(scen_alt_root_item.non_empty_children, curr_alt_id_list)
+                    for alt_item, id_ in zip(scen_item.non_empty_children, curr_alt_id_list)
                     if alt_item not in items
                 ]
                 if new_alt_id_list != curr_alt_id_list:
@@ -542,12 +633,6 @@ class AlternativeScenarioTreeView(ItemTreeView):
         self.model().db_mngr.set_scenario_alternatives(db_map_scen_alt_data)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()
-
-    def update_actions_availability(self, item):
-        """See base class."""
-        self._generate_scenarios_action.setEnabled(
-            isinstance(item, AlternativeLeafItem) and bool(self._selected_alternative_ids.get(item.db_map))
-        )
 
     def dragMoveEvent(self, event):
         super().dragMoveEvent(event)
@@ -561,20 +646,8 @@ class AlternativeScenarioTreeView(ItemTreeView):
         if event.source() is self:
             event.accept()
 
-    def _open_scenario_generator(self):
-        """Opens the scenario generator dialog."""
-        item = self.model().item_from_index(self.currentIndex())
-        if not isinstance(item, AlternativeLeafItem):
-            return
-        included_ids = set()
-        alternatives = list()
-        db_map = item.db_map
-        for id_ in self._selected_alternative_ids.get(db_map, ()):
-            if id_ not in included_ids:
-                alternatives.append(self._spine_db_editor.db_mngr.get_item(db_map, "alternative", id_))
-                included_ids.add(id_)
-        generator = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
-        generator.show()
+    def update_actions_availability(self, item):
+        """See base class"""
 
 
 class ParameterValueListTreeView(ItemTreeView):

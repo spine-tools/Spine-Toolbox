@@ -57,22 +57,40 @@ bring the corresponding class to *Pivot table* using the **Parameter value** inp
 Then, just edit the appropriate cell in the table body.
 
 
-Updating alternatives and scenarios
-===================================
+Updating alternatives
+=====================
 
 
 From *Pivot table*
 ~~~~~~~~~~~~~~~~~~
 
 Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table`).
-To rename a scenario, just edit the proper cell in the **scenario** header.
 To rename an alternative, just edit the proper cell in the **alternative** header.
 
-From *Alternative/Scenario tree*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+From *Alternative tree*
+~~~~~~~~~~~~~~~~~~~~~~~
 
-To rename a scenario or alternative, just edit the appropriate item in *Alternative/Scenario tree*.
-To change scenario alternative ranks, just drag and drop the items under **scenario_alternatives**.
+To rename an alternative, just edit the appropriate item in *Alternative tree*.
+
+Updating scenarios
+==================
+
+From *Pivot table*
+~~~~~~~~~~~~~~~~~~
+
+Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table`).
+To rename a scenario, just edit the proper cell in the **scenario** header.
+
+To change the alternatives of a scenario as well as their ranks,
+check or uncheck the boxes on the pivot table.
+The number in the checkbox signifies the alternative's rank.
+
+From *Scenario tree*
+~~~~~~~~~~~~~~~~~~~~
+
+To rename a scenario, just edit the appropriate item in *Scenario tree*.
+
+To change scenario alternative ranks, just drag and drop the items under the corresponding scenario.
 
 
 Updating tools and features
@@ -85,5 +103,3 @@ Updating parameter value lists
 ==============================
 
 To rename a parameter value list or change any of its values, just edit the appropriate item in *Parameter value list*.
-
-

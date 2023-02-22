@@ -98,7 +98,6 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._populate_main_menu()
         self._spec_toolbar.save_action.triggered.connect(self._save)
         self._spec_toolbar.duplicate_action.triggered.connect(self._duplicate)
-        self._spec_toolbar.close_action.triggered.connect(self.close)
         self._undo_stack.cleanChanged.connect(self._update_window_modified)
 
     @property
@@ -133,6 +132,10 @@ class SpecificationEditorWindowBase(QMainWindow):
         """
         raise NotImplementedError()
 
+    def spec_toolbar(self):
+        """Returns spec editor window's toolbar, which contains e.g. the hamburger menu."""
+        return self._spec_toolbar
+
     @Slot(str)
     def show_error(self, message):
         self._ui_error.showMessage(message)
@@ -147,7 +150,9 @@ class SpecificationEditorWindowBase(QMainWindow):
         undo_action = self._undo_stack.createUndoAction(self)
         redo_action = self._undo_stack.createRedoAction(self)
         undo_action.setShortcuts(QKeySequence.Undo)
+        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
         redo_action.setShortcuts(QKeySequence.Redo)
+        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
         self._spec_toolbar.menu.insertActions(self._spec_toolbar.save_action, [redo_action, undo_action])
         self._spec_toolbar.menu.insertSeparator(self._spec_toolbar.save_action)
 
@@ -237,7 +242,7 @@ class SpecificationEditorWindowBase(QMainWindow):
 
 
 class _SpecNameDescriptionToolbar(QToolBar):
-    """A QToolBar to let users set name and description for an Spec."""
+    """QToolBar for line edits and a hamburger menu."""
 
     name_changed = Signal(str)
 
@@ -280,8 +285,11 @@ class _SpecNameDescriptionToolbar(QToolBar):
         self.save_action.setEnabled(False)
         self.duplicate_action.setEnabled(self._parent.specification is not None)
         self.save_action.setShortcut(QKeySequence.Save)
+        self.save_action.setIcon(QIcon(":/icons/menu_icons/save_solid.svg"))
         self.duplicate_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_D))
+        self.duplicate_action.setIcon(QIcon(":/icons/menu_icons/copy.svg"))
         self.close_action.setShortcut(QKeySequence.Close)
+        self.close_action.setIcon(QIcon(":/icons/menu_icons/window-close.svg"))
         self.setObjectName("_SpecNameDescriptionToolbar")
         if spec:
             self.do_set_name(spec.name)

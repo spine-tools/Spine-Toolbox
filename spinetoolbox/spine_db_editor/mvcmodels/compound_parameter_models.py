@@ -33,8 +33,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     """
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Initializes model.
-
+        """
         Args:
             parent (SpineDBEditor): the parent object
             db_mngr (SpineDBManager): the database manager
@@ -159,7 +158,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return self._empty_model_type(self, self.header, self.db_mngr)
 
     def filter_accepts_model(self, model):
-        """Returns a boolean indicating whether or not the given model passes the filter for compound model.
+        """Returns a boolean indicating whether the given model passes the filter for compound model.
 
         Args:
             model (SingleParameterModel, EmptyParameterModel)

@@ -1,16 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
-######################################################################################################################
--->
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -39,12 +27,12 @@
     </sizepolicy>
    </property>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_alternative_scenario_tree">
+  <widget class="QDockWidget" name="alternative_dock_widget">
    <property name="allowedAreas">
     <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle">
-    <string>Alternative/Scenario tree</string>
+    <string>Alternative tree</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -67,13 +55,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="AlternativeScenarioTreeView" name="treeView_alternative_scenario">
-       <property name="contextMenuPolicy">
-        <enum>Qt::DefaultContextMenu</enum>
-       </property>
-       <property name="acceptDrops">
-        <bool>false</bool>
-       </property>
+      <widget class="AlternativeTreeView" name="alternative_tree_view">
        <property name="accessibleName">
         <string>alternative tree</string>
        </property>
@@ -84,19 +66,10 @@
         <bool>true</bool>
        </property>
        <property name="dragDropMode">
-        <enum>QAbstractItemView::InternalMove</enum>
+        <enum>QAbstractItemView::DragOnly</enum>
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
-       </property>
-       <property name="selectionBehavior">
-        <enum>QAbstractItemView::SelectRows</enum>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>20</width>
-         <height>20</height>
-        </size>
        </property>
        <property name="uniformRowHeights">
         <bool>true</bool>
@@ -132,9 +105,6 @@
      </property>
      <item>
       <widget class="ParameterValueListTreeView" name="treeView_parameter_value_list">
-       <property name="contextMenuPolicy">
-        <enum>Qt::DefaultContextMenu</enum>
-       </property>
        <property name="accessibleName">
         <string>parameter value list</string>
        </property>
@@ -416,7 +386,7 @@
     <string>Pivot table</string>
    </property>
    <attribute name="dockWidgetArea">
-    <number>2</number>
+    <number>1</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_10">
     <layout class="QVBoxLayout" name="verticalLayout_13">
@@ -453,7 +423,7 @@
     <string>Frozen table</string>
    </property>
    <attribute name="dockWidgetArea">
-    <number>2</number>
+    <number>1</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_11">
     <layout class="QVBoxLayout" name="verticalLayout_14">
@@ -673,6 +643,61 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="scenario_dock_widget">
+   <property name="windowTitle">
+    <string>Scenario tree</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_9">
+    <layout class="QVBoxLayout" name="verticalLayout_12">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="ScenarioTreeView" name="scenario_tree_view">
+       <property name="acceptDrops">
+        <bool>true</bool>
+       </property>
+       <property name="accessibleName">
+        <string>scenario tree</string>
+       </property>
+       <property name="editTriggers">
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
+       </property>
+       <property name="dragEnabled">
+        <bool>true</bool>
+       </property>
+       <property name="dragDropMode">
+        <enum>QAbstractItemView::DragDrop</enum>
+       </property>
+       <property name="defaultDropAction">
+        <enum>Qt::MoveAction</enum>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+       <property name="uniformRowHeights">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionCommit">
    <property name="enabled">
     <bool>true</bool>
@@ -705,7 +730,7 @@
   </action>
   <action name="actionClose">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
@@ -713,9 +738,6 @@
    </property>
    <property name="text">
     <string>Close</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+W</string>
    </property>
   </action>
   <action name="actionImport">
@@ -981,11 +1003,6 @@
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
-   <class>AlternativeScenarioTreeView</class>
-   <extends>QTreeView</extends>
-   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
-  </customwidget>
-  <customwidget>
    <class>ToolFeatureTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
@@ -999,6 +1016,16 @@
    <class>ItemMetadataTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>AlternativeTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ScenarioTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

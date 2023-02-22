@@ -18,6 +18,7 @@ Classes and functions that can be shared among unit test modules.
 from contextlib import contextmanager
 from unittest import mock
 
+from PySide6.QtCore import QModelIndex
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.fetch_parent import FlexibleFetchParent
@@ -321,3 +322,16 @@ def q_object(o):
         yield o
     finally:
         o.deleteLater()
+
+
+def model_data_to_dict(model, parent=QModelIndex()):
+    """"""
+    rows = list()
+    for row in range(model.rowCount(parent)):
+        row_data = []
+        for column in range(model.columnCount()):
+            index = model.index(row, column, parent)
+            child_data = model_data_to_dict(model, index)
+            row_data.append({index.data(): child_data} if child_data else index.data())
+        rows.append(row_data)
+    return rows

@@ -15,7 +15,7 @@ General helper functions and classes.
 :authors: P. Savolainen (VTT)
 :date:   10.1.2018
 """
-
+import time
 from enum import Enum, unique
 import itertools
 import os
@@ -29,6 +29,7 @@ import re
 import pathlib
 import bisect
 from contextlib import contextmanager
+
 import matplotlib
 from PySide6.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide6.QtCore import __version__ as qt_version
@@ -1250,15 +1251,18 @@ def parameter_identifier(database, parameter, names, alternative):
 class SignalWaiter(QObject):
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
-    def __init__(self, condition=None):
+    def __init__(self, condition=None, timeout=None):
         """
         Args:
-            condition (function): receiving the self.args and returning whether to stop waiting.
+            condition (function, optional): receiving the self.args and returning whether to stop waiting.
+            timeout (float, optional): timeout in seconds; wait will raise after timeout
         """
         super().__init__()
         self._triggered = False
         self.args = ()
         self._condition = condition
+        self._timeout = timeout
+        self._start = time.monotonic() if self._timeout is not None else None
 
     def trigger(self, *args):
         """Signal receiving slot."""
@@ -1271,11 +1275,13 @@ class SignalWaiter(QObject):
         """Wait for signal to be received."""
         while not self._triggered:
             QApplication.processEvents()
+            if self._timeout is not None and time.monotonic() - self._start > self._timeout:
+                raise RuntimeError("timeout exceeded")
 
 
 @contextmanager
-def signal_waiter(signal, condition=None):
-    waiter = SignalWaiter(condition=condition)
+def signal_waiter(signal, condition=None, timeout=None):
+    waiter = SignalWaiter(condition=condition, timeout=timeout)
     signal.connect(waiter.trigger)
     try:
         yield waiter

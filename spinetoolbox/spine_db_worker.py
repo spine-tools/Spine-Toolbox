@@ -157,14 +157,18 @@ class SpineDBWorker(QObject):
         Args:
             item_type (str)
             callback (Function or None)
+
+        Returns:
+            bool: True if query is being advanced, False otherwise
         """
         if item_type in self._fetched_item_types:
-            return
+            return False
         if item_type in self._advance_query_callbacks:
             self._advance_query_callbacks[item_type].add(callback)
-            return
+            return True
         self._advance_query_callbacks[item_type] = {callback}
         self._executor.submit(self._do_advance_query, item_type)
+        return True
 
     @busy_effect
     @_db_map_lock
@@ -363,7 +367,8 @@ class SpineDBWorker(QObject):
         self._register_fetch_parent(parent)
         parent.set_busy(True)
         if not self._iterate_cache(parent) and not parent.is_fetched:
-            self._advance_query(parent.fetch_item_type, callback=_callback)
+            if not self._advance_query(parent.fetch_item_type, callback=_callback):
+                parent.set_busy(False)
 
     def _handle_query_advanced(self, parent):
         if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):

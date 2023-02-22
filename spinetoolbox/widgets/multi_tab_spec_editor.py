@@ -40,6 +40,35 @@ class MultiTabSpecEditor(MultiTabWindow):
         tab.setAttribute(Qt.WA_DeleteOnClose, True)
         return tab
 
+    def _connect_tab_signals(self, tab):
+        """Connects spec editor window (tab) signals.
+
+        Args:
+            tab (SpecificationEditorWindowBase): Specification editor window
+
+        Returns:
+            bool: True if ok, False otherwise
+        """
+        if not super()._connect_tab_signals(tab):
+            return False
+        tab.spec_toolbar().close_action.triggered.connect(self.handle_close_request_from_tab)
+        return True
+
+    def _disconnect_tab_signals(self, index):
+        """Disconnects signals of spec editor window (tab) in given index.
+
+        Args:
+            index (int): Tab index
+
+        Returns:
+            bool: True if ok, False otherwise
+        """
+        if not super()._disconnect_tab_signals(index):
+            return False
+        tab = self.tab_widget.widget(index)
+        tab.spec_toolbar().close_action.triggered.disconnect(self.handle_close_request_from_tab)
+        return True
+
     @property
     def new_tab_title(self):
         return "<unnamed specification>"

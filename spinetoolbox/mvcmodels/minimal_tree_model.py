@@ -34,7 +34,7 @@ class TreeItem:
         self._set_up_once = False
 
     def has_children(self):
-        """Returns whether or not this item has or could have children."""
+        """Returns whether this item has or could have children."""
         if self.can_fetch_more():
             return True
         return bool(self.child_count())
@@ -132,13 +132,17 @@ class TreeItem:
         Args:
             position (int): insert new items here
             children (list of TreeItem): insert items from this iterable
+
+        Returns:
+            bool: True if the children were inserted successfully, False otherwise
         """
         bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
         if bad_types:
             raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
         if position < 0 or position > self.child_count():
             return False
-        self.model.beginInsertRows(self.index(), position, position + len(children) - 1)
+        parent_index = self.index()
+        self.model.beginInsertRows(parent_index, position, position + len(children) - 1)
         for child in children:
             child.parent_item = self
         self.children[position:position] = children
@@ -200,7 +204,7 @@ class TreeItem:
         return None
 
     def can_fetch_more(self):
-        """Returns whether or not this item can fetch more."""
+        """Returns whether this item can fetch more."""
         return not self._fetched
 
     def fetch_more(self):
@@ -292,8 +296,18 @@ class MinimalTreeModel(QAbstractItemModel):
         return self._invisible_root_item
 
     def index_from_item(self, item):
-        """Return a model index corresponding to the given item."""
-        return self.createIndex(item.child_number(), 0, item)
+        """Return a model index corresponding to the given item.
+
+        Args:
+            item (StandardTreeItem): item
+
+        Returns:
+            QModelIndex: item's index
+        """
+        row = item.child_number()
+        if row < 0:
+            return QModelIndex()
+        return self.createIndex(row, 0, item)
 
     def index(self, row, column, parent=QModelIndex()):
         """Returns the index of the item in the model specified by the given row, column and parent index."""
@@ -309,7 +323,7 @@ class MinimalTreeModel(QAbstractItemModel):
             return QModelIndex()
         item = self.item_from_index(index)
         parent_item = item.parent_item
-        if parent_item is None or parent_item == self._invisible_root_item:
+        if parent_item is None or parent_item is self._invisible_root_item:
             return QModelIndex()
         return self.createIndex(parent_item.child_number(), 0, parent_item)
 

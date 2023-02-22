@@ -26,7 +26,8 @@ from .add_items_dialogs import (
 from .edit_or_remove_items_dialogs import EditEntityClassesDialog, EditEntitiesDialog, RemoveEntitiesDialog
 from ..mvcmodels.tool_feature_model import ToolFeatureModel
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..mvcmodels.alternative_scenario_model import AlternativeScenarioModel
+from ..mvcmodels.alternative_model import AlternativeModel
+from ..mvcmodels.scenario_model import ScenarioModel
 from ..mvcmodels.entity_tree_models import EntityTreeModel
 from ...spine_db_parcel import SpineDBParcel
 
@@ -38,18 +39,21 @@ class TreeViewMixin:
         super().__init__(*args, **kwargs)
         self.entity_tree_model = EntityTreeModel(self, self.db_mngr)
         self.tool_feature_model = ToolFeatureModel(self, self.db_mngr)
-        self.alternative_scenario_model = AlternativeScenarioModel(self, self.db_mngr)
+        self.alternative_model = AlternativeModel(self, self.db_mngr)
+        self.scenario_model = ScenarioModel(self, self.db_mngr)
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr)
         models = (
             self.entity_tree_model,
             self.tool_feature_model,
-            self.alternative_scenario_model,
+            self.alternative_model,
+            self.scenario_model,
             self.parameter_value_list_model,
         )
         views = (
             self.ui.treeView_entity,
             self.ui.treeView_tool_feature,
-            self.ui.treeView_alternative_scenario,
+            self.ui.alternative_tree_view,
+            self.ui.scenario_tree_view,
             self.ui.treeView_parameter_value_list,
         )
         for view, model in zip(views, models):
@@ -63,7 +67,8 @@ class TreeViewMixin:
         for view in (
             self.ui.treeView_entity,
             self.ui.treeView_tool_feature,
-            self.ui.treeView_alternative_scenario,
+            self.ui.alternative_tree_view,
+            self.ui.scenario_tree_view,
             self.ui.treeView_parameter_value_list,
         ):
             view.model().db_maps = self.db_maps

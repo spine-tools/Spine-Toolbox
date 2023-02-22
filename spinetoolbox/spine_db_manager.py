@@ -217,7 +217,11 @@ class SpineDBManager(QObject):
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            db_cache = self._cache.setdefault(db_map, DBCache(worker.advance_query))
+            try:
+                db_cache = self._cache[db_map]
+            except KeyError:
+                db_cache = DBCache(worker.advance_query)
+                self._cache[db_map] = db_cache
             table_cache = db_cache.table_cache(item_type)
             new_db_map_data[db_map] = [table_cache.add_item(item) for item in items]
         return new_db_map_data
@@ -271,7 +275,12 @@ class SpineDBManager(QObject):
         worker.fetch_all(
             fetch_item_types=fetch_item_types, only_descendants=only_descendants, include_ancestors=include_ancestors
         )
-        return self._cache.setdefault(db_map, DBCache(worker.advance_query))
+        try:
+            cache = self._cache[db_map]
+        except KeyError:
+            cache = DBCache(worker.advance_query)
+            self._cache[db_map] = cache
+        return cache
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -298,6 +307,32 @@ class SpineDBManager(QObject):
     @property
     def db_maps(self):
         return set(self._db_maps.values())
+
+    @staticmethod
+    def db_map_key(db_map):
+        """Creates an identifier for given db_map.
+
+        Args:
+            db_map (DiffDatabaseMapping): database mapping
+
+        Returns:
+            int: identification key
+        """
+        return hash(db_map)
+
+    def db_map_from_key(self, key):
+        """Returns database mapping that corresponds to given identification key.
+
+        Args:
+            key (int): identification key
+
+        Returns:
+            DiffDatabaseMapping: database mapping
+
+        Raises:
+            KeyError: raised if database map is not found
+        """
+        return {self.db_map_key(db_map): db_map for db_map in self._db_maps.values()}[key]
 
     @property
     def db_urls(self):
@@ -920,7 +955,7 @@ class SpineDBManager(QObject):
 
     def get_scenario_alternative_id_list(self, db_map, scen_id, only_visible=True):
         scenario = self.get_item(db_map, "scenario", scen_id, only_visible=only_visible)
-        if scenario is None:
+        if not scenario:
             return []
         return scenario["alternative_id_list"]
 
