@@ -277,6 +277,7 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(unique_name("Prefix", ["aaa"]), "Prefix 1")
         self.assertEqual(unique_name("Prefix", ["Prefix 1"]), "Prefix 2")
         self.assertEqual(unique_name("Prefix", ["Prefix 2"]), "Prefix 1")
+        self.assertEqual(unique_name("Prefix 1", {"Prefix", "Prefix 1", "Prefix 1 1"}), "Prefix 1 2")
 
     def test_load_tool_specification_from_file(self):
         """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
