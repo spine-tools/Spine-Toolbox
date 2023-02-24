@@ -41,8 +41,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Removed
 - Python 3.7 support
-- GdxExporter project item
-- Gimlet project item
+- GdxExporter project item. Please use Exporter instead.
+- Gimlet project item. Please use Tool instead.
+- The possibility to import parameter values when importing object groups using Importer.
+  Existing mappings will not import group parameters anymore.
+  Please add explicit parameter import mappings if needed.
+- The possibility to export parameter values when exporting object groups using Exporter.
+  Existing mappings will not export group parameters anymore.
+  Please add explicit parameter export mappings if needed.
 
 ### Fixed
 
