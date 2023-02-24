@@ -21,11 +21,14 @@ from PySide6.QtWidgets import QTreeView, QApplication
 from PySide6.QtCore import Signal, Qt
 
 
-class CopyTreeView(QTreeView):
-    """Custom QTreeView class with copy support."""
+class CopyPasteTreeView(QTreeView):
+    """Custom QTreeView class with copy and paste support."""
 
     def __init__(self, parent):
-        """Initialize the view."""
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent=parent)
 
     def can_copy(self):
@@ -36,17 +39,22 @@ class CopyTreeView(QTreeView):
         """
         return not self.selectionModel().selection().isEmpty()
 
-    @staticmethod
-    def can_paste():
-        """Returns False always as pasting is disabled into this view.
+    def can_paste(self):
+        """Returns whether it is possible to paste into this view.
 
         Returns:
-            bool: whether it is possible to paste to the view
+            bool: True if pasting is possible, False otherwise
         """
         return False
 
     def copy(self):
-        """Copy current selection to clipboard in excel format."""
+        """Copy current selection to clipboard.
+
+        The default implementation copies the data as linefeed separated list.
+
+        Returns:
+            bool: True if data was successfully copied, False otherwise
+        """
         selection = self.selectionModel().selection()
         if not selection:
             return False
@@ -56,19 +64,21 @@ class CopyTreeView(QTreeView):
         QApplication.clipboard().setText(content)
         return True
 
+    def paste(self):
+        """Pastes data to the view."""
+
 
 class SourcesTreeView(QTreeView):
-    """Custom QTreeView class for 'Sources' in Tool specification editor widget.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
+    """Custom QTreeView class for 'Sources' in Tool specification editor widget."""
 
     files_dropped = Signal(list)
     del_key_pressed = Signal()
 
     def __init__(self, parent):
-        """Initialize the view."""
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent=parent)
 
     def dragEnterEvent(self, event):
@@ -100,16 +110,15 @@ class SourcesTreeView(QTreeView):
 
 
 class CustomTreeView(QTreeView):
-    """Custom QTreeView class for Tool specification editor form to enable keyPressEvent.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
+    """Custom QTreeView class for Tool specification editor form to enable keyPressEvent."""
 
     del_key_pressed = Signal()
 
     def __init__(self, parent):
-        """Initialize the view."""
+        """
+        Args:
+            parent (QWidget): The parent of this view
+        """
         super().__init__(parent=parent)
 
     def keyPressEvent(self, event):

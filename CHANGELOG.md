@@ -14,6 +14,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   filter to be checked.
 - Python 3.11 support
 - PySide6 support. The app has been ported from PySide2 to PySide6.
+- In addition to dragging and dropping, 
+  it is now possible to copy alternatives from Alternative tree and paste them to the scenario tree
+  in Database editor.
+- Scenarios can now be copied and pasted between databases in Database editor.
+- Scenarios can now be duplicated in Database editor.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools

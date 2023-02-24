@@ -15,21 +15,23 @@ Classes for custom QTreeView.
 :author: M. Marin (KTH)
 :date:   25.4.2018
 """
+import pickle
 
-from PySide6.QtWidgets import QMenu, QAbstractItemView
+from PySide6.QtWidgets import QApplication, QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
 from PySide6.QtGui import QMouseEvent, QIcon
 
-from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
+from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
 from spinetoolbox.widgets.custom_qwidgets import ResizingViewMixin
 from .custom_delegates import ScenarioDelegate, ToolFeatureDelegate, AlternativeDelegate, ParameterValueListDelegate
 from .scenario_generator import ScenarioGenerator
+from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
-from ..mvcmodels.scenario_item import ScenarioAlternativeItem, ScenarioItem
+from ..mvcmodels.scenario_item import ScenarioDBItem, ScenarioAlternativeItem, ScenarioItem
 
 
-class ResizableTreeView(ResizingViewMixin, CopyTreeView):
+class ResizableTreeView(ResizingViewMixin, CopyPasteTreeView):
     def _do_resize(self):
         self.resizeColumnToContents(0)
 
@@ -40,7 +42,10 @@ class EntityTreeView(ResizableTreeView):
     tree_selection_changed = Signal(dict)
 
     def __init__(self, parent):
-        """Initialize the view."""
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent=parent)
         self._context_item = None
         self._selected_indexes = {}
@@ -271,7 +276,10 @@ class ObjectTreeView(EntityTreeView):
     """Custom QTreeView class for the object tree in SpineDBEditor."""
 
     def __init__(self, parent):
-        """Initialize the view."""
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent=parent)
         self._add_objects_action = None
         self._add_object_classes_action = None
@@ -384,7 +392,10 @@ class ItemTreeView(ResizableTreeView):
     """Base class for all non-entity tree views."""
 
     def __init__(self, parent):
-        """Initialize the view."""
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent=parent)
         self._spine_db_editor = None
         self._menu = QMenu(self)
@@ -406,6 +417,11 @@ class ItemTreeView(ResizableTreeView):
         raise NotImplementedError()
 
     def connect_spine_db_editor(self, spine_db_editor):
+        """Prepares the view to work with the DB editor.
+
+        Args:
+            spine_db_editor (SpineDBEditor): editor instance
+        """
         self._spine_db_editor = spine_db_editor
         self.populate_context_menu()
         self.connect_signals()
@@ -413,6 +429,7 @@ class ItemTreeView(ResizableTreeView):
     def populate_context_menu(self):
         """Creates a context menu for this view."""
         self._menu.addAction(self._spine_db_editor.ui.actionCopy)
+        self._menu.addAction(self._spine_db_editor.ui.actionPaste)
         self._menu.addAction("Remove", self.remove_selected)
 
     def contextMenuEvent(self, event):
@@ -535,6 +552,14 @@ class AlternativeTreeView(ItemTreeView):
         super().populate_context_menu()
 
     def _db_map_alt_ids_from_selection(self, selection):
+        """Gather alternative ids per database map from selection.
+
+        Args:
+            selection (QItemSelection): selection
+
+        Returns:
+            dict: mapping from database map to set of alternative ids
+        """
         db_map_ids = {}
         for index in selection.indexes():
             if index.column() != 0:
@@ -590,6 +615,61 @@ class AlternativeTreeView(ItemTreeView):
         generator = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
         generator.show()
 
+    def can_copy(self):
+        """See base class."""
+        selection = self.selectionModel().selection()
+        if selection.isEmpty():
+            return False
+        model = self.model()
+        for index in selection.indexes():
+            item = model.item_from_index(index)
+            if isinstance(item, AlternativeItem) and item.id is not None:
+                return True
+        return False
+
+    def can_paste(self):
+        """See base class."""
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        if mime_data is None or not mime_data.hasFormat(mime_types.ALTERNATIVE_DATA):
+            return False
+        return True
+
+    def copy(self):
+        """See base class."""
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        model = self.model()
+        indexes = []
+        for index in selection.indexes():
+            item = model.item_from_index(index)
+            if not isinstance(item, AlternativeItem) or item.id is None:
+                continue
+            indexes.append(index)
+        if not indexes:
+            return False
+        mime_data = self.model().mimeData(indexes)
+        clipboard = QApplication.clipboard()
+        clipboard.setMimeData(mime_data)
+        return True
+
+    def paste(self):
+        """Pastes alternatives from clipboard to the tree.
+
+        This makes sense only when pasting alternatives from one database to another.
+        """
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        if mime_data is None or not mime_data.hasFormat(mime_types.ALTERNATIVE_DATA):
+            return
+        index = self.selectionModel().currentIndex()
+        model = self.model()
+        item = model.item_from_index(index)
+        if isinstance(item, AlternativeItem):
+            item = item.parent_item
+        model.paste_alternative_mime_data(mime_data, item)
+
 
 class ScenarioTreeView(ItemTreeView):
     """Custom QTreeView for the scenario tree in SpineDBEditor."""
@@ -603,6 +683,7 @@ class ScenarioTreeView(ItemTreeView):
         """
         super().__init__(parent=parent)
         self._selected_alternative_ids = dict()
+        self._duplicate_scenario_action = None
 
     @property
     def selected_alternative_ids(self):
@@ -626,8 +707,8 @@ class ScenarioTreeView(ItemTreeView):
 
     def populate_context_menu(self):
         """See base class."""
-        self._menu.addSeparator()
         super().populate_context_menu()
+        self._duplicate_scenario_action = self._menu.addAction("Duplicate", self._duplicate_scenario)
 
     def _db_map_alternative_ids_from_selection(self, selection):
         """Collects database maps and alternative ids within given selection.
@@ -704,13 +785,88 @@ class ScenarioTreeView(ItemTreeView):
 
     def update_actions_availability(self, item):
         """See base class"""
+        self._duplicate_scenario_action.setEnabled(isinstance(item, ScenarioItem) and item.id is not None)
+
+    def copy(self):
+        """See base class."""
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        model = self.model()
+        mime_data = model.mimeData(selection.indexes())
+        clipboard = QApplication.clipboard()
+        clipboard.setMimeData(mime_data)
+        return True
+
+    def can_paste(self):
+        """See base class."""
+        index = self.selectionModel().currentIndex()
+        model = self.model()
+        item = model.item_from_index(index)
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        if mime_data is None:
+            return False
+        if mime_data.hasFormat(mime_types.ALTERNATIVE_DATA):
+            if isinstance(item, ScenarioItem):
+                return item.id is not None
+            return isinstance(item, ScenarioAlternativeItem)
+        if mime_data.hasFormat(mime_types.SCENARIO_DATA):
+            return isinstance(item, (ScenarioDBItem, ScenarioItem))
+        return False
+
+    def paste(self):
+        """Pastes alternatives and scenarios from clipboard to the tree."""
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        if mime_data is None:
+            return
+        index = self.selectionModel().currentIndex()
+        model = self.model()
+        item = model.item_from_index(index)
+        if mime_data.hasFormat(mime_types.ALTERNATIVE_DATA):
+            if isinstance(item, ScenarioAlternativeItem):
+                target_row = index.row()
+                scenario_item = item.parent_item
+            elif isinstance(item, ScenarioItem):
+                target_row = -1
+                scenario_item = item
+            else:
+                return
+            if scenario_item.id is None:
+                return
+            model.paste_alternative_mime_data(mime_data, target_row, scenario_item)
+        elif mime_data.hasFormat(mime_types.SCENARIO_DATA):
+            if isinstance(item, ScenarioItem):
+                database_item = item.parent_item
+            elif isinstance(item, ScenarioDBItem):
+                database_item = item
+            else:
+                return
+            model.paste_scenario_mime_data(mime_data, database_item)
+
+    def _duplicate_scenario(self):
+        """Duplicates selected scenarios."""
+        selection = self.selectionModel().selection()
+        if selection.isEmpty():
+            return
+        model = self.model()
+        # Remove duplicates while keeping the order.
+        items = list(dict.fromkeys(model.item_from_index(index) for index in selection.indexes()))
+        for item in items:
+            if not isinstance(item, ScenarioItem) or item.id is None:
+                continue
+            model.duplicate_scenario(item)
 
 
 class ParameterValueListTreeView(ItemTreeView):
     """Custom QTreeView class for parameter_value_list in SpineDBEditor."""
 
     def __init__(self, parent):
-        """Initialize the view."""
+        """
+        Args:
+            parent(QWidget): parent widget
+        """
         super().__init__(parent=parent)
         self._open_in_editor_action = None
 
