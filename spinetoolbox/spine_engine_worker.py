@@ -223,10 +223,6 @@ class SpineEngineWorker(QObject):
         included = self._included_items(self.engine_data["execution_permits"], self.engine_data["connections"])
         included_items = [item_dict for name, item_dict in self._project_items.items() if name in included]
         ignored_items = [item_dict for name, item_dict in self._project_items.items() if name not in included]
-        includes = [n.name for n in included_items]
-        ignores = [n.name for n in ignored_items]
-        print(f"included: {includes}")
-        print(f"ignored: {ignores}")
         return included_items, ignored_items
 
     def _included_items(self, permitted_items, connections):
