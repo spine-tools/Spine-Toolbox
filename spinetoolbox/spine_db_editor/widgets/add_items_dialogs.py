@@ -740,7 +740,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
             ):
                 key = relationship["object_name_list"]
                 self.relationship_ids[key] = relationship["id"]
-        existing_items = sorted(self.relationship_ids)
+        existing_items = sorted(map(list, self.relationship_ids))
         self.existing_items_model.reset_model(existing_items)
         self.model.refresh()
         self.model.modelReset.emit()
@@ -748,7 +748,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
             wg.deleteLater()
         for name in object_class_name_list:
             tree_widget = QTreeWidget(self)
-            tree_widget.setSelectionMode(QAbstractItemView.ExtendedSelection)
+            tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
             tree_widget.setColumnCount(1)
             tree_widget.setIndentation(0)
             header_item = QTreeWidgetItem([name])
@@ -817,12 +817,12 @@ class ObjectGroupDialogBase(QDialog):
         header_layout.addWidget(self.db_combo_box)
         self.non_members_tree = QTreeWidget(self)
         self.non_members_tree.setHeaderLabel("Non members")
-        self.non_members_tree.setSelectionMode(QTreeWidget.ExtendedSelection)
+        self.non_members_tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
         self.non_members_tree.setColumnCount(1)
         self.non_members_tree.setIndentation(0)
         self.members_tree = QTreeWidget(self)
         self.members_tree.setHeaderLabel("Members")
-        self.members_tree.setSelectionMode(QTreeWidget.ExtendedSelection)
+        self.members_tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
         self.members_tree.setColumnCount(1)
         self.members_tree.setIndentation(0)
         self.add_button = QToolButton()
