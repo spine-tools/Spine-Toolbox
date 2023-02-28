@@ -590,9 +590,6 @@ class ExecutionIcon(QGraphicsEllipseItem):
     def item_name(self):
         return self._parent.name()
 
-    def _hide_execution_icon(self):
-        self.hide()
-
     def _repaint(self, text, color):
         self._text_item.prepareGeometryChange()
         self._text_item.setPos(0, 0)
@@ -611,7 +608,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
 
     def mark_execution_ignored(self):
         self._execution_state = "not started"
-        self._hide_execution_icon()
+        self.hide()
 
     def mark_execution_started(self):
         self._execution_state = "in progress"
