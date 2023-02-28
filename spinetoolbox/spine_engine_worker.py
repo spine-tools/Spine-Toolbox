@@ -34,6 +34,7 @@ def _handle_node_execution_ignored(project_items):
     for item in project_items:
         item.get_icon().execution_icon.mark_execution_ignored()
 
+
 @Slot(object, object)
 def _handle_node_execution_started(item, direction):
     icon = item.get_icon()
