@@ -49,7 +49,7 @@ class EditorDelegateMocking:
             key_press_event = QKeyEvent(QEvent.KeyPress, Qt.Key_Down, Qt.NoModifier, 0, 0, 0)
             i = 0
             while self._cell_editor.data() != value:
-                if i == self._cell_editor.model.rowCount():
+                if i == self._cell_editor._model.rowCount():
                     raise RuntimeError("Value not found in editor widget.")
                 self._cell_editor.keyPressEvent(key_press_event)
                 i += 1

@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
     QStyle,
     QLabel,
 )
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor, QIcon, QPixmap, QPainter
+from PySide6.QtGui import QPalette, QStandardItemModel, QStandardItem, QColor, QIcon, QPixmap, QPainter
 from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
 
 
@@ -75,7 +75,7 @@ class ParameterValueLineEditor(CustomLineEditor):
 class _CustomLineEditDelegate(QStyledItemDelegate):
     """A delegate for placing a CustomLineEditor on the first row of SearchBarEditor."""
 
-    text_edited = Signal("QString")
+    text_edited = Signal(str)
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.data())
@@ -109,8 +109,7 @@ class SearchBarEditor(QTableView):
     data_committed = Signal()
 
     def __init__(self, parent, tutor=None):
-        """Initializes instance.
-
+        """
         Args:
             parent (QWidget): parent widget
             tutor (QWidget, optional): another widget used for positioning.
@@ -121,34 +120,36 @@ class SearchBarEditor(QTableView):
         self._original_text = None
         self._orig_pos = None
         self.first_index = QModelIndex()
-        self.model = QStandardItemModel(self)
+        self._model = QStandardItemModel(self)
         self.proxy_model = QSortFilterProxyModel(self)
-        self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self.proxy_model.setSourceModel(self._model)
         self.proxy_model.filterAcceptsRow = self._proxy_model_filter_accepts_row
         self.setModel(self.proxy_model)
         self.verticalHeader().hide()
         self.horizontalHeader().hide()
         self.setShowGrid(False)
-        self.setMouseTracking(True)
         self.setTabKeyNavigation(False)
         delegate = _CustomLineEditDelegate(self)
         delegate.text_edited.connect(self._handle_delegate_text_edited)
         self.setItemDelegateForRow(0, delegate)
+        hover_color = self.palette().color(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight).lighter(220)
+        self.setStyleSheet(f"QTableView::item:hover {{background: {hover_color.name()};}}")
 
     def set_data(self, current, items):
         """Populates model.
 
         Args:
             current (str): item that is currently selected from given items
-            items (Sequence(str)): items to show in the list
+            items (Sequence of str): items to show in the list
         """
         item_list = [QStandardItem(current)]
         for item in items:
             qitem = QStandardItem(item)
             item_list.append(qitem)
             qitem.setFlags(~Qt.ItemIsEditable)
-        self.model.invisibleRootItem().appendRows(item_list)
-        self.first_index = self.proxy_model.mapFromSource(self.model.index(0, 0))
+        self._model.invisibleRootItem().appendRows(item_list)
+        self.first_index = self.proxy_model.mapFromSource(self._model.index(0, 0))
 
     def set_base_offset(self, offset):
         self._base_offset = offset
@@ -179,7 +180,14 @@ class SearchBarEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
-        return self.first_index.data(Qt.ItemDataRole.EditRole)
+        first_data = self.first_index.data(Qt.ItemDataRole.EditRole)
+        if not first_data:
+            return None
+        model = self.model()
+        rows = model.rowCount()
+        if any(model.index(row, 0).data(Qt.ItemDataRole.EditRole) == first_data for row in range(1, rows)):
+            return first_data
+        return model.index(1, 0).data(Qt.ItemDataRole.EditRole)
 
     @Slot(str)
     def _handle_delegate_text_edited(self, text):
@@ -201,7 +209,6 @@ class SearchBarEditor(QTableView):
         """
         super().keyPressEvent(event)
         event.accept()  # Important to avoid unhandled behavior when trying to navigate outside view limits
-        # Initialize original text. TODO: Is there a better place for this?
         if self._original_text is None:
             self.proxy_model.setData(self.first_index, event.text())
             self._handle_delegate_text_edited(event.text())
@@ -225,15 +232,6 @@ class SearchBarEditor(QTableView):
             return
         self.edit(self.first_index)
 
-    def mouseMoveEvent(self, event):
-        """Sets the current index to the one hovered by the mouse."""
-        if not self.currentIndex().isValid():
-            return
-        index = self.indexAt(event.position().toPoint())
-        if index.row() == 0:
-            return
-        self.setCurrentIndex(index)
-
     def mousePressEvent(self, event):
         """Commits data."""
         index = self.indexAt(event.position().toPoint())
@@ -247,7 +245,12 @@ class CheckListEditor(QTableView):
     """A check list editor."""
 
     def __init__(self, parent, tutor=None, ranked=False):
-        """Initialize class."""
+        """
+        Args:
+            parent (QWidget): parent widget
+            tutor (QWidget, optional): a widget that helps in positioning
+            ranked (bool):
+        """
         super().__init__(parent)
         self._tutor = tutor
         self._ranked = ranked

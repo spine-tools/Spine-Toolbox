@@ -28,8 +28,6 @@ from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ...helpers import object_icon
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 
-# FIXME: only_visible=False ???
-
 
 class RelationshipPivotTableDelegate(CheckBoxDelegate):
     data_committed = Signal(QModelIndex, object)
@@ -37,7 +35,7 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
     def __init__(self, parent):
         """
         Args:
-            parent (SpineDBEditor)
+            parent (SpineDBEditor): parent widget, i.e. the database editor
         """
         super().__init__(parent)
         self.data_committed.connect(parent._set_model_data)
@@ -45,11 +43,14 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
     @staticmethod
     def _is_relationship_index(index):
         """
-        Checks whether or not the given index corresponds to a relationship,
+        Checks whether the given index corresponds to a relationship,
         in which case we need to use the check box delegate.
 
+        Args:
+            index (QModelIndex): index to check
+
         Returns:
-            bool
+            bool: True if index corresponds to relationship, False otherwise
         """
         return index.model().sourceModel().index_in_data(index)
 
@@ -88,7 +89,7 @@ class ScenarioAlternativeTableDelegate(RankDelegate):
     def __init__(self, parent):
         """
         Args:
-            parent (SpineDBEditor)
+            parent (SpineDBEditor): database editor
         """
         super().__init__(parent)
         self.data_committed.connect(parent._set_model_data)
@@ -140,7 +141,7 @@ class ParameterPivotTableDelegate(QStyledItemDelegate):
     def __init__(self, parent):
         """
         Args:
-            parent (SpineDBEditor)
+            parent (SpineDBEditor): parent widget, i.e. database editor
         """
         super().__init__(parent)
         self.data_committed.connect(parent._set_model_data)
@@ -270,6 +271,11 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     parameter_value_editor_requested = Signal(QModelIndex)
 
     def __init__(self, parent, db_mngr):
+        """
+        Args:
+            parent (QWidget): parent widget
+            db_mngr (SpineDatabaseManager): database manager
+        """
         super().__init__(parent, db_mngr)
         self._db_value_list_lookup = {}
 
