@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
     QStyle,
     QLabel,
 )
-from PySide6.QtGui import QPalette, QStandardItemModel, QStandardItem, QColor, QIcon, QPixmap, QPainter
+from PySide6.QtGui import QPalette, QStandardItemModel, QStandardItem, QColor
 from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
 
 
@@ -64,11 +64,13 @@ class CustomLineEditor(QLineEdit):
 
 class ParameterValueLineEditor(CustomLineEditor):
     def set_data(self, data):
+        """See base class."""
         if data is not None and not isinstance(data, str):
             self.setAlignment(Qt.AlignRight)
         super().set_data(data)
 
     def data(self):
+        """See base class."""
         return try_number_from_string(super().data())
 
 
@@ -152,10 +154,19 @@ class SearchBarEditor(QTableView):
         self.first_index = self.proxy_model.mapFromSource(self._model.index(0, 0))
 
     def set_base_offset(self, offset):
+        """Changes the base offset that is applied to the editor's position.
+
+        Args:
+            offset (QPoint): new offset
+        """
         self._base_offset = offset
 
     def update_geometry(self, option):
-        """Updates geometry."""
+        """Updates geometry.
+
+        Args:
+            option (QStyleOptionViewItem): style information
+        """
         self.resizeColumnsToContents()
         self.verticalHeader().setDefaultSectionSize(option.rect.height())
         self._orig_pos = self.pos() + self._base_offset
@@ -164,6 +175,7 @@ class SearchBarEditor(QTableView):
         self.refit()
 
     def refit(self):
+        """Changes the position and size of the editor to fit the window."""
         self.move(self._orig_pos)
         margins = self.contentsMargins()
         table_height = self.verticalHeader().length() + margins.top() + margins.bottom()
@@ -180,6 +192,11 @@ class SearchBarEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
+        """Returns editor's final data.
+
+        Returns:
+            str: editor data
+        """
         first_data = self.first_index.data(Qt.ItemDataRole.EditRole)
         if not first_data:
             return None
@@ -191,14 +208,26 @@ class SearchBarEditor(QTableView):
 
     @Slot(str)
     def _handle_delegate_text_edited(self, text):
-        """Filters model as the first row is being edited."""
+        """Filters model as the first row is being edited.
+
+        Args:
+            text (str): text the user has entered on the first row
+        """
         self._original_text = text
         self.proxy_model.setFilterRegularExpression("^" + text)
         self.proxy_model.setData(self.first_index, text)
         self.refit()
 
     def _proxy_model_filter_accepts_row(self, source_row, source_parent):
-        """Always accept first row."""
+        """Always accept first row while filtering the rest.
+
+        Args:
+            source_row (int): source row index
+            source_parent (QModelIndex): parent index for source row
+
+        Returns:
+            bool: True if row is accepted, False otherwise
+        """
         if source_row == 0:
             return True
         return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
@@ -244,18 +273,16 @@ class SearchBarEditor(QTableView):
 class CheckListEditor(QTableView):
     """A check list editor."""
 
-    def __init__(self, parent, tutor=None, ranked=False):
+    def __init__(self, parent, tutor=None):
         """
         Args:
             parent (QWidget): parent widget
             tutor (QWidget, optional): a widget that helps in positioning
-            ranked (bool):
         """
         super().__init__(parent)
         self._tutor = tutor
-        self._ranked = ranked
-        self.model = QStandardItemModel(self)
-        self.setModel(self.model)
+        self._model = QStandardItemModel(self)
+        self.setModel(self._model)
         self.verticalHeader().hide()
         self.horizontalHeader().hide()
         self.setShowGrid(False)
@@ -263,18 +290,6 @@ class CheckListEditor(QTableView):
         self._icons = []
         self._selected = []
         self._items = {}
-        self._blank_icon = self._make_icon()
-
-    def _make_icon(self, i=None):
-        if not self._ranked:
-            return None
-        pixmap = QPixmap(16, 16)
-        pixmap.fill(Qt.white)
-        if i is not None:
-            painter = QPainter(pixmap)
-            painter.drawText(0, 0, 16, 16, Qt.AlignCenter, str(i))
-            painter.end()
-        return QIcon(pixmap)
 
     def keyPressEvent(self, event):
         """Toggles checked state if the user presses space."""
@@ -289,30 +304,14 @@ class CheckListEditor(QTableView):
         Args:
             index (QModelIndex): index to toggle
         """
-        item = self.model.itemFromIndex(index).text()
+        item = self._model.itemFromIndex(index).text()
         qitem = self._items[item]
         if item not in self._selected:
             rank = len(self._selected)
-            self._select_item(qitem, rank)
+            qitem.setCheckState(Qt.CheckState.Checked)
             self._selected.append(item)
         else:
             self._selected.remove(item)
-            self._deselect_item(qitem, update_ranks=True)
-
-    def _select_item(self, qitem, rank):
-        if self._ranked:
-            qitem.setData(self._icons[rank], Qt.ItemDataRole.DecorationRole)
-        else:
-            qitem.setCheckState(Qt.CheckState.Checked)
-
-    def _deselect_item(self, qitem, update_ranks=False):
-        if self._ranked:
-            qitem.setData(self._blank_icon, Qt.ItemDataRole.DecorationRole)
-            if update_ranks:
-                for rank, item in enumerate(self._selected):
-                    qitem = self._items[item]
-                    self._select_item(qitem, rank)
-        else:
             qitem.setCheckState(Qt.CheckState.Unchecked)
 
     def mouseMoveEvent(self, event):
@@ -332,18 +331,17 @@ class CheckListEditor(QTableView):
             items (Sequence(str)): All items.
             checked_items (Sequence(str)): Initially checked items.
         """
-        self._icons = [self._make_icon(i + 1) for i in range(len(items))]
         for item in items:
             qitem = QStandardItem(item)
             qitem.setFlags(~Qt.ItemIsEditable)
             qitem.setData(qApp.palette().window(), Qt.ItemDataRole.BackgroundRole)  # pylint: disable=undefined-variable
-            self._deselect_item(qitem)
+            qitem.setCheckState(Qt.CheckState.Unchecked)
             self._items[item] = qitem
-            self.model.appendRow(qitem)
+            self._model.appendRow(qitem)
         self._selected = [item for item in checked_items if item in items]
-        for rank, item in enumerate(self._selected):
+        for item in self._selected:
             qitem = self._items[item]
-            self._select_item(qitem, rank)
+            qitem.setCheckState(Qt.CheckState.Checked)
 
     def data(self):
         """Returns a comma separated list of checked items.
@@ -354,7 +352,11 @@ class CheckListEditor(QTableView):
         return ",".join(self._selected)
 
     def update_geometry(self, option):
-        """Updates geometry."""
+        """Updates geometry.
+
+        Args:
+            option (QStyleOptionViewItem): style information
+        """
         self.resizeColumnsToContents()
         self.verticalHeader().setDefaultSectionSize(option.rect.height())
         margins = self.contentsMargins()
@@ -388,7 +390,10 @@ class IconColorEditor(QDialog):
     """An editor to let the user select an icon and a color for an object_class."""
 
     def __init__(self, parent):
-        """Init class."""
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent)
         icon_size = QSize(32, 32)
         self.icon_mngr = IconListManager(icon_size)
@@ -428,7 +433,15 @@ class IconColorEditor(QDialog):
         self.connect_signals()
 
     def _proxy_model_filter_accepts_row(self, source_row, source_parent):
-        """Filters icons according to search terms."""
+        """Filters icons according to search terms.
+
+        Args:
+            source_row (int): source row index
+            source_parent (QModelIndex): parent index for source row
+
+        Returns:
+            bool: True if row is accepted, False otherwise
+        """
         text = self.line_edit.text()
         if not text:
             return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
@@ -442,6 +455,11 @@ class IconColorEditor(QDialog):
         self.button_box.rejected.connect(self.reject)
 
     def set_data(self, data):
+        """Sets current icon data.
+
+        Args:
+            data (int): database icon data
+        """
         icon_code, color_code = interpret_icon_id(data)
         self.icon_mngr.init_model()
         for i in range(self.proxy_model.rowCount()):
@@ -452,6 +470,11 @@ class IconColorEditor(QDialog):
         self.color_dialog.setCurrentColor(QColor(color_code))
 
     def data(self):
+        """Gets current icon data.
+
+        Returns:
+            int: database icon data
+        """
         icon_code = self.icon_list.currentIndex().data(Qt.ItemDataRole.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
         return make_icon_id(icon_code, color_code)

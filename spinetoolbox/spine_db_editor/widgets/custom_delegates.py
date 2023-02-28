@@ -261,7 +261,7 @@ class DatabaseNameDelegate(ParameterDelegate):
         """Returns editor."""
         editor = SearchBarEditor(self.parent(), parent)
         editor.set_data(index.data(Qt.ItemDataRole.DisplayRole), [x.codename for x in self.db_mngr.db_maps])
-        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
 
@@ -288,14 +288,34 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
             value = join_value_and_type(*to_database(display_value))
         self.data_committed.emit(index, value)
 
-    def _create_or_request_parameter_value_editor(self, parent, option, index, db_map):
-        """Emits the signal to request a standalone `ParameterValueEditor` from parent widget."""
+    def _create_or_request_parameter_value_editor(self, parent, index):
+        """Emits the signal to request a standalone `ParameterValueEditor` from parent widget.
+
+        Args:
+            parent (QWidget): editor's parent widget
+            index (QModelIndex): index to parameter value model
+
+        Returns:
+            ParameterValueLineEditor: editor or None if ``parameter_value_editor_request`` signal was emitted
+        """
         value = index.data(PARSED_ROLE)
         if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
             editor = ParameterValueLineEditor(parent)
             editor.set_data(value)
             return editor
         self.parameter_value_editor_requested.emit(index)
+
+    def _get_value_list_id(self, index, db_map):
+        """Returns a value list id for the given index and db_map.
+
+        Args:
+            index (QModelIndex): value list's index
+            db_map (DiffDatabaseMapping): database mapping
+
+        Returns:
+            int: value list id
+        """
+        raise NotImplementedError()
 
     def createEditor(self, parent, option, index):
         """If the parameter has associated a value list, returns a SearchBarEditor.
@@ -316,16 +336,16 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
             self._db_value_list_lookup = dict(zip(display_value_list, db_value_list))
             editor = SearchBarEditor(self.parent(), parent)
             editor.set_data(index.data(), self._db_value_list_lookup)
-            editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+            editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
             return editor
-        return self._create_or_request_parameter_value_editor(parent, option, index, db_map)
+        return self._create_or_request_parameter_value_editor(parent, index)
 
 
 class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
     """A delegate for the default value."""
 
     def _get_value_list_id(self, index, db_map):
-        """Returns a value list item for the given index and db_map."""
+        """See base class"""
         h = index.model().header.index
         value_list_name = index.sibling(index.row(), h("value_list_name")).data()
         value_lists = self.db_mngr.get_items_by_field(
@@ -339,7 +359,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     """A delegate for the parameter_value."""
 
     def _get_value_list_id(self, index, db_map):
-        """Returns a value list item for the given index and db_map."""
+        """See base class."""
         h = index.model().header.index
         parameter_name = index.sibling(index.row(), h("parameter_name")).data()
         parameters = self.db_mngr.get_items_by_field(
@@ -366,7 +386,7 @@ class ValueListDelegate(ParameterDelegate):
         editor = SearchBarEditor(self.parent(), parent)
         name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "parameter_value_list", only_visible=False)]
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
-        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
 
@@ -381,7 +401,7 @@ class ObjectClassNameDelegate(ParameterDelegate):
         editor = SearchBarEditor(self.parent(), parent)
         object_classes = self.db_mngr.get_items(db_map, "object_class", only_visible=False)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), [x["name"] for x in object_classes])
-        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
 
@@ -396,7 +416,7 @@ class RelationshipClassNameDelegate(ParameterDelegate):
         editor = SearchBarEditor(self.parent(), parent)
         relationship_classes = self.db_mngr.get_items(db_map, "relationship_class", only_visible=False)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), [x["name"] for x in relationship_classes])
-        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
 
@@ -418,7 +438,7 @@ class ParameterNameDelegate(ParameterDelegate):
             parameter_definitions = self.db_mngr.get_items(db_map, "parameter_definition", only_visible=False)
         name_list = list({x["parameter_name"]: None for x in parameter_definitions})
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
-        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
 
@@ -438,7 +458,7 @@ class ObjectNameDelegate(ParameterDelegate):
             objects = self.db_mngr.get_items(db_map, "object", only_visible=False)
         name_list = list({x["name"]: None for x in objects})
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
-        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
 
@@ -453,7 +473,7 @@ class AlternativeNameDelegate(ParameterDelegate):
         editor = SearchBarEditor(self.parent(), parent)
         name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "alternative", only_visible=False)]
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
-        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
 
@@ -481,10 +501,24 @@ class ToolFeatureDelegate(QStyledItemDelegate):
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, *args, **kwargs):
+        """
+        Args:
+            *args: arguments passed to QStyledItemDelegate
+            **kwargs: keyword arguments passed to QStyledItemDelegate
+        """
         super().__init__(*args, **kwargs)
         self._feature_ids = {}
 
     def _get_names(self, item, model):
+        """Collects names under given tree item.
+
+        Args:
+            item (Standard tree item): A non-leaf item
+            model (ToolFeatureModel): model
+
+        Returns:
+            list of str: names or None if nothing was found
+        """
         if item.item_type == "feature":
             names = model.get_all_feature_names(item.db_map)
             if not names:
@@ -511,6 +545,15 @@ class ToolFeatureDelegate(QStyledItemDelegate):
 
     @staticmethod
     def _get_index_data(item, index):
+        """Returns formatted model data from given index.
+
+        Args:
+            item (StandardTreeItem): item corresponding to index
+            index (QModelIndex): index
+
+        Returns:
+            str: index data
+        """
         index_data = index.data(Qt.ItemDataRole.EditRole)
         if item.item_type == "tool_feature required":
             return index_data.split(": ")[1]
@@ -543,7 +586,7 @@ class ToolFeatureDelegate(QStyledItemDelegate):
             if names is None:
                 return None
             editor.set_data(index_data, names)
-            editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+            editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
@@ -562,17 +605,29 @@ class ToolFeatureDelegate(QStyledItemDelegate):
             editor.update_geometry(option)
 
     def _close_editor(self, editor, index):
-        """Closes editor. Needed by SearchBarEditor."""
+        """Closes editor.
+
+        Needed by SearchBarEditor.
+
+        Args:
+            editor (QWidget): editor widget
+            index (QModelIndex): index that is being edited
+        """
         self.closeEditor.emit(editor)
         self.setModelData(editor, index.model(), index)
 
 
 class AlternativeDelegate(QStyledItemDelegate):
-    """A delegate for the alternative scenario tree."""
+    """A delegate for the alternative tree."""
 
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, *args, **kwargs):
+        """
+        Args:
+            *args: arguments passed to QStyledItemDelegate
+            **kwargs: keyword arguments passed to QStyledItemDelegate
+        """
         super().__init__(*args, **kwargs)
         self._alternative_ids = {}
 
@@ -601,7 +656,14 @@ class AlternativeDelegate(QStyledItemDelegate):
         item = index.model().item_from_index(index)
 
     def _close_editor(self, editor, index):
-        """Closes editor. Needed by SearchBarEditor."""
+        """Closes editor.
+
+        Needed by SearchBarEditor.
+
+        Args:
+            editor (QWidget): editor widget
+            index (QModelIndex): index that is being edited
+        """
         self.closeEditor.emit(editor)
         self.setModelData(editor, index.model(), index)
 
@@ -612,6 +674,11 @@ class ScenarioDelegate(QStyledItemDelegate):
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, *args, **kwargs):
+        """
+        Args:
+            *args: arguments passed to QStyledItemDelegate
+            **kwargs: keyword arguments passed to QStyledItemDelegate
+        """
         super().__init__(*args, **kwargs)
         self._alternative_ids = {}
 
@@ -632,10 +699,21 @@ class ScenarioDelegate(QStyledItemDelegate):
         """Do nothing. We're setting editor data right away in createEditor."""
 
     def _get_names(self, item):
+        """Collects available alternative names avoiding duplicates in a scenario.
+
+        Excludes alternatives that are already in the scenario
+
+        Args:
+            item (ScenarioAlternativeItem): one of scenario's scenario alternatives
+
+        Returns:
+            list of str: available alternative names
+        """
+        excluded_ids = set(item.parent_item.alternative_id_list)
         self._alternative_ids = {
             x["name"]: x["id"]
             for x in item.db_mngr.get_items(item.db_map, "alternative", only_visible=False)
-            if x["id"] not in item.parent_item.alternative_id_list
+            if x["id"] not in excluded_ids
         }
         return list(self._alternative_ids)
 
@@ -647,10 +725,8 @@ class ScenarioDelegate(QStyledItemDelegate):
             editor = SearchBarEditor(self.parent(), parent)
             index_data = index.data(Qt.ItemDataRole.EditRole)
             names = self._get_names(item)
-            if names is None:
-                return None
             editor.set_data(index_data, names)
-            editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+            editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
@@ -663,7 +739,14 @@ class ScenarioDelegate(QStyledItemDelegate):
             editor.update_geometry(option)
 
     def _close_editor(self, editor, index):
-        """Closes editor. Needed by SearchBarEditor."""
+        """Closes editor.
+
+        Needed by SearchBarEditor.
+
+        Args:
+            editor (QWidget): editor widget
+            index (QModelIndex): index that is being edited
+        """
         self.closeEditor.emit(editor)
         self.setModelData(editor, index.model(), index)
 
@@ -702,7 +785,14 @@ class ParameterValueListDelegate(QStyledItemDelegate):
         self.parameter_value_editor_requested.emit(index)
 
     def _close_editor(self, editor, index):
-        """Closes editor."""
+        """Closes editor.
+
+        Needed by SearchBarEditor.
+
+        Args:
+            editor (QWidget): editor widget
+            index (QModelIndex): index that is being edited
+        """
         self.closeEditor.emit(editor)
         self.setModelData(editor, index.model(), index)
 
@@ -716,9 +806,17 @@ class ManageItemsDelegate(QStyledItemDelegate):
         """Send signal."""
         self.data_committed.emit(index, editor.data())
 
-    def close_editor(self, editor, index, model):
+    def close_editor(self, editor, index):
+        """Closes editor.
+
+        Needed by SearchBarEditor.
+
+        Args:
+            editor (QWidget): editor widget
+            index (QModelIndex): index that is being edited
+        """
         self.closeEditor.emit(editor)
-        self.setModelData(editor, model, index)
+        self.setModelData(editor, index.model(), index)
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
@@ -726,12 +824,25 @@ class ManageItemsDelegate(QStyledItemDelegate):
             editor.update_geometry(option)
 
     def connect_editor_signals(self, editor, index):
-        """Connect editor signals if necessary."""
-        if isinstance(editor, SearchBarEditor):
-            model = index.model()
-            editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        """Connect editor signals if necessary.
 
-    def _create_database_editor(self, parent, option, index):
+        Args:
+            editor (QWidget): editor widget
+            index (QModelIndex): index being edited
+        """
+        if isinstance(editor, SearchBarEditor):
+            editor.data_committed.connect(lambda *_: self.close_editor(editor, index))
+
+    def _create_database_editor(self, parent, index):
+        """Creates an editor.
+
+        Args:
+            parent (QWidget): parent widget
+            index (QModelIndex): index being edited
+
+        Returns:
+            QWidget: editor
+        """
         editor = CheckListEditor(parent)
         all_databases = self.parent().all_databases(index.row())
         databases = index.data(Qt.ItemDataRole.DisplayRole).split(",")
@@ -742,7 +853,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
         """Returns an editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'databases':
-            editor = self._create_database_editor(parent, option, index)
+            editor = self._create_database_editor(parent, index)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
@@ -773,7 +884,7 @@ class ManageObjectClassesDelegate(ManageEntityClassesDelegate):
             self.icon_color_editor_requested.emit(index)
             editor = None
         elif header[index.column()] == 'databases':
-            editor = self._create_database_editor(parent, option, index)
+            editor = self._create_database_editor(parent, index)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
@@ -792,7 +903,7 @@ class ManageObjectsDelegate(ManageItemsDelegate):
             object_class_name_list = self.parent().object_class_name_list(index.row())
             editor.set_data(index.data(Qt.ItemDataRole.EditRole), object_class_name_list)
         elif header[index.column()] == 'databases':
-            editor = self._create_database_editor(parent, option, index)
+            editor = self._create_database_editor(parent, index)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
@@ -815,7 +926,7 @@ class ManageRelationshipClassesDelegate(ManageEntityClassesDelegate):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
         elif header[index.column()] == 'databases':
-            editor = self._create_database_editor(parent, option, index)
+            editor = self._create_database_editor(parent, index)
         else:
             editor = SearchBarEditor(parent)
             object_class_name_list = self.parent().object_class_name_list(index.row())
@@ -835,7 +946,7 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
             data = index.data(Qt.ItemDataRole.EditRole)
             editor.set_data(data)
         elif header[index.column()] == 'databases':
-            editor = self._create_database_editor(parent, option, index)
+            editor = self._create_database_editor(parent, index)
         else:
             editor = SearchBarEditor(parent)
             object_name_list = self.parent().object_name_list(index.row(), index.column())
@@ -851,7 +962,7 @@ class RemoveEntitiesDelegate(ManageItemsDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'databases':
-            editor = self._create_database_editor(parent, option, index)
+            editor = self._create_database_editor(parent, index)
             self.connect_editor_signals(editor, index)
             return editor
 
