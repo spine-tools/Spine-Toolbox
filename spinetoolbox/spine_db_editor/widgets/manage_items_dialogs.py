@@ -52,7 +52,9 @@ class ManageItemsDialogBase(QDialog):
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def make_table_view(self):
-        return CopyPasteTableView(self)
+        table_view = CopyPasteTableView(self)
+        table_view.init_copy_and_paste_actions()
+        return table_view
 
     def connect_signals(self):
         """Connect signals to slots."""
