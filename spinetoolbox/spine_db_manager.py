@@ -359,10 +359,13 @@ class SpineDBManager(QObject):
                 msg.setWindowTitle("Database not empty")
                 msg.setText(f"The URL <b>{url}</b> points to an existing database.")
                 msg.setInformativeText("Do you want to overwrite it?")
-                msg.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
+                overwrite_button = msg.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
                 msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
-                ret = msg.exec()  # Show message box
-                if ret != QMessageBox.ButtonRole.AcceptRole:
+                msg.exec()
+                # We have custom buttons, exec() returns an opaque value.
+                # Let's check the clicked button explicitly instead.
+                clicked_button = msg.clickedButton()
+                if clicked_button is not overwrite_button:
                     return
             do_create_new_spine_database(url)
             logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
