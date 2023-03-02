@@ -943,9 +943,11 @@ class ToolboxUI(QMainWindow):
                 self.msg_error.emit(
                     "Something went wrong in disconnecting {0} signals".format(self.active_project_item.name)
                 )
+            self._item_properties_uis[self.active_project_item.item_type()].unset_item()
         self.active_project_item = active_project_item
         if self.active_project_item:
             self.active_project_item.activate()
+            self._item_properties_uis[self.active_project_item.item_type()].set_item(self.active_project_item)
 
     def _set_active_link_item(self, active_link_item):
         """
