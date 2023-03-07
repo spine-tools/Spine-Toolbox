@@ -21,7 +21,17 @@
                 "to": [
                     "Export values",
                     "left"
-                ]
+                ],
+                "filter_settings": {
+                    "known_filters": {
+                        "db_url@Data": {
+                            "scenario_filter": {
+                                "scenario": false
+                            }
+                        }
+                    },
+                    "auto_online": false
+                }
             }
         ],
         "jumps": []
