@@ -16,10 +16,8 @@ Classes for custom line edits.
 :date:   11.10.2018
 """
 
-import os
-from PySide6.QtCore import Qt, Signal, Slot
-from PySide6.QtWidgets import QLineEdit, QStyle
-from .custom_qwidgets import ElidedTextMixin, UndoRedoMixin
+from PySide6.QtWidgets import QLineEdit
+from .custom_qwidgets import UndoRedoMixin
 
 
 class PropertyQLineEdit(UndoRedoMixin, QLineEdit):
@@ -32,69 +30,3 @@ class PropertyQLineEdit(UndoRedoMixin, QLineEdit):
         pos = self.cursorPosition()
         super().setText(text)
         self.setCursorPosition(pos)
-
-
-class CustomQLineEdit(ElidedTextMixin, PropertyQLineEdit):
-    """A custom QLineEdit that accepts file drops and displays the path."""
-
-    file_dropped = Signal(str)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._editing = False
-        self.textEdited.connect(self._set_full_text)
-
-    @Slot(str)
-    def _set_full_text(self, text):
-        self._full_text = text
-
-    def dragEnterEvent(self, event):
-        """Accept a single file drop from the filesystem."""
-        urls = event.mimeData().urls()
-        if len(urls) > 1:
-            event.ignore()
-            return
-        url = urls[0]
-        if not url.isLocalFile():
-            event.ignore()
-            return
-        if not os.path.isfile(url.toLocalFile()):
-            event.ignore()
-            return
-        event.accept()
-        event.setDropAction(Qt.LinkAction)
-
-    def dragMoveEvent(self, event):
-        """Accept event."""
-        event.accept()
-
-    def dropEvent(self, event):
-        """Emit file_dropped signal with the file for the dropped url."""
-        url = event.mimeData().urls()[0]
-        self.file_dropped.emit(url.toLocalFile())
-
-    def _elided_offset(self):
-        if self.isClearButtonEnabled():
-            # icon width and margin hardcoded in qlineedit.cpp
-            # pylint: disable=undefined-variable
-            icon_width = qApp.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize, None, self)
-            margin = icon_width / 4
-            return icon_width + margin + 6
-        return super()._offset()
-
-    def focusInEvent(self, event):
-        super().focusInEvent(event)
-        self._editing = True
-        self._update_text(self._full_text)
-
-    def focusOutEvent(self, event):
-        super().focusOutEvent(event)
-        self._editing = False
-        self._update_text(self._full_text)
-
-    def _update_text(self, text):
-        if not self._editing:
-            super()._update_text(text)
-            return
-        self._full_text = text
-        PropertyQLineEdit.setText(self, text)
