@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for SpineDBEditor classes.
+Unit tests for ``add_items_dialog`` module.
 
 :author: M. Marin (KTH)
 :date:   6.12.2018
@@ -19,31 +19,21 @@ Unit tests for SpineDBEditor classes.
 import unittest
 from unittest import mock
 from tempfile import TemporaryDirectory
-import logging
-import sys
 from PySide6.QtCore import QModelIndex
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog
+from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog, ManageRelationshipsDialog
+from tests.spine_db_editor.widgets.helpers import TestBase
 
 
 class TestAddItemsDialog(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        """Overridden method. Runs once before all tests in this class."""
-        try:
-            cls.app = QApplication().processEvents()
-        except RuntimeError:
-            pass
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
+        if not QApplication.instance():
+            QApplication()
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of SpineDBEditor class."""
@@ -110,6 +100,47 @@ class TestAddItemsDialog(unittest.TestCase):
             with signal_waiter(self._db_mngr.session_committed) as waiter:
                 self._db_editor.ui.actionCommit.trigger()
                 waiter.wait()
+
+
+class TestManageRelationshipsDialog(TestBase):
+    def setUp(self):
+        self._common_setup("sqlite://", create=True)
+
+    def tearDown(self):
+        self._common_tear_down()
+
+    def test_add_relationship_among_existing_ones(self):
+        self._db_mngr.add_object_classes({self._db_map: [{"name": "Object_1", "id": 1}, {"name": "Object_2", "id": 2}]})
+        self._db_mngr.add_objects(
+            {
+                self._db_map: [
+                    {"class_id": 1, "name": "object_11"},
+                    {"class_id": 1, "name": "object_12"},
+                    {"class_id": 2, "name": "object_21"},
+                ]
+            }
+        )
+        self._db_mngr.add_relationship_classes(
+            {self._db_map: [{"name": "rc", "id": 3, "object_class_id_list": [1, 2]}]}
+        )
+        self._db_mngr.add_relationships({self._db_map: [{"name": "r", "class_id": 3, "object_id_list": [1, 3]}]})
+        root_index = self._db_editor.relationship_tree_model.index(0, 0)
+        class_index = self._db_editor.relationship_tree_model.index(0, 0, root_index)
+        self.assertEqual(class_index.data(), "rc")
+        relationship_item = self._db_editor.relationship_tree_model.item_from_index(class_index)
+        dialog = ManageRelationshipsDialog(self._db_editor, relationship_item, self._db_mngr, self._db_map)
+        self.assertEqual(dialog.existing_items_model.rowCount(), 1)
+        self.assertEqual(dialog.existing_items_model.columnCount(), 2)
+        self.assertEqual(dialog.existing_items_model.index(0, 0).data(), "object_11")
+        self.assertEqual(dialog.existing_items_model.index(0, 1).data(), "object_21")
+        self.assertEqual(dialog.new_items_model.rowCount(), 0)
+        for tree_widget in dialog.splitter_widgets():
+            tree_widget.selectAll()
+        dialog.add_relationships()
+        self.assertEqual(dialog.new_items_model.rowCount(), 1)
+        self.assertEqual(dialog.new_items_model.columnCount(), 2)
+        self.assertEqual(dialog.new_items_model.index(0, 0).data(), "object_12")
+        self.assertEqual(dialog.new_items_model.index(0, 1).data(), "object_21")
 
 
 if __name__ == '__main__':
