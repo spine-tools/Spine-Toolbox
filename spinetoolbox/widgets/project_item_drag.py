@@ -334,7 +334,7 @@ class ProjectItemSpecArray(QToolBar):
         """
         geom = previous.geometry()
         style = self.style()
-        extension_extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
+        extension_extent = style.pixelMetric(QStyle.PixelMetric.PM_ToolBarExtensionExtent)
         if self.orientation() == Qt.Orientation.Horizontal:
             toolbar_size = self.width() - extension_extent - 2 * self._margins.left() + 2
             x, y = geom.right() + 1, geom.top()
