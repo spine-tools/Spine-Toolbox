@@ -112,7 +112,9 @@ class SpineDBWorker(QObject):
         return self._executor.submit(self._get_db_map, *args, **kwargs).result()
 
     def _get_db_map(self, *args, **kwargs):
-        self._db_map = DatabaseMapping(self._db_url, *args, sqlite_timeout=2, **kwargs)
+        self._db_map = DatabaseMapping(
+            self._db_url, *args, advance_cache_query=self.advance_query, sqlite_timeout=2, **kwargs
+        )
         return self._db_map
 
     def reset_queries(self):
@@ -122,6 +124,9 @@ class SpineDBWorker(QObject):
         self._fetched_ids.clear()
         self._fetched_item_types.clear()
         self._advance_query_callbacks.clear()
+
+    def reset_fetch_parets(self):
+        self._current_fetch_token += 1
 
     def _reset_fetching_if_required(self, parent):
         """Sets fetch parent's token or resets the parent if fetch tokens don't match.
@@ -373,11 +378,11 @@ class SpineDBWorker(QObject):
             parent.set_fetched(True)
             parent.set_busy(False)
 
-    def fetch_all(self, fetch_item_types=None, only_descendants=False, include_ancestors=False):
+    def fetch_all(self, fetch_item_types=None, include_descendants=False, include_ancestors=False):
         if fetch_item_types is None:
             fetch_item_types = set(self._db_map.ITEM_TYPES)
-        if only_descendants:
-            fetch_item_types = {
+        if include_descendants:
+            fetch_item_types |= {
                 descendant
                 for item_type in fetch_item_types
                 for descendant in self._db_map.descendant_tablenames.get(item_type, ())

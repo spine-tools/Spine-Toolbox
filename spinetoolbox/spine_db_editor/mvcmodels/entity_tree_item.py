@@ -357,13 +357,13 @@ class RelationshipItem(EntityItem):
 
     @property
     def edit_data(self):
-        return self.object_name_list
+        return DB_ITEM_SEPARATOR.join(self.object_name_list)
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
             relationship_class_name=self.parent_item.display_data,
-            object_name_list=DB_ITEM_SEPARATOR.join(self.db_map_data_field(self.first_db_map, "object_name_list")),
+            object_name_list=DB_ITEM_SEPARATOR.join(self.object_name_list),
             database=self.first_db_map.codename,
         )
 

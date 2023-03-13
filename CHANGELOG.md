@@ -49,6 +49,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - The possibility to export parameter values when exporting object groups using Exporter.
   Existing mappings will not export group parameters anymore.
   Please add explicit parameter export mappings if needed.
+- Execute in work setting in Tool Specification Editor. Please use Execute in work setting 
+  in Tool Properties instead.
 
 ### Fixed
 

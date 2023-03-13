@@ -637,7 +637,6 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
             parent_item (MultiDBTreeItem)
             db_mngr (SpineDBManager): the manager to do the removal
             *db_maps: DiffDatabaseMapping instances
-            relationship_class_key (str, optional): relationships class name, object_class name list string.
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Manage relationships")
@@ -713,9 +712,11 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     @Slot(bool)
     def add_relationships(self, checked=True):
         object_names = [[item.text(0) for item in wg.selectedItems()] for wg in self.splitter_widgets()]
-        candidate = list(product(*object_names))
-        existing = self.new_items_model._main_data + self.existing_items_model._main_data
-        to_add = list(set(candidate) - set(existing))
+        candidate = set(product(*object_names))
+        existing = {
+            tuple(objects) for objects in self.new_items_model._main_data + self.existing_items_model._main_data
+        }
+        to_add = candidate - existing
         count = len(to_add)
         self.new_items_model.insertRows(0, count)
         self.new_items_model._main_data[0:count] = to_add
@@ -783,7 +784,9 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        keys_to_remove = set(self.relationship_ids) - set(self.existing_items_model._main_data)
+        keys_to_remove = set(self.relationship_ids) - {
+            tuple(objects) for objects in self.existing_items_model._main_data
+        }
         to_remove = [self.relationship_ids[key] for key in keys_to_remove]
         self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
         to_add = [[self.class_name, object_name_list] for object_name_list in self.new_items_model._main_data]
