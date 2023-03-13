@@ -19,7 +19,7 @@ Unit tests for ``add_items_dialog`` module.
 import unittest
 from unittest import mock
 from tempfile import TemporaryDirectory
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.helpers import signal_waiter
@@ -141,6 +141,66 @@ class TestManageRelationshipsDialog(TestBase):
         self.assertEqual(dialog.new_items_model.columnCount(), 2)
         self.assertEqual(dialog.new_items_model.index(0, 0).data(), "object_12")
         self.assertEqual(dialog.new_items_model.index(0, 1).data(), "object_21")
+
+    def test_accept_relationship_removal(self):
+        self._db_mngr.add_object_classes({self._db_map: [{"name": "Object_1", "id": 1}, {"name": "Object_2", "id": 2}]})
+        self._db_mngr.add_objects(
+            {
+                self._db_map: [
+                    {"class_id": 1, "name": "object_11"},
+                    {"class_id": 1, "name": "object_12"},
+                    {"class_id": 2, "name": "object_21"},
+                ]
+            }
+        )
+        self._db_mngr.add_relationship_classes(
+            {self._db_map: [{"name": "rc", "id": 3, "object_class_id_list": [1, 2]}]}
+        )
+        self._db_mngr.add_relationships(
+            {
+                self._db_map: [
+                    {"name": "r11", "class_id": 3, "object_id_list": [1, 3]},
+                    {"name": "r21", "class_id": 3, "object_id_list": [2, 3]},
+                ]
+            }
+        )
+        root_index = self._db_editor.relationship_tree_model.index(0, 0)
+        class_index = self._db_editor.relationship_tree_model.index(0, 0, root_index)
+        self.assertEqual(class_index.data(), "rc")
+        relationship_item = self._db_editor.relationship_tree_model.item_from_index(class_index)
+        dialog = ManageRelationshipsDialog(self._db_editor, relationship_item, self._db_mngr, self._db_map)
+        self.assertEqual(dialog.existing_items_model.rowCount(), 2)
+        self.assertEqual(dialog.existing_items_model.columnCount(), 2)
+        self.assertEqual(dialog.existing_items_model.index(0, 0).data(), "object_11")
+        self.assertEqual(dialog.existing_items_model.index(0, 1).data(), "object_21")
+        self.assertEqual(dialog.existing_items_model.index(1, 0).data(), "object_12")
+        self.assertEqual(dialog.existing_items_model.index(1, 1).data(), "object_21")
+        self.assertEqual(dialog.table_view.model().rowCount(), 2)
+        self.assertEqual(dialog.table_view.model().columnCount(), 2)
+        top_left = dialog.table_view.model().index(0, 0)
+        bottom_right = dialog.table_view.model().index(0, 1)
+        self.assertEqual(top_left.data(), "object_11")
+        self.assertEqual(bottom_right.data(), "object_21")
+        dialog.table_view.selectionModel().select(
+            QItemSelection(top_left, bottom_right), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        dialog.remove_selected_rows()
+        self.assertEqual(dialog.existing_items_model.rowCount(), 1)
+        dialog.accept()
+        relationships = self._db_mngr.get_items(self._db_map, "relationship")
+        self.assertEqual(
+            relationships,
+            [
+                {
+                    'class_id': 3,
+                    'commit_id': 2,
+                    'id': 5,
+                    'name': 'r21',
+                    'object_class_id_list': (1, 2),
+                    'object_id_list': (2, 3),
+                }
+            ],
+        )
 
 
 if __name__ == '__main__':
