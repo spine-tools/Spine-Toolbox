@@ -116,9 +116,10 @@ class UrlToolBar(QToolBar):
         self._open_project_url_menu.clear()
         ds_items = toolbox.project_item_model.items("Data Stores")
         self._project_urls = {ds.name: ds.project_item.sql_alchemy_url() for ds in ds_items}
+        is_url_validated = {ds.name: ds.project_item.is_url_validated() for ds in ds_items}
         for name, url in self._project_urls.items():
             action = self._open_project_url_menu.addAction(name)
-            action.setEnabled(bool(url))
+            action.setEnabled(url is not None and is_url_validated[name])
 
     @Slot(QAction)
     def _open_ds_url(self, action):

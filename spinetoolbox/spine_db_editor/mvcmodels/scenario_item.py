@@ -25,7 +25,7 @@ from .tree_item_utility import (
 _SCENARIO_ICON = "\uf008"  # film
 
 
-class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
+class ScenarioDBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
     """A root item representing a db."""
 
     @property

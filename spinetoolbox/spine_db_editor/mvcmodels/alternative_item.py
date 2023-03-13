@@ -56,4 +56,7 @@ class AlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
         self.db_mngr.update_alternatives({self.db_map: [db_item]})
 
     def flags(self, column):
-        return super().flags(column) | Qt.ItemFlag.ItemIsDragEnabled
+        flags = super().flags(column)
+        if self.id is None:
+            return flags
+        return flags | Qt.ItemFlag.ItemIsDragEnabled

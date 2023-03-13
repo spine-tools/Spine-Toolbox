@@ -184,7 +184,7 @@ class EntityItem(MultiDBTreeItem):
 
     @property
     def edit_data(self):
-        return self.element_name_list
+        return DB_ITEM_SEPARATOR.join(self.element_name_list)
 
     def update(self, is_group=False):
         self.is_group = is_group

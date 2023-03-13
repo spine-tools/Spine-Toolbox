@@ -14,6 +14,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   filter to be checked.
 - Python 3.11 support
 - PySide6 support. The app has been ported from PySide2 to PySide6.
+- In addition to dragging and dropping, 
+  it is now possible to copy alternatives from Alternative tree and paste them to the scenario tree
+  in Database editor.
+- Scenarios can now be copied and pasted between databases in Database editor.
+- Scenarios can now be duplicated in Database editor.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools
@@ -36,8 +41,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Removed
 - Python 3.7 support
-- GdxExporter project item
-- Gimlet project item
+- GdxExporter project item. Please use Exporter instead.
+- Gimlet project item. Please use Tool instead.
+- The possibility to import parameter values when importing object groups using Importer.
+  Existing mappings will not import group parameters anymore.
+  Please add explicit parameter import mappings if needed.
+- The possibility to export parameter values when exporting object groups using Exporter.
+  Existing mappings will not export group parameters anymore.
+  Please add explicit parameter export mappings if needed.
+- Execute in work setting in Tool Specification Editor. Please use Execute in work setting 
+  in Tool Properties instead.
 
 ### Fixed
 

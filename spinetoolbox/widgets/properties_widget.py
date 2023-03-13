@@ -27,6 +27,7 @@ class PropertiesWidgetBase(QWidget):
 
     def __init__(self, toolbox, base_color=None):
         super().__init__()
+        self._active_item = None
         self._toolbox = toolbox
         self._pixmap = None
         self._bg_color = None
@@ -36,6 +37,18 @@ class PropertiesWidgetBase(QWidget):
         self._transparent_widgets = set()
         if base_color is not None:
             self.set_color_and_icon(base_color)
+
+    def set_item(self, project_item):
+        """Sets the active project item.
+
+        Args:
+            project_item (ProjectItem): active project item
+        """
+        self._active_item = project_item
+
+    def unset_item(self):
+        """Unsets the active project item."""
+        self._active_item = None
 
     @property
     def fg_color(self):

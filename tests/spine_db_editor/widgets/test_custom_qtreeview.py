@@ -106,9 +106,9 @@ def _remove_entity_tree_item(view, menu_action_text, dialog_class):
         if action.text() == menu_action_text:
             remove_items_action = action
             break
-    patched = "spinetoolbox.spine_db_editor.widgets.tree_view_mixin." + dialog_class.__name__
     if remove_items_action is None:
         raise RuntimeError("Menu action not found.")
+    patched = "spinetoolbox.spine_db_editor.widgets.tree_view_mixin." + dialog_class.__name__
     with mock.patch(patched) as mock_dialog:
         remove_items_action.trigger()
         arguments_list = mock_dialog.call_args_list

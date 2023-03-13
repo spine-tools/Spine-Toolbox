@@ -10,6 +10,8 @@
 ######################################################################################################################
 """Unit tests for ``scenario_model`` module."""
 import pickle
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -23,12 +25,20 @@ from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import model_data_to_dict, TestSpineDBManager
 
 
-class TestScenarioModel(unittest.TestCase):
+class _TestBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
 
+    @staticmethod
+    def _fetch_recursively(model):
+        for item in model.visit_all():
+            if item.can_fetch_more():
+                item.fetch_more()
+
+
+class TestScenarioModel(_TestBase):
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
@@ -273,11 +283,260 @@ class TestScenarioModel(unittest.TestCase):
         ]
         self.assertEqual(model_data, expected)
 
-    @staticmethod
-    def _fetch_recursively(model):
-        for item in model.visit_all():
-            if item.can_fetch_more():
-                item.fetch_more()
+    def test_paste_alternative_mime_data(self):
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
+        model.build_tree()
+        self._fetch_recursively(model)
+        root_index = model.index(0, 0)
+        self.assertEqual(root_index.data(), "test_db")
+        edit_index = model.index(0, 0, root_index)
+        model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
+        scenario_index = model.index(0, 0, root_index)
+        self.assertEqual(scenario_index.data(), "my_scenario")
+        mime_data = QMimeData()
+        data = {self._db_mngr.db_map_key(self._db_map): [2]}
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        scenario_item = model.item_from_index(scenario_index)
+        model.paste_alternative_mime_data(mime_data, -1, scenario_item)
+        self._fetch_recursively(model)
+        model_data = model_data_to_dict(model)
+        expected = [
+            [
+                {
+                    "test_db": [
+                        [{"my_scenario": [["alternative_1", ""], ["Type scenario alternative name here...", ""]]}, ""],
+                        ["Type new scenario name here...", ""],
+                    ]
+                },
+                None,
+            ]
+        ]
+        self.assertEqual(model_data, expected)
+
+    def test_paste_alternative_mime_data_ranks_alternatives(self):
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
+        model.build_tree()
+        self._fetch_recursively(model)
+        root_index = model.index(0, 0)
+        self.assertEqual(root_index.data(), "test_db")
+        edit_index = model.index(0, 0, root_index)
+        model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
+        scenario_index = model.index(0, 0, root_index)
+        self.assertEqual(scenario_index.data(), "my_scenario")
+        mime_data = QMimeData()
+        data = {self._db_mngr.db_map_key(self._db_map): [1]}
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        scenario_item = model.item_from_index(scenario_index)
+        model.paste_alternative_mime_data(mime_data, -1, scenario_item)
+        self._fetch_recursively(model)
+        model_data = model_data_to_dict(model)
+        expected = [
+            [
+                {
+                    "test_db": [
+                        [
+                            {
+                                "my_scenario": [
+                                    ["Base", "Base alternative"],
+                                    ["Type scenario alternative name here...", ""],
+                                ]
+                            },
+                            "",
+                        ],
+                        ["Type new scenario name here...", ""],
+                    ]
+                },
+                None,
+            ]
+        ]
+        self.assertEqual(model_data, expected)
+        data = {self._db_mngr.db_map_key(self._db_map): [2]}
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        scenario_item = model.item_from_index(scenario_index)
+        model.paste_alternative_mime_data(mime_data, 0, scenario_item)
+        self._fetch_recursively(model)
+        model_data = model_data_to_dict(model)
+        expected = [
+            [
+                {
+                    "test_db": [
+                        [
+                            {
+                                "my_scenario": [
+                                    ["alternative_1", ""],
+                                    ["Base", "Base alternative"],
+                                    ["Type scenario alternative name here...", ""],
+                                ]
+                            },
+                            "",
+                        ],
+                        ["Type new scenario name here...", ""],
+                    ]
+                },
+                None,
+            ]
+        ]
+        self.assertEqual(model_data, expected)
+
+    def test_duplicate_scenario(self):
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_scenarios({self._db_map: [{"name": "my_scenario", "description": "My test scenario"}]})
+        self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": 1, "alternative_id_list": [2, 1]}]})
+        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
+        model.build_tree()
+        self._fetch_recursively(model)
+        root_index = model.index(0, 0)
+        scenario_index = model.index(0, 0, root_index)
+        scenario_item = model.item_from_index(scenario_index)
+        model.duplicate_scenario(scenario_item)
+        self._fetch_recursively(model)
+        model_data = model_data_to_dict(model)
+        expected = [
+            [
+                {
+                    "test_db": [
+                        [
+                            {
+                                "my_scenario": [
+                                    ["alternative_1", ""],
+                                    ["Base", "Base alternative"],
+                                    ["Type scenario alternative name here...", ""],
+                                ]
+                            },
+                            "My test scenario",
+                        ],
+                        [
+                            {
+                                "my_scenario 1": [
+                                    ["alternative_1", ""],
+                                    ["Base", "Base alternative"],
+                                    ["Type scenario alternative name here...", ""],
+                                ]
+                            },
+                            "My test scenario",
+                        ],
+                        ["Type new scenario name here...", ""],
+                    ]
+                },
+                None,
+            ]
+        ]
+        self.assertEqual(model_data, expected)
+
+
+class TestScenarioModelWithTwoDatabases(_TestBase):
+    def setUp(self):
+        self._temp_dir = TemporaryDirectory()
+        app_settings = MagicMock()
+        logger = MagicMock()
+        self._db_mngr = TestSpineDBManager(app_settings, None)
+        self._db_map1 = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db_1", create=True)
+        url2 = "sqlite:///" + str(Path(self._temp_dir.name, "db_2.sqlite"))
+        self._db_map2 = self._db_mngr.get_db_map(url2, logger, codename="test_db_2", create=True)
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db_1", url2: "test_db_2"})
+
+    def tearDown(self):
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
+        ):
+            self._db_editor.close()
+        self._db_mngr.close_all_sessions()
+        while not self._db_map1.connection.closed and self._db_map2.connection.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+        self._db_editor.deleteLater()
+        self._temp_dir.cleanup()
+
+    def test_paste_alternative_mime_data_doesnt_paste_across_databases(self):
+        self._db_mngr.add_alternatives({self._db_map1: [{"name": "alternative_1"}]})
+        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
+        model.build_tree()
+        self._fetch_recursively(model)
+        root_index = model.index(1, 0)
+        self.assertEqual(root_index.data(), "test_db_2")
+        edit_index = model.index(0, 0, root_index)
+        model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
+        scenario_index = model.index(0, 0, root_index)
+        self.assertEqual(scenario_index.data(), "my_scenario")
+        mime_data = QMimeData()
+        data = {self._db_mngr.db_map_key(self._db_map1): [2]}
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        scenario_item = model.item_from_index(scenario_index)
+        model.paste_alternative_mime_data(mime_data, -1, scenario_item)
+        self._fetch_recursively(model)
+        model_data = model_data_to_dict(model)
+        expected = [
+            [{"test_db_1": [["Type new scenario name here...", ""]]}, None],
+            [
+                {
+                    "test_db_2": [
+                        [{"my_scenario": [["Type scenario alternative name here...", ""]]}, ""],
+                        ["Type new scenario name here...", ""],
+                    ]
+                },
+                None,
+            ],
+        ]
+        self.assertEqual(model_data, expected)
+
+    def test_paste_scenario_mime_data(self):
+        self._db_mngr.add_scenarios({self._db_map1: [{"name": "my_scenario"}]})
+        self._db_mngr.add_alternatives({self._db_map1: [{"name": "alternative_1"}]})
+        self._db_mngr.set_scenario_alternatives({self._db_map1: [{"id": 1, "alternative_id_list": [2, 1]}]})
+        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
+        model.build_tree()
+        self._fetch_recursively(model)
+        mime_data = QMimeData()
+        data = {self._db_mngr.db_map_key(self._db_map1): [1]}
+        mime_data.setData(mime_types.SCENARIO_DATA, pickle.dumps(data))
+        root_index = model.index(1, 0)
+        self.assertEqual(root_index.data(), "test_db_2")
+        db_item = model.item_from_index(root_index)
+        model.paste_scenario_mime_data(mime_data, db_item)
+        self._fetch_recursively(model)
+        model_data = model_data_to_dict(model)
+        expected = [
+            [
+                {
+                    "test_db_1": [
+                        [
+                            {
+                                "my_scenario": [
+                                    ["alternative_1", ""],
+                                    ["Base", "Base alternative"],
+                                    ["Type scenario alternative name here...", ""],
+                                ]
+                            },
+                            "",
+                        ],
+                        ["Type new scenario name here...", ""],
+                    ]
+                },
+                None,
+            ],
+            [
+                {
+                    "test_db_2": [
+                        [
+                            {
+                                "my_scenario": [
+                                    ["alternative_1", ""],
+                                    ["Base", "Base alternative"],
+                                    ["Type scenario alternative name here...", ""],
+                                ]
+                            },
+                            "",
+                        ],
+                        ["Type new scenario name here...", ""],
+                    ]
+                },
+                None,
+            ],
+        ]
+        self.assertEqual(model_data, expected)
 
 
 if __name__ == '__main__':

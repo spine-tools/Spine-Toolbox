@@ -500,7 +500,6 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             parent_item (MultiDBTreeItem)
             db_mngr (SpineDBManager): the manager to do the removal
             *db_maps: DiffDatabaseMapping instances
-            relationship_class_key (str, optional): relationships class name, object_class name list string.
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Manage elements")
@@ -576,9 +575,11 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
     @Slot(bool)
     def add_entities(self, checked=True):
         element_names = [[item.text(0) for item in wg.selectedItems()] for wg in self.splitter_widgets()]
-        candidate = list(product(*element_names))
-        existing = self.new_items_model._main_data + self.existing_items_model._main_data
-        to_add = list(set(candidate) - set(existing))
+        candidate = set(product(*element_names))
+        existing = {
+            tuple(elements) for elements in self.new_items_model._main_data + self.existing_items_model._main_data
+        }
+        to_add = candidate - existing
         count = len(to_add)
         self.new_items_model.insertRows(0, count)
         self.new_items_model._main_data[0:count] = to_add
@@ -602,7 +603,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             ):
                 key = entity["element_name_list"]
                 self.entity_ids[key] = entity["id"]
-        existing_items = sorted(self.entity_ids)
+        existing_items = sorted(map(list, self.entity_ids))
         self.existing_items_model.reset_model(existing_items)
         self.model.refresh()
         self.model.modelReset.emit()
@@ -610,7 +611,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             wg.deleteLater()
         for name in self.dimension_name_list:
             tree_widget = QTreeWidget(self)
-            tree_widget.setSelectionMode(QAbstractItemView.ExtendedSelection)
+            tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
             tree_widget.setColumnCount(1)
             tree_widget.setIndentation(0)
             header_item = QTreeWidgetItem([name])
@@ -645,7 +646,9 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        keys_to_remove = set(self.entity_ids) - set(self.existing_items_model._main_data)
+        keys_to_remove = set(self.entity_ids) - {
+            tuple(elements) for elements in self.existing_items_model._main_data
+        }
         to_remove = [self.entity_ids[key] for key in keys_to_remove]
         self.db_mngr.remove_items({self.db_map: {"entity": to_remove}})
         to_add = [[self.class_name, element_name_list] for element_name_list in self.new_items_model._main_data]
@@ -679,12 +682,12 @@ class EntityGroupDialogBase(QDialog):
         header_layout.addWidget(self.db_combo_box)
         self.non_members_tree = QTreeWidget(self)
         self.non_members_tree.setHeaderLabel("Non members")
-        self.non_members_tree.setSelectionMode(QTreeWidget.ExtendedSelection)
+        self.non_members_tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
         self.non_members_tree.setColumnCount(1)
         self.non_members_tree.setIndentation(0)
         self.members_tree = QTreeWidget(self)
         self.members_tree.setHeaderLabel("Members")
-        self.members_tree.setSelectionMode(QTreeWidget.ExtendedSelection)
+        self.members_tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
         self.members_tree.setColumnCount(1)
         self.members_tree.setIndentation(0)
         self.add_button = QToolButton()

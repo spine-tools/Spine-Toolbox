@@ -46,7 +46,6 @@ from spinedb_api import (
 from spinedb_api.parameter_value import load_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
-from spinedb_api.db_cache import DBCache
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import SpineDBMacro, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
@@ -110,7 +109,6 @@ class SpineDBManager(QObject):
         self.undo_stack = {}
         self.undo_action = {}
         self.redo_action = {}
-        self._cache = {}
         self._icon_mngr = {}
         self._connect_signals()
 
@@ -213,16 +211,7 @@ class SpineDBManager(QObject):
         if item_type == "entity_class":
             self.update_icons(db_map_data)
         for db_map, items in db_map_data.items():
-            try:
-                worker = self._get_worker(db_map)
-            except KeyError:
-                continue
-            try:
-                db_cache = self._cache[db_map]
-            except KeyError:
-                db_cache = DBCache(worker.advance_query)
-                self._cache[db_map] = db_cache
-            table_cache = db_cache.table_cache(item_type)
+            table_cache = db_map.cache.table_cache(item_type)
             new_db_map_data[db_map] = [table_cache.add_item(item) for item in items]
         return new_db_map_data
 
@@ -236,10 +225,7 @@ class SpineDBManager(QObject):
         if item_type == "entity_class":
             self.update_icons(db_map_data)
         for db_map, items in db_map_data.items():
-            db_cache = self._cache.get(db_map)
-            if db_cache is None:
-                continue
-            table_cache = db_cache.get(item_type)
+            table_cache = db_map.cache.get(item_type)
             if table_cache is None:
                 continue
             for item in items:
@@ -257,30 +243,24 @@ class SpineDBManager(QObject):
         """
         db_map_data = {}
         for db_map, ids in db_map_ids.items():
-            db_cache = self._cache.get(db_map)
-            if db_cache is None:
-                continue
-            table_cache = db_cache.get(item_type)
+            table_cache = db_map.cache.get(item_type)
             if table_cache is None:
                 continue
             db_map_data[db_map] = [table_cache.remove_item(id_) for id_ in ids]
         return db_map_data
 
     @busy_effect
-    def get_db_map_cache(self, db_map, fetch_item_types=None, only_descendants=False, include_ancestors=False):
+    def get_db_map_cache(self, db_map, fetch_item_types=None, include_descendants=False, include_ancestors=False):
         try:
             worker = self._get_worker(db_map)
         except KeyError:
             return {}
         worker.fetch_all(
-            fetch_item_types=fetch_item_types, only_descendants=only_descendants, include_ancestors=include_ancestors
+            fetch_item_types=fetch_item_types,
+            include_descendants=include_descendants,
+            include_ancestors=include_ancestors,
         )
-        try:
-            cache = self._cache[db_map]
-        except KeyError:
-            cache = DBCache(worker.advance_query)
-            self._cache[db_map] = cache
-        return cache
+        return db_map.cache
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -359,10 +339,13 @@ class SpineDBManager(QObject):
                 msg.setWindowTitle("Database not empty")
                 msg.setText(f"The URL <b>{url}</b> points to an existing database.")
                 msg.setInformativeText("Do you want to overwrite it?")
-                msg.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
+                overwrite_button = msg.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
                 msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
-                ret = msg.exec()  # Show message box
-                if ret != QMessageBox.ButtonRole.AcceptRole:
+                msg.exec()
+                # We have custom buttons, exec() returns an opaque value.
+                # Let's check the clicked button explicitly instead.
+                clicked_button = msg.clickedButton()
+                if clicked_button is not overwrite_button:
                     return
             do_create_new_spine_database(url)
             logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
@@ -392,7 +375,7 @@ class SpineDBManager(QObject):
             if worker is not None:
                 worker.close_db_map()
                 worker.clean_up()
-            self._cache.pop(db_map, None)
+            db_map.cache.clear()
             del self.undo_stack[db_map]
             del self.undo_action[db_map]
             del self.redo_action[db_map]
@@ -593,10 +576,15 @@ class SpineDBManager(QObject):
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
-        refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self._cache)
+        refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self.db_maps)
         if not refreshed_db_maps:
             return
-        self._restart_fetching(refreshed_db_maps)
+        for db_map in refreshed_db_maps:
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            worker.reset_fetch_parets()
         self.session_refreshed.emit(refreshed_db_maps)
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
@@ -638,16 +626,6 @@ class SpineDBManager(QObject):
             except KeyError:
                 continue
             worker.rollback_session()
-        self._restart_fetching(dirty_db_maps)
-
-    def _restart_fetching(self, db_maps):
-        """Restarts fetching"""
-        for db_map in db_maps:
-            del self._cache[db_map]
-            try:
-                worker = self._get_worker(db_map)
-            except KeyError:
-                continue
             worker.reset_queries()
 
     def entity_class_renderer(self, db_map, entity_class_id, for_group=False):
@@ -695,7 +673,7 @@ class SpineDBManager(QObject):
         Returns:
             CacheItem: cached item
         """
-        item = self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
+        item = db_map.cache.get(item_type, {}).get(id_, {})
         if only_visible and item:
             return item
         try:
@@ -703,7 +681,7 @@ class SpineDBManager(QObject):
         except KeyError:
             return {}
         worker.fetch_all(fetch_item_types={item_type})
-        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
+        return db_map.cache.get(item_type, {}).get(id_, {})
 
     def get_field(self, db_map, item_type, id_, field, only_visible=True):
         return self.get_item(db_map, item_type, id_, only_visible=only_visible).get(field)
@@ -719,7 +697,7 @@ class SpineDBManager(QObject):
         Returns:
             list
         """
-        items = list(self._cache.get(db_map, {}).get(item_type, {}).values())
+        items = list(db_map.cache.get(item_type, {}).values())
         if only_visible:
             return items
         try:
@@ -727,7 +705,7 @@ class SpineDBManager(QObject):
         except KeyError:
             return []
         worker.fetch_all(fetch_item_types={item_type})
-        return list(self._cache.get(db_map, {}).get(item_type, {}).values())
+        return list(db_map.cache.get(item_type, {}).values())
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
         """Returns a list of items of the given type in the given db map that have the given value

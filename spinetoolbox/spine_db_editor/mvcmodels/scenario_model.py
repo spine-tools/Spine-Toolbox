@@ -12,8 +12,9 @@
 import pickle
 
 from PySide6.QtCore import QMimeData, Qt
+from spinetoolbox.helpers import unique_name
 from .tree_model_base import TreeModelBase
-from .scenario_item import DBItem, ScenarioItem
+from .scenario_item import ScenarioDBItem, ScenarioAlternativeItem, ScenarioItem
 from .utils import two_column_as_csv
 from . import mime_types
 
@@ -23,7 +24,7 @@ class ScenarioModel(TreeModelBase):
 
     @staticmethod
     def _make_db_item(db_map):
-        return DBItem(db_map)
+        return ScenarioDBItem(db_map)
 
     @staticmethod
     def _top_children():
@@ -35,30 +36,58 @@ class ScenarioModel(TreeModelBase):
     def mimeData(self, indexes):
         """Stores selected indexes into MIME data.
 
-        The MIME data structure contains two distinct data:
+        If indexes contains scenario indexes, only those indexes will be kept.
+        Otherwise, only scenario alternative indexes are kept.
 
+        The MIME data contains distinct data:
         - Text representation of the selection
         - A pickled dict mapping db identifier to list of alternative ids
+        - A pickled dict mapping db identifier to list of scenario ids
 
         Args:
             indexes (Sequence of QModelIndex): selected indexes
 
         Returns:
-            QMimeData: MIME data
+            QMimeData: MIME data or None if selection was bad
         """
-        # We have two columns and consequently usually twice the same item per row.
-        # Make items unique without losing order using a dictionary trick.
-        items = list(dict.fromkeys(self.item_from_index(ind) for ind in indexes))
-        d = {}
-        for item in items:
-            db_item = item.parent_item.parent_item
-            db_key = self.db_mngr.db_map_key(db_item.db_map)
-            d.setdefault(db_key, []).append(item.alternative_id)
-        data = pickle.dumps(d)
         mime = QMimeData()
-        mime.setData(mime_types.ALTERNATIVE_DATA, data)
-        mime.setText(two_column_as_csv(indexes))
-        return mime
+        scenario_indexes = []
+        scenario_items = {}
+        for index in indexes:
+            item = self.item_from_index(index)
+            if isinstance(item, ScenarioItem) and item.id is not None:
+                scenario_indexes.append(index)
+                # We have two columns and consequently usually twice the same item per row.
+                # Make items unique without losing order using a dictionary trick.
+                scenario_items[item] = None
+        if scenario_items:
+            scenario_data = {}
+            for item in scenario_items:
+                db_item = item.parent_item
+                db_key = self.db_mngr.db_map_key(db_item.db_map)
+                scenario_data.setdefault(db_key, []).append(item.id)
+            mime.setData(mime_types.SCENARIO_DATA, pickle.dumps(scenario_data))
+            mime.setText(two_column_as_csv(scenario_indexes))
+            return mime
+        alternative_indexes = []
+        alternative_items = {}
+        for index in indexes:
+            item = self.item_from_index(index)
+            if isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
+                alternative_indexes.append(index)
+                # We have two columns and consequently usually twice the same item per row.
+                # Make items unique without losing order using a dictionary trick.
+                alternative_items[item] = None
+        if alternative_items:
+            alternative_data = {}
+            for item in alternative_items:
+                db_item = item.parent_item.parent_item
+                db_key = self.db_mngr.db_map_key(db_item.db_map)
+                alternative_data.setdefault(db_key, []).append(item.alternative_id)
+            mime.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(alternative_data))
+            mime.setText(two_column_as_csv(alternative_indexes))
+            return mime
+        return None
 
     def canDropMimeData(self, data, drop_action, row, column, parent):
         if drop_action & self.supportedDropActions() == 0:
@@ -92,6 +121,7 @@ class ScenarioModel(TreeModelBase):
         return True
 
     def dropMimeData(self, data, drop_action, row, column, parent):
+        # This function expects that data has be verified by canDropMimeData() already.
         scenario_item = self.item_from_index(parent)
         if not isinstance(scenario_item, ScenarioItem):
             # In some rare cases, it is possible that the drop was accepted
@@ -108,3 +138,95 @@ class ScenarioModel(TreeModelBase):
         db_item = {"id": scenario_item.id, "alternative_id_list": alternative_id_list}
         self.db_mngr.set_scenario_alternatives({scenario_item.db_map: [db_item]})
         return True
+
+    def paste_alternative_mime_data(self, mime_data, row, scenario_item):
+        """Adds alternatives from MIME data to the model.
+
+        Args:
+            mime_data (QMimeData): mime data that must contain ALTERNATIVE_DATA format
+            row (int): where to paste within scenario item, -1 lets the model choose
+            scenario_item (ScenarioItem): parent item
+        """
+        old_alternative_id_list = list(scenario_item.alternative_id_list)
+        if row == -1:
+            row = len(old_alternative_id_list)
+        data_to_add = {}
+        for db_map_key, alternative_ids in pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA)).items():
+            target_db_map = self.db_mngr.db_map_from_key(db_map_key)
+            if target_db_map != scenario_item.db_map:
+                continue
+            alternative_id_list = [id_ for id_ in old_alternative_id_list[:row] if id_ not in alternative_ids]
+            alternative_id_list += alternative_ids
+            alternative_id_list += [id_ for id_ in old_alternative_id_list[row:] if id_ not in alternative_ids]
+            data_to_add[target_db_map] = [{"id": scenario_item.id, "alternative_id_list": alternative_id_list}]
+        self.db_mngr.set_scenario_alternatives(data_to_add)
+
+    def paste_scenario_mime_data(self, mime_data, db_item):
+        """Adds scenarios and their alternatives from MIME data to the model.
+
+        Args:
+            mime_data (QMimeData): mime data that must contain ALTERNATIVE_DATA format
+            db_item (ScenarioDBItem): parent item
+        """
+        scenarios_to_add = []
+        alternatives_to_add = []
+        alternative_names_by_scenario = {}
+        existing_scenarios = {i.name for i in self.db_mngr.get_items(db_item.db_map, "scenario", only_visible=False)}
+        existing_alternatives = {
+            i.name for i in self.db_mngr.get_items(db_item.db_map, "alternative", only_visible=False)
+        }
+        for db_map_key, scenario_ids in pickle.loads(mime_data.data(mime_types.SCENARIO_DATA)).items():
+            db_map = self.db_mngr.db_map_from_key(db_map_key)
+            if db_map is db_item.db_map:
+                continue
+            for id_ in scenario_ids:
+                scenario_data = self.db_mngr.get_item(db_map, "scenario", id_, only_visible=False)
+                if scenario_data.name in existing_scenarios:
+                    continue
+                alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, id_, only_visible=False)
+                for alternative_id in alternative_id_list:
+                    alternative_db_item = self.db_mngr.get_item(
+                        db_map, "alternative", alternative_id, only_visible=False
+                    )
+                    alternative_names_by_scenario.setdefault(scenario_data.name, []).append(alternative_db_item.name)
+                    if alternative_db_item.name in existing_alternatives:
+                        continue
+                    alternatives_to_add.append(
+                        {"name": alternative_db_item.name, "description": alternative_db_item.description}
+                    )
+                scenarios_to_add.append({"name": scenario_data.name, "description": scenario_data.description})
+        if scenarios_to_add:
+            if alternatives_to_add:
+                self.db_mngr.add_alternatives({db_item.db_map: alternatives_to_add})
+            self.db_mngr.add_scenarios({db_item.db_map: scenarios_to_add})
+            alternatives = self.db_mngr.get_items(db_item.db_map, "alternative", only_visible=False)
+            alternative_id_by_name = {i.name: i.id for i in alternatives}
+            scenarios = self.db_mngr.get_items(db_item.db_map, "scenario")
+            scenario_id_by_name = {i.name: i.id for i in scenarios}
+            scenario_alternative_id_lists = []
+            for scenario_name, alternative_name_list in alternative_names_by_scenario.items():
+                alternative_id_list = [alternative_id_by_name[name] for name in alternative_name_list]
+                scenario_alternative_id_lists.append(
+                    {"id": scenario_id_by_name[scenario_name], "alternative_id_list": alternative_id_list}
+                )
+            self.db_mngr.set_scenario_alternatives({db_item.db_map: scenario_alternative_id_lists})
+
+    def duplicate_scenario(self, scenario_item):
+        """Duplicates scenario within database.
+
+        Args:
+            scenario_item (ScenarioItem): scenario item to duplicate
+        """
+        db_map = scenario_item.db_map
+        existing_names = {i.name for i in self.db_mngr.get_items(db_map, "scenario", only_visible=False)}
+        name = unique_name(scenario_item.item_data.name, existing_names)
+        self.db_mngr.add_scenarios({db_map: [{"name": name, "description": scenario_item.item_data.description}]})
+        alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(
+            db_map, scenario_item.id, only_visible=False
+        )
+        for item in self.db_mngr.get_items(db_map, "scenario", only_visible=False):
+            if item.name == name:
+                self.db_mngr.set_scenario_alternatives(
+                    {db_map: [{"id": item.id, "alternative_id_list": alternative_id_list}]}
+                )
+                break

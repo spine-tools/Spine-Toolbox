@@ -1034,7 +1034,7 @@ def unique_name(prefix, existing):
     reserved = set()
     for name in existing:
         if pattern.fullmatch(name) is not None:
-            _, _, number = name.partition(" ")
+            _, _, number = name.rpartition(" ")
             reserved.add(int(number))
     free = len(reserved) + 1
     for i in range(len(reserved)):

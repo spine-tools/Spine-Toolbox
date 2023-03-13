@@ -101,13 +101,15 @@ class MultiSpineDBEditor(MultiTabWindow):
         toolbox = self.db_mngr.parent()
         if toolbox is None:
             return
-        ds_urls = {ds.name: ds.project_item.sql_alchemy_url() for ds in toolbox.project_item_model.items("Data Stores")}
+        data_stores = tuple(ds_item.project_item for ds_item in toolbox.project_item_model.items("Data Stores"))
+        ds_urls = {ds.name: ds.sql_alchemy_url() for ds in data_stores}
+        is_url_validated = {ds.name: ds.is_url_validated() for ds in data_stores}
         if not ds_urls:
             return
         menu = QMenu(self)
         for name, url in ds_urls.items():
-            action = menu.addAction(name, lambda name=name, url=url: self.add_new_tab({url: name}))
-            action.setEnabled(bool(url))
+            action = menu.addAction(name, lambda: self.add_new_tab({url: name}))
+            action.setEnabled(url is not None and is_url_validated[name])
         menu.popup(global_pos)
         menu.aboutToHide.connect(menu.deleteLater)
 
