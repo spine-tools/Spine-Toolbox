@@ -784,7 +784,9 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        keys_to_remove = set(self.relationship_ids) - set(self.existing_items_model._main_data)
+        keys_to_remove = set(self.relationship_ids) - {
+            tuple(objects) for objects in self.existing_items_model._main_data
+        }
         to_remove = [self.relationship_ids[key] for key in keys_to_remove]
         self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
         to_add = [[self.class_name, object_name_list] for object_name_list in self.new_items_model._main_data]
