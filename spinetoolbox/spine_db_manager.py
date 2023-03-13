@@ -579,7 +579,12 @@ class SpineDBManager(QObject):
         refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self.db_maps)
         if not refreshed_db_maps:
             return
-        self._restart_fetching(refreshed_db_maps)
+        for db_map in refreshed_db_maps:
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            worker.reset_fetch_parets()
         self.session_refreshed.emit(refreshed_db_maps)
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
@@ -621,16 +626,6 @@ class SpineDBManager(QObject):
             except KeyError:
                 continue
             worker.rollback_session()
-        self._restart_fetching(dirty_db_maps)
-
-    def _restart_fetching(self, db_maps):
-        """Restarts fetching"""
-        for db_map in db_maps:
-            try:
-                worker = self._get_worker(db_map)
-            except KeyError:
-                continue
-            db_map.cache.clear()
             worker.reset_queries()
 
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
