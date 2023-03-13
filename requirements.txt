@@ -1,4 +1,4 @@
--e git+https://github.com/spine-tools/Spine-Database-API.git@toolbox_1668_exporter_remote_database_target#egg=spinedb_api
+-e git+https://github.com/spine-tools/Spine-Database-API.git#egg=spinedb_api
 -e git+https://github.com/spine-tools/spine-engine.git#egg=spine_engine
--e git+https://github.com/spine-tools/spine-items.git@1668_exporter_remote_database_target#egg=spine_items
+-e git+https://github.com/spine-tools/spine-items.git#egg=spine_items
 -e .
