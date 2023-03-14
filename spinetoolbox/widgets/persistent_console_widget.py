@@ -179,6 +179,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self.setMaximumBlockCount(self._MAX_LINES_COUNT)
         self._toolbox = toolbox
         self._key = key
+        self._is_dead = False
         self._language = language
         self.owners = {owner}
         self._prompt, self._prompt_format = self._make_prompt()
@@ -696,23 +697,44 @@ class PersistentConsoleWidget(QPlainTextEdit):
     @Slot()
     def _handle_restarted(self):
         self._make_prompt_block(prompt=self._prompt)
+        self._is_dead = False
 
     @Slot(bool)
     def _interrupt_persistent(self, _=False):
-        """Interrupts underlying persistent process."""
+        """Sends a task to executor which will interrupt the underlying persistent process."""
         self._executor.submit(self._do_interrupt_persistent)
 
     def _do_interrupt_persistent(self):
+        """Interrupts the underlying persistent process."""
         engine_mngr = self.create_engine_manager()
         if not engine_mngr:
             return
         engine_mngr.interrupt_persistent(self._key)
 
+    @Slot(bool)
+    def _kill_persistent(self, _=False):
+        """Sends a task to executor which will kill the underlying persistent process."""
+        self._executor.submit(self._do_kill_persistent)
+        self.add_stdout("Killed.")
+        self._is_dead = True
+
+    def _do_kill_persistent(self):
+        """Kills underlying persistent process."""
+        engine_mngr = self.create_engine_manager()
+        if not engine_mngr:
+            return
+        engine_mngr.kill_persistent(self._key)
+
     def _extend_menu(self, menu):
-        """Adds two more actions: Restart, and Interrupt."""
+        """Appends two more actions: Restart, and Interrupt.
+
+        Args:
+            menu (QMenu): where to append
+        """
         menu.addSeparator()
         menu.addAction("Restart", self._restart_persistent)
-        menu.addAction("Interrupt", self._interrupt_persistent)
+        menu.addAction("Interrupt", self._interrupt_persistent).setEnabled(not self._is_dead)
+        menu.addAction("Kill", self._kill_persistent).setEnabled(not self._is_dead)
 
     def contextMenuEvent(self, ev):
         """Reimplemented to extend menu with custom actions."""
