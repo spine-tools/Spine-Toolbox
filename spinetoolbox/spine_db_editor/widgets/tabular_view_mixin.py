@@ -212,6 +212,7 @@ class TabularViewMixin:
         self.current_input_type = action.text()
         # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed` with `visible = True`
         # See `SpineDBEditor` class.
+        self.do_reload_pivot_table()
 
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
@@ -220,8 +221,6 @@ class TabularViewMixin:
                 action.setChecked(False)
             return
         if self._pending_reload:
-            self.pivot_actions[self.current_input_type].setChecked(True)
-            self.ui.dockWidget_frozen_table.setVisible(True)
             self.do_reload_pivot_table()
 
     @Slot(dict)
@@ -252,7 +251,6 @@ class TabularViewMixin:
         self.current_class_id = class_id
         self.current_class_type = current_class_item.item_type
         self.current_class_name = current_class_item.display_data
-        self.clear_pivot_table()
 
     @staticmethod
     def _get_current_class_item(current_index):
@@ -569,6 +567,8 @@ class TabularViewMixin:
         if not self.ui.dockWidget_pivot_table.isVisible():
             self._pending_reload = True
             return
+        self.pivot_actions[self.current_input_type].setChecked(True)
+        self.ui.dockWidget_frozen_table.setVisible(True)
         self._pending_reload = False
         self.pivot_table_model = self._pivot_table_models[self.current_input_type]
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
