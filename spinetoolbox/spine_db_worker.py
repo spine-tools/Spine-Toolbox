@@ -125,9 +125,6 @@ class SpineDBWorker(QObject):
         self._fetched_item_types.clear()
         self._advance_query_callbacks.clear()
 
-    def reset_fetch_parets(self):
-        self._current_fetch_token += 1
-
     def _reset_fetching_if_required(self, parent):
         """Sets fetch parent's token or resets the parent if fetch tokens don't match.
 
