@@ -157,6 +157,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
     _history_item_available = Signal(str, str)
     _completions_available = Signal(str, str, list)
     _restarted = Signal()
+    _killed = Signal(bool)
     _flush_needed = Signal()
     _FLUSH_INTERVAL = 200
     _MAX_LINES_PER_SECOND = 2000
@@ -232,6 +233,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._history_item_available.connect(self._display_history_item)
         self._completions_available.connect(self._display_completions)
         self._restarted.connect(self._handle_restarted)
+        self._killed.connect(self._do_set_killed)
 
     def closeEvent(self, ev):
         super().closeEvent(ev)
@@ -470,6 +472,26 @@ class PersistentConsoleWidget(QPlainTextEdit):
         else:
             self._insert_stdout_text(cursor, text)
 
+    def set_killed(self, killed):
+        """Emits the ``killed`` signal.
+
+        Args:
+            killed (bool): if True, may the console rest in peace
+        """
+        self._killed.emit(killed)
+
+    @Slot(bool)
+    def _do_set_killed(self, killed):
+        """Sets the console as killed or alive.
+
+        Args:
+            killed (bool): if True, may the console rest in peace
+        """
+        self._is_dead = killed
+        self._line_edit.setVisible(not killed)
+        if killed:
+            self._make_prompt_block("Console killed (can be restarted from the right-click context menu)")
+
     def add_stdin(self, data):
         """Adds new prompt with data. Used when adding stdin from external execution.
 
@@ -696,8 +718,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     @Slot()
     def _handle_restarted(self):
+        self._do_set_killed(False)
         self._make_prompt_block(prompt=self._prompt)
-        self._is_dead = False
 
     @Slot(bool)
     def _interrupt_persistent(self, _=False):
@@ -714,9 +736,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
     @Slot(bool)
     def _kill_persistent(self, _=False):
         """Sends a task to executor which will kill the underlying persistent process."""
+        self._do_set_killed(True)
         self._executor.submit(self._do_kill_persistent)
-        self.add_stdout("Killed.")
-        self._is_dead = True
 
     def _do_kill_persistent(self):
         """Kills underlying persistent process."""
