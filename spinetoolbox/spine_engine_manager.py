@@ -112,6 +112,14 @@ class SpineEngineManagerBase:
         """
         raise NotImplementedError()
 
+    def kill_persistent(self, persistent_key):
+        """Kills a persistent process.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+        """
+        raise NotImplementedError()
+
     def get_persistent_completions(self, persistent_key, text):
         """Returns a list of auto-completion options from given text.
 
@@ -195,6 +203,12 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         from spine_engine.execution_managers.persistent_execution_manager import interrupt_persistent
 
         interrupt_persistent(persistent_key)
+
+    def kill_persistent(self, persistent_key):
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.persistent_execution_manager import kill_persistent
+
+        kill_persistent(persistent_key)
 
     def get_persistent_completions(self, persistent_key, text):
         # pylint: disable=import-outside-toplevel
@@ -339,6 +353,10 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
     def interrupt_persistent(self, persistent_key):
         """See base class."""
         return self.engine_client.send_interrupt_persistent(persistent_key)
+
+    def kill_persistent(self, persistent_key):
+        """See base class."""
+        return self.engine_client.send_kill_persistent(persistent_key)
 
     def get_persistent_completions(self, persistent_key, text):
         """See base class."""

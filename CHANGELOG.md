@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   in Database editor.
 - Scenarios can now be copied and pasted between databases in Database editor.
 - Scenarios can now be duplicated in Database editor.
+- Tool project item's Python and Julia consoles can now be killed from the right-click context menu.
+  A killed console can be restored by restarting it.
+- A new option "Kill consoles at the end of execution" has been added to Tool properties
+  that kills Python and Julia console processes after execution saving some memory and computing resources.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools
