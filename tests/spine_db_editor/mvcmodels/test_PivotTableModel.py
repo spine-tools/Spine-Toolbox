@@ -53,7 +53,9 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
             self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)
         self._editor._update_class_attributes(index)
-        self._editor.do_reload_pivot_table()
+        with patch.object(self._editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+            mock_is_visible.return_value = True
+            self._editor.do_reload_pivot_table()
         self._model = self._editor.pivot_table_model
         self._model.beginResetModel()
         self._model.endResetModel()
@@ -140,7 +142,9 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
                 action.trigger()
                 break
         self._editor._update_class_attributes(index)
-        self._editor.do_reload_pivot_table()
+        with patch.object(self._editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+            mock_is_visible.return_value = True
+            self._editor.do_reload_pivot_table()
         self._model = self._editor.pivot_table_model
         self._model.beginResetModel()
         self._model.endResetModel()

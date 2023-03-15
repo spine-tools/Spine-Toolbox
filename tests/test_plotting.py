@@ -132,7 +132,9 @@ class TestPlotPivotTableSelection(TestBase):
         self._add_object_parameter_values(values)
         self.assertEqual(self._db_editor.current_input_type, self._db_editor._PARAMETER_VALUE)
         self._select_object_class_in_tree_view()
-        self._db_editor.do_reload_pivot_table()
+        with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+            mock_is_visible.return_value = True
+            self._db_editor.do_reload_pivot_table()
         if self._db_editor.pivot_table_model.canFetchMore(QModelIndex()):
             self._db_editor.pivot_table_model.fetchMore(QModelIndex())
         model = self._db_editor.pivot_table_proxy

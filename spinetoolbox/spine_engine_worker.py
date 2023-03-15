@@ -329,6 +329,8 @@ class SpineEngineWorker(QObject):
                 "Please go to Settings->Tools and check your setup."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+        elif msg_type == "persistent_killed":
+            self._logger.persistent_killed(item, msg["filter_id"])
         elif msg_type == "stdin":
             self._logger.add_persistent_stdin(item, msg["filter_id"], msg["data"])
         elif msg_type == "stdout":
@@ -340,6 +342,8 @@ class SpineEngineWorker(QObject):
                 item, msg["filter_id"], "msg", f"*** Starting execution on persistent process <b>{msg['args']}</b> ***"
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages")
+        else:
+            raise RuntimeError(f"Logic error: unknown persistent execution msg_type '{msg_type}'")
 
     def _handle_kernel_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]] or self._connections.get(msg["item_name"])

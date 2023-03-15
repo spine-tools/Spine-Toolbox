@@ -2426,6 +2426,9 @@ class ToolboxUI(QMainWindow):
             d[filter_id] = self._make_persistent_console(item, key, language)
         self.override_console_and_execution_list()
 
+    def persistent_killed(self, item, filter_id):
+        self._get_console(item, filter_id).set_killed(True)
+
     def add_persistent_stdin(self, item, filter_id, data):
         self._get_console(item, filter_id).add_stdin(data)
 

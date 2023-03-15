@@ -584,7 +584,7 @@ class SpineDBManager(QObject):
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            worker.reset_fetch_parets()
+            worker.reset_queries()
         self.session_refreshed.emit(refreshed_db_maps)
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
