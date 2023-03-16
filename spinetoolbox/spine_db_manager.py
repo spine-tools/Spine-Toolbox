@@ -212,7 +212,7 @@ class SpineDBManager(QObject):
             self.update_icons(db_map_data)
         for db_map, items in db_map_data.items():
             table_cache = db_map.cache.table_cache(item_type)
-            new_db_map_data[db_map] = [table_cache.add_item(item) for item in items]
+            new_db_map_data[db_map] = [table_cache.add_item(item, keep_existing=True) for item in items]
         return new_db_map_data
 
     def update_items_in_cache(self, item_type, db_map_data):
