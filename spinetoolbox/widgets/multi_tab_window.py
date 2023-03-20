@@ -40,7 +40,7 @@ class MultiTabWindow(QMainWindow):
         self.settings_group = settings_group
         self.tab_widget = QTabWidget(self)
         self.tab_bar = TabBarPlus(self)
-        self.tab_widget.setTabBar(self.tab_bar)
+        self.tab_widget.setTabBar(self.tab_bar)  # This sets mouseTracking on for self.tab_bar. Bug in pyqtdarktheme.
         self.setCentralWidget(self.tab_widget)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self._hot_spot = None
@@ -515,6 +515,9 @@ class TabBarPlus(QTabBar):
 
     def mouseMoveEvent(self, event):
         """Detaches a tab either if the user moves beyond the limits of the tab bar, or if it's the only one."""
+        print(f"mouseTracking:{self.hasMouseTracking()} self._hot_spot_y:{self._hot_spot_y}")
+        if not self._hot_spot_y:  # This is a hacky effort to deal with the bug in pyqtdarktheme
+            return
         if self.count() > 0:
             self._plus_button.hide()
         if self.count() == 1:

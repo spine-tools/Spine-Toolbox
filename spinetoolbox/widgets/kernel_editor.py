@@ -36,7 +36,6 @@ from spinetoolbox.helpers import (
     ensure_window_is_on_screen,
     get_datetime,
 )
-from spinetoolbox.config import MAINWINDOW_SS
 from spinetoolbox.logger_interface import LoggerInterface
 from spinetoolbox.helpers import unique_name
 
@@ -74,7 +73,6 @@ class KernelEditorBase(QDialog):
         This can be removed when SettingsWidget
         inherits stylesheet from ToolboxUI."""
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        self.setStyleSheet(MAINWINDOW_SS)
 
     def connect_signals(self):
         """Connects signals to slots."""

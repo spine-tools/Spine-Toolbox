@@ -57,6 +57,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
 )
+import qdarktheme
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .project_item_icon import ProjectItemIcon
@@ -82,7 +83,7 @@ from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_engine_manager import make_engine_manager
-from .config import MAINWINDOW_SS, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL
+from .config import DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL
 from .helpers import (
     create_dir,
     ensure_window_is_on_screen,
@@ -155,8 +156,6 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._share_item_edit_actions()
         self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
-        # Set style sheets
-        self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
         self._item_categories = dict()
@@ -231,6 +230,7 @@ class ToolboxUI(QMainWindow):
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
+        qdarktheme.setup_theme("auto")
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
