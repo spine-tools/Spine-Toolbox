@@ -16,7 +16,7 @@ The FetchParent and FlexibleFetchParent classes.
 :date:   18.11.2022
 """
 
-from PySide6.QtCore import QTimer, Signal, Slot, QObject
+from PySide6.QtCore import QTimer, Signal, QObject
 from .helpers import busy_effect
 
 
@@ -83,10 +83,6 @@ class FetchParent(QObject):
     def increment_position(self, db_map):
         self._position[db_map] += 1
 
-    @Slot()
-    def _do_apply_pending_changes(self):
-        self._apply_pending_changes()
-
     @busy_effect
     def _apply_pending_changes(self):
         if self.is_obsolete:
@@ -102,15 +98,15 @@ class FetchParent(QObject):
             self.handle_items_removed({db_map: data})
         QTimer.singleShot(0, lambda: self.set_busy(False))
 
-    def add_item(self, db_map, item):
+    def add_item(self, item, db_map):
         self._items_to_add.setdefault(db_map, []).append(item)
         self._changes_pending.emit()
 
-    def update_item(self, db_map, item):
+    def update_item(self, item, db_map):
         self._items_to_update.setdefault(db_map, []).append(item)
         self._changes_pending.emit()
 
-    def remove_item(self, db_map, item):
+    def remove_item(self, item, db_map):
         self._items_to_remove.setdefault(db_map, []).append(item)
         self._changes_pending.emit()
 
@@ -126,10 +122,24 @@ class FetchParent(QObject):
     # pylint: disable=no-self-use
     def accepts_item(self, item, db_map):
         """Called by the associated SpineDBWorker whenever items are fetched and also added/updated/removed.
-        Returns whether this parent should accept that item as a children.
+        Returns whether this parent accepts that item as a children.
 
         In case of modifications, the SpineDBWorker will call one or more of ``handle_items_added()``,
         ``handle_items_updated()``, or ``handle_items_removed()`` with all the items that pass this test.
+
+        Args:
+            item (dict): The item
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            bool
+        """
+        return True
+
+    # pylint: disable=no-self-use
+    def shows_item(self, item, db_map):
+        """Called by the associated SpineDBWorker whenever items are fetched and accepted.
+        Returns whether this parent will show this item to the user.
 
         Args:
             item (dict): The item
@@ -244,12 +254,14 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         handle_items_removed=None,
         handle_items_updated=None,
         accepts_item=None,
+        shows_item=None,
         will_have_children_change=None,
         owner=None,
         chunk_size=1000,
     ):
         super().__init__(fetch_item_type, owner=owner, chunk_size=chunk_size)
         self._accepts_item = accepts_item
+        self._shows_item = shows_item
         self._handle_items_added = handle_items_added
         self._handle_items_removed = handle_items_removed
         self._handle_items_updated = handle_items_updated
@@ -274,6 +286,11 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         if self._accepts_item is None:
             return super().accepts_item(item, db_map)
         return self._accepts_item(item, db_map)
+
+    def shows_item(self, item, db_map):
+        if self._shows_item is None:
+            return super().shows_item(item, db_map)
+        return self._shows_item(item, db_map)
 
     def will_have_children_change(self):
         if self._will_have_children_change is None:

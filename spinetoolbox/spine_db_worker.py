@@ -271,8 +271,9 @@ class SpineDBWorker(QObject):
             if parent.accepts_item(item, self._db_map):
                 self._bind_item(parent, item)
                 if item.is_valid():
-                    parent.add_item(self._db_map, item)
-                    added_count += 1
+                    parent.add_item(item, self._db_map)
+                    if parent.shows_item(item, self._db_map):
+                        added_count += 1
                 if added_count == parent.chunk_size:
                     break
         if parent.chunk_size is None:
@@ -288,21 +289,21 @@ class SpineDBWorker(QObject):
         if parent.is_obsolete:
             self._add_item_callbacks.pop(parent, None)
             return False
-        parent.add_item(self._db_map, item)
+        parent.add_item(item, self._db_map)
         return True
 
     def _update_item(self, parent, item):
         if parent.is_obsolete:
             self._update_item_callbacks.pop(parent, None)
             return False
-        parent.update_item(self._db_map, item)
+        parent.update_item(item, self._db_map)
         return True
 
     def _remove_item(self, parent, item):
         if parent.is_obsolete:
             self._remove_item_callbacks.pop(parent, None)
             return False
-        parent.remove_item(self._db_map, item)
+        parent.remove_item(item, self._db_map)
         return True
 
     def _make_add_item_callback(self, parent):
