@@ -56,6 +56,7 @@ class TabularViewMixin:
             self._INDEX_EXPANSION: IndexExpansionPivotTableModel(self),
             self._SCENARIO_ALTERNATIVE: ScenarioAlternativePivotTableModel(self),
         }
+        self._pending_reload = False
         self.current_class_id = {}  # Mapping from db_map to class_id
         self.current_class_name = None
         self.current_input_type = self._PARAMETER_VALUE
@@ -94,7 +95,6 @@ class TabularViewMixin:
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
         self.pivot_action_group.triggered.connect(self._handle_pivot_action_triggered)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
-        self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
         self.db_mngr.items_updated.connect(self._reload_pivot_table_if_needed)
 
     def refresh_views(self):
@@ -198,8 +198,9 @@ class TabularViewMixin:
     @Slot("QAction")
     def _handle_pivot_action_triggered(self, action):
         self.current_input_type = action.text()
-        # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed`
-        # with `visible = True`. See `SpineDBEditor` class.
+        # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed` with `visible = True`
+        # See `SpineDBEditor` class.
+        self.do_reload_pivot_table()
 
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
@@ -207,21 +208,15 @@ class TabularViewMixin:
             for action in self.pivot_actions.values():
                 action.setChecked(False)
             return
-        self.pivot_actions[self.current_input_type].setChecked(True)
-        self.ui.dockWidget_frozen_table.setVisible(True)
-        self.do_reload_pivot_table()
-
-    @Slot(bool)
-    def _handle_frozen_table_visibility_changed(self, visible):
-        if visible:
-            self.ui.dockWidget_pivot_table.show()
+        if self._pending_reload:
+            self.do_reload_pivot_table()
 
     @Slot(dict)
     def _handle_entity_tree_selection_changed(self, selected_indexes):
         super()._handle_entity_tree_selection_changed(selected_indexes)
         current_index = self.ui.treeView_entity.currentIndex()
         self._update_class_attributes(current_index)
-        if self.current_input_type != self._SCENARIO_ALTERNATIVE and self.ui.dockWidget_pivot_table.isVisible():
+        if self.current_input_type != self._SCENARIO_ALTERNATIVE:
             self.do_reload_pivot_table()
 
     def _update_class_attributes(self, current_index):
@@ -234,7 +229,6 @@ class TabularViewMixin:
             return
         self.current_class_id = class_id
         self.current_class_name = current_class_item.display_data
-        self.clear_pivot_table()
 
     @staticmethod
     def _get_current_class_item(current_index):
@@ -533,6 +527,12 @@ class TabularViewMixin:
         """Reloads pivot table."""
         if not self._can_build_pivot_table():
             return
+        if not self.ui.dockWidget_pivot_table.isVisible():
+            self._pending_reload = True
+            return
+        self.pivot_actions[self.current_input_type].setChecked(True)
+        self.ui.dockWidget_frozen_table.setVisible(True)
+        self._pending_reload = False
         self.pivot_table_model = self._pivot_table_models[self.current_input_type]
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
         self.pivot_table_model.modelReset.connect(self.make_pivot_headers)

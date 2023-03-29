@@ -114,6 +114,8 @@ class CompoundTableModel(MinimalTableModel):
         self.layoutAboutToBeChanged.emit()
         self._do_refresh()
         self.layoutChanged.emit()
+        if self.canFetchMore(QModelIndex()):
+            self.fetchMore(QModelIndex())
 
     def _do_refresh(self):
         """Recomputes the row and inverse row maps."""

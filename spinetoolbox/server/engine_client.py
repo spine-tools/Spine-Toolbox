@@ -295,6 +295,15 @@ class EngineClient:
         data = persistent_key, "interrupt_persistent", ""
         return self.send_request_to_persistent(data)
 
+    def send_kill_persistent(self, persistent_key):
+        """Sends kill persistent cmd to persistent execution manager backend on server.
+
+        Args:
+            persistent_key (tuple): persistent manager identifier
+        """
+        data = persistent_key, "kill_persistent", ""
+        return self.send_request_to_persistent(data)
+
     def send_request_to_persistent(self, data):
         """Sends given data containing persistent_key, command, cmd_to_persistent to
         Spine Engine Server to be processed by a persistent execution manager backend.

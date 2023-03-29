@@ -16,7 +16,6 @@ The SpineDBWorker class
 :date:   2.10.2019
 """
 from functools import wraps
-import itertools
 from PySide6.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from .helpers import busy_effect, separate_metadata_and_item_metadata
@@ -48,22 +47,6 @@ def _db_map_lock(func):
     return new_function
 
 
-def _by_chunks(it):
-    """
-    Iterate given iterator by chunks.
-
-    Args:
-        it (Iterable)
-    Yields:
-        list: chunk of items
-    """
-    while True:
-        chunk = list(itertools.islice(it, _CHUNK_SIZE))
-        yield chunk
-        if not chunk:
-            break
-
-
 class SpineDBWorker(QObject):
     """Does all the communication with a certain DB for SpineDBManager, in a non-GUI thread."""
 
@@ -81,7 +64,7 @@ class SpineDBWorker(QObject):
         self._db_map = None
         self._committing = False
         self._current_fetch_token = 0
-        self._queries = {}
+        self._offsets = {}
         self._fetched_ids = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
@@ -120,13 +103,10 @@ class SpineDBWorker(QObject):
     def reset_queries(self):
         """Resets queries and clears caches."""
         self._current_fetch_token += 1
-        self._queries.clear()
+        self._offsets.clear()
         self._fetched_ids.clear()
         self._fetched_item_types.clear()
         self._advance_query_callbacks.clear()
-
-    def reset_fetch_parets(self):
-        self._current_fetch_token += 1
 
     def _reset_fetching_if_required(self, parent):
         """Sets fetch parent's token or resets the parent if fetch tokens don't match.
@@ -186,17 +166,14 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if new items were fetched from the DB, False otherwise.
         """
-        if item_type not in self._queries:
-            try:
-                sq_name = self._db_map.cache_sqs[item_type]
-            except KeyError:
-                return False
-            query = self._db_map.query(getattr(self._db_map, sq_name))
-            self._queries[item_type] = _by_chunks(
-                x._asdict() for x in query.yield_per(_CHUNK_SIZE).enable_eagerloads(False)
-            )
-        query = self._queries[item_type]
-        chunk = next(query, [])
+        try:
+            sq_name = self._db_map.cache_sqs[item_type]
+        except KeyError:
+            return False
+        offset = self._offsets.setdefault(item_type, 0)
+        query = self._db_map.query(getattr(self._db_map, sq_name)).limit(_CHUNK_SIZE).offset(offset)
+        chunk = [x._asdict() for x in query]
+        self._offsets[item_type] += len(chunk)
         if not chunk:
             self._fetched_item_types.add(item_type)
         else:
@@ -294,8 +271,9 @@ class SpineDBWorker(QObject):
             if parent.accepts_item(item, self._db_map):
                 self._bind_item(parent, item)
                 if item.is_valid():
-                    parent.add_item(self._db_map, item)
-                    added_count += 1
+                    parent.add_item(item, self._db_map)
+                    if parent.shows_item(item, self._db_map):
+                        added_count += 1
                 if added_count == parent.chunk_size:
                     break
         if parent.chunk_size is None:
@@ -311,21 +289,21 @@ class SpineDBWorker(QObject):
         if parent.is_obsolete:
             self._add_item_callbacks.pop(parent, None)
             return False
-        parent.add_item(self._db_map, item)
+        parent.add_item(item, self._db_map)
         return True
 
     def _update_item(self, parent, item):
         if parent.is_obsolete:
             self._update_item_callbacks.pop(parent, None)
             return False
-        parent.update_item(self._db_map, item)
+        parent.update_item(item, self._db_map)
         return True
 
     def _remove_item(self, parent, item):
         if parent.is_obsolete:
             self._remove_item_callbacks.pop(parent, None)
             return False
-        parent.remove_item(self._db_map, item)
+        parent.remove_item(item, self._db_map)
         return True
 
     def _make_add_item_callback(self, parent):

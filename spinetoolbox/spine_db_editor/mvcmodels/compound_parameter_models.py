@@ -52,6 +52,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_timer.timeout.connect(self.refresh)
         self._fetch_parent = FlexibleFetchParent(
             self.item_type,
+            shows_item=self.shows_item,
             handle_items_added=self.handle_items_added,
             handle_items_removed=self.handle_items_removed,
             handle_items_updated=self.handle_items_updated,
@@ -67,6 +68,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def fetchMore(self, _parent):
         for db_map in self.db_maps:
             self.db_mngr.fetch_more(db_map, self._fetch_parent)
+
+    def shows_item(self, item, db_map):
+        return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
 
     def _make_header(self):
         raise NotImplementedError()
