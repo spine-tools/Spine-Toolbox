@@ -24,7 +24,6 @@ import functools
 from operator import methodcaller, itemgetter
 from typing import Dict, List, Optional, Union
 
-from matplotlib.container import BarContainer
 from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
@@ -294,11 +293,11 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
     _limit_string_x_tick_labels(squeezed_data, plot_widget)
     y_labels = sorted({xy_data.y_label for xy_data in data_list})
     if len(y_labels) == 1 or _always_single_y_axis(plot_type):
-        legend_handles = _plot_single_y_axis(squeezed_data, y_labels[0], plot_widget, plot_type)
+        legend_handles = _plot_single_y_axis(squeezed_data, y_labels[0], plot_widget.canvas.axes, plot_type)
     elif len(y_labels) == 2:
         legend_handles = _plot_double_y_axis(squeezed_data, y_labels, plot_widget, plot_type)
     else:
-        legend_handles = _plot_single_y_axis(squeezed_data, "", plot_widget, plot_type)
+        legend_handles = _plot_single_y_axis(squeezed_data, "", plot_widget.canvas.axes, plot_type)
     plot_widget.canvas.axes.set_xlabel(squeezed_data[0].x_label.label)
     plot_title = " | ".join(map(str, common_indexes))
     plot_widget.canvas.axes.set_title(plot_title)
@@ -310,40 +309,40 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
     return plot_widget
 
 
-def _plot_single_y_axis(data_list, y_label, plot_widget, plot_type):
+def _plot_single_y_axis(data_list, y_label, axes, plot_type):
     """Plots all data on single y-axis.
 
     Args:
         data_list (list of XYData): data to plot
         y_label (str): y-axis label
-        plot_widget (PlotWidget): plot widget
+        axes (Axes): plot axes
         plot_type (PlotType): plot type
 
     Returns:
         list: legend handles
     """
     if plot_type == PlotType.STACKED_LINE:
-        return _plot_stacked_line(data_list, y_label, plot_widget)
+        return _plot_stacked_line(data_list, y_label, axes)
+    elif plot_type == PlotType.BAR:
+        return _plot_bar(data_list, y_label, axes)
     legend_handles = []
-    plot = _make_plot_function(plot_type, type(data_list[0].x[0]), plot_widget.canvas.axes)
+    plot = _make_plot_function(plot_type, type(data_list[0].x[0]), axes)
     for data in data_list:
         plot_label = " | ".join(map(str, data.data_index))
         x = _make_x_plottable(data.x)
         handles = plot(x, data.y, label=plot_label)
-        if isinstance(handles, BarContainer):
-            handles = [Patch(color=handles.patches[0].get_facecolor(), label=plot_label)]
         legend_handles += handles
-    plot_widget.canvas.axes.set_ylabel(y_label)
+    axes.set_ylabel(y_label)
     return legend_handles
 
 
-def _plot_stacked_line(data_list, y_label, plot_widget):
+def _plot_stacked_line(data_list, y_label, axes):
     """Plots all data as stacked lines.
 
     Args:
         data_list (list of XYData): data to plot
         y_label (str): y-axis label
-        plot_widget (PlotWidget): plot widget
+        axes (Axes): plot axes
 
     Returns:
         list: legend handles
@@ -353,9 +352,38 @@ def _plot_stacked_line(data_list, y_label, plot_widget):
     x = _make_x_plottable(data_list[0].x)
     y = [data.y for data in data_list]
     labels = [" | ".join(map(str, data.data_index)) for data in data_list]
-    handles = plot_widget.canvas.axes.stackplot(x, y, labels=labels, **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
-    plot_widget.canvas.axes.set_ylabel(y_label)
+    handles = axes.stackplot(x, y, labels=labels, **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
+    axes.set_ylabel(y_label)
     return handles
+
+
+def _plot_bar(data_list, y_label, axes):
+    """Plots all data as bars.
+
+    Args:
+        data_list (list of XYData): data to plot
+        y_label (str): y-axis label
+        axes (Axes): plot axes
+
+    Returns:
+        list: legend handles
+    """
+    legend_handles = []
+    plot_kwargs = dict(axes=axes, **_BASE_SETTINGS)
+    data_list, bar_width, x_ticks = _group_bars(data_list)
+    if bar_width is not None:
+        plot_kwargs["width"] = bar_width
+    for data in data_list:
+        plot_kwargs["label"] = " | ".join(map(str, data.data_index))
+        x = _make_x_plottable(data.x)
+        handles = _bar(x, data.y, **plot_kwargs)
+        legend_handles += handles
+    if x_ticks is not None:
+        axes.set_xticks(*x_ticks)
+    if axes.get_ylim()[0] < 0:
+        axes.axhline(linewidth=1, color="black")
+    axes.set_ylabel(y_label)
+    return legend_handles
 
 
 def _plot_double_y_axis(data_list, y_labels, plot_widget, plot_type):
@@ -412,7 +440,7 @@ class _PlotStackedBars:
         for key, h in zip(x, height):
             cumulative = self._cumulative_height.get(key, 0.0)
             self._cumulative_height[key] = cumulative + h
-        return self._axes.bar(x, height, bottom=bottom, **_BASE_SETTINGS, **kwargs)
+        return _bar(x, height, self._axes, bottom=bottom, **_BASE_SETTINGS, **kwargs)
 
 
 def _make_plot_function(plot_type, x_data_type, axes):
@@ -432,8 +460,6 @@ def _make_plot_function(plot_type, x_data_type, axes):
         return functools.partial(_plot_or_step(x_data_type, axes), **_SCATTER_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
     if plot_type == PlotType.LINE:
         return functools.partial(_plot_or_step(x_data_type, axes), **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
-    if plot_type == PlotType.BAR:
-        return functools.partial(axes.bar, **_BASE_SETTINGS)
     if plot_type == PlotType.STACKED_BAR:
         return _PlotStackedBars(axes)
     raise RuntimeError(f"Unknown plot type '{plot_type}'")
@@ -449,6 +475,43 @@ def _plot_or_step(x_data_type, axes):
     if x_data_type in (np.datetime64, datetime.datetime, datetime.date, datetime.time):
         return axes.step
     return axes.plot
+
+
+def _bar(x, y, axes, **kwargs):
+    """Plots bar chart on axes but returns patches instead of bar container.
+
+    Args:
+        x (Any): x data
+        y (Any): y data
+        axes (Axes): plot axes
+        **kwargs: keyword arguments passed to bar()
+
+    Returns:
+        list of Patch: patches
+    """
+    bar_container = axes.bar(x, y, **kwargs)
+    return [Patch(color=bar_container.patches[0].get_facecolor(), label=kwargs["label"])]
+
+
+def _group_bars(data_list):
+    """Gives data with same x small offsets to prevent bar stacking.
+
+    Args:
+        data_list (List of XYData): squeezed data
+
+    Returns:
+        tuple: grouped data, bar width and x ticks
+    """
+    if len(data_list) < 2:
+        return data_list, None, None
+    ticks = np.arange(len(data_list[0].x))
+    bar_width = 1 / (len(data_list) + 1)
+    offset = bar_width * (len(data_list) - 1) / 2
+    shifted_data = []
+    for step, xy_data in enumerate(data_list):
+        x = list(ticks + (step * bar_width - offset))
+        shifted_data.append(replace(xy_data, x=x))
+    return shifted_data, bar_width, (ticks, data_list[0].x)
 
 
 def _clear_plot(plot_widget):
