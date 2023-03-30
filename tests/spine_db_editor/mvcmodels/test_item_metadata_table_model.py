@@ -55,17 +55,15 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         import_objects(db_map, (("my_class", "my_object"),))
         import_object_parameters(db_map, (("my_class", "object_parameter"),))
         import_object_parameter_values(db_map, (("my_class", "my_object", "object_parameter", 2.3),))
-        import_relationship_classes(db_map, (("relationship_class", ("my_class",)),))
-        import_relationships(db_map, (("relationship_class", ("my_object",)),))
-        import_relationship_parameters(db_map, (("relationship_class", "relationship_parameter"),))
-        import_relationship_parameter_values(
-            db_map, (("relationship_class", ("my_object",), "relationship_parameter", 5.0),)
-        )
+        import_relationship_classes(db_map, (("entity_class", ("my_class",)),))
+        import_relationships(db_map, (("entity_class", ("my_object",)),))
+        import_relationship_parameters(db_map, (("entity_class", "relationship_parameter"),))
+        import_relationship_parameter_values(db_map, (("entity_class", ("my_object",), "relationship_parameter", 5.0),))
         import_metadata(db_map, ('{"source": "Fountain of objects"}',))
         import_object_metadata(db_map, (("my_class", "my_object", '{"source": "Fountain of objects"}'),))
         import_metadata(db_map, ('{"source": "Fountain of relationships"}',))
         import_relationship_metadata(
-            db_map, (("relationship_class", ("my_object",), '{"source": "Fountain of relationships"}'),)
+            db_map, (("entity_class", ("my_object",), '{"source": "Fountain of relationships"}'),)
         )
         import_metadata(db_map, ('{"source": "Fountain of object values"}',))
         import_object_parameter_value_metadata(
@@ -76,7 +74,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
             db_map,
             (
                 (
-                    "relationship_class",
+                    "entity_class",
                     ("my_object",),
                     "relationship_parameter",
                     '{"source": "Fountain of relationship values"}',

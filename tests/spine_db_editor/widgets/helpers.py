@@ -17,7 +17,7 @@ from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication
 
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog, AddObjectsDialog
+from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, AddEntitiesDialog
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.widgets.custom_editors import SearchBarEditor
 from ...mock_helpers import TestSpineDBManager
@@ -107,7 +107,8 @@ def add_entity_tree_item(item_names, view, menu_action_text, dialog_class):
 
 
 def add_object_class(view, class_name):
-    add_entity_tree_item({0: class_name}, view, "Add object classes", AddObjectClassesDialog)
+    view._context_item = view.model().root_item
+    add_entity_tree_item({0: class_name}, view, "Add entity classes", AddEntityClassesDialog)
 
 
 def add_object(view, object_name, object_class_index=0):
@@ -115,7 +116,7 @@ def add_object(view, object_name, object_class_index=0):
     root_index = model.index(0, 0)
     class_index = model.index(object_class_index, 0, root_index)
     view._context_item = model.item_from_index(class_index)
-    add_entity_tree_item({1: object_name}, view, "Add objects", AddObjectsDialog)
+    add_entity_tree_item({0: object_name}, view, "Add entities", AddEntitiesDialog)
 
 
 class TestBase(unittest.TestCase):

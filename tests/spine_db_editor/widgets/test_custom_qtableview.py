@@ -31,7 +31,7 @@ class TestParameterTableView(TestBase):
         self._common_tear_down()
 
     def test_remove_last_empty_row(self):
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         index = model.index(0, 0)
         selection_model = table_view.selectionModel()
@@ -41,10 +41,10 @@ class TestParameterTableView(TestBase):
         self.assertEqual(model.rowCount(), 1)
 
     def test_remove_rows_from_empty_model(self):
-        tree_view = self._db_editor.ui.treeView_object
+        tree_view = self._db_editor.ui.treeView_entity
         add_object_class(tree_view, "an_object_class")
         add_object(tree_view, "an_object")
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
         index = model.index(0, 0)
@@ -76,17 +76,17 @@ class TestParameterTableView(TestBase):
         self.assertFalse(selection_model.hasSelection())
 
     def test_removing_row_does_not_allow_fetching_more_data(self):
-        tree_view = self._db_editor.ui.treeView_object
+        tree_view = self._db_editor.ui.treeView_entity
         add_object_class(tree_view, "an_object_class")
         add_object(tree_view, "object_1")
         add_object(tree_view, "object_2")
-        definition_table_view = self._db_editor.ui.tableView_object_parameter_definition
+        definition_table_view = self._db_editor.ui.tableView_parameter_definition
         definition_model = definition_table_view.model()
         delegate_mock = EditorDelegateMocking()
         delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 0), "an_object_class")
         delegate_mock.reset()
         delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
         _set_row_data(table_view, model, 0, ["an_object_class", "object_1", "a_parameter", "Base"], delegate_mock)
@@ -116,16 +116,16 @@ class TestParameterTableView(TestBase):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_receiving_uncommitted_but_existing_value_does_not_create_duplicate_entry(self):
-        tree_view = self._db_editor.ui.treeView_object
+        tree_view = self._db_editor.ui.treeView_entity
         add_object_class(tree_view, "an_object_class")
         add_object(tree_view, "an_object")
-        definition_table_view = self._db_editor.ui.tableView_object_parameter_definition
+        definition_table_view = self._db_editor.ui.tableView_parameter_definition
         definition_model = definition_table_view.model()
         delegate_mock = EditorDelegateMocking()
         delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 0), "an_object_class")
         delegate_mock.reset()
         delegate_mock.write_to_index(definition_table_view, definition_model.index(0, 1), "a_parameter")
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
         _set_row_data(table_view, model, 0, ["an_object_class", "an_object", "a_parameter", "Base"], delegate_mock)
@@ -146,18 +146,18 @@ class TestParameterTableView(TestBase):
 
     @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=1)
     def test_incremental_fetching_groups_values_by_entity_class(self):
-        tree_view = self._db_editor.ui.treeView_object
+        tree_view = self._db_editor.ui.treeView_entity
         add_object_class(tree_view, "object_1_class")
         add_object(tree_view, "an_object_1")
         add_object(tree_view, "another_object_1")
         add_object_class(tree_view, "object_2_class")
         add_object(tree_view, "an_object_2", object_class_index=1)
-        definition_table_view = self._db_editor.ui.tableView_object_parameter_definition
+        definition_table_view = self._db_editor.ui.tableView_parameter_definition
         definition_model = definition_table_view.model()
         delegate_mock = EditorDelegateMocking()
         _set_row_data(definition_table_view, definition_model, 0, ["object_1_class", "parameter_1"], delegate_mock)
         _set_row_data(definition_table_view, definition_model, 1, ["object_2_class", "parameter_2"], delegate_mock)
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
         _set_row_data(
@@ -223,7 +223,7 @@ class TestParameterTableWithExistingData(TestBase):
         db_map.commit_session("Add test data.")
         db_map.connection.close()
         self._common_setup(url, create=False)
-        model = self._db_editor.ui.tableView_object_parameter_value.model()
+        model = self._db_editor.ui.tableView_parameter_value.model()
         while model.rowCount() != self._CHUNK_SIZE + 1:
             # Wait for fetching to finish.
             QApplication.processEvents()
@@ -233,14 +233,14 @@ class TestParameterTableWithExistingData(TestBase):
         self._temp_dir.cleanup()
 
     def test_purging_value_data_removes_all_rows(self):
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 1)
 
     def test_purging_value_data_leaves_empty_rows_intact(self):
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
         delegate_mock = EditorDelegateMocking()
@@ -257,7 +257,7 @@ class TestParameterTableWithExistingData(TestBase):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_removing_fetched_rows_allows_still_fetching_more(self):
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
         n_values = self._n_parameters * self._n_objects
@@ -265,7 +265,7 @@ class TestParameterTableWithExistingData(TestBase):
         self.assertEqual(model.rowCount(), (self._CHUNK_SIZE) / 2 + 1)
 
     def test_undoing_purge(self):
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
@@ -288,7 +288,7 @@ class TestParameterTableWithExistingData(TestBase):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_rolling_back_purge(self):
-        table_view = self._db_editor.ui.tableView_object_parameter_value
+        table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})

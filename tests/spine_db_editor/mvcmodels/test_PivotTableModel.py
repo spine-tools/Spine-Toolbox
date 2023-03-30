@@ -37,10 +37,10 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         with patch.object(SpineDBEditor, "restore_ui"):
             self._editor = SpineDBEditor(self._db_mngr, {"sqlite://": db_map.codename})
         data = {
-            "object_classes": ("class1",),
-            "object_parameters": (("class1", "parameter1"), ("class1", "parameter2")),
-            "objects": (("class1", "object1"), ("class1", "object2")),
-            "object_parameter_values": (
+            "entity_classes": (("class1",),),
+            "parameter_definitions": (("class1", "parameter1"), ("class1", "parameter2")),
+            "entities": (("class1", "object1"), ("class1", "object2")),
+            "parameter_values": (
                 ("class1", "object1", "parameter1", 1.0),
                 ("class1", "object2", "parameter1", 3.0),
                 ("class1", "object1", "parameter2", 5.0),
@@ -48,10 +48,10 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
             ),
         }
         self._db_mngr.import_data({db_map: data})
-        object_class_index = self._editor.object_tree_model.index(0, 0)
-        if self._editor.object_tree_model.canFetchMore(object_class_index):
-            self._editor.object_tree_model.fetchMore(object_class_index)
-        index = self._editor.object_tree_model.index(0, 0, object_class_index)
+        object_class_index = self._editor.entity_tree_model.index(0, 0)
+        if self._editor.entity_tree_model.canFetchMore(object_class_index):
+            self._editor.entity_tree_model.fetchMore(object_class_index)
+        index = self._editor.entity_tree_model.index(0, 0, object_class_index)
         self._editor._update_class_attributes(index)
         with patch.object(self._editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
             mock_is_visible.return_value = True
@@ -122,10 +122,10 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
         with patch.object(SpineDBEditor, "restore_ui"):
             self._editor = SpineDBEditor(self._db_mngr, {"sqlite://": db_map.codename})
         data = {
-            "object_classes": ("class1",),
-            "object_parameters": (("class1", "parameter1"), ("class1", "parameter2")),
-            "objects": (("class1", "object1"), ("class1", "object2")),
-            "object_parameter_values": (
+            "entity_classes": (("class1",),),
+            "parameter_definitions": (("class1", "parameter1"), ("class1", "parameter2")),
+            "entities": (("class1", "object1"), ("class1", "object2")),
+            "parameter_values": (
                 ("class1", "object1", "parameter1", Map(["A", "B"], [1.1, 2.1])),
                 ("class1", "object2", "parameter1", Map(["C", "D"], [1.2, 2.2])),
                 ("class1", "object1", "parameter2", Map(["C", "D"], [-1.1, -2.1])),
@@ -133,10 +133,10 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
             ),
         }
         self._db_mngr.import_data({db_map: data})
-        object_class_index = self._editor.object_tree_model.index(0, 0)
-        if self._editor.object_tree_model.canFetchMore(object_class_index):
-            self._editor.object_tree_model.fetchMore(object_class_index)
-        index = self._editor.object_tree_model.index(0, 0, object_class_index)
+        object_class_index = self._editor.entity_tree_model.index(0, 0)
+        if self._editor.entity_tree_model.canFetchMore(object_class_index):
+            self._editor.entity_tree_model.fetchMore(object_class_index)
+        index = self._editor.entity_tree_model.index(0, 0, object_class_index)
         for action in self._editor.pivot_action_group.actions():
             if action.text() == self._editor._INDEX_EXPANSION:
                 action.trigger()

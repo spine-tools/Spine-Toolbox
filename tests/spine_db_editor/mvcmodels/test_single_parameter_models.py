@@ -17,12 +17,12 @@ from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE
 from spinetoolbox.spine_db_editor.mvcmodels.single_parameter_models import (
     SingleParameterModel,
-    SingleObjectParameterValueModel,
+    SingleParameterValueModel,
 )
 from tests.mock_helpers import q_object, TestSpineDBManager
 
 OBJECT_PARAMETER_VALUE_HEADER = [
-    "object_class_name",
+    "entity_class_name",
     "object_name",
     "parameter_name",
     "alternative_name",
@@ -48,7 +48,7 @@ class TestEmptySingleParameterModel(unittest.TestCase):
 
 class TestSingleObjectParameterValueModel(unittest.TestCase):
     OBJECT_PARAMETER_VALUE_HEADER = [
-        "object_class_name",
+        "entity_class_name",
         "object_name",
         "parameter_name",
         "alternative_name",
@@ -72,9 +72,9 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
         self._db_mngr.deleteLater()
 
     def test_data_db_map_role(self):
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "my_class"}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class"}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"entity_class_id": 1, "name": "my_parameter"}]})
-        self._db_mngr.add_objects({self._db_map: [{"class_id": 1, "name": "my_object"}]})
+        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "my_object"}]})
         value, type_ = to_database(2.3)
         self._db_mngr.add_parameter_values(
             {
@@ -91,7 +91,7 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
             }
         )
         with q_object(
-            SingleObjectParameterValueModel(OBJECT_PARAMETER_VALUE_HEADER, self._db_mngr, self._db_map, 1, True, False)
+            SingleParameterValueModel(OBJECT_PARAMETER_VALUE_HEADER, self._db_mngr, self._db_map, 1, True, False)
         ) as model:
             if model.canFetchMore(None):
                 model.fetchMore(None)

@@ -63,7 +63,7 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
                 "parameter_value_list": False,
                 "parameter_value_metadata": False,
                 "relationship": False,
-                "relationship_class": False,
+                "entity_class": False,
                 "scenario": False,
                 "scenario_alternative": False,
                 "tool": False,
@@ -75,10 +75,10 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
 
     def test_purge_objects(self):
         with signal_waiter(self._db_mngr.object_classes_added) as waiter:
-            self._db_mngr.add_object_classes({self._db_map: [{"name": "my_class"}]})
+            self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class"}]})
             waiter.wait()
         with signal_waiter(self._db_mngr.objects_added) as waiter:
-            self._db_mngr.add_objects({self._db_map: [{"class_id": 1, "name": "my_object"}]})
+            self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "my_object"}]})
             waiter.wait()
         self.assertEqual(
             self._db_mngr.get_items(self._db_map, "object"),

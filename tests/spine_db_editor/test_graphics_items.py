@@ -19,12 +19,12 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QPointF
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.graphics_items import RelationshipItem
+from spinetoolbox.spine_db_editor.graphics_items import EntityItem
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from ..mock_helpers import TestSpineDBManager
 
 
-class TestRelationshipItem(unittest.TestCase):
+class TestEntityItem(unittest.TestCase):
     _db_mngr = None
 
     @classmethod
@@ -44,12 +44,10 @@ class TestRelationshipItem(unittest.TestCase):
             self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
             self._spine_db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "database"})
             self._spine_db_editor.pivot_table_model = mock.MagicMock()
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "oc", "id": 1}]})
-        self._db_mngr.add_objects({self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
-        self._db_mngr.add_relationship_classes(
-            {self._db_map: [{"name": "rc", "id": 2, "object_class_id_list": [1], "object_class_name_list": "oc"}]}
-        )
-        self._db_mngr.add_relationships(
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
+        self._db_mngr.add_entities({self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "id": 2, "dimension_id_list": [1]}]})
+        self._db_mngr.add_entities(
             {
                 self._db_map: [
                     {
@@ -57,14 +55,13 @@ class TestRelationshipItem(unittest.TestCase):
                         "id": 2,
                         "class_id": 2,
                         "class_name": "rc",
-                        "object_id_list": [1],
-                        "object_name_list": ["o"],
+                        "element_id_list": [1],
                     }
                 ]
             }
         )
-        with mock.patch.object(RelationshipItem, "refresh_icon"):
-            self._item = RelationshipItem(self._spine_db_editor, 0.0, 0.0, 0, ((self._db_map, 2),))
+        with mock.patch.object(EntityItem, "refresh_icon"):
+            self._item = EntityItem(self._spine_db_editor, 0.0, 0.0, 0, ((self._db_map, 2),))
 
     @classmethod
     def tearDownClass(cls):
@@ -81,14 +78,8 @@ class TestRelationshipItem(unittest.TestCase):
         self._spine_db_editor.deleteLater()
         self._spine_db_editor = None
 
-    def test_entity_type(self):
-        self.assertEqual(self._item.entity_type, "relationship")
-
     def test_entity_name(self):
         self.assertEqual(self._item.entity_name, "r")
-
-    def test_entity_class_type(self):
-        self.assertEqual(self._item.entity_class_type, "relationship_class")
 
     def test_entity_class_id(self):
         self.assertEqual(self._item.entity_class_id(self._db_map), 2)
@@ -122,9 +113,7 @@ class TestRelationshipItem(unittest.TestCase):
                 'id': 2,
                 'class_id': 2,
                 'class_name': 'rc',
-                'object_id_list': (1,),
-                'object_name_list': ['o'],
-                'object_class_id_list': (1,),
+                'element_id_list': (1,),
                 'commit_id': 2,
             },
         )

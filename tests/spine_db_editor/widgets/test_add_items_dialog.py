@@ -25,7 +25,7 @@ import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog, ManageRelationshipsDialog
+from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, ManageElementsDialog
 from tests.spine_db_editor.widgets.helpers import TestBase
 
 
@@ -63,14 +63,16 @@ class TestAddItemsDialog(unittest.TestCase):
         self._db_editor = None
         self._temp_dir.cleanup()
 
-    def test_add_object_classes(self):
+    def test_add_entity_classes(self):
         """Test object classes are added through the manager when accepting the dialog."""
-        dialog = AddObjectClassesDialog(self._db_editor, self._db_mngr, self._db_map)
+        dialog = AddEntityClassesDialog(
+            self._db_editor, self._db_editor.entity_tree_model.root_item, self._db_mngr, self._db_map
+        )
         model = dialog.model
         header = model.header
         model.fetchMore(QModelIndex())
-        self.assertEqual(header, ['object_class name', 'description', 'display icon', 'databases'])
-        indexes = [model.index(0, header.index(field)) for field in ('object_class name', 'databases')]
+        self.assertEqual(header, ['entity class name', 'description', 'display icon', 'databases'])
+        indexes = [model.index(0, header.index(field)) for field in ('entity class name', 'databases')]
         values = ['fish', 'mock_db']
         model.batch_set_data(indexes, values)
         dialog.accept()
@@ -79,20 +81,22 @@ class TestAddItemsDialog(unittest.TestCase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "fish")
 
-    def test_do_not_add_object_classes_with_invalid_db(self):
+    def test_do_not_add_entity_classes_with_invalid_db(self):
         """Test object classes aren't added when the database is not correct."""
-        dialog = AddObjectClassesDialog(self._db_editor, self._db_mngr, self._db_map)
+        dialog = AddEntityClassesDialog(
+            self._db_editor, self._db_editor.entity_tree_model.root_item, self._db_mngr, self._db_map
+        )
         self._db_editor.msg_error = mock.NonCallableMagicMock()
         self._db_editor.msg_error.attach_mock(mock.MagicMock(), "emit")
         model = dialog.model
         header = model.header
         model.fetchMore(QModelIndex())
-        self.assertEqual(header, ['object_class name', 'description', 'display icon', 'databases'])
-        indexes = [model.index(0, header.index(field)) for field in ('object_class name', 'databases')]
+        self.assertEqual(header, ['entity class name', 'description', 'display icon', 'databases'])
+        indexes = [model.index(0, header.index(field)) for field in ('entity class name', 'databases')]
         values = ['fish', 'gibberish']
         model.batch_set_data(indexes, values)
         dialog.accept()
-        self._db_editor.msg_error.emit.assert_called_with("Invalid database 'gibberish' at row 1")
+        self._db_editor.msg_error.emit.assert_called_with("Invalid database gibberish at row 1")
 
     def _commit_changes_to_database(self, commit_message):
         with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
@@ -102,7 +106,7 @@ class TestAddItemsDialog(unittest.TestCase):
                 waiter.wait()
 
 
-class TestManageRelationshipsDialog(TestBase):
+class TestManageElementsDialog(TestBase):
     def setUp(self):
         self._common_setup("sqlite://", create=True)
 
@@ -110,8 +114,8 @@ class TestManageRelationshipsDialog(TestBase):
         self._common_tear_down()
 
     def test_add_relationship_among_existing_ones(self):
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "Object_1", "id": 1}, {"name": "Object_2", "id": 2}]})
-        self._db_mngr.add_objects(
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1", "id": 1}, {"name": "Object_2", "id": 2}]})
+        self._db_mngr.add_entities(
             {
                 self._db_map: [
                     {"class_id": 1, "name": "object_11"},
@@ -120,15 +124,13 @@ class TestManageRelationshipsDialog(TestBase):
                 ]
             }
         )
-        self._db_mngr.add_relationship_classes(
-            {self._db_map: [{"name": "rc", "id": 3, "object_class_id_list": [1, 2]}]}
-        )
-        self._db_mngr.add_relationships({self._db_map: [{"name": "r", "class_id": 3, "object_id_list": [1, 3]}]})
-        root_index = self._db_editor.relationship_tree_model.index(0, 0)
-        class_index = self._db_editor.relationship_tree_model.index(0, 0, root_index)
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "id": 3, "dimension_id_list": [1, 2]}]})
+        self._db_mngr.add_entities({self._db_map: [{"name": "r", "class_id": 3, "element_id_list": [1, 3]}]})
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        class_index = self._db_editor.entity_tree_model.index(2, 0, root_index)
         self.assertEqual(class_index.data(), "rc")
-        relationship_item = self._db_editor.relationship_tree_model.item_from_index(class_index)
-        dialog = ManageRelationshipsDialog(self._db_editor, relationship_item, self._db_mngr, self._db_map)
+        relationship_item = self._db_editor.entity_tree_model.item_from_index(class_index)
+        dialog = ManageElementsDialog(self._db_editor, relationship_item, self._db_mngr, self._db_map)
         self.assertEqual(dialog.existing_items_model.rowCount(), 1)
         self.assertEqual(dialog.existing_items_model.columnCount(), 2)
         self.assertEqual(dialog.existing_items_model.index(0, 0).data(), "object_11")
@@ -136,15 +138,15 @@ class TestManageRelationshipsDialog(TestBase):
         self.assertEqual(dialog.new_items_model.rowCount(), 0)
         for tree_widget in dialog.splitter_widgets():
             tree_widget.selectAll()
-        dialog.add_relationships()
+        dialog.add_entities()
         self.assertEqual(dialog.new_items_model.rowCount(), 1)
         self.assertEqual(dialog.new_items_model.columnCount(), 2)
         self.assertEqual(dialog.new_items_model.index(0, 0).data(), "object_12")
         self.assertEqual(dialog.new_items_model.index(0, 1).data(), "object_21")
 
     def test_accept_relationship_removal(self):
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "Object_1", "id": 1}, {"name": "Object_2", "id": 2}]})
-        self._db_mngr.add_objects(
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1", "id": 1}, {"name": "Object_2", "id": 2}]})
+        self._db_mngr.add_entities(
             {
                 self._db_map: [
                     {"class_id": 1, "name": "object_11"},
@@ -153,22 +155,20 @@ class TestManageRelationshipsDialog(TestBase):
                 ]
             }
         )
-        self._db_mngr.add_relationship_classes(
-            {self._db_map: [{"name": "rc", "id": 3, "object_class_id_list": [1, 2]}]}
-        )
-        self._db_mngr.add_relationships(
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "id": 3, "dimension_id_list": [1, 2]}]})
+        self._db_mngr.add_entities(
             {
                 self._db_map: [
-                    {"name": "r11", "class_id": 3, "object_id_list": [1, 3]},
-                    {"name": "r21", "class_id": 3, "object_id_list": [2, 3]},
+                    {"name": "r11", "class_id": 3, "element_id_list": [1, 3]},
+                    {"name": "r21", "class_id": 3, "element_id_list": [2, 3]},
                 ]
             }
         )
-        root_index = self._db_editor.relationship_tree_model.index(0, 0)
-        class_index = self._db_editor.relationship_tree_model.index(0, 0, root_index)
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        class_index = self._db_editor.entity_tree_model.index(2, 0, root_index)
         self.assertEqual(class_index.data(), "rc")
-        relationship_item = self._db_editor.relationship_tree_model.item_from_index(class_index)
-        dialog = ManageRelationshipsDialog(self._db_editor, relationship_item, self._db_mngr, self._db_map)
+        relationship_item = self._db_editor.entity_tree_model.item_from_index(class_index)
+        dialog = ManageElementsDialog(self._db_editor, relationship_item, self._db_mngr, self._db_map)
         self.assertEqual(dialog.existing_items_model.rowCount(), 2)
         self.assertEqual(dialog.existing_items_model.columnCount(), 2)
         self.assertEqual(dialog.existing_items_model.index(0, 0).data(), "object_11")
@@ -187,19 +187,10 @@ class TestManageRelationshipsDialog(TestBase):
         dialog.remove_selected_rows()
         self.assertEqual(dialog.existing_items_model.rowCount(), 1)
         dialog.accept()
-        relationships = self._db_mngr.get_items(self._db_map, "relationship")
+        relationships = [x for x in self._db_mngr.get_items(self._db_map, "entity") if x["element_id_list"]]
         self.assertEqual(
             relationships,
-            [
-                {
-                    'class_id': 3,
-                    'commit_id': 2,
-                    'id': 5,
-                    'name': 'r21',
-                    'object_class_id_list': (1, 2),
-                    'object_id_list': (2, 3),
-                }
-            ],
+            [{'class_id': 3, 'commit_id': 2, 'id': 5, 'name': 'r21', 'element_id_list': (2, 3)}],
         )
 
 

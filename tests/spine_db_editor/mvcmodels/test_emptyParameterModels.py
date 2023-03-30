@@ -28,10 +28,8 @@ from spinedb_api import (
     import_relationships,
 )
 from spinetoolbox.spine_db_editor.mvcmodels.empty_parameter_models import (
-    EmptyObjectParameterValueModel,
-    EmptyRelationshipParameterValueModel,
-    EmptyObjectParameterDefinitionModel,
-    EmptyRelationshipParameterDefinitionModel,
+    EmptyParameterValueModel,
+    EmptyParameterDefinitionModel,
 )
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinedb_api.parameter_value import join_value_and_type
@@ -63,21 +61,14 @@ class TestEmptyParameterModel(unittest.TestCase):
         self._db_map.commit_session("Add test data")
         self._db_mngr.fetch_all(self._db_map)
         self.object_table_header = [
-            "object_class_name",
-            "object_name",
+            "entity_class_name",
+            "entity_byname",
             "parameter_name",
             "alternative_id",
             "value",
             "database",
         ]
-        self.relationship_table_header = [
-            "relationship_class_name",
-            "object_name_list",
-            "parameter_name",
-            "alternative_id",
-            "value",
-            "database",
-        ]
+        self.relationship_table_header = self.object_table_header
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -86,7 +77,7 @@ class TestEmptyParameterModel(unittest.TestCase):
     def test_add_object_parameter_values_to_db(self):
         """Test that object parameter values are added to the db when editing the table."""
         header = self.object_table_header
-        model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
+        model = EmptyParameterValueModel(None, header, self._db_mngr)
         if model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
         self.assertTrue(
@@ -95,27 +86,27 @@ class TestEmptyParameterModel(unittest.TestCase):
                 ["dog", "pluto", "breed", 1, join_value_and_type(b'"bloodhound"', None), "mock_db"],
             )
         )
-        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["object_class_id"]]
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value")]
         self.assertEqual(len(values), 1)
-        self.assertEqual(values[0]["object_class_name"], "dog")
-        self.assertEqual(values[0]["object_name"], "pluto")
+        self.assertEqual(values[0]["entity_class_name"], "dog")
+        self.assertEqual(values[0]["entity_name"], "pluto")
         self.assertEqual(values[0]["parameter_name"], "breed")
         self.assertEqual(values[0]["value"], b'"bloodhound"')
 
     def test_do_not_add_invalid_object_parameter_values(self):
         """Test that object parameter values aren't added to the db if data is incomplete."""
         header = self.object_table_header
-        model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
+        model = EmptyParameterValueModel(None, header, self._db_mngr)
         if model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["fish", "nemo", "water", "salty", "mock_db"]))
-        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["object_class_id"]]
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if not x["dimension_id_list"]]
         self.assertEqual(values, [])
 
     def test_infer_class_from_object_and_parameter(self):
         """Test that object classes are inferred from the object and parameter if possible."""
         header = self.object_table_header
-        model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
+        model = EmptyParameterValueModel(None, header, self._db_mngr)
         if model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
         indexes = _empty_indexes(model)
@@ -125,17 +116,17 @@ class TestEmptyParameterModel(unittest.TestCase):
             )
         )
         self.assertEqual(indexes[0].data(), "dog")
-        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["object_class_id"]]
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if not x["dimension_id_list"]]
         self.assertEqual(len(values), 1)
-        self.assertEqual(values[0]["object_class_name"], "dog")
-        self.assertEqual(values[0]["object_name"], "pluto")
+        self.assertEqual(values[0]["entity_class_name"], "dog")
+        self.assertEqual(values[0]["entity_name"], "pluto")
         self.assertEqual(values[0]["parameter_name"], "breed")
         self.assertEqual(values[0]["value"], b'"bloodhound"')
 
     def test_add_relationship_parameter_values_to_db(self):
         """Test that relationship parameter values are added to the db when editing the table."""
         header = self.relationship_table_header
-        model = EmptyRelationshipParameterValueModel(None, header, self._db_mngr)
+        model = EmptyParameterValueModel(None, header, self._db_mngr)
         if model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
         self.assertTrue(
@@ -151,33 +142,35 @@ class TestEmptyParameterModel(unittest.TestCase):
                 ],
             )
         )
-        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["relationship_class_id"]]
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["dimension_id_list"]]
         self.assertEqual(len(values), 1)
-        self.assertEqual(values[0]["relationship_class_name"], "dog__fish")
-        self.assertEqual(values[0]["object_name_list"], ("pluto", "nemo"))
+        self.assertEqual(values[0]["entity_class_name"], "dog__fish")
+        self.assertEqual(values[0]["element_name_list"], ("pluto", "nemo"))
         self.assertEqual(values[0]["parameter_name"], "relative_speed")
         self.assertEqual(values[0]["value"], b"-1")
 
     def test_do_not_add_invalid_relationship_parameter_values(self):
         """Test that relationship parameter values aren't added to the db if data is incomplete."""
         header = self.relationship_table_header
-        model = EmptyRelationshipParameterValueModel(None, header, self._db_mngr)
+        model = EmptyParameterValueModel(None, header, self._db_mngr)
         if model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
         self.assertTrue(
             model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "combined_mojo", 100, "mock_db"])
         )
-        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["relationship_class_id"]]
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["dimension_id_list"]]
         self.assertEqual(values, [])
 
     def test_add_object_parameter_definitions_to_db(self):
         """Test that object parameter definitions are added to the db when editing the table."""
-        header = ["object_class_name", "parameter_name", "value_list_name", "database"]
-        model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
+        header = ["entity_class_name", "parameter_name", "value_list_name", "database"]
+        model = EmptyParameterDefinitionModel(None, header, self._db_mngr)
         if model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog", "color", None, "mock_db"]))
-        definitions = [x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["object_class_id"]]
+        definitions = [
+            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if not x["dimension_id_list"]
+        ]
         self.assertEqual(len(definitions), 2)
         names = {d["parameter_name"] for d in definitions}
         self.assertEqual(names, {"breed", "color"})
@@ -185,23 +178,25 @@ class TestEmptyParameterModel(unittest.TestCase):
     def test_do_not_add_invalid_object_parameter_definitions(self):
         """Test that object parameter definitions aren't added to the db if data is incomplete."""
         header = self.object_table_header
-        model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
+        model = EmptyParameterDefinitionModel(None, header, self._db_mngr)
         if model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["cat", "color", None, "mock_db"]))
-        definitions = [x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["object_class_id"]]
+        definitions = [
+            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if not x["dimension_id_list"]
+        ]
         self.assertEqual(len(definitions), 1)
         self.assertEqual(definitions[0]["parameter_name"], "breed")
 
     def test_add_relationship_parameter_definitions_to_db(self):
         """Test that relationship parameter definitions are added to the db when editing the table."""
-        header = ["relationship_class_name", "parameter_name", "value_list_name", "database"]
-        model = EmptyRelationshipParameterDefinitionModel(None, header, self._db_mngr)
+        header = ["entity_class_name", "parameter_name", "value_list_name", "database"]
+        model = EmptyParameterDefinitionModel(None, header, self._db_mngr)
         if model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", None, "mock_db"]))
         definitions = [
-            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["relationship_class_id"]
+            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["dimension_id_list"]
         ]
         self.assertEqual(len(definitions), 2)
         names = {d["parameter_name"] for d in definitions}
@@ -210,14 +205,14 @@ class TestEmptyParameterModel(unittest.TestCase):
     def test_do_not_add_invalid_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions aren't added to the db if data is incomplete."""
         header = self.relationship_table_header
-        model = EmptyRelationshipParameterDefinitionModel(None, header, self._db_mngr)
+        model = EmptyParameterDefinitionModel(None, header, self._db_mngr)
         if model.canFetchMore(QModelIndex()):
             model.fetchMore(QModelIndex())
         self.assertTrue(
             model.batch_set_data(_empty_indexes(model), ["fish__dog", "each_others_opinion", None, "mock_db"])
         )
         definitions = [
-            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["relationship_class_id"]
+            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["dimension_id_list"]
         ]
         self.assertEqual(len(definitions), 1)
         self.assertEqual(definitions[0]["parameter_name"], "relative_speed")

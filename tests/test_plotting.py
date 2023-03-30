@@ -88,20 +88,20 @@ class TestBase(unittest.TestCase):
         self._db_editor = None
 
     def _add_object_parameter_values(self, values):
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "class"}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "class"}]})
         self._db_mngr.add_parameter_definitions(
-            {self._db_map: [{"object_class_id": 1, "name": name} for name in values]}
+            {self._db_map: [{"entity_class_id": 1, "name": name} for name in values]}
         )
         object_count = max(len(x) for x in values.values())
-        self._db_mngr.add_objects({self._db_map: [{"class_id": 1, "name": f"o{i + 1}"} for i in range(object_count)]})
+        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": f"o{i + 1}"} for i in range(object_count)]})
         db_values = {
             name: [(value, type_) for value, type_ in map(to_database, value_list)]
             for name, value_list in values.items()
         }
         value_items = [
             {
-                "object_class_id": 1,
-                "object_id": (i + 1),
+                "entity_class_id": 1,
+                "entity_id": (i + 1),
                 "parameter_definition_id": param_i + 1,
                 "alternative_id": 1,
                 "type": type_,
@@ -113,7 +113,7 @@ class TestBase(unittest.TestCase):
         self._db_mngr.add_parameter_values({self._db_map: value_items})
 
     def _select_object_class_in_tree_view(self):
-        object_tree_model = self._db_editor.ui.treeView_object.model()
+        object_tree_model = self._db_editor.ui.treeView_entity.model()
         root_index = object_tree_model.index(0, 0)
         if object_tree_model.canFetchMore(root_index):
             object_tree_model.fetchMore(root_index)
@@ -121,7 +121,7 @@ class TestBase(unittest.TestCase):
         class_index = object_tree_model.index(0, 0, root_index)
         refreshing_models = list(self._db_editor._parameter_models) + list(self._db_editor._parameter_value_models)
         with multi_signal_waiter([model.refreshed for model in refreshing_models]) as at_filter_refresh:
-            self._db_editor.ui.treeView_object.selectionModel().setCurrentIndex(
+            self._db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
                 class_index, QItemSelectionModel.ClearAndSelect
             )
             at_filter_refresh.wait()

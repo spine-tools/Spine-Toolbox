@@ -21,54 +21,57 @@ from spinetoolbox.spine_db_editor.mvcmodels.single_parameter_models import Singl
 
 
 class TestSpineDBEditorAddMixin:
-    def test_add_object_classes_to_object_tree_model(self):
+    def test_add_entity_classes_to_object_tree_model(self):
         """Test that object classes are added to the object tree model."""
-        root_item = self.spine_db_editor.object_tree_model.root_item
+        root_item = self.spine_db_editor.entity_tree_model.root_item
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
-        dog_item, fish_item = root_item.children
-        self.assertEqual(fish_item.item_type, "object_class")
+        dog_item = next(x for x in root_item.children if x.display_data == "dog")
+        fish_item = next(x for x in root_item.children if x.display_data == "fish")
+        self.assertEqual(fish_item.item_type, "entity_class")
         self.assertEqual(fish_item.display_data, "fish")
-        self.assertEqual(dog_item.item_type, "object_class")
+        self.assertEqual(dog_item.item_type, "entity_class")
         self.assertEqual(dog_item.display_data, "dog")
         self.assertEqual(root_item.child_count(), 2)
 
-    def test_add_objects_to_object_tree_model(self):
+    def test_add_entities_to_object_tree_model(self):
         """Test that objects are added to the object tree model."""
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
-        root_item = self.spine_db_editor.object_tree_model.root_item
-        dog_item, fish_item = root_item.children
+        root_item = self.spine_db_editor.entity_tree_model.root_item
+        dog_item = next(x for x in root_item.children if x.display_data == "dog")
+        fish_item = next(x for x in root_item.children if x.display_data == "fish")
         nemo_item = fish_item.child(0)
         pluto_item, scooby_item = dog_item.children
-        self.assertEqual(nemo_item.item_type, "object")
+        self.assertEqual(nemo_item.item_type, "entity")
         self.assertEqual(nemo_item.display_data, "nemo")
         self.assertEqual(fish_item.child_count(), 1)
-        self.assertEqual(pluto_item.item_type, "object")
+        self.assertEqual(pluto_item.item_type, "entity")
         self.assertEqual(pluto_item.display_data, "pluto")
-        self.assertEqual(scooby_item.item_type, "object")
+        self.assertEqual(scooby_item.item_type, "entity")
         self.assertEqual(scooby_item.display_data, "scooby")
         self.assertEqual(dog_item.child_count(), 2)
 
     def test_add_relationship_classes_to_object_tree_model(self):
-        """Test that relationship classes are added to the object tree model."""
+        """Test that entity classes are added to the object tree model."""
         self.spine_db_editor.init_models()
         self.fetch_object_tree_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        root_item = self.spine_db_editor.object_tree_model.root_item
-        dog_item, fish_item = root_item.children
+        root_item = self.spine_db_editor.entity_tree_model.root_item
+        dog_item = next(x for x in root_item.children if x.display_data == "dog")
+        fish_item = next(x for x in root_item.children if x.display_data == "fish")
         nemo_item = fish_item.child(0)
         pluto_item = dog_item.child(0)
         nemo_dog_fish_item = nemo_item.child(0)
         pluto_fish_dog_item = pluto_item.child(1)
-        self.assertEqual(nemo_dog_fish_item.item_type, "relationship_class")
+        self.assertEqual(nemo_dog_fish_item.item_type, "entity_class")
         self.assertEqual(nemo_dog_fish_item.display_data, "dog__fish")
         self.assertEqual(nemo_item.child_count(), 2)
-        self.assertEqual(pluto_fish_dog_item.item_type, "relationship_class")
+        self.assertEqual(pluto_fish_dog_item.item_type, "entity_class")
         self.assertEqual(pluto_fish_dog_item.display_data, "fish__dog")
         self.assertEqual(pluto_item.child_count(), 2)
 
@@ -80,8 +83,9 @@ class TestSpineDBEditorAddMixin:
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationships_in_db_mngr()
         self.fetch_object_tree_model()
-        root_item = self.spine_db_editor.object_tree_model.root_item
-        dog_item, fish_item = root_item.children
+        root_item = self.spine_db_editor.entity_tree_model.root_item
+        dog_item = next(x for x in root_item.children if x.display_data == "dog")
+        fish_item = next(x for x in root_item.children if x.display_data == "fish")
         nemo_item = fish_item.child(0)
         pluto_item, scooby_item = dog_item.children
         nemo_dog_fish_item, nemo_fish_dog_item = nemo_item.children
@@ -99,22 +103,22 @@ class TestSpineDBEditorAddMixin:
         self.assertEqual(pluto_fish_dog_item.child_count(), 1)
         self.assertEqual(scooby_dog_fish_item.child_count(), 0)
         self.assertEqual(scooby_fish_dog_item.child_count(), 1)
-        self.assertEqual(pluto_nemo_item1.item_type, "relationship")
+        self.assertEqual(pluto_nemo_item1.item_type, "entity")
         self.assertEqual(pluto_nemo_item1.display_data, 'nemo')
-        self.assertEqual(pluto_nemo_item2.item_type, "relationship")
+        self.assertEqual(pluto_nemo_item2.item_type, "entity")
         self.assertEqual(pluto_nemo_item2.display_data, 'pluto')
-        self.assertEqual(nemo_pluto_item1.item_type, "relationship")
+        self.assertEqual(nemo_pluto_item1.item_type, "entity")
         self.assertEqual(nemo_pluto_item1.display_data, 'nemo')
-        self.assertEqual(nemo_pluto_item2.item_type, "relationship")
+        self.assertEqual(nemo_pluto_item2.item_type, "entity")
         self.assertEqual(nemo_pluto_item2.display_data, 'pluto')
-        self.assertEqual(nemo_scooby_item1.item_type, "relationship")
+        self.assertEqual(nemo_scooby_item1.item_type, "entity")
         self.assertEqual(nemo_scooby_item1.display_data, 'nemo')
-        self.assertEqual(nemo_scooby_item2.item_type, "relationship")
+        self.assertEqual(nemo_scooby_item2.item_type, "entity")
         self.assertEqual(nemo_scooby_item2.display_data, 'scooby')
 
     def test_add_object_parameter_definitions_to_model(self):
         """Test that object parameter definitions are added to the model."""
-        model = self.spine_db_editor.object_parameter_definition_model
+        model = self.spine_db_editor.parameter_definition_model
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -125,14 +129,14 @@ class TestSpineDBEditorAddMixin:
         parameters = []
         for row in range(model.rowCount()):
             parameters.append(
-                (model.index(row, h("object_class_name")).data(), model.index(row, h("parameter_name")).data())
+                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
             )
         self.assertTrue(("fish", "water") in parameters)
         self.assertTrue(("dog", "breed") in parameters)
 
     def test_add_relationship_parameter_definitions_to_model(self):
-        """Test that relationship parameter definitions are added to the model."""
-        model = self.spine_db_editor.relationship_parameter_definition_model
+        """Test that entity parameter definitions are added to the model."""
+        model = self.spine_db_editor.parameter_definition_model
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -144,14 +148,14 @@ class TestSpineDBEditorAddMixin:
         parameters = []
         for row in range(model.rowCount()):
             parameters.append(
-                (model.index(row, h("relationship_class_name")).data(), model.index(row, h("parameter_name")).data())
+                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
             )
         self.assertTrue(("fish__dog", "relative_speed") in parameters)
         self.assertTrue(("dog__fish", "combined_mojo") in parameters)
 
     def test_add_object_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
-        model = self.spine_db_editor.object_parameter_value_model
+        model = self.spine_db_editor.parameter_value_model
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -165,7 +169,7 @@ class TestSpineDBEditorAddMixin:
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("object_name")).data(),
+                    model.index(row, h("entity_byname")).data(),
                     model.index(row, h("parameter_name")).data(),
                     model.index(row, h("value")).data(),
                 )
@@ -176,7 +180,7 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_relationship_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
-        model = self.spine_db_editor.relationship_parameter_value_model
+        model = self.spine_db_editor.parameter_value_model
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -193,7 +197,7 @@ class TestSpineDBEditorAddMixin:
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    tuple((model.index(row, h("object_name_list")).data() or "").split(DB_ITEM_SEPARATOR)),
+                    tuple((model.index(row, h("entity_byname")).data() or "").split(DB_ITEM_SEPARATOR)),
                     model.index(row, h("parameter_name")).data(),
                     model.index(row, h("value")).data(),
                 )

@@ -23,7 +23,7 @@ class TestSelectDatabaseItems(unittest.TestCase):
             QApplication()
 
     def test_restore_previously_checked_states(self):
-        stored_states = {"feature": True, "object": True}
+        stored_states = {"feature": True, "entity": True}
         with _select_database_items(stored_states) as widget:
             self.assertEqual(
                 widget.checked_states(),
@@ -34,14 +34,12 @@ class TestSelectDatabaseItems(unittest.TestCase):
                     "feature": True,
                     "list_value": False,
                     "metadata": False,
-                    "object": True,
-                    "object_class": False,
+                    "entity": True,
+                    "entity_class": False,
                     "parameter_definition": False,
                     "parameter_value": False,
                     "parameter_value_list": False,
                     "parameter_value_metadata": False,
-                    "relationship": False,
-                    "relationship_class": False,
                     "scenario": False,
                     "scenario_alternative": False,
                     "tool": False,

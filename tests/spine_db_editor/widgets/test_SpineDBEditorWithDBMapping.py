@@ -74,26 +74,26 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def fetch_object_tree_model(self):
-        for item in self.spine_db_editor.object_tree_model.visit_all():
+        for item in self.spine_db_editor.entity_tree_model.visit_all():
             if item.can_fetch_more():
                 item.fetch_more()
 
     def test_duplicate_object_in_object_tree_model(self):
         data = dict()
-        data["object_classes"] = ["fish", "dog"]
-        data["relationship_classes"] = [("fish__dog", ("fish", "dog"))]
-        data["objects"] = [("fish", "nemo"), ("dog", "pluto")]
-        data["relationships"] = [("fish__dog", ("nemo", "pluto"))]
-        data["object_parameters"] = [("fish", "color")]
-        data["object_parameter_values"] = [("fish", "nemo", "color", "orange")]
+        data["entity_classes"] = [("fish",), ("dog",)]
+        data["entities"] = [("fish", "nemo"), ("dog", "pluto")]
         self.db_mngr.import_data({self.db_map: data})
+        data["entity_classes"] = [("fish__dog", ("fish", "dog"))]
+        data["entities"] = [("fish__dog", ("nemo", "pluto"))]
+        data["parameter_definitions"] = [("fish", "color")]
+        data["parameter_values"] = [("fish", "nemo", "color", "orange")]
         self.fetch_object_tree_model()
-        root_item = self.spine_db_editor.object_tree_model.root_item
+        root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
         nemo_item = fish_item.child(0)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QInputDialog") as mock_input_dialog:
             mock_input_dialog.getText.side_effect = lambda *args, **kwargs: ("nemo_copy", True)
-            self.spine_db_editor.duplicate_object(nemo_item)
+            self.spine_db_editor.duplicate_entity(nemo_item)
         nemo_dupe = fish_item.child(1)
         self.assertEqual(nemo_dupe.display_data, "nemo_copy")
 

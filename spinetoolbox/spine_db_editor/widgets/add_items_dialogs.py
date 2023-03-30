@@ -646,9 +646,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        keys_to_remove = set(self.entity_ids) - {
-            tuple(elements) for elements in self.existing_items_model._main_data
-        }
+        keys_to_remove = set(self.entity_ids) - {tuple(elements) for elements in self.existing_items_model._main_data}
         to_remove = [self.entity_ids[key] for key in keys_to_remove]
         self.db_mngr.remove_items({self.db_map: {"entity": to_remove}})
         to_add = [[self.class_name, element_name_list] for element_name_list in self.new_items_model._main_data]

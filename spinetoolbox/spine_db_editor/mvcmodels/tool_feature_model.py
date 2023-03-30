@@ -55,9 +55,7 @@ class ToolFeatureModel(TreeModelBase):
 
     def _begin_set_features(self, db_map):
         parameter_definitions = self.db_mngr.get_items(db_map, "parameter_definition", only_visible=False)
-        key = lambda x: self.make_feature_name(
-            x.get("object_class_name") or x.get("relationship_class_name"), x["parameter_name"]
-        )
+        key = lambda x: self.make_feature_name(x["entity_class_name"], x["parameter_name"])
         self._db_map_feature_data[db_map] = {
             key(x): (x["id"], x["value_list_id"]) for x in parameter_definitions if x["value_list_id"]
         }

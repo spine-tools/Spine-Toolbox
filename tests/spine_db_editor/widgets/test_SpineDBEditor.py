@@ -22,7 +22,6 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QModelIndex, QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_SpineDBEditorAdd import TestSpineDBEditorAddMixin
 from .test_SpineDBEditorUpdate import TestSpineDBEditorUpdateMixin
 from .test_SpineDBEditorRemove import TestSpineDBEditorRemoveMixin
@@ -38,105 +37,27 @@ class TestSpineDBEditor(
     unittest.TestCase,
 ):
     @staticmethod
-    def _object_class(*args):
-        return dict(zip(["id", "name", "description", "display_order", "display_icon"], args))
+    def _entity_class(*args):
+        return dict(zip(["id", "name", "dimension_id_list"], args))
 
     @staticmethod
-    def _object(*args):
-        return dict(zip(["id", "class_id", "class_name", "name", "description"], args))
+    def _entity(*args):
+        return dict(zip(["id", "class_id", "name", "element_id_list"], args))
 
     @staticmethod
-    def _relationship_class(*args):
-        return dict(zip(["id", "name", "object_class_id_list", "object_class_name_list", "display_icon"], args))
+    def _parameter_definition(*args):
+        d = dict(zip(["id", "entity_class_id", "name"], args))
+        d.update({"default_value": None, "default_type": None})
+        return d
 
     @staticmethod
-    def _relationship(*args):
+    def _parameter_value(*args):
         return dict(
             zip(
-                [
-                    "id",
-                    "class_id",
-                    "name",
-                    "class_name",
-                    "object_class_id_list",
-                    "object_class_name_list",
-                    "object_id_list",
-                    "object_name_list",
-                ],
+                ["id", "entity_class_id", "entity_id", "parameter_definition_id", "alternative_id", "value", "type"],
                 args,
             )
         )
-
-    @staticmethod
-    def _object_parameter_definition(*args):
-        d = dict(zip(["id", "object_class_id", "object_class_name", "name"], args))
-        d.update({"default_value": None, "default_type": None})
-        return d
-
-    @staticmethod
-    def _relationship_parameter_definition(*args):
-        d = dict(
-            zip(
-                [
-                    "id",
-                    "relationship_class_id",
-                    "relationship_class_name",
-                    "object_class_id_list",
-                    "object_class_name_list",
-                    "name",
-                ],
-                args,
-            )
-        )
-        d.update({"default_value": None, "default_type": None})
-        return d
-
-    @staticmethod
-    def _object_parameter_value(*args):
-        d = dict(
-            zip(
-                [
-                    "id",
-                    "object_class_id",
-                    "object_class_name",
-                    "object_id",
-                    "object_name",
-                    "parameter_definition_id",
-                    "parameter_name",
-                    "alternative_id",
-                    "value",
-                    "type",
-                ],
-                args,
-            )
-        )
-        d["entity_id"] = d["object_id"]
-        return d
-
-    @staticmethod
-    def _relationship_parameter_value(*args):
-        d = dict(
-            zip(
-                [
-                    "id",
-                    "relationship_class_id",
-                    "relationship_class_name",
-                    "object_class_id_list",
-                    "object_class_name_list",
-                    "relationship_id",
-                    "object_id_list",
-                    "object_name_list",
-                    "parameter_definition_id",
-                    "parameter_name",
-                    "alternative_id",
-                    "value",
-                    "type",
-                ],
-                args,
-            )
-        )
-        d["entity_id"] = d["relationship_id"]
-        return d
 
     @classmethod
     def setUpClass(cls):
@@ -147,150 +68,76 @@ class TestSpineDBEditor(
 
     @classmethod
     def create_mock_dataset(cls):
-        cls.fish_class = cls._object_class(1, "fish", "A fish.", 1, None)
-        cls.dog_class = cls._object_class(2, "dog", "A dog.", 3, None)
-        cls.fish_dog_class = cls._relationship_class(
-            3,
-            "fish__dog",
-            [cls.fish_class["id"], cls.dog_class["id"]],
-            [cls.fish_class["name"], cls.dog_class["name"]],
-            None,
+        cls.fish_class = cls._entity_class(1, "fish")
+        cls.dog_class = cls._entity_class(2, "dog")
+        cls.fish_dog_class = cls._entity_class(3, "fish__dog", [cls.fish_class["id"], cls.dog_class["id"]])
+        cls.dog_fish_class = cls._entity_class(4, "dog__fish", [cls.dog_class["id"], cls.fish_class["id"]])
+        cls.nemo_object = cls._entity(1, cls.fish_class["id"], 'nemo')
+        cls.pluto_object = cls._entity(2, cls.dog_class["id"], 'pluto')
+        cls.scooby_object = cls._entity(3, cls.dog_class["id"], 'scooby')
+        cls.pluto_nemo_rel = cls._entity(
+            4, cls.dog_fish_class["id"], "dog__fish_pluto__nemo", [cls.pluto_object["id"], cls.nemo_object["id"]]
         )
-        cls.dog_fish_class = cls._relationship_class(
-            4,
-            "dog__fish",
-            [cls.dog_class["id"], cls.fish_class["id"]],
-            [cls.dog_class["name"], cls.fish_class["name"]],
-            None,
+        cls.nemo_pluto_rel = cls._entity(
+            5, cls.fish_dog_class["id"], "fish__dog_nemo__pluto", [cls.nemo_object["id"], cls.pluto_object["id"]]
         )
-        cls.nemo_object = cls._object(1, cls.fish_class["id"], cls.fish_class["name"], 'nemo', 'The lost one.')
-        cls.pluto_object = cls._object(2, cls.dog_class["id"], cls.dog_class["name"], 'pluto', "Mickey's.")
-        cls.scooby_object = cls._object(3, cls.dog_class["id"], cls.dog_class["name"], 'scooby', 'Scooby-Dooby-Doo.')
-        cls.pluto_nemo_rel = cls._relationship(
-            4,
-            cls.dog_fish_class["id"],
-            "dog__fish_pluto__nemo",
-            cls.dog_fish_class["name"],
-            [cls.dog_class["id"], cls.fish_class["id"]],
-            [cls.dog_class["name"], cls.fish_class["name"]],
-            [cls.pluto_object["id"], cls.nemo_object["id"]],
-            [cls.pluto_object["name"], cls.nemo_object["name"]],
+        cls.nemo_scooby_rel = cls._entity(
+            6, cls.fish_dog_class["id"], "fish__dog_nemo__scooby", [cls.nemo_object["id"], cls.scooby_object["id"]]
         )
-        cls.nemo_pluto_rel = cls._relationship(
-            5,
-            cls.fish_dog_class["id"],
-            "fish__dog_nemo__pluto",
-            cls.fish_dog_class["name"],
-            [cls.fish_class["id"], cls.dog_class["id"]],
-            [cls.fish_class["name"], cls.dog_class["name"]],
-            [cls.nemo_object["id"], cls.pluto_object["id"]],
-            [cls.nemo_object["name"], cls.pluto_object["name"]],
-        )
-        cls.nemo_scooby_rel = cls._relationship(
-            6,
-            cls.fish_dog_class["id"],
-            "fish__dog_nemo__scooby",
-            cls.fish_dog_class["name"],
-            [cls.fish_class["id"], cls.dog_class["id"]],
-            [cls.fish_class["name"], cls.dog_class["name"]],
-            [cls.nemo_object["id"], cls.scooby_object["id"]],
-            [cls.nemo_object["name"], cls.scooby_object["name"]],
-        )
-        cls.water_parameter = cls._object_parameter_definition(1, cls.fish_class["id"], cls.fish_class["name"], "water")
-        cls.breed_parameter = cls._object_parameter_definition(2, cls.dog_class["id"], cls.dog_class["name"], "breed")
-        cls.relative_speed_parameter = cls._relationship_parameter_definition(
-            3,
-            cls.fish_dog_class["id"],
-            cls.fish_dog_class["name"],
-            cls.fish_dog_class["object_class_id_list"],
-            cls.fish_dog_class["object_class_name_list"],
-            "relative_speed",
-        )
-        cls.combined_mojo_parameter = cls._relationship_parameter_definition(
-            4,
-            cls.dog_fish_class["id"],
-            cls.dog_fish_class["name"],
-            cls.dog_fish_class["object_class_id_list"],
-            cls.dog_fish_class["object_class_name_list"],
-            "combined_mojo",
-        )
-        cls.nemo_water = cls._object_parameter_value(
+        cls.water_parameter = cls._parameter_definition(1, cls.fish_class["id"], "water")
+        cls.breed_parameter = cls._parameter_definition(2, cls.dog_class["id"], "breed")
+        cls.relative_speed_parameter = cls._parameter_definition(3, cls.fish_dog_class["id"], "relative_speed")
+        cls.combined_mojo_parameter = cls._parameter_definition(4, cls.dog_fish_class["id"], "combined_mojo")
+        cls.nemo_water = cls._parameter_value(
             1,
-            cls.water_parameter["object_class_id"],
-            cls.water_parameter["object_class_name"],
+            cls.water_parameter["entity_class_id"],
             cls.nemo_object["id"],
-            cls.nemo_object["name"],
             cls.water_parameter["id"],
-            cls.water_parameter["name"],
             1,
             b'"salt"',
             None,
         )
-        cls.pluto_breed = cls._object_parameter_value(
+        cls.pluto_breed = cls._parameter_value(
             2,
-            cls.breed_parameter["object_class_id"],
-            cls.breed_parameter["object_class_name"],
+            cls.breed_parameter["entity_class_id"],
             cls.pluto_object["id"],
-            cls.pluto_object["name"],
             cls.breed_parameter["id"],
-            cls.breed_parameter["name"],
             1,
             b'"bloodhound"',
             None,
         )
-        cls.scooby_breed = cls._object_parameter_value(
+        cls.scooby_breed = cls._parameter_value(
             3,
-            cls.breed_parameter["object_class_id"],
-            cls.breed_parameter["object_class_name"],
+            cls.breed_parameter["entity_class_id"],
             cls.scooby_object["id"],
-            cls.scooby_object["name"],
             cls.breed_parameter["id"],
-            cls.breed_parameter["name"],
             1,
             b'"great dane"',
             None,
         )
-        cls.nemo_pluto_relative_speed = cls._relationship_parameter_value(
+        cls.nemo_pluto_relative_speed = cls._parameter_value(
             4,
-            cls.relative_speed_parameter["relationship_class_id"],
-            cls.relative_speed_parameter["relationship_class_name"],
-            cls.relative_speed_parameter["object_class_id_list"],
-            cls.relative_speed_parameter["object_class_name_list"],
+            cls.relative_speed_parameter["entity_class_id"],
             cls.nemo_pluto_rel["id"],
-            cls.nemo_pluto_rel["object_id_list"],
-            cls.nemo_pluto_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
-            cls.relative_speed_parameter["name"],
             1,
             b"-1",
             None,
         )
-        cls.nemo_scooby_relative_speed = cls._relationship_parameter_value(
+        cls.nemo_scooby_relative_speed = cls._parameter_value(
             5,
-            cls.relative_speed_parameter["relationship_class_id"],
-            cls.relative_speed_parameter["relationship_class_name"],
-            cls.relative_speed_parameter["object_class_id_list"],
-            cls.relative_speed_parameter["object_class_name_list"],
+            cls.relative_speed_parameter["entity_class_id"],
             cls.nemo_scooby_rel["id"],
-            cls.nemo_scooby_rel["object_id_list"],
-            cls.nemo_scooby_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
-            cls.relative_speed_parameter["name"],
             1,
             b"5",
             None,
         )
-        cls.pluto_nemo_combined_mojo = cls._relationship_parameter_value(
+        cls.pluto_nemo_combined_mojo = cls._parameter_value(
             6,
-            cls.combined_mojo_parameter["relationship_class_id"],
-            cls.combined_mojo_parameter["relationship_class_name"],
-            cls.combined_mojo_parameter["object_class_id_list"],
-            cls.combined_mojo_parameter["object_class_name_list"],
+            cls.combined_mojo_parameter["entity_class_id"],
             cls.pluto_nemo_rel["id"],
-            cls.pluto_nemo_rel["object_id_list"],
-            cls.pluto_nemo_rel["object_name_list"],
             cls.combined_mojo_parameter["id"],
-            cls.combined_mojo_parameter["name"],
             1,
             b"100",
             None,
@@ -328,25 +175,25 @@ class TestSpineDBEditor(
     def put_mock_object_classes_in_db_mngr(self):
         """Put fish and dog object classes in the db mngr."""
         object_classes = [self.fish_class, self.dog_class]
-        self.db_mngr.add_object_classes({self.mock_db_map: object_classes})
+        self.db_mngr.add_entity_classes({self.mock_db_map: object_classes})
         self.fetch_object_tree_model()
 
     def put_mock_objects_in_db_mngr(self):
         """Put nemo, pluto and scooby objects in the db mngr."""
         objects = [self.nemo_object, self.pluto_object, self.scooby_object]
-        self.db_mngr.add_objects({self.mock_db_map: objects})
+        self.db_mngr.add_entities({self.mock_db_map: objects})
         self.fetch_object_tree_model()
 
     def put_mock_relationship_classes_in_db_mngr(self):
         """Put dog__fish and fish__dog relationship classes in the db mngr."""
         relationship_classes = [self.fish_dog_class, self.dog_fish_class]
-        self.db_mngr.add_relationship_classes({self.mock_db_map: relationship_classes})
+        self.db_mngr.add_entity_classes({self.mock_db_map: relationship_classes})
         self.fetch_object_tree_model()
 
     def put_mock_relationships_in_db_mngr(self):
         """Put pluto_nemo, nemo_pluto and nemo_scooby relationships in the db mngr."""
         relationships = [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]
-        self.db_mngr.add_relationships({self.mock_db_map: relationships})
+        self.db_mngr.add_entities({self.mock_db_map: relationships})
         self.fetch_object_tree_model()
 
     def put_mock_object_parameter_definitions_in_db_mngr(self):
@@ -385,7 +232,7 @@ class TestSpineDBEditor(
         self.put_mock_relationship_parameter_values_in_db_mngr()
 
     def fetch_object_tree_model(self):
-        for item in self.spine_db_editor.object_tree_model.visit_all():
+        for item in self.spine_db_editor.entity_tree_model.visit_all():
             if item.can_fetch_more():
                 item.fetch_more()
 
@@ -395,18 +242,18 @@ class TestSpineDBEditor(
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
         # Select fish item in object tree
-        root_item = self.spine_db_editor.object_tree_model.root_item
+        root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = root_item.child(1)
-        fish_index = self.spine_db_editor.object_tree_model.index_from_item(fish_item)
-        self.spine_db_editor.ui.treeView_object.setCurrentIndex(fish_index)
-        self.spine_db_editor.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
+        fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
+        self.spine_db_editor.ui.treeView_entity.setCurrentIndex(fish_index)
+        self.spine_db_editor.ui.treeView_entity.selectionModel().select(fish_index, QItemSelectionModel.Select)
         # Check default in object parameter_definition
-        model = self.spine_db_editor.object_parameter_definition_model
+        model = self.spine_db_editor.parameter_definition_model
         model.empty_model.fetchMore(QModelIndex())
         h = model.header.index
         row_data = []
         for row in range(model.rowCount()):
-            row_data.append(tuple(model.index(row, h(field)).data() for field in ("object_class_name", "database")))
+            row_data.append(tuple(model.index(row, h(field)).data() for field in ("entity_class_name", "database")))
         self.assertIn(("fish", "database"), row_data)
 
 
@@ -443,7 +290,7 @@ class TestClosingDBEditors(unittest.TestCase):
     def test_first_editor_to_close_does_not_ask_for_confirmation_on_dirty_database(self):
         editor_1 = self._make_db_editor()
         editor_2 = self._make_db_editor()
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "my_object_class"}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_object_class"}]})
         self.assertTrue(self._db_mngr.dirty(self._db_map))
         with mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
@@ -458,7 +305,7 @@ class TestClosingDBEditors(unittest.TestCase):
 
     def test_editor_asks_for_confirmation_even_when_non_editor_listeners_are_connected(self):
         editor = self._make_db_editor()
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "my_object_class"}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_object_class"}]})
         self.assertTrue(self._db_mngr.dirty(self._db_map))
         non_editor_listener = object()
         self._db_mngr.register_listener(non_editor_listener, self._db_map)
