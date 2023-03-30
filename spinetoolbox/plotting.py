@@ -62,22 +62,28 @@ class PlottingError(Exception):
 
 
 @dataclass(frozen=True)
+class IndexName:
+    label: str
+    id: int
+
+
+@dataclass(frozen=True)
 class XYData:
     """Two-dimensional data for plotting."""
 
     x: List[Union[float, int, str, np.datetime64]]
     y: List[Union[float, int]]
-    x_label: str
+    x_label: IndexName
     y_label: str
     data_index: List[str]
-    index_names: List[str]
+    index_names: List[IndexName]
 
 
 @dataclass
 class TreeNode:
     """A labeled node in tree structure."""
 
-    label: str
+    label: Union[str, IndexName]
     content: Dict = field(default_factory=dict)
 
 
@@ -120,7 +126,7 @@ def turn_node_to_xy_data(root_node, y_label_position, index_names=None, indexes=
     Args:
         root_node (TreeNode): root node
         y_label_position (int, optional): position of y label in indexes
-        index_names (list of str, optional): list of current index names
+        index_names (list of IndexName, optional): list of current index names
         indexes (list): list of current indexes
 
     Yields:
@@ -130,7 +136,10 @@ def turn_node_to_xy_data(root_node, y_label_position, index_names=None, indexes=
         index_names = []
     if indexes is None:
         indexes = []
-    current_index_names = index_names + [root_node.label]
+    index_name = (
+        root_node.label if isinstance(root_node.label, IndexName) else IndexName(root_node.label, len(index_names))
+    )
+    current_index_names = index_names + [index_name]
     x = []
     y = []
     for index, sub_node in root_node.content.items():
@@ -158,7 +167,7 @@ def raise_if_not_common_x_labels(data_list):
     if len(data_list) < 2:
         return
     first_label = data_list[0].x_label
-    if any(data.x_label != first_label for data in data_list[1:]):
+    if any(data.x_label.label != first_label.label for data in data_list[1:]):
         raise PlottingError("X axis labels don't match.")
 
 
@@ -290,7 +299,7 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
         legend_handles = _plot_double_y_axis(squeezed_data, y_labels, plot_widget, plot_type)
     else:
         legend_handles = _plot_single_y_axis(squeezed_data, "", plot_widget, plot_type)
-    plot_widget.canvas.axes.set_xlabel(squeezed_data[0].x_label)
+    plot_widget.canvas.axes.set_xlabel(squeezed_data[0].x_label.label)
     plot_title = " | ".join(map(str, common_indexes))
     plot_widget.canvas.axes.set_title(plot_title)
     if len(squeezed_data) > 1:
