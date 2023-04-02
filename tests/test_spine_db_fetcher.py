@@ -112,6 +112,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'display_icon': None,
             'hidden': 0,
             'dimension_id_list': (),
+            'dimension_name_list': None,
         }
         fetcher = TestItemTypeFetchParent("entity_class")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
@@ -123,7 +124,15 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_objects(self):
         self._import_data(entity_classes=(("oc",),), entities=(("oc", "obj"),))
-        item = {'id': 1, 'class_id': 1, 'name': 'obj', 'element_id_list': (), 'description': None, 'commit_id': 2}
+        item = {
+            'id': 1,
+            'class_id': 1,
+            'name': 'obj',
+            'element_id_list': (),
+            'element_name_list': None,
+            'description': None,
+            'commit_id': 2,
+        }
         self._db_mngr.fetch_more(self._db_map, TestItemTypeFetchParent("entity_class"))
         for item_type in ("entity",):
             dep_fetcher = TestItemTypeFetchParent(item_type)
@@ -146,6 +155,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'display_icon': None,
             'hidden': 0,
             'dimension_id_list': (1,),
+            'dimension_name_list': "oc",
         }
         for item_type in ("object_class",):
             dep_fetcher = TestItemTypeFetchParent(item_type)
@@ -161,7 +171,15 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_relationships(self):
         self._import_data(entity_classes=(("oc",),), entities=(("oc", "obj"),))
         self._import_data(entity_classes=(("rc", ("oc",)),), entities=(("rc", ("obj",)),))
-        item = {'id': 2, 'name': 'rc_obj', 'class_id': 2, 'element_id_list': (1,), 'description': None, 'commit_id': 3}
+        item = {
+            'id': 2,
+            'name': 'rc_obj',
+            'class_id': 2,
+            'element_id_list': (1,),
+            'element_name_list': "obj",
+            'description': None,
+            'commit_id': 3,
+        }
         for item_type in ("entity_class", "entity"):
             dep_fetcher = TestItemTypeFetchParent(item_type)
             self._db_mngr.fetch_more(self._db_map, dep_fetcher)
