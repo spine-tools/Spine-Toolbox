@@ -18,9 +18,9 @@ Contains SpineEngineManagerBase.
 import queue
 import threading
 import json
-from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
-from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
+from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.server.util.event_data_converter import EventDataConverter
+from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
 
 
 class SpineEngineManagerBase:
@@ -329,7 +329,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def answer_prompt(self, item_name, accepted):
         """See base class."""
-        raise NotImplementedError()
+        self.engine_client.answer_prompt(self.exec_job_id, item_name, accepted)
 
     def restart_kernel(self, connection_file):
         """See base class."""
