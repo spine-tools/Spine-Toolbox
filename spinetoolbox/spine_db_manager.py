@@ -950,7 +950,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             make_cache = lambda *args, db_map=db_map, **kwargs: self.get_db_map_cache(db_map)
             try:
-                data_for_import = get_data_for_import(db_map, make_cache=make_cache, **data)
+                data_for_import = get_data_for_import(db_map, make_cache=make_cache, dry_run=True, **data)
             except (TypeError, ValueError) as err:
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
                 db_map_error_log.setdefault(db_map, []).append(msg)

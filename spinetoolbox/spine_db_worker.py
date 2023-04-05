@@ -62,7 +62,7 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._committing = False
+        self._dry_run = True
         self._current_fetch_token = 0
         self._offsets = {}
         self._fetched_ids = {}
@@ -442,15 +442,14 @@ class SpineDBWorker(QObject):
             "entity_metadata": "add_ext_entity_metadata",
             "parameter_value_metadata": "add_ext_parameter_value_metadata",
         }[item_type]
-        check &= not self._committing
-        readd |= self._committing
-        with self._db_map.override_committing(self._committing):
-            items, errors = getattr(self._db_map, method_name)(
-                *orig_items, check=check, readd=readd, return_items=True, cache=cache
-            )
+        check &= self._dry_run
+        readd |= not self._dry_run
+        items, errors = getattr(self._db_map, method_name)(
+            *orig_items, check=check, readd=readd, dry_run=self._dry_run, return_items=True, cache=cache
+        )
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        if self._committing:
+        if not self._dry_run:
             if callback is not None:
                 callback({})
             return
@@ -499,12 +498,13 @@ class SpineDBWorker(QObject):
             "entity_metadata": "update_ext_entity_metadata",
             "parameter_value_metadata": "update_ext_parameter_value_metadata",
         }[item_type]
-        check &= not self._committing
-        with self._db_map.override_committing(self._committing):
-            items, errors = getattr(self._db_map, method_name)(*orig_items, check=check, return_items=True, cache=cache)
+        check &= self._dry_run
+        items, errors = getattr(self._db_map, method_name)(
+            *orig_items, check=check, dry_run=self._dry_run, return_items=True, cache=cache
+        )
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        if self._committing:
+        if not self._dry_run:
             if callback is not None:
                 callback({})
             return
@@ -522,12 +522,11 @@ class SpineDBWorker(QObject):
         Args:
             ids_per_type (dict): lists of items to remove keyed by item type (str)
         """
-        if self._committing:
-            with self._db_map.override_committing(self._committing):
-                try:
-                    self._db_map.cascade_remove_items(**{item_type: ids})
-                except SpineDBAPIError as err:
-                    self._db_mngr.error_msg.emit({self._db_map: [err]})
+        if not self._dry_run:
+            try:
+                self._db_map.cascade_remove_items(**{item_type: ids})
+            except SpineDBAPIError as err:
+                self._db_mngr.error_msg.emit({self._db_map: [err]})
             if callback is not None:
                 callback({})
             return
@@ -556,15 +555,16 @@ class SpineDBWorker(QObject):
             undo_stack (AgedUndoStack): undo stack that outlive the DB manager
             cookie (Any): a cookie to include in session_committed signal
         """
-        self._committing = True
-        undo_stack.commit()
-        self._committing = False
+        self._dry_run = False
         try:
+            undo_stack.commit()
             self._db_map.commit_session(commit_msg)
             self._db_mngr.session_committed.emit({self._db_map}, cookie)
+            undo_stack.setClean()
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
-        undo_stack.setClean()
+        finally:
+            self._dry_run = True
 
     def rollback_session(self):
         """Initiates rollback session in the worker thread."""
@@ -582,6 +582,6 @@ class SpineDBWorker(QObject):
         try:
             self._db_map.reset_session()
             self._db_mngr.session_rolled_back.emit({self._db_map})
+            undo_stack.setClean()
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
-        undo_stack.setClean()

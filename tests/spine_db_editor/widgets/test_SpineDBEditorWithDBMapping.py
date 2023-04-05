@@ -80,13 +80,11 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
 
     def test_duplicate_object_in_object_tree_model(self):
         data = dict()
-        data["entity_classes"] = [("fish",), ("dog",)]
-        data["entities"] = [("fish", "nemo"), ("dog", "pluto")]
-        self.db_mngr.import_data({self.db_map: data})
-        data["entity_classes"] = [("fish__dog", ("fish", "dog"))]
-        data["entities"] = [("fish__dog", ("nemo", "pluto"))]
+        data["entity_classes"] = [("fish",), ("dog",), ("fish__dog", ("fish", "dog"))]
+        data["entities"] = [("fish", "nemo"), ("dog", "pluto"), ("fish__dog", ("nemo", "pluto"))]
         data["parameter_definitions"] = [("fish", "color")]
         data["parameter_values"] = [("fish", "nemo", "color", "orange")]
+        self.db_mngr.import_data({self.db_map: data})
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
