@@ -362,8 +362,8 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         sibling_conns = project.incoming_connections(self.destination)
         for conn in sibling_conns:
             conn.link.update_icons()
-        item = project.get_item(self.source)
-        project.notify_resource_changes_to_successors(item)
+        project.notify_resource_changes_to_successors(project.get_item(self.source))
+        project.notify_resource_changes_to_predecessors(project.get_item(self.destination))
         if self is self._toolbox.active_link_item:
             self._toolbox.link_properties_widgets[LoggingConnection].load_connection_options()
 

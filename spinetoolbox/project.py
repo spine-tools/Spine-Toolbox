@@ -1145,7 +1145,7 @@ class SpineToolboxProject(MetaObject):
         """
         item_name = item.name
         predecessor_names = {c.source for c in self.incoming_connections(item_name)}
-        successor_connections = self._outgoing_connections
+        successor_connections = self.outgoing_connections
         update_resources = self._update_predecessor
         trigger_resources = item.resources_for_direct_predecessors()
         self._notify_resource_changes(
@@ -1164,7 +1164,7 @@ class SpineToolboxProject(MetaObject):
             item (ProjectItem): item whose resources have changed
         """
         item_name = item.name
-        successor_names = {c.destination for c in self._outgoing_connections(item_name)}
+        successor_names = {c.destination for c in self.outgoing_connections(item_name)}
         predecessor_connections = self.incoming_connections
         update_resources = self._update_successor
         trigger_resources = item.resources_for_direct_successors()
@@ -1241,7 +1241,7 @@ class SpineToolboxProject(MetaObject):
             connections = self.incoming_connections(target_name)
             self._update_successor(target_item, connections, resource_cache={})
         else:
-            connections = self._outgoing_connections(target_name)
+            connections = self.outgoing_connections(target_name)
             self._update_predecessor(target_item, connections, resource_cache={})
 
     def predecessor_names(self, name):
@@ -1264,9 +1264,22 @@ class SpineToolboxProject(MetaObject):
         Returns:
             set of str: direct successor names
         """
-        return {c.destination for c in self._outgoing_connections(name)}
+        return {c.destination for c in self.outgoing_connections(name)}
 
-    def _outgoing_connections(self, name):
+    def descendant_names(self, name):
+        """Yields descendant item names.
+
+        Args:
+            name (str): name of the project item whose descendants to collect
+
+        Yields:
+            str: descendant name
+        """
+        for succ_name in self.successor_names(name):
+            yield succ_name
+            yield from self.descendant_names(succ_name)
+
+    def outgoing_connections(self, name):
         """Collects outgoing connections.
 
         Args:
@@ -1297,7 +1310,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             set of Connection/Jump: outgoing connections and jumps
         """
-        return self._outgoing_connections(name) + self._outgoing_jumps(name)
+        return self.outgoing_connections(name) + self._outgoing_jumps(name)
 
     def incoming_connections(self, name):
         """Collects incoming connections.

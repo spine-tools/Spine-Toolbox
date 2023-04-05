@@ -34,7 +34,7 @@ class PivotTableHeaderView(QHeaderView):
     def __init__(self, orientation, area, pivot_table_view):
         """
         Args:
-            orientation (int): Qt.Orientation.Horizontal or Qt.Orientation.Vertical
+            orientation (Qt.Orientation): Qt.Orientation.Horizontal or Qt.Orientation.Vertical
             area (str): which pivot area the header represents: "columns", "rows" or "frozen"
             pivot_table_view (PivotTableView): parent view
         """
@@ -67,7 +67,7 @@ class ParameterValuePivotHeaderView(PivotTableHeaderView):
     def __init__(self, orientation, area, pivot_table_view):
         """
         Args:
-            orientation (int): Qt.Orientation.Horizontal or Qt.Orientation.Vertical
+            orientation (Qt.Orientation): Qt.Orientation.Horizontal or Qt.Orientation.Vertical
             area (str): which pivot area the header represents: "columns", "rows" or "frozen"
             pivot_table_view (PivotTableView): parent view
         """

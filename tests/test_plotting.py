@@ -48,6 +48,7 @@ from spinetoolbox.plotting import (
     plot_pivot_table_selection,
     LEGEND_PLACEMENT_THRESHOLD,
     add_row_to_exception,
+    IndexName,
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestSpineDBManager
@@ -608,7 +609,7 @@ class TestTurnNodesToXYData(unittest.TestCase):
         node = TreeNode("my_index")
         node.content = {1: 1.1, 2: 2.2}
         xy_data = list(turn_node_to_xy_data(node, None))
-        expected = [XYData([1, 2], [1.1, 2.2], "my_index", "", [], [])]
+        expected = [XYData([1, 2], [1.1, 2.2], IndexName("my_index", 0), "", [], [])]
         self.assertEqual(xy_data, expected)
 
     def test_one_index_deep_tree(self):
@@ -620,8 +621,8 @@ class TestTurnNodesToXYData(unittest.TestCase):
         root.content = {"a": node1, "b": node2}
         xy_data = list(turn_node_to_xy_data(root, None))
         expected = [
-            XYData([1, 2], [1.1, 2.2], "index_1", "", ["a"], ["root_index"]),
-            XYData([3, 4], [3.3, 4.4], "index_2", "", ["b"], ["root_index"]),
+            XYData([1, 2], [1.1, 2.2], IndexName("index_1", 1), "", ["a"], [IndexName("root_index", 0)]),
+            XYData([3, 4], [3.3, 4.4], IndexName("index_2", 1), "", ["b"], [IndexName("root_index", 0)]),
         ]
         self.assertEqual(xy_data, expected)
 
@@ -632,8 +633,8 @@ class TestTurnNodesToXYData(unittest.TestCase):
         root.content = {"a": node1, 3: 3.3, 4: 4.4}
         xy_data = list(turn_node_to_xy_data(root, None))
         expected = [
-            XYData([1, 2], [1.1, 2.2], "index_1", "", ["a"], ["root_index"]),
-            XYData([3, 4], [3.3, 4.4], "root_index", "", [], []),
+            XYData([1, 2], [1.1, 2.2], IndexName("index_1", 1), "", ["a"], [IndexName("root_index", 0)]),
+            XYData([3, 4], [3.3, 4.4], IndexName("root_index", 0), "", [], []),
         ]
         self.assertEqual(xy_data, expected)
 
@@ -652,56 +653,98 @@ class TestTurnNodesToXYData(unittest.TestCase):
         root.content = {"a": label_node1, "b": label_node2}
         xy_data = list(turn_node_to_xy_data(root, 1))
         expected = [
-            XYData([1, 2], [1.1, 2.2], "index_1", "to the top", ["a", "to the top"], ["root_index", "Y label 1"]),
-            XYData([3, 4], [3.3, 4.4], "index_2", "upwards", ["a", "upwards"], ["root_index", "Y label 1"]),
-            XYData([5, 6], [5.5, 6.6], "index_3", "ascent", ["b", "ascent"], ["root_index", "Y label 2"]),
+            XYData(
+                [1, 2],
+                [1.1, 2.2],
+                IndexName("index_1", 2),
+                "to the top",
+                ["a", "to the top"],
+                [IndexName("root_index", 0), IndexName("Y label 1", 1)],
+            ),
+            XYData(
+                [3, 4],
+                [3.3, 4.4],
+                IndexName("index_2", 2),
+                "upwards",
+                ["a", "upwards"],
+                [IndexName("root_index", 0), IndexName("Y label 1", 1)],
+            ),
+            XYData(
+                [5, 6],
+                [5.5, 6.6],
+                IndexName("index_3", 2),
+                "ascent",
+                ["b", "ascent"],
+                [IndexName("root_index", 0), IndexName("Y label 2", 1)],
+            ),
         ]
         self.assertEqual(xy_data, expected)
 
 
 class TestReduceIndexes(unittest.TestCase):
     def test_single_shallow_xy_data(self):
-        data = [XYData([1, 2], [1.1, 2.2], "my_index", "", [], [])]
+        data = [XYData([1, 2], [1.1, 2.2], IndexName("my_index", 0), "", [], [])]
         reduced_data, common_indexes = reduce_indexes(data)
-        expected = [XYData([1, 2], [1.1, 2.2], "my_index", "", [], [])]
+        expected = [XYData([1, 2], [1.1, 2.2], IndexName("my_index", 0), "", [], [])]
         self.assertEqual(reduced_data, expected)
         self.assertEqual(common_indexes, [])
 
     def test_all_indexes_shared(self):
         data = [
-            XYData([1, 2], [1.1, 2.2], "x_index_1", "", ["my_index"], ["index name"]),
-            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["my_index"], ["index name"]),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index_1", 1), "", ["my_index"], [IndexName("index name", 0)]),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index_2", 1), "", ["my_index"], [IndexName("index name", 0)]),
         ]
         reduced_data, common_indexes = reduce_indexes(data)
         expected = [
-            XYData([1, 2], [1.1, 2.2], "x_index_1", "", [], []),
-            XYData([3, 4], [3.3, 4.4], "x_index_2", "", [], []),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index_1", 1), "", [], []),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index_2", 1), "", [], []),
         ]
         self.assertEqual(reduced_data, expected)
         self.assertEqual(common_indexes, ["my_index"])
 
     def test_uneven_depth(self):
         data = [
-            XYData([1, 2], [1.1, 2.2], "x_index_1", "", ["shared_1"], ["shared index"]),
-            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["shared_1", "extra"], ["shared index", "goes deeper"]),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index_1", 1), "", ["shared_1"], [IndexName("shared index", 0)]),
+            XYData(
+                [3, 4],
+                [3.3, 4.4],
+                IndexName("x_index_2", 2),
+                "",
+                ["shared_1", "extra"],
+                [IndexName("shared index", 0), IndexName("goes deeper", 1)],
+            ),
         ]
         reduced_data, common_indexes = reduce_indexes(data)
         expected = [
-            XYData([1, 2], [1.1, 2.2], "x_index_1", "", [], []),
-            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["extra"], ["goes deeper"]),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index_1", 1), "", [], []),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index_2", 2), "", ["extra"], [IndexName("goes deeper", 1)]),
         ]
         self.assertEqual(reduced_data, expected)
         self.assertEqual(common_indexes, ["shared_1"])
 
     def test_first_index_not_shared(self):
         data = [
-            XYData([1, 2], [1.1, 2.2], "x_index_1", "", ["different_1", "shared"], ["my_index_1", "shared index"]),
-            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["different_2", "shared"], ["my_index_2", "shared index"]),
+            XYData(
+                [1, 2],
+                [1.1, 2.2],
+                IndexName("x_index_1", 2),
+                "",
+                ["different_1", "shared"],
+                [IndexName("my_index_1", 0), IndexName("shared index", 1)],
+            ),
+            XYData(
+                [3, 4],
+                [3.3, 4.4],
+                IndexName("x_index_2", 2),
+                "",
+                ["different_2", "shared"],
+                [IndexName("my_index_2", 0), IndexName("shared index", 1)],
+            ),
         ]
         reduced_data, common_indexes = reduce_indexes(data)
         expected = [
-            XYData([1, 2], [1.1, 2.2], "x_index_1", "", ["different_1"], ["my_index_1"]),
-            XYData([3, 4], [3.3, 4.4], "x_index_2", "", ["different_2"], ["my_index_2"]),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index_1", 2), "", ["different_1"], [IndexName("my_index_1", 0)]),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index_2", 2), "", ["different_2"], [IndexName("my_index_2", 0)]),
         ]
         self.assertEqual(reduced_data, expected)
         self.assertEqual(common_indexes, ["shared"])
@@ -710,41 +753,53 @@ class TestReduceIndexes(unittest.TestCase):
 class TestCombineDataWithSameIndexes(unittest.TestCase):
     def test_not_combined_due_to_different_x_labels(self):
         data = [
-            XYData([1, 2], [1.1, 2.2], "x_index_1", "", [], []),
-            XYData([3, 4], [3.3, 4.4], "x_index_2", "", [], []),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index_1", 0), "", [], []),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index_2", 0), "", [], []),
         ]
         combined = combine_data_with_same_indexes(data)
         expected = [
-            XYData([1, 2], [1.1, 2.2], "x_index_1", "", [], []),
-            XYData([3, 4], [3.3, 4.4], "x_index_2", "", [], []),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index_1", 0), "", [], []),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index_2", 0), "", [], []),
         ]
         self.assertEqual(combined, expected)
 
     def test_not_combined_due_to_different_indexes(self):
         data = [
-            XYData([1, 2], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"]),
-            XYData([3, 4], [3.3, 4.4], "x_index", "", ["index_2"], ["index name"]),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index", 1), "", ["index_1"], [IndexName("index name", 0)]),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index", 1), "", ["index_2"], [IndexName("index name", 0)]),
         ]
         combined = combine_data_with_same_indexes(data)
         expected = [
-            XYData([1, 2], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"]),
-            XYData([3, 4], [3.3, 4.4], "x_index", "", ["index_2"], ["index name"]),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index", 1), "", ["index_1"], [IndexName("index name", 0)]),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index", 1), "", ["index_2"], [IndexName("index name", 0)]),
         ]
         self.assertEqual(combined, expected)
 
     def test_same_x_axes_combined(self):
-        data = [XYData([1, 2], [1.1, 2.2], "x_index", "", [], []), XYData([3, 4], [3.3, 4.4], "x_index", "", [], [])]
+        data = [
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index", 0), "", [], []),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index", 0), "", [], []),
+        ]
         combined = combine_data_with_same_indexes(data)
-        expected = [XYData([1, 2, 3, 4], [1.1, 2.2, 3.3, 4.4], "x_index", "", [], [])]
+        expected = [XYData([1, 2, 3, 4], [1.1, 2.2, 3.3, 4.4], IndexName("x_index", 0), "", [], [])]
         self.assertEqual(combined, expected)
 
     def test_all_same_indexes_combined(self):
         data = [
-            XYData([1, 2], [1.1, 2.2], "x_index", "", ["index_1"], ["index name"]),
-            XYData([3, 4], [3.3, 4.4], "x_index", "", ["index_1"], ["index name"]),
+            XYData([1, 2], [1.1, 2.2], IndexName("x_index", 1), "", ["index_1"], [IndexName("index name", 0)]),
+            XYData([3, 4], [3.3, 4.4], IndexName("x_index", 1), "", ["index_1"], [IndexName("index name", 0)]),
         ]
         combined = combine_data_with_same_indexes(data)
-        expected = [XYData([1, 2, 3, 4], [1.1, 2.2, 3.3, 4.4], "x_index", "", ["index_1"], ["index name"])]
+        expected = [
+            XYData(
+                [1, 2, 3, 4],
+                [1.1, 2.2, 3.3, 4.4],
+                IndexName("x_index", 1),
+                "",
+                ["index_1"],
+                [IndexName("index name", 0)],
+            )
+        ]
         self.assertEqual(combined, expected)
 
 
@@ -759,11 +814,11 @@ class TestPlotData(unittest.TestCase):
         self.assertEqual(len(plot_widget.canvas.axes.lines), 0)
 
     def test_single_plot(self):
-        data = [XYData([-11, -22], [1.1, 2.2], "x_index", "y", ["index_1"], ["index name"])]
+        data = [XYData([-11, -22], [1.1, 2.2], IndexName("x_index", 1), "y", ["index_1"], [IndexName("index name", 0)])]
         plot_widget = plot_data(data)
         lines = plot_widget.canvas.axes.lines
         self.assertEqual(plot_widget.canvas.axes.get_title(), "index_1")
-        self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x_index")
+        self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x_index", 1)
         self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "y")
         self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
         self.assertEqual(len(lines), 1)
@@ -771,7 +826,7 @@ class TestPlotData(unittest.TestCase):
         self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1, 2.2])
 
     def test_two_plots_with_shared_and_individual_indexes(self):
-        data = [XYData([-11, -22], [1.1, 2.2], "x_index", "y", ["index_1"], ["index name"])]
+        data = [XYData([-11, -22], [1.1, 2.2], IndexName("x_index", 1), "y", ["index_1"], [IndexName("index name", 0)])]
         plot_widget = plot_data(data)
         lines = plot_widget.canvas.axes.lines
         self.assertEqual(plot_widget.canvas.axes.get_title(), "index_1")
@@ -787,18 +842,18 @@ class TestPlotData(unittest.TestCase):
             XYData(
                 [numpy.datetime64("2022-11-18T16:00:00"), numpy.datetime64("2022-11-18T17:00:00")],
                 [1.1, 2.2],
-                "time",
+                IndexName("time", 1),
                 "y",
                 ["index_1"],
-                ["index name"],
+                [IndexName("index name", 0)],
             ),
             XYData(
                 [numpy.datetime64("2022-11-18T16:00:00"), numpy.datetime64("2022-11-18T17:00:00")],
                 [3.3, 4.4],
-                "time",
+                IndexName("time", 1),
                 "y",
                 ["index_2"],
-                ["index name"],
+                [IndexName("index name", 0)],
             ),
         ]
         plot_widget = plot_data(data)
@@ -819,8 +874,17 @@ class TestPlotData(unittest.TestCase):
 
     def test_we_find_unsqueezed_index_no_matter_what(self):
         data = [
-            XYData(x=["t1", "t2"], y=[13.0, 7.0], x_label="x", y_label="y", data_index=["A1"], index_names=["idx"]),
-            XYData(x=["B1", "B2"], y=[-13.0, -7.0], x_label="x", y_label="y", data_index=[], index_names=[]),
+            XYData(
+                x=["t1", "t2"],
+                y=[13.0, 7.0],
+                x_label=IndexName("x", 1),
+                y_label="y",
+                data_index=["A1"],
+                index_names=[IndexName("idx", 0)],
+            ),
+            XYData(
+                x=["B1", "B2"], y=[-13.0, -7.0], x_label=IndexName("x", 1), y_label="y", data_index=[], index_names=[]
+            ),
         ]
         plot_widget = plot_data(data)
         self.assertEqual(plot_widget.canvas.axes.get_title(), "")
@@ -838,16 +902,23 @@ class TestPlotData(unittest.TestCase):
 
     def test_y_axis_is_not_labeled_when_more_than_two_labels_are_possible(self):
         data = [
-            XYData(x=["t1", "t2"], y=[1.1, 2.2], x_label="x", y_label="y", data_index=["A1"], index_names=["idx"]),
+            XYData(
+                x=["t1", "t2"],
+                y=[1.1, 2.2],
+                x_label=IndexName("x", 1),
+                y_label="y",
+                data_index=["A1"],
+                index_names=[IndexName("idx", 0)],
+            ),
             XYData(
                 x=["t1", "t2"],
                 y=[3.3, 4.4],
-                x_label="x",
+                x_label=IndexName("x", 1),
                 y_label="z",
                 data_index=["B1", "b1"],
-                index_names=["jdx", "kdx"],
+                index_names=[IndexName("jdx", 0), IndexName("kdx", 1)],
             ),
-            XYData(x=["t1", "t2"], y=[5.5, 6.6], x_label="x", y_label="a", data_index=[], index_names=[]),
+            XYData(x=["t1", "t2"], y=[5.5, 6.6], x_label=IndexName("x", 0), y_label="a", data_index=[], index_names=[]),
         ]
         plot_widget = plot_data(data)
         self.assertFalse(plot_widget.canvas.has_twinned_axes())
@@ -868,7 +939,7 @@ class TestPlotData(unittest.TestCase):
 
     def test_legend_placement_below_threshold(self):
         data = [
-            XYData(x=["x"], y=[1.0], x_label="x", y_label="", data_index=[], index_names=[])
+            XYData(x=["x"], y=[1.0], x_label=IndexName("x", 0), y_label="", data_index=[], index_names=[])
             for _ in range(LEGEND_PLACEMENT_THRESHOLD - 1)
         ]
         plot_widget = plot_data(data)
@@ -878,7 +949,7 @@ class TestPlotData(unittest.TestCase):
 
     def test_legend_placement_above_threshold(self):
         data = [
-            XYData(x=["x"], y=[1.0], x_label="x", y_label="", data_index=[], index_names=[])
+            XYData(x=["x"], y=[1.0], x_label=IndexName("x", 0), y_label="", data_index=[], index_names=[])
             for _ in range(LEGEND_PLACEMENT_THRESHOLD)
         ]
         plot_widget = plot_data(data)
@@ -891,18 +962,18 @@ class TestRaiseIfIncompatibleX(unittest.TestCase):
             XYData(
                 x=[1.0, 2.0, 3.0],
                 y=[5.0, 2.0, -1.0],
-                x_label='x',
+                x_label=IndexName('x', 0),
                 y_label='',
                 data_index=['1d_map'],
-                index_names=['parameter_name'],
+                index_names=[IndexName('parameter_name', 0)],
             ),
             XYData(
                 x=['t1', 't2'],
                 y=[13.0, 7.0],
-                x_label='x',
+                x_label=IndexName('x', 2),
                 y_label='',
                 data_index=['uneven_map', 'A1'],
-                index_names=['parameter_name', 'x'],
+                index_names=[IndexName('parameter_name', 0), IndexName('x', 1)],
             ),
         ]
         self.assertRaises(PlottingError, raise_if_incompatible_x, data_list)

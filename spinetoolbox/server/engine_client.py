@@ -16,12 +16,12 @@ Client for exchanging messages between the toolbox and the Spine Engine Server.
 """
 
 import os
-import zmq
-import zmq.auth
 import time
 import random
 import json
 from enum import Enum
+import zmq
+import zmq.auth
 from spine_engine.server.util.server_message import ServerMessage
 from spine_engine.exception import RemoteEngineInitFailed
 
@@ -191,6 +191,17 @@ class EngineClient:
         response = self.rcv_next("dealer")
         response_server_message = ServerMessage.parse(response[1])
         return response_server_message.getData()
+
+    def answer_prompt(self, job_id, item_name, accepted):
+        """Sends a request to answer a prompt from the DAG that is managed by this client.
+
+        Args:
+            job_id (str): Job Id on server to stop
+            item_name (str)
+            accepted (Bool)
+        """
+        req = ServerMessage("answer_prompt", job_id, json.dumps((item_name, True)), None)
+        self.socket.send_multipart([req.to_bytes()])
 
     def download_files(self, q):
         """Pulls files from server until b'END' is received."""
