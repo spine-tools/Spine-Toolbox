@@ -35,7 +35,17 @@ from ...helpers import object_icon
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 
 
-class RelationshipPivotTableDelegate(CheckBoxDelegate):
+class PivotTableDelegateMixin:
+    """A mixin that fixes Pivot table's header table editor position."""
+
+    def updateEditorGeometry(self, editor, option, index):
+        """Fixes position of header table editors."""
+        super().updateEditorGeometry(editor, option, index)
+        if isinstance(editor, PivotHeaderTableLineEditor):
+            editor.fix_geometry()
+
+
+class RelationshipPivotTableDelegate(PivotTableDelegateMixin, CheckBoxDelegate):
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent):
@@ -84,12 +94,12 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
     def createEditor(self, parent, option, index):
         if self._is_relationship_index(index):
             return super().createEditor(parent, option, index)
-        editor = CustomLineEditor(parent)
+        editor = PivotHeaderTableLineEditor(parent)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole))
         return editor
 
 
-class ScenarioAlternativeTableDelegate(RankDelegate):
+class ScenarioAlternativeTableDelegate(PivotTableDelegateMixin, RankDelegate):
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent):
@@ -135,12 +145,12 @@ class ScenarioAlternativeTableDelegate(RankDelegate):
     def createEditor(self, parent, option, index):
         if self._is_scenario_alternative_index(index):
             return super().createEditor(parent, option, index)
-        editor = CustomLineEditor(parent)
+        editor = PivotHeaderTableLineEditor(parent)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole))
         return editor
 
 
-class ParameterPivotTableDelegate(QStyledItemDelegate):
+class ParameterPivotTableDelegate(PivotTableDelegateMixin, QStyledItemDelegate):
     parameter_value_editor_requested = Signal(QModelIndex)
     data_committed = Signal(QModelIndex, object)
 
@@ -175,12 +185,6 @@ class ParameterPivotTableDelegate(QStyledItemDelegate):
         editor = PivotHeaderTableLineEditor(parent)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole))
         return editor
-
-    def updateEditorGeometry(self, editor, option, index):
-        """Fixes position of header table editors."""
-        super().updateEditorGeometry(editor, option, index)
-        if isinstance(editor, PivotHeaderTableLineEditor):
-            editor.fix_geometry()
 
 
 class ParameterValueElementDelegate(QStyledItemDelegate):
