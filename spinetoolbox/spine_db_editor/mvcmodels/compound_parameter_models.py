@@ -63,6 +63,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._fetch_parent = FlexibleFetchParent(
             self.item_type,
             accepts_item=self.accepts_item,
+            shows_item=self.shows_item,
             handle_items_added=self.handle_items_added,
             handle_items_removed=self.handle_items_removed,
             handle_items_updated=self.handle_items_updated,
@@ -81,6 +82,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     def accepts_item(self, item, db_map):
         return item.get(self.entity_class_id_key) is not None
+
+    def shows_item(self, item, db_map):
+        return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
 
     def _make_header(self):
         raise NotImplementedError()

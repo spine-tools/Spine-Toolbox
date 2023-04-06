@@ -74,6 +74,28 @@ class ParameterValueLineEditor(CustomLineEditor):
         return try_number_from_string(super().data())
 
 
+class PivotHeaderTableLineEditor(CustomLineEditor):
+    """Line editor that is visible on Pivot view's header tables due to a clever hack."""
+
+    def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget, optional): parent widget
+        """
+        # For unknown reason editors opened on the header tables of Pivot view are invisible but still usable.
+        # This may be somehow connected to the header tables having WA_TransparentForMouseEvents attribute set.
+        # In any case, we can reparent the editor here and fix its position later in the delegate.
+        super().__init__(parent.parent())
+        self._map_to_parent = parent.mapToParent
+
+    def fix_geometry(self):
+        """Fixes editor's position after reparenting."""
+        geometry = self.geometry()
+        geometry.setTopLeft(self._map_to_parent(geometry.topLeft()))
+        geometry.setBottomRight(self._map_to_parent(geometry.bottomRight()))
+        self.setGeometry(geometry)
+
+
 class _CustomLineEditDelegate(QStyledItemDelegate):
     """A delegate for placing a CustomLineEditor on the first row of SearchBarEditor."""
 

@@ -22,14 +22,30 @@ from PySide6.QtWidgets import QStyledItemDelegate, QComboBox
 from PySide6.QtGui import QFontMetrics, QFont
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
-from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
+from ...widgets.custom_editors import (
+    CustomLineEditor,
+    PivotHeaderTableLineEditor,
+    SearchBarEditor,
+    CheckListEditor,
+    ParameterValueLineEditor,
+)
 from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ...helpers import object_icon
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 
 
-class RelationshipPivotTableDelegate(CheckBoxDelegate):
+class PivotTableDelegateMixin:
+    """A mixin that fixes Pivot table's header table editor position."""
+
+    def updateEditorGeometry(self, editor, option, index):
+        """Fixes position of header table editors."""
+        super().updateEditorGeometry(editor, option, index)
+        if isinstance(editor, PivotHeaderTableLineEditor):
+            editor.fix_geometry()
+
+
+class RelationshipPivotTableDelegate(PivotTableDelegateMixin, CheckBoxDelegate):
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent):
@@ -78,12 +94,12 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
     def createEditor(self, parent, option, index):
         if self._is_relationship_index(index):
             return super().createEditor(parent, option, index)
-        editor = CustomLineEditor(parent)
+        editor = PivotHeaderTableLineEditor(parent)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole))
         return editor
 
 
-class ScenarioAlternativeTableDelegate(RankDelegate):
+class ScenarioAlternativeTableDelegate(PivotTableDelegateMixin, RankDelegate):
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent):
@@ -129,12 +145,12 @@ class ScenarioAlternativeTableDelegate(RankDelegate):
     def createEditor(self, parent, option, index):
         if self._is_scenario_alternative_index(index):
             return super().createEditor(parent, option, index)
-        editor = CustomLineEditor(parent)
+        editor = PivotHeaderTableLineEditor(parent)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole))
         return editor
 
 
-class ParameterPivotTableDelegate(QStyledItemDelegate):
+class ParameterPivotTableDelegate(PivotTableDelegateMixin, QStyledItemDelegate):
     parameter_value_editor_requested = Signal(QModelIndex)
     data_committed = Signal(QModelIndex, object)
 
@@ -159,14 +175,14 @@ class ParameterPivotTableDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         if self.parent().pivot_table_model.index_in_data(index):
-            value = index.model().mapToSource(index).data(PARSED_ROLE)
+            value = index.data(PARSED_ROLE)
             if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
                 editor = ParameterValueLineEditor(parent)
                 editor.set_data(value)
                 return editor
             self.parameter_value_editor_requested.emit(index.model().mapToSource(index))
             return None
-        editor = CustomLineEditor(parent)
+        editor = PivotHeaderTableLineEditor(parent)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole))
         return editor
 

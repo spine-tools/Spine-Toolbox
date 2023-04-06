@@ -286,9 +286,9 @@ class TestSpineDBManager(SpineDBManager):
             return super().get_db_map(*args, **kwargs)
 
     def can_fetch_more(self, db_map, parent):
-        parent.add_item = lambda db_map, item: parent.handle_items_added({db_map: [item]})
-        parent.update_item = lambda db_map, item: parent.handle_items_updated({db_map: [item]})
-        parent.remove_item = lambda db_map, item: parent.handle_items_removed({db_map: [item]})
+        parent.add_item = lambda item, db_map: parent.handle_items_added({db_map: [item]})
+        parent.update_item = lambda item, db_map: parent.handle_items_updated({db_map: [item]})
+        parent.remove_item = lambda item, db_map: parent.handle_items_removed({db_map: [item]})
         return super().can_fetch_more(db_map, parent)
 
 
