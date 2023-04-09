@@ -166,7 +166,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             url = resource.url
             if not url:
                 continue
-            db_map = self._get_db_map(url)
+            db_map = self._get_db_map(url, ignore_version_error=True)
             if db_map is None:
                 continue
             available_scenarios = {
@@ -185,9 +185,9 @@ class LoggingConnection(LogMixin, HeadlessConnection):
                 return True
         return False
 
-    def _get_db_map(self, url):
+    def _get_db_map(self, url, ignore_version_error=False):
         if url not in self._db_maps:
-            db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox)
+            db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox, ignore_version_error=ignore_version_error)
             if db_map is None:
                 return None
             self._db_maps[url] = db_map

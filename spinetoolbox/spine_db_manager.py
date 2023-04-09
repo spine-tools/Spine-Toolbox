@@ -389,7 +389,7 @@ class SpineDBManager(QObject):
         for url in list(self._db_maps):
             self.close_session(url)
 
-    def get_db_map(self, url, logger, codename=None, upgrade=False, create=False):
+    def get_db_map(self, url, logger, codename=None, upgrade=False, create=False, ignore_version_error=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
@@ -406,9 +406,11 @@ class SpineDBManager(QObject):
         try:
             return self._do_get_db_map(url, codename, upgrade, create)
         except SpineDBVersionError as v_err:
+            if ignore_version_error:
+                return None
             if v_err.upgrade_available:
                 text, info_text = get_upgrade_db_promt_text(url, v_err.current, v_err.expected)
-                msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
+                msg = QMessageBox(self.parent() or qApp.activeWindow())  # pylint: disable=undefined-variable
                 msg.setIcon(QMessageBox.Icon.Question)
                 msg.setWindowTitle("Incompatible database version")
                 msg.setText(text)
