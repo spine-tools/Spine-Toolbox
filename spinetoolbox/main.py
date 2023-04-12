@@ -27,6 +27,7 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = plugin_path
 from argparse import ArgumentParser
 import sys
 import logging
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
 
@@ -66,7 +67,7 @@ def main():
         logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
     window = ToolboxUI()
     window.show()
-    window.init_project(args.project)
+    QTimer.singleShot(0, lambda: window.init_project(args.project))
     # Enter main event loop and wait until exit() is called
     return_code = app.exec()
     return return_code
