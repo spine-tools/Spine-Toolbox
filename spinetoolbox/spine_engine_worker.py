@@ -58,7 +58,7 @@ def _handle_process_message_arrived(item, filter_id, msg_type, msg_text):
 
 
 @Slot(dict, object)
-def _handle_prompt_arrived(prompt, engine_mngr):
+def _handle_prompt_arrived(prompt, engine_mngr, logger=None):
     prompt_type = prompt["type"]
     if prompt_type == "upgrade_db":
         url = prompt["url"]
@@ -75,7 +75,7 @@ def _handle_prompt_arrived(prompt, engine_mngr):
         item_name,
         text,
         buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        parent=qApp.activeWindow(),
+        parent=logger,
     )
     if info_text:
         box.setInformativeText(info_text)
@@ -110,7 +110,7 @@ class SpineEngineWorker(QObject):
     _node_execution_finished = Signal(object, object, object)
     _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
-    _prompt_arrived = Signal(dict, object)
+    _prompt_arrived = Signal(dict, object, object)
     _flash_arrived = Signal(object)
     _all_items_failed = Signal(list)
 
@@ -257,7 +257,7 @@ class SpineEngineWorker(QObject):
         handler(data)
 
     def _handle_prompt(self, prompt):
-        self._prompt_arrived.emit(prompt, self._engine_mngr)
+        self._prompt_arrived.emit(prompt, self._engine_mngr, self._logger)
 
     def _handle_flash(self, flash):
         connection = self._connections[flash["item_name"]]
