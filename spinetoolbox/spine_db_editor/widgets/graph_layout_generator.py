@@ -99,7 +99,7 @@ class ProgressBarWidget(QWidget):
         super().paintEvent(event)
 
 
-class GraphLayoutGeneratorRunnable(QRunnable, GraphLayoutGenerator):
+class GraphLayoutGeneratorRunnable(QRunnable):
     """Computes the layout for the Entity Graph View."""
 
     class Signals(QObject):
@@ -119,9 +119,8 @@ class GraphLayoutGeneratorRunnable(QRunnable, GraphLayoutGenerator):
         max_iters=12,
         weight_exp=-2,
     ):
-        QRunnable.__init__(self)
-        GraphLayoutGenerator.__init__(
-            self,
+        super().__init__()
+        self._generator = GraphLayoutGenerator(
             vertex_count,
             src_inds=src_inds,
             dst_inds=dst_inds,
@@ -129,9 +128,18 @@ class GraphLayoutGeneratorRunnable(QRunnable, GraphLayoutGenerator):
             heavy_positions=heavy_positions,
             max_iters=max_iters,
             weight_exp=weight_exp,
+            is_stopped=self._is_stopped,
+            preview_available=self._preview_available,
+            layout_available=self._layout_available,
+            layout_progressed=self._layout_progressed,
+            message_available=self._message_available,
         )
+        self.vertex_count = vertex_count
+        self.max_iters = max_iters
         self._id = identifier
         self._signals = self.Signals()
+        self._stopped = False
+        self._show_previews = False
         self.finished = self._signals.finished
         self.layout_available = self._signals.layout_available
         self.progressed = self._signals.progressed
@@ -145,16 +153,22 @@ class GraphLayoutGeneratorRunnable(QRunnable, GraphLayoutGenerator):
     def set_show_previews(self, checked):
         self._show_previews = checked
 
-    def emit_progressed(self, iteration):
+    def _is_stopped(self):
+        return self._stopped
+
+    def _layout_progressed(self, iteration):
         self.progressed.emit(iteration)
 
-    def emit_msg(self, text):
+    def _message_available(self, text):
         self.msg.emit(text)
 
-    def save_layout(self, x, y):
-        super().save_layout(x, y)
+    def _layout_available(self, x, y):
         self.layout_available.emit(self._id, x, y)
 
+    def _preview_available(self, x, y):
+        if self._show_previews:
+            self.layout_available.emit(self._id, x, y)
+
     def run(self):
-        self.compute_layout()
+        self._generator.compute_layout()
         self.finished.emit(self._id)
