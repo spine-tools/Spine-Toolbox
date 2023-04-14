@@ -227,6 +227,24 @@ def add_exporter(project, item_factories, name, x=0, y=0):
     return project.get_item(name)
 
 
+def add_merger(project, item_factories, name, x=0, y=0):
+    """Helper function to create a Merger to given project.
+
+    Args:
+        project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
+        name (str): item's name
+        x (float): item's x coordinate
+        y (float): item's y coordinate
+
+    Returns:
+        Merger: added project item
+    """
+    item = {name: {"type": "Merger", "description": "", "x": x, "y": y}}
+    project.restore_project_items(item, item_factories, silent=True)
+    return project.get_item(name)
+
+
 class _FakeSignal:
     """A fake Signal that just remembers all slots it's connected to."""
 
