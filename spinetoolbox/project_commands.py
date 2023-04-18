@@ -11,9 +11,6 @@
 
 """
 QUndoCommand subclasses for modifying the project.
-
-:authors: M. Marin (KTH)
-:date:   12.2.2020
 """
 
 from PySide6.QtGui import QUndoCommand

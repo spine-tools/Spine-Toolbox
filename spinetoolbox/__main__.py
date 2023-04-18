@@ -11,9 +11,6 @@
 
 """
 Spine Toolbox application main file.
-
-:author: P. Savolainen (VTT)
-:date:   14.12.2017
 """
 
 import sys

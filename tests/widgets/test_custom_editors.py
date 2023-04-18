@@ -11,9 +11,6 @@
 
 """
 Unit tests for custom editor widgets.
-
-:author: A. Soininen (VTT)
-:date:   11.3.2021
 """
 
 import unittest

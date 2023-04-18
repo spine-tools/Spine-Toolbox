@@ -11,9 +11,6 @@
 
 """
 Unit tests for the TimeSeriesModelVariableResolution class.
-
-:authors: A. Soininen (VTT)
-:date:   5.7.2019
 """
 
 import unittest

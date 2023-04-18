@@ -11,9 +11,6 @@
 
 """
 Functions to report failures in plotting to the user.
-
-:author: A. Soininen (VTT)
-:date:   10.7.2019
 """
 
 from PySide6.QtWidgets import QMessageBox

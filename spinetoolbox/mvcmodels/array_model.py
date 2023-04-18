@@ -11,9 +11,6 @@
 
 """
 Contains model for the Array editor widget.
-
-:author: A. Soininen (VTT)
-:date:   14.6.2019
 """
 import locale
 from numbers import Number

@@ -11,9 +11,6 @@
 
 """
 Contains ToolboxUI class.
-
-:author: P. Savolainen (VTT)
-:date:   14.12.2017
 """
 
 import os

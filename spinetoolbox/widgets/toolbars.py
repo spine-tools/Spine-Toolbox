@@ -11,9 +11,6 @@
 
 """
 Functions to make and handle QToolBars.
-
-:author: P. Savolainen (VTT)
-:date:   19.1.2018
 """
 
 from PySide6.QtCore import Qt, Slot

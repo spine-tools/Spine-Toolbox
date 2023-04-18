@@ -12,9 +12,6 @@
 """
 Contains ProjectUpgrader class used in upgrading and converting projects
 and project dicts from earlier versions to the latest version.
-
-:authors: P. Savolainen (VTT)
-:date:   8.11.2019
 """
 
 import shutil

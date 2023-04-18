@@ -11,9 +11,6 @@
 
 """
 Models that vertically concatenate two or more table models.
-
-:authors: M. Marin (KTH)
-:date:   9.10.2019
 """
 
 import bisect

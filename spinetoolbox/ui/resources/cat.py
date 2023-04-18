@@ -11,9 +11,6 @@
 
 """
 Meow.
-
-:authors: M. Marin (ER)
-:date:    28.4.2022
 """
 
 import random

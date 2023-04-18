@@ -11,9 +11,6 @@
 
 """
 Contains FrozenTableModel class.
-
-:author: P. Vennström (VTT)
-:date:   24.9.2019
 """
 
 from PySide6.QtCore import Qt, QModelIndex, QAbstractItemModel

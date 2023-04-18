@@ -11,9 +11,6 @@
 
 """
 Unit tests for IndexedValueTableView class.
-
-:author: A. Soininen (VTT)
-:date:   8.8.2019
 """
 
 import locale

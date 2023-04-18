@@ -10,9 +10,6 @@
 ######################################################################################################################
 """
 Contains base classes for project items and item factories.
-
-:authors: P. Savolainen (VTT)
-:date:   4.10.2018
 """
 
 

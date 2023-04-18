@@ -11,6 +11,4 @@
 
 """
 Package for Remote Spine Engine Client side tests.
-:authors: P. Savolainen (VTT)
-:date:   15.6.2022
 """

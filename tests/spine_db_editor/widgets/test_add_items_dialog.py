@@ -11,9 +11,6 @@
 
 """
 Unit tests for ``add_items_dialog`` module.
-
-:author: M. Marin (KTH)
-:date:   6.12.2018
 """
 
 import unittest

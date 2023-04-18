@@ -11,9 +11,6 @@
 
 """
 Dialog for selecting a kernel or creating a new Julia or Python kernel.
-
-:author: P. Savolainen (VTT)
-:date:   7.10.2020
 """
 import os
 import shutil

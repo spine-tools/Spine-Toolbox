@@ -11,9 +11,6 @@
 
 """
 An editor dialog for Array elements.
-
-:author: A. Soininen (VTT)
-:date:   10.11.2020
 """
 from PySide6.QtCore import Qt
 from .duration_editor import DurationEditor

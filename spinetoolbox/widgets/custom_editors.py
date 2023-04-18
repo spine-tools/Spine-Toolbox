@@ -11,10 +11,6 @@
 
 """
 Custom editors for model/view programming.
-
-
-:author: M. Marin (KTH)
-:date:   2.9.2018
 """
 
 from PySide6.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize

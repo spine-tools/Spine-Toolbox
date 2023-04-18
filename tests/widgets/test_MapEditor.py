@@ -11,9 +11,6 @@
 
 """
 Unit tests for the MapEditor widget.
-
-:authors: A. Soininen (VTT)
-:date:   12.2.2020
 """
 
 import unittest

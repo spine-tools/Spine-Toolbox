@@ -11,9 +11,6 @@
 
 """
 Contains :class:`ItemMetadataTableModel` and associated functionality.
-
-:author: A. Soininen (VTT)
-:date:   25.3.2022
 """
 from enum import auto, Enum, IntEnum, unique
 

@@ -11,9 +11,6 @@
 
 """
 Contains TabularViewHeaderWidget class.
-
-:authors: P. Vennström (VTT), M. Marin (KTH)
-:date:   2.12.2019
 """
 
 from PySide6.QtCore import Qt, QMimeData, Signal

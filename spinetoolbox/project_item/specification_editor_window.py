@@ -11,9 +11,6 @@
 
 """
 Contains SpecificationEditorWindowBase and ChangeSpecPropertyCommand
-
-:author: M. Marin (KTH), P. Savolainen (VTT)
-:date:   12.4.2018
 """
 
 from PySide6.QtGui import QKeySequence, QIcon, QUndoStack, QAction, QUndoCommand

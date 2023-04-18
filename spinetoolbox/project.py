@@ -11,9 +11,6 @@
 
 """
 Spine Toolbox project class.
-
-:authors: P. Savolainen (VTT), E. Rinne (VTT)
-:date:   10.1.2018
 """
 from enum import auto, Enum, unique
 from itertools import chain

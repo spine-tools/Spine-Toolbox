@@ -11,8 +11,6 @@
 
 """
 Contains tests for the EngineClient class.
-:author: P. Savolainen (VTT)
-:date:   15.6.2022
 """
 
 

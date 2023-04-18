@@ -11,9 +11,6 @@
 
 """
 Contains PropertiesWidgetBase.
-
-:author: M. Marin (ER)
-:date: 20.01.2022
 """
 
 from PySide6.QtWidgets import QWidget, QAbstractItemView, QLineEdit, QHeaderView

@@ -11,9 +11,6 @@
 
 """
 Unit tests for ProjectUpgrader class.
-
-:authors: P. Savolainen (VTT)
-:date:   28.11.2019
 """
 
 import unittest

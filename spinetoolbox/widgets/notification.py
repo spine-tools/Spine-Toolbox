@@ -11,9 +11,6 @@
 
 """
 Contains a notification widget.
-
-:author: P. Savolainen (VTT)
-:date: 12.12.2019
 """
 
 from PySide6.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton

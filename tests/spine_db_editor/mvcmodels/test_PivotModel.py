@@ -11,9 +11,6 @@
 
 """
 Unit tests for PivotModel class.
-
-:author: P. Vennström (VTT)
-:date:   16.11.2018
 """
 
 import unittest

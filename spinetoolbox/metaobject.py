@@ -11,9 +11,6 @@
 
 """
 MetaObject class.
-
-:authors: E. Rinne (VTT), P. Savolainen (VTT)
-:date:   18.12.2017
 """
 
 from PySide6.QtCore import QObject

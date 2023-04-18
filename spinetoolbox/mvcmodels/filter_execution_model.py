@@ -11,9 +11,6 @@
 
 """
 Contains FilterExecutionModel.
-
-:author: M. Marin (KTH)
-:date:   26.11.2020
 """
 
 from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel

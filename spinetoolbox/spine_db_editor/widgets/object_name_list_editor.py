@@ -11,9 +11,6 @@
 
 """
 Contains the ObjectNameListEditor class.
-
-:author: M. Marin (KTH)
-:date:   27.11.2019
 """
 
 from PySide6.QtCore import Qt, Slot, Signal, QEvent, QCoreApplication

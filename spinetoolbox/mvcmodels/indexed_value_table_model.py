@@ -11,9 +11,6 @@
 
 """
 A model for indexed parameter values, used by the parameter_value editors.
-
-:authors: A. Soininen (VTT)
-:date:   18.6.2019
 """
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt

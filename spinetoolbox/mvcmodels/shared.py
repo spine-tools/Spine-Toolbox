@@ -11,9 +11,6 @@
 
 """
 Contains stuff that is used by more than one model
-
-:author: M. Marin (KTH)
-:date:   23.3.2020
 """
 
 from PySide6.QtCore import Qt

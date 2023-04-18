@@ -11,9 +11,6 @@
 
 """
 Classes for custom QTreeView.
-
-:author: M. Marin (KTH)
-:date:   25.4.2018
 """
 import pickle
 

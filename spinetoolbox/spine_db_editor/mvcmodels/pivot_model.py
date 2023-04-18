@@ -11,9 +11,6 @@
 
 """
 Provides PivotModel.
-
-:author: P. Vennström (VTT)
-:date:   1.11.2018
 """
 
 import operator

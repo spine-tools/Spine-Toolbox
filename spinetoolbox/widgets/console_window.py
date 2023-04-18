@@ -11,9 +11,6 @@
 
 """
 Window for the 'base' Julia Console and Python Console.
-
-:author: P. Savolainen (VTT)
-:date: 5.2.2021
 """
 
 from PySide6.QtWidgets import QMainWindow

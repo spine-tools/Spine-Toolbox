@@ -11,9 +11,6 @@
 
 """
 Models to represent entities in a tree.
-
-:authors: P. Vennström (VTT), M. Marin (KTH)
-:date:   11.3.2019
 """
 
 from .entity_tree_item import ObjectTreeRootItem, RelationshipTreeRootItem

@@ -11,9 +11,6 @@
 
 """
 Unit tests for FilterCheckboxListModel class.
-
-:author: P. Vennström (VTT)
-:date:   3.12.2018
 """
 
 import unittest

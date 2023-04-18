@@ -11,9 +11,6 @@
 
 """
 Project Tree items.
-
-:authors: A. Soininen (VTT)
-:date:   17.1.2020
 """
 
 import logging

@@ -11,9 +11,6 @@
 
 """
 Unit tests for the SpineConsoleWidget.
-
-:authors: P. Savolainen (VTT)
-:date:   10.11.2020
 """
 
 import unittest

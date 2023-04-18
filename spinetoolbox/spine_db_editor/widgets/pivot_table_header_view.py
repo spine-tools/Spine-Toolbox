@@ -11,9 +11,6 @@
 
 """
 Contains custom QHeaderView for the pivot table.
-
-:author: M. Marin (KTH)
-:date:   2.12.2019
 """
 
 from PySide6.QtCore import Signal, Slot, Qt, QPoint

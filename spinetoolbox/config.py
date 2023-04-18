@@ -11,9 +11,6 @@
 
 """
 Application constants and style sheets
-
-:author: P. Savolainen (VTT)
-:date:   2.1.2018
 """
 
 import sys

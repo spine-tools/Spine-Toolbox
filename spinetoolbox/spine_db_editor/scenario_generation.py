@@ -11,9 +11,6 @@
 
 """
 Contains functions for automatically generating scenarios from a set of alternatives.
-
-:authors: A.Soininen (VTT)
-:date:    7.9.2021
 """
 from itertools import compress, permutations
 

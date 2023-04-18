@@ -11,9 +11,6 @@
 
 """
 Unit tests for TimeSeriesFixedResolutionTableView class.
-
-:author: A. Soininen (VTT)
-:date:   8.8.2019
 """
 
 import locale
