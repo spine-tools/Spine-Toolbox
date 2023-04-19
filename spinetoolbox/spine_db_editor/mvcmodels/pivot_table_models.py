@@ -225,6 +225,8 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
 class PivotTableModelBase(QAbstractTableModel):
     _CHUNK_SIZE = 1000
     model_data_changed = Signal()
+    frozen_values_added = Signal(set)
+    frozen_values_removed = Signal(set)
 
     def __init__(self, db_editor):
         """
@@ -350,6 +352,9 @@ class PivotTableModelBase(QAbstractTableModel):
     def add_to_model(self, db_map_data):
         if not db_map_data:
             return
+        frozen_values = self.model.frozen_values(db_map_data)
+        if frozen_values:
+            self.frozen_values_added.emit(frozen_values)
         row_count, column_count = self.model.add_to_model(db_map_data)
         if row_count > 0:
             first = self.headerRowCount() + self.dataRowCount()
@@ -367,6 +372,9 @@ class PivotTableModelBase(QAbstractTableModel):
         if not data:
             return
         row_count, column_count = self.model.remove_from_model(data)
+        frozen_values = self.model.frozen_values(data)
+        if frozen_values:
+            self.frozen_values_removed.emit(frozen_values)
         if row_count > 0:
             first = self.headerRowCount()
             self.beginRemoveRows(QModelIndex(), first, first + row_count - 1)
@@ -390,10 +398,29 @@ class PivotTableModelBase(QAbstractTableModel):
         self.model.set_pivot(rows, columns, frozen, frozen_value)
         self.endResetModel()
 
+    def set_frozen(self, frozen):
+        """Sets the order of frozen headers without changing model data.
+
+        Args:
+            frozen (list of str): new frozen
+        """
+        self.model.set_frozen(frozen)
+
     def set_frozen_value(self, frozen_value):
+        """Sets frozen value resetting the model.
+
+        Args:
+            frozen_value (tuple): frozen value
+
+        Returns:
+            bool: True if value was set, False otherwise
+        """
+        if frozen_value == self.model.frozen_value:
+            return False
         self.beginResetModel()
         self.model.set_frozen_value(frozen_value)
         self.endResetModel()
+        return True
 
     def set_plot_x_column(self, column, is_x):
         """Sets or clears the X flag on a column"""

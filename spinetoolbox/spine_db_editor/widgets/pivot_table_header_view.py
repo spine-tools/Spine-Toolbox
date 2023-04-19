@@ -17,7 +17,7 @@ Contains custom QHeaderView for the pivot table.
 """
 
 from PySide6.QtCore import Signal, Slot, Qt, QPoint
-from PySide6.QtWidgets import QHeaderView, QMenu
+from PySide6.QtWidgets import QHeaderView, QMenu, QWidget
 from PySide6.QtGui import QAction
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...widgets.report_plotting_failure import report_plotting_failure
@@ -29,7 +29,7 @@ from ...config import PIVOT_TABLE_HEADER_COLOR
 class PivotTableHeaderView(QHeaderView):
     """Header view for the pivot table."""
 
-    header_dropped = Signal(object, object)
+    header_dropped = Signal(QWidget, QWidget)
 
     def __init__(self, orientation, area, pivot_table_view):
         """
