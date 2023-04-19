@@ -15,7 +15,7 @@ Custom QTableView classes that support copy-paste and the like.
 
 from dataclasses import replace
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint, QItemSelection, QItemSelectionModel
-from PySide6.QtWidgets import QTableView, QMenu
+from PySide6.QtWidgets import QTableView, QMenu, QWidget
 from PySide6.QtGui import QKeySequence, QAction
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels.pivot_table_models import (
@@ -1005,7 +1005,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
 
 
 class FrozenTableView(QTableView):
-    header_dropped = Signal(object, object)
+    header_dropped = Signal(QWidget, QWidget)
 
     @property
     def area(self):

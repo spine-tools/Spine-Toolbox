@@ -39,10 +39,10 @@ class PivotModel:
             columns = ()
             frozen = ()
             frozen_value = ()
-        self.pivot_rows = None
-        self.pivot_columns = None
-        self.pivot_frozen = None
-        self.frozen_value = None
+        self.pivot_rows = ()
+        self.pivot_columns = ()
+        self.pivot_frozen = ()
+        self.frozen_value = ()
         # create data dict with keys as long as index_ids
         self._data = data
         self.index_values = dict(zip(top_left_headers, zip(*data.keys())))
@@ -101,6 +101,18 @@ class PivotModel:
         removed_row_count = old_row_count - len(self._row_data_header)
         removed_column_count = old_column_count - len(self._column_data_header)
         return removed_row_count, removed_column_count
+
+    def frozen_values(self, data):
+        """Collects frozen values from data.
+
+        Args:
+            data (dict): pivot model data
+
+        Returns:
+            set of tuple: frozen values
+        """
+        frozen_getter = self._index_key_getter(self.pivot_frozen)
+        return {frozen_getter(item) for item in data}
 
     def _check_pivot(self, rows, columns, frozen, frozen_value):
         """Checks if given pivot is valid.
@@ -183,12 +195,26 @@ class PivotModel:
         self._column_data_header = self._get_unique_index_values(self.pivot_columns)
 
     def set_frozen_value(self, value):
-        """Sets values for the frozen indexes."""
+        """Sets values for the frozen indexes.
+
+        Args:
+            value (list of str):
+        """
         if len(value) != len(self.pivot_frozen):
             raise ValueError("'value' must have same length as 'self.pivot_frozen'")
         if value == self.frozen_value:
             return
         self.set_pivot(self.pivot_rows, self.pivot_columns, self.pivot_frozen, value)
+
+    def set_frozen(self, frozen):
+        """Sets the frozen names without resetting the pivot.
+
+        Args:
+            frozen (Iterable of str)
+        """
+        if len(frozen) != len(self.frozen_value):
+            raise ValueError("'frozen' must have same length as 'self.frozen_value'")
+        self.pivot_frozen = tuple(frozen)
 
     def get_pivoted_data(self, row_mask, column_mask):
         """Returns data for indexes in row_mask and column_mask.

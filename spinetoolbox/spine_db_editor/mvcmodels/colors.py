@@ -14,3 +14,4 @@ Color constants for models.
 from PySide6.QtGui import QColor
 
 FIXED_FIELD_COLOR = QColor("lightGray")
+SELECTED_COLOR = QColor.fromString("paleturquoise")

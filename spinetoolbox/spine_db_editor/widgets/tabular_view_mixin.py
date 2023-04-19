@@ -12,15 +12,17 @@
 """
 Contains TabularViewMixin class.
 """
-
+from contextlib import contextmanager
 from itertools import product
 from collections import namedtuple
-from PySide6.QtCore import Qt, Slot, QTimer
-from PySide6.QtGui import QIcon, QActionGroup
+from PySide6.QtCore import QModelIndex, Qt, Slot, QTimer
+from PySide6.QtGui import QAction, QIcon, QActionGroup
+from PySide6.QtWidgets import QWidget
+
 from spinedb_api.helpers import fix_name_ambiguity
 from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from ...helpers import busy_effect, CharIconEngine, preferred_row_height
+from ...helpers import busy_effect, CharIconEngine, preferred_row_height, disconnect
 from ..mvcmodels.pivot_table_models import (
     PivotTableSortFilterProxy,
     ParameterValuePivotTableModel,
@@ -66,7 +68,8 @@ class TabularViewMixin:
         self.populate_pivot_action_group()
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = None
-        self.frozen_table_model = FrozenTableModel(self)
+        self.frozen_table_model = FrozenTableModel(self.db_mngr, self)
+        self._disable_frozen_table_reload = False
         self.ui.pivot_table.setModel(self.pivot_table_proxy)
         self.ui.pivot_table.connect_spine_db_editor(self)
         self.ui.frozen_table.setModel(self.frozen_table_model)
@@ -90,7 +93,14 @@ class TabularViewMixin:
         super().connect_signals()
         self.ui.pivot_table.header_changed.connect(self._connect_pivot_table_header_signals)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
-        self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
+        self.ui.frozen_table.selectionModel().currentChanged.connect(self._change_selected_frozen_row)
+        self.frozen_table_model.rowsInserted.connect(self._check_frozen_value_selected)
+        self.frozen_table_model.rowsRemoved.connect(self._check_frozen_value_selected)
+        self.frozen_table_model.columnsInserted.connect(self._make_inserted_frozen_headers)
+        self.frozen_table_model.modelReset.connect(self._make_all_frozen_headers)
+        self.frozen_table_model.selected_row_changed.connect(
+            self._change_frozen_value, Qt.ConnectionType.QueuedConnection
+        )
         self.pivot_action_group.triggered.connect(self._handle_pivot_action_triggered)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.db_mngr.items_updated.connect(self._reload_pivot_table_if_needed)
@@ -166,7 +176,7 @@ class TabularViewMixin:
         super().init_models()
         self.clear_pivot_table()
 
-    @Slot("QModelIndex", object)
+    @Slot(QModelIndex, object)
     def _set_model_data(self, index, value):
         self.pivot_table_proxy.setData(index, value)
 
@@ -195,7 +205,7 @@ class TabularViewMixin:
 
     @staticmethod
     def _is_class_index(index):
-        """Returns whether or not the given tree index is a class index.
+        """Returns whether the given tree index is a class index.
 
         Args:
             index (QModelIndex): index from object or relationship tree
@@ -204,7 +214,7 @@ class TabularViewMixin:
         """
         return index.column() == 0 and not index.parent().parent().isValid()
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _handle_pivot_action_triggered(self, action):
         self.current_input_type = action.text()
         # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed` with `visible = True`
@@ -567,12 +577,16 @@ class TabularViewMixin:
         self.pivot_actions[self.current_input_type].setChecked(True)
         self.ui.dockWidget_frozen_table.setVisible(True)
         self._pending_reload = False
-        self.pivot_table_model = self._pivot_table_models[self.current_input_type]
-        self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
-        self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
-        self.pivot_table_model.modelReset.connect(self.reload_frozen_table)
-        delegate = self.pivot_table_model.make_delegate(self)
-        self.ui.pivot_table.setItemDelegate(delegate)
+        pivot_table_model = self._pivot_table_models[self.current_input_type]
+        if self.pivot_table_model is not pivot_table_model:
+            self.pivot_table_model = pivot_table_model
+            self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
+            self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
+            self.pivot_table_model.modelReset.connect(self.reload_frozen_table)
+            self.pivot_table_model.frozen_values_added.connect(self._add_values_to_frozen_table)
+            self.pivot_table_model.frozen_values_removed.connect(self._remove_values_from_frozen_table)
+            delegate = self.pivot_table_model.make_delegate(self)
+            self.ui.pivot_table.setItemDelegate(delegate)
         pivot = self.get_pivot_preferences()
         self.wipe_out_filter_menus()
         self.pivot_table_model.call_reset_model(pivot)
@@ -592,6 +606,8 @@ class TabularViewMixin:
             self.pivot_table_proxy.clear_filter()
             self.pivot_table_model.modelReset.disconnect(self.make_pivot_headers)
             self.pivot_table_model.modelReset.disconnect(self.reload_frozen_table)
+            self.pivot_table_model.frozen_values_added.disconnect(self._add_values_to_frozen_table)
+            self.pivot_table_model.frozen_values_removed.disconnect(self._remove_values_from_frozen_table)
             self.pivot_table_model = None
         self.frozen_table_model.clear_model()
 
@@ -624,18 +640,40 @@ class TabularViewMixin:
         for index in top_indexes:
             self.ui.pivot_table.resizeColumnToContents(index.column())
 
-    def make_frozen_headers(self):
+    @Slot(QModelIndex, int, int)
+    def _make_inserted_frozen_headers(self, parent_index, first_column, last_column):
+        """Turns the first row of columns in the frozen table into TabularViewHeaderWidgets.
+
+        Args:
+            parent_index (QModelIndex): frozen table column's parent index
+            first_column (int): first inserted column
+            last_column (int): last inserted column
         """
-        Turns indexes in the first row of the frozen table into TabularViewHeaderWidget.
-        """
-        for column in range(self.frozen_table_model.columnCount()):
+        self._make_frozen_headers(first_column, last_column)
+
+    @Slot()
+    def _make_all_frozen_headers(self):
+        """Turns the first row of columns in the frozen table into TabularViewHeaderWidgets."""
+        if self.frozen_table_model.rowCount() > 0:
+            self._make_frozen_headers(0, self.frozen_table_model.columnCount())
+
+    def _make_frozen_headers(self, first_column, last_column):
+        horizontal_header = self.ui.frozen_table.horizontalHeader()
+        for column in range(first_column, last_column + 1):
             index = self.frozen_table_model.index(0, column)
             widget = self.create_header_widget(index.data(Qt.ItemDataRole.DisplayRole), "frozen", with_menu=False)
             self.ui.frozen_table.setIndexWidget(index, widget)
-            column_width = self.ui.frozen_table.horizontalHeader().sectionSize(column)
+            column_width = horizontal_header.sectionSize(column)
             header_width = widget.size().width()
             width = max(column_width, header_width)
-            self.ui.frozen_table.horizontalHeader().resizeSection(column, width)
+            horizontal_header.resizeSection(column, width)
+
+    @Slot(QModelIndex, int, int)
+    def _check_frozen_value_selected(self, parent, first_row, last_row):
+        """Ensures that at least one row is selected in frozen table when number of rows change."""
+        if self.ui.frozen_table.currentIndex().isValid() or self.frozen_table_model.rowCount() < 2:
+            return
+        self.ui.frozen_table.setCurrentIndex(self.frozen_table_model.index(1, 0))
 
     def create_filter_menu(self, identifier):
         """Returns a filter menu for given given object_class identifier.
@@ -702,60 +740,115 @@ class TabularViewMixin:
             i = 0
         return i
 
-    @Slot(object, object, str)
+    @Slot(QWidget, QWidget, str)
     def handle_header_dropped(self, dropped, catcher, position=""):
         """
         Updates pivots when a header is dropped.
 
         Args:
-            dropped (TabularViewHeaderWidget)
-            catcher (TabularViewHeaderWidget, PivotTableHeaderView, FrozenTableView)
+            dropped (TabularViewHeaderWidget): drag source widget
+            catcher (TabularViewHeaderWidget or PivotTableHeaderView or FrozenTableView): drop target widget
             position (str): either "before", "after", or ""
         """
         top_indexes, left_indexes = self.pivot_table_model.top_left_indexes()
         rows = [index.data(Qt.ItemDataRole.DisplayRole) for index in top_indexes]
         columns = [index.data(Qt.ItemDataRole.DisplayRole) for index in left_indexes]
+        list_options = {"columns": columns, "rows": rows, "frozen": self.frozen_table_model.headers}
+        dropped_list = list_options[dropped.area]
+        catcher_list = list_options[catcher.area]
+        destination = self._get_insert_index(catcher_list, catcher, position)
+        if dropped.area == "frozen" and catcher.area == "frozen":
+            source = dropped_list.index(dropped.identifier)
+            self.frozen_table_model.moveColumn(QModelIndex(), source, QModelIndex(), destination)
+            self.pivot_table_model.set_frozen(self.frozen_table_model.headers)
+            return
+        if dropped.area == "frozen":
+            source = dropped_list.index(dropped.identifier)
+            self.frozen_table_model.remove_column(source)
+        else:
+            dropped_list.remove(dropped.identifier)
+        if catcher.area == "frozen":
+            values = set(self.pivot_table_model.model.index_values.get(dropped.identifier, []))
+            self.frozen_table_model.insert_column_data(dropped.identifier, values, destination)
+        else:
+            catcher_list.insert(destination, dropped.identifier)
+        frozen_value = self.frozen_table_model.get_frozen_value()
         frozen = self.frozen_table_model.headers
-        dropped_list = {"columns": columns, "rows": rows, "frozen": frozen}[dropped.area]
-        catcher_list = {"columns": columns, "rows": rows, "frozen": frozen}[catcher.area]
-        dropped_list.remove(dropped.identifier)
-        i = self._get_insert_index(catcher_list, catcher, position)
-        catcher_list.insert(i, dropped.identifier)
-        if dropped.area == "frozen" or catcher.area == "frozen":
-            if frozen:
-                frozen_values = self.find_frozen_values(frozen)
-                self.frozen_table_model.reset_model(frozen_values, frozen)
-                self.ui.frozen_table.resizeColumnsToContents()
-                self.make_frozen_headers()
-            else:
-                self.frozen_table_model.clear_model()
-        frozen_value = self.get_frozen_value(self.ui.frozen_table.currentIndex())
-        self.pivot_table_model.set_pivot(rows, columns, frozen, frozen_value)
+        with self._frozen_table_reload_disabled():
+            self.pivot_table_model.set_pivot(rows, columns, frozen, frozen_value)
         # save current pivot
         self.class_pivot_preferences[
             (self.current_class_name, self.current_class_type, self.current_input_type)
         ] = self.PivotPreferences(rows, columns, frozen, frozen_value)
         self.make_pivot_headers()
 
-    def get_frozen_value(self, index):
-        """
-        Returns the value in the frozen table corresponding to the given index.
+    @Slot(QModelIndex, QModelIndex)
+    def _change_selected_frozen_row(self, current, previous):
+        """Sets the frozen value from selection in frozen table."""
+        if not current.isValid():
+            return
+        row = current.row()
+        if row == 0:
+            selection_model = self.ui.frozen_table.selectionModel()
+            with disconnect(selection_model.currentChanged, self._change_selected_frozen_row):
+                self.ui.frozen_table.setCurrentIndex(previous)
+            return
+        if row == previous.row():
+            return
+        with self._frozen_table_reload_disabled():
+            self.frozen_table_model.set_selected(row)
+
+    @Slot(str, set, bool)
+    def change_filter(self, identifier, valid_values, has_filter):
+        # None means everything passes
+        self.pivot_table_proxy.set_filter(identifier, valid_values if has_filter else None)
+
+    @Slot(set)
+    def _add_values_to_frozen_table(self, frozen_values):
+        """Adds values to frozen table.
 
         Args:
-            index (QModelIndex)
-        Returns:
-            tuple
+            frozen_values (set of tuple): values to add
         """
-        if not index.isValid():
-            return tuple(None for _ in range(self.frozen_table_model.columnCount()))
-        return self.frozen_table_model.row(index)
+        self.frozen_table_model.add_values(frozen_values)
 
-    @Slot("QModelIndex", "QModelIndex")
-    def change_frozen_value(self, current, previous):
-        """Sets the frozen value from selection in frozen table."""
-        frozen_value = self.get_frozen_value(current)
-        self.pivot_table_model.set_frozen_value(frozen_value)
-        # store pivot preferences
+    @Slot(set)
+    def _remove_values_from_frozen_table(self, frozen_values):
+        """Removes values from frozen table.
+
+        Args:
+            frozen_values (set of tuple): values to remove
+        """
+        self.frozen_table_model.remove_values(frozen_values)
+
+    @Slot()
+    def reload_frozen_table(self):
+        """Resets the frozen model according to new selection in entity trees."""
+        if self._disable_frozen_table_reload or not self.pivot_table_model:
+            return
+        frozen = self.pivot_table_model.model.pivot_frozen
+        self.frozen_table_model.set_headers(frozen)
+
+    def find_frozen_values(self, frozen):
+        """Returns a list of tuples containing unique values for the frozen indexes.
+
+        Args:
+            frozen (tuple): A tuple of currently frozen indexes
+
+        Returns:
+            list: frozen value
+        """
+        return list(dict.fromkeys(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])).keys())
+
+    @Slot()
+    def _change_frozen_value(self):
+        """Updated frozen value according to selected row in Frozen table."""
+        if self.pivot_table_model is None:
+            # Happens at startup.
+            return
+        frozen_value = self.frozen_table_model.get_frozen_value()
+        if not self.pivot_table_model.set_frozen_value(frozen_value):
+            return
         self.class_pivot_preferences[
             (self.current_class_name, self.current_class_type, self.current_input_type)
         ] = self.PivotPreferences(
@@ -764,43 +857,6 @@ class TabularViewMixin:
             self.pivot_table_model.model.pivot_frozen,
             self.pivot_table_model.model.frozen_value,
         )
-
-    @Slot(str, set, bool)
-    def change_filter(self, identifier, valid_values, has_filter):
-        # None means everything passes
-        self.pivot_table_proxy.set_filter(identifier, valid_values if has_filter else None)
-
-    def reload_frozen_table(self):
-        """Resets the frozen model according to new selection in entity trees."""
-        if not self.pivot_table_model:
-            return
-        frozen = self.pivot_table_model.model.pivot_frozen
-        frozen_value = self.pivot_table_model.model.frozen_value
-        frozen_values = self.find_frozen_values(frozen)
-        self.frozen_table_model.reset_model(frozen_values, frozen)
-        self.ui.frozen_table.resizeColumnsToContents()
-        self.make_frozen_headers()
-        if frozen_value in frozen_values:
-            # update selected row
-            ind = frozen_values.index(frozen_value)
-            self.ui.frozen_table.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
-            self.ui.frozen_table.selectRow(ind + 1)
-            self.ui.frozen_table.selectionModel().blockSignals(False)
-        else:
-            # frozen value not found, remove selection
-            self.ui.frozen_table.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
-            self.ui.frozen_table.clearSelection()
-            self.ui.frozen_table.selectionModel().blockSignals(False)
-
-    def find_frozen_values(self, frozen):
-        """Returns a list of tuples containing unique values (object ids) for the frozen indexes (object_class ids).
-
-        Args:
-            frozen (tuple(int)): A tuple of currently frozen indexes
-        Returns:
-            list(tuple(list(int)))
-        """
-        return list(dict.fromkeys(zip(*[self.pivot_table_model.model.index_values.get(k, []) for k in frozen])).keys())
 
     def receive_session_rolled_back(self, db_maps):
         """Reacts to session rolled back event."""
@@ -819,3 +875,11 @@ class TabularViewMixin:
 
     def accepts_ith_member_object_item(self, i, item, db_map):
         return item["class_id"] == self.current_object_class_id_list[i][db_map]
+
+    @contextmanager
+    def _frozen_table_reload_disabled(self):
+        self._disable_frozen_table_reload = True
+        try:
+            yield
+        finally:
+            self._disable_frozen_table_reload = False

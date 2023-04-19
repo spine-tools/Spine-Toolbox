@@ -12,6 +12,7 @@
 """
 General helper functions and classes.
 """
+import functools
 import time
 from enum import Enum, unique
 import itertools
@@ -112,6 +113,7 @@ def busy_effect(func):
         func (Callable): Decorated function.
     """
 
+    @functools.wraps(func)
     def new_function(*args, **kwargs):
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QApplication.setOverrideCursor(QCursor(Qt.BusyCursor))
@@ -408,7 +410,7 @@ def rows_to_row_count_tuples(rows):
     chunks of successive rows.
 
     Args:
-        rows (Iterable): rows
+        rows (Iterable of int): rows
 
     Returns:
         list of tuple: row count tuples
@@ -1243,6 +1245,23 @@ def parameter_identifier(database, parameter, names, alternative):
         parts += [alternative]
     parts += [DB_ITEM_SEPARATOR.join(names)]
     return " - ".join(parts)
+
+
+@contextmanager
+def disconnect(signal, *slots):
+    """Disconnects signal for the duration of a 'with' block.
+
+    Args:
+        signal (Signal): signal to disconnect
+        *slots: slots to disconnect from
+    """
+    for slot in slots:
+        signal.disconnect(slot)
+    try:
+        yield
+    finally:
+        for slot in slots:
+            signal.connect(slot)
 
 
 class SignalWaiter(QObject):
