@@ -11,9 +11,6 @@
 
 """
 Unit tests for ProjectItem base class.
-
-:author: A. Soininen (VTT)
-:date:   4.10.2019
 """
 
 from tempfile import TemporaryDirectory

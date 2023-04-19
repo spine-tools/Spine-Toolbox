@@ -11,9 +11,6 @@
 
 """
 Contains TabularViewMixin class.
-
-:author: P. Vennström (VTT)
-:date:   1.11.2018
 """
 
 from itertools import product

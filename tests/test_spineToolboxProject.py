@@ -11,9 +11,6 @@
 
 """
 Unit tests for SpineToolboxProject class.
-
-:author: P. Savolainen (VTT)
-:date:   14.11.2018
 """
 import json
 import os.path

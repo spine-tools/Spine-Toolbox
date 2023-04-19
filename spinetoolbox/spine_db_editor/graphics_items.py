@@ -11,9 +11,6 @@
 
 """
 Classes for drawing graphics items on graph view's QGraphicsScene.
-
-:authors: M. Marin (KTH), P. Savolainen (VTT)
-:date:   4.4.2018
 """
 from PySide6.QtCore import Qt, Signal, Slot, QLineF
 from PySide6.QtSvgWidgets import QGraphicsSvgItem

@@ -11,9 +11,6 @@
 
 """
 Unit tests for the indexed_value_table_context_menu module.
-
-:author: A. Soininen (VTT)
-:date:   5.7.2019
 """
 
 import unittest

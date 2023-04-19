@@ -11,9 +11,6 @@
 
 """
 Classes for custom QDialogs to add edit and remove database items.
-
-:author: M. Marin (KTH)
-:date:   13.5.2018
 """
 from PySide6.QtWidgets import QCheckBox, QDialogButtonBox, QWidget
 from PySide6.QtCore import Signal, Slot

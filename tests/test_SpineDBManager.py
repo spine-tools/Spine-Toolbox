@@ -11,9 +11,6 @@
 
 """
 Unit tests for the spine_db_manager module.
-
-:author: A. Soininen (VTT)
-:date:   12.7.2019
 """
 from pathlib import Path
 from tempfile import TemporaryDirectory

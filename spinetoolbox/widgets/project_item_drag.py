@@ -11,9 +11,6 @@
 
 """
 Classes for custom QListView.
-
-:author: M. Marin (KTH)
-:date:   14.11.2018
 """
 
 from textwrap import fill

@@ -11,9 +11,6 @@
 
 """
 Contains unit tests for the SpineDBEditorBase class.
-
-:author: A. Soininen
-:date:   16.3.2020
 """
 
 import unittest

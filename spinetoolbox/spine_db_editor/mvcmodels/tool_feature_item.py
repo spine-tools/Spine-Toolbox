@@ -11,9 +11,6 @@
 
 """
 Classes to represent tool and feature items in a tree.
-
-:authors: M. Marin (KTH)
-:date:    1.9.2020
 """
 from PySide6.QtCore import Qt
 from .tree_item_utility import GrayIfLastMixin, EditableMixin, EmptyChildRootItem, LeafItem, StandardTreeItem

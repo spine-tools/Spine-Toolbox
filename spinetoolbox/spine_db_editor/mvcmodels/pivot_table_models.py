@@ -11,9 +11,6 @@
 
 """
 Provides pivot table models for the Tabular View.
-
-:author: P. Vennström (VTT)
-:date:   1.11.2018
 """
 
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel

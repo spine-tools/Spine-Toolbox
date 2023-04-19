@@ -11,9 +11,6 @@
 
 """
 General helper functions and classes.
-
-:authors: P. Savolainen (VTT)
-:date:   10.1.2018
 """
 import time
 from enum import Enum, unique

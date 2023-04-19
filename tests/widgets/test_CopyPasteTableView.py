@@ -11,9 +11,6 @@
 
 """
 Unit tests for CopyPasteTableView class.
-
-:author: A. Soininen (VTT)
-:date:   12.8.2019
 """
 
 import locale

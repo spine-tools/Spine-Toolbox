@@ -11,7 +11,4 @@
 
 """
 This subpackage contains GUI files for the Spine db editor.
-
-:authors: M. Marin (KTH)
-:date:    13.5.2020
 """

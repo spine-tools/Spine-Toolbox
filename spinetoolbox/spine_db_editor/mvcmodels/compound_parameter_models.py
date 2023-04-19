@@ -12,9 +12,6 @@
 """
 Compound models for object parameter definitions and values.
 These models concatenate several 'single' models and one 'empty' model.
-
-:authors: M. Marin (KTH)
-:date:   28.6.2019
 """
 from PySide6.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide6.QtGui import QFont

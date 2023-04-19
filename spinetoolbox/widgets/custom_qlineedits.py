@@ -11,9 +11,6 @@
 
 """
 Classes for custom line edits.
-
-:authors: M. Marin (KTH), P. Savolainen (VTT)
-:date:   11.10.2018
 """
 
 from PySide6.QtWidgets import QLineEdit

@@ -11,9 +11,6 @@
 
 """
 Unit tests for the models in ``compound_parameter_models`` module.
-
-:author: A. Soininen (VTT)
-:date:   28.1.2021
 """
 import unittest
 from unittest.mock import MagicMock, patch

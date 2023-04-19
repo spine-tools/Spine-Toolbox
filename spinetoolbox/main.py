@@ -11,9 +11,6 @@
 
 """
 Provides the main() function.
-
-:author: A. Soininen (VTT)
-:date:   4.10.2019
 """
 import os
 import multiprocessing

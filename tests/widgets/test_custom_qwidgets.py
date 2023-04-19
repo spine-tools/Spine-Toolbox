@@ -11,9 +11,6 @@
 
 """
 Unit tests for the models in ``custom_qwidgets`` module.
-
-:author: A. Soininen (VTT)
-:date:   4.2.2021
 """
 
 import unittest

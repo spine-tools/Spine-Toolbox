@@ -11,8 +11,6 @@
 
 """
 Client for exchanging messages between the toolbox and the Spine Engine Server.
-:author: P. Pääkkönen (VTT), P. Savolainen (VTT)
-:date:   02.09.2021
 """
 
 import os

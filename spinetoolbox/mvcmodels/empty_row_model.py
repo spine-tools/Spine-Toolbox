@@ -11,9 +11,6 @@
 
 """
 Contains a table model with an empty last row.
-
-:authors: M. Marin (KTH)
-:date:   20.5.2018
 """
 
 from PySide6.QtCore import Qt, Slot, QModelIndex

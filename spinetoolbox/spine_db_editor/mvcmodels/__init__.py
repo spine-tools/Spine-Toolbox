@@ -13,7 +13,4 @@
 Modules in this package contain classes that represent Spine Toolbox's models (internal data structures) in the
 Model-View-Controller design pattern. The model classes define an interface that is used by views and delegates
 to access data in the application.
-
-:author: M. Marin (KTH)
-:date:   23.5.2020
 """

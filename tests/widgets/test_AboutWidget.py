@@ -11,9 +11,6 @@
 
 """
 Unit tests for the AboutWidget class.
-
-:authors: P. Savolainen (VTT)
-:date:   4.11.2022
 """
 
 import unittest

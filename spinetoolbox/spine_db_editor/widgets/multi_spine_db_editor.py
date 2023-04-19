@@ -11,9 +11,6 @@
 
 """
 Contains the MultiSpineDBEditor class.
-
-:author: M. Marin (KTH)
-:date:   12.12.2020
 """
 
 import os

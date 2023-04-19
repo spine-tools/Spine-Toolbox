@@ -11,9 +11,6 @@
 
 """
 The FetchParent and FlexibleFetchParent classes.
-
-:authors: M. Marin (ER) and A. Soininen (VTT)
-:date:   18.11.2022
 """
 
 from PySide6.QtCore import QTimer, Signal, QObject

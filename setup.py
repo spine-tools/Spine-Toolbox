@@ -11,9 +11,6 @@
 
 """
 Setup script for Python's setuptools.
-
-:author: A. Soininen (VTT)
-:date:   3.10.2019
 """
 
 from setuptools import setup

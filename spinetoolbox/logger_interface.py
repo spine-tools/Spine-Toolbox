@@ -11,9 +11,6 @@
 
 """
 A logger interface.
-
-:authors: A. Soininen (VTT)
-:date:   16.1.2020
 """
 
 from PySide6.QtCore import QObject, Signal

@@ -11,9 +11,6 @@
 
 """
 Unit tests for the metadata table model.
-
-:author: A. Soininen (VTT)
-:date:   30.3.2022
 """
 import itertools
 from pathlib import Path

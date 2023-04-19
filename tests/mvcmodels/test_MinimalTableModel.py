@@ -11,9 +11,6 @@
 
 """
 Unit tests for the MinimalTableModel class.
-
-:author: A. Soininen (VTT)
-:date:   10.5.2019
 """
 
 import unittest

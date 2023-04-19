@@ -11,9 +11,6 @@
 
 """
 Unit tests for ProjectItemModel class.
-
-:author: A. Soininen (VTT)
-:date:   14.10.2019
 """
 
 from tempfile import TemporaryDirectory

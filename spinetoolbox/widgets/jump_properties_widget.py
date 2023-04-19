@@ -11,9 +11,6 @@
 
 """
 Contains jump properties widget's business logic.
-
-:author: A. Soininen (VTT)
-:date:   23.6.2021
 """
 from PySide6.QtCore import Slot, QItemSelection
 from .properties_widget import PropertiesWidgetBase

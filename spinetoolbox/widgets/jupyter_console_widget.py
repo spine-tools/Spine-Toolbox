@@ -11,9 +11,6 @@
 
 """
 Class for a custom RichJupyterWidget that can run Tool instances.
-
-:authors: M. Marin (KTH), P. Savolainen (VTT)
-:date:   22.10.2019
 """
 
 import logging

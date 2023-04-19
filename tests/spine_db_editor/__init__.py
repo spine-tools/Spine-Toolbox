@@ -11,7 +11,4 @@
 
 """
 Unit tests for Spine db editor
-
-:author: M. Marin (KTH)
-:date:   13.5.2020
 """

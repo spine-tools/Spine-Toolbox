@@ -11,9 +11,6 @@
 
 """
 Models to represent items in a tree.
-
-:authors: P. Vennström (VTT), M. Marin (KTH)
-:date:   11.3.2019
 """
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
 

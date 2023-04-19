@@ -11,9 +11,6 @@
 
 """
 A model for maps, used by the parameter_value editors.
-
-:authors: A. Soininen (VTT)
-:date:    11.2.2020
 """
 from copy import deepcopy
 from numbers import Number

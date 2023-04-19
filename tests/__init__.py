@@ -11,7 +11,4 @@
 
 """
 Init file for tests package. Intentionally empty.
-
-:author: P. Savolainen (VTT)
-:date:   11.10.2018
 """

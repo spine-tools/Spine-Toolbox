@@ -11,9 +11,6 @@
 
 """
 Unit tests for DB editor's custom ``QTreeView`` classes.
-
-:author: A. Soininen
-:date:   17.8.2021
 """
 import os.path
 from tempfile import TemporaryDirectory

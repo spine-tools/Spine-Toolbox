@@ -11,9 +11,6 @@
 
 """
 Contains the MultiTabWindow and TabBarPlus classes.
-
-:author: M. Marin (KTH)
-:date:   12.12.2020
 """
 
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QTabBar, QToolButton, QApplication, QMenu

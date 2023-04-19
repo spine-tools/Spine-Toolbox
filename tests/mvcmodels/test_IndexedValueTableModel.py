@@ -11,9 +11,6 @@
 
 """
 Unit tests for the IndexedValueTableModel class.
-
-:authors: A. Soininen (VTT)
-:date:   2.7.2019
 """
 
 import unittest

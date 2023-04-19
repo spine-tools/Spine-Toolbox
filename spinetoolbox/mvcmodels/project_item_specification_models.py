@@ -11,9 +11,6 @@
 
 """
 Contains a class for storing Tool specifications.
-
-:authors: P. Savolainen (VTT)
-:date:   23.1.2018
 """
 
 import bisect

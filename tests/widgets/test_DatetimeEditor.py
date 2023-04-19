@@ -11,9 +11,6 @@
 
 """
 Unit tests for the DatetimeEditor widget.
-
-:authors: A. Soininen (VTT)
-:date:   3.7.2019
 """
 
 import unittest

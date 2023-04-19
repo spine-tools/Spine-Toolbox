@@ -11,7 +11,4 @@
 
 """
 Automatically generated UI modules for Spine db editor.
-
-:authors: M. Marin (KTH)
-:date:    13.5.2020
 """
