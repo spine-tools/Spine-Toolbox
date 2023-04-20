@@ -655,7 +655,7 @@ class TabularViewMixin:
     def _make_all_frozen_headers(self):
         """Turns the first row of columns in the frozen table into TabularViewHeaderWidgets."""
         if self.frozen_table_model.rowCount() > 0:
-            self._make_frozen_headers(0, self.frozen_table_model.columnCount())
+            self._make_frozen_headers(0, self.frozen_table_model.columnCount() - 1)
 
     def _make_frozen_headers(self, first_column, last_column):
         horizontal_header = self.ui.frozen_table.horizontalHeader()
