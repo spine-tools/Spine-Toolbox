@@ -11,9 +11,6 @@
 
 """
 Custom QTableView classes that support copy-paste and the like.
-
-:author: M. Marin (KTH)
-:date:   18.5.2018
 """
 
 import csv

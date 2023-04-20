@@ -11,9 +11,6 @@
 
 """
 Unit tests for :class:`SpecificationEditorWindowBase` and its supports.
-
-:author: A. Soininen (VTT)
-:date:   1.7.2021
 """
 from tempfile import TemporaryDirectory
 import unittest

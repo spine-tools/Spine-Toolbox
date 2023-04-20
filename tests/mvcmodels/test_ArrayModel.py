@@ -11,9 +11,6 @@
 
 """
 Unit tests for the ArrayModel class.
-
-:author: A. Soininen (VTT)
-:date:   9.4.2020
 """
 import unittest
 from PySide6.QtCore import QObject, Qt

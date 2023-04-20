@@ -11,9 +11,6 @@
 
 """
 Classes and functions that can be shared among unit test modules.
-
-:author: P. Savolainen (VTT)
-:date:   18.4.2019
 """
 from contextlib import contextmanager
 from unittest import mock

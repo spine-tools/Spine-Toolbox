@@ -10,9 +10,6 @@
 ######################################################################################################################
 
 """Version info for Spine Toolbox package. Inspired by python sys.version and sys.version_info.
-
-:author: P. Savolainen (VTT)
-:date: 8.1.2020
 """
 
 from typing import NamedTuple

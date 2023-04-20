@@ -11,9 +11,6 @@
 
 """
 Provides FilterCheckboxListModel for FilterWidget.
-
-:author: P. Vennström (VTT)
-:date:   1.11.2018
 """
 
 import re

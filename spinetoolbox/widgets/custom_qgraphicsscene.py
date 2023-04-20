@@ -11,9 +11,6 @@
 
 """
 Custom QGraphicsScene used in the Design View.
-
-:author: P. Savolainen (VTT)
-:date:   13.2.2019
 """
 
 import math

@@ -11,9 +11,6 @@
 
 """
 Contains a class for storing project items.
-
-:authors: P. Savolainen (VTT)
-:date:   23.1.2018
 """
 import logging
 from copy import copy

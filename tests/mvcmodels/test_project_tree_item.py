@@ -11,9 +11,6 @@
 
 """
 Unit tests for project_tree_item module.
-
-:author: A. Soininen (VTT)
-:date:   17.1.2020
 """
 
 from tempfile import TemporaryDirectory

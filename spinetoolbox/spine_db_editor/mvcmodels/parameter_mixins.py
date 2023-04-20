@@ -11,9 +11,6 @@
 
 """
 Miscelaneous mixins for parameter models
-
-:authors: M. Marin (KTH)
-:date:   4.10.2019
 """
 
 from spinedb_api.parameter_value import split_value_and_type

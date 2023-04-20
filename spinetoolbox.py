@@ -11,9 +11,6 @@
 
 """
 Starts Spine Toolbox.
-
-:author: A. Soininen (VTT)
-:date:   3.10.2019
 """
 
 

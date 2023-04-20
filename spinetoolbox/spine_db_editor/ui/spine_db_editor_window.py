@@ -418,8 +418,9 @@ class Ui_MainWindow(object):
         self.frozen_table.setObjectName(u"frozen_table")
         self.frozen_table.setAcceptDrops(True)
         self.frozen_table.setTabKeyNavigation(False)
-        self.frozen_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.frozen_table.setSelectionMode(QAbstractItemView.NoSelection)
         self.frozen_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.frozen_table.horizontalHeader().setVisible(False)
         self.frozen_table.verticalHeader().setVisible(False)
 
         self.verticalLayout_14.addWidget(self.frozen_table)

@@ -11,9 +11,6 @@
 
 """
 Class for a custom QTextBrowser for showing the logs and tool output.
-
-:author: P. Savolainen (VTT)
-:date:   6.2.2018
 """
 
 from contextlib import contextmanager

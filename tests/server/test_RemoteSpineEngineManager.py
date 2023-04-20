@@ -11,8 +11,6 @@
 
 """
 Tests for Remote Spine Engine Manager.
-:authors: P. Savolainen (VTT)
-:date:   16.6.2022
 """
 
 import unittest

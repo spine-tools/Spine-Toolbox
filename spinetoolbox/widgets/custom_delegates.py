@@ -11,9 +11,6 @@
 
 """
 Custom item delegates.
-
-:author: M. Marin (KTH)
-:date:   1.9.2018
 """
 
 from PySide6.QtCore import Qt, Signal, QEvent, QPoint, QRect

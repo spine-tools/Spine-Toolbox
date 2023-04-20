@@ -11,9 +11,6 @@
 
 """
 Link properties widget.
-
-:author: M. Marin (KTH)
-:date:   27.11.2020
 """
 
 from PySide6.QtCore import Slot

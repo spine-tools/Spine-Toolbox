@@ -11,9 +11,6 @@
 
 """
 Unit tests for AddProjectItemWidget.
-
-:author: A. Soininen (VTT)
-:date:   17.10.2019
 """
 from tempfile import TemporaryDirectory
 import unittest

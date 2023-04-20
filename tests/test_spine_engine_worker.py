@@ -11,9 +11,6 @@
 
 """
 Unit tests for ``spine_engine_worker`` module.
-
-:authors: A. Soininen (VTT)
-:date:    3.12.2020
 """
 import time
 import unittest

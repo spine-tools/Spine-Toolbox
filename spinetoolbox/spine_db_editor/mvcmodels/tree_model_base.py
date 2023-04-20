@@ -10,9 +10,6 @@
 ######################################################################################################################
 """
 Models to represent things in a tree.
-
-:authors: M. Marin (KTH)
-:date:    1.0.2020
 """
 from PySide6.QtCore import Qt, QModelIndex
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel

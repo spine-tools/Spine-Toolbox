@@ -11,13 +11,10 @@
 
 """
 Contains TabularViewHeaderWidget class.
-
-:authors: P. Vennström (VTT), M. Marin (KTH)
-:date:   2.12.2019
 """
 
 from PySide6.QtCore import Qt, QMimeData, Signal
-from PySide6.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout
+from PySide6.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout, QWidget
 from PySide6.QtGui import QDrag
 from ...config import PIVOT_TABLE_HEADER_COLOR
 
@@ -25,7 +22,7 @@ from ...config import PIVOT_TABLE_HEADER_COLOR
 class TabularViewHeaderWidget(QFrame):
     """A draggable QWidget."""
 
-    header_dropped = Signal(object, object, str)
+    header_dropped = Signal(QWidget, QWidget, str)
     _H_MARGIN = 3
     _SPACING = 16
 
@@ -121,7 +118,7 @@ class TabularViewHeaderWidget(QFrame):
 
     def dropEvent(self, event):
         other = event.source()
-        if other == self:
+        if other is self:
             return
         center = self.rect().center()
         drop = event.pos()
@@ -129,4 +126,6 @@ class TabularViewHeaderWidget(QFrame):
             position = "before" if center.x() > drop.x() else "after"
         elif self.area == "columns":
             position = "before" if center.y() > drop.y() else "after"
+        else:
+            raise RuntimeError(f"Logic error: invalid area '{self.area}'")
         self.header_dropped.emit(other, self, position)

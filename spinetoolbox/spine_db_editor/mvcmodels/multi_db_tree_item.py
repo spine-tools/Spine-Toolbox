@@ -11,9 +11,6 @@
 
 """
 Base classes to represent items from multiple databases in a tree.
-
-:authors: P. Vennström (VTT), M. Marin (KTH)
-:date:    17.6.2020
 """
 from operator import attrgetter
 

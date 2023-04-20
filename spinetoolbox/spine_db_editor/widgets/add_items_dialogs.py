@@ -12,8 +12,6 @@
 """
 Classes for custom QDialogs to add items to databases.
 
-:author: M. Marin (KTH)
-:date:   13.5.2018
 """
 
 from itertools import product

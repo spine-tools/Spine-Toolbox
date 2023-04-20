@@ -11,9 +11,6 @@
 
 """
 Contains a dialog for generating scenarios from selected alternatives.
-
-:authors: A.Soininen (VTT)
-:date:    7.9.2021
 """
 from enum import auto, Enum, unique
 from PySide6.QtCore import Qt, Slot

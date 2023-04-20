@@ -11,9 +11,6 @@
 
 """
 Unit tests for SpineDBEditor classes.
-
-:author: M. Marin (KTH)
-:date:   6.12.2018
 """
 
 import unittest

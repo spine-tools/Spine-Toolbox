@@ -11,9 +11,6 @@
 
 """
 Contains a custom combo box for the custom open project dialog.
-
-:author: P. Savolainen (VTT)
-:date: 14.12.2017
 """
 
 import os

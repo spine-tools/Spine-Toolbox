@@ -11,9 +11,6 @@
 
 """
 Unit tests for the :module:`spinetoolbox.load_project_items` module.
-
-:author: A. Soininen (VTT)
-:date:   8.5.2020
 """
 import unittest
 from PySide6.QtWidgets import QApplication

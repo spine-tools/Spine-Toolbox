@@ -11,9 +11,6 @@
 
 """
 Unit tests for ToolboxUI class.
-
-:author: P. Savolainen (VTT)
-:date:   22.8.2018
 """
 
 from collections import namedtuple

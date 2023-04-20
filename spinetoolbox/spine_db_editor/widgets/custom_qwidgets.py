@@ -11,9 +11,6 @@
 
 """
 Custom QWidgets.
-
-:author: M. Marin (KTH)
-:date:   13.5.2018
 """
 
 import os

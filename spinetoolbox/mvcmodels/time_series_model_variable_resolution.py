@@ -11,9 +11,6 @@
 
 """
 A model for variable resolution time series, used by the parameter_value editors.
-
-:authors: A. Soininen (VTT)
-:date:   5.7.2019
 """
 
 import numpy as np

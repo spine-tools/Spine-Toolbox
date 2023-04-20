@@ -11,8 +11,6 @@
 
 """
 Contains SpineEngineWorker.
-:authors: M. Marin (KTH)
-:date:   14.10.2020
 """
 import copy
 from PySide6.QtCore import Signal, Slot, QObject, QThread

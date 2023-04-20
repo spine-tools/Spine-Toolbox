@@ -11,9 +11,6 @@
 
 """
 Classes for custom context menus and pop-up menus.
-
-:author: P. Savolainen (VTT)
-:date:   9.1.2018
 """
 
 import os

@@ -11,7 +11,4 @@
 
 """
 Init file for tests.widgets package. Intentionally empty.
-
-:author: A. Soininen (VTT)
-:date:   28.10.2019
 """

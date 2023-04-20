@@ -11,9 +11,6 @@
 
 """
 SpineDBParcel class.
-
-:authors: M. Marin (KTH)
-:date:   10.5.2020
 """
 
 from spinedb_api import Asterisk

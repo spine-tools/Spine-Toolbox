@@ -11,9 +11,6 @@
 
 """
 Context menus for parameter value editor widgets.
-
-:author: A. Soininen (VTT)
-:date:   5.7.2019
 """
 from operator import itemgetter
 

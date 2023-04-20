@@ -11,9 +11,6 @@
 
 """
 Unit tests for ``graphics_items`` module.
-
-:authors: A. Soininen (VTT)
-:date:    17.12.2020
 """
 import os.path
 from tempfile import TemporaryDirectory

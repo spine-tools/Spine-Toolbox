@@ -11,9 +11,6 @@
 
 """
 Custom QWidgets for Filtering and Zooming.
-
-:author: P. Vennström (VTT)
-:date:   4.12.2018
 """
 
 from PySide6.QtWidgets import (

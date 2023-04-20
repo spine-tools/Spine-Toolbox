@@ -11,9 +11,6 @@
 
 """
 A base for editor windows for editing parameter values.
-
-:author: A. Soininen (VTT)
-:date:   2.11.2020
 """
 
 from enum import auto, Enum, unique

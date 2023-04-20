@@ -11,9 +11,6 @@
 
 """
 Unit tests for the jump properties widget.
-
-:authors: A. Soininen (VTT)
-:date:    6.7.2021
 """
 from tempfile import TemporaryDirectory
 import unittest

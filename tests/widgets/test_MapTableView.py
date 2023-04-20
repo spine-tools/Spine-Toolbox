@@ -11,9 +11,6 @@
 
 """
 Unit tests for MapTableView class.
-
-:author: A. Soininen (VTT)
-:date:   25.3.2021
 """
 
 import csv

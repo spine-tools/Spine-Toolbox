@@ -27,9 +27,6 @@ On Windows:
 On other platforms (not tested):
 1. Build the application into build/ directory with command 'python cx_Freeze_setup.py build'
 2. Use cx_Freeze_setup.py (this file) and Cx_Freeze (see Cx_Freeze documentation for help)
-
-:author: P. Savolainen (VTT)
-:date:   29.5.2018
 """
 
 import os

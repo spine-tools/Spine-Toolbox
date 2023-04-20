@@ -11,9 +11,6 @@
 
 """
 Classes for custom QDialogs for julia setup.
-
-:author: M. Marin (KTH)
-:date:   13.5.2018
 """
 
 import os

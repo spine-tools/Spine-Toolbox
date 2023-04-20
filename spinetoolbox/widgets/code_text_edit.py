@@ -11,9 +11,6 @@
 
 """
 Provides simple text editor for programming purposes.
-
-:author: M. Marin (KTH)
-:date:   28.1.2020
 """
 
 from pygments.styles import get_style_by_name

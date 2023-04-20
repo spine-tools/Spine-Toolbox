@@ -11,9 +11,6 @@
 
 """
 An editor widget for editing datetime database (relationship) parameter values.
-
-:author: A. Soininen (VTT)
-:date:   28.6.2019
 """
 
 from datetime import datetime

@@ -11,9 +11,6 @@
 
 """
 Contains base class for metadata table models associated functionality.
-
-:author: A. Soininen (VTT)
-:date:   25.4.2022
 """
 from enum import IntEnum, unique
 from operator import itemgetter

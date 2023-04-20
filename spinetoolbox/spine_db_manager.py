@@ -11,9 +11,6 @@
 
 """
 The SpineDBManager class
-
-:authors: P. Vennström (VTT) and M. Marin (KTH)
-:date:   2.10.2019
 """
 
 import json

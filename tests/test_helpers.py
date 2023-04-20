@@ -11,9 +11,6 @@
 
 """
 Unit tests for the helpers module.
-
-:authors: A. Soininen (VTT)
-:date:   23.3.2020
 """
 import json
 import re

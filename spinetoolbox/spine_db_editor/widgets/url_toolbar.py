@@ -11,9 +11,6 @@
 
 """
 Contains the UrlToolBar class and helpers.
-
-:author: M. Marin (KTH)
-:date:   13.5.2020
 """
 from PySide6.QtWidgets import (
     QToolBar,
