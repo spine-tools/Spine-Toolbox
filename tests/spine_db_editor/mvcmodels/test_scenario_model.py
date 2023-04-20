@@ -409,7 +409,7 @@ class TestScenarioModel(_TestBase):
                         ],
                         [
                             {
-                                "my_scenario 1": [
+                                "my_scenario (1)": [
                                     ["alternative_1", ""],
                                     ["Base", "Base alternative"],
                                     ["Type scenario alternative name here...", ""],
