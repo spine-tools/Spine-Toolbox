@@ -13,7 +13,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.1
+## Created by: Qt User Interface Compiler version 6.4.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -338,6 +338,7 @@ class Ui_MainWindow(object):
         self.splitter_console = QSplitter(self.dockWidgetContents_console)
         self.splitter_console.setObjectName(u"splitter_console")
         self.splitter_console.setOrientation(Qt.Vertical)
+        self.splitter_console.setChildrenCollapsible(False)
         self.listView_console_executions = QTreeView(self.splitter_console)
         self.listView_console_executions.setObjectName(u"listView_console_executions")
         sizePolicy1.setHeightForWidth(self.listView_console_executions.sizePolicy().hasHeightForWidth())
