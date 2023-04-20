@@ -13,5 +13,7 @@ Color constants for models.
 """
 from PySide6.QtGui import QColor
 
+PIVOT_TABLE_HEADER_COLOR = QColor("#efefef")
+
 FIXED_FIELD_COLOR = QColor("lightGray")
 SELECTED_COLOR = QColor.fromString("paleturquoise")

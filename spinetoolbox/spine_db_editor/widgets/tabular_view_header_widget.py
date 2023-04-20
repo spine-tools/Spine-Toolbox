@@ -16,7 +16,7 @@ Contains TabularViewHeaderWidget class.
 from PySide6.QtCore import Qt, QMimeData, Signal
 from PySide6.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout, QWidget
 from PySide6.QtGui import QDrag
-from ...config import PIVOT_TABLE_HEADER_COLOR
+from ..mvcmodels.colors import PIVOT_TABLE_HEADER_COLOR
 
 
 class TabularViewHeaderWidget(QFrame):
@@ -68,7 +68,7 @@ class TabularViewHeaderWidget(QFrame):
         self.setAutoFillBackground(True)
         self.setFrameStyle(QFrame.Raised)
         self.setFrameShape(QFrame.Panel)
-        self.setStyleSheet("QFrame {background: " + PIVOT_TABLE_HEADER_COLOR + ";}")
+        self.setStyleSheet(f"QFrame {{background: {PIVOT_TABLE_HEADER_COLOR.name()};}}")
         self.setAcceptDrops(True)
         self.setToolTip(
             "<p>This is a draggable header. </p>"
