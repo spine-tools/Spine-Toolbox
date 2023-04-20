@@ -475,7 +475,7 @@ class TabularViewMixin:
         get_id = self._make_get_id(action)
         if self.current_class_type == "object_class":
             return {
-                ((db_map, x["object_id"]), (db_map, x["parameter_id"]), (db_map, x["alternative_id"]), db_map): get_id(
+                ((db_map, x["entity_id"]), (db_map, x["parameter_id"]), (db_map, x["alternative_id"]), db_map): get_id(
                     db_map, x
                 )
                 for db_map, items in db_map_parameter_values.items()
