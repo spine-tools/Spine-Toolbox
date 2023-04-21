@@ -12,8 +12,6 @@
 """
 Classes for custom QTreeView.
 """
-import pickle
-
 from PySide6.QtWidgets import QApplication, QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
 from PySide6.QtGui import QMouseEvent, QIcon
@@ -69,6 +67,7 @@ class EntityTreeView(ResizableTreeView):
         self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
         self._find_next_action = None
+        self._hide_empty_classes_action = None
         self._entity_index = None
 
     def reset(self):
@@ -124,6 +123,12 @@ class EntityTreeView(ResizableTreeView):
         self._fully_collapse_action = self._menu.addAction(
             QIcon(CharIconEngine("\uf100")), "Fully collapse", self.fully_collapse
         )
+        self._menu.addSeparator()
+        self._hide_empty_classes_action = self._menu.addAction("Hide empty classes", self.toggle_hide_empty_classes)
+        self._hide_empty_classes_action.setCheckable(True)
+
+    def toggle_hide_empty_classes(self):
+        self.model().hide_empty_classes = self._hide_empty_classes_action.isChecked()
 
     @Slot(QModelIndex, int, QEvent)
     def edit(self, index, trigger, event):

@@ -49,6 +49,23 @@ class MultiDBTreeItem(TreeItem):
             owner=self,
         )
 
+    @property
+    def visible_children(self):
+        return [x for x in self.children if not x.is_hidden()]
+
+    def is_hidden(self):
+        return False
+
+    def child_count(self):
+        return len(self.visible_children)
+
+    def child(self, row):
+        """Returns the child at given row or None if out of bounds."""
+        try:
+            return self.visible_children[row]
+        except IndexError:
+            return None
+
     def child_number(self):
         try:
             db_map, id_ = next(iter(self._db_map_ids.items()))
@@ -58,6 +75,16 @@ class MultiDBTreeItem(TreeItem):
             return self.parent_item.find_row(db_map, id_)
         except AttributeError:
             return super().child_number()
+
+    def _refresh_child_map(self):
+        """Recomputes the child map."""
+        self.model.layoutAboutToBeChanged.emit()
+        self._child_map.clear()
+        for row, child in enumerate(self.visible_children):
+            for db_map in child.db_maps:
+                id_ = child.db_map_id(db_map)
+                self._child_map.setdefault(db_map, {})[id_] = row
+        self.model.layoutChanged.emit()
 
     def set_data(self, column, value, role):
         raise NotImplementedError()
@@ -394,14 +421,6 @@ class MultiDBTreeItem(TreeItem):
         """Clear children list."""
         super().clear_children()
         self._child_map.clear()
-
-    def _refresh_child_map(self):
-        """Recomputes the child map."""
-        self._child_map.clear()
-        for row, child in enumerate(self.children):
-            for db_map in child.db_maps:
-                id_ = child.db_map_id(db_map)
-                self._child_map.setdefault(db_map, dict())[id_] = row
 
     def find_row(self, db_map, id_):
         return self._child_map.get(db_map, {}).get(id_, -1)

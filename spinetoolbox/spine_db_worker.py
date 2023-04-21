@@ -48,7 +48,7 @@ class SpineDBWorker(QObject):
     """Does all the communication with a certain DB for SpineDBManager, in a non-GUI thread."""
 
     _more_available = Signal(object)
-    _will_have_children_change = Signal(list)
+    _will_have_children_change = Signal(object)
 
     def __init__(self, db_mngr, db_url):
         super().__init__()
@@ -241,7 +241,7 @@ class SpineDBWorker(QObject):
                 self._will_have_children_change.emit(parents_to_check)
                 break
 
-    @Slot(list)
+    @Slot(object)
     @staticmethod
     def _handle_will_have_children_change(parents):
         for parent in parents:
@@ -345,10 +345,13 @@ class SpineDBWorker(QObject):
 
         self._reset_fetching_if_required(parent)
         self._register_fetch_parent(parent)
+        if parent.is_fetched:
+            return
+        if self._iterate_cache(parent):
+            parent.set_fetched(parent.position(self._db_map) == len(self._fetched_ids.get(parent.fetch_item_type, ())))
+            return
         parent.set_busy(True)
-        if not self._iterate_cache(parent) and not parent.is_fetched:
-            if not self._advance_query(parent.fetch_item_type, callback=_callback):
-                parent.set_busy(False)
+        self._advance_query(parent.fetch_item_type, callback=_callback)
 
     def _handle_query_advanced(self, parent):
         if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):

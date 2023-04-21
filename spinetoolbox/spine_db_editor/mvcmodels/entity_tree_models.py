@@ -18,6 +18,10 @@ from .multi_db_tree_model import MultiDBTreeModel
 
 
 class EntityTreeModel(MultiDBTreeModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._hide_empty_classes = False
+
     @property
     def root_item_type(self):
         return EntityTreeRootItem
@@ -50,4 +54,15 @@ class EntityTreeModel(MultiDBTreeModel):
             for parent_item in self.find_items(db_map, (dimension_id, element_id), fetch=True):
                 for item in parent_item.find_children(lambda child: child.display_id == ent_item.display_id):
                     return self.index_from_item(item)
-        return None
+
+    @property
+    def hide_empty_classes(self):
+        return self._hide_empty_classes
+
+    @hide_empty_classes.setter
+    def hide_empty_classes(self, on):
+        if self._hide_empty_classes is on:
+            return
+        self.layoutAboutToBeChanged.emit()
+        self._hide_empty_classes = on
+        self.layoutChanged.emit()

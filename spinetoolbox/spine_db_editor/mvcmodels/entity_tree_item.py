@@ -73,6 +73,9 @@ class EntityClassItem(MultiDBTreeItem):
     def child_item_class(self):
         return EntityItem
 
+    def is_hidden(self):
+        return self.model.hide_empty_classes and not self.can_fetch_more() and not self.child_count()
+
     @property
     def _children_sort_key(self):
         """Reimplemented so groups are above non-groups."""
