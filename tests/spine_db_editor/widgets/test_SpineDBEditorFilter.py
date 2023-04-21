@@ -11,9 +11,6 @@
 
 """
 Unit tests for the TreeViewFormFilterMixin class.
-
-:author: M. Marin (KTH)
-:date:   6.12.2018
 """
 
 from PySide6.QtCore import Qt, QItemSelectionModel

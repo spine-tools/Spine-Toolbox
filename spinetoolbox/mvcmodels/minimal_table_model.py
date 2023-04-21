@@ -11,9 +11,6 @@
 
 """
 Contains a minimal table model.
-
-:authors: M. Marin (KTH)
-:date:   20.5.2018
 """
 
 from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel

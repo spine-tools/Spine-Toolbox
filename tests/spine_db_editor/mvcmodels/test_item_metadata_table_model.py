@@ -11,9 +11,6 @@
 
 """
 Unit tests for the item metadata table model.
-
-:author: A. Soininen (VTT)
-:date:   29.4.2022
 """
 from tempfile import TemporaryDirectory
 import unittest

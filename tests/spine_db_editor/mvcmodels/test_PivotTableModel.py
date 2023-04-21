@@ -11,9 +11,6 @@
 
 """
 Unit tests for :class:`ParameterValuePivotTableModel` module.
-
-:author: A. Soininen(VTT)
-:date:   10.7.2019
 """
 import unittest
 from unittest.mock import MagicMock, patch

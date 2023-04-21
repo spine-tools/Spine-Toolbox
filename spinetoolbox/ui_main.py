@@ -11,9 +11,6 @@
 
 """
 Contains ToolboxUI class.
-
-:author: P. Savolainen (VTT)
-:date:   14.12.2017
 """
 
 import os
@@ -236,9 +233,9 @@ class ToolboxUI(QMainWindow):
         # Save/restore splitter states when hiding/showing execution lists
         if obj == self.ui.listView_console_executions:
             if ev.type() == QEvent.Hide:
-                self._qsettings.setValue("mainWindow/consoleSplitterState", self.ui.splitter_console.saveState())
+                self._qsettings.setValue("mainWindow/consoleSplitterPosition", self.ui.splitter_console.saveState())
             elif ev.type() == QEvent.Show:
-                splitter_state = self._qsettings.value("mainWindow/consoleSplitterState", defaultValue="false")
+                splitter_state = self._qsettings.value("mainWindow/consoleSplitterPosition", defaultValue="false")
                 if splitter_state != "false":
                     self.ui.splitter_console.restoreState(splitter_state)
         return super().eventFilter(obj, ev)

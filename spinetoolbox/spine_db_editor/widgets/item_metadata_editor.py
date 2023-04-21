@@ -11,9 +11,6 @@
 
 """
 Contains machinery to deal with item metadata editor.
-
-:author: A. Soininen (VTT)
-:date:   25.3.2022
 """
 from PySide6.QtCore import Slot, QModelIndex
 

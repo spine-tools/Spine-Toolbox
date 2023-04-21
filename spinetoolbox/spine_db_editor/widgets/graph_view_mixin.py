@@ -11,9 +11,6 @@
 
 """
 Contains the GraphViewMixin class.
-
-:author: M. Marin (KTH)
-:date:   26.11.2018
 """
 
 import sys

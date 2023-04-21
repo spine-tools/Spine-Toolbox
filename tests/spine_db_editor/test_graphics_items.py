@@ -11,9 +11,6 @@
 
 """
 Unit tests for Database editor's ``graphics_items`` module.
-
-:authors: A. Soininen (VTT)
-:date:    16.4.2021
 """
 import unittest
 from unittest import mock

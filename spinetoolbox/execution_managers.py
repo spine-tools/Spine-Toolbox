@@ -11,9 +11,6 @@
 
 """
 Classes to manage tool instance execution in various forms.
-
-:author: P. Savolainen (VTT)
-:date:   1.2.2018
 """
 
 import logging

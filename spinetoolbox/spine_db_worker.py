@@ -11,9 +11,6 @@
 
 """
 The SpineDBWorker class
-
-:authors: P. Vennström (VTT) and M. Marin (KTH)
-:date:   2.10.2019
 """
 from functools import wraps
 from PySide6.QtCore import QObject, Signal, Slot

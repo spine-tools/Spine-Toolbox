@@ -11,9 +11,6 @@
 
 """
 Provides SpineDBIconManager.
-
-:authors: M. Marin (KTH)
-:date:   3.2.2021
 """
 
 from PySide6.QtCore import Qt, QPointF, QRectF, QBuffer

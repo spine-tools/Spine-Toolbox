@@ -11,9 +11,6 @@
 
 """
 Contains a class for a widget that represents a 'Open Project Directory' dialog.
-
-:author: P. Savolainen (VTT)
-:date: 1.11.2019
 """
 
 import os

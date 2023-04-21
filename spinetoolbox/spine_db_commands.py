@@ -11,9 +11,6 @@
 
 """
 QUndoCommand subclasses for modifying the db.
-
-:authors: M. Marin (KTH)
-:date:   31.1.2020
 """
 
 import time

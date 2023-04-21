@@ -11,9 +11,6 @@
 
 """
 Contains ResourceFilterModel.
-
-:author: M. Marin (KTH)
-:date:   26.11.2020
 """
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QStandardItemModel, QStandardItem

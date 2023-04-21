@@ -11,9 +11,6 @@
 
 """
 Unit tests for the custom QTextBrowser.
-
-:author: A. Soininen (VTT)
-:date:   7.6.2019
 """
 
 import logging

@@ -11,9 +11,6 @@
 
 """
 Unit tests for SpineDBEditor classes.
-
-:author: M. Marin (KTH)
-:date:   6.12.2018
 """
 import os.path
 from tempfile import TemporaryDirectory
@@ -79,11 +76,12 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
                 item.fetch_more()
 
     def test_duplicate_object_in_object_tree_model(self):
-        data = dict()
-        data["entity_classes"] = [("fish",), ("dog",), ("fish__dog", ("fish", "dog"))]
-        data["entities"] = [("fish", "nemo"), ("dog", "pluto"), ("fish__dog", ("nemo", "pluto"))]
-        data["parameter_definitions"] = [("fish", "color")]
-        data["parameter_values"] = [("fish", "nemo", "color", "orange")]
+        data = {
+            "entity_classes": ["fish", "dog"], ("fish__dog", ("fish", "dog"))],
+            "entities": [("fish", "nemo"), ("dog", "pluto"), ("fish__dog", ("nemo", "pluto"))],
+            "parameter_definitions": [("fish", "color")],
+            "parameter_values": [("fish", "nemo", "color", "orange")],
+        }
         self.db_mngr.import_data({self.db_map: data})
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item

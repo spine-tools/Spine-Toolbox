@@ -11,9 +11,6 @@
 
 """
 A Qt widget showing a toolbar and a matplotlib plotting canvas.
-
-:author: A. Soininen (VTT)
-:date:   27.6.2019
 """
 
 import itertools

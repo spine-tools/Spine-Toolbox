@@ -11,9 +11,6 @@
 
 """
 Unit tests for the EmptyParameterModel subclasses.
-
-:author: M. Marin (KTH)
-:date:   10.5.2019
 """
 import unittest
 from unittest import mock

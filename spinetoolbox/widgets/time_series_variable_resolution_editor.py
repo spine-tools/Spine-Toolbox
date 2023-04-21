@@ -11,9 +11,6 @@
 
 """
 Contains logic for the variable resolution time series editor widget.
-
-:author: A. Soininen (VTT)
-:date:   31.5.2019
 """
 
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot

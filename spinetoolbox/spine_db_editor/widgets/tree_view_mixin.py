@@ -11,9 +11,6 @@
 
 """
 Contains the TreeViewMixin class.
-
-:author: M. Marin (KTH)
-:date:   26.11.2018
 """
 from PySide6.QtCore import Slot
 from .add_items_dialogs import (

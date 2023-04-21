@@ -11,9 +11,6 @@
 
 """
 Functions for plotting on PlotWidget.
-
-:author: A. Soininen (VTT)
-:date:   9.7.2019
 """
 import datetime
 from enum import auto, Enum, unique

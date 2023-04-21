@@ -11,9 +11,6 @@
 
 """
 Unit tests for the TreeViewFormUpdateMixin.
-
-:author: M. Marin (KTH)
-:date:   6.12.2018
 """
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR

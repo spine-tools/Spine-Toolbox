@@ -11,9 +11,6 @@
 
 """
 Classes for drawing graphics items on QGraphicsScene.
-
-:authors: M. Marin (KTH), P. Savolainen (VTT)
-:date:    4.4.2018
 """
 
 import functools

@@ -11,9 +11,6 @@
 
 """
 Contains PluginManager class.
-
-:author: M. Marin (KTH)
-:date:   21.2.2021
 """
 import itertools
 import os

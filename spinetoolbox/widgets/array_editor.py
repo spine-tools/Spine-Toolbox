@@ -11,9 +11,6 @@
 
 """
 Contains an editor widget for array type parameter values.
-
-:author: A. Soininen (VTT)
-:date:   25.3.2020
 """
 
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot

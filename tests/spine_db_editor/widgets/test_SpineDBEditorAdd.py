@@ -11,9 +11,6 @@
 
 """
 Unit tests for the TreeViewFormAddMixin class.
-
-:author: M. Marin (KTH)
-:date:   6.12.2018
 """
 from unittest import mock
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR

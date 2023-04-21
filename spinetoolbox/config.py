@@ -11,9 +11,6 @@
 
 """
 Application constants and style sheets
-
-:author: P. Savolainen (VTT)
-:date:   2.1.2018
 """
 
 import sys
@@ -120,5 +117,3 @@ MAINWINDOW_SS = (
     "QTextEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}"
     "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
 )
-
-PIVOT_TABLE_HEADER_COLOR = "#efefef"

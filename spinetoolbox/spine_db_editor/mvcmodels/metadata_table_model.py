@@ -11,9 +11,6 @@
 
 """
 Contains :class:`MetadataTableModel` and associated functionality.
-
-:author: A. Soininen (VTT)
-:date:   7.2.2022
 """
 from enum import IntEnum, unique
 from PySide6.QtCore import QModelIndex, Qt

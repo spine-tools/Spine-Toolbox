@@ -11,9 +11,6 @@
 
 """
 Unit tests for custom graphics scenes.
-
-:author: A. Soininen (VTT)
-:date:   8.7.2021
 """
 from tempfile import TemporaryDirectory
 import unittest

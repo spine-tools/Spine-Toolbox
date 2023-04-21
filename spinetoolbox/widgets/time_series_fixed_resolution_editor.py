@@ -11,9 +11,6 @@
 
 """
 Contains logic for the fixed step time series editor widget.
-
-:author: A. Soininen (VTT)
-:date:   14.6.2019
 """
 
 from datetime import datetime

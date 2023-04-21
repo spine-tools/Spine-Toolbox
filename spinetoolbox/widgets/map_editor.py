@@ -11,9 +11,6 @@
 
 """
 An editor widget for editing a map type parameter values.
-
-:author: A. Soininen (VTT)
-:date:   11.2.2020
 """
 
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot

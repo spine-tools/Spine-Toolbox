@@ -10,9 +10,6 @@
 ######################################################################################################################
 """
 Models to represent tools and features in a tree.
-
-:authors: M. Marin (KTH)
-:date:    1.0.2020
 """
 import json
 from PySide6.QtCore import QMimeData, Qt

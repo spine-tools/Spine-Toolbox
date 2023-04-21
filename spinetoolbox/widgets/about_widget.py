@@ -11,9 +11,6 @@
 
 """
 A widget for presenting basic information about the application.
-
-:author: P. Savolainen (VTT)
-:date: 14.12.2017
 """
 
 import os

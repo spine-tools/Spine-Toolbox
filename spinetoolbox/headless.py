@@ -11,9 +11,6 @@
 
 """
 Contains facilities to open and execute projects without GUI.
-
-:authors: A. Soininen (VTT)
-:date:   29.4.2020
 """
 from copy import deepcopy
 from enum import IntEnum, unique

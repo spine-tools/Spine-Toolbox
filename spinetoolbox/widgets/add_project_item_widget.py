@@ -11,9 +11,6 @@
 
 """
 Widget shown to user when a new Project Item is created.
-
-:author: P. Savolainen (VTT)
-:date:   19.1.2017
 """
 
 from PySide6.QtWidgets import QWidget, QStatusBar

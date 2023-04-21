@@ -11,9 +11,6 @@
 
 """
 Class for a custom QComboBox.
-
-:author: P. Savolainen (VTT)
-:date:   16.10.2020
 """
 
 from PySide6.QtWidgets import QComboBox

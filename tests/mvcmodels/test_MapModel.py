@@ -11,9 +11,6 @@
 
 """
 Unit tests for MapModel class.
-
-:authors: A. Soininen (VTT)
-:date:    11.2.2020
 """
 
 import unittest

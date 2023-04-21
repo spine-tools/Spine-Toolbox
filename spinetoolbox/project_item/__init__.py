@@ -11,7 +11,4 @@
 
 """
 This subpackage contains base classes for project items.
-
-:authors: M. Marin (KTH)
-:date:    8.10.2020
 """

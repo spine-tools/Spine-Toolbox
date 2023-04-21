@@ -11,9 +11,6 @@
 
 """
 Unit tests for the ``kernel_editor`` module.
-
-:authors: P. Savolainen (VTT)
-:date:   10.11.2020
 """
 import json
 import pathlib

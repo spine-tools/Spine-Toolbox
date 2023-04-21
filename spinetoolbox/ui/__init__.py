@@ -11,7 +11,4 @@
 
 """
 Init file for ui package. Intentionally empty.
-
-:author: P. Savolainen (VTT)
-:date:   3.1.2018
 """

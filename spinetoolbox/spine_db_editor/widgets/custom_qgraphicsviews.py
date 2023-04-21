@@ -11,9 +11,6 @@
 
 """
 Classes for custom QGraphicsViews for the Entity graph view.
-
-:authors: P. Savolainen (VTT), M. Marin (KTH)
-:date:   6.2.2018
 """
 
 import sys

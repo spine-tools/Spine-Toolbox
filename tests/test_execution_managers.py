@@ -10,9 +10,6 @@
 ######################################################################################################################
 """
 Unit tests for ``execution_managers`` module.
-
-:authors: A. Soininen (VTT)
-:date:    1.2.2018
 """
 import sys
 import unittest

@@ -11,9 +11,6 @@
 
 """
 Contains the ParameterViewMixin class.
-
-:author: M. Marin (KTH)
-:date:   26.11.2018
 """
 
 from PySide6.QtCore import Qt, Slot, QModelIndex

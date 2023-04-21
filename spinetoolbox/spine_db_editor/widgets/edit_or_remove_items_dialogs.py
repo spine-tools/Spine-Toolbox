@@ -11,9 +11,6 @@
 
 """
 Classes for custom QDialogs to edit items in databases.
-
-:author: M. Marin (KTH)
-:date:   13.5.2018
 """
 
 from PySide6.QtCore import Slot

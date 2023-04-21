@@ -11,9 +11,6 @@
 
 """
 Unit tests for ``spine_db_fetcher`` module.
-
-:authors: A. Soininen (VTT)
-:date:    4.2.2021
 """
 import unittest
 from unittest.mock import MagicMock

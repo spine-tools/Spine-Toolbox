@@ -11,9 +11,6 @@
 
 """
 A Qt widget to use as a matplotlib backend.
-
-:author: A. Soininen (VTT)
-:date:   3.6.2019
 """
 from enum import auto, Enum, unique
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
