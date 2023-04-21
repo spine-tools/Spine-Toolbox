@@ -47,11 +47,9 @@ class TestSpineDBEditorRemoveMixin:
         self.put_mock_relationship_classes_in_db_mngr()
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
-        dog_item = next(iter(item for item in root_item.children if item.display_data == "dog"))
-        pluto_item = dog_item.child(0)
-        self.assertEqual(pluto_item.child_count(), 2)
+        self.assertEqual(root_item.child_count(), 4)
         self.db_mngr.remove_items({self.mock_db_map: {"entity_class": {self.fish_dog_class["id"]}}})
-        self.assertEqual(pluto_item.child_count(), 1)
+        self.assertEqual(root_item.child_count(), 3)
 
     def test_remove_relationships_from_object_tree_model(self):
         """Test that relationships are removed from the object tree model."""
@@ -64,13 +62,13 @@ class TestSpineDBEditorRemoveMixin:
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
         nemo_item = fish_item.child(0)
-        nemo_fish_dog_item = nemo_item.child(1)
-        relationships = [x.display_data for x in nemo_fish_dog_item.children]
-        self.assertEqual(nemo_fish_dog_item.child_count(), 2)
-        self.assertEqual(relationships[0], "pluto")
-        self.assertEqual(relationships[1], "scooby")
+        relationships = [x.display_data for x in nemo_item.children]
+        self.assertEqual(nemo_item.child_count(), 3)
+        self.assertEqual(relationships[0], "[dog__fish] pluto ǀ ٭")
+        self.assertEqual(relationships[1], "[fish__dog] ٭ ǀ pluto")
+        self.assertEqual(relationships[2], "[fish__dog] ٭ ǀ scooby")
         self.db_mngr.remove_items({self.mock_db_map: {"entity": {self.nemo_pluto_rel["id"]}}})
-        self.assertEqual(nemo_fish_dog_item.child_count(), 1)
+        self.assertEqual(nemo_item.child_count(), 2)
 
     def test_remove_object_parameter_definitions_from_model(self):
         """Test that object parameter definitions are removed from the model."""

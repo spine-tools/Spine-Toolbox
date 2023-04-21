@@ -77,7 +77,7 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
 
     def test_duplicate_object_in_object_tree_model(self):
         data = {
-            "entity_classes": ["fish", "dog"], ("fish__dog", ("fish", "dog"))],
+            "entity_classes": [("fish",), ("dog",), ("fish__dog", ("fish", "dog"))],
             "entities": [("fish", "nemo"), ("dog", "pluto"), ("fish__dog", ("nemo", "pluto"))],
             "parameter_definitions": [("fish", "color")],
             "parameter_values": [("fish", "nemo", "color", "orange")],

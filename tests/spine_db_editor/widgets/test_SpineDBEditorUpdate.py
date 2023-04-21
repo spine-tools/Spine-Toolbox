@@ -53,11 +53,9 @@ class TestSpineDBEditorUpdateMixin:
         self.fish_dog_class = {"id": 3, "name": "octopus__dog"}
         self.db_mngr.update_entity_classes({self.mock_db_map: [self.fish_dog_class]})
         root_item = self.spine_db_editor.entity_tree_model.root_item
-        dog_item = root_item.child(0)
-        pluto_item = dog_item.child(0)
-        pluto_fish_dog_item = pluto_item.child(1)
-        self.assertEqual(pluto_fish_dog_item.item_type, "entity_class")
-        self.assertEqual(pluto_fish_dog_item.display_data, "octopus__dog")
+        fish_dog_item = root_item.child(3)
+        self.assertEqual(fish_dog_item.item_type, "entity_class")
+        self.assertEqual(fish_dog_item.display_data, "octopus__dog")
 
     def test_update_object_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
