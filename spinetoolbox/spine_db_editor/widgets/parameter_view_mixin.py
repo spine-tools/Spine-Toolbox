@@ -148,11 +148,12 @@ class ParameterViewMixin:
     @Slot(dict)
     def _handle_entity_tree_selection_changed(self, selected_indexes):
         """Resets filter according to entity tree selection."""
-        ent_cls_inds = set(selected_indexes.get("entity_class", {}).keys())
         ent_inds = set(selected_indexes.get("entity", {}).keys())
-        more_ent_inds = {ind.parent() for ind in ent_cls_inds}
-        ent_cls_inds |= {ind.parent() for ind in ent_inds}
-        ent_inds |= more_ent_inds
+        ent_cls_inds = set(selected_indexes.get("entity_class", {}).keys()) | {
+            parent_ind
+            for parent_ind in (ind.parent() for ind in ent_inds)
+            if self.entity_tree_model.item_from_index(parent_ind).item_type == "entity_class"
+        }
         self._filter_class_ids = self._db_map_ids(ent_cls_inds)
         self._filter_entity_ids = self._db_map_ids(ent_inds)
         self._reset_filters()

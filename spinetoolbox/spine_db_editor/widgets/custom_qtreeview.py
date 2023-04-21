@@ -266,7 +266,7 @@ class EntityTreeView(ResizableTreeView):
         self._fully_expand_action.setEnabled(item_has_children)
         self._fully_collapse_action.setEnabled(item_has_children)
         self._add_entity_classes_action.setEnabled(item.item_type in ("root", "entity_class"))
-        self._add_entities_action.setEnabled(item.item_type in ("root", "entity_class"))
+        self._add_entities_action.setEnabled(item.item_type in ("root", "entity_class", "entity"))
         self._add_entity_group_action.setEnabled(item.item_type == "entity_class")
         self._duplicate_entity_action.setEnabled(
             item.item_type == "entity" and not item.is_group and not item.element_name_list

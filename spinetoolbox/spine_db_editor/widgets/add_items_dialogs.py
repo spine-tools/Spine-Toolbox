@@ -370,13 +370,14 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
-        grand_parent_item = parent_item.parent_item
-        if hasattr(grand_parent_item, "item_type") and grand_parent_item.item_type == "entity":
-            entity_name = grand_parent_item.display_data
-            entity_class_name = grand_parent_item.parent_item.display_data
+        if hasattr(parent_item, "item_type") and parent_item.item_type == "entity":
+            entity_name = parent_item.display_data
+            entity_class_name = parent_item.parent_item.display_data
             self.entity_names_by_class_name = {entity_class_name: entity_name}
+            entity_class_key = None
         else:
             self.entity_names_by_class_name = {}
+            entity_class_key = parent_item.display_id
         self.entity_class = None
         self.model.force_default = force_default
         self.setWindowTitle("Add entities")
@@ -386,7 +387,6 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             key for entity_classes in self.db_map_ent_cls_lookup.values() for key in entity_classes
         ]
         self.ent_cls_combo_box.addItems(["{0} {1}".format(*key) for key in self.entity_class_keys])
-        entity_class_key = parent_item.display_id
         try:
             current_index = self.entity_class_keys.index(entity_class_key)
             self.reset_model(current_index)

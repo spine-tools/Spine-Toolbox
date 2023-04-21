@@ -30,27 +30,24 @@ class EntityTreeModel(MultiDBTreeModel):
         if not (ent_item.item_type == "entity" and ent_item.element_name_list):
             return None
         # Get all ancestors
-        ent_cls_item = ent_item.parent_item
-        el_item = ent_cls_item.parent_item
+        el_item = ent_item.parent_item
         if el_item.item_type != "entity":
             return
         for db_map in ent_item.db_maps:
             # Get data from ancestors
             ent_data = ent_item.db_map_data(db_map)
-            ent_cls_data = ent_cls_item.db_map_data(db_map)
             el_data = el_item.db_map_data(db_map)
             # Get specific data for our searches
-            ent_cls_id = ent_cls_data['id']
             el_id = el_data['id']
             element_ids = list(reversed(ent_data['element_id_list']))
-            dimension_ids = list(reversed(ent_cls_data['dimension_id_list']))
+            dimension_ids = list(reversed(ent_data['dimension_id_list']))
             # Find position in the entity of the (grand parent) element,
             # then use it to determine dimension and element id to look for
             pos = element_ids.index(el_id) - 1
             element_id = element_ids[pos]
             dimension_id = dimension_ids[pos]
             # Return first node that passes all cascade filters
-            for parent_item in self.find_items(db_map, (dimension_id, element_id, ent_cls_id), fetch=True):
+            for parent_item in self.find_items(db_map, (dimension_id, element_id), fetch=True):
                 for item in parent_item.find_children(lambda child: child.display_id == ent_item.display_id):
                     return self.index_from_item(item)
         return None

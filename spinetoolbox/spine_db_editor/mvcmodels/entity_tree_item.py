@@ -67,7 +67,7 @@ class EntityClassItem(MultiDBTreeItem):
     @property
     def display_icon(self):
         """Returns class icon."""
-        return self._display_icon()
+        return self.db_mngr.entity_class_icon(self.first_db_map, self.db_map_id(self.first_db_map))
 
     @property
     def child_item_class(self):
@@ -77,9 +77,6 @@ class EntityClassItem(MultiDBTreeItem):
     def _children_sort_key(self):
         """Reimplemented so groups are above non-groups."""
         return lambda item: (not item.is_group, item.display_id)
-
-    def _display_icon(self, for_group=False):
-        return self.db_mngr.entity_class_icon(self.first_db_map, self.db_map_id(self.first_db_map), for_group=for_group)
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -149,7 +146,7 @@ class EntityClassItem(MultiDBTreeItem):
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
 
-    visual_key = ["byname"]
+    visual_key = ["class_name", "byname"]
     item_type = "entity"
 
     def __init__(self, *args, is_group=False, **kwargs):
@@ -159,13 +156,15 @@ class EntityItem(MultiDBTreeItem):
 
     @property
     def child_item_class(self):
-        """Child class is always :class:`ObjectRelationshipClassItem`."""
-        return EntityClassItem
+        """Child class is always :class:`EntityItem`."""
+        return EntityItem
 
     @property
     def display_icon(self):
         """Returns corresponding class icon."""
-        return self.parent_item._display_icon(for_group=self.is_group)
+        return self.db_mngr.entity_class_icon(
+            self.first_db_map, self.db_map_data_field(self.first_db_map, "class_id"), for_group=self.is_group
+        )
 
     @property
     def element_name_list(self):
@@ -175,8 +174,10 @@ class EntityItem(MultiDBTreeItem):
     def display_data(self):
         """Returns the name for display."""
         byname = self.db_map_data_field(self.first_db_map, "byname", default="")
-        if self.parent_item.parent_item.item_type == self.item_type:
-            byname = [x for x in byname if x != self.parent_item.parent_item.display_data]
+        if self.parent_item.item_type == self.item_type:
+            class_name = self.db_map_data_field(self.first_db_map, "class_name", default="")
+            byname = [x if x != self.parent_item.display_data else "\u066d" for x in byname]
+            return "[" + class_name + "] " + DB_ITEM_SEPARATOR.join(byname) + ""
         return DB_ITEM_SEPARATOR.join(byname)
 
     @property
@@ -223,8 +224,7 @@ class EntityItem(MultiDBTreeItem):
         )
 
     def accepts_item(self, item, db_map):
-        class_id = self.db_map_data_field(db_map, 'class_id')
-        return class_id in item["dimension_id_list"]
+        return self.db_map_id(db_map) in item["element_id_list"]
 
     def is_valid(self):
         """Checks that the grand parent object is still in the relationship."""
