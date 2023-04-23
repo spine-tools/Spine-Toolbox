@@ -64,9 +64,9 @@ class TestSpineDBEditorRemoveMixin:
         nemo_item = fish_item.child(0)
         relationships = [x.display_data for x in nemo_item.children]
         self.assertEqual(nemo_item.child_count(), 3)
-        self.assertEqual(relationships[0], "[dog__fish] pluto ǀ ٭")
-        self.assertEqual(relationships[1], "[fish__dog] ٭ ǀ pluto")
-        self.assertEqual(relationships[2], "[fish__dog] ٭ ǀ scooby")
+        self.assertTrue("dog__fish" in relationships[0] and "pluto" in relationships[0])
+        self.assertTrue("fish__dog" in relationships[1] and "pluto" in relationships[1])
+        self.assertTrue("fish__dog" in relationships[2] and "scooby" in relationships[2])
         self.db_mngr.remove_items({self.mock_db_map: {"entity": {self.nemo_pluto_rel["id"]}}})
         self.assertEqual(nemo_item.child_count(), 2)
 

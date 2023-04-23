@@ -349,8 +349,6 @@ class SpineDBWorker(QObject):
             return
         if self._advance_query(parent.fetch_item_type, callback=_callback):
             parent.set_busy(True)
-        else:
-            parent.set_fetched(True)
 
     def _handle_query_advanced(self, parent):
         if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):

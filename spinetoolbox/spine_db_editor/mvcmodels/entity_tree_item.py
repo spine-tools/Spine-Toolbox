@@ -179,8 +179,8 @@ class EntityItem(MultiDBTreeItem):
         byname = self.db_map_data_field(self.first_db_map, "byname", default="")
         if self.parent_item.item_type == self.item_type:
             class_name = self.db_map_data_field(self.first_db_map, "class_name", default="")
-            byname = [x if x != self.parent_item.display_data else "\u066d" for x in byname]
-            return "[" + class_name + "] " + DB_ITEM_SEPARATOR.join(byname) + ""
+            byname = [x if x != self.parent_item.display_data else "\u2022" for x in byname]
+            return class_name + "[ " + DB_ITEM_SEPARATOR.join(byname) + " ]"
         return DB_ITEM_SEPARATOR.join(byname)
 
     @property

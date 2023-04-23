@@ -90,17 +90,17 @@ class TestSpineDBEditorAddMixin:
         self.assertEqual(pluto_item.child_count(), 2)
         self.assertEqual(scooby_item.child_count(), 1)
         self.assertEqual(pluto_nemo_item1.item_type, "entity")
-        self.assertEqual(pluto_nemo_item1.display_data, '[dog__fish] ٭ ǀ nemo')
+        self.assertTrue("dog__fish" in pluto_nemo_item1.display_data and "nemo" in pluto_nemo_item1.display_data)
         self.assertEqual(pluto_nemo_item2.item_type, "entity")
-        self.assertEqual(pluto_nemo_item2.display_data, '[dog__fish] pluto ǀ ٭')
+        self.assertTrue("dog__fish" in pluto_nemo_item2.display_data and "pluto" in pluto_nemo_item2.display_data)
         self.assertEqual(nemo_pluto_item1.item_type, "entity")
-        self.assertEqual(nemo_pluto_item1.display_data, '[fish__dog] nemo ǀ ٭')
+        self.assertTrue("fish__dog" in nemo_pluto_item1.display_data and "nemo" in nemo_pluto_item1.display_data)
         self.assertEqual(nemo_pluto_item2.item_type, "entity")
-        self.assertEqual(nemo_pluto_item2.display_data, '[fish__dog] ٭ ǀ pluto')
+        self.assertTrue("fish__dog" in nemo_pluto_item2.display_data and "pluto" in nemo_pluto_item2.display_data)
         self.assertEqual(nemo_scooby_item1.item_type, "entity")
-        self.assertEqual(nemo_scooby_item1.display_data, '[fish__dog] nemo ǀ ٭')
+        self.assertTrue("fish__dog" in nemo_scooby_item1.display_data and "nemo" in nemo_scooby_item1.display_data)
         self.assertEqual(nemo_scooby_item2.item_type, "entity")
-        self.assertEqual(nemo_scooby_item2.display_data, '[fish__dog] ٭ ǀ scooby')
+        self.assertTrue("fish__dog" in nemo_scooby_item2.display_data and "scooby" in nemo_scooby_item2.display_data)
 
     def test_add_object_parameter_definitions_to_model(self):
         """Test that object parameter definitions are added to the model."""

@@ -152,6 +152,7 @@ class TestSpineDBEditor(
             self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
             self.spine_db_editor = SpineDBEditor(self.db_mngr, {"sqlite://": "database"})
             self.spine_db_editor.pivot_table_model = mock.MagicMock()
+            self.spine_db_editor.entity_tree_model.hide_empty_classes = False
 
     def tearDown(self):
         """Overridden method. Runs after each test.
