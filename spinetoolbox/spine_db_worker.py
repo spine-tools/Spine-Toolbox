@@ -345,13 +345,12 @@ class SpineDBWorker(QObject):
 
         self._reset_fetching_if_required(parent)
         self._register_fetch_parent(parent)
-        if parent.is_fetched:
+        if parent.is_fetched or self._iterate_cache(parent):
             return
-        if self._iterate_cache(parent):
-            parent.set_fetched(parent.position(self._db_map) == len(self._fetched_ids.get(parent.fetch_item_type, ())))
-            return
-        parent.set_busy(True)
-        self._advance_query(parent.fetch_item_type, callback=_callback)
+        if self._advance_query(parent.fetch_item_type, callback=_callback):
+            parent.set_busy(True)
+        else:
+            parent.set_fetched(True)
 
     def _handle_query_advanced(self, parent):
         if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):
