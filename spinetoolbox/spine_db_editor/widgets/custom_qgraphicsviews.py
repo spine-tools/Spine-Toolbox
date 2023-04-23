@@ -121,7 +121,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._auto_expand_entities_action = self._menu.addAction("Auto-expand entities")
         self._auto_expand_entities_action.setCheckable(True)
         self._auto_expand_entities_action.setChecked(self.auto_expand_entities)
-        self._auto_expand_entities_action.triggered.connect(self._set_auto_expand_objects)
+        self._auto_expand_entities_action.triggered.connect(self._set_auto_expand_entities)
         self._merge_dbs_action = self._menu.addAction("Merge databases")
         self._merge_dbs_action.setCheckable(True)
         self._merge_dbs_action.setChecked(self.merge_dbs)
@@ -250,7 +250,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         return menu
 
     @Slot(bool)
-    def _set_auto_expand_objects(self, _checked=False, save_setting=True):
+    def _set_auto_expand_entities(self, _checked=False, save_setting=True):
         checked = self._auto_expand_entities_action.isChecked()
         if checked == self.auto_expand_entities:
             return
@@ -259,9 +259,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.auto_expand_entities = checked
         self._spine_db_editor.build_graph()
 
-    def set_auto_expand_objects(self, checked):
+    def set_auto_expand_entities(self, checked):
         self._auto_expand_entities_action.setChecked(checked)
-        self._set_auto_expand_objects(save_setting=False)
+        self._set_auto_expand_entities(save_setting=False)
 
     @Slot(bool)
     def _set_merge_dbs(self, _checked=False, save_setting=True):

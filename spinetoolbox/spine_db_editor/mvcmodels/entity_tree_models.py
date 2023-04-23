@@ -20,7 +20,9 @@ from .multi_db_tree_model import MultiDBTreeModel
 class EntityTreeModel(MultiDBTreeModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._hide_empty_classes = False
+        self._hide_empty_classes = (
+            self.db_editor.qsettings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
+        )
 
     @property
     def root_item_type(self):
@@ -54,6 +56,10 @@ class EntityTreeModel(MultiDBTreeModel):
             for parent_item in self.find_items(db_map, (dimension_id, element_id), fetch=True):
                 for item in parent_item.find_children(lambda child: child.display_id == ent_item.display_id):
                     return self.index_from_item(item)
+
+    def save_hide_empty_classes(self):
+        hide_empty_classes = "true" if self.hide_empty_classes else "false"
+        self.db_editor.qsettings.setValue("appSettings/hideEmptyClasses", hide_empty_classes)
 
     @property
     def hide_empty_classes(self):

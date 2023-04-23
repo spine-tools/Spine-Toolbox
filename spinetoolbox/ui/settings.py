@@ -13,7 +13,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.1
+## Created by: Qt User Interface Compiler version 6.4.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -636,15 +636,25 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_4.addWidget(self.checkBox_db_editor_show_undo)
 
-        self.checkBox_object_tree_sticky_selection = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_object_tree_sticky_selection.setObjectName(u"checkBox_object_tree_sticky_selection")
+        self.checkBox_entity_tree_sticky_selection = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_entity_tree_sticky_selection.setObjectName(u"checkBox_entity_tree_sticky_selection")
 
-        self.verticalLayout_4.addWidget(self.checkBox_object_tree_sticky_selection)
+        self.verticalLayout_4.addWidget(self.checkBox_entity_tree_sticky_selection)
 
-        self.checkBox_relationship_items_follow = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_relationship_items_follow.setObjectName(u"checkBox_relationship_items_follow")
+        self.checkBox_hide_empty_classes = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_hide_empty_classes.setObjectName(u"checkBox_hide_empty_classes")
 
-        self.verticalLayout_4.addWidget(self.checkBox_relationship_items_follow)
+        self.verticalLayout_4.addWidget(self.checkBox_hide_empty_classes)
+
+        self.checkBox_entity_items_follow = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_entity_items_follow.setObjectName(u"checkBox_entity_items_follow")
+
+        self.verticalLayout_4.addWidget(self.checkBox_entity_items_follow)
+
+        self.checkBox_auto_expand_entities = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_auto_expand_entities.setObjectName(u"checkBox_auto_expand_entities")
+
+        self.verticalLayout_4.addWidget(self.checkBox_auto_expand_entities)
 
         self.checkBox_smooth_entity_graph_zoom = QCheckBox(self.groupBox_spine_db_editor)
         self.checkBox_smooth_entity_graph_zoom.setObjectName(u"checkBox_smooth_entity_graph_zoom")
@@ -655,11 +665,6 @@ class Ui_SettingsForm(object):
         self.checkBox_smooth_entity_graph_rotation.setObjectName(u"checkBox_smooth_entity_graph_rotation")
 
         self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_rotation)
-
-        self.checkBox_auto_expand_objects = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_auto_expand_objects.setObjectName(u"checkBox_auto_expand_objects")
-
-        self.verticalLayout_4.addWidget(self.checkBox_auto_expand_objects)
 
         self.checkBox_merge_dbs = QCheckBox(self.groupBox_spine_db_editor)
         self.checkBox_merge_dbs.setObjectName(u"checkBox_merge_dbs")
@@ -930,12 +935,11 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.lineEdit_conda_path, self.toolButton_browse_conda)
         QWidget.setTabOrder(self.toolButton_browse_conda, self.checkBox_commit_at_exit)
         QWidget.setTabOrder(self.checkBox_commit_at_exit, self.checkBox_db_editor_show_undo)
-        QWidget.setTabOrder(self.checkBox_db_editor_show_undo, self.checkBox_object_tree_sticky_selection)
-        QWidget.setTabOrder(self.checkBox_object_tree_sticky_selection, self.checkBox_relationship_items_follow)
-        QWidget.setTabOrder(self.checkBox_relationship_items_follow, self.checkBox_smooth_entity_graph_zoom)
+        QWidget.setTabOrder(self.checkBox_db_editor_show_undo, self.checkBox_entity_tree_sticky_selection)
+        QWidget.setTabOrder(self.checkBox_entity_tree_sticky_selection, self.checkBox_entity_items_follow)
+        QWidget.setTabOrder(self.checkBox_entity_items_follow, self.checkBox_smooth_entity_graph_zoom)
         QWidget.setTabOrder(self.checkBox_smooth_entity_graph_zoom, self.checkBox_smooth_entity_graph_rotation)
-        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_auto_expand_objects)
-        QWidget.setTabOrder(self.checkBox_auto_expand_objects, self.checkBox_save_spec_before_closing)
+        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_save_spec_before_closing)
         QWidget.setTabOrder(self.checkBox_save_spec_before_closing, self.checkBox_spec_show_undo)
         QWidget.setTabOrder(self.checkBox_spec_show_undo, self.listWidget)
         QWidget.setTabOrder(self.listWidget, self.checkBox_use_rounded_items)
@@ -1126,19 +1130,20 @@ class Ui_SettingsForm(object):
         self.checkBox_commit_at_exit.setText(QCoreApplication.translate("SettingsForm", u"Commit session before closing", None))
         self.checkBox_db_editor_show_undo.setText(QCoreApplication.translate("SettingsForm", u"Show undo notifications", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_object_tree_sticky_selection.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None))
+        self.checkBox_entity_tree_sticky_selection.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.checkBox_object_tree_sticky_selection.setText(QCoreApplication.translate("SettingsForm", u"Sticky selection in Entity trees", None))
+        self.checkBox_entity_tree_sticky_selection.setText(QCoreApplication.translate("SettingsForm", u"Sticky selection in Entity tree", None))
+        self.checkBox_hide_empty_classes.setText(QCoreApplication.translate("SettingsForm", u"Hide empty classes in Entity tree", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_relationship_items_follow.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None))
+        self.checkBox_entity_items_follow.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.checkBox_relationship_items_follow.setText(QCoreApplication.translate("SettingsForm", u"Move relationships along with objects in Entity graph", None))
+        self.checkBox_entity_items_follow.setText(QCoreApplication.translate("SettingsForm", u"Move entities along with its elements in Entity graph", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_auto_expand_entities.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_auto_expand_entities.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand entities by default in Entity graph", None))
         self.checkBox_smooth_entity_graph_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph zoom", None))
         self.checkBox_smooth_entity_graph_rotation.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph rotation", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_auto_expand_objects.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_auto_expand_objects.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand objects by default in Entity graph", None))
         self.checkBox_merge_dbs.setText(QCoreApplication.translate("SettingsForm", u"Merge databases by default in Entity graph", None))
         self.groupBox.setTitle(QCoreApplication.translate("SettingsForm", u"Specification editors", None))
 #if QT_CONFIG(tooltip)

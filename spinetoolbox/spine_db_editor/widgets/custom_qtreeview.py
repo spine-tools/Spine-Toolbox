@@ -126,9 +126,11 @@ class EntityTreeView(ResizableTreeView):
         self._menu.addSeparator()
         self._hide_empty_classes_action = self._menu.addAction("Hide empty classes", self.toggle_hide_empty_classes)
         self._hide_empty_classes_action.setCheckable(True)
+        self._hide_empty_classes_action.setChecked(self.model().hide_empty_classes)
 
     def toggle_hide_empty_classes(self):
         self.model().hide_empty_classes = self._hide_empty_classes_action.isChecked()
+        self.model().save_hide_empty_classes()
 
     @Slot(QModelIndex, int, QEvent)
     def edit(self, index, trigger, event):

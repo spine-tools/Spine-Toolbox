@@ -154,13 +154,15 @@ class SpineDBEditorSettingsMixin:
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
-        self.ui.checkBox_auto_expand_objects.clicked.connect(self.set_auto_expand_objects)
+        self.ui.checkBox_hide_empty_classes.clicked.connect(self.set_hide_empty_classes)
+        self.ui.checkBox_auto_expand_entities.clicked.connect(self.set_auto_expand_entities)
         self.ui.checkBox_merge_dbs.clicked.connect(self.set_merge_dbs)
 
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
         sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
+        hide_empty_classes = self._qsettings.value("appSettings/hideEmptyClasses", defaultValue="false")
         smooth_zoom = self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false")
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
@@ -173,11 +175,12 @@ class SpineDBEditorSettingsMixin:
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
         else:  # commit_at_exit == "2":
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Checked)
-        self.ui.checkBox_object_tree_sticky_selection.setChecked(sticky_selection == "true")
+        self.ui.checkBox_entity_tree_sticky_selection.setChecked(sticky_selection == "true")
+        self.ui.checkBox_hide_empty_classes.setChecked(hide_empty_classes == "true")
         self.ui.checkBox_smooth_entity_graph_zoom.setChecked(smooth_zoom == "true")
         self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
-        self.ui.checkBox_relationship_items_follow.setChecked(relationship_items_follow == "true")
-        self.ui.checkBox_auto_expand_objects.setChecked(auto_expand_entities == "true")
+        self.ui.checkBox_entity_items_follow.setChecked(relationship_items_follow == "true")
+        self.ui.checkBox_auto_expand_entities.setChecked(auto_expand_entities == "true")
         self.ui.checkBox_merge_dbs.setChecked(merge_dbs == "true")
         if db_editor_show_undo == 2:
             self.ui.checkBox_db_editor_show_undo.setChecked(True)
@@ -188,15 +191,17 @@ class SpineDBEditorSettingsMixin:
             return False
         commit_at_exit = str(self.ui.checkBox_commit_at_exit.checkState().value)
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
-        sticky_selection = "true" if self.ui.checkBox_object_tree_sticky_selection.checkState().value else "false"
+        sticky_selection = "true" if self.ui.checkBox_entity_tree_sticky_selection.checkState().value else "false"
         self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
+        hide_empty_classes = "true" if self.ui.checkBox_hide_empty_classes.checkState().value else "false"
+        self._qsettings.setValue("appSettings/hideEmptyClasses", hide_empty_classes)
         smooth_zoom = "true" if self.ui.checkBox_smooth_entity_graph_zoom.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothEntityGraphZoom", smooth_zoom)
         smooth_rotation = "true" if self.ui.checkBox_smooth_entity_graph_rotation.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothEntityGraphRotation", smooth_rotation)
-        relationship_items_follow = "true" if self.ui.checkBox_relationship_items_follow.checkState().value else "false"
+        relationship_items_follow = "true" if self.ui.checkBox_entity_items_follow.checkState().value else "false"
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
-        auto_expand_entities = "true" if self.ui.checkBox_auto_expand_objects.checkState().value else "false"
+        auto_expand_entities = "true" if self.ui.checkBox_auto_expand_entities.checkState().value else "false"
         self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_entities)
         merge_dbs = "true" if self.ui.checkBox_merge_dbs.checkState().value else "false"
         self._qsettings.setValue("appSettings/mergeDBs", merge_dbs)
@@ -206,15 +211,22 @@ class SpineDBEditorSettingsMixin:
 
     def update_ui(self):
         super().update_ui()
+        hide_empty_classes = self._qsettings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
         auto_expand_entities = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
-        self.set_auto_expand_objects(auto_expand_entities)
+        self.set_hide_empty_classes(hide_empty_classes)
+        self.set_auto_expand_entities(auto_expand_entities)
         self.set_merge_dbs(merge_dbs)
 
     @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
+    def set_hide_empty_classes(self, checked=False):
         for db_editor in self.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
+            db_editor.entity_tree_model.hide_empty_classes = checked
+
+    @Slot(bool)
+    def set_auto_expand_entities(self, checked=False):
+        for db_editor in self.db_mngr.get_all_spine_db_editors():
+            db_editor.ui.graphicsView.set_auto_expand_entities(checked)
 
     @Slot(bool)
     def set_merge_dbs(self, checked=False):

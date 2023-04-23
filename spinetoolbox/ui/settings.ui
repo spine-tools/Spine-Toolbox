@@ -1083,22 +1083,39 @@
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="checkBox_object_tree_sticky_selection">
+            <widget class="QCheckBox" name="checkBox_entity_tree_sticky_selection">
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls how selecting items in Object tree &lt;span style=&quot; font-weight:600;&quot;&gt;using the left mouse button&lt;/span&gt; works. &lt;/p&gt;&lt;p&gt;When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.&lt;/p&gt;&lt;p&gt;When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Sticky selection in Entity trees</string>
+              <string>Sticky selection in Entity tree</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QCheckBox" name="checkBox_relationship_items_follow">
+            <widget class="QCheckBox" name="checkBox_hide_empty_classes">
+             <property name="text">
+              <string>Hide empty classes in Entity tree</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="checkBox_entity_items_follow">
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When checked [default], moving Object items causes connected Relationship items to follow.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Move relationships along with objects in Entity graph</string>
+              <string>Move entities along with its elements in Entity graph</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="checkBox_auto_expand_entities">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Checked&lt;/span&gt;: Whenever an object is included in the Entity graph, the graph automatically includes &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; its relationships.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Unchecked&lt;/span&gt;: Whenever &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;p&gt;Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Auto-expand entities by default in Entity graph</string>
              </property>
             </widget>
            </item>
@@ -1113,16 +1130,6 @@
             <widget class="QCheckBox" name="checkBox_smooth_entity_graph_rotation">
              <property name="text">
               <string>Smooth Entity graph rotation</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QCheckBox" name="checkBox_auto_expand_objects">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Checked&lt;/span&gt;: Whenever an object is included in the Entity graph, the graph automatically includes &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; its relationships.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Unchecked&lt;/span&gt;: Whenever &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;p&gt;Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Auto-expand objects by default in Entity graph</string>
              </property>
             </widget>
            </item>
@@ -1567,11 +1574,10 @@
   <tabstop>toolButton_browse_conda</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
   <tabstop>checkBox_db_editor_show_undo</tabstop>
-  <tabstop>checkBox_object_tree_sticky_selection</tabstop>
-  <tabstop>checkBox_relationship_items_follow</tabstop>
+  <tabstop>checkBox_entity_tree_sticky_selection</tabstop>
+  <tabstop>checkBox_entity_items_follow</tabstop>
   <tabstop>checkBox_smooth_entity_graph_zoom</tabstop>
   <tabstop>checkBox_smooth_entity_graph_rotation</tabstop>
-  <tabstop>checkBox_auto_expand_objects</tabstop>
   <tabstop>checkBox_save_spec_before_closing</tabstop>
   <tabstop>checkBox_spec_show_undo</tabstop>
   <tabstop>listWidget</tabstop>
@@ -1615,7 +1621,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="persistent_processes_button_group"/>
   <buttongroup name="engine_processes_button_group"/>
+  <buttongroup name="persistent_processes_button_group"/>
  </buttongroups>
 </ui>
