@@ -12,15 +12,20 @@
 """
 Provides pivot table models for the Tabular View.
 """
+from collections import defaultdict
+from contextlib import suppress
+from functools import partial
 
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QFont
+
+from spinedb_api import DatabaseMapping
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier
 from spinetoolbox.fetch_parent import FlexibleFetchParent
+from .colors import FIXED_FIELD_COLOR, PIVOT_TABLE_HEADER_COLOR
 from .pivot_model import PivotModel
 from ...mvcmodels.shared import PARSED_ROLE
-from ...config import PIVOT_TABLE_HEADER_COLOR
 from ..widgets.custom_delegates import (
     RelationshipPivotTableDelegate,
     ParameterPivotTableDelegate,
@@ -55,6 +60,41 @@ class TopLeftHeaderItem:
         if role == Qt.ItemDataRole.ToolTipRole:
             return item.get("description", "No description")
 
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
+        """Returns header data for given id.
+
+        Args:
+            header_id (Any): header id
+            role (Qt.ItemDataRole): data role
+
+        Returns:
+            Any: data corresponding to role
+        """
+        raise NotImplementedError()
+
+    def update_data(self, db_map_data):
+        """Updates database data.
+
+        Args:
+            db_map_data (dict): update data
+
+        Returns:
+            bool: True if data was successfully updated, False otherwise
+        """
+        raise NotImplementedError()
+
+    def add_data(self, names, db_map):
+        """Adds more data to database.
+
+        Args:
+            names (set of str): header names
+            db_map (DatabaseMapping): database to add the data to
+
+        Returns:
+            bool: True if data was added successfully, False otherwise
+        """
+        raise NotImplementedError()
+
 
 class TopLeftObjectHeaderItem(TopLeftHeaderItem):
     """A top left header for object_class."""
@@ -74,21 +114,22 @@ class TopLeftObjectHeaderItem(TopLeftHeaderItem):
         return self._name
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
+        """See base class."""
         return self._get_header_data_from_db("object", header_id, "name", role)
 
     def update_data(self, db_map_data):
+        """See base class."""
         if not db_map_data:
             return False
         self.db_mngr.update_objects(db_map_data)
         return True
 
-    def add_data(self, names):
+    def add_data(self, names, db_map):
+        """See base class."""
         if not names:
             return False
-        db_map_data = {
-            db_map: [{"name": name, "class_id": class_id} for name in names]
-            for db_map, class_id in self._class_id.items()
-        }
+        class_id = self._class_id[db_map]
+        db_map_data = {db_map: [{"name": name, "class_id": class_id} for name in names]}
         self.db_mngr.add_objects(db_map_data)
         return True
 
@@ -105,21 +146,22 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
         return "parameter"
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
+        """See base class."""
         return self._get_header_data_from_db("parameter_definition", header_id, "parameter_name", role)
 
     def update_data(self, db_map_data):
+        """See base class."""
         if not db_map_data:
             return False
         self.db_mngr.update_parameter_definitions(db_map_data)
         return True
 
-    def add_data(self, names):
+    def add_data(self, names, db_map):
+        """See base class."""
         if not names:
             return False
-        db_map_data = {
-            db_map: [{"name": name, "entity_class_id": class_id} for name in names]
-            for db_map, class_id in self.model._parent.current_class_id.items()
-        }
+        class_id = self.model._parent.current_class_id[db_map]
+        db_map_data = {db_map: [{"name": name, "entity_class_id": class_id} for name in names]}
         self.db_mngr.add_parameter_definitions(db_map_data)
         return True
 
@@ -136,15 +178,18 @@ class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
         return "index"
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
+        """See base class."""
         _, index = header_id
         if role == PARSED_ROLE:
             return index
         return str(index)
 
     def update_data(self, db_map_data):  # pylint: disable=no-self-use
+        """See base class."""
         return False
 
-    def add_data(self, _names):  # pylint: disable=no-self-use
+    def add_data(self, names, db_map):  # pylint: disable=no-self-use
+        """See base class."""
         return False
 
 
@@ -160,18 +205,21 @@ class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
         return "alternative"
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
+        """See base class."""
         return self._get_header_data_from_db("alternative", header_id, "name", role)
 
     def update_data(self, db_map_data):
+        """See base class."""
         if not db_map_data:
             return False
         self.db_mngr.update_alternatives(db_map_data)
         return True
 
-    def add_data(self, names):
+    def add_data(self, names, db_map):
+        """See base class."""
         if not names:
             return False
-        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
+        db_map_data = {db_map: [{"name": name} for name in names]}
         self.db_mngr.add_alternatives(db_map_data)
         return True
 
@@ -188,24 +236,31 @@ class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
         return "scenario"
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
+        """See base class."""
         return self._get_header_data_from_db("scenario", header_id, "name", role)
 
     def update_data(self, db_map_data):
+        """See base class."""
         if not db_map_data:
             return False
         self.db_mngr.update_scenarios(db_map_data)
         return True
 
-    def add_data(self, names):
+    def add_data(self, names, db_map):
+        """See base class."""
         if not names:
             return False
-        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
+        db_map_data = {db_map: [{"name": name} for name in names]}
         self.db_mngr.add_scenarios(db_map_data)
         return True
 
 
 class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
     """A top left header for database."""
+
+    def __init__(self, model):
+        super().__init__(model)
+        self._suggested_codename = None
 
     @property
     def header_type(self):
@@ -216,7 +271,54 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
         return "database"
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
+        """See base class."""
         return header_id.codename
+
+    def update_data(self, db_map_data):
+        """See base class."""
+        return False
+
+    def add_data(self, names, db_map):
+        """See base class."""
+        return False
+
+    def set_data(self, codename):
+        """Sets database mapping's codename.
+
+        Args:
+            codename (str): database codename
+
+        Returns:
+            bool: True if codename was acceptable, False otherwise
+        """
+        if any(db_map.codename == codename for db_map in self.model.db_maps):
+            self._suggested_codename = codename
+            return True
+        return False
+
+    def take_suggested_db_map(self):
+        """Suggests database mapping resetting the suggestion afterwards.
+
+        Returns:
+            DatabaseMapping: database mapping
+        """
+        if self._suggested_codename is not None:
+            for db_map in self.model.db_maps:
+                if db_map.codename == self._suggested_codename:
+                    self._suggested_codename = None
+                    return db_map
+            raise RuntimeError(f"Logic error: no such database mapping `{self._suggested_codename}`")
+        return next(iter(self.model.db_maps))
+
+    def suggest_db_map_codename(self):
+        """Suggests a database mapping codename.
+
+        Returns:
+            str: codename
+        """
+        if self._suggested_codename is not None:
+            return self._suggested_codename
+        return next(iter(self.model.db_maps)).codename
 
 
 class PivotTableModelBase(QAbstractTableModel):
@@ -243,6 +345,10 @@ class PivotTableModelBase(QAbstractTableModel):
         self.modelReset.connect(lambda *args: QTimer.singleShot(0, self._collect_more_data))
         self.rowsInserted.connect(lambda *args: QTimer.singleShot(0, self._collect_more_rows))
         self.columnsInserted.connect(lambda *args: QTimer.singleShot(0, self._collect_more_columns))
+
+    @property
+    def db_maps(self):
+        return self._parent.db_maps
 
     def reset_fetch_parents(self):
         for parent in self._fetch_parents():
@@ -493,11 +599,20 @@ class PivotTableModelBase(QAbstractTableModel):
 
     def flags(self, index):
         """Roles for data"""
-        if index.row() < self.headerRowCount() and index.column() < self.headerColumnCount():
+        row = index.row()
+        is_top = row < self.headerRowCount()
+        is_left = index.column() < self.headerColumnCount()
+        if is_top and is_left:
             return ~Qt.ItemIsEnabled
-        if self.model.pivot_rows and index.row() == len(self.model.pivot_columns):
+        if self.model.pivot_rows and row == len(self.model.pivot_columns):
             # empty line between column headers and data
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if is_top or is_left:
+            flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            id_ = self.top_left_id(index)
+            if id_ is None or not isinstance(self.top_left_headers[id_], TopLeftDatabaseHeaderItem):
+                flags |= Qt.ItemIsEditable
+            return flags
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def top_left_indexes(self):
@@ -608,8 +723,9 @@ class PivotTableModelBase(QAbstractTableModel):
 
         Args:
             index (QModelIndex)
+
         Returns:
-            int, NoneType
+            tuple or DatabaseMapping or NoneType
         """
         if self.index_in_row_headers(index):
             row, _ = self.map_to_pivot(index)
@@ -648,8 +764,15 @@ class PivotTableModelBase(QAbstractTableModel):
         return self._header_name(top_left_id, header_id)
 
     def _color_data(self, index):
-        if index.row() < self.headerRowCount() and index.column() < self.headerColumnCount():
-            return QColor(PIVOT_TABLE_HEADER_COLOR)
+        is_top = index.row() < self.headerRowCount()
+        is_left = index.column() < self.headerColumnCount()
+        if is_top and is_left:
+            return PIVOT_TABLE_HEADER_COLOR
+        if is_top or is_left:
+            id_ = self.top_left_id(index)
+            if id_ is not None and isinstance(self.top_left_headers[id_], TopLeftDatabaseHeaderItem):
+                return FIXED_FIELD_COLOR
+        return None
 
     def _text_alignment_data(self, index):  # pylint: disable=no-self-use
         return None
@@ -675,6 +798,19 @@ class PivotTableModelBase(QAbstractTableModel):
                 return self._header_data(index, role)
             if self.index_in_data(index):
                 return self._data(index, role)
+            if "database" not in self.model.pivot_frozen:
+                if self.emptyRowCount() > 0 and index.row() == self.headerRowCount() + self.dataRowCount():
+                    with suppress(ValueError):
+                        database_header_column = self.model.pivot_rows.index("database")
+                        if index.column() == database_header_column:
+                            return self.top_left_headers["database"].suggest_db_map_codename()
+                elif (
+                    self.emptyColumnCount() > 0 and index.column() == self.headerColumnCount() + self.dataColumnCount()
+                ):
+                    with suppress(ValueError):
+                        database_header_row = self.model.pivot_columns.index("database")
+                        if index.row() == database_header_row:
+                            return self.top_left_headers["database"].suggest_db_map_codename()
             return None
         if role == Qt.ItemDataRole.FontRole and self.index_in_top_left(index):
             font = QFont()
@@ -733,20 +869,47 @@ class PivotTableModelBase(QAbstractTableModel):
         raise NotImplementedError()
 
     def _batch_set_header_data(self, header_data):
-        data_by_top_left_id = {}
+        """Sets header data for multiple indexes at once.
+
+        Args:
+            header_data (list of tuple): mapping from index to data
+
+        Returns:
+            bool: True if data was set successfully, False otherwise
+        """
+        list_dict = partial(defaultdict, list)
+        data_by_top_left_id = defaultdict(list_dict)
         for index, value in header_data:
-            db_map, id_ = self._header_id(index)
-            top_left_id = self.top_left_id(index)
-            item = dict(id=id_, name=value)
-            data_by_top_left_id.setdefault(top_left_id, {}).setdefault(db_map, []).append(item)
-        return any(self.top_left_headers[id_].update_data(data) for id_, data in data_by_top_left_id.items())
+            header_id = self._header_id(index)
+            if isinstance(header_id, tuple):
+                top_left_id = self.top_left_id(index)
+                item = dict(id=header_id[1], name=value)
+                data_by_top_left_id[top_left_id][header_id[0]].append(item)
+        success = False
+        for id_, data in data_by_top_left_id.items():
+            success = success or self.top_left_headers[id_].update_data(data)
+        return success
 
     def _batch_set_empty_header_data(self, header_data, get_top_left_id):
-        names_by_top_left_id = {}
+        names_by_top_left_id = defaultdict(set)
+        db_map = None
+        for value in self.model.frozen_value:
+            if isinstance(value, DatabaseMapping):
+                db_map = value
+                break
         for index, value in header_data:
             top_left_id = get_top_left_id(index)
-            names_by_top_left_id.setdefault(top_left_id, set()).add(value)
-        return any(self.top_left_headers[id_].add_data(names) for id_, names in names_by_top_left_id.items())
+            names_by_top_left_id[top_left_id].add(value)
+        success = False
+        for id_, names in names_by_top_left_id.items():
+            header_item = self.top_left_headers[id_]
+            if db_map is None:
+                db_map = self.top_left_headers["database"].take_suggested_db_map()
+            if isinstance(header_item, TopLeftDatabaseHeaderItem):
+                header_item.set_data(next(iter(names)))
+            else:
+                success = success or header_item.add_data(names, db_map)
+        return success
 
 
 class ParameterValuePivotTableModel(PivotTableModelBase):
@@ -970,8 +1133,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def _object_parameter_value_to_add(self, db_map, header_ids, value_and_type):
         value, value_type = split_value_and_type(value_and_type)
         return dict(
-            entity_class_id=self._parent.current_class_id[db_map],
-            entity_id=header_ids[0],
+            object_class_id=self._parent.current_class_id[db_map],
+            object_id=header_ids[0],
             parameter_definition_id=header_ids[-2],
             value=value,
             type=value_type,
@@ -980,11 +1143,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
     def _relationship_parameter_value_to_add(self, db_map, header_ids, value_and_type, rel_id_lookup):
         object_id_list = tuple(id_ for id_ in header_ids[:-2])
-        relationship_id = rel_id_lookup[db_map, object_id_list]
         value, value_type = split_value_and_type(value_and_type)
         return dict(
-            entity_class_id=self._parent.current_class_id[db_map],
-            entity_id=relationship_id,
+            relationship_class_id=self._parent.current_class_id[db_map],
+            relationship_id=rel_id_lookup[db_map, object_id_list],
             parameter_definition_id=header_ids[-2],
             value=value,
             type=value_type,

@@ -400,6 +400,9 @@
        <property name="orientation">
         <enum>Qt::Vertical</enum>
        </property>
+       <property name="childrenCollapsible">
+        <bool>false</bool>
+       </property>
        <widget class="QTreeView" name="listView_console_executions">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
