@@ -186,6 +186,12 @@ class EntityItem(_FetchEntityGroupMixin, MultiDBTreeItem):
         return self.db_map_data_field(self.first_db_map, "element_name_list", default="")
 
     @property
+    def entity_class_key(self):
+        return tuple(
+            self.db_map_data_field(self.first_db_map, field) for field in ("class_name", "dimension_name_list")
+        )
+
+    @property
     def display_data(self):
         """Returns the name for display."""
         byname = self.db_map_data_field(self.first_db_map, "byname", default="")

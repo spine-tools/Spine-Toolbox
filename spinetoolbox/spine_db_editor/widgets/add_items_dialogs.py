@@ -164,11 +164,11 @@ class AddItemsDialog(ManageItemsDialog):
 class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, AddItemsDialog):
     """A dialog to query user's preferences for new entity classes."""
 
-    def __init__(self, parent, parent_item, db_mngr, *db_maps, force_default=False):
+    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False):
         """
         Args:
             parent (SpineDBEditor)
-            parent_item (MultiDBTreeItem)
+            item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
             *db_maps: DiffDatabaseMapping instances
             force_default (bool): if True, defaults are non-editable
@@ -191,7 +191,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         self.layout().addWidget(self.button_box, 3, 0, -1, -1)
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageEntityClassesDelegate(self))
-        dimension_one_name = parent_item.display_data if parent_item.item_type != "root" else None
+        dimension_one_name = item.display_data if item.item_type != "root" else None
         self.number_of_dimensions = 1 if dimension_one_name is not None else 0
         self.spin_box.setValue(self.number_of_dimensions)
         self.connect_signals()
@@ -199,7 +199,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         labels += ['entity class name', 'description', 'display icon', 'databases']
         self.model.set_horizontal_header_labels(labels)
         self.db_map_ent_cls_lookup_by_name = self.make_db_map_ent_cls_lookup_by_name()
-        db_names = ",".join(x.codename for x in parent_item.db_maps)
+        db_names = ",".join(x.codename for x in item.db_maps)
         self.default_display_icon = None
         self.model.set_default_row(
             **{
@@ -360,24 +360,29 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
     """A dialog to query user's preferences for new relationships."""
 
-    def __init__(self, parent, parent_item, db_mngr, *db_maps, force_default=False):
+    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False):
         """
         Args:
             parent (SpineDBEditor)
-            parent_item (MultiDBTreeItem)
+            item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
             *db_maps: DiffDatabaseMapping instances
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
-        if hasattr(parent_item, "item_type") and parent_item.item_type == "entity":
-            entity_name = parent_item.display_data
-            entity_class_name = parent_item.parent_item.display_data
-            self.entity_names_by_class_name = {entity_class_name: entity_name}
+        self.entity_names_by_class_name = {}
+        if item.item_type == "entity":
+            if not item.element_name_list:
+                entity_name = item.display_data
+                entity_class_name = item.parent_item.display_data
+                self.entity_names_by_class_name = {entity_class_name: entity_name}
+                entity_class_key = None
+            else:
+                entity_class_key = item.entity_class_key
+        elif item.item_type == "entity_class":
+            entity_class_key = item.display_id
+        else:  # item_type == "root"
             entity_class_key = None
-        else:
-            self.entity_names_by_class_name = {}
-            entity_class_key = parent_item.display_id
         self.entity_class = None
         self.model.force_default = force_default
         self.setWindowTitle("Add entities")
@@ -491,11 +496,11 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
 class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
     """A dialog to query user's preferences for managing relationships."""
 
-    def __init__(self, parent, parent_item, db_mngr, *db_maps):
+    def __init__(self, parent, item, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor): data store widget
-            parent_item (MultiDBTreeItem)
+            item (MultiDBTreeItem)
             db_mngr (SpineDBManager): the manager to do the removal
             *db_maps: DiffDatabaseMapping instances
         """
@@ -542,7 +547,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         self.new_items_model = MinimalTableModel(self, lazy=False)
         self.model.sub_models = [self.new_items_model, self.existing_items_model]
         self.db_combo_box.addItems([db_map.codename for db_map in db_maps])
-        self.reset_entity_class_combo_box(db_maps[0].codename, parent_item.display_id)
+        self.reset_entity_class_combo_box(db_maps[0].codename, item.display_id)
         self.connect_signals()
 
     def make_model(self):
