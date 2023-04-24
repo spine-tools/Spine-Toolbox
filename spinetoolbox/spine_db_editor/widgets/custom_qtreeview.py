@@ -278,7 +278,7 @@ class EntityTreeView(ResizableTreeView):
         self._duplicate_entity_action.setEnabled(
             item.item_type == "entity" and not item.is_group and not item.element_name_list
         )
-        self._manage_members_action.setEnabled(item.item_type == "members")
+        self._manage_members_action.setEnabled(item.item_type == "entity" and item.is_group)
         self._manage_elements_action.setEnabled(item.item_type in ("root", "entity_class"))
         read_only = item.item_type in ("root", "members")
         self._export_action.setEnabled(not read_only)
@@ -316,21 +316,16 @@ class EntityTreeView(ResizableTreeView):
 
     def duplicate_entity(self):
         """Duplicates the object at the current index using the connected Spine db editor."""
-        entity_item = self.currentIndex().internalPointer()
-        self._spine_db_editor.duplicate_entity(entity_item)
+        self._spine_db_editor.duplicate_entity(self._context_item)
 
     def add_entity_group(self):
-        index = self.currentIndex()
-        item = index.internalPointer()
-        self._spine_db_editor.show_add_entity_group_form(item)
+        self._spine_db_editor.show_add_entity_group_form(self._context_item)
 
     def manage_elements(self):
         self._spine_db_editor.show_manage_elements_form(self._context_item)
 
     def manage_members(self):
-        index = self.currentIndex()
-        item = index.internalPointer().parent_item
-        self._spine_db_editor.show_manage_members_form(item)
+        self._spine_db_editor.show_manage_members_form(self._context_item)
 
 
 class ItemTreeView(ResizableTreeView):

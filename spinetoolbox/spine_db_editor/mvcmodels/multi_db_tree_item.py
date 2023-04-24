@@ -366,7 +366,6 @@ class MultiDBTreeItem(TreeItem):
         display_ids = [child.display_id for child in self.children if child.display_id is not None]
         for row in sorted(rows_to_update, reverse=True):
             child = self.child(row)
-            child.update(**kwargs)
             if not child:
                 continue
             if not child.is_valid():
@@ -378,7 +377,10 @@ class MultiDBTreeItem(TreeItem):
                 db_map = child.first_db_map
                 new_child = child.deep_take_db_map(db_map)
                 new_children.append(new_child)
-            if child.display_id in display_ids[:row] + display_ids[row + 1 :] or child.should_be_merged():
+            if child.will_always_be_merged():
+                continue
+            child.update(**kwargs)
+            if child.display_id in display_ids[:row] + display_ids[row + 1 :] or child.will_always_be_merged():
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
                 self.remove_children(row, 1)
@@ -392,7 +394,7 @@ class MultiDBTreeItem(TreeItem):
     def update(self, **kwargs):
         pass
 
-    def should_be_merged(self):
+    def will_always_be_merged(self):
         return False
 
     def insert_children(self, position, children):

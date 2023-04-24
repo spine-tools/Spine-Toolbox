@@ -161,7 +161,8 @@ class SpineDBIconManager:
         scene.addRect(scene.itemsBoundingRect())
         self._group_renderers[class_name] = _SceneSvgRenderer.from_scene(scene)
 
-    def group_renderer(self, class_name):
+    def group_renderer(self, entity_class):
+        class_name = entity_class["name"]
         if class_name not in self._group_renderers:
             self._create_group_renderer(class_name)
         return self._group_renderers[class_name]
