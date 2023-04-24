@@ -963,6 +963,8 @@ class SpineDBManager(QObject):
 
     def _import_data_cmds(self, db_map, data_for_import, db_map_error_log):
         for item_type, (to_add, to_update, import_error_log) in data_for_import:
+            if item_type in ("object_class", "relationship_class", "object", "relationship"):
+                continue
             db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
             if to_update:
                 yield UpdateItemsCommand(self, db_map, to_update, item_type, check=False)

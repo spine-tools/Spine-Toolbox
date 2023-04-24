@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
 from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QAction
-from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
+from spinedb_api import import_data, export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
 from .custom_menus import MainMenu
@@ -479,6 +479,9 @@ class SpineDBEditorBase(QMainWindow):
             except json.decoder.JSONDecodeError as err:
                 self.msg_error.emit(f"File {file_path} is not a valid json: {err}")
                 return
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            import_data(db_map, **data)
+            data = export_data(db_map)
         self.import_data(data)
         filename = os.path.split(file_path)[1]
         self.msg.emit(f"File {filename} successfully imported.")
