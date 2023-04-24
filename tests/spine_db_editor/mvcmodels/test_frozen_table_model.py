@@ -48,6 +48,7 @@ class TestFrozenTableModel(unittest.TestCase):
         self._model.set_headers(["header 1", "header 2"])
         self.assertEqual(self._model.rowCount(), 1)
         self.assertEqual(self._model.columnCount(), 2)
+        self.assertEqual(self._model.headers, ["header 1", "header 2"])
         self.assertEqual(self._model.index(0, 0).data(), "header 1")
         self.assertEqual(self._model.index(0, 1).data(), "header 2")
 
@@ -142,15 +143,11 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.columnCount(), 2)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.headers, ["database", "alternative"])
-        names = {item["id"]: item["name"] for item in alternatives}
-        expected = {("test_db", names[id_]) for id_ in ids}
-        table = set()
-        for row in range(2):
-            row_data = []
+        expected = [["test_db", "Base"], ["test_db", "alternative_1"]]
+        for row in range(1, self._model.rowCount()):
             for column in range(self._model.columnCount()):
-                row_data.append(self._model.index(row + 1, column).data())
-            table.add(tuple(row_data))
-        self.assertEqual(table, expected)
+                with self.subTest(f"row {row} column {column}"):
+                    self.assertEqual(self._model.index(row, column).data(), expected[row - 1][column])
 
     def test_insert_column_data_extends_inserted_data(self):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
@@ -163,15 +160,11 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.columnCount(), 2)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.headers, ["database", "alternative"])
-        names = {item["id"]: item["name"] for item in alternatives}
-        expected = {("test_db", names[id_]) for id_ in ids}
-        table = set()
-        for row in range(2):
-            row_data = []
+        expected = [["test_db", "Base"], ["test_db", "alternative_1"]]
+        for row in range(1, self._model.rowCount()):
             for column in range(self._model.columnCount()):
-                row_data.append(self._model.index(row + 1, column).data())
-            table.add(tuple(row_data))
-        self.assertEqual(table, expected)
+                with self.subTest(f"row {row} column {column}"):
+                    self.assertEqual(self._model.index(row, column).data(), expected[row - 1][column])
 
     def test_remove_last_column_clears_model(self):
         self._model.insert_column_data("database", {self._db_map}, 0)
@@ -201,9 +194,48 @@ class TestFrozenTableModel(unittest.TestCase):
         alternatives = self._db_mngr.get_items(self._db_map, "alternative")
         ids = {item["id"] for item in alternatives}
         self._model.insert_column_data("alternative", {(self._db_map, id_) for id_ in ids}, 1)
+        self.assertEqual(self._model.headers, ["database", "alternative"])
         self.assertEqual(self._model.columnCount(), 2)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertTrue(self._model.moveColumns(QModelIndex(), 1, 1, QModelIndex(), 0))
+        self.assertEqual(self._model.columnCount(), 2)
+        self.assertEqual(self._model.rowCount(), 3)
+        self.assertEqual(self._model.headers, ["alternative", "database"])
+        expected = [["Base", "test_db"], ["alternative_1", "test_db"]]
+        for row in range(1, self._model.rowCount()):
+            for column in range(self._model.columnCount()):
+                with self.subTest(f"row {row} column {column}"):
+                    self.assertEqual(self._model.index(row, column).data(), expected[row - 1][column])
+
+    def test_table_stays_sorted(self):
+        self._model.insert_column_data("database", {self._db_map}, 0)
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_object_classes({self._db_map: [{"name": "Gadget"}]})
+        self._db_mngr.add_objects({self._db_map: [{"class_id": 1, "name": "fork"}, {"class_id": 1, "name": "spoon"}]})
+        alternatives = self._db_mngr.get_items(self._db_map, "alternative")
+        ids = {item["id"] for item in alternatives}
+        self._model.insert_column_data("alternative", {(self._db_map, id_) for id_ in ids}, 0)
+        objects = self._db_mngr.get_items(self._db_map, "object")
+        ids = {item["id"] for item in objects}
+        self._model.insert_column_data("Gadget", {(self._db_map, id_) for id_ in ids}, 0)
+        self.assertEqual(self._model.headers, ["Gadget", "alternative", "database"])
+        self.assertEqual(self._model.columnCount(), 3)
+        self.assertEqual(self._model.rowCount(), 5)
+        self.assertEqual(self._model.index(0, 0).data(), "Gadget")
+        self.assertEqual(self._model.index(0, 1).data(), "alternative")
+        self.assertEqual(self._model.index(0, 2).data(), "database")
+        self.assertEqual(self._model.index(1, 0).data(), "fork")
+        self.assertEqual(self._model.index(1, 1).data(), "Base")
+        self.assertEqual(self._model.index(1, 2).data(), "test_db")
+        self.assertEqual(self._model.index(2, 0).data(), "fork")
+        self.assertEqual(self._model.index(2, 1).data(), "alternative_1")
+        self.assertEqual(self._model.index(2, 2).data(), "test_db")
+        self.assertEqual(self._model.index(3, 0).data(), "spoon")
+        self.assertEqual(self._model.index(3, 1).data(), "Base")
+        self.assertEqual(self._model.index(3, 2).data(), "test_db")
+        self.assertEqual(self._model.index(4, 0).data(), "spoon")
+        self.assertEqual(self._model.index(4, 1).data(), "alternative_1")
+        self.assertEqual(self._model.index(4, 2).data(), "test_db")
 
 
 if __name__ == '__main__':

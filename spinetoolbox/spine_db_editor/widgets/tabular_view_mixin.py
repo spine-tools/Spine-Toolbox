@@ -217,7 +217,8 @@ class TabularViewMixin:
     @Slot(QAction)
     def _handle_pivot_action_triggered(self, action):
         self.current_input_type = action.text()
-        # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed` with `visible = True`
+        # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed`
+        # with `visible = True`
         # See `SpineDBEditor` class.
         self.do_reload_pivot_table()
 
