@@ -160,7 +160,7 @@ class TreeItem:
             child.tear_down_recursively()
         self.tear_down()
 
-    def remove_children(self, position, count):
+    def remove_children(self, position, count, tear_down=True):
         """Removes count children starting from the given position.
 
         Args:
@@ -182,8 +182,9 @@ class TreeItem:
             child.parent_item = None
         del self.children[first : last + 1]
         self.model.endRemoveRows()
-        for child in children:
-            child.tear_down_recursively()
+        if tear_down:
+            for child in children:
+                child.tear_down_recursively()
         return True
 
     def clear_children(self):

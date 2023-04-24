@@ -383,7 +383,7 @@ class MultiDBTreeItem(TreeItem):
             if child.display_id in display_ids[:row] + display_ids[row + 1 :] or child.will_always_be_merged():
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
-                self.remove_children(row, 1)
+                self.remove_children(row, 1, tear_down=False)
                 display_ids.pop(row)
         self._deep_refresh_children()
         self._merge_children(new_children)
@@ -412,9 +412,9 @@ class MultiDBTreeItem(TreeItem):
         self._refresh_child_map()
         return True
 
-    def remove_children(self, position, count):
+    def remove_children(self, position, count, tear_down=True):
         """Removes count children starting from the given position."""
-        if super().remove_children(position, count):
+        if super().remove_children(position, count, tear_down=tear_down):
             self._refresh_child_map()
             return True
         return False
