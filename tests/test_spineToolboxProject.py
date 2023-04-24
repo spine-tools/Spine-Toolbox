@@ -20,6 +20,7 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QVariantAnimation
 from PySide6.QtWidgets import QApplication
+import networkx as nx
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
@@ -63,6 +64,20 @@ class TestSpineToolboxProject(unittest.TestCase):
         clean_up_toolbox(self.toolbox)
         self._temp_dir.cleanup()
 
+    def node_is_isolated(self, project, node):
+        """Checks if the project item in given project with the given name has any connections.
+
+        Args:
+            project (SpineToolboxProject): Project with project items
+            node (str): Project item name
+
+        Returns:
+            bool: True if node is isolated, False otherwise
+        """
+        g = project.dag_with_node(node)
+        return nx.is_isolate(g, node)
+
+
     def test_add_data_store(self):
         name = "DS"
         add_ds(self.toolbox.project(), self.toolbox.item_factories, name)
@@ -79,7 +94,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         """Checks that project dag handler contains only one
         graph, which has one node and its name matches the
         given argument."""
-        self.assertTrue(len(self.toolbox.project().dags()) == 1)
+        dags = [dag for dag in self.toolbox.project()._dag_iterator()]
+        self.assertTrue(len(dags) == 1)
+        # self.assertTrue(len(self.toolbox.project().dags()) == 1)
         g = self.toolbox.project().dag_with_node(name)
         self.assertTrue(len(g.nodes()) == 1)
         for node_name in g.nodes():
@@ -157,8 +174,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         merger = p.get_item(merger_name)
         self.assertEqual(merger_name, merger.name)
         # DAG handler should now have eight graphs, each with one item
-        n_dags = len(self.toolbox.project().dags())
-        self.assertEqual(8, n_dags)
+        dags = [dag for dag in self.toolbox.project()._dag_iterator()]
+        self.assertEqual(8, len(dags))
         # Check that all created items are in graphs
         ds_graph = self.toolbox.project().dag_with_node(ds_name)
         self.assertIsNotNone(ds_graph)
@@ -203,7 +220,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(len(project.connections), 0)
         view = self.toolbox.project_item_model.get_item(view2_name)
         self.assertEqual(view2_name, view.name)
-        self.assertTrue(project.node_is_isolated(view2_name))
+        self.assertTrue(self.node_is_isolated(project, view2_name))
 
     def test_remove_item_by_name_removes_incoming_connections(self):
         project = self.toolbox.project()
@@ -223,24 +240,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(len(project.connections), 0)
         view = self.toolbox.project_item_model.get_item(view1_name)
         self.assertEqual(view1_name, view.name)
-        self.assertTrue(project.node_is_isolated(view1_name))
-
-    # def _execute_project(self):
-    #     waiter = SignalWaiter()
-    #     self.toolbox.project().project_execution_finished.connect(waiter.trigger)
-    #     with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, mock.patch(
-    #         "spinetoolbox.project.make_settings_dict_for_engine"
-    #     ) as mock_settings_dict:
-    #         # Make sure that the test uses LocalSpineEngineManager
-    #         # This mocks the check for engineSettings/remoteEngineEnabled in SpineToolboxProject.execute_dags()
-    #         mock_qsettings_value.side_effect = qsettings_value_side_effect
-    #         # This mocks the call to make_settings_dict_for_engine in SpineToolboxProject._execute_dags()
-    #         mock_settings_dict.return_value = dict()
-    #         self.toolbox.project().execute_project()
-    #         mock_qsettings_value.assert_called()
-    #         mock_settings_dict.assert_called_once()
-    #     waiter.wait()
-    #     self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
+        self.assertTrue(self.node_is_isolated(project, view1_name))
 
     def _execute_project(self, names=None):
         """Executes only the selected items or the whole project.
@@ -328,42 +328,42 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertFalse(view_executable.execute_called)
 
     def test_execute_selected_items_within_single_dag(self):
-        ds1 = add_ds(self.toolbox.project(), self.toolbox.item_factories, "DS1")
-        ds1_executable = self._make_mock_executable(ds1)
         dc1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC1")
         dc1_executable = self._make_mock_executable(dc1)
         dc2 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC2")
         dc2_executable = self._make_mock_executable(dc2)
         dc3 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC3")
         dc3_executable = self._make_mock_executable(dc3)
-        v1 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View1")
-        v1_executable = self._make_mock_executable(v1)
+        dc4 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC4")
+        dc4_executable = self._make_mock_executable(dc4)
+        dc5 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC5")
+        dc5_executable = self._make_mock_executable(dc5)
         self.toolbox.project().add_connection(
-            LoggingConnection(ds1.name, "right", dc1.name, "left", toolbox=self.toolbox)
+            LoggingConnection(dc1.name, "right", dc2.name, "left", toolbox=self.toolbox)
         )
         self.toolbox.project().add_connection(
-            LoggingConnection(dc1.name, "bottom", v1.name, "top", toolbox=self.toolbox)
+            LoggingConnection(dc2.name, "bottom", dc3.name, "top", toolbox=self.toolbox)
         )
         self.toolbox.project().add_connection(
-            LoggingConnection(ds1.name, "right", dc2.name, "left", toolbox=self.toolbox)
+            LoggingConnection(dc1.name, "right", dc4.name, "left", toolbox=self.toolbox)
         )
         self.toolbox.project().add_connection(
-            LoggingConnection(dc2.name, "right", dc3.name, "left", toolbox=self.toolbox)
+            LoggingConnection(dc4.name, "right", dc5.name, "left", toolbox=self.toolbox)
         )
-        # DAG contains 5 items and 4 connections. ds1->dc2->dc3 and ds1->dc1->v1
-        # Test selected execution when dc3 and v1 are selected. The items are not connected, so the DAG should
+        # DAG contains 5 items and 4 connections. dc1->dc2->dc3 and dc1->dc4->dc5.
+        # Test selected execution when dc3 and dc5 are selected. The items are not connected, so the DAG should
         # be split into two DAG's before invoking SpineEngineWorker.
         with mock.patch("spine_engine.spine_engine.SpineEngine.make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args, **kwargs: {
-                ds1.name: ds1_executable,
                 dc1.name: dc1_executable,
                 dc2.name: dc2_executable,
                 dc3.name: dc3_executable,
-                v1.name: v1_executable,
+                dc4.name: dc4_executable,
+                dc5.name: dc5_executable,
             }[name]
-            self._execute_project(["DC3", "View1"])
+            self._execute_project(["DC3", "DC5"])
             self.assertTrue(dc3_executable.execute_called)
-            self.assertTrue(v1_executable.execute_called)
+            self.assertTrue(dc5_executable.execute_called)
 
     def test_executing_cyclic_dag_fails_graciously(self):
         item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
@@ -405,7 +405,7 @@ class TestSpineToolboxProject(unittest.TestCase):
             project.connections,
             [LoggingConnection("renamed source", "left", destination_name, "right", toolbox=self.toolbox)],
         )
-        dags = project.dags()
+        dags = [dag for dag in project._dag_iterator()]
         self.assertEqual(len(dags), 1)
         self.assertEqual(node_successors(dags[0]), {"destination": [], "renamed source": ["destination"]})
         self.assertEqual(source_item.get_icon().name(), "renamed source")
