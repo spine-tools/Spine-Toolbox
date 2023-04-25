@@ -25,7 +25,14 @@ from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import validate_single_jump
-from spine_engine.utils.helpers import ExecutionDirection, shorten, get_file_size, make_dag, dag_edges, connections_to_selected_items
+from spine_engine.utils.helpers import (
+    ExecutionDirection,
+    shorten,
+    get_file_size,
+    make_dag,
+    dag_edges,
+    connections_to_selected_items,
+)
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_engine.server.util.zip_handler import ZipHandler
 from .server.engine_client import EngineClient
