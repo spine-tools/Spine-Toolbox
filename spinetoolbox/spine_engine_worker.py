@@ -27,6 +27,12 @@ def _handle_dag_execution_started(project_items):
         item.get_icon().execution_icon.mark_execution_waiting()
 
 
+@Slot(list)
+def _handle_node_execution_ignored(project_items):
+    for item in project_items:
+        item.get_icon().execution_icon.mark_execution_ignored()
+
+
 @Slot(object, object)
 def _handle_node_execution_started(item, direction):
     icon = item.get_icon()
@@ -103,6 +109,7 @@ def _mark_all_items_failed(items):
 
 class SpineEngineWorker(QObject):
     finished = Signal()
+    _mark_items_ignored = Signal(list)
     _dag_execution_started = Signal(list)
     _node_execution_started = Signal(object, object)
     _node_execution_finished = Signal(object, object, object)
@@ -185,6 +192,7 @@ class SpineEngineWorker(QObject):
             self._event_message_arrived.connect(self._handle_event_message_arrived_silent)
             self._process_message_arrived.connect(self._handle_process_message_arrived_silent)
             return
+        self._mark_items_ignored.connect(_handle_node_execution_ignored)
         self._dag_execution_started.connect(_handle_dag_execution_started)
         self._node_execution_started.connect(_handle_node_execution_started)
         self._node_execution_finished.connect(_handle_node_execution_finished)
@@ -202,8 +210,41 @@ class SpineEngineWorker(QObject):
         """
         self._connect_log_signals(silent)
         self._all_items_failed.connect(_mark_all_items_failed)
-        self._dag_execution_started.emit(list(self._project_items.values()))
+        included_items, ignored_items = self._included_and_ignored_items()
+        self._dag_execution_started.emit(included_items)
+        self._mark_items_ignored.emit(ignored_items)
         self._thread.start()
+
+    def _included_and_ignored_items(self):
+        """Returns two lists, where the first one contains project items that are about to be executed and the second
+        one contains project items that are about to be ignored."""
+        included = self._included_items(self.engine_data["execution_permits"], self.engine_data["connections"])
+        included_items = [item_dict for name, item_dict in self._project_items.items() if name in included]
+        ignored_items = [item_dict for name, item_dict in self._project_items.items() if name not in included]
+        return included_items, ignored_items
+
+    def _included_items(self, permitted_items, connections):
+        """Collects a list of project item names that are going to be executed in this DAG
+        based on execution permits and connections in the DAG.
+
+        Args:
+            permitted_items (dict): Mapping of item names to bool. True items have been selected by user for execution.
+            connections (list): Serialized connections
+
+        Returns:
+            list: Project item names
+        """
+        selected_items = [name for name, item_dict in self._project_items.items() if permitted_items[name]]
+        i_names = set()  # Names of items that are connected to permitted items
+        for conn in connections:
+            src_item = conn["from"][0]
+            dst_item = conn["to"][0]
+            if src_item in selected_items or dst_item in selected_items:
+                i_names.add(src_item)
+                i_names.add(dst_item)
+        if not i_names:  # Single node DAG with no connections
+            return selected_items
+        return list(i_names)
 
     @Slot()
     def do_work(self):

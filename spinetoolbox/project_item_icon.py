@@ -603,6 +603,10 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._execution_state = "waiting for dependencies"
         self._repaint(self._CLOCK, QColor("orange"))
 
+    def mark_execution_ignored(self):
+        self._execution_state = "not started"
+        self.hide()
+
     def mark_execution_started(self):
         self._execution_state = "in progress"
         self._repaint(self._CHECK, QColor("orange"))
