@@ -64,7 +64,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         clean_up_toolbox(self.toolbox)
         self._temp_dir.cleanup()
 
-    def node_is_isolated(self, project, node):
+    @staticmethod
+    def node_is_isolated(project, node):
         """Checks if the project item in given project with the given name has any connections.
 
         Args:
@@ -76,7 +77,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         """
         g = project.dag_with_node(node)
         return nx.is_isolate(g, node)
-
 
     def test_add_data_store(self):
         name = "DS"
@@ -96,7 +96,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         given argument."""
         dags = [dag for dag in self.toolbox.project()._dag_iterator()]
         self.assertTrue(len(dags) == 1)
-        # self.assertTrue(len(self.toolbox.project().dags()) == 1)
         g = self.toolbox.project().dag_with_node(name)
         self.assertTrue(len(g.nodes()) == 1)
         for node_name in g.nodes():

@@ -25,7 +25,7 @@ from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import validate_single_jump
-from spine_engine.utils.helpers import ExecutionDirection, shorten, get_file_size, make_dag
+from spine_engine.utils.helpers import ExecutionDirection, shorten, get_file_size, make_dag, dag_edges, connections_to_selected_items
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_engine.server.util.zip_handler import ZipHandler
 from .server.engine_client import EngineClient
@@ -1082,7 +1082,7 @@ class SpineToolboxProject(MetaObject):
         the dag is returned unaltered.
 
         Args:
-            dags (list(DiGraph): Dags that contain selected items
+            dag (list(DiGraph): Dag that is checked if it needs to be split into subdags
             selected_items (list): Names of selected items
 
         Returns:
@@ -1091,16 +1091,10 @@ class SpineToolboxProject(MetaObject):
         if len(dag.nodes) == 1:
             return [dag]
         # List of Connections that have a selected item as its source or destination item
-        connections = [
-            conn for conn in self._connections if conn.source in selected_items or conn.destination in selected_items
-        ]
-        edges = dict()
-        for connection in connections:
-            source, destination = connection.source, connection.destination
-            edges.setdefault(source, list()).append(destination)
-        d = make_dag(edges)
+        connections = connections_to_selected_items(self._connections, selected_items)
+        edges = dag_edges(connections)
+        d = make_dag(edges)  # Make DAG as SpineEngine does it
         if nx.number_weakly_connected_components(d) > 1:
-            print("DAG contains unconnected items")
             return [d.subgraph(c) for c in nx.weakly_connected_components(d)]
         return [dag]
 
