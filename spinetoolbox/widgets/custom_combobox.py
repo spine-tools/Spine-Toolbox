@@ -28,7 +28,6 @@ class ElidedCombobox(QComboBox):
         self.initStyleOption(opt)
         p = QStylePainter(self)
         p.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, opt)
-
         text_rect = self.style().subControlRect(
             QStyle.ComplexControl.CC_ComboBox, opt, QStyle.SubControl.SC_ComboBoxEditField, self
         )

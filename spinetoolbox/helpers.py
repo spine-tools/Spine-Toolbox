@@ -32,7 +32,7 @@ import matplotlib
 from PySide6.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide6.QtCore import __version__ as qt_version
 from PySide6.QtCore import __version_info__ as qt_version_info
-from PySide6.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
+from PySide6.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog, QSplitter
 from PySide6.QtGui import (
     QGuiApplication,
     QCursor,
@@ -1384,6 +1384,9 @@ def restore_ui(window, app_settings, settings_group):
     window_state = app_settings.value("windowState")
     window_maximized = app_settings.value("windowMaximized", defaultValue='false')
     n_screens = app_settings.value("n_screens", defaultValue=1)
+    splitter_states = {
+        splitter: app_settings.value(splitter.objectName() + "State") for splitter in window.findChildren(QSplitter)
+    }
     app_settings.endGroup()
     original_size = window.size()
     if window_size:
@@ -1396,6 +1399,8 @@ def restore_ui(window, app_settings, settings_group):
     if len(QGuiApplication.screens()) < int(n_screens):
         # There are less screens available now than on previous application startup
         window.move(0, 0)  # Move this widget to primary screen position (0,0)
+    for splitter, state in splitter_states.items():
+        splitter.restoreState(state)
     ensure_window_is_on_screen(window, original_size)
     if window_maximized == 'true':
         window.setWindowState(Qt.WindowMaximized)
@@ -1415,6 +1420,8 @@ def save_ui(window, app_settings, settings_group):
     app_settings.setValue("windowState", window.saveState(version=1))
     app_settings.setValue("windowMaximized", window.windowState() == Qt.WindowMaximized)
     app_settings.setValue("n_screens", len(QGuiApplication.screens()))
+    for splitter in window.findChildren(QSplitter):
+        app_settings.setValue(splitter.objectName() + "State", splitter.saveState())
     app_settings.endGroup()
 
 
