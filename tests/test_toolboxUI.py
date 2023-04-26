@@ -749,35 +749,6 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(tasks, ["prompt exit", "save"])
         self.toolbox._project = None
 
-    def test_propose_item_name(self):
-        class MockModel:
-            def __init__(self):
-                self.all_item_names = []
-
-            remove_leaves = mock.MagicMock()
-
-        # temporarily replace project
-        project = self.toolbox._project
-        self.toolbox._project = MockModel()
-
-        name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix (1)")
-
-        self.toolbox._project.all_item_names = ['prefix']
-        name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix (1)")
-
-        self.toolbox._project.all_item_names = ['prefix', 'prefix (1)', 'prefix (2)']
-        name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix (3)")
-
-        self.toolbox._project.all_item_names = ['prefix', 'prefix (1)', 'prefix (3)']
-        name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix (2)")
-
-        # restore original project
-        self.toolbox._project = project
-
     def test_copy_project_item_to_clipboard(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)

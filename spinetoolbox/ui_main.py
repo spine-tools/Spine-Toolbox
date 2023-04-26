@@ -2051,7 +2051,7 @@ class ToolboxUI(QMainWindow):
         for name, item_dict in items_dict.items():
             item_dict["duplicate_files"] = duplicate_files
             if self.project_item_model.find_item(name) is not None:
-                new_name = self.propose_item_name(name)
+                new_name = unique_name(name, self.project().all_item_names)
                 final_items_dict[new_name] = item_dict
             else:
                 final_items_dict[name] = item_dict
@@ -2093,20 +2093,6 @@ class ToolboxUI(QMainWindow):
         if not item_dicts:
             return
         self._deserialize_items(item_dicts, duplicate_files)
-
-    def propose_item_name(self, prefix):
-        """Proposes a name for a project item.
-
-        The format is `prefix (xx)` where `xx` is a counter value [1..].
-        If `prefix` already contains a counter `(xx)`, the value `xx` is updated
-
-        Args:
-            prefix (str): a prefix for the name
-
-        Returns:
-            str: a name string
-        """
-        return unique_name(prefix, self._project.all_item_names)
 
     def _share_item_edit_actions(self):
         """Adds generic actions to project tree view and Design View."""
