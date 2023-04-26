@@ -1133,8 +1133,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def _object_parameter_value_to_add(self, db_map, header_ids, value_and_type):
         value, value_type = split_value_and_type(value_and_type)
         return dict(
-            entity_class_id=self._parent.current_class_id[db_map],
-            entity_id=header_ids[0],
+            object_class_id=self._parent.current_class_id[db_map],
+            object_id=header_ids[0],
             parameter_definition_id=header_ids[-2],
             value=value,
             type=value_type,
@@ -1143,11 +1143,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
     def _relationship_parameter_value_to_add(self, db_map, header_ids, value_and_type, rel_id_lookup):
         object_id_list = tuple(id_ for id_ in header_ids[:-2])
-        relationship_id = rel_id_lookup[db_map, object_id_list]
         value, value_type = split_value_and_type(value_and_type)
         return dict(
-            entity_class_id=self._parent.current_class_id[db_map],
-            entity_id=relationship_id,
+            relationship_class_id=self._parent.current_class_id[db_map],
+            relationship_id=rel_id_lookup[db_map, object_id_list],
             parameter_definition_id=header_ids[-2],
             value=value,
             type=value_type,
