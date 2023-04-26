@@ -1020,7 +1020,8 @@ def color_from_index(i, count, base_hue=0.0, saturation=1.0):
 
 def unique_name(prefix, existing):
     """
-    Creates a unique name in the form "prefix X" where X is a number.
+    Creates a unique name in the form `prefix (xx)` where xx is a counter value.
+    When `prefix` already contains a counter `(xx)`, the value `xx` is updated.
 
     Args:
         prefix (str): name prefix

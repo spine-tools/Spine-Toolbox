@@ -137,6 +137,10 @@ class SpineToolboxProject(MetaObject):
         """
         return self._toolbox
 
+    @property
+    def all_item_names(self):
+        return list(self._project_items)
+
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
         Creates directories and files that are common to all projects.
