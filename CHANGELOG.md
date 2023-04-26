@@ -40,6 +40,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Scenario filters now filter unrelated scenarios and alternatives as well.
 - Alternative/Scenario tree in Database editor has been split into separate Alternative tree and Scenario tree docks.
   This will hopefully make dragging and dropping alternatives to scenarios easier.
+- Names for duplicate items/scenarios/etc now use the format `prefix (xx)` instead of `prefix xx`.
+  Duplicating a previously duplicated item now has the number `xx` incremented instead of having a new number appended.
 
 ### Deprecated
 
