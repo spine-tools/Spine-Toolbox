@@ -18,6 +18,7 @@ from PySide6.QtWidgets import QMenu, QWidgetAction
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import Slot, QPersistentModelIndex
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
+from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels
 
 
 class CustomContextMenu(QMenu):
@@ -189,6 +190,43 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
                 return
         if not self._parent.open_project(p):
             return
+
+
+class KernelsPopupMenu(CustomPopupMenu):
+    """Kernels menu embedded to 'File-Consoles' QAction."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): Parent widget of this menu (ToolboxUI)
+        """
+        super().__init__(parent=parent)
+        self._parent = parent
+        self.setToolTipsVisible(True)
+
+    def add_kernels(self):
+        """Fetches the available kernels and adds them to the QMenu as QActions."""
+        python_kernels = find_python_kernels()
+        if len(python_kernels) > 0:
+            for name, path in python_kernels.items():
+                self.add_action(
+                    name,
+                    lambda checked=False, name=name: self.call_open_console(checked, name),
+                    tooltip=path,
+                )
+        else:
+            self.add_action("No kernels found", lambda: None)
+
+    @Slot(bool, str)
+    def call_open_console(self, checked, kernel_name):
+        """Slot for catching the user selected action from the kernel's menu.
+
+        Args:
+            checked (bool): Argument sent by triggered signal
+            kernel_name (str): Kernel name to launch
+        """
+        self._parent.msg.emit(f"Launching kernel {kernel_name} in Console")
+        self._parent.start_base_python_console(kernel_name)
 
 
 class FilterMenuBase(QMenu):

@@ -14,7 +14,6 @@ Contains ToolboxUI class.
 """
 
 import os
-import platform
 import sys
 import locale
 import logging
@@ -65,7 +64,7 @@ from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
-from .widgets.custom_menus import RecentProjectsPopupMenu
+from .widgets.custom_menus import RecentProjectsPopupMenu, KernelsPopupMenu
 from .widgets.settings_widget import SettingsWidget
 from .widgets.custom_qwidgets import ToolBarWidgetAction
 from .widgets.jupyter_console_widget import JupyterConsoleWidget
@@ -178,13 +177,14 @@ class ToolboxUI(QMainWindow):
         self.settings_form = None
         self.add_project_item_form = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
+        self.kernels_menu = KernelsPopupMenu(self)
         # Make and initialize toolbars
         self.main_toolbar = toolbars.MainToolBar(
             self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
         )
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self.setStatusBar(None)
-        self._base_python_console = None  # 'base' Python console, independent of project items
+        self.base_python_consoles = {}  # Mapping of kernel name to ConsoleWindow
         self._base_julia_console = None  # 'base' Julia console, independent of project items
         # Additional consoles for item execution
         self._item_consoles = {}
@@ -268,6 +268,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen.triggered.connect(self.open_project)
         self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
         self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
+        self.ui.actionKernels.setMenu(self.kernels_menu)
+        self.ui.actionKernels.hovered.connect(self.show_kernels_menu)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
@@ -300,8 +302,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_item_directory.triggered.connect(self._open_project_item_directory)
         self.ui.actionRename_item.triggered.connect(self._rename_project_item)
         self.ui.actionRemove.triggered.connect(self._remove_selected_items)
-        self.ui.actionStartJuliaConsole.triggered.connect(self._start_base_julia_console)
-        self.ui.actionStartPythonConsole.triggered.connect(self._start_base_python_console)
+        self.ui.actionStartJuliaConsole.triggered.connect(self.start_base_julia_console)
+        self.ui.actionStartPythonConsole.triggered.connect(self.start_base_python_console)
         # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
@@ -640,6 +642,13 @@ class ToolboxUI(QMainWindow):
         if not self.recent_projects_menu.isVisible():
             self.recent_projects_menu = RecentProjectsPopupMenu(self)
             self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
+
+    @Slot()
+    def show_kernels_menu(self):
+        if not self.kernels_menu.isVisible():
+            self.kernels_menu = KernelsPopupMenu(self)
+            self.kernels_menu.add_kernels()
+            self.ui.actionKernels.setMenu(self.kernels_menu)
 
     @Slot()
     def save_project(self):
@@ -1775,8 +1784,8 @@ class ToolboxUI(QMainWindow):
         """Closes the 'base' Python and Julia Consoles if running."""
         if self._base_julia_console is not None:
             self._base_julia_console.close()
-        if self._base_python_console is not None:
-            self._base_python_console.close()
+        while self.base_python_consoles:
+            self.base_python_consoles.popitem()[1].close()  # kernel_name by ConsoleWindow
 
     def _tasks_before_exit(self):
         """
@@ -2343,45 +2352,33 @@ class ToolboxUI(QMainWindow):
         menu.aboutToHide.connect(self.enable_edit_actions)
         return menu
 
-    @Slot()
-    def _start_base_julia_console(self):
+    @Slot(str)
+    def start_base_julia_console(self, kernel_name):
         """Shows and starts the 'base' Julia Console if not running or activates the window if running."""
         if not self._base_julia_console:
             k_name = self.qsettings().value("appSettings/juliaKernel", defaultValue="")
             if k_name == "":
                 self.msg_error.emit("No kernel selected. Go to Settings->Tools to select a kernel for Julia")
                 return
-            c = JupyterConsoleWidget(self, k_name, owner=None)
+            c = JupyterConsoleWidget(self, owner=None)
             self._base_julia_console = ConsoleWindow(self, c, "julia")
-            self._base_julia_console.start()
+            self._base_julia_console.start(kernel_name)
         else:
             if self._base_julia_console.isMinimized():
                 self._base_julia_console.showNormal()
             self._base_julia_console.activateWindow()
 
-    @Slot()
-    def _start_base_python_console(self):
+    @Slot(str)
+    def start_base_python_console(self, kernel_name):
         """Shows and starts the 'base' Python Console if not running or activates the window if running."""
-        if not self._base_python_console:
-            k_name = self.qsettings().value("appSettings/pythonKernel", defaultValue="")
-            if k_name == "":
-                self.msg_error.emit("No kernel selected. Go to Settings->Tools to select a kernel for Python")
-                return
-            c = JupyterConsoleWidget(self, k_name, owner=None)
-            self._base_python_console = ConsoleWindow(self, c, "python")
-            self._base_python_console.start()
+        if kernel_name not in self.base_python_consoles.keys():
+            c = JupyterConsoleWidget(self, owner=None)
+            cw = self.base_python_consoles[kernel_name] = ConsoleWindow(self, c, "python")
+            cw.start(kernel_name)
         else:
-            if self._base_python_console.isMinimized():
-                self._base_python_console.showNormal()
-            self._base_python_console.activateWindow()
-
-    def destroy_base_python_console(self):
-        self._base_python_console.deleteLater()
-        self._base_python_console = None
-
-    def destroy_julia_console(self):
-        self._base_julia_console.deleteLater()
-        self._base_julia_console = None
+            if self.base_python_consoles[kernel_name].isMinimized():
+                self.base_python_consoles[kernel_name].showNormal()
+            self.base_python_consoles[kernel_name].activateWindow()
 
     @Slot(object, str, str, str, dict)
     def _setup_jupyter_console(self, item, filter_id, kernel_name, connection_file, connection_file_dict):

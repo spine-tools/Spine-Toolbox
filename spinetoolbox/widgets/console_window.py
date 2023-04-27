@@ -34,7 +34,8 @@ class ConsoleWindow(QMainWindow):
         self._console = spine_console
         self._language = language
         self.setCentralWidget(self._console)
-        self.setWindowTitle(self._console.name())
+        self.kernel_in_this_console = None
+        # self.setWindowTitle(self._console.name())
         if language == "python":
             self.setWindowIcon(QIcon(":/icons/python.svg"))
         elif language == "julia":
@@ -43,9 +44,10 @@ class ConsoleWindow(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.show()
 
-    def start(self):
+    def start(self, kernel_name):
         """Starts the kernel."""
-        self._console.start_console()
+        self.kernel_in_this_console = kernel_name
+        self._console.start_kernel_manager_in_engine(kernel_name)
 
     def closeEvent(self, e):
         """Shuts down the running kernel and calls ToolboxUI method to destroy this window.
@@ -53,9 +55,6 @@ class ConsoleWindow(QMainWindow):
         Args:
             e (QCloseEvent): Event
         """
+        self._console.shutdown_kernel_manager_on_engine()
         self._console.shutdown_kernel()
-        if self._language == "python":
-            self._toolbox.destroy_base_python_console()
-        elif self._language == "julia":
-            self._toolbox.destroy_base_julia_console()
         super().closeEvent(e)

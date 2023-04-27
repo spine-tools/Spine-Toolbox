@@ -17,6 +17,7 @@ import logging
 import os
 import sys
 import subprocess
+import multiprocessing
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QAction
@@ -27,6 +28,8 @@ from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 from spinetoolbox.widgets.kernel_editor import find_kernels
 from spinetoolbox.spine_engine_manager import make_engine_manager
+from spine_engine.execution_managers.kernel_execution_manager import KernelExecutionManager, shutdown_kernel_manager, n_kernel_managers
+from spine_engine.utils.queue_logger import QueueLogger
 
 # Set logging level for jupyter loggers
 traitlets_logger = logging.getLogger("traitlets")
@@ -38,22 +41,25 @@ asyncio_logger.setLevel(level=logging.WARNING)
 class JupyterConsoleWidget(RichJupyterWidget):
     """Base class for all embedded console widgets that can run tool instances."""
 
-    def __init__(self, toolbox, target_kernel_name, owner=None):
+    def __init__(self, toolbox, owner=None):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            target_kernel_name (str): Kernel name, e.g. 'julia-1.6'
             owner (ProjectItem, NoneType): Item that owns the console.
         """
         super().__init__(parent=toolbox)
         self._toolbox = toolbox
-        self._target_kernel_name = target_kernel_name
+        # self._target_kernel_name = target_kernel_name
         self.owners = {owner}
         self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
         self.kernel_name = None
         self.kernel_manager = None
         self.kernel_client = None
         self._engine_connection_file = None  # To restart kernels controlled by Spine Engine
+        self._exec_mngr = None
+        self._engine_mngr = None
+        self._logger = None
+        self._q = multiprocessing.Queue()
         self.normal_cursor = self._control.viewport().cursor()
         self._copy_input_action = QAction('Copy (Only Input)', self)
         self._copy_input_action.triggered.connect(lambda checked: self.copy_input())
@@ -63,6 +69,54 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.start_console_action.triggered.connect(self.start_console)
         self.restart_console_action = QAction("Restart", self)
         self.restart_console_action.triggered.connect(self.restart_console)
+
+    def start_kernel_manager_in_engine(self, kernel_name):
+        # exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        # self._engine_mngr = make_engine_manager(exec_remotely)
+        self._logger = QueueLogger(self._q, "BasePythonConsole", None, dict())
+        self._exec_mngr = KernelExecutionManager(
+            self._logger,
+            kernel_name,
+            [],
+            group_id="BasePython",
+            server_ip="127.0.0.1",
+        )
+        msg = self._q.get(timeout=20)  # tuple (msg type str, msg dict)
+        if msg[0] == "kernel_execution_msg":
+            self._handle_kernel_execution_msg(msg[1])
+        else:
+            print(f"Unhandled msg received:{msg}")
+
+    def _handle_kernel_execution_msg(self, msg):
+        item = msg["item_name"]  # BasePythonConsole
+        if msg["type"] == "kernel_started":
+            filter_id = msg["filter_id"]
+            kernel_name = msg["kernel_name"]
+            self._engine_connection_file = msg["connection_file"]
+            connection_file_dict = msg.get("connection_file_dict", dict())  # For kms running on SpineEngineServer
+            self._toolbox.msg.emit(f"Kernel '{kernel_name}' is now running on Engine. Connecting...")
+            # Set console window title (Needs editing when multiple consoles are allowed)
+            self._toolbox.base_python_consoles[kernel_name].setWindowTitle(f"{kernel_name} on Jupyter Console")
+            self.connect_to_kernel(kernel_name, msg["connection_file"])
+        elif msg["type"] == "kernel_spec_not_found":
+            msg_text = f"Unable to find kernel spec <b>{msg['kernel_name']}</b> <br/>For Python Tools, " \
+                       f"select a kernel spec in the Tool specification editor. <br/>For Julia Tools, " \
+                       f"select a kernel spec from File->Settings->Tools."
+            self._toolbox.msg_error.emit(f"Could not connect to kernel manager on Engine:<br/>{msg_text}")
+        elif msg["type"] == "conda_not_found":
+            msg_text = f"{msg['error']}<br/>Couldn't call Conda. Set up <b>Conda executable</b> " \
+                       f"in <b>File->Settings->Tools</b>."
+            self._toolbox.msg_error.emit(f"{msg_text}")
+        elif msg["type"] == "execution_failed_to_start":
+            msg_text = f"Execution on kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
+            self._toolbox.msg_error.emit(msg_text)
+        elif msg["type"] == "kernel_spec_exe_not_found":
+            msg_text = f"Invalid kernel spec ({msg['kernel_name']}). File " \
+                       f"<b>{msg['kernel_exe_path']}</b> does not exist."
+            self._toolbox.msg_error.emit(item, msg["filter_id"], "msg_error", msg_text)
+        elif msg["type"] == "execution_started":
+            print(f"execution_started: {msg}")
+            self._toolbox.msg.emit(f"*** Starting execution on kernel spec <b>{msg['kernel_name']}</b> ***")
 
     def name(self):
         """Returns console name for display purposes."""
@@ -157,6 +211,10 @@ class JupyterConsoleWidget(RichJupyterWidget):
             self._kernel_starting = False
             return
 
+    def shutdown_kernel_manager_on_engine(self):
+        shutdown_kernel_manager(self._engine_connection_file)
+        self._engine_connection_file = ""
+
     def shutdown_kernel(self):
         """Shut down Julia/Python kernel."""
         if not self.kernel_manager or not self.kernel_manager.is_alive():
@@ -168,7 +226,6 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.kernel_manager = None
         self.kernel_client.deleteLater()
         self.kernel_client = None
-        self._toolbox.msg.emit(f"Kernel <b>{self.kernel_name}</b> shut down")
 
     def dragEnterEvent(self, e):
         """Don't accept project item drops."""

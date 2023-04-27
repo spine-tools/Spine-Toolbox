@@ -119,6 +119,7 @@
     </property>
     <addaction name="actionStartPythonConsole"/>
     <addaction name="actionStartJuliaConsole"/>
+    <addaction name="actionKernels"/>
    </widget>
    <widget class="QMenu" name="menuServer">
     <property name="title">
@@ -972,6 +973,11 @@
   <action name="actionRetrieve_project">
    <property name="text">
     <string>Retrieve project</string>
+   </property>
+  </action>
+  <action name="actionKernels">
+   <property name="text">
+    <string>Kernels</string>
    </property>
   </action>
  </widget>
