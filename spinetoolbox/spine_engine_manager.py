@@ -171,11 +171,15 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
     def shutdown_kernel(self, connection_file):
         # pylint: disable=import-outside-toplevel
-        from spine_engine.execution_managers.kernel_execution_manager import pop_kernel_manager
+        from spine_engine.execution_managers.kernel_execution_manager import shutdown_kernel_manager
 
-        km = pop_kernel_manager(connection_file)
-        if km is not None:
-            km.shutdown_kernel(now=True)
+        shutdown_kernel_manager(connection_file)
+
+    def kernel_managers(self):
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.kernel_execution_manager import n_kernel_managers
+
+        return n_kernel_managers()
 
     def issue_persistent_command(self, persistent_key, command):
         # pylint: disable=import-outside-toplevel
