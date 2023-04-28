@@ -117,9 +117,7 @@
     <property name="title">
      <string>Consoles</string>
     </property>
-    <addaction name="actionStartPythonConsole"/>
-    <addaction name="actionStartJuliaConsole"/>
-    <addaction name="actionKernels"/>
+    <addaction name="actionStart_jupyter_console"/>
    </widget>
    <widget class="QMenu" name="menuServer">
     <property name="title">
@@ -774,14 +772,6 @@
     <string>Shift+F2</string>
    </property>
   </action>
-  <action name="actionUpgrade_project">
-   <property name="text">
-    <string>Upgrade project</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Upgrade old (.proj) Spine Toolbox project into a new style directory based project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </action>
   <action name="actionRemove">
    <property name="text">
     <string>Remove</string>
@@ -872,36 +862,6 @@
     <bool>false</bool>
    </property>
   </action>
-  <action name="actionStartJuliaConsole">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/julia-dots.svg</normaloff>:/icons/julia-dots.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Start Jupyter Console</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Start selected Julia kernel spec in Jupyter Console. Select kernel spec in File-&amp;gt;Settings-&amp;gt;Tools.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+2</string>
-   </property>
-  </action>
-  <action name="actionStartPythonConsole">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/python.svg</normaloff>:/icons/python.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Start Jupyter Console</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Start selected Python kernel spec in Jupyter Console. Select kernel spec in File-&amp;gt;Settings-&amp;gt;Tools.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+1</string>
-   </property>
-  </action>
   <action name="actionClose">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -975,9 +935,13 @@
     <string>Retrieve project</string>
    </property>
   </action>
-  <action name="actionKernels">
+  <action name="actionStart_jupyter_console">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/desktop.svg</normaloff>:/icons/desktop.svg</iconset>
+   </property>
    <property name="text">
-    <string>Kernels</string>
+    <string>Start Jupyter Console</string>
    </property>
   </action>
  </widget>

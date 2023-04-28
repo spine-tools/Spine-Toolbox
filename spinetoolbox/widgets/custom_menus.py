@@ -18,7 +18,7 @@ from PySide6.QtWidgets import QMenu, QWidgetAction
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import Slot, QPersistentModelIndex
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
-from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels
+from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels, find_kernels
 
 
 class CustomContextMenu(QMenu):
@@ -206,27 +206,46 @@ class KernelsPopupMenu(CustomPopupMenu):
 
     def add_kernels(self):
         """Fetches the available kernels and adds them to the QMenu as QActions."""
-        python_kernels = find_python_kernels()
+        python_kernels = find_kernels()
         if len(python_kernels) > 0:
             for name, path in python_kernels.items():
+                ico = self.get_icon(path)
                 self.add_action(
                     name,
-                    lambda checked=False, name=name: self.call_open_console(checked, name),
-                    tooltip=path,
+                    lambda checked=False, kname=name, icon=ico: self.call_open_console(checked, kname, icon),
+                    tooltip=path, icon=ico,
                 )
         else:
             self.add_action("No kernels found", lambda: None)
 
-    @Slot(bool, str)
-    def call_open_console(self, checked, kernel_name):
+    @staticmethod
+    def get_icon(p):
+        """Retrieves the kernel icon. First tries to find the .svg icon then .png's.
+
+        Args:
+            p (str): Kernel path
+
+        Returns:
+            QIcon: Kernel icon or a null icon if icon file not found.
+        """
+        icon_fnames = ["logo-svg.svg", "logo-64x64.png", "logo-32x32.png"]
+        for icon_fname in icon_fnames:
+            icon_fpath = os.path.join(p, icon_fname)
+            if not os.path.isfile(icon_fpath):
+                continue
+            return QIcon(icon_fpath)
+        return QIcon()
+
+    @Slot(bool, str, QIcon)
+    def call_open_console(self, checked, kernel_name, icon):
         """Slot for catching the user selected action from the kernel's menu.
 
         Args:
             checked (bool): Argument sent by triggered signal
             kernel_name (str): Kernel name to launch
+            icon (QIcon): Icon representing the kernel language
         """
-        self._parent.msg.emit(f"Launching kernel {kernel_name} in Console")
-        self._parent.start_base_python_console(kernel_name)
+        self._parent.start_detached_jupyter_console(kernel_name, icon)
 
 
 class FilterMenuBase(QMenu):

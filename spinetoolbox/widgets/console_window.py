@@ -14,47 +14,52 @@ Window for the 'base' Julia Console and Python Console.
 """
 
 from PySide6.QtWidgets import QMainWindow
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 
 
 class ConsoleWindow(QMainWindow):
     """Class for a separate window for the Python or Julia Console."""
 
-    def __init__(self, toolbox, spine_console, language):
+    closed = Signal(str)
+
+    def __init__(self, toolbox, jcw, icon):
         """
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            spine_console (JupyterConsoleWidget): Qt Console
-            language (str): 'python' or 'julia'
+            jcw (JupyterConsoleWidget): QtConsole
+            icon (QIcon): Icon representing the kernel language
         """
         super().__init__()
         self._toolbox = toolbox
-        self._console = spine_console
-        self._language = language
+        self._console = jcw
         self.setCentralWidget(self._console)
-        self.kernel_in_this_console = None
-        # self.setWindowTitle(self._console.name())
-        if language == "python":
-            self.setWindowIcon(QIcon(":/icons/python.svg"))
-        elif language == "julia":
-            self.setWindowIcon(QIcon(":icons/julia-dots.svg"))
+        self.setWindowIcon(icon)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.show()
 
-    def start(self, kernel_name):
-        """Starts the kernel."""
-        self.kernel_in_this_console = kernel_name
-        self._console.start_kernel_manager_in_engine(kernel_name)
+    def console(self):
+        """Returns the JupyterConsoleWidget attached to this main window."""
+        return self._console
+
+    def set_window_title(self, kernel_name):
+        """Sets a window title for this main window.
+
+        Args:
+            kernel_name (str): Kernel name
+        """
+        self.setWindowTitle(f"{kernel_name} on Jupyter Console [Detached]")
 
     def closeEvent(self, e):
-        """Shuts down the running kernel and calls ToolboxUI method to destroy this window.
+        """Shuts down the running kernel closes the window.
 
         Args:
             e (QCloseEvent): Event
         """
-        self._console.shutdown_kernel_manager_on_engine()
-        self._console.shutdown_kernel()
+        kernel_name = self._console.kernel_manager.kernel_name
+        self._console.request_shutdown_kernel_manager()
+        self._console.shutdown_local_kernel_manager()
+        self.closed.emit(kernel_name)
         super().closeEvent(e)
