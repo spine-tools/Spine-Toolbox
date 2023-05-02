@@ -16,7 +16,6 @@ Link properties widget.
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QMenu
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
-from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from .properties_widget import PropertiesWidgetBase
 from .custom_qwidgets import PurgeSettingsDialog
 from ..project_commands import SetConnectionOptionsCommand, SetConnectionDefaultFilterOnlineStatus
@@ -104,10 +103,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         Returns:
             dict: menu actions
         """
-        action_data = {
-            "Require at least one checked scenario": SCENARIO_FILTER_TYPE,
-            "Require at least one checked tool": TOOL_FILTER_TYPE,
-        }
+        action_data = {"Require at least one checked scenario": SCENARIO_FILTER_TYPE}
         actions = {}
         for label, filter_type in action_data.items():
             action = self._filter_validation_menu.addAction(label)

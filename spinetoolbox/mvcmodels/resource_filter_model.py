@@ -15,14 +15,13 @@ Contains ResourceFilterModel.
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
-from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from ..project_commands import SetFiltersOnlineCommand
 
 
 class ResourceFilterModel(QStandardItemModel):
     tree_built = Signal()
     _SELECT_ALL = "Select all"
-    _FILTER_TYPES = {"Scenario filter": SCENARIO_FILTER_TYPE, "Tool filter": TOOL_FILTER_TYPE}
+    _FILTER_TYPES = {"Scenario filter": SCENARIO_FILTER_TYPE}
     _FILTER_TYPE_TO_TEXT = dict(zip(_FILTER_TYPES.values(), _FILTER_TYPES.keys()))
 
     def __init__(self, connection, project, undo_stack, logger):
@@ -92,9 +91,6 @@ class ResourceFilterModel(QStandardItemModel):
             scenario_names = self._connection.get_scenario_names(url)
             if scenario_names:
                 filters.setdefault(resource.label, {})[SCENARIO_FILTER_TYPE] = scenario_names
-            tool_names = self._connection.get_tool_names(url)
-            if tool_names:
-                filters.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = tool_names
         return filters
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
@@ -131,7 +127,7 @@ class ResourceFilterModel(QStandardItemModel):
 
         Args:
             resource (str): Resource label
-            filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
+            filter_type (str): Always SCENARIO_FILTER_TYPE, for now.
             online (dict): mapping from scenario/tool id to online flag
         """
         self.connection.set_online(resource, filter_type, online)

@@ -130,6 +130,7 @@ class SpineDBMacro(AgedUndoCommand):
         child = next(self._cmd_iter, None)
         if child is None:
             self._completed_once = True
+            self.setObsolete(all(cmd.isObsolete() for cmd in self._cmds))
             return
         if not self._completed_once:
             self._cmds.append(child)
@@ -174,11 +175,10 @@ class SpineDBCommand(AgedUndoCommand):
     def handle_redo_complete(self, data):
         """Calls the redo complete callback with the data from redo().
         Subclasses need to pass this as the callback to the function that modifies the db in redo()."""
+        if not self._done_once:
+            self._done_once = True
+            self._handle_first_redo_complete(data)
         self.redo_complete_callback(data)
-        if self._done_once:
-            return
-        self._done_once = True
-        self._handle_first_redo_complete(data)
 
     def _handle_first_redo_complete(self, _):
         """Reimplement in subclasses to do stuff with the data from running redo() the first time."""
@@ -197,10 +197,6 @@ class AddItemsCommand(SpineDBCommand):
         "alternative": "add alternative",
         "scenario": "add scenario",
         "scenario_alternative": "add scenario alternative",
-        "feature": "add feature",
-        "tool": "add tool",
-        "tool_feature": "add tool features",
-        "tool_feature_method": "add tool feature methods",
         "metadata": "add metadata",
         "entity_metadata": "add entity metadata",
         "parameter_value_metadata": "add parameter value metadata",
@@ -249,7 +245,7 @@ class AddItemsCommand(SpineDBCommand):
         self._readd = True
 
     def _handle_first_redo_complete(self, db_map_data):
-        if self.db_map not in db_map_data:
+        if not any(db_map_data.get(self.db_map, ())):
             self.setObsolete(True)
             return
         self.redo_db_map_data = db_map_data
@@ -267,10 +263,6 @@ class UpdateItemsCommand(SpineDBCommand):
         "alternative": "update alternatives",
         "scenario": "update scenarios",
         "scenario_alternative": "update scenario alternative",
-        "feature": "update features",
-        "tool": "update tools",
-        "tool_feature": "update tool features",
-        "tool_feature_method": "update tool feature methods",
         "metadata": "update metadata",
         "entity_metadata": "update entity metadata",
         "parameter_value_metadata": "update parameter value metadata",
@@ -318,7 +310,7 @@ class UpdateItemsCommand(SpineDBCommand):
         )
 
     def _handle_first_redo_complete(self, db_map_data):
-        if not db_map_data.get(self.db_map):
+        if not any(db_map_data.get(self.db_map, ())):
             self.setObsolete(True)
             return
         self._check = False
@@ -357,4 +349,7 @@ class RemoveItemsCommand(SpineDBCommand):
         self.db_mngr.add_items(self.undo_db_map_data, self.item_type, readd=True, callback=self.handle_undo_complete)
 
     def _handle_first_redo_complete(self, db_map_data):
+        if not any(db_map_data.get(self.db_map, ())):
+            self.setObsolete(True)
+            return
         self.undo_db_map_data = db_map_data

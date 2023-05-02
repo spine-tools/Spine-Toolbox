@@ -469,7 +469,7 @@ class EntityBynameDelegate(ParameterDelegate):
 
 
 class AlternativeNameDelegate(ParameterDelegate):
-    """A delegate for the object name."""
+    """A delegate for the alternative name."""
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
@@ -481,128 +481,6 @@ class AlternativeNameDelegate(ParameterDelegate):
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
-
-
-class ToolFeatureDelegate(QStyledItemDelegate):
-    """A delegate for the tool feature tree."""
-
-    data_committed = Signal(QModelIndex, object)
-
-    def __init__(self, *args, **kwargs):
-        """
-        Args:
-            *args: arguments passed to QStyledItemDelegate
-            **kwargs: keyword arguments passed to QStyledItemDelegate
-        """
-        super().__init__(*args, **kwargs)
-        self._feature_ids = {}
-
-    def _get_names(self, item, model):
-        """Collects names under given tree item.
-
-        Args:
-            item (Standard tree item): A non-leaf item
-            model (ToolFeatureModel): model
-
-        Returns:
-            list of str: names or None if nothing was found
-        """
-        if item.item_type == "feature":
-            names = model.get_all_feature_names(item.db_map)
-            if not names:
-                model._parent.msg_error.emit("There aren't any listed parameter definitions to create features from.")
-                return None
-            return names
-        if item.item_type == "tool_feature":
-            self._feature_ids = {
-                model.make_feature_name(x["entity_class_name"], x["parameter_definition_name"]): (
-                    x["id"],
-                    x["parameter_value_list_id"],
-                )
-                for x in item.db_mngr.get_items(item.db_map, "feature", only_visible=False)
-                if x["id"] not in item.parent_item.feature_id_list
-            }
-            return list(self._feature_ids)
-        if item.item_type == "tool_feature required":
-            return ["yes", "no"]
-        if item.item_type == "tool_feature_method":
-            tool_feat_item = item.tool_feature_item
-            return model.get_all_feature_methods(
-                tool_feat_item.db_map, tool_feat_item.item_data["parameter_value_list_id"]
-            )
-
-    @staticmethod
-    def _get_index_data(item, index):
-        """Returns formatted model data from given index.
-
-        Args:
-            item (StandardTreeItem): item corresponding to index
-            index (QModelIndex): index
-
-        Returns:
-            str: index data
-        """
-        index_data = index.data(Qt.ItemDataRole.EditRole)
-        if item.item_type == "tool_feature required":
-            return index_data.split(": ")[1]
-        return index_data
-
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        item = index.model().item_from_index(index)
-        index_data = self._get_index_data(item, index)
-        editor_data = editor.data()
-        if editor_data == index_data:
-            return
-        if item.item_type == "tool_feature":
-            editor_data = self._feature_ids.get(editor_data)
-            if editor_data is None:
-                return
-        self.data_committed.emit(index, editor_data)
-
-    def setEditorData(self, editor, index):
-        """Do nothing. We're setting editor data right away in createEditor."""
-
-    def createEditor(self, parent, option, index):
-        """Returns editor."""
-        model = index.model()
-        item = model.item_from_index(index)
-        if item.item_type in ("feature", "tool_feature", "tool_feature required", "tool_feature_method"):
-            editor = SearchBarEditor(self.parent(), parent)
-            index_data = self._get_index_data(item, index)
-            names = self._get_names(item, model)
-            if names is None:
-                return None
-            editor.set_data(index_data, names)
-            editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
-        else:
-            editor = CustomLineEditor(parent)
-            editor.set_data(index.data(Qt.ItemDataRole.EditRole))
-        return editor
-
-    def updateEditorGeometry(self, editor, option, index):
-        super().updateEditorGeometry(editor, option, index)
-        item = index.model().item_from_index(index)
-        if item.item_type in ("feature", "tool_feature", "tool_feature required", "tool_feature_method"):
-            if item.item_type == "tool_feature required":
-                font = index.data(Qt.ItemDataRole.FontRole)
-                if not font:
-                    font = QFont()  # app default
-                dx = QFontMetrics(font).horizontalAdvance("required:")
-                editor.set_base_offset(QPoint(dx, 0))
-            editor.update_geometry(option)
-
-    def _close_editor(self, editor, index):
-        """Closes editor.
-
-        Needed by SearchBarEditor.
-
-        Args:
-            editor (QWidget): editor widget
-            index (QModelIndex): index that is being edited
-        """
-        self.closeEditor.emit(editor)
-        self.setModelData(editor, index.model(), index)
 
 
 class AlternativeDelegate(QStyledItemDelegate):

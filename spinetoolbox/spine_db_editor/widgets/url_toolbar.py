@@ -30,7 +30,6 @@ from PySide6.QtGui import QIcon, QKeySequence, QAction
 from PySide6.QtCore import QSize, Qt, Signal, Slot
 from spinedb_api.filters.tools import (
     SCENARIO_FILTER_TYPE,
-    TOOL_FILTER_TYPE,
     filter_config,
     append_filter_config,
     filter_configs,
@@ -227,7 +226,7 @@ class _FilterArrayWidget(QWidget):
         self._db_map = db_map
         self._filter_widgets = []
         active_filter_configs = {cfg['type']: cfg for cfg in filter_configs(db_map.db_url)}
-        for item_type, filter_type in (("scenario", SCENARIO_FILTER_TYPE), ("tool", TOOL_FILTER_TYPE)):
+        for item_type, filter_type in (("scenario", SCENARIO_FILTER_TYPE),):
             active_cfg = active_filter_configs.get(filter_type, {})
             active_item = name_from_dict(active_cfg) if active_cfg else None
             filter_widget = _FilterWidget(db_mngr, db_map, item_type, filter_type, active_item, parent=self)

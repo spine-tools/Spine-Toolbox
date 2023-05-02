@@ -160,40 +160,6 @@ class SpineDBParcel:
             }
         )
 
-    def push_feature_ids(self, db_map_ids):
-        """Pushes feature ids."""
-        self._update_ids(db_map_ids, "feature_ids")
-
-    def push_tool_ids(self, db_map_ids):
-        """Pushes tool ids."""
-        self._update_ids(db_map_ids, "tool_ids")
-
-    def push_tool_feature_ids(self, db_map_ids):
-        """Pushes tool_feature ids."""
-        self._update_ids(db_map_ids, "tool_feature_ids")
-        self.push_feature_ids(
-            {
-                db_map: self._get_field_values(db_map, "tool_feature", "feature_id", ids)
-                for db_map, ids in db_map_ids.items()
-            }
-        )
-        self.push_tool_ids(
-            {
-                db_map: self._get_field_values(db_map, "tool_feature", "tool_id", ids)
-                for db_map, ids in db_map_ids.items()
-            }
-        )
-
-    def push_tool_feature_method_ids(self, db_map_ids):
-        """Pushes tool_feature_method ids."""
-        self._update_ids(db_map_ids, "tool_feature_method_ids")
-        self.push_tool_feature_ids(
-            {
-                db_map: self._get_field_values(db_map, "tool_feature_method", "tool_feature_id", ids)
-                for db_map, ids in db_map_ids.items()
-            }
-        )
-
     def full_push_entity_class_ids(self, db_map_ids):
         """Pushes parameter definitions associated with given entity classes.
         This essentially full_pushes the entity classes, their parameter definitions, and their member entity classes.
@@ -287,9 +253,5 @@ class SpineDBParcel:
             "alternative_ids": set(),
             "scenario_ids": set(),
             "scenario_alternative_ids": set(),
-            "feature_ids": set(),
-            "tool_ids": set(),
-            "tool_feature_ids": set(),
-            "tool_feature_method_ids": set(),
         }
         return self._data.setdefault(db_map, d)

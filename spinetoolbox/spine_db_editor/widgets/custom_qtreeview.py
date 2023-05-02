@@ -19,7 +19,7 @@ from PySide6.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
 from spinetoolbox.widgets.custom_qwidgets import ResizingViewMixin
-from .custom_delegates import ScenarioDelegate, ToolFeatureDelegate, AlternativeDelegate, ParameterValueListDelegate
+from .custom_delegates import ScenarioDelegate, AlternativeDelegate, ParameterValueListDelegate
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
@@ -389,66 +389,6 @@ class ItemTreeView(ResizableTreeView):
     def _refresh_copy_paste_actions(self, _, __):
         """Refreshes copy and paste actions enabled state."""
         self._spine_db_editor.refresh_copy_paste_actions()
-
-
-class ToolFeatureTreeView(ItemTreeView):
-    """Custom QTreeView class for tools and features in SpineDBEditor."""
-
-    def connect_spine_db_editor(self, spine_db_editor):
-        """see base class"""
-        super().connect_spine_db_editor(spine_db_editor)
-        delegate = ToolFeatureDelegate(self._spine_db_editor)
-        delegate.data_committed.connect(self.model().setData)
-        self.setItemDelegateForColumn(0, delegate)
-
-    def remove_selected(self):
-        """See base class."""
-        if not self.selectionModel().hasSelection():
-            return
-        db_map_typed_data_to_rm = {}
-        items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
-        for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {
-                "feature": set(),
-                "tool": set(),
-                "tool_feature": set(),
-                "tool_feature_method": set(),
-            }
-            for feat_item in reversed(db_item.child(0).children[:-1]):
-                if feat_item in items:
-                    db_map_typed_data_to_rm[db_item.db_map]["feature"].add(feat_item.id)
-            for tool_item in reversed(db_item.child(1).children[:-1]):
-                if tool_item in items:
-                    db_map_typed_data_to_rm[db_item.db_map]["tool"].add(tool_item.id)
-                    continue
-                tool_feat_root_item = tool_item.child(0)
-                for tool_feat_item in reversed(tool_feat_root_item.children):
-                    if tool_feat_item in items:
-                        db_map_typed_data_to_rm[db_item.db_map]["tool_feature"].add(tool_feat_item.id)
-                        continue
-                    tool_feat_meth_root_item = tool_feat_item.child(1)
-                    if tool_feat_meth_root_item is None:
-                        continue
-                    for tool_feat_meth_item in reversed(tool_feat_meth_root_item.children):
-                        if tool_feat_meth_item in items:
-                            db_map_typed_data_to_rm[db_item.db_map]["tool_feature_method"].add(tool_feat_meth_item.id)
-        self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
-        self.selectionModel().clearSelection()
-
-    def update_actions_availability(self, item):
-        """See base class."""
-
-    def dragMoveEvent(self, event):
-        super().dragMoveEvent(event)
-        index = self.indexAt(event.position().toPoint())
-        item = self.model().item_from_index(index)
-        if item and item.item_type == "tool":
-            self.expand(index)
-
-    def dragEnterEvent(self, event):
-        super().dragEnterEvent(event)
-        if event.source() is self:
-            event.accept()
 
 
 class AlternativeTreeView(ItemTreeView):

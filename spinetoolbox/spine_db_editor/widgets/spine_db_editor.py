@@ -261,7 +261,6 @@ class SpineDBEditorBase(QMainWindow):
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
         menu.addSeparator()
-        menu.addAction(self.ui.dockWidget_tool_feature_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         menu.addAction(self.ui.alternative_dock_widget.toggleViewAction())
         menu.addAction(self.ui.scenario_dock_widget.toggleViewAction())
@@ -575,12 +574,6 @@ class SpineDBEditorBase(QMainWindow):
         db_map_scen_alt_ids = {
             db_map: _ids("scenario_alternative", types) for db_map, types in db_map_item_types.items()
         }
-        db_map_feat_ids = {db_map: _ids("feature", types) for db_map, types in db_map_item_types.items()}
-        db_map_tool_ids = {db_map: _ids("tool", types) for db_map, types in db_map_item_types.items()}
-        db_map_tool_feat_ids = {db_map: _ids("tool_feature", types) for db_map, types in db_map_item_types.items()}
-        db_map_tool_feat_meth_ids = {
-            db_map: _ids("tool_feature_method", types) for db_map, types in db_map_item_types.items()
-        }
         parcel = SpineDBParcel(self.db_mngr)
         parcel.push_entity_class_ids(db_map_ent_cls_ids)
         parcel.push_entity_ids(db_map_ent_ids)
@@ -591,10 +584,6 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_alternative_ids(db_map_alt_ids)
         parcel.push_scenario_ids(db_map_scen_ids)
         parcel.push_scenario_alternative_ids(db_map_scen_alt_ids)
-        parcel.push_feature_ids(db_map_feat_ids)
-        parcel.push_tool_ids(db_map_tool_ids)
-        parcel.push_tool_feature_ids(db_map_tool_feat_ids)
-        parcel.push_tool_feature_method_ids(db_map_tool_feat_meth_ids)
         self.export_data(parcel.data)
 
     def duplicate_entity(self, entity_item):
@@ -1042,22 +1031,16 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(
             self.ui.scenario_dock_widget, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
         )
-        self.tabify_and_raise([self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_tool_feature_tree])
-        self.tabify_and_raise([self.ui.dockWidget_tool_feature_tree, self.ui.metadata_dock_widget])
+        self.tabify_and_raise([self.ui.dockWidget_parameter_value_list, self.ui.metadata_dock_widget])
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         self.ui.dockWidget_parameter_value_list.raise_()
         # center
         self.tabify_and_raise([self.ui.dockWidget_parameter_value, self.ui.dockWidget_parameter_definition])
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
-        docks = [
-            self.ui.dockWidget_entity_tree,
-            self.ui.dockWidget_parameter_value,
-            self.ui.alternative_dock_widget,
-            self.ui.dockWidget_tool_feature_tree,
-        ]
+        docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_parameter_value, self.ui.alternative_dock_widget]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.15 * width, 0.15 * width], Qt.Orientation.Horizontal)
+        self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Orientation.Horizontal)
 
     @Slot(QAction)
     def apply_pivot_style(self, _action):
@@ -1073,7 +1056,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_parameter_value.hide()
         self.ui.dockWidget_parameter_definition.hide()
-        self.ui.dockWidget_tool_feature_tree.hide()
         self.ui.metadata_dock_widget.hide()
         self.ui.item_metadata_dock_widget.hide()
         docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]

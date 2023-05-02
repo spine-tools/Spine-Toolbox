@@ -21,7 +21,6 @@ from .add_items_dialogs import (
     ManageMembersDialog,
 )
 from .edit_or_remove_items_dialogs import EditEntityClassesDialog, EditEntitiesDialog, RemoveEntitiesDialog
-from ..mvcmodels.tool_feature_model import ToolFeatureModel
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.alternative_model import AlternativeModel
 from ..mvcmodels.scenario_model import ScenarioModel
@@ -35,20 +34,12 @@ class TreeViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.entity_tree_model = EntityTreeModel(self, self.db_mngr)
-        self.tool_feature_model = ToolFeatureModel(self, self.db_mngr)
         self.alternative_model = AlternativeModel(self, self.db_mngr)
         self.scenario_model = ScenarioModel(self, self.db_mngr)
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr)
-        models = (
-            self.entity_tree_model,
-            self.tool_feature_model,
-            self.alternative_model,
-            self.scenario_model,
-            self.parameter_value_list_model,
-        )
+        models = (self.entity_tree_model, self.alternative_model, self.scenario_model, self.parameter_value_list_model)
         views = (
             self.ui.treeView_entity,
-            self.ui.treeView_tool_feature,
             self.ui.alternative_tree_view,
             self.ui.scenario_tree_view,
             self.ui.treeView_parameter_value_list,
@@ -63,7 +54,6 @@ class TreeViewMixin:
         super().init_models()
         for view in (
             self.ui.treeView_entity,
-            self.ui.treeView_tool_feature,
             self.ui.alternative_tree_view,
             self.ui.scenario_tree_view,
             self.ui.treeView_parameter_value_list,

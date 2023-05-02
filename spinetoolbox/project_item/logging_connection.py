@@ -11,7 +11,6 @@
 """Contains logging connection and jump classes."""
 
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
-from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spine_engine.project_item.connection import ResourceConvertingConnection, Jump, ConnectionBase, FilterSettings
 from ..log_mixin import LogMixin
@@ -80,13 +79,6 @@ class HeadlessConnection(ResourceConvertingConnection):
                     ).setdefault(SCENARIO_FILTER_TYPE, {})
                     for row in db_map.query(db_map.scenario_sq):
                         specific_filter_settings[row.name]: row.id = row.id in scenario_filter_ids
-                tool_filter_ids = resource_filter_ids.get(TOOL_FILTER_TYPE)
-                if tool_filter_ids is not None:
-                    specific_filter_settings = self._filter_settings.known_filters.setdefault(
-                        resource.label, {}
-                    ).setdefault(TOOL_FILTER_TYPE, {})
-                    for row in db_map.query(db_map.tool_sq):
-                        specific_filter_settings[row.name] = row.id in tool_filter_ids
             finally:
                 db_map.connection.close()
         self._legacy_resource_filter_ids = None
@@ -176,12 +168,6 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             if any(enabled for s, enabled in scenario_filters.items() if s in available_scenarios):
                 return True
             if self._filter_settings.auto_online and any(name not in scenario_filters for name in available_scenarios):
-                return True
-            available_tools = {x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "tool", only_visible=True)}
-            tool_filters = self._filter_settings.known_filters.get(resource.label, {}).get(TOOL_FILTER_TYPE, {})
-            if any(enabled for t, enabled in tool_filters.items() if t in available_tools):
-                return True
-            if self._filter_settings.auto_online and any(name not in tool_filters for name in available_tools):
                 return True
         return False
 
@@ -317,7 +303,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
 
         Args:
             resource (str): Resource label
-            filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
+            filter_type (str): Always SCENARIO_FILTER_TYPE, for now.
             online (dict): mapping from scenario/tool name to online flag
         """
         self._filter_settings.known_filters.setdefault(resource, {}).setdefault(filter_type, {}).update(online)
@@ -375,7 +361,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         """
         filter_settings = FilterSettings(auto_online=self._filter_settings.auto_online)
         for resource in self._resources:
-            for filter_type in (SCENARIO_FILTER_TYPE, TOOL_FILTER_TYPE):
+            for filter_type in (SCENARIO_FILTER_TYPE,):
                 online_filters = self._resource_filters_online(resource, filter_type)
                 if online_filters is not None:
                     filter_settings.known_filters.setdefault(resource.label, {})[filter_type] = online_filters
@@ -388,7 +374,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         db_map = self._get_db_map(url)
         if db_map is None:
             return None
-        db_item_type = {SCENARIO_FILTER_TYPE: "scenario", TOOL_FILTER_TYPE: "tool"}[filter_type]
+        db_item_type = {SCENARIO_FILTER_TYPE: "scenario"}[filter_type]
         available_filters = (
             x["name"] for x in self._toolbox.db_mngr.get_items(db_map, db_item_type, only_visible=True)
         )

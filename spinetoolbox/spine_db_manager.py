@@ -1081,42 +1081,6 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "list_value"))
 
-    def add_features(self, db_map_data):
-        """Adds features to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "feature"))
-
-    def add_tools(self, db_map_data):
-        """Adds tools to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool"))
-
-    def add_tool_features(self, db_map_data):
-        """Adds tool features to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool_feature"))
-
-    def add_tool_feature_methods(self, db_map_data):
-        """Adds tool feature methods to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool_feature_method"))
-
     def add_metadata(self, db_map_data):
         """Adds metadata to db.
 
@@ -1239,42 +1203,6 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "list_value"))
-
-    def update_features(self, db_map_data):
-        """Updates features in db.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "feature"))
-
-    def update_tools(self, db_map_data):
-        """Updates tools in db.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool"))
-
-    def update_tool_features(self, db_map_data):
-        """Updates tools features in db.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool_feature"))
-
-    def update_tool_feature_methods(self, db_map_data):
-        """Updates tools feature methods in db.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool_feature_method"))
 
     def update_metadata(self, db_map_data):
         """Updates metadata in db.
