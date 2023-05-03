@@ -162,9 +162,9 @@ class MainToolBar(ToolBar):
     def _add_project_item_button(self, item_type, factory, colored):
         if factory.is_deprecated():
             return
-        icon_file_type = factory.icon()
+        icon_file_name = factory.icon()
         icon_color = factory.icon_color().darker(120)
-        icon = ColoredIcon(icon_file_type, icon_color, self.iconSize(), colored=colored)
+        icon = ColoredIcon(icon_file_name, icon_color, self.iconSize(), colored=colored)
         if not self._toolbox.supports_specification(item_type):
             button = ProjectItemButton(self._toolbox, item_type, icon)
             button.set_orientation(self.orientation())

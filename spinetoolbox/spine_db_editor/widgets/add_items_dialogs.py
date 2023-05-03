@@ -337,6 +337,7 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
         self.layout().addWidget(self.button_box, 3, 0, -1, -1)
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.db_map_ent_lookup = self.make_db_map_ent_lookup()
+        self.db_map_alt_id_lookup = self.make_db_map_alt_id_lookup()
         self.db_map_ent_cls_lookup = self.make_db_map_ent_cls_lookup()
         self.entity_class_keys = []
         self.class_name = None
@@ -406,9 +407,9 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
 
     @Slot(int)
     def reset_model(self, index):
-        """Setup model according to current relationship_class selected in combobox."""
+        """Setup model according to current entity_class selected in combobox."""
         self.class_name, self.dimension_name_list = self.entity_class_keys[index]
-        header = self.dimension_name_list + ('entity name', 'databases')
+        header = self.dimension_name_list + ('entity name', 'active alternatives', 'inactive alternatives', 'databases')
         self.model.set_horizontal_header_labels(header)
         default_db_maps = [
             db_map
@@ -416,7 +417,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             if (self.class_name, self.dimension_name_list) in ent_cls_list
         ]
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
-        defaults = {'databases': db_names}
+        defaults = {'active alternatives': 'Base', 'inactive alternatives': '', 'databases': db_names}
         defaults.update(self.entity_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
@@ -430,23 +431,25 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         left = top_left.column()
         bottom = bottom_right.row()
         right = bottom_right.column()
-        number_of_dimensions = self.model.columnCount() - 2
+        dimension_count = len(self.dimension_name_list)
         for row in range(top, bottom + 1):
             if header.index('entity name') not in range(left, right + 1):
                 col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
-                el_names = [col_data(j) for j in range(number_of_dimensions) if col_data(j)]
+                el_names = [col_data(j) for j in range(dimension_count) if col_data(j)]
                 entity_name = self.class_name + "_"
                 if len(el_names) == 1:
                     entity_name += el_names[0] + "__"
                 else:
                     entity_name += "__".join(el_names)
-                self.model.setData(self.model.index(row, number_of_dimensions), entity_name)
+                self.model.setData(self.model.index(row, dimension_count), entity_name)
 
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("entity name")
+        active_column = self.model.horizontal_header_labels().index("active alternatives")
+        inactive_column = self.model.horizontal_header_labels().index("inactive alternatives")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
@@ -454,6 +457,12 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             entity_name = row_data[name_column]
             if not entity_name:
                 self.parent().msg_error.emit("Entity missing at row {}".format(i + 1))
+                return
+            active_alts = [x for x in row_data[active_column].split(",") if x]
+            inactive_alts = [x for x in row_data[inactive_column].split(",") if x]
+            conflicting = set(active_alts) & set(inactive_alts)
+            if conflicting:
+                self.parent().msg_error.emit(f"Conflicting alternatives {conflicting} at row {i + 1}")
                 return
             pre_item = {'name': entity_name}
             db_names = row_data[db_column]
@@ -483,8 +492,32 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                         return
                     element_id = entities[entity_class_id, element_name]["id"]
                     element_id_list.append(element_id)
+                active_alt_ids = []
+                inactive_alt_ids = []
+                alternative_ids = self.db_map_alt_id_lookup[db_map]
+                for alt_name in active_alts:
+                    if alt_name not in alternative_ids:
+                        self.parent().msg_error.emit(
+                            f"Invalid alternative '{alt_name}' for db '{db_name}' at row {i + 1}"
+                        )
+                        return
+                    active_alt_ids.append(alternative_ids[alt_name])
+                for alt_name in inactive_alts:
+                    if alt_name not in alternative_ids:
+                        self.parent().msg_error.emit(
+                            f"Invalid alternative '{alt_name}' for db '{db_name}' at row {i + 1}"
+                        )
+                        return
+                    inactive_alt_ids.append(alternative_ids[alt_name])
                 item = pre_item.copy()
-                item.update({'element_id_list': element_id_list, 'class_id': class_id})
+                item.update(
+                    {
+                        'element_id_list': element_id_list,
+                        'class_id': class_id,
+                        'active_alternative_id_list': active_alt_ids,
+                        'inactive_alternative_id_list': inactive_alt_ids,
+                    }
+                )
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")

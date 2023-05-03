@@ -94,6 +94,9 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
             removed_count = curr_alt_count - alt_count
             self.remove_children(alt_count, removed_count)
 
+    def accepts_item(self, item, db_map):
+        return db_map == self.db_map and item["scenario_id"] == self.id
+
     def handle_items_added(self, _db_map_data):
         self.update_alternative_id_list()
 
@@ -161,5 +164,5 @@ class ScenarioAlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
             alternative_id_list = list(self.parent_item.alternative_id_list)
             alternative_id_list.append(value)
             db_item = {"id": self.parent_item.id, "alternative_id_list": alternative_id_list}
-            self.db_mngr.set_scenario_alternatives({self.db_map: [db_item]})
+            self.db_mngr.update_scenarios({self.db_map: [db_item]})
         return True

@@ -193,7 +193,6 @@ class EntityItem(_FetchEntityGroupMixin, MultiDBTreeItem):
 
     @property
     def display_data(self):
-        """Returns the name for display."""
         byname = self.db_map_data_field(self.first_db_map, "byname", default="")
         if self.is_member:
             return "member: " + DB_ITEM_SEPARATOR.join(byname)
@@ -231,14 +230,14 @@ class EntityItem(_FetchEntityGroupMixin, MultiDBTreeItem):
             database=self.first_db_map.codename,
         )
 
-    def accepts_item(self, item, db_map):
-        return self.db_map_id(db_map) in item["element_id_list"]
-
     def is_valid(self):
         """Checks that the parent entity (if any) is still an element in this entity."""
         if self.parent_item.item_type == "entity_class":
             return True
         return self.parent_item.display_data in self.element_name_list
+
+    def accepts_item(self, item, db_map):
+        return self.db_map_id(db_map) in item["element_id_list"]
 
     def _accepts_entity_group_item(self, item, db_map):
         return item["group_id"] == self.db_map_id(db_map)

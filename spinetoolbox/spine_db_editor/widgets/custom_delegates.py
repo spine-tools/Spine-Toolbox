@@ -14,9 +14,8 @@ Custom item delegates.
 """
 
 from numbers import Number
-from PySide6.QtCore import QModelIndex, QPoint, Qt, Signal
+from PySide6.QtCore import QModelIndex, Qt, Signal
 from PySide6.QtWidgets import QStyledItemDelegate, QComboBox
-from PySide6.QtGui import QFontMetrics, QFont
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
 from ...widgets.custom_editors import (
@@ -488,18 +487,8 @@ class AlternativeDelegate(QStyledItemDelegate):
 
     data_committed = Signal(QModelIndex, object)
 
-    def __init__(self, *args, **kwargs):
-        """
-        Args:
-            *args: arguments passed to QStyledItemDelegate
-            **kwargs: keyword arguments passed to QStyledItemDelegate
-        """
-        super().__init__(*args, **kwargs)
-        self._alternative_ids = {}
-
     def setModelData(self, editor, model, index):
         """Send signal."""
-        item = index.model().item_from_index(index)
         index_data = index.data(Qt.ItemDataRole.EditRole)
         editor_data = editor.data()
         if editor_data == index_data:
@@ -511,15 +500,9 @@ class AlternativeDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
-        model = index.model()
-        item = model.item_from_index(index)
         editor = CustomLineEditor(parent)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole))
         return editor
-
-    def updateEditorGeometry(self, editor, option, index):
-        super().updateEditorGeometry(editor, option, index)
-        item = index.model().item_from_index(index)
 
     def _close_editor(self, editor, index):
         """Closes editor.
@@ -564,8 +547,8 @@ class ScenarioDelegate(QStyledItemDelegate):
     def setEditorData(self, editor, index):
         """Do nothing. We're setting editor data right away in createEditor."""
 
-    def _get_names(self, item):
-        """Collects available alternative names avoiding duplicates in a scenario.
+    def _update_alternative_ids(self, item):
+        """Updates available alternatives avoiding duplicates in a scenario.
 
         Excludes alternatives that are already in the scenario
 
@@ -590,7 +573,8 @@ class ScenarioDelegate(QStyledItemDelegate):
         if item.item_type == "scenario_alternative":
             editor = SearchBarEditor(self.parent(), parent)
             index_data = index.data(Qt.ItemDataRole.EditRole)
-            names = self._get_names(item)
+            self._update_alternative_ids(item)
+            names = sorted(self._alternative_ids)
             editor.set_data(index_data, names)
             editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         else:
@@ -728,7 +712,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
 
 
 class ManageEntityClassesDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in {Add/Edit}RelationshipClassesDialog."""
+    """A delegate for the model and view in {Add/Edit}EntityClassesDialog."""
 
     icon_color_editor_requested = Signal(QModelIndex)
 
@@ -761,7 +745,15 @@ class ManageEntityClassesDelegate(ManageItemsDelegate):
 
 
 class ManageEntitiesDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in {Add/Edit}RelationshipsDialog."""
+    """A delegate for the model and view in {Add/Edit}EntitiesDialog."""
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        data = editor.data()
+        header = model.horizontal_header_labels()
+        if header[index.column()] == 'active':
+            data = {"true": True, "false": False}.get(data, True)
+        self.data_committed.emit(index, data)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -772,6 +764,11 @@ class ManageEntitiesDelegate(ManageItemsDelegate):
             editor.set_data(data)
         elif header[index.column()] == 'databases':
             editor = self._create_database_editor(parent, index)
+        elif header[index.column()] in ('active alternatives', 'inactive alternatives'):
+            editor = CheckListEditor(parent)
+            all_alternative_name_list = self.parent().alternative_name_list(index.row())
+            alternative_name_list = index.data(Qt.ItemDataRole.DisplayRole).split(",")
+            editor.set_data(all_alternative_name_list, alternative_name_list)
         else:
             editor = SearchBarEditor(parent)
             entity_name_list = self.parent().entity_name_list(index.row(), index.column())

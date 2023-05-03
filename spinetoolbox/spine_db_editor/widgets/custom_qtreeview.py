@@ -647,7 +647,7 @@ class ScenarioTreeView(ItemTreeView):
                 if new_alt_id_list != curr_alt_id_list:
                     item = {"id": scen_item.id, "alternative_id_list": new_alt_id_list}
                     db_map_scen_alt_data[db_item.db_map].append(item)
-        self.model().db_mngr.set_scenario_alternatives(db_map_scen_alt_data)
+        self.model().db_mngr.update_scenarios(db_map_scen_alt_data)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()
 

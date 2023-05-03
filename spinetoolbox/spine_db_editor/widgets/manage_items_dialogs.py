@@ -153,7 +153,7 @@ class GetEntityClassesMixin:
             entity_class_name_list = [
                 name for name in self.db_map_ent_cls_lookup_by_name[db_map] if name in entity_class_name_list
             ]
-        return entity_class_name_list
+        return sorted(entity_class_name_list)
 
 
 class GetEntitiesMixin:
@@ -166,6 +166,21 @@ class GetEntitiesMixin:
             }
             for db_map in self.db_maps
         }
+
+    def make_db_map_alt_id_lookup(self):
+        return {
+            db_map: {x["name"]: x["id"] for x in self.db_mngr.get_items(db_map, "alternative", only_visible=False)}
+            for db_map in self.db_maps
+        }
+
+    def alternative_name_list(self, row):
+        """Return a list of alternative names present in all databases selected for given row.
+        Used by `ManageEntitiesDelegate`.
+        """
+        db_column = self.model.header.index('databases')
+        db_names = self.model._main_data[row][db_column]
+        db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
+        return sorted(set(x for db_map in db_maps for x in self.db_map_alt_id_lookup[db_map]))
 
     def entity_name_list(self, row, column):
         """Return a list of entity names present in all databases selected for given row.
@@ -187,7 +202,7 @@ class GetEntitiesMixin:
             entity_name_lists.append([name for (class_id, name) in entities if class_id == dimension_id])
         if not entity_name_lists:
             return []
-        return list(reduce(lambda x, y: set(x) & set(y), entity_name_lists))
+        return sorted(reduce(lambda x, y: set(x) & set(y), entity_name_lists))
 
 
 class ShowIconColorEditorMixin:

@@ -46,6 +46,10 @@ class MultiDBTreeModel(MinimalTreeModel):
     def root_index(self):
         return self.index_from_item(self._root_item)
 
+    @property
+    def _header_labels(self):
+        return ("name", "database")
+
     def build_tree(self):
         """Builds tree."""
         self.beginResetModel()
@@ -55,11 +59,11 @@ class MultiDBTreeModel(MinimalTreeModel):
         self.endResetModel()
 
     def columnCount(self, parent=QModelIndex()):
-        return 2
+        return len(self._header_labels)
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
-            return ("name", "database")[section]
+            return self._header_labels[section]
         return None
 
     def find_items(self, db_map, path_prefix, fetch=False):

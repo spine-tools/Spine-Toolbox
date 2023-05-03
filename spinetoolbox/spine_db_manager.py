@@ -246,19 +246,6 @@ class SpineDBManager(QObject):
             db_map_data[db_map] = [table_cache.remove_item(id_) for id_ in ids]
         return db_map_data
 
-    @busy_effect
-    def get_db_map_cache(self, db_map, fetch_item_types=None, include_descendants=False, include_ancestors=False):
-        try:
-            worker = self._get_worker(db_map)
-        except KeyError:
-            return {}
-        worker.fetch_all(
-            fetch_item_types=fetch_item_types,
-            include_descendants=include_descendants,
-            include_ancestors=include_ancestors,
-        )
-        return db_map.cache
-
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
 
@@ -675,11 +662,7 @@ class SpineDBManager(QObject):
         item = db_map.cache.get(item_type, {}).get(id_, {})
         if only_visible and item:
             return item
-        try:
-            worker = self._get_worker(db_map)
-        except KeyError:
-            return {}
-        worker.fetch_all(fetch_item_types={item_type})
+        db_map.cache.fetch_all(item_type)
         return db_map.cache.get(item_type, {}).get(id_, {})
 
     def get_field(self, db_map, item_type, id_, field, only_visible=True):
@@ -699,11 +682,7 @@ class SpineDBManager(QObject):
         items = list(db_map.cache.get(item_type, {}).values())
         if only_visible:
             return items
-        try:
-            worker = self._get_worker(db_map)
-        except KeyError:
-            return []
-        worker.fetch_all(fetch_item_types={item_type})
+        db_map.cache.fetch_all(item_type)
         return list(db_map.cache.get(item_type, {}).values())
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
@@ -931,10 +910,12 @@ class SpineDBManager(QObject):
         ]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id, only_visible=True):
-        scenario = self.get_item(db_map, "scenario", scen_id, only_visible=only_visible)
-        if not scenario:
-            return []
-        return scenario["alternative_id_list"]
+        return [
+            x["alternative_id"]
+            for x in self.get_items_by_field(
+                db_map, "scenario_alternative", "scenario_id", scen_id, only_visible=only_visible
+            )
+        ]
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -947,9 +928,8 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = dict()
         for db_map, data in db_map_data.items():
-            make_cache = lambda *args, db_map=db_map, **kwargs: self.get_db_map_cache(db_map)
             try:
-                data_for_import = get_data_for_import(db_map, make_cache=make_cache, dry_run=True, **data)
+                data_for_import = get_data_for_import(db_map, dry_run=True, **data)
             except (TypeError, ValueError) as err:
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
                 db_map_error_log.setdefault(db_map, []).append(msg)
@@ -978,8 +958,7 @@ class SpineDBManager(QObject):
             except KeyError:
                 # We're closing the kiosk.
                 continue
-            cache = self.get_db_map_cache(db_map)
-            worker.add_items(data, item_type, readd, check, cache, callback)
+            worker.add_items(data, item_type, readd, check, callback)
 
     def update_items(self, db_map_data, item_type, check=True, callback=None):
         for db_map, data in db_map_data.items():
@@ -988,8 +967,7 @@ class SpineDBManager(QObject):
             except KeyError:
                 # We're closing the kiosk.
                 continue
-            cache = self.get_db_map_cache(db_map)
-            worker.update_items(data, item_type, check, cache, callback)
+            worker.update_items(data, item_type, check, callback)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.
@@ -1231,27 +1209,6 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_value_metadata"))
 
-    def set_scenario_alternatives(self, db_map_data):
-        """Sets scenario alternatives in db.
-
-        Args:
-            db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            child_cmds = []
-            cache = self.get_db_map_cache(db_map)
-            items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data, cache=cache)
-            if ids_to_remove:
-                rm_cmd = RemoveItemsCommand(self, db_map, ids_to_remove, "scenario_alternative")
-                child_cmds.append(rm_cmd)
-            if items_to_add:
-                add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative")
-                child_cmds.append(add_cmd)
-            if child_cmds:
-                macro = SpineDBMacro(iter(child_cmds))
-                macro.setText(f"set scenario alternatives in {db_map.codename}")
-                self.undo_stack[db_map].push(macro)
-
     def purge_items(self, db_map_purgable_items):
         """Purges selected items from given database.
 
@@ -1400,11 +1357,7 @@ class SpineDBManager(QObject):
     def _get_data_for_export(self, db_map_item_ids):
         data = {}
         for db_map, item_ids in db_map_item_ids.items():
-            make_cache = lambda tablenames, db_map=db_map, **kwargs: self.get_db_map_cache(
-                db_map, fetch_item_types=tablenames, **kwargs
-            )
-
-            for key, items in export_data(db_map, make_cache=make_cache, parse_value=load_db_value, **item_ids).items():
+            for key, items in export_data(db_map, parse_value=load_db_value, **item_ids).items():
                 data.setdefault(key, []).extend(items)
         return data
 

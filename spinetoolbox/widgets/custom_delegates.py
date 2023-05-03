@@ -13,7 +13,7 @@
 Custom item delegates.
 """
 
-from PySide6.QtCore import Qt, Signal, QEvent, QPoint, QRect
+from PySide6.QtCore import Qt, Signal, QEvent, QPoint, QRect, QModelIndex
 from PySide6.QtWidgets import (
     QComboBox,
     QStyledItemDelegate,
@@ -65,7 +65,7 @@ class ComboBoxDelegate(QStyledItemDelegate):
 class CheckBoxDelegate(QStyledItemDelegate):
     """A delegate that places a fully functioning QCheckBox."""
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent, centered=True):
         """
