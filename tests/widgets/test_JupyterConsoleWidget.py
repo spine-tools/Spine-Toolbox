@@ -19,7 +19,7 @@ from spinetoolbox.widgets.jupyter_console_widget import JupyterConsoleWidget
 from tests.mock_helpers import create_toolboxui, clean_up_toolbox
 
 
-class TestSpineConsoleWidget(unittest.TestCase):
+class TestJupyterConsoleWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():

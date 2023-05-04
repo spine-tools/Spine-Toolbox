@@ -2349,8 +2349,8 @@ class ToolboxUI(QMainWindow):
         menu.aboutToHide.connect(self.enable_edit_actions)
         return menu
 
-    @Slot(str, QIcon)
-    def start_detached_jupyter_console(self, kernel_name, icon):
+    @Slot(str, QIcon, bool)
+    def start_detached_jupyter_console(self, kernel_name, icon, conda):
         """Launches a new detached Console with the given kernel
         name or activates an existing Console if the kernel is
         already running.
@@ -2358,12 +2358,13 @@ class ToolboxUI(QMainWindow):
         Args:
             kernel_name (str): Requested kernel name
             icon (QIcon): Icon representing the kernel language
+            conda (bool): Is this a Conda kernel?
         """
         if kernel_name not in self.detached_jupyter_consoles.keys():
             self.msg.emit(f"Starting kernel {kernel_name} in a detached Jupyter Console")
             c = JupyterConsoleWidget(self, owner=None)
             cw = ConsoleWindow(self, c, icon)
-            if not cw.console().request_start_kernel(kernel_name):
+            if not cw.console().request_start_kernel(kernel_name, conda):
                 return
             cw.set_window_title(kernel_name)
             cw.closed.connect(self._clean_up_detached_console_ref)
@@ -2377,9 +2378,10 @@ class ToolboxUI(QMainWindow):
     @Slot(str)
     def _clean_up_detached_console_ref(self, kernel_name):
         """Removes ConsoleWindow reference."""
-        if not self.detached_jupyter_consoles:
+        ref = self.detached_jupyter_consoles.pop(kernel_name, None)
+        if not ref:
             return
-        self.detached_jupyter_consoles.pop(kernel_name).deleteLater()
+        ref.deleteLater()
 
     @Slot(object, str, str, str, dict)
     def _setup_jupyter_console(self, item, filter_id, kernel_name, connection_file, connection_file_dict):

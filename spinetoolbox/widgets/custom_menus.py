@@ -18,7 +18,9 @@ from PySide6.QtWidgets import QMenu, QWidgetAction
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import Slot, QPersistentModelIndex
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
-from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels, find_kernels
+from spinetoolbox.widgets.kernel_editor import find_kernels
+from spine_engine.utils.helpers import resolve_conda_executable
+from spine_engine.execution_managers.conda_kernel_spec_manager import CondaKernelSpecManager
 
 
 class CustomContextMenu(QMenu):
@@ -193,7 +195,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
 
 
 class KernelsPopupMenu(CustomPopupMenu):
-    """Kernels menu embedded to 'File-Consoles' QAction."""
+    """Menu embedded into 'Consoles->Start Jupyter Console' QMenu."""
 
     def __init__(self, parent):
         """
@@ -206,14 +208,14 @@ class KernelsPopupMenu(CustomPopupMenu):
 
     def add_kernels(self):
         """Fetches the available kernels and adds them to the QMenu as QActions."""
-        python_kernels = find_kernels()
-        if len(python_kernels) > 0:
-            for name, path in python_kernels.items():
-                ico = self.get_icon(path)
+        kernels = self.all_kernel_specs()
+        if len(kernels) > 0:
+            for k in kernels:
+                ico = self.get_icon(k["resource_dir"])
                 self.add_action(
-                    name,
-                    lambda checked=False, kname=name, icon=ico: self.call_open_console(checked, kname, icon),
-                    tooltip=path, icon=ico,
+                    k["name"],
+                    lambda checked=False, kname=k["name"], icon=ico, conda=k["conda"]: self.call_open_console(checked, kname, icon, conda),
+                    tooltip=k["resource_dir"], icon=ico,
                 )
         else:
             self.add_action("No kernels found", lambda: None)
@@ -236,16 +238,36 @@ class KernelsPopupMenu(CustomPopupMenu):
             return QIcon(icon_fpath)
         return QIcon()
 
-    @Slot(bool, str, QIcon)
-    def call_open_console(self, checked, kernel_name, icon):
+    @Slot(bool, str, QIcon, bool)
+    def call_open_console(self, checked, kernel_name, icon, conda):
         """Slot for catching the user selected action from the kernel's menu.
 
         Args:
             checked (bool): Argument sent by triggered signal
             kernel_name (str): Kernel name to launch
             icon (QIcon): Icon representing the kernel language
+            conda (bool): Is this a Conda kernel spec?
         """
-        self._parent.start_detached_jupyter_console(kernel_name, icon)
+        self._parent.start_detached_jupyter_console(kernel_name, icon, conda)
+
+    def all_kernel_specs(self):
+        """Returns all Conda and regular kernel names, resource dirs
+        and a flog indicating if it is a Conda env, in a list."""
+        kernel_specs_list = list()
+        # Get Regular Python and Julia Kernel names and resource dirs
+        for n, resource_dir in find_kernels().items():
+            kernel_specs_list.append({"name": n, "resource_dir": resource_dir, "conda": False})
+        # Add auto-generated conda kernel spec names
+        conda_exe = self._parent.qsettings().value("appSettings/condaPath", defaultValue="")
+        conda_exe = resolve_conda_executable(conda_exe)
+        if conda_exe != "":
+            ksm = CondaKernelSpecManager(conda_exe=conda_exe)  # This is expensive
+            # Get Conda Kernel names and resource dirs
+            for conda_spec_name, spec_deats in ksm._all_specs().items():
+                rsc_dir = spec_deats.get("resource_dir", "Resource_dir not found")
+                kernel_specs_list.append({"name": conda_spec_name, "resource_dir": rsc_dir, "conda": True})
+        print(f"kernel_specs_list:{kernel_specs_list}")
+        return kernel_specs_list
 
 
 class FilterMenuBase(QMenu):

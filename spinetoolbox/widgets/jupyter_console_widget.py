@@ -27,6 +27,7 @@ from spinetoolbox.spine_engine_manager import make_engine_manager
 from spinetoolbox.helpers import solve_connection_file
 from spine_engine.execution_managers.kernel_execution_manager import KernelExecutionManager
 from spine_engine.utils.queue_logger import QueueLogger
+from spine_engine.utils.helpers import resolve_conda_executable
 
 # Set logging level for jupyter loggers
 traitlets_logger = logging.getLogger("traitlets")
@@ -65,16 +66,22 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.restart_kernel_action = QAction("Restart", self)
         self.restart_kernel_action.triggered.connect(self.request_restart_kernel)
 
-    def request_start_kernel(self, kernel_name):
+    def request_start_kernel(self, kernel_name, conda):
         """Requests engine to launch a kernel manager for the given kernel_name.
 
         Args:
             kernel_name (str): Kernel name
+            conda (bool): Conda kernel or not
 
         Returns:
             bool: True if kernel manager was launched successfully, False otherwise
         """
-        self._requested_kernel_name = kernel_name  #
+        self._requested_kernel_name = kernel_name
+        environment = ""
+        if conda:
+            environment = "conda"
+        conda_exe = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
+        conda_exe = resolve_conda_executable(conda_exe)
         try:
             self._execution_manager = KernelExecutionManager(
                 self._logger,
@@ -82,6 +89,8 @@ class JupyterConsoleWidget(RichJupyterWidget):
                 [],
                 group_id="DetachedPythonConsoleGroup",
                 server_ip="127.0.0.1",
+                environment=environment,
+                conda_exe=conda_exe,
                 )
         except RuntimeError:
             pass

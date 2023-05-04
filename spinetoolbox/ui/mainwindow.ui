@@ -43,7 +43,7 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>&amp;File</string>
     </property>
     <property name="toolTipsVisible">
      <bool>true</bool>
@@ -64,7 +64,7 @@
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
-     <string>Help</string>
+     <string>&amp;Help</string>
     </property>
     <addaction name="actionUser_Guide"/>
     <addaction name="actionGetting_started"/>
@@ -74,7 +74,7 @@
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Edit</string>
+     <string>&amp;Edit</string>
     </property>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
@@ -87,7 +87,7 @@
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
-     <string>View</string>
+     <string>&amp;View</string>
     </property>
     <widget class="QMenu" name="menuToolbars">
      <property name="title">
@@ -106,7 +106,7 @@
    </widget>
    <widget class="QMenu" name="menuPlugins">
     <property name="title">
-     <string>Plugins</string>
+     <string>&amp;Plugins</string>
     </property>
     <addaction name="actionInstall_plugin"/>
     <addaction name="actionManage_plugins"/>
@@ -115,13 +115,13 @@
    </widget>
    <widget class="QMenu" name="menuConsoles">
     <property name="title">
-     <string>Consoles</string>
+     <string>&amp;Consoles</string>
     </property>
     <addaction name="actionStart_jupyter_console"/>
    </widget>
    <widget class="QMenu" name="menuServer">
     <property name="title">
-     <string>Server</string>
+     <string>&amp;Server</string>
     </property>
     <addaction name="actionRetrieve_project"/>
    </widget>
