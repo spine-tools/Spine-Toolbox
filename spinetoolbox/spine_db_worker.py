@@ -12,36 +12,12 @@
 """
 The SpineDBWorker class
 """
-from functools import wraps
 from PySide6.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from .helpers import busy_effect, separate_metadata_and_item_metadata
-from .qthread_pool_executor import QtBasedThreadPoolExecutor
 
 
 _CHUNK_SIZE = 1000
-
-
-def _db_map_lock(func):
-    """A wrapper for SpineDBWorker that locks the database for the duration of the wrapped method.
-
-    In case the locking fails, the wrapped method will not be invoked.
-
-    Args:
-        func (Callable): method to wrap
-    """
-
-    @wraps(func)
-    def new_function(self, *args, **kwargs):
-        lock = self._db_mngr.db_map_locks.get(self._db_map)
-        if lock is None or not lock.tryLock():
-            return
-        try:
-            return func(self, *args, **kwargs)
-        finally:
-            lock.unlock()
-
-    return new_function
 
 
 class SpineDBWorker(QObject):
@@ -52,20 +28,15 @@ class SpineDBWorker(QObject):
 
     def __init__(self, db_mngr, db_url):
         super().__init__()
-        self._parents_by_type = {}
-        self._add_item_callbacks = {}
-        self._update_item_callbacks = {}
-        self._remove_item_callbacks = {}
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._dry_run = True
+        self._parents_by_type = {}
+        self._restore_item_callbacks = {}
+        self._update_item_callbacks = {}
+        self._remove_item_callbacks = {}
         self._current_fetch_token = 0
-        self._offsets = {}
-        self._fetched_ids = {}
-        self._fetched_item_types = set()
         self.commit_cache = {}
-        self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._advance_query_callbacks = {}
         self._more_available.connect(self.fetch_more)
         self._will_have_children_change.connect(self._handle_will_have_children_change)
@@ -78,31 +49,21 @@ class SpineDBWorker(QObject):
         return parents
 
     def clean_up(self):
-        self._executor.shutdown()
         self.deleteLater()
 
-    def query(self, sq_name):
-        """For tests."""
-        return self._executor.submit(self._query, sq_name).result()
-
-    def _query(self, sq_name):
-        return self._db_map.query(getattr(self._db_map, sq_name)).all()
-
     def get_db_map(self, *args, **kwargs):
-        return self._executor.submit(self._get_db_map, *args, **kwargs).result()
-
-    def _get_db_map(self, *args, **kwargs):
         self._db_map = DatabaseMapping(
-            self._db_url, *args, advance_cache_query=self.advance_query, sqlite_timeout=2, **kwargs
+            self._db_url, *args, sqlite_timeout=2, chunk_size=_CHUNK_SIZE, asynchronous=True, **kwargs
         )
         return self._db_map
 
     def reset_queries(self):
         """Resets queries and clears caches."""
+        self._cache.reset_queries()
+        self._reset_queries()
+
+    def _reset_queries(self):
         self._current_fetch_token += 1
-        self._offsets.clear()
-        self._fetched_ids.clear()
-        self._fetched_item_types.clear()
         self._advance_query_callbacks.clear()
 
     def _reset_fetching_if_required(self, parent):
@@ -114,57 +75,10 @@ class SpineDBWorker(QObject):
         if parent.fetch_token is None:
             parent.fetch_token = self._current_fetch_token
         elif parent.fetch_token != self._current_fetch_token:
-            self._add_item_callbacks.pop(parent, None)
+            self._restore_item_callbacks.pop(parent, None)
             self._update_item_callbacks.pop(parent, None)
             self._remove_item_callbacks.pop(parent, None)
             parent.reset_fetching(self._current_fetch_token)
-
-    def advance_query(self, item_type):
-        """Advances the DB query that fetches items of given type.
-
-        Args:
-            item_type (str)
-
-        Returns:
-            list: items
-        """
-        if item_type in self._fetched_item_types:
-            return []
-        return self._executor.submit(self._do_advance_query, item_type).result()
-
-    @busy_effect
-    @_db_map_lock
-    def _do_advance_query(self, item_type):
-        """Advances the DB query that fetches items of given type and caches the results.
-
-        Args:
-            item_type (str)
-
-        Returns:
-            list: items fetched from the DB
-        """
-        try:
-            sq_name = self._db_map.cache_sqs[item_type]
-        except KeyError:
-            return []
-        offset = self._offsets.setdefault(item_type, 0)
-        query = self._db_map.query(getattr(self._db_map, sq_name)).limit(_CHUNK_SIZE).offset(offset)
-        chunk = [x._asdict() for x in query]
-        self._offsets[item_type] += len(chunk)
-        if not chunk:
-            self._fetched_item_types.add(item_type)
-        else:
-            self._fetched_ids.setdefault(item_type, []).extend([x["id"] for x in chunk])
-            self._populate_commit_cache(item_type, chunk)
-        return chunk
-
-    def _advance_query_and_add_items(self, item_type):
-        items = self._do_advance_query(item_type)
-        if items:
-            self._db_mngr.add_items_to_cache(item_type, {self._db_map: items})
-        for callback in self._advance_query_callbacks.pop(item_type, ()):
-            if callback is not None:
-                callback()
 
     def _register_fetch_parent(self, parent):
         """Registers the given parent and starts checking whether it will have children if fetched.
@@ -177,13 +91,16 @@ class SpineDBWorker(QObject):
             parents.add(parent)
             self._update_parents_will_have_children(parent.fetch_item_type)
 
+    def _fetched_ids(self, item_type, position):
+        return list(self._db_map.cache.get(item_type, {}))[position:]
+
     def _update_parents_will_have_children(self, item_type):
         """Schedules a restart of the process that checks whether parents associated to given type will have children.
 
         Args:
             item_type (str)
         """
-        self._executor.submit(self._do_update_parents_will_have_children, item_type)
+        self._db_map.executor.submit(self._do_update_parents_will_have_children, item_type)
 
     def _do_update_parents_will_have_children(self, item_type):
         """Updates the ``will_have_children`` property for all parents associated to given type.
@@ -204,7 +121,7 @@ class SpineDBWorker(QObject):
             parents_to_check = {parent for parent in parents if parent.will_have_children is None}
             if not parents_to_check:
                 break
-            for id_ in self._fetched_ids.get(item_type, [])[position:]:
+            for id_ in self._fetched_ids(item_type, position):
                 if self._get_parents(item_type) != parents:
                     # New parents registered - we need to start over
                     return
@@ -218,8 +135,9 @@ class SpineDBWorker(QObject):
                     break
             if not parents_to_check:
                 break
-            self._advance_query_and_add_items(item_type)
-            if position == len(self._fetched_ids.get(item_type, ())):
+            chunk = self._db_map.cache.do_advance_query(item_type)
+            self._do_call_advance_query_callbacks(item_type, chunk)
+            if position == len(self._db_map.cache.get(item_type, ())):
                 for parent in parents_to_check:
                     parent.will_have_children = False
                 self._will_have_children_change.emit(parents_to_check)
@@ -243,7 +161,7 @@ class SpineDBWorker(QObject):
         """
         item_type = parent.fetch_item_type
         added_count = 0
-        for id_ in self._fetched_ids.get(item_type, [])[parent.position(self._db_map) :]:
+        for id_ in self._fetched_ids(item_type, parent.position(self._db_map)):
             parent.increment_position(self._db_map)
             item = self._db_mngr.get_item(self._db_map, item_type, id_)
             if not item:
@@ -262,13 +180,13 @@ class SpineDBWorker(QObject):
         return added_count > 0
 
     def _bind_item(self, parent, item):
-        item.readd_callbacks.add(self._make_add_item_callback(parent))
+        item.restore_callbacks.add(self._make_restore_item_callback(parent))
         item.update_callbacks.add(self._make_update_item_callback(parent))
         item.remove_callbacks.add(self._make_remove_item_callback(parent))
 
     def _add_item(self, parent, item):
         if parent.is_obsolete:
-            self._add_item_callbacks.pop(parent, None)
+            self._restore_item_callbacks.pop(parent, None)
             return False
         parent.add_item(item, self._db_map)
         return True
@@ -287,10 +205,10 @@ class SpineDBWorker(QObject):
         parent.remove_item(item, self._db_map)
         return True
 
-    def _make_add_item_callback(self, parent):
-        if parent not in self._add_item_callbacks:
-            self._add_item_callbacks[parent] = lambda item, parent=parent: self._add_item(parent, item)
-        return self._add_item_callbacks[parent]
+    def _make_restore_item_callback(self, parent):
+        if parent not in self._restore_item_callbacks:
+            self._restore_item_callbacks[parent] = lambda item, parent=parent: self._add_item(parent, item)
+        return self._restore_item_callbacks[parent]
 
     def _make_update_item_callback(self, parent):
         if parent not in self._update_item_callbacks:
@@ -327,31 +245,37 @@ class SpineDBWorker(QObject):
         self._register_fetch_parent(parent)
         if self._iterate_cache(parent) or parent.is_fetched:  # NOTE: Order of statements is important
             return
-        self._advance_query_for_parent(parent)
-
-    def _advance_query_for_parent(self, parent):
-        """Schedules a progression of the DB query that fetches items for given parent.
-
-        Args:
-            parent (FetchParent)
-        """
+        # Nothing in cache, something in DB
         item_type = parent.fetch_item_type
-        callback = lambda parent=parent: self._handle_query_advanced(parent)
-        if item_type in self._fetched_item_types:
+        if item_type in self._db_map.cache.fetched_item_types:
             return
+        callback = lambda parent=parent: self._handle_query_advanced(parent)
         if item_type in self._advance_query_callbacks:
             self._advance_query_callbacks[item_type].add(callback)
             return
         self._advance_query_callbacks[item_type] = {callback}
-        self._executor.submit(self._advance_query_and_add_items, item_type)
+        future = self._db_map.cache.advance_query(item_type)
+        future.add_done_callback(
+            lambda future, item_type=item_type: self._call_advance_query_callbacks(item_type, future)
+        )
         parent.set_busy(True)
 
     def _handle_query_advanced(self, parent):
-        if parent.position(self._db_map) < len(self._fetched_ids.get(parent.fetch_item_type, ())):
+        if parent.position(self._db_map) < len(self._db_map.cache.get(parent.fetch_item_type, ())):
             self._more_available.emit(parent)
         else:
             parent.set_fetched(True)
             parent.set_busy(False)
+
+    def _call_advance_query_callbacks(self, item_type, future):
+        self._do_call_advance_query_callbacks(item_type, future.result())
+
+    def _do_call_advance_query_callbacks(self, item_type, chunk):
+        self._populate_commit_cache(item_type, chunk)
+        self._db_mngr.update_icons(self._db_map, item_type, chunk)
+        for callback in self._advance_query_callbacks.pop(item_type, ()):
+            if callback is not None:
+                callback()
 
     def fetch_all(self, fetch_item_types=None, include_descendants=False, include_ancestors=False):
         if fetch_item_types is None:
@@ -369,11 +293,7 @@ class SpineDBWorker(QObject):
                 self.commit_cache.setdefault(commit_id, {}).setdefault(item_type, []).append(item["id"])
 
     def close_db_map(self):
-        _ = self._executor.submit(self._close_db_map).result()
-
-    def _close_db_map(self):
-        if not self._db_map.connection.closed:
-            self._db_map.connection.close()
+        self._db_map.close()
 
     def _split_items_by_type(self, item_type, items):
         if item_type in ("parameter_value_metadata", "entity_metadata"):
@@ -384,24 +304,17 @@ class SpineDBWorker(QObject):
                 yield "metadata", metadata
             if item_metadata:
                 yield item_type, item_metadata
-        if item_type == "scenario":
-            yield "scenario_alternative", [
-                {"scenario_id": x["id"], "alternative_id": alt_id} for x in items for alt_id in x["alternative_id_list"]
-            ]
-            yield item_type, items
         else:
             yield item_type, items
 
     @busy_effect
-    def add_items(self, orig_items, item_type, readd, check, callback):
+    def add_items(self, item_type, orig_items, check):
         """Adds items to db.
 
         Args:
-            orig_items (list): dict-items to add
             item_type (str): item type
-            readd (bool) : Whether to re-add items that were previously removed
+            orig_items (list): dict-items to add
             check (bool): Whether to check integrity
-            callback (None or function): something to call with the result
         """
         method_name = {
             "entity_class": "add_entity_classes",
@@ -418,42 +331,26 @@ class SpineDBWorker(QObject):
             "entity_metadata": "add_ext_entity_metadata",
             "parameter_value_metadata": "add_ext_parameter_value_metadata",
         }[item_type]
-        check &= self._dry_run
-        readd |= not self._dry_run
-        items, errors = getattr(self._db_map, method_name)(
-            *orig_items, check=check, readd=readd, dry_run=self._dry_run, return_items=True
-        )
+        items, errors = getattr(self._db_map, method_name)(*orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        if not self._dry_run:
-            if callback is not None:
-                callback({})
-            return
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
-            if not readd:
-                actual_items = self._db_mngr.add_items_to_cache(actual_item_type, {self._db_map: actual_items})[
-                    self._db_map
-                ]
-                self._fetched_ids.setdefault(actual_item_type, []).extend([x["id"] for x in actual_items])
-                for parent in self._get_parents(actual_item_type):
-                    self.fetch_more(parent)
-            else:
-                for actual_item in actual_items:
-                    actual_item.cascade_readd()
-            db_map_data = {self._db_map: actual_items}
-            if item_type == actual_item_type and callback is not None:
-                callback(db_map_data)
-            self._db_mngr.items_added.emit(actual_item_type, db_map_data)
+            self._db_mngr.update_icons(self._db_map, actual_item_type, actual_items)
+            for parent in self._get_parents(actual_item_type):
+                self.fetch_more(parent)
+            if item_type == actual_item_type:
+                result = actual_items
+            self._db_mngr.items_added.emit(actual_item_type, {self._db_map: actual_items})
+        return result
 
     @busy_effect
-    def update_items(self, orig_items, item_type, check, callback):
+    def update_items(self, item_type, orig_items, check):
         """Updates items in db.
 
         Args:
-            orig_items (list): dict-items to update
             item_type (str): item type
+            orig_items (list): dict-items to update
             check (bool): Whether or not to check integrity
-            callback (None or function): something to call with the result
         """
         method_name = {
             "entity_class": "update_entity_classes",
@@ -469,43 +366,39 @@ class SpineDBWorker(QObject):
             "entity_metadata": "update_ext_entity_metadata",
             "parameter_value_metadata": "update_ext_parameter_value_metadata",
         }[item_type]
-        check &= self._dry_run
-        items, errors = getattr(self._db_map, method_name)(
-            *orig_items, check=check, dry_run=self._dry_run, return_items=True
-        )
+        items, errors = getattr(self._db_map, method_name)(*orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        if not self._dry_run:
-            if callback is not None:
-                callback({})
-            return
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
-            print(actual_item_type, actual_items)
-            self._db_mngr.update_items_in_cache(actual_item_type, {self._db_map: actual_items})
-            db_map_data = {self._db_map: [{**x} for x in actual_items]}
-            if item_type == actual_item_type and callback is not None:
-                callback(db_map_data)
-            self._db_mngr.items_updated.emit(actual_item_type, db_map_data)
+            self._db_mngr.update_icons(self._db_map, actual_item_type, actual_items)
+            if item_type == actual_item_type:
+                result = actual_items
+            self._db_mngr.items_updated.emit(actual_item_type, {self._db_map: [{**x} for x in actual_items]})
+        return result
 
     @busy_effect
-    def remove_items(self, item_type, ids, callback):
+    def remove_items(self, item_type, ids):
         """Removes items from database.
 
         Args:
-            ids_per_type (dict): lists of items to remove keyed by item type (str)
+            item_type (str): item type
+            ids (set): ids of items to remove
         """
-        if not self._dry_run:
-            try:
-                self._db_map.cascade_remove_items(**{item_type: ids})
-            except SpineDBAPIError as err:
-                self._db_mngr.error_msg.emit({self._db_map: [err]})
-            if callback is not None:
-                callback({})
-            return
-        db_map_data = self._db_mngr.remove_items_in_cache(item_type, {self._db_map: ids})
-        if callback is not None:
-            callback(db_map_data)
-        self._db_mngr.items_removed.emit(item_type, db_map_data)
+        items = self._db_map.remove_items(item_type, *ids)
+        self._db_mngr.items_removed.emit(item_type, {self._db_map: items})
+        return items
+
+    @busy_effect
+    def restore_items(self, item_type, ids):
+        """Readds items to database.
+
+        Args:
+            item_type (str): item type
+            ids (set): ids of items to restore
+        """
+        items = self._db_map.restore_items(item_type, *ids)
+        self._db_mngr.items_added.emit(item_type, {self._db_map: items})
+        return items
 
     def commit_session(self, commit_msg, cookie=None):
         """Initiates commit session.
@@ -514,46 +407,19 @@ class SpineDBWorker(QObject):
             commit_msg (str): commit message
             cookie (Any): a cookie to include in session_committed signal
         """
-        # Make sure that the worker thread has a reference to undo stacks even if they get deleted
-        # in the GUI thread.
-        undo_stack = self._db_mngr.undo_stack[self._db_map]
-        self._executor.submit(self._commit_session, commit_msg, undo_stack, cookie).result()
-
-    def _commit_session(self, commit_msg, undo_stack, cookie=None):
-        """Commits session for given database maps.
-
-        Args:
-            commit_msg (str): commit message
-            undo_stack (AgedUndoStack): undo stack that outlive the DB manager
-            cookie (Any): a cookie to include in session_committed signal
-        """
-        self._dry_run = False
         try:
-            undo_stack.commit()
-            self._db_map.commit_session(commit_msg)
+            self._db_map.commit_session(commit_msg)  # This blocks until session is committed
+            self._db_mngr.undo_stack[self._db_map].setClean()
             self._db_mngr.session_committed.emit({self._db_map}, cookie)
-            undo_stack.setClean()
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
-        finally:
-            self._dry_run = True
 
     def rollback_session(self):
         """Initiates rollback session in the worker thread."""
-        # Make sure that the worker thread has a reference to undo stacks even if they get deleted
-        # in the GUI thread.
-        undo_stack = self._db_mngr.undo_stack[self._db_map]
-        self._executor.submit(self._rollback_session, undo_stack)
-
-    def _rollback_session(self, undo_stack):
-        """Rolls back session.
-
-        Args:
-            undo_stack (AgedUndoStack): undo stack that outlive the DB manager
-        """
         try:
-            self._db_map.reset_session()
+            self._db_map.rollback_session()  # This blocks until session is rolled back
+            self._reset_queries()
+            self._db_mngr.undo_stack[self._db_map].setClean()
             self._db_mngr.session_rolled_back.emit({self._db_map})
-            undo_stack.setClean()
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})

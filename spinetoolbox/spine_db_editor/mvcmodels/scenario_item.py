@@ -164,5 +164,5 @@ class ScenarioAlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
             alternative_id_list = list(self.parent_item.alternative_id_list)
             alternative_id_list.append(value)
             db_item = {"id": self.parent_item.id, "alternative_id_list": alternative_id_list}
-            self.db_mngr.update_scenarios({self.db_map: [db_item]})
+            self.db_mngr.set_scenario_alternatives({self.db_map: [db_item]})
         return True

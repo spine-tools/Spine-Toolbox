@@ -47,7 +47,7 @@ from .manage_items_dialogs import (
     ManageItemsDialog,
     ManageItemsDialogBase,
 )
-from ...spine_db_commands import SpineDBMacro, AddItemsCommand, RemoveItemsCommand
+from ...spine_db_commands import AgedUndoCommand, AddItemsCommand, RemoveItemsCommand
 
 
 class AddReadyEntitiesDialog(ManageItemsDialogBase):
@@ -913,15 +913,11 @@ class ManageMembersDialog(EntityGroupDialogBase):
             {"entity_id": ent["id"], "entity_class_id": ent["class_id"], "member_id": member_id} for member_id in added
         ]
         ids_to_remove = [x["id"] for x in self._entity_groups() if x["member_id"] in removed]
-        child_cmds = []
+        macro = AgedUndoCommand()
+        macro.setText(f"manage {self.entity_item.display_data}'s members")
         if items_to_add:
-            cmd = AddItemsCommand(self.db_mngr, self.db_map, items_to_add, "entity_group")
-            child_cmds.append(cmd)
+            AddItemsCommand(self.db_mngr, self.db_map, "entity_group", items_to_add, parent=macro)
         if ids_to_remove:
-            cmd = RemoveItemsCommand(self.db_mngr, self.db_map, ids_to_remove, "entity_group")
-            child_cmds.append(cmd)
-        if child_cmds:
-            macro = SpineDBMacro(iter(child_cmds))
-            macro.setText(f"manage {self.entity_item.display_data}'s members")
-            self.db_mngr.undo_stack[self.db_map].push(macro)
+            RemoveItemsCommand(self.db_mngr, self.db_map, "entity_group", ids_to_remove, parent=macro)
+        self.db_mngr.undo_stack[self.db_map].push(macro)
         super().accept()

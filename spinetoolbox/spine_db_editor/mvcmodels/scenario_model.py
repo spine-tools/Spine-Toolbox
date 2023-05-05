@@ -136,7 +136,7 @@ class ScenarioModel(TreeModelBase):
         alternative_id_list += alternative_ids
         alternative_id_list += [id_ for id_ in old_alternative_id_list[row:] if id_ not in alternative_ids]
         db_item = {"id": scenario_item.id, "alternative_id_list": alternative_id_list}
-        self.db_mngr.update_scenarios({scenario_item.db_map: [db_item]})
+        self.db_mngr.set_scenario_alternatives({scenario_item.db_map: [db_item]})
         return True
 
     def paste_alternative_mime_data(self, mime_data, row, scenario_item):
@@ -159,7 +159,7 @@ class ScenarioModel(TreeModelBase):
             alternative_id_list += alternative_ids
             alternative_id_list += [id_ for id_ in old_alternative_id_list[row:] if id_ not in alternative_ids]
             data_to_add[target_db_map] = [{"id": scenario_item.id, "alternative_id_list": alternative_id_list}]
-        self.db_mngr.update_scenarios(data_to_add)
+        self.db_mngr.set_scenario_alternatives(data_to_add)
 
     def paste_scenario_mime_data(self, mime_data, db_item):
         """Adds scenarios and their alternatives from MIME data to the model.
@@ -209,7 +209,7 @@ class ScenarioModel(TreeModelBase):
                 scenario_alternative_id_lists.append(
                     {"id": scenario_id_by_name[scenario_name], "alternative_id_list": alternative_id_list}
                 )
-            self.db_mngr.update_scenarios({db_item.db_map: scenario_alternative_id_lists})
+            self.db_mngr.set_scenario_alternatives({db_item.db_map: scenario_alternative_id_lists})
 
     def duplicate_scenario(self, scenario_item):
         """Duplicates scenario within database.
@@ -226,5 +226,7 @@ class ScenarioModel(TreeModelBase):
         )
         for item in self.db_mngr.get_items(db_map, "scenario", only_visible=False):
             if item.name == name:
-                self.db_mngr.update_scenarios({db_map: [{"id": item.id, "alternative_id_list": alternative_id_list}]})
+                self.db_mngr.set_scenario_alternatives(
+                    {db_map: [{"id": item.id, "alternative_id_list": alternative_id_list}]}
+                )
                 break

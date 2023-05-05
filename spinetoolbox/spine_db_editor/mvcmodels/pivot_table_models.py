@@ -1580,7 +1580,7 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             ]
             db_item = {"id": scen_id, "alternative_id_list": alternative_id_list}
             db_map_items.setdefault(db_map, []).append(db_item)
-        self.db_mngr.update_scenarios(db_map_items)
+        self.db_mngr.set_scenario_alternatives(db_map_items)
         return True
 
 

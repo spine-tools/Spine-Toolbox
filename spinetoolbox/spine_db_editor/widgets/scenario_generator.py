@@ -134,7 +134,7 @@ class ScenarioGenerator(QWidget):
             {"id": scenario_id, "alternative_id_list": alternative_ids}
             for scenario_id, alternative_ids in scenario_definitions_by_id.items()
         ]
-        self._db_editor.db_mngr.update_scenarios({self._db_map: scenario_alternative_data})
+        self._db_editor.db_mngr.set_scenario_alternatives({self._db_map: scenario_alternative_data})
 
     def _check_existing_scenarios(self, proposed_scenario_names, existing_scenario_names):
         """Checks if proposed scenarios exist, and if so, prompts users what to do.
