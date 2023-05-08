@@ -9,9 +9,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Window for the 'base' Julia Console and Python Console.
-"""
+"""Window for the Detached Jupyter Console."""
 
 from PySide6.QtWidgets import QMainWindow
 from PySide6.QtCore import Qt, Signal
@@ -58,8 +56,8 @@ class ConsoleWindow(QMainWindow):
         Args:
             e (QCloseEvent): Event
         """
-        kernel_name = self._console.kernel_manager.kernel_name
+        kernel_name = self._console.kernel_name
         self._console.request_shutdown_kernel_manager()
-        self._console.shutdown_local_kernel_manager()
+        self._console.shutdown_kernel_client()
         self.closed.emit(kernel_name)
         super().closeEvent(e)

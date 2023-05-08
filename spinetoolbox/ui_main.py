@@ -2362,13 +2362,13 @@ class ToolboxUI(QMainWindow):
         """
         if kernel_name not in self.detached_jupyter_consoles.keys():
             self.msg.emit(f"Starting kernel {kernel_name} in a detached Jupyter Console")
-            c = JupyterConsoleWidget(self, owner=None)
+            c = JupyterConsoleWidget(self, kernel_name, owner=None)
             cw = ConsoleWindow(self, c, icon)
-            if not cw.console().request_start_kernel(kernel_name, conda):
+            if not cw.console().request_start_kernel(conda):
                 return
             cw.set_window_title(kernel_name)
             cw.closed.connect(self._clean_up_detached_console_ref)
-            cw.console().connect_to_kernel(kernel_name)
+            cw.console().connect_to_kernel()
             self.detached_jupyter_consoles[kernel_name] = cw
         else:
             if self.detached_jupyter_consoles[kernel_name].isMinimized():
@@ -2451,8 +2451,8 @@ class ToolboxUI(QMainWindow):
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._jupyter_consoles[connection_file] = JupyterConsoleWidget(self, owner=item)
-        console.connect_to_kernel(kernel_name, connection_file)
+        console = self._jupyter_consoles[connection_file] = JupyterConsoleWidget(self, kernel_name, owner=item)
+        console.connect_to_kernel(connection_file)
         return console
 
     def _make_persistent_console(self, item, key, language):

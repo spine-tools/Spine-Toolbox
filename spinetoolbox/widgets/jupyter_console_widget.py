@@ -16,11 +16,12 @@ Class for a custom RichJupyterWidget that can run Tool instances.
 import logging
 import multiprocessing
 from queue import Empty
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QAction
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
+from qtconsole.client import QtKernelClient
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 from spinetoolbox.spine_engine_manager import make_engine_manager
@@ -38,24 +39,23 @@ asyncio_logger.setLevel(level=logging.WARNING)
 
 class JupyterConsoleWidget(RichJupyterWidget):
     """Base class for all embedded console widgets that can run tool instances."""
-
-    def __init__(self, toolbox, owner=None):
+    def __init__(self, toolbox, kernel_name, owner=None):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
+            kernel_name (str): Kernel name to start
             owner (ProjectItem, NoneType): Item that owns the console.
         """
         super().__init__(parent=toolbox)
         self._toolbox = toolbox
+        self.kernel_name = kernel_name
         self.owners = {owner}
-        self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
-        self.kernel_manager = None
         self.kernel_client = None
+        self.blocking_client = None
         self._engine_connection_file = None
         self._execution_manager = None
         exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         self._engine_manager = make_engine_manager(exec_remotely)
-        self._requested_kernel_name = None
         self._q = multiprocessing.Queue()
         self._logger = QueueLogger(self._q, "DetachedPythonConsole", None, dict())
         self.normal_cursor = self._control.viewport().cursor()
@@ -66,17 +66,15 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.restart_kernel_action = QAction("Restart", self)
         self.restart_kernel_action.triggered.connect(self.request_restart_kernel)
 
-    def request_start_kernel(self, kernel_name, conda):
+    def request_start_kernel(self, conda=False):
         """Requests engine to launch a kernel manager for the given kernel_name.
 
         Args:
-            kernel_name (str): Kernel name
             conda (bool): Conda kernel or not
 
         Returns:
             bool: True if kernel manager was launched successfully, False otherwise
         """
-        self._requested_kernel_name = kernel_name
         environment = ""
         if conda:
             environment = "conda"
@@ -85,9 +83,9 @@ class JupyterConsoleWidget(RichJupyterWidget):
         try:
             self._execution_manager = KernelExecutionManager(
                 self._logger,
-                kernel_name,
+                self.kernel_name,
                 [],
-                group_id="DetachedPythonConsoleGroup",
+                group_id="DetachedConsoleGroup",
                 server_ip="127.0.0.1",
                 environment=environment,
                 conda_exe=conda_exe,
@@ -117,14 +115,9 @@ class JupyterConsoleWidget(RichJupyterWidget):
         """
         item = msg["item_name"]  # DetachedPythonConsole
         if msg["type"] == "kernel_started":
-            filter_id = msg["filter_id"]
-            kernel_name = msg["kernel_name"]
-            if self._requested_kernel_name != kernel_name:  # Assert that the launched kernel matches the requested one
-                self._toolbox.msg_error.emit(
-                    f"Requested {self._requested_kernel_name} but {kernel_name} was launched. Console launch aborted."
-                )
-                return False
-            self._engine_connection_file = solve_connection_file(msg["connection_file"], msg.get("connection_file_dict", dict()))
+            self._engine_connection_file = solve_connection_file(
+                msg["connection_file"], msg.get("connection_file_dict", dict())
+            )
             return True
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = f"Unable to find kernel spec <b>{msg['kernel_name']}</b> <br/>For Python Tools, " \
@@ -150,36 +143,24 @@ class JupyterConsoleWidget(RichJupyterWidget):
             self._toolbox.msg.emit(f"Unhandled message: {msg}")
         return False
 
-    def connect_to_kernel(self, kernel_name, connection_file=None):
-        """Connects to an existing kernel manager running on Spine Engine.
+    def connect_to_kernel(self, connection_file=None):
+        """Connects a local kernel client to a kernel manager running on Spine Engine.
 
         Args:
-            kernel_name (str): Kernel name running on Engine
             connection_file (str or None): Path to the connection file of the kernel.
               If None, console is running in detached mode and the connection file is
               already available.
         """
         if connection_file:
             self._engine_connection_file = connection_file
-        self._kernel_starting = True
-        self.kernel_manager = QtKernelManager(kernel_name=kernel_name, connection_file=self._engine_connection_file)
-        self.kernel_manager.load_connection_file()
-        self._replace_client()
+        kc = QtKernelClient(connection_file=self._engine_connection_file)
+        kc.load_connection_file()
+        kc.hb_channel.time_to_dead = JUPYTER_KERNEL_TIME_TO_DEAD  # Not crucial, but nicer to keep the same as mngr
+        kc.start_channels()
+        self.kernel_client = kc  # property in BaseFrontEndMixin()
         # pylint: disable=attribute-defined-outside-init
         self.include_other_output = True
         self.other_output_prefix = ""
-
-    def _replace_client(self):
-        """Replaces local kernel client with a new one. Must be
-        done when starting or restarting a kernel manager."""
-        if self.kernel_manager is None:
-            return
-        kc = self.kernel_manager.client()
-        kc.hb_channel.time_to_dead = JUPYTER_KERNEL_TIME_TO_DEAD  # Not crucial, but nicer to keep the same as mngr
-        kc.start_channels()
-        if self.kernel_client is not None:
-            self.kernel_client.stop_channels()
-        self.kernel_client = kc
 
     def request_restart_kernel(self):
         """Requests the engine to restart the kernel manager."""
@@ -187,57 +168,36 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self._replace_client()
 
     def request_shutdown_kernel_manager(self):
-        """Sends a shut down kernel request to engine."""
+        """Sends a shutdown kernel request to engine."""
         self._engine_manager.shutdown_kernel(self._engine_connection_file)
 
     def name(self):
         """Returns console name for display purposes."""
-        return f"{self.kernel_manager.kernel_name} on Jupyter Console - {self.owner_names}"
+        return f"{self.kernel_name} on Jupyter Console - {self.owner_names}"
 
     @property
     def owner_names(self):
         return " & ".join(x.name for x in self.owners if x is not None)
 
-    def shutdown_local_kernel_manager(self):
-        """Shuts down local kernel manager."""
-        # TODO: Check if this ever gets past the first line
-        if not self.kernel_manager or not self.kernel_manager.is_alive():
-            return
+    def shutdown_kernel_client(self):
+        """Shuts down local kernel client."""
         if self.kernel_client is not None:
             self.kernel_client.stop_channels()
-        self.kernel_manager.shutdown_kernel(now=True)
-        self.kernel_manager.deleteLater()
-        self.kernel_manager = None
         self.kernel_client.deleteLater()
         self.kernel_client = None
 
     def dragEnterEvent(self, e):
-        """Don't accept project item drops."""
+        """Rejects dropped project items."""
         source = e.source()
         if isinstance(source, ProjectItemDragMixin):
             e.ignore()
         else:
             super().dragEnterEvent(e)
 
-    @Slot(dict)
     def _handle_status(self, msg):
-        # TODO: Is this needed?
+        # TODO: Needed?
         """Handles status message."""
         super()._handle_status(msg)
-        kernel_execution_state = msg["content"].get("execution_state", "")
-        if kernel_execution_state == "starting":
-            # This msg does not show up when starting the Console but on Restart it does (strange)
-            self._kernel_starting = True
-            return
-        if kernel_execution_state == "idle" and self._kernel_starting:
-            self._kernel_starting = False
-            self._control.viewport().setCursor(self.normal_cursor)
-
-    def enterEvent(self, event):
-        # TODO: Does this work?
-        """Sets busy cursor during console (re)starts."""
-        if self._kernel_starting:
-            self._control.viewport().setCursor(Qt.BusyCursor)
 
     def _context_menu_make(self, pos):
         """Reimplemented to add actions to console context-menus."""
@@ -247,7 +207,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
                 menu.insertAction(before_action, self._copy_input_action)
                 break
         first_action = menu.actions()[0]
-        self.restart_kernel_action.setEnabled(not self._kernel_starting)
+        self.restart_kernel_action.setEnabled(not self.kernel_client.is_alive())
         menu.insertAction(first_action, self.restart_kernel_action)
         menu.insertSeparator(first_action)
         return menu
