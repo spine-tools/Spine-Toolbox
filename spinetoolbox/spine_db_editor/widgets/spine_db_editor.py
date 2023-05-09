@@ -56,6 +56,7 @@ from ...helpers import (
     busy_effect,
     CharIconEngine,
     preferred_row_height,
+    unique_name,
 )
 from ...spine_db_parcel import SpineDBParcel
 from ...config import APPLICATION_PATH
@@ -636,13 +637,10 @@ class SpineDBEditorBase(QMainWindow):
             scen_id (int)
         """
         orig_name = self.db_mngr.get_item(db_map, "scenario", scen_id)["name"]
-        dup_name, ok = QInputDialog.getText(
-            self, "Duplicate object", "Enter a name for the duplicate object:", text=orig_name + "_copy"
-        )
-        if not ok:
-            return
         parcel = SpineDBParcel(self.db_mngr)
         parcel.full_push_scenario_ids({db_map: {scen_id}})
+        existing_names = {i.name for i in self.db_mngr.get_items(db_map, "scenario", only_visible=False)}
+        dup_name = unique_name(orig_name, existing_names)
         self.db_mngr.duplicate_scenario(parcel.data, dup_name, db_map)
 
     @Slot(object)
