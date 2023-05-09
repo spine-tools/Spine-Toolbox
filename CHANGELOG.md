@@ -43,6 +43,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Logic of executing selected project items. URL's passed by unselected Data Transformers are not included automatically 
   into selective execution anymore. When selecting project items for execution, make sure to select also preceding 
   Data Transformers if needed.
+- Names for duplicate items/scenarios/etc now use the format `prefix (xx)` instead of `prefix xx`.
+  Duplicating a previously duplicated item now has the number `xx` incremented instead of having a new number appended.
 
 ### Deprecated
 
