@@ -85,22 +85,6 @@ class SpineDBCommand(AgedUndoCommand):
 
 
 class AddItemsCommand(SpineDBCommand):
-    _add_command_name = {
-        "entity_class": "add entity classes",
-        "entity": "add entities",
-        "entity_group": "add entity groups",
-        "parameter_definition": "add parameter definitions",
-        "parameter_value": "add parameter values",
-        "parameter_value_list": "add parameter value lists",
-        "list_value": "add parameter value list values",
-        "alternative": "add alternative",
-        "scenario": "add scenario",
-        "scenario_alternative": "add scenario alternative",
-        "metadata": "add metadata",
-        "entity_metadata": "add entity metadata",
-        "parameter_value_metadata": "add parameter value metadata",
-    }
-
     def __init__(self, db_mngr, db_map, item_type, data, check=True, parent=None):
         """
         Args:
@@ -116,14 +100,14 @@ class AddItemsCommand(SpineDBCommand):
         self.redo_data = data
         self.undo_ids = None
         self._check = check
-        self.setText(self._add_command_name.get(item_type, "add item") + f" to '{db_map.codename}'")
+        self.setText(f"add {item_type} items to {db_map.codename}")
 
     def redo(self):
         super().redo()
         if self.undo_ids:
-            self.db_mngr.restore_items(self.db_map, self.item_type, self.undo_ids)
+            self.db_mngr.do_restore_items(self.db_map, self.item_type, self.undo_ids)
             return
-        data = self.db_mngr.add_items(self.db_map, self.item_type, self.redo_data, check=self._check)
+        data = self.db_mngr.do_add_items(self.db_map, self.item_type, self.redo_data, check=self._check)
         if not data:
             self.setObsolete(True)
             return
@@ -135,21 +119,6 @@ class AddItemsCommand(SpineDBCommand):
 
 
 class UpdateItemsCommand(SpineDBCommand):
-    _update_command_name = {
-        "entity_class": "update entity classes",
-        "entity": "update entities",
-        "parameter_definition": "update parameter definitions",
-        "parameter_value": "update parameter values",
-        "parameter_value_list": "update parameter value lists",
-        "list_value": "update parameter value list values",
-        "alternative": "update alternatives",
-        "scenario": "update scenarios",
-        "scenario_alternative": "update scenario alternative",
-        "metadata": "update metadata",
-        "entity_metadata": "update entity metadata",
-        "parameter_value_metadata": "update parameter value metadata",
-    }
-
     def __init__(self, db_mngr, db_map, item_type, data, check=True, parent=None):
         """
         Args:
@@ -162,23 +131,23 @@ class UpdateItemsCommand(SpineDBCommand):
         if not data:
             self.setObsolete(True)
         self.item_type = item_type
-        self.undo_data = [self.db_mngr.get_item(self.db_map, item_type, item["id"]).copy() for item in data]
-        self.redo_data = [undo_item.updated(item) for undo_item, item in zip(self.undo_data, data)]
+        self.undo_data = [self.db_mngr.get_item(self.db_map, item_type, item["id"])._asdict() for item in data]
+        self.redo_data = [{**undo_item, **item} for undo_item, item in zip(self.undo_data, data)]
         if self.redo_data == self.undo_data:
             self.setObsolete(True)
         self._check = check
-        self.setText(self._update_command_name.get(item_type, "update item") + f" in '{db_map.codename}'")
+        self.setText(f"update {item_type} items in {db_map.codename}")
 
     def redo(self):
         super().redo()
-        if not self.db_mngr.update_items(self.db_map, self.item_type, self.redo_data, check=self._check):
+        if not self.db_mngr.do_update_items(self.db_map, self.item_type, self.redo_data, check=self._check):
             self.setObsolete(True)
             return
         self._check = False
 
     def undo(self):
         super().undo()
-        self.db_mngr.update_items(self.db_map, self.item_type, self.undo_data, check=False)
+        self.db_mngr.do_update_items(self.db_map, self.item_type, self.undo_data, check=False)
 
 
 class RemoveItemsCommand(SpineDBCommand):
@@ -195,7 +164,7 @@ class RemoveItemsCommand(SpineDBCommand):
             self.setObsolete(True)
         self.item_type = item_type
         self.ids = ids
-        self.setText(f"remove {item_type} items from '{db_map.codename}'")
+        self.setText(f"remove {item_type} items from {db_map.codename}")
 
     def redo(self):
         super().redo()
@@ -204,4 +173,4 @@ class RemoveItemsCommand(SpineDBCommand):
 
     def undo(self):
         super().undo()
-        self.db_mngr.restore_items(self.db_map, self.item_type, self.ids)
+        self.db_mngr.do_restore_items(self.db_map, self.item_type, self.ids)

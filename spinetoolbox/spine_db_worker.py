@@ -316,22 +316,7 @@ class SpineDBWorker(QObject):
             orig_items (list): dict-items to add
             check (bool): Whether to check integrity
         """
-        method_name = {
-            "entity_class": "add_entity_classes",
-            "entity": "add_entities",
-            "entity_group": "add_entity_groups",
-            "parameter_definition": "add_parameter_definitions",
-            "parameter_value": "add_parameter_values",
-            "parameter_value_list": "add_parameter_value_lists",
-            "list_value": "add_list_values",
-            "alternative": "add_alternatives",
-            "scenario": "add_scenarios",
-            "scenario_alternative": "add_scenario_alternatives",
-            "metadata": "add_metadata",
-            "entity_metadata": "add_ext_entity_metadata",
-            "parameter_value_metadata": "add_ext_parameter_value_metadata",
-        }[item_type]
-        items, errors = getattr(self._db_map, method_name)(*orig_items, check=check)
+        items, errors = self._db_map.add_items(item_type, *orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
@@ -352,21 +337,7 @@ class SpineDBWorker(QObject):
             orig_items (list): dict-items to update
             check (bool): Whether or not to check integrity
         """
-        method_name = {
-            "entity_class": "update_entity_classes",
-            "entity": "update_entities",
-            "parameter_definition": "update_parameter_definitions",
-            "parameter_value": "update_parameter_values",
-            "parameter_value_list": "update_parameter_value_lists",
-            "list_value": "update_list_values",
-            "alternative": "update_alternatives",
-            "scenario": "update_scenarios",
-            "scenario_alternative": "update_scenario_alternatives",
-            "metadata": "update_metadata",
-            "entity_metadata": "update_ext_entity_metadata",
-            "parameter_value_metadata": "update_ext_parameter_value_metadata",
-        }[item_type]
-        items, errors = getattr(self._db_map, method_name)(*orig_items, check=check)
+        items, errors = self._db_map.update_items(item_type, *orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
