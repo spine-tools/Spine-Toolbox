@@ -49,11 +49,11 @@ class TestAddProjectItemWidget(unittest.TestCase):
 
     def test_name_field_initially_selected(self):
         widget = AddProjectItemWidget(self._toolbox, 0.0, 0.0, class_=TestProjectItem)
-        self.assertEqual(widget.ui.lineEdit_name.selectedText(), "TestItemType (1)")
+        self.assertEqual(widget.ui.lineEdit_name.selectedText(), "TestItemType")
 
     def test_find_item_is_used_to_create_prefix(self):
         widget = AddProjectItemWidget(self._toolbox, 0.0, 0.0, class_=TestProjectItem)
-        self.assertEqual(widget.ui.lineEdit_name.text(), "TestItemType (1)")
+        self.assertEqual(widget.ui.lineEdit_name.text(), "TestItemType")
 
 
 class TestAddProjectItemWidgetWithSpecifications(unittest.TestCase):
