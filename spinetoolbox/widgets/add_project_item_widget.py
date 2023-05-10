@@ -59,7 +59,8 @@ class AddProjectItemWidget(QWidget):
         else:
             prefix = class_.item_type()
             self.ui.comboBox_specification.setEnabled(False)
-        self.name = unique_name(prefix, toolbox.project().all_item_names)
+        existing_item_names = toolbox.project().all_item_names
+        self.name = unique_name(prefix, existing_item_names) if prefix in existing_item_names else prefix
         self.ui.lineEdit_name.setText(self.name)
         self.ui.lineEdit_name.selectAll()
         self.description = ""
