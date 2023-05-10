@@ -80,11 +80,11 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         # Inspired by jupyter_client/tests/test_client.py
         with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.connect_to_kernel()
-        jcw.kernel_client.shell_channel.msg_recv.wait()
+        jcw.kernel_client.shell_channel.msg_recv.wait(timeout=10)
         reply = jcw.kernel_client.shell_channel.last_msg
         self.assertTrue(jcw.kernel_client.is_alive())
         jcw.kernel_client.execute("print('0')")
-        jcw.kernel_client.iopub_channel.msg_recv.wait()
+        jcw.kernel_client.iopub_channel.msg_recv.wait(timeout=10)
         reply2 = jcw.kernel_client.iopub_channel.last_msg
         jcw.request_shutdown_kernel_manager()
         self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
