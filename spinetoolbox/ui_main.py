@@ -93,6 +93,7 @@ from .helpers import (
     load_specification_local_data,
     same_path,
     solve_connection_file,
+    unique_name,
 )
 from .project_commands import (
     AddSpecificationCommand,
@@ -204,7 +205,6 @@ class ToolboxUI(QMainWindow):
         self.set_debug_qactions()
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
-        self._proposed_item_name_counts = dict()
         self.restore_dock_widgets()
         self.restore_ui()
         self.ui.listView_console_executions.hide()
@@ -2057,7 +2057,7 @@ class ToolboxUI(QMainWindow):
         for name, item_dict in items_dict.items():
             item_dict["duplicate_files"] = duplicate_files
             if self.project_item_model.find_item(name) is not None:
-                new_name = self.propose_item_name(name)
+                new_name = unique_name(name, self.project().all_item_names)
                 final_items_dict[new_name] = item_dict
             else:
                 final_items_dict[name] = item_dict
@@ -2099,28 +2099,6 @@ class ToolboxUI(QMainWindow):
         if not item_dicts:
             return
         self._deserialize_items(item_dicts, duplicate_files)
-
-    def propose_item_name(self, prefix):
-        """Proposes a name for a project item.
-
-        The format is `prefix_xx` where `xx` is a counter value [01..99].
-
-        Args:
-            prefix (str): a prefix for the name
-
-        Returns:
-            str: a name string
-        """
-        name_count = self._proposed_item_name_counts.setdefault(prefix, 0)
-        name = prefix + " {}".format(name_count + 1)
-        if self.project_item_model.find_item(name) is not None:
-            if name_count == 98:
-                # Avoiding too deep recursions.
-                raise RuntimeError("Ran out of numbers: cannot find suitable name for project item.")
-            # Increment index recursively if name is already in project.
-            self._proposed_item_name_counts[prefix] += 1
-            name = self.propose_item_name(prefix)
-        return name
 
     def _share_item_edit_actions(self):
         """Adds generic actions to project tree view and Design View."""

@@ -748,33 +748,6 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(tasks, ["prompt exit", "save"])
         self.toolbox._project = None
 
-    def test_propose_item_name(self):
-        class MockModel:
-            def __init__(self):
-                self.finds = list()
-                self.find_count = 0
-
-            def find_item(self, _):
-                found = self.finds[self.find_count]
-                self.find_count += 1
-                return found
-
-            remove_leaves = mock.MagicMock()
-
-        self.toolbox.project_item_model = namedtuple("model", ["find_name"])
-        self.toolbox.project_item_model = MockModel()
-        self.toolbox.project_item_model.finds = [None]
-        name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix 1")
-        # Subsequent calls should not increase the counter
-        self.toolbox.project_item_model.find_count = 0
-        name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix 1")
-        self.toolbox.project_item_model.finds = [object(), object(), None]
-        self.toolbox.project_item_model.find_count = 0
-        name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix 3")
-
     def test_copy_project_item_to_clipboard(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
@@ -801,7 +774,7 @@ class TestToolboxUI(unittest.TestCase):
         self.toolbox.ui.actionCopy.triggered.emit()
         self.toolbox.ui.actionPaste.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
-        new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
+        new_item_index = self.toolbox.project_item_model.find_item("data_connection (1)")
         self.assertIsNotNone(new_item_index)
 
     def test_duplicate_project_item(self):
@@ -814,7 +787,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
             self.toolbox.ui.actionDuplicate.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
-        new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
+        new_item_index = self.toolbox.project_item_model.find_item("data_connection (1)")
         self.assertIsNotNone(new_item_index)
 
     def test_persistent_console_requested(self):

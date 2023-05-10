@@ -17,6 +17,7 @@ from PySide6.QtWidgets import QWidget, QStatusBar
 from PySide6.QtCore import Slot, Qt
 from spine_engine.utils.helpers import shorten
 from ..config import STATUSBAR_SS
+from ..helpers import unique_name
 from ..project import ItemNameStatus
 
 
@@ -58,7 +59,8 @@ class AddProjectItemWidget(QWidget):
         else:
             prefix = class_.item_type()
             self.ui.comboBox_specification.setEnabled(False)
-        self.name = toolbox.propose_item_name(prefix)
+        existing_item_names = toolbox.project().all_item_names
+        self.name = unique_name(prefix, existing_item_names) if prefix in existing_item_names else prefix
         self.ui.lineEdit_name.setText(self.name)
         self.ui.lineEdit_name.selectAll()
         self.description = ""

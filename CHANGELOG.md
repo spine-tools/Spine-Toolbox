@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   for filtering in Link properties.
 - The new "Filer validation" button in Link properties allows forcing at least one scenario or tool
   filter to be checked.
-- Python 3.11 support
+- Python 3.11 support.
 - PySide6 support. The app has been ported from PySide2 to PySide6.
 - In addition to dragging and dropping, 
   it is now possible to copy alternatives from Alternative tree and paste them to the scenario tree
@@ -21,8 +21,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Scenarios can now be duplicated in Database editor.
 - Tool project item's Python and Julia consoles can now be killed from the right-click context menu.
   A killed console can be restored by restarting it.
-- A new option "Kill consoles at the end of execution" has been added to Tool properties
+- A new option "Kill consoles at the end of execution" has been added to Tool properties.
   that kills Python and Julia console processes after execution saving some memory and computing resources.
+- You can now open a 'Detached' Jupyter Console on any kernel you have installed in your system from the *Consoles*
+  main window menu.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools
@@ -43,6 +45,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Logic of executing selected project items. URL's passed by unselected Data Transformers are not included automatically 
   into selective execution anymore. When selecting project items for execution, make sure to select also preceding 
   Data Transformers if needed.
+- Names for duplicate items/scenarios/etc now use the format `prefix (xx)` instead of `prefix xx`.
+  Duplicating a previously duplicated item now has the number `xx` incremented instead of having a new number appended.
 
 ### Deprecated
 
