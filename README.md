@@ -10,7 +10,8 @@ Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badg
 [![PyPI version](https://badge.fury.io/py/spinetoolbox.svg)](https://badge.fury.io/py/spinetoolbox)
 [![Join the chat at https://gitter.im/spine-tools/Spine-Toolbox](https://badges.gitter.im/spine-tools/Spine-Toolbox.svg)](https://gitter.im/spine-tools/Spine-Toolbox?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Spine Toolbox is an open source Python package to manage data, scenarios and workflows for modelling and simulation. You can have your local workflow, but work as a team through version control and SQL databases.
+Spine Toolbox is an open source Python package to manage data, scenarios and workflows for modelling and simulation. 
+You can have your local workflow, but work as a team through version control and SQL databases.
 
 ## Programming language
 
@@ -34,7 +35,10 @@ Guide.
 
 If you use Spine Toolbox in a published work, please cite the following publication (Chicago/Turabian Style).
 
-Kiviluoma Juha, Pallonetto Fabiano, Marin Manuel, Savolainen Pekka T., Soininen Antti, Vennström Per, Rinne Erkka, Huang Jiangyi, Kouveliotis-Lysikatos Iasonas, Ihlemann Maren, Delarue Erik, O’Dwyer Ciara, O’Donnel Terence, Amelin Mikael, Söder Lennart, and Dillon Joseph. 2022. "Spine Toolbox: A flexible open-source workflow management system with scenario and data management" SoftwareX, Vol. 17, 100967, https://doi.org/10.1016/j.softx.2021.100967.
+Kiviluoma Juha, Pallonetto Fabiano, Marin Manuel, Savolainen Pekka T., Soininen Antti, Vennström Per, Rinne Erkka, 
+Huang Jiangyi, Kouveliotis-Lysikatos Iasonas, Ihlemann Maren, Delarue Erik, O’Dwyer Ciara, O’Donnel Terence, 
+Amelin Mikael, Söder Lennart, and Dillon Joseph. 2022. "Spine Toolbox: A flexible open-source workflow management 
+system with scenario and data management" SoftwareX, Vol. 17, 100967, https://doi.org/10.1016/j.softx.2021.100967.
 
 ## Installation
 
@@ -54,11 +58,15 @@ apply to Linux and Mac where applicable.
 
 2. If you want to use Python 3.10 or 3.11 on Windows, please install **Microsoft Visual C++ 14.0 or greater** on 
    Windows. Get it with *Microsoft C++ Build Tools*: 
-   https://visualstudio.microsoft.com/visual-cpp-build-tools/. (Earlier versions of Python use earlier versions of C++ libraries that should be available with Windows.)
+   https://visualstudio.microsoft.com/visual-cpp-build-tools/. (Earlier versions of Python use earlier versions of 
+   C++ libraries that should be available with Windows.)
    
 3. If you don't have Git, Windows version can be found here: https://git-scm.com/download/win.
 
-4. Open a terminal (e.g., Command Prompt). Windows: If you will have issues with Python and/or git not found in the path, then you can add them to the environment variables manually. This can be done from Windows Control Panel (use find with 'environmental') or from a command prompt using `set PATH=%PATH%;[path-to-executable]` e.g. `set PATH=%PATH%;C:\Users\my_user_name\AppData\Local\Programs\Git\Cmd`. 
+4. Open a terminal (e.g., Command Prompt). Windows: If you have issues with Python and/or git not found in path, 
+   you can add the paths to environment variables manually. This can be done from Windows Control Panel 
+   (use find with 'environmental') or from a command prompt using `set PATH=%PATH%;[path-to-executable]` e.g. 
+   `set PATH=%PATH%;C:\Users\my_user_name\AppData\Local\Programs\Git\Cmd`. 
 
 5. Get the latest version of `pip` (pip is a package manager for Python)
 
@@ -72,7 +80,8 @@ apply to Linux and Mac where applicable.
 
 7. Restart the terminal or re-login for the changes of the latest command to take effect.
 
-8. Choose which Toolbox version to install (**NOTE: There is no release version for Python 3.11, yet**). Latest *release* version is installed using 
+8. Choose which Toolbox version to install (**NOTE: There is no release version for Python 3.11, yet**). Latest 
+   *release* version is installed using 
 
         python -m pipx install spinetoolbox
 
@@ -84,8 +93,8 @@ That’s it! To launch Spine Toolbox, open a terminal and run
 
     spinetoolbox
 
-If for some reason the command is not found, the executable can be found under 
-`~/.local/bin` (`%USERPROFILE%\.local\bin` on Windows).
+If for some reason the command is not found, the executable can be found under `~/.local/bin` 
+(`%USERPROFILE%\.local\bin` on Windows).
 
 To update Spine Toolbox to the latest available release, open a terminal and run
 
@@ -96,38 +105,42 @@ development version.
 
 ### Installation from sources using Git
 
-This option is for developers and other contributors who want to debug or 
-edit Spine Toolbox source code. First, follow the instructions above to 
-install Python and get the latest version of pip.
+This option is for developers and other contributors who want to debug or edit Spine Toolbox source code. First, 
+follow the instructions above to install Python and get the latest version of pip.
 
-0. Make sure you have git: https://git-scm.com/download/win
+1. Make sure you have git: https://git-scm.com/download/win
 
-1. Clone or download the source code from this repository.
+2. Clone or download the source code from this repository.
    
-2. Browse to the folder where Spine Toolbox was cloned and create a Python virtual environment using
+3. Browse to the folder where Spine Toolbox was cloned and create a Python virtual environment using
 
         python -m venv .venv
     
     Make sure you have the right Python version in the system path, or then use the full path of the Python 
     version you want to use.
-
-    Instead of venv, one can also use a new [conda](https://docs.conda.io/projects/conda/) environment using e.g.
+    <br>
+    <br>
+    Instead of venv, one can also use a 
+    [miniconda](https://docs.conda.io/projects/conda/en/stable/glossary.html#miniconda-glossary) environment. You 
+    can [download miniconda from here](https://docs.conda.io/en/latest/miniconda.html). **Note: Anaconda 
+    environments are not supported.** Create a new miniconda environment without linking packages from the base 
+    environment for e.g. Python 3.9 using
 
         conda create -n spinetoolbox python=3.9
     
-3. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
+4. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
    or `source .venv/bin/activate` (bash, zsh) or `conda activate spinetoolbox`. 
 
-4. Make sure that the terminal prompt indicates the active environment
+5. Make sure that the terminal prompt indicates the active environment
    and get the latest version of `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-5. Install Spine Toolbox along with its dependencies with
+6. Install Spine Toolbox along with its dependencies with
 
         python -m pip install -r requirements.txt
     
-6. (Optional) Install additional development packages with
+7. (Optional) Install additional development packages with
 
         python -m pip install -r dev-requirements.txt
 
@@ -159,8 +172,8 @@ See file `setup.cfg` and `requirements.txt` for packages required to run Spine T
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
 
 The requirements include three packages ([`spinedb_api`](https://github.com/spine-tools/Spine-Database-API),
-[`spine_engine`](https://github.com/spine-tools/spine-engine), and [`spine_items`](https://github.com/spine-tools/spine-items)),
-developed by the Spine project consortium.
+[`spine_engine`](https://github.com/spine-tools/spine-engine), and 
+[`spine_items`](https://github.com/spine-tools/spine-items)), developed by the Spine project consortium.
 
 ### Building the User Guide
 
@@ -176,6 +189,13 @@ index page can be found in `docs/build/html/index.html`. The User Guide can also
 be opened from Spine Toolbox menu Help->User Guide (F2).
 
 ### Troubleshooting
+
+#### Obscure crashes that may produce a traceback related to PySide6's model classes
+
+The first thing is to make sure that you are not using Anaconda. Only Miniconda is supported. Anaconda's base 
+environment includes Qt related packages and we suspect that they leak some shared Qt libraries into environments,
+even when specifically requesting that base environment packages should not be linked to environment packages. See
+also [Problems in starting the application](#problems-in-starting-the-application) below.
 
 #### Installation fails
 
@@ -212,7 +232,7 @@ should check is that you don't have `Qt`, `PyQt4`, `PyQt5`, `PySide`, `PySide2`,
 `PySide6` packages installed in the same environment. These do not play nice together 
 and may introduce conflicts. In addition, make sure that you do not have multiple versions 
 of these `Qt` related packages installed in the same environment. The easiest way 
-to solve this problem is to create a blank (e.g. virtual environment) Python 
+to solve this problem is to create a blank (e.g. venv virtual environment) Python 
 environment just for `PySide6` applications and installing the requirements again.
 
 **Warning: Using the *conda-forge* channel for installing the requirements is not 
@@ -297,10 +317,13 @@ already open in the issue tracker.
 <tr>
 <td valign="middle" width=100px>
 <img src=fig/eu-emblem-low-res.jpg alt="EU emblem" width=100%></td>
-<td valign="middle">This work has been partially supported by EU project Mopo (2023-2026), which has received funding from European Climate, Infrastructure and Environment Executive Agency under the European Union’s HORIZON Research and Innovation Actions under grant agreement N°101095998.</td>
+<td valign="middle">This work has been partially supported by EU project Mopo (2023-2026), which has received funding 
+from European Climate, Infrastructure and Environment Executive Agency under the European Union’s HORIZON Research and 
+Innovation Actions under grant agreement N°101095998.</td>
 <tr>
 <td valign="middle" width=100px>
 <img src=fig/eu-emblem-low-res.jpg alt="EU emblem" width=100%></td>
-<td valign="middle">This work has been partially supported by EU project Spine (2017-2021), which has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 774629.</td>
+<td valign="middle">This work has been partially supported by EU project Spine (2017-2021), which has received funding 
+from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 774629.</td>
 </table>
 </center>
