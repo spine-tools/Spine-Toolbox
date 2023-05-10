@@ -16,11 +16,9 @@ Class for a custom RichJupyterWidget that can run Tool instances.
 import logging
 import multiprocessing
 from queue import Empty
-from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QAction
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
-from qtconsole.manager import QtKernelManager
 from qtconsole.client import QtKernelClient
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
@@ -162,7 +160,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.other_output_prefix = ""
 
     def request_restart_kernel(self):
-        """Requests the engine to restart the kernel manager."""
+        """FIXME: Requests the engine to restart the kernel manager."""
         self._engine_manager.restart_kernel(self._engine_connection_file)
         self._replace_client()
 
@@ -192,21 +190,6 @@ class JupyterConsoleWidget(RichJupyterWidget):
             e.ignore()
         else:
             super().dragEnterEvent(e)
-
-    def _handle_status(self, msg):
-        # TODO: Needed?
-        """Handles status message. These appear only when we let
-         Qt process the QApplication events (ie. not in tests)."""
-        print(f"status:{msg}")
-        super()._handle_status(msg)
-
-    def _handle_kernel_info_reply(self, msg):
-        print(f"handle_kernel_info_reply:{msg}")
-        super()._handle_kernel_info_reply(msg)
-
-    def _handle_display_data(self, msg):
-        print(f"handle_display_data:{msg}")
-        super()._handle_display_data(msg)
 
     def _context_menu_make(self, pos):
         """Reimplemented to add actions to console context-menus."""
