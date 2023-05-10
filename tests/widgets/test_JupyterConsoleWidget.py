@@ -13,11 +13,15 @@
 Unit tests for the JupyterConsoleWidget.
 """
 
+import time
 import unittest
 from unittest import mock
 from threading import Event
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Slot, QObject
+from PySide6.QtGui import QIcon
 from spinetoolbox.widgets.jupyter_console_widget import JupyterConsoleWidget
+from spinetoolbox.widgets.console_window import ConsoleWindow
 from spine_engine.execution_managers.kernel_execution_manager import _kernel_manager_factory
 from jupyter_client.kernelspec import NATIVE_KERNEL_NAME
 from jupyter_client.threaded import ThreadedKernelClient
@@ -36,8 +40,21 @@ class CustomQtZMQSocketChannel(QtZMQSocketChannel):
         super().__init__(*args, **kwargs)
 
     def call_handlers(self, msg):
-        self.last_msg = msg
-        self.msg_recv.set()
+        super().call_handlers(msg)
+        msg_type = msg["header"]["msg_type"]
+        if msg_type == "status":
+            execution_state = msg["content"]["execution_state"]
+            print(f"status: execution_state:{execution_state}")
+        elif msg_type == "kernel_info_reply":
+            kernel_status = msg["content"]["status"]
+            print(f"Kernel connected: {kernel_status}")
+            self.last_msg = msg
+            self.msg_recv.set()
+        elif msg_type == "execute_reply":
+            status = msg["content"]["status"]
+            self.last_msg = msg
+            self.msg_recv.set()
+        # time.sleep(2)
 
 
 class CustomThreadedKernelClient(ThreadedKernelClient):
@@ -45,7 +62,6 @@ class CustomThreadedKernelClient(ThreadedKernelClient):
     iopub_channel_class = Type(CustomQtZMQSocketChannel)
     shell_channel_class = Type(CustomQtZMQSocketChannel)
     stdin_channel_class = Type(CustomQtZMQSocketChannel)
-    control_channel_class = Type(CustomQtZMQSocketChannel)
 
 
 class CustomQtKernelClient(QtKernelClientMixin, CustomThreadedKernelClient):
@@ -70,22 +86,27 @@ class TestJupyterConsoleWidget(unittest.TestCase):
     def test_make_jupyter_console_widget(self):
         jcw = JupyterConsoleWidget(self.toolbox, kernel_name="testkernel")
         self.assertIsInstance(jcw, JupyterConsoleWidget)
+        self.assertIsInstance(jcw, QObject)
 
     def test_connect_jcw_to_kernel_manager_on_engine(self):
         jcw = JupyterConsoleWidget(self.toolbox, NATIVE_KERNEL_NAME)
-        success = jcw.request_start_kernel()
+        cw = ConsoleWindow(self.toolbox, jcw, QIcon())
+        success = cw.console().request_start_kernel()
         self.assertTrue(success)
         self.assertEqual(1, _kernel_manager_factory.n_kernel_managers())
         # Replace QtKernelClient class with a custom one
         # Inspired by jupyter_client/tests/test_client.py
         with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.connect_to_kernel()
-        jcw.kernel_client.shell_channel.msg_recv.wait(timeout=10)
-        reply = jcw.kernel_client.shell_channel.last_msg
-        self.assertTrue(jcw.kernel_client.is_alive())
+            jcw.kernel_client.shell_channel.msg_recv.wait(timeout=10)
+            reply = jcw.kernel_client.shell_channel.last_msg
+            print(f"reply:{reply}")
+            self.assertTrue(jcw.kernel_client.is_alive())
         jcw.kernel_client.execute("print('0')")
-        jcw.kernel_client.iopub_channel.msg_recv.wait(timeout=10)
-        reply2 = jcw.kernel_client.iopub_channel.last_msg
+        jcw.kernel_client.shell_channel.msg_recv.wait(timeout=10)
+        execute_reply = jcw.kernel_client.shell_channel.last_msg
+        print(f"execute_reply:{execute_reply}")
+        self.assertTrue(execute_reply["content"]["status"] == "ok")
         jcw.request_shutdown_kernel_manager()
         self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
         jcw.shutdown_kernel_client()

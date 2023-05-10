@@ -51,7 +51,6 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.kernel_name = kernel_name
         self.owners = {owner}
         self.kernel_client = None
-        self.blocking_client = None
         self._engine_connection_file = None
         self._execution_manager = None
         exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
@@ -196,8 +195,18 @@ class JupyterConsoleWidget(RichJupyterWidget):
 
     def _handle_status(self, msg):
         # TODO: Needed?
-        """Handles status message."""
+        """Handles status message. These appear only when we let
+         Qt process the QApplication events (ie. not in tests)."""
+        print(f"status:{msg}")
         super()._handle_status(msg)
+
+    def _handle_kernel_info_reply(self, msg):
+        print(f"handle_kernel_info_reply:{msg}")
+        super()._handle_kernel_info_reply(msg)
+
+    def _handle_display_data(self, msg):
+        print(f"handle_display_data:{msg}")
+        super()._handle_display_data(msg)
 
     def _context_menu_make(self, pos):
         """Reimplemented to add actions to console context-menus."""
