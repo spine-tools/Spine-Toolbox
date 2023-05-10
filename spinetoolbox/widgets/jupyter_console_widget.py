@@ -183,8 +183,8 @@ class JupyterConsoleWidget(RichJupyterWidget):
         """Shuts down local kernel client."""
         if self.kernel_client is not None:
             self.kernel_client.stop_channels()
-        self.kernel_client.deleteLater()
-        self.kernel_client = None
+            self.kernel_client.deleteLater()
+            self.kernel_client = None
 
     def dragEnterEvent(self, e):
         """Rejects dropped project items."""
