@@ -163,11 +163,9 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
     def restart_kernel(self, connection_file):
         # pylint: disable=import-outside-toplevel
-        from spine_engine.execution_managers.kernel_execution_manager import get_kernel_manager
+        from spine_engine.execution_managers.kernel_execution_manager import restart_kernel_manager
 
-        km = get_kernel_manager(connection_file)
-        if km is not None:
-            km.restart_kernel(now=True)
+        return restart_kernel_manager(connection_file)
 
     def shutdown_kernel(self, connection_file):
         # pylint: disable=import-outside-toplevel

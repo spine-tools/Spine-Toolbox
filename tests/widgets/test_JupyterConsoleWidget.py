@@ -34,7 +34,8 @@ class CustomQtZMQSocketChannel(QtZMQSocketChannel):
     last_msg = None
 
     def __init__(self, *args, **kwargs):
-        self.msg_recv = Event()
+        self.kernel_info_event = Event()
+        self.execute_reply_event = Event()
         super().__init__(*args, **kwargs)
 
     def call_handlers(self, msg):
@@ -45,11 +46,11 @@ class CustomQtZMQSocketChannel(QtZMQSocketChannel):
         elif msg_type == "kernel_info_reply":
             # When this appears after calling connect_to_kernel(), kernel client should be connected and ready to go
             self.last_msg = msg
-            self.msg_recv.set()
+            self.kernel_info_event.set()
         elif msg_type == "execute_reply":
             # These are replies to execute_request's, ['content']['status'] tells if execution succeeded
             self.last_msg = msg
-            self.msg_recv.set()
+            self.execute_reply_event.set()
 
 
 class CustomThreadedKernelClient(ThreadedKernelClient):
@@ -92,14 +93,17 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         # Inspired by jupyter_client/tests/test_client.py
         with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.connect_to_kernel()
-        # Wait until we get a kernel_info_reply with status == "ok" -> assume we're connected
-        jcw.kernel_client.shell_channel.msg_recv.wait(timeout=10)
+        # Wait until we get a kernel_info_reply
+        jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)
         kernel_info_reply = jcw.kernel_client.shell_channel.last_msg
+        # If status == "ok" -> assume we're connected
         self.assertTrue(kernel_info_reply["content"]["status"] == "ok")
         self.assertTrue(jcw.kernel_client.is_alive())
         jcw.kernel_client.execute("print('hi')")
-        jcw.kernel_client.shell_channel.msg_recv.wait(timeout=10)
+        # Wait until an execute_reply is received
+        jcw.kernel_client.shell_channel.execute_reply_event.wait(timeout=10)
         execute_reply = jcw.kernel_client.shell_channel.last_msg
+        # Check that command was executed successfully
         self.assertTrue(execute_reply["content"]["status"] == "ok")
         jcw.request_shutdown_kernel_manager()
         self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())

@@ -61,10 +61,10 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self._copy_input_action.setEnabled(False)
         self.copy_available.connect(self._copy_input_action.setEnabled)
         self.restart_kernel_action = QAction("Restart", self)
-        self.restart_kernel_action.triggered.connect(self.request_restart_kernel)
+        self.restart_kernel_action.triggered.connect(self.request_restart_kernel_manager)
 
     def request_start_kernel(self, conda=False):
-        """Requests engine to launch a kernel manager for the given kernel_name.
+        """Requests Spine Engine to launch a kernel manager for the given kernel_name.
 
         Args:
             conda (bool): Conda kernel or not
@@ -154,15 +154,17 @@ class JupyterConsoleWidget(RichJupyterWidget):
         kc.load_connection_file()
         kc.hb_channel.time_to_dead = JUPYTER_KERNEL_TIME_TO_DEAD  # Not crucial, but nicer to keep the same as mngr
         kc.start_channels()
-        self.kernel_client = kc  # property in BaseFrontEndMixin()
+        self.kernel_client = kc  # property in BaseFrontEndMixin(). Handles closing previous client connections.
         # pylint: disable=attribute-defined-outside-init
         self.include_other_output = True
         self.other_output_prefix = ""
 
-    def request_restart_kernel(self):
-        """FIXME: Requests the engine to restart the kernel manager."""
-        self._engine_manager.restart_kernel(self._engine_connection_file)
-        self._replace_client()
+    def request_restart_kernel_manager(self):
+        """Restarts kernel manager on Engine and connect a new kernel client to it."""
+        if not self._engine_manager.restart_kernel(self._engine_connection_file):
+            self._toolbox.msg_error.emit("Restarting kernel manager failed")
+            return
+        self.connect_to_kernel()
 
     def request_shutdown_kernel_manager(self):
         """Sends a shutdown kernel request to engine."""
@@ -199,7 +201,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
                 menu.insertAction(before_action, self._copy_input_action)
                 break
         first_action = menu.actions()[0]
-        self.restart_kernel_action.setEnabled(not self.kernel_client.is_alive())
+        self.restart_kernel_action.setEnabled(self.kernel_client.is_alive())
         menu.insertAction(first_action, self.restart_kernel_action)
         menu.insertSeparator(first_action)
         return menu
