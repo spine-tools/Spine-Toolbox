@@ -214,8 +214,11 @@ class KernelsPopupMenu(CustomPopupMenu):
                 ico = self.get_icon(k["resource_dir"])
                 self.add_action(
                     k["name"],
-                    lambda checked=False, kname=k["name"], icon=ico, conda=k["conda"]: self.call_open_console(checked, kname, icon, conda),
-                    tooltip=k["resource_dir"], icon=ico,
+                    lambda checked=False, kname=k["name"], icon=ico, conda=k["conda"]: self.call_open_console(
+                        checked, kname, icon, conda
+                    ),
+                    tooltip=k["resource_dir"],
+                    icon=ico,
                 )
         else:
             self.add_action("No kernels found", lambda: None)

@@ -72,7 +72,6 @@ from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.jump_properties_widget import JumpPropertiesWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
-from .widgets.console_window import ConsoleWindow
 from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
@@ -137,9 +136,8 @@ class ToolboxUI(QMainWindow):
         self._qsettings = QSettings("SpineProject", "Spine Toolbox", self)
         self._update_qsettings()
         locale.setlocale(locale.LC_NUMERIC, 'C')
-        # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.ui.setupUi(self)  # Set up gui widgets from Qt Designer files
         self.label_item_name = QLabel()
         self._button_item_dir = QToolButton()
         self._properties_title = QWidget()
@@ -185,12 +183,11 @@ class ToolboxUI(QMainWindow):
         )
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self.setStatusBar(None)
-        self.detached_jupyter_consoles = {}  # Mapping of kernel name to ConsoleWindow
         # Additional consoles for item execution
         self._item_consoles = {}
         self._filter_item_consoles = {}
-        self._persistent_consoles = {}
-        self._jupyter_consoles = {}
+        self._persistent_consoles = {}  # TODO: Get rid of this
+        self._jupyter_consoles = {}  # Mapping of connection file to JupyterConsoleWidget
         self._current_execution_keys = {}
         # Setup main window menu
         self.add_zoom_action()
@@ -816,7 +813,7 @@ class ToolboxUI(QMainWindow):
         self._restore_original_console()
         self.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self._shutdown_engine_kernels()
-        self._close_item_consoles()
+        self._close_consoles()
 
     def undo_critical_commands(self):
         """Undoes critical commands in the undo stack.
@@ -1777,13 +1774,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionDuplicate.setEnabled(True)
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(True)
 
-    def tear_down_consoles(self):
-        """Closes the detached Jupyter Consoles if running."""
-        while self.detached_jupyter_consoles:
-            c = self.detached_jupyter_consoles.popitem()[1]  # kernel_name by ConsoleWindow
-            if c is not None:
-                c.close()
-
     def _tasks_before_exit(self):
         """
         Returns a list of tasks to perform before exiting the application.
@@ -1971,8 +1961,8 @@ class ToolboxUI(QMainWindow):
         # Save number of screens
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
-        self.tear_down_consoles()
-        self._close_item_consoles()
+        self._shutdown_engine_kernels()
+        self._close_consoles()
         if self._project is not None:
             self._project.tear_down()
         for item_type in self.item_factories:
@@ -2338,28 +2328,24 @@ class ToolboxUI(QMainWindow):
             icon (QIcon): Icon representing the kernel language
             conda (bool): Is this a Conda kernel?
         """
-        if kernel_name not in self.detached_jupyter_consoles.keys():
-            self.msg.emit(f"Starting kernel {kernel_name} in a detached Jupyter Console")
-            c = JupyterConsoleWidget(self, kernel_name, owner=None)
-            cw = ConsoleWindow(self, c, icon)
-            if not cw.console().request_start_kernel(conda):
+        for cw in self._jupyter_consoles.values():
+            if cw.kernel_name == kernel_name:
+                # Console running the requested kernel already exists, show and activate it
+                if cw.isMinimized():
+                    cw.showNormal()
+                cw.activateWindow()
                 return
-            cw.set_window_title(kernel_name)
-            cw.closed.connect(self._clean_up_detached_console_ref)
-            cw.console().connect_to_kernel()
-            self.detached_jupyter_consoles[kernel_name] = cw
-        else:
-            if self.detached_jupyter_consoles[kernel_name].isMinimized():
-                self.detached_jupyter_consoles[kernel_name].showNormal()
-            self.detached_jupyter_consoles[kernel_name].activateWindow()
-
-    @Slot(str)
-    def _clean_up_detached_console_ref(self, kernel_name):
-        """Removes ConsoleWindow reference."""
-        ref = self.detached_jupyter_consoles.pop(kernel_name, None)
-        if not ref:
+        self.msg.emit(f"Starting kernel {kernel_name} in a detached Jupyter Console")
+        c = JupyterConsoleWidget(self, kernel_name, owner=None)
+        connection_file = c.request_start_kernel(conda)
+        if not connection_file:
             return
-        ref.deleteLater()
+        c.set_connection_file(connection_file)
+        c.setWindowIcon(icon)
+        c.setWindowTitle(f"{kernel_name} on Jupyter Console [Detached]")
+        c.connect_to_kernel()
+        self._jupyter_consoles[connection_file] = c
+        c.show()
 
     @Slot(object, str, str, str, dict)
     def _setup_jupyter_console(self, item, filter_id, kernel_name, connection_file, connection_file_dict):
@@ -2430,7 +2416,8 @@ class ToolboxUI(QMainWindow):
             console.owners.add(item)
             return console
         console = self._jupyter_consoles[connection_file] = JupyterConsoleWidget(self, kernel_name, owner=item)
-        console.connect_to_kernel(connection_file)
+        console.set_connection_file(connection_file)
+        console.connect_to_kernel()
         return console
 
     def _make_persistent_console(self, item, key, language):
@@ -2458,13 +2445,18 @@ class ToolboxUI(QMainWindow):
         for connection_file in self._jupyter_consoles:
             engine_mngr.shutdown_kernel(connection_file)
 
-    def _close_item_consoles(self):
+    def _close_consoles(self):
+        """Closes Persistent and Jupyter Console widgets."""
+        # TODO: Get rid of _persistent_consoles and close _item_consoles and _filtered_item_consoles here
         while self._persistent_consoles:
             self._persistent_consoles.popitem()[1].close()
         while self._jupyter_consoles:
-            self._jupyter_consoles.popitem()[1].kernel_client.stop_channels()
+            c = self._jupyter_consoles.popitem()[1]
+            c.shutdown_kernel_client()
+            c.close()
 
     def restore_and_activate(self):
+        """Brings the app main window into focus."""
         if self.isMinimized():
             self.showNormal()
         self.activateWindow()

@@ -171,7 +171,7 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         # pylint: disable=import-outside-toplevel
         from spine_engine.execution_managers.kernel_execution_manager import shutdown_kernel_manager
 
-        shutdown_kernel_manager(connection_file)
+        return shutdown_kernel_manager(connection_file)
 
     def kernel_managers(self):
         # pylint: disable=import-outside-toplevel

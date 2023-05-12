@@ -51,13 +51,13 @@ class ConsoleWindow(QMainWindow):
         self.setWindowTitle(f"{kernel_name} on Jupyter Console [Detached]")
 
     def closeEvent(self, e):
-        """Shuts down the running kernel closes the window.
+        """Shuts down the running kernel manager and client and closes the window.
 
         Args:
             e (QCloseEvent): Event
         """
-        kernel_name = self._console.kernel_name
+        connection_file = self._console._engine_connection_file
         self._console.request_shutdown_kernel_manager()
         self._console.shutdown_kernel_client()
-        self.closed.emit(kernel_name)
+        self.closed.emit(connection_file)
         super().closeEvent(e)

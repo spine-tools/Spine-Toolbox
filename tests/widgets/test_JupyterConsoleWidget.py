@@ -42,7 +42,7 @@ class CustomQtZMQSocketChannel(QtZMQSocketChannel):
         super().call_handlers(msg)
         msg_type = msg["header"]["msg_type"]
         if msg_type == "status":
-            pass  # you can get the msg["content"]["execution_state"], which is e.g. 'idle' or 'busy here if needed
+            pass  # you can get the msg["content"]["execution_state"], which is e.g. 'idle' or 'busy' here if needed
         elif msg_type == "kernel_info_reply":
             # When this appears after calling connect_to_kernel(), kernel client should be connected and ready to go
             self.last_msg = msg
@@ -86,8 +86,9 @@ class TestJupyterConsoleWidget(unittest.TestCase):
 
     def test_connect_jcw_to_kernel_manager_on_engine(self):
         jcw = JupyterConsoleWidget(self.toolbox, NATIVE_KERNEL_NAME)
-        success = jcw.request_start_kernel()
-        self.assertTrue(success)
+        connection_file = jcw.request_start_kernel()
+        self.assertIsNotNone(connection_file)
+        jcw.set_connection_file(connection_file)
         self.assertEqual(1, _kernel_manager_factory.n_kernel_managers())
         # Replace QtKernelClient class with a custom one
         # Inspired by jupyter_client/tests/test_client.py
