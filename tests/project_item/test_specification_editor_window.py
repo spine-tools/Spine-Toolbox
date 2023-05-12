@@ -168,7 +168,6 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
 
 
 class _MockProjectItem(ProjectItem):
-
     _toolbox = None
 
     @staticmethod

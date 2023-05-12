@@ -70,6 +70,7 @@ class FrozenTableModel(QAbstractTableModel):
         self.beginInsertRows(QModelIndex(), old_size, old_size + len(new_values) - 1)
         self._data += new_values
         self.endInsertRows()
+        self._keep_sorted()
 
     def remove_values(self, data):
         """Removes frozen values from the table.
@@ -175,6 +176,7 @@ class FrozenTableModel(QAbstractTableModel):
         self._data[1:] = new_data
         self._selected_row = self._find_first(previous_selected_value, column)
         self.endResetModel()
+        self._keep_sorted()
 
     def remove_column(self, column):
         """Removes column and makes rows unique.
@@ -215,7 +217,29 @@ class FrozenTableModel(QAbstractTableModel):
         self.beginMoveColumns(sourceParent, sourceColumn, sourceColumn + count - 1, destinationParent, destinationChild)
         self._data = data
         self.endMoveColumns()
+        self._keep_sorted()
         return True
+
+    def _keep_sorted(self):
+        """Sorts the data table."""
+        if len(self._data) < 3:
+            return
+        frozen_value = self.get_frozen_value() if self._selected_row is not None else None
+        self.layoutAboutToBeChanged["QList<QPersistentModelIndex>", "QAbstractItemModel::LayoutChangeHint"].emit(
+            [], QAbstractTableModel.LayoutChangeHint.VerticalSortHint
+        )
+        header = self._data[0]
+        column_count = self.columnCount()
+        data = sorted(
+            self._data[1:],
+            key=lambda x: tuple(self._name_from_data(x[column], header[column]) for column in range(column_count)),
+        )
+        self._data[1:] = data
+        if frozen_value is not None:
+            self._selected_row = self._find_first(frozen_value)
+        self.layoutChanged["QList<QPersistentModelIndex>", "QAbstractItemModel::LayoutChangeHint"].emit(
+            [], QAbstractTableModel.LayoutChangeHint.VerticalSortHint
+        )
 
     def _unique_values(self):
         """Turns non-header data into sets of unique values on each column.
@@ -254,43 +278,73 @@ class FrozenTableModel(QAbstractTableModel):
         raise RuntimeError("Logic error: cannot find row in frozen table.")
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole):
+        if role == Qt.ItemDataRole.DisplayRole:
             row = index.row()
-            column = index.column()
-            header_id = self._data[row][column]
             if row == 0:
-                return header_id
-            index_id = self._data[0][column]
-            if index_id == "parameter":
-                db_map, id_ = header_id
-                item = self.db_mngr.get_item(db_map, "parameter_definition", id_)
-                name = item.get("parameter_name")
-            elif index_id == "alternative":
-                db_map, id_ = header_id
-                item = self.db_mngr.get_item(db_map, "alternative", id_)
-                name = item.get("name")
-            elif index_id == "index":
-                index = header_id[1]
-                item = {}
-                name = str(index)
-            elif index_id == "database":
-                item = {}
-                name = header_id.codename
-            else:
-                db_map, id_ = header_id
-                item = self.db_mngr.get_item(db_map, "object", id_)
-                name = item.get("name")
-            if role == Qt.ItemDataRole.DisplayRole:
-                return name
-            description = item.get("description")
-            if not description:
-                description = name
-            return description
+                return self._data[row][index.column()]
+            column = index.column()
+            return self._name_from_data(self._data[row][column], self._data[0][column])
+        if role == Qt.ItemDataRole.ToolTipRole:
+            row = index.row()
+            if row == 0:
+                return self._data[row][index.column()]
+            return self._tooltip_from_data(row, index.column())
         if role == Qt.ItemDataRole.BackgroundRole:
             if index.row() == self._selected_row:
                 return SELECTED_COLOR
             return None
         return None
+
+    def _tooltip_from_data(self, row, column):
+        """Resolves item tooltip which is usually its description.
+
+        Args:
+            row (int): row
+            column (int): column
+
+        Returns:
+            str: value's tooltip
+        """
+        value = self._data[row][column]
+        header = self._data[0][column]
+        if header == "parameter":
+            db_map, id_ = value
+            return self.db_mngr.get_item(db_map, "parameter_definition", id_)["description"]
+        if header == "alternative":
+            db_map, id_ = value
+            return self.db_mngr.get_item(db_map, "alternative", id_)["description"]
+        if header == "index":
+            return str(value[1])
+        if header == "database":
+            return value.codename
+        db_map, id_ = value
+        return self.db_mngr.get_item(db_map, "object", id_)["description"]
+
+    def _name_from_data(self, value, header):
+        """Resolves item name.
+
+        Args:
+            value (tuple or DatabaseMappingBase): cell value
+            header (str): column header
+
+        Returns:
+            str: value's name
+        """
+        if header == "parameter":
+            db_map, id_ = value
+            item = self.db_mngr.get_item(db_map, "parameter_definition", id_)
+            return item.get("parameter_name")
+        if header == "alternative":
+            db_map, id_ = value
+            item = self.db_mngr.get_item(db_map, "alternative", id_)
+            return item.get("name")
+        if header == "index":
+            return str(value[1])
+        if header == "database":
+            return value.codename
+        db_map, id_ = value
+        item = self.db_mngr.get_item(db_map, "object", id_)
+        return item.get("name")
 
     @property
     def headers(self):

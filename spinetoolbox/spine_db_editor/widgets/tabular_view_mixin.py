@@ -205,7 +205,8 @@ class TabularViewMixin:
     @Slot(QAction)
     def _handle_pivot_action_triggered(self, action):
         self.current_input_type = action.text()
-        # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed` with `visible = True`
+        # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed`
+        # with `visible = True`
         # See `SpineDBEditor` class.
         self.do_reload_pivot_table()
 
@@ -618,7 +619,7 @@ class TabularViewMixin:
     def _make_all_frozen_headers(self):
         """Turns the first row of columns in the frozen table into TabularViewHeaderWidgets."""
         if self.frozen_table_model.rowCount() > 0:
-            self._make_frozen_headers(0, self.frozen_table_model.columnCount())
+            self._make_frozen_headers(0, self.frozen_table_model.columnCount() - 1)
 
     def _make_frozen_headers(self, first_column, last_column):
         horizontal_header = self.ui.frozen_table.horizontalHeader()

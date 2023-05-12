@@ -2488,7 +2488,7 @@ class ToolboxUI(QMainWindow):
         while self._persistent_consoles:
             self._persistent_consoles.popitem()[1].close()
         while self._jupyter_consoles:
-            self._jupyter_consoles.popitem()[1].close()
+            self._jupyter_consoles.popitem()[1].kernel_client.stop_channels()
 
     def restore_and_activate(self):
         if self.isMinimized():

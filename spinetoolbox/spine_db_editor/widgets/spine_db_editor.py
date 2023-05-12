@@ -1007,12 +1007,22 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
 
     def end_style_change(self):
         """Ends a style change operation."""
+        for tab_bar in self.children():
+            # This is a workaround to hide a rogue tab bar that sometimes shows as a single gray line
+            # somewhere in the editor window when closing the Object parameter value dock and/or switching
+            # between Table view and the other views.
+            # This could be caused by a bug in Qt but was still present in PySide6 6.5.0.
+            # See issue #2091 for more information.
+            if not isinstance(tab_bar, QTabBar):
+                continue
+            if tab_bar.count() == 0 and tab_bar.isVisible():
+                tab_bar.hide()
         qApp.processEvents()  # pylint: disable=undefined-variable
         self.ui.dockWidget_exports.hide()
         self.resize(self._original_size)
 
     @Slot(bool)
-    def apply_stacked_style(self, checked=False):
+    def apply_stacked_style(self, _checked=False):
         """Applies the stacked style, inspired in the former tree view."""
         self.begin_style_change()
         self.splitDockWidget(
@@ -1042,8 +1052,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Orientation.Horizontal)
 
-    @Slot(QAction)
-    def apply_pivot_style(self, _action):
+    @Slot(bool)
+    def apply_pivot_style(self, _checked=False):
         """Applies the pivot style, inspired in the former tabular view."""
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, Qt.Orientation.Horizontal)
@@ -1064,7 +1074,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.end_style_change()
 
     @Slot(bool)
-    def apply_graph_style(self, checked=False):
+    def apply_graph_style(self, _checked=False):
         """Applies the graph style, inspired in the former graph view."""
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_entity_graph, Qt.Orientation.Horizontal)
