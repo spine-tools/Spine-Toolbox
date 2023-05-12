@@ -13,7 +13,8 @@
 The FetchParent and FlexibleFetchParent classes.
 """
 
-from PySide6.QtCore import QTimer, Signal, QObject
+from PySide6.QtCore import QTimer, Signal, QObject, Qt
+from PySide6.QtGui import QCursor
 from .helpers import busy_effect
 
 
@@ -160,6 +161,8 @@ class FetchParent(QObject):
         Args:
             obsolete (bool): whether parent has become obsolete
         """
+        if obsolete:
+            self.set_busy(False)
         self._obsolete = obsolete
 
     @property
@@ -172,6 +175,8 @@ class FetchParent(QObject):
         Args:
             fetched (bool): whether parent has been fetched completely
         """
+        if fetched:
+            self.set_busy(False)
         self._fetched = fetched
 
     @property
@@ -184,6 +189,10 @@ class FetchParent(QObject):
         Args:
             busy (bool): whether parent is busy fetching
         """
+        if busy:
+            qApp.setOverrideCursor(QCursor(Qt.BusyCursor))
+        else:
+            qApp.restoreOverrideCursor()
         self._busy = busy
 
     def handle_items_added(self, db_map_data):

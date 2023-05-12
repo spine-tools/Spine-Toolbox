@@ -102,6 +102,7 @@ class SpineDBWorker(QObject):
         """
         self._db_map.executor.submit(self._do_update_parents_will_have_children, item_type)
 
+    @busy_effect
     def _do_update_parents_will_have_children(self, item_type):
         """Updates the ``will_have_children`` property for all parents associated to given type.
 
