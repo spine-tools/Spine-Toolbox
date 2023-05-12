@@ -178,6 +178,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
 
     def request_shutdown_kernel_manager(self):
         """Sends a shutdown kernel manager request to engine."""
+        # TODO: Shutting down Conda kernel managers does not work!
         self._engine_manager.shutdown_kernel(self._connection_file)
 
     def name(self):

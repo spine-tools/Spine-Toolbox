@@ -184,9 +184,9 @@ class ToolboxUI(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self.setStatusBar(None)
         # Additional consoles for item execution
-        self._item_consoles = {}
-        self._filter_item_consoles = {}
-        self._persistent_consoles = {}  # TODO: Get rid of this
+        self._item_consoles = {}  # Mapping of ProjectItem to console
+        self._filter_item_consoles = {}  # (ProjectItem, {f_id_0: console_0, f_id_1:console_1, ... , f_id_n:console_n})
+        self._persistent_consoles = {}  # Mapping of key to PersistentConsoleWidget
         self._jupyter_consoles = {}  # Mapping of connection file to JupyterConsoleWidget
         self._current_execution_keys = {}
         # Setup main window menu
@@ -2329,7 +2329,7 @@ class ToolboxUI(QMainWindow):
             conda (bool): Is this a Conda kernel?
         """
         for cw in self._jupyter_consoles.values():
-            if cw.kernel_name == kernel_name:
+            if cw.kernel_name == kernel_name and None in cw.owners:
                 # Console running the requested kernel already exists, show and activate it
                 if cw.isMinimized():
                     cw.showNormal()
@@ -2439,21 +2439,29 @@ class ToolboxUI(QMainWindow):
         return console
 
     def _shutdown_engine_kernels(self):
-        """Shuts down all kernels managed by Spine Engine."""
+        """Shuts down all persistent and Jupyter kernels managed by Spine Engine."""
         exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
+        for key in self._persistent_consoles.keys():
+            engine_mngr.kill_persistent(key)
         for connection_file in self._jupyter_consoles:
             engine_mngr.shutdown_kernel(connection_file)
 
     def _close_consoles(self):
         """Closes Persistent and Jupyter Console widgets."""
-        # TODO: Get rid of _persistent_consoles and close _item_consoles and _filtered_item_consoles here
         while self._persistent_consoles:
             self._persistent_consoles.popitem()[1].close()
         while self._jupyter_consoles:
             c = self._jupyter_consoles.popitem()[1]
             c.shutdown_kernel_client()
             c.close()
+        while self._item_consoles:
+            self._item_consoles.popitem()[1].close()
+        while self._filter_item_consoles:
+            fic = self._filter_item_consoles.popitem()
+            # fic is a tuple (ProjectItem, {f_id_0: console_0, f_id_1:console_1, ... , f_id_n:console_n})
+            for console in fic[1].values():
+                console.close()
 
     def restore_and_activate(self):
         """Brings the app main window into focus."""
