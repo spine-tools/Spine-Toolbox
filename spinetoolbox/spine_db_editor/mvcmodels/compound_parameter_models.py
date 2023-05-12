@@ -318,11 +318,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 ids_committed = []
                 ids_uncommitted = []
                 for item in class_items:
-                    is_committed = db_map.commit_id() is None or item["commit_id"] != db_map.commit_id()
                     item_id = item["id"]
                     if item_id in existing_ids:
                         continue
-                    if is_committed:
+                    if item.is_committed():
                         ids_committed.append(item_id)
                     else:
                         ids_uncommitted.append(item_id)
