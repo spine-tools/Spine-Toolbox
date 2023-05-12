@@ -16,12 +16,7 @@ Classes for custom QDialogs to edit items in databases.
 from PySide6.QtCore import Slot
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate, RemoveEntitiesDelegate
-from .manage_items_dialogs import (
-    ShowIconColorEditorMixin,
-    GetEntitiesMixin,
-    GetEntityClassesMixin,
-    ManageItemsDialog,
-)
+from .manage_items_dialogs import ShowIconColorEditorMixin, GetEntitiesMixin, GetEntityClassesMixin, ManageItemsDialog
 from ...helpers import default_icon_id
 
 
@@ -131,8 +126,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         self.connect_signals()
         self.class_name, self.dimension_name_list = class_key
         self.model.set_horizontal_header_labels(
-            [x + ' name' for x in self.dimension_name_list]
-            + ['entity name', 'active alternatives', 'inactive alternatives', 'databases']
+            [x + ' name' for x in self.dimension_name_list] + ['entity name', 'databases']
         )
         self.orig_data = list()
         model_data = list()
@@ -140,12 +134,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         for item in selected:
             self.db_maps.update(item.db_maps)
             data = item.db_map_data(item.first_db_map)
-            row_data = [
-                *item.element_name_list,
-                data["name"],
-                ",".join(data["active_alternative_name_list"]),
-                ",".join(data["inactive_alternative_name_list"]),
-            ]
+            row_data = [*item.element_name_list, data["name"]]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -161,8 +150,6 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("entity name")
-        active_column = self.model.horizontal_header_labels().index("active alternatives")
-        inactive_column = self.model.horizontal_header_labels().index("inactive alternatives")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount()):
             row_data = self.model.row_data(i)
@@ -175,12 +162,6 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
             orig_row = self.orig_data[i]
             if [*element_name_list, name] == orig_row:
                 continue
-            active_alts = [x for x in row_data[active_column].split(",") if x]
-            inactive_alts = [x for x in row_data[inactive_column].split(",") if x]
-            conflicting = set(active_alts) & set(inactive_alts)
-            if conflicting:
-                self.parent().msg_error.emit(f"Conflicting alternatives {conflicting} at row {i + 1}")
-                return
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""
@@ -214,33 +195,8 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
                         return
                     element_id = entities[dimension_id, element_name]["id"]
                     element_id_list.append(element_id)
-                # Find alt id lists
-                active_alt_ids = []
-                inactive_alt_ids = []
-                alternative_ids = self.db_map_alt_id_lookup[db_map]
-                for alt_name in active_alts:
-                    if alt_name not in alternative_ids:
-                        self.parent().msg_error.emit(
-                            f"Invalid alternative '{alt_name}' for db '{db_map.codename}' at row {i + 1}"
-                        )
-                        return
-                    active_alt_ids.append(alternative_ids[alt_name])
-                for alt_name in inactive_alts:
-                    if alt_name not in alternative_ids:
-                        self.parent().msg_error.emit(
-                            f"Invalid alternative '{alt_name}' for db '{db_map.codename}' at row {i + 1}"
-                        )
-                        return
-                    inactive_alt_ids.append(alternative_ids[alt_name])
                 db_item = pre_db_item.copy()
-                db_item.update(
-                    {
-                        'id': id_,
-                        'element_id_list': element_id_list,
-                        'active_alternative_id_list': active_alt_ids,
-                        'inactive_alternative_id_list': inactive_alt_ids,
-                    }
-                )
+                db_item.update({'id': id_, 'element_id_list': element_id_list})
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to update")
