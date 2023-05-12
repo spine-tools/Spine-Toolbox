@@ -1089,15 +1089,20 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
+        db_map_error_log = {}
         for db_map, data in db_map_data.items():
             macro = AgedUndoCommand()
             macro.setText(f"set scenario alternatives in {db_map.codename}")
-            items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data)
+            items_to_add, ids_to_remove, errors = db_map.get_data_to_set_scenario_alternatives(*data)
             if ids_to_remove:
                 RemoveItemsCommand(self, db_map, "scenario_alternative", ids_to_remove, parent=macro)
             if items_to_add:
                 AddItemsCommand(self, db_map, "scenario_alternative", items_to_add, parent=macro)
+            if errors:
+                db_map_error_log.setdefault(db_map, []).extend([str(x) for x in errors])
             self.undo_stack[db_map].push(macro)
+        if any(db_map_error_log.values()):
+            self.error_msg.emit(db_map_error_log)
 
     def purge_items(self, db_map_purgable_items):
         """Purges selected items from given database.
