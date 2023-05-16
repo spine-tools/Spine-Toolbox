@@ -141,22 +141,22 @@ class ItemMetadataTableModel(MetadataTableModelBase):
         """See base class."""
         item_id = self._item_ids[db_map]
         if self._item_type == ItemType.ENTITY:
-            self._db_mngr.add_entity_metadata(
+            self._db_mngr.add_ext_entity_metadata(
                 {db_map: [{"entity_id": item_id, "metadata_name": name, "metadata_value": value}]}
             )
         else:
-            self._db_mngr.add_parameter_value_metadata(
+            self._db_mngr.add_ext_parameter_value_metadata(
                 {db_map: [{"parameter_value_id": item_id, "metadata_name": name, "metadata_value": value}]}
             )
 
     def _update_data_in_db_mngr(self, id_, name, value, db_map):
         """See base class"""
         if self._item_type == ItemType.ENTITY:
-            self._db_mngr.update_entity_metadata(
+            self._db_mngr.update_ext_entity_metadata(
                 {db_map: [{"id": id_, "metadata_name": name, "metadata_value": value}]}
             )
         else:
-            self._db_mngr.update_parameter_value_metadata(
+            self._db_mngr.update_ext_parameter_value_metadata(
                 {db_map: [{"id": id_, "metadata_name": name, "metadata_value": value}]}
             )
 

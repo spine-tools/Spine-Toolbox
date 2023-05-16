@@ -971,6 +971,32 @@ class SpineDBManager(QObject):
         """
         self.add_items("parameter_value_metadata", db_map_data)
 
+    def _add_ext_item_metadata(self, db_map_data, item_type):
+        for db_map, items in db_map_data.items():
+            macro = AgedUndoCommand()
+            macro.setText(f"add {item_type} to {db_map.codename}")
+            metadata_items = db_map.get_metadata_to_add_with_entity_metadata_items(*items)
+            if metadata_items:
+                AddItemsCommand(self, db_map, "metadata", metadata_items, parent=macro)
+            AddItemsCommand(self, db_map, item_type, items, parent=macro)
+            self.undo_stack[db_map].push(macro)
+
+    def add_ext_entity_metadata(self, db_map_data):
+        """Adds entity metadata together with all necessary metadata to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        self._add_ext_item_metadata(db_map_data, "entity_metadata")
+
+    def add_ext_parameter_value_metadata(self, db_map_data):
+        """Adds parameter value metadata together with all necessary metadata to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        self._add_ext_item_metadata(db_map_data, "parameter_value_metadata")
+
     def update_alternatives(self, db_map_data):
         """Updates alternatives in db.
 
@@ -1019,6 +1045,30 @@ class SpineDBManager(QObject):
         """
         self.update_items("parameter_value", db_map_data)
 
+    def update_expanded_parameter_values(self, db_map_data):
+        """Updates expanded parameter values in db.
+
+        Args:
+            db_map_data (dict): lists of expanded items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, expanded_data in db_map_data.items():
+            packed_data = {}
+            for item in expanded_data:
+                packed_data.setdefault(item["id"], {})[item["index"]] = (item["value"], item["type"])
+            items = []
+            for id_, indexed_values in packed_data.items():
+                parsed_value = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
+                if isinstance(parsed_value, IndexedValue):
+                    for index, (val, typ) in indexed_values.items():
+                        parsed_val = from_database(val, typ)
+                        parsed_value.set_value(index, parsed_val)
+                    value, value_type = to_database(parsed_value)
+                else:
+                    value, value_type = next(iter(indexed_values.values()))
+                item = {"id": id_, "value": value, "type": value_type}
+                items.append(item)
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, "parameter_value", items))
+
     def update_parameter_value_lists(self, db_map_data):
         """Updates parameter_value lists in db.
 
@@ -1059,29 +1109,21 @@ class SpineDBManager(QObject):
         """
         self.update_items("parameter_value_metadata", db_map_data)
 
-    def update_expanded_parameter_values(self, db_map_data):
-        """Updates expanded parameter values in db.
+    def update_ext_entity_metadata(self, db_map_data):
+        """Updates entity metadata in db.
 
         Args:
-            db_map_data (dict): lists of expanded items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        for db_map, expanded_data in db_map_data.items():
-            packed_data = {}
-            for item in expanded_data:
-                packed_data.setdefault(item["id"], {})[item["index"]] = (item["value"], item["type"])
-            items = []
-            for id_, indexed_values in packed_data.items():
-                parsed_value = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
-                if isinstance(parsed_value, IndexedValue):
-                    for index, (val, typ) in indexed_values.items():
-                        parsed_val = from_database(val, typ)
-                        parsed_value.set_value(index, parsed_val)
-                    value, value_type = to_database(parsed_value)
-                else:
-                    value, value_type = next(iter(indexed_values.values()))
-                item = {"id": id_, "value": value, "type": value_type}
-                items.append(item)
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, "parameter_value", items))
+        # TODO
+
+    def update_ext_parameter_value_metadata(self, db_map_data):
+        """Updates parameter value metadata in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        # TODO
 
     def set_scenario_alternatives(self, db_map_data):
         """Sets scenario alternatives in db.

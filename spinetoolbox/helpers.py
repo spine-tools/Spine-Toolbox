@@ -1547,31 +1547,6 @@ def _is_metadata_item(item):
     return "name" in item and "value" in item
 
 
-def separate_metadata_and_item_metadata(db_map_data):
-    """Separates normal metadata items from item metadata items.
-
-    Args:
-        db_map_data (dict): database records
-
-    Returns:
-        tuple: item metadata records and metadata records
-    """
-    metadata_db_map_data = {}
-    item_metadata_db_map_data = {}
-    for db_map, items in db_map_data.items():
-        metadata_items = []
-        entity_metadata_items = []
-        for item in items:
-            if _is_metadata_item(item):
-                metadata_items.append(item)
-            else:
-                entity_metadata_items.append(item)
-        if metadata_items:
-            metadata_db_map_data[db_map] = metadata_items
-        item_metadata_db_map_data[db_map] = entity_metadata_items
-    return item_metadata_db_map_data, metadata_db_map_data
-
-
 class HTMLTagFilter(HTMLParser):
     """HTML tag filter."""
 

@@ -14,7 +14,7 @@ The SpineDBWorker class
 """
 from PySide6.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
-from .helpers import busy_effect, separate_metadata_and_item_metadata
+from .helpers import busy_effect
 
 
 _CHUNK_SIZE = 1000
@@ -136,7 +136,7 @@ class SpineDBWorker(QObject):
                     break
             if not parents_to_check:
                 break
-            chunk = self._db_map.cache.do_advance_query(item_type)
+            chunk = self._db_map.advance_cache_query(item_type)
             self._do_call_advance_query_callbacks(item_type, chunk)
             if position == len(self._db_map.cache.get(item_type, ())):
                 for parent in parents_to_check:
@@ -250,15 +250,13 @@ class SpineDBWorker(QObject):
         item_type = parent.fetch_item_type
         if item_type in self._db_map.cache.fetched_item_types:
             return
-        callback = lambda parent=parent: self._handle_query_advanced(parent)
+        callback = lambda: self._handle_query_advanced(parent)
         if item_type in self._advance_query_callbacks:
             self._advance_query_callbacks[item_type].add(callback)
             return
         self._advance_query_callbacks[item_type] = {callback}
-        future = self._db_map.cache.advance_query(item_type)
-        future.add_done_callback(
-            lambda future, item_type=item_type: self._call_advance_query_callbacks(item_type, future)
-        )
+        callback = lambda result: self._call_advance_query_callbacks(item_type, result)
+        self._db_map.advance_cache_query(item_type, callback=callback)
         parent.set_busy(True)
 
     def _handle_query_advanced(self, parent):
@@ -268,8 +266,8 @@ class SpineDBWorker(QObject):
             parent.set_fetched(True)
             parent.set_busy(False)
 
-    def _call_advance_query_callbacks(self, item_type, future):
-        self._do_call_advance_query_callbacks(item_type, future.result())
+    def _call_advance_query_callbacks(self, item_type, result):
+        self._do_call_advance_query_callbacks(item_type, result)
 
     def _do_call_advance_query_callbacks(self, item_type, chunk):
         self._populate_commit_cache(item_type, chunk)
@@ -296,18 +294,6 @@ class SpineDBWorker(QObject):
     def close_db_map(self):
         self._db_map.close()
 
-    def _split_items_by_type(self, item_type, items):
-        if item_type in ("parameter_value_metadata", "entity_metadata"):
-            db_map_item_metadata, db_map_metadata = separate_metadata_and_item_metadata({self._db_map: items})
-            metadata = db_map_metadata.get(self._db_map)
-            item_metadata = db_map_item_metadata.get(self._db_map)
-            if metadata:
-                yield "metadata", metadata
-            if item_metadata:
-                yield item_type, item_metadata
-        else:
-            yield item_type, items
-
     @busy_effect
     def add_items(self, item_type, orig_items, check):
         """Adds items to db.
@@ -320,14 +306,11 @@ class SpineDBWorker(QObject):
         items, errors = self._db_map.add_items(item_type, *orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
-            self._db_mngr.update_icons(self._db_map, actual_item_type, actual_items)
-            for parent in self._get_parents(actual_item_type):
-                self.fetch_more(parent)
-            if item_type == actual_item_type:
-                result = actual_items
-            self._db_mngr.items_added.emit(actual_item_type, {self._db_map: actual_items})
-        return result
+        self._db_mngr.update_icons(self._db_map, item_type, items)
+        for parent in self._get_parents(item_type):
+            self.fetch_more(parent)
+        self._db_mngr.items_added.emit(item_type, {self._db_map: items})
+        return items
 
     @busy_effect
     def update_items(self, item_type, orig_items, check):
@@ -341,12 +324,9 @@ class SpineDBWorker(QObject):
         items, errors = self._db_map.update_items(item_type, *orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        for actual_item_type, actual_items in self._split_items_by_type(item_type, items):
-            self._db_mngr.update_icons(self._db_map, actual_item_type, actual_items)
-            if item_type == actual_item_type:
-                result = actual_items
-            self._db_mngr.items_updated.emit(actual_item_type, {self._db_map: [{**x} for x in actual_items]})
-        return result
+        self._db_mngr.update_icons(self._db_map, item_type, items)
+        self._db_mngr.items_updated.emit(item_type, {self._db_map: [dict(x) for x in items]})
+        return items
 
     @busy_effect
     def remove_items(self, item_type, ids):
