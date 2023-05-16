@@ -627,7 +627,7 @@ class Ui_MainWindow(object):
             )
         )
         # endif // QT_CONFIG(tooltip)
-        self.actionCopy.setText(QCoreApplication.translate("MainWindow", u"Cop&y", None))
+        self.actionCopy.setText(QCoreApplication.translate("MainWindow", u"Cop&y name(s) as text", None))
         # if QT_CONFIG(shortcut)
         self.actionCopy.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+C", None))
         # endif // QT_CONFIG(shortcut)

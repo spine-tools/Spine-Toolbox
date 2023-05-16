@@ -1003,7 +1003,7 @@
      <normaloff>:/icons/menu_icons/copy.svg</normaloff>:/icons/menu_icons/copy.svg</iconset>
    </property>
    <property name="text">
-    <string>Cop&amp;y</string>
+    <string>Cop&amp;y name(s) as text</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
