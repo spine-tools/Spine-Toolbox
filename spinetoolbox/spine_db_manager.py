@@ -167,7 +167,7 @@ class SpineDBManager(QObject):
         Returns:
             bool
         """
-        if db_map.connection.closed:
+        if db_map.closed:
             return False
         try:
             worker = self._get_worker(db_map)
@@ -182,7 +182,7 @@ class SpineDBManager(QObject):
             db_map (DiffDatabaseMapping)
             parent (FetchParent): The object that requests the fetching.
         """
-        if db_map.connection.closed:
+        if db_map.closed:
             return
         try:
             worker = self._get_worker(db_map)
@@ -301,7 +301,7 @@ class SpineDBManager(QObject):
         for url in list(self._db_maps):
             self.close_session(url)
 
-    def get_db_map(self, url, logger, codename=None, upgrade=False, create=False, ignore_version_error=False):
+    def get_db_map(self, url, logger, ignore_version_error=False, codename=None, create=False, upgrade=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
@@ -316,7 +316,7 @@ class SpineDBManager(QObject):
             DiffDatabaseMapping, NoneType
         """
         try:
-            return self._do_get_db_map(url, codename, upgrade, create)
+            return self._do_get_db_map(url, codename, create, upgrade)
         except SpineDBVersionError as v_err:
             if ignore_version_error:
                 return None
@@ -332,7 +332,7 @@ class SpineDBManager(QObject):
                 ret = msg.exec()  # Show message box
                 if ret == QMessageBox.StandardButton.Cancel:
                     return None
-                return self.get_db_map(url, logger, codename=codename, upgrade=True, create=create)
+                return self.get_db_map(url, logger, codename=codename, create=create, upgrade=True)
             QMessageBox.information(
                 qApp.activeWindow(),  # pylint: disable=undefined-variable
                 "Unsupported database version",
@@ -347,7 +347,7 @@ class SpineDBManager(QObject):
             return None
 
     @busy_effect
-    def _do_get_db_map(self, url, codename, upgrade, create):
+    def _do_get_db_map(self, url, codename, create, upgrade):
         """Returns a memorized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
@@ -1370,7 +1370,7 @@ class SpineDBManager(QObject):
         else:
             caller.sqlite_file_exported.emit(file_path)
         finally:
-            db_map.connection.close()
+            db_map.close()
 
     def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
         """Exports given data into JSON file."""
@@ -1401,7 +1401,7 @@ class SpineDBManager(QObject):
         else:
             caller.file_exported.emit(file_path)
         finally:
-            db_map.connection.close()
+            db_map.close()
 
     def get_items_for_commit(self, db_map, commit_id):
         try:

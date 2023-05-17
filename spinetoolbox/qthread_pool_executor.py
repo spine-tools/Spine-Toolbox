@@ -52,10 +52,14 @@ class QtBasedFuture:
     def __init__(self):
         self._result_queue = QtBasedQueue()
         self._exception_queue = QtBasedQueue()
+        self._done_callbacks = []
 
     def set_result(self, result):
         self._exception_queue.put(None)
         self._result_queue.put(result)
+        for callback in self._done_callbacks:
+            callback(self)
+        self._done_callbacks = []
 
     def set_exception(self, exc):
         self._exception_queue.put(exc)
@@ -70,6 +74,9 @@ class QtBasedFuture:
 
     def exception(self, timeout=None):
         return self._exception_queue.get(timeout=timeout)
+
+    def add_done_callback(self, callback):
+        self._done_callbacks.append(callback)
 
 
 class QtBasedThread(QThread):

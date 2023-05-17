@@ -14,6 +14,7 @@ The SpineDBWorker class
 """
 from PySide6.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
+from .qthread_pool_executor import QtBasedThreadPoolExecutor
 from .helpers import busy_effect
 
 
@@ -31,6 +32,7 @@ class SpineDBWorker(QObject):
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
+        self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._parents_by_type = {}
         self._restore_item_callbacks = {}
         self._update_item_callbacks = {}
@@ -49,12 +51,11 @@ class SpineDBWorker(QObject):
         return parents
 
     def clean_up(self):
+        self._executor.shutdown()
         self.deleteLater()
 
     def get_db_map(self, *args, **kwargs):
-        self._db_map = DatabaseMapping(
-            self._db_url, *args, sqlite_timeout=2, chunk_size=_CHUNK_SIZE, asynchronous=True, **kwargs
-        )
+        self._db_map = DatabaseMapping(self._db_url, *args, sqlite_timeout=2, chunk_size=_CHUNK_SIZE, **kwargs)
         return self._db_map
 
     def reset_queries(self):
@@ -100,7 +101,7 @@ class SpineDBWorker(QObject):
         Args:
             item_type (str)
         """
-        self._db_map.executor.submit(self._do_update_parents_will_have_children, item_type)
+        self._executor.submit(self._do_update_parents_will_have_children, item_type)
 
     @busy_effect
     def _do_update_parents_will_have_children(self, item_type):
@@ -255,8 +256,8 @@ class SpineDBWorker(QObject):
             self._advance_query_callbacks[item_type].add(callback)
             return
         self._advance_query_callbacks[item_type] = {callback}
-        callback = lambda result: self._call_advance_query_callbacks(item_type, result)
-        self._db_map.advance_cache_query(item_type, callback=callback)
+        callback = lambda future: self._call_advance_query_callbacks(item_type, future.result())
+        self._executor.submit(self._db_map.advance_cache_query, item_type).add_done_callback(callback)
         parent.set_busy(True)
 
     def _handle_query_advanced(self, parent):
@@ -276,12 +277,8 @@ class SpineDBWorker(QObject):
             if callback is not None:
                 callback()
 
-    def fetch_all(self, fetch_item_types=None, include_descendants=False, include_ancestors=False):
-        if fetch_item_types is None:
-            fetch_item_types = set(self._db_map.ITEM_TYPES)
-        self._db_map.fetch_all(
-            fetch_item_types, include_descendants=include_descendants, include_ancestors=include_ancestors
-        )
+    def fetch_all(self, fetch_item_types=None):
+        self._db_map.fetch_all(fetch_item_types)
 
     def _populate_commit_cache(self, item_type, items):
         if item_type == "commit":

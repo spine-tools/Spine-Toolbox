@@ -80,7 +80,7 @@ class HeadlessConnection(ResourceConvertingConnection):
                     for row in db_map.query(db_map.scenario_sq):
                         specific_filter_settings[row.name]: row.id = row.id in scenario_filter_ids
             finally:
-                db_map.connection.close()
+                db_map.close()
         self._legacy_resource_filter_ids = None
 
     @staticmethod
