@@ -128,7 +128,7 @@ class CustomQGraphicsView(QGraphicsView):
             self.time_line.start()
         else:
             angle = event.angleDelta().y()
-            factor = self._zoom_factor_base**angle
+            factor = self._zoom_factor_base ** angle
             self.gentle_zoom(factor, event.position().toPoint())
             self._set_preferred_scene_rect()
 
@@ -212,12 +212,12 @@ class CustomQGraphicsView(QGraphicsView):
 
     def zoom_in(self):
         """Perform a zoom in with a fixed scaling."""
-        self.gentle_zoom(self._zoom_factor_base**self._angle)
+        self.gentle_zoom(self._zoom_factor_base ** self._angle)
         self._set_preferred_scene_rect()
 
     def zoom_out(self):
         """Perform a zoom out with a fixed scaling."""
-        self.gentle_zoom(self._zoom_factor_base**-self._angle)
+        self.gentle_zoom(self._zoom_factor_base ** -self._angle)
         self._set_preferred_scene_rect()
 
     def gentle_zoom(self, factor, zoom_focus=None):
