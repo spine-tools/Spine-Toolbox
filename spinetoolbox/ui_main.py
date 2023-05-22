@@ -60,6 +60,7 @@ from .project_item_icon import ProjectItemIcon
 from .load_project_items import load_project_items
 from .mvcmodels.project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .mvcmodels.project_item_model import ProjectItemModel
+from .mvcmodels.project_tree_item import LeafProjectTreeItem
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.set_description_dialog import SetDescriptionDialog
@@ -94,6 +95,7 @@ from .helpers import (
     load_specification_from_file,
     load_specification_local_data,
     same_path,
+    unique_name,
 )
 from .project_commands import (
     AddSpecificationCommand,
@@ -205,7 +207,6 @@ class ToolboxUI(QMainWindow):
         self.set_debug_qactions()
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
-        self._proposed_item_name_counts = dict()
         self.restore_dock_widgets()
         self.restore_ui()
         self.ui.listView_console_executions.hide()
@@ -1219,7 +1220,10 @@ class ToolboxUI(QMainWindow):
             return
         specification = self.specification_model.specification(index.row())
         # Open spec in Tool specification edit widget
-        self.show_specification_form(specification.item_type, specification, item)
+        if item.item_type() == "Importer":
+            item.edit_specification()
+        else:
+            self.show_specification_form(specification.item_type, specification, item)
 
     @Slot(QModelIndex)
     def remove_specification(self, index):
@@ -2051,7 +2055,7 @@ class ToolboxUI(QMainWindow):
         for name, item_dict in items_dict.items():
             item_dict["duplicate_files"] = duplicate_files
             if self.project_item_model.find_item(name) is not None:
-                new_name = self.propose_item_name(name)
+                new_name = unique_name(name, self.project().all_item_names)
                 final_items_dict[new_name] = item_dict
             else:
                 final_items_dict[name] = item_dict
@@ -2093,28 +2097,6 @@ class ToolboxUI(QMainWindow):
         if not item_dicts:
             return
         self._deserialize_items(item_dicts, duplicate_files)
-
-    def propose_item_name(self, prefix):
-        """Proposes a name for a project item.
-
-        The format is `prefix_xx` where `xx` is a counter value [01..99].
-
-        Args:
-            prefix (str): a prefix for the name
-
-        Returns:
-            str: a name string
-        """
-        name_count = self._proposed_item_name_counts.setdefault(prefix, 0)
-        name = prefix + " {}".format(name_count + 1)
-        if self.project_item_model.find_item(name) is not None:
-            if name_count == 98:
-                # Avoiding too deep recursions.
-                raise RuntimeError("Ran out of numbers: cannot find suitable name for project item.")
-            # Increment index recursively if name is already in project.
-            self._proposed_item_name_counts[prefix] += 1
-            name = self.propose_item_name(prefix)
-        return name
 
     def _share_item_edit_actions(self):
         """Adds generic actions to project tree view and Design View."""
@@ -2488,7 +2470,7 @@ class ToolboxUI(QMainWindow):
         while self._persistent_consoles:
             self._persistent_consoles.popitem()[1].close()
         while self._jupyter_consoles:
-            self._jupyter_consoles.popitem()[1].close()
+            self._jupyter_consoles.popitem()[1].kernel_client.stop_channels()
 
     def restore_and_activate(self):
         if self.isMinimized():

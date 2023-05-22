@@ -155,7 +155,7 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             project_item.set_specification(specification)
             self._toolbox.project().add_item(project_item)
             window = SpecificationEditorWindowBase(self._toolbox, item=project_item)
-            mock_make_specification.side_effect = lambda name: ProjectItemSpecification(
+            mock_make_specification.side_effect = lambda name, exiting: ProjectItemSpecification(
                 name, window._spec_toolbar.description(), "Mock"
             )
             mock_save.return_value = {}
@@ -168,7 +168,6 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
 
 
 class _MockProjectItem(ProjectItem):
-
     _toolbox = None
 
     @staticmethod

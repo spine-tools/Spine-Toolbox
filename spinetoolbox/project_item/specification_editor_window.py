@@ -118,11 +118,12 @@ class SpecificationEditorWindowBase(QMainWindow):
         """Restores dockWidgets to some default state. Called in the constructor, before restoring the ui from settings.
         Reimplement in subclasses if needed."""
 
-    def _make_new_specification(self, spec_name):
+    def _make_new_specification(self, spec_name, exiting=None):
         """Returns a ProjectItemSpecification from current form settings.
 
         Args:
             spec_name (str): Name of the spec
+            exiting (bool, optional): Set as True if called when trying to exit the editor window
 
         Returns:
             ProjectItemSpecification
@@ -170,8 +171,11 @@ class SpecificationEditorWindowBase(QMainWindow):
         self.setWindowTitle(title)
         self.windowTitleChanged.emit(self.windowTitle())
 
-    def _save(self):
+    def _save(self, exiting=None):
         """Saves spec.
+
+        Args:
+            exiting (bool, optional): Set as True if called when trying to exit the editor window
 
         Returns:
             bool: True if operation was successful, False otherwise
@@ -181,11 +185,13 @@ class SpecificationEditorWindowBase(QMainWindow):
             return False
         name = self._spec_toolbar.name()
         if not name:
+            if exiting:
+                return self.prompt_exit_without_saving()
             self.show_error("Please enter a name for the specification.")
             return False
-        spec = self._make_new_specification(name)
+        spec = self._make_new_specification(name, exiting)
         if spec is None:
-            return False
+            return self.prompt_exit_without_saving() if exiting else False
         if not self._original_spec_name:
             if self._toolbox.project().is_specification_name_reserved(name):
                 self.show_error("Specification name already in use. Please enter a new name.")
@@ -210,6 +216,24 @@ class SpecificationEditorWindowBase(QMainWindow):
         self.setWindowTitle(self.specification.name)
         return True
 
+    def prompt_exit_without_saving(self):
+        """Prompts whether the user wants to exit without saving or cancel the exit.
+
+        Returns:
+            bool: False if the user chooses to cancel, in which case we don't close the form.
+        """
+
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setWindowTitle(self.windowTitle())
+        msg.setText("Can't save unfinished specification.\nDo you want to exit without saving?")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
+        answer = msg.exec()
+        if answer == QMessageBox.StandardButton.Cancel:
+            return False
+        if answer == QMessageBox.StandardButton.Yes:
+            return True
+
     @property
     def _duplicate_kwargs(self):
         return {}
@@ -224,7 +248,8 @@ class SpecificationEditorWindowBase(QMainWindow):
     def tear_down(self):
         if self.focusWidget():
             self.focusWidget().clearFocus()
-        if not self._undo_stack.isClean() and not prompt_to_save_changes(self, self._toolbox.qsettings(), self._save):
+        if not self._undo_stack.isClean() and not prompt_to_save_changes(self, self._toolbox.qsettings(),
+                                                                         self._save, True):
             return False
         self._change_notifier.tear_down()
         self._undo_stack.cleanChanged.disconnect(self._update_window_modified)
@@ -346,7 +371,7 @@ class _SpecNameDescriptionToolbar(QToolBar):
         return self._line_edit_description.text()
 
 
-def prompt_to_save_changes(parent, settings, save_callback):
+def prompt_to_save_changes(parent, settings, save_callback, exiting=None):
     """Prompts to save changes.
 
     Args:
@@ -354,6 +379,7 @@ def prompt_to_save_changes(parent, settings, save_callback):
         settings (QSettings): Toolbox settings
         save_callback (Callable): A function to call if the user chooses Save.
             It must return True or False depending on the outcome of the 'saving'.
+        exiting (bool, optional): Set as True if called when trying to exit the editor window
 
     Returns:
         bool: False if the user chooses to cancel, in which case we don't close the form.
@@ -362,7 +388,7 @@ def prompt_to_save_changes(parent, settings, save_callback):
     if save_spec == 0:
         return True
     if save_spec == 2:
-        return save_callback()
+        return save_callback(exiting)
     msg = QMessageBox(parent)
     msg.setIcon(QMessageBox.Icon.Question)
     msg.setWindowTitle(parent.windowTitle())
@@ -381,5 +407,5 @@ def prompt_to_save_changes(parent, settings, save_callback):
         preference = "2" if answer == QMessageBox.StandardButton.Yes else "0"
         settings.setValue("appSettings/saveSpecBeforeClosing", preference)
     if answer == QMessageBox.StandardButton.Yes:
-        return save_callback()
+        return save_callback(exiting)
     return True

@@ -1020,7 +1020,8 @@ def color_from_index(i, count, base_hue=0.0, saturation=1.0):
 
 def unique_name(prefix, existing):
     """
-    Creates a unique name in the form "prefix X" where X is a number.
+    Creates a unique name in the form `prefix (xx)` where xx is a counter value.
+    When `prefix` already contains a counter `(xx)`, the value `xx` is updated.
 
     Args:
         prefix (str): name prefix
@@ -1029,18 +1030,26 @@ def unique_name(prefix, existing):
     Returns:
         str: unique name
     """
-    pattern = re.compile(fr"^{prefix} [0-9]+$")
     reserved = set()
+
+    # check if `prefix` is already a duplicate and adjust if needed
+    match = re.fullmatch(r"^(.*) \(([0-9]+)\)$", prefix)
+    if match:
+        prefix = match[1]
+        reserved.add(int(match[2]))
+
+    pattern = re.compile(fr"^{prefix} \(([0-9]+)\)$")
     for name in existing:
-        if pattern.fullmatch(name) is not None:
-            _, _, number = name.rpartition(" ")
-            reserved.add(int(number))
+        match = pattern.fullmatch(name)
+        if match:
+            reserved.add(int(match[1]))
+
     free = len(reserved) + 1
-    for i in range(len(reserved)):
-        if i + 1 not in reserved:
-            free = i + 1
+    for i in range(1, len(reserved) + 1):
+        if i not in reserved:
+            free = i
             break
-    return f"{prefix} {free}"
+    return f"{prefix} ({free})"
 
 
 def get_upgrade_db_promt_text(url, current, expected):

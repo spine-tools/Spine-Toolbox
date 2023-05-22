@@ -25,7 +25,14 @@ from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spine_engine.spine_engine import validate_single_jump
-from spine_engine.utils.helpers import ExecutionDirection, shorten, get_file_size
+from spine_engine.utils.helpers import (
+    ExecutionDirection,
+    shorten,
+    get_file_size,
+    make_dag,
+    dag_edges,
+    connections_to_selected_items,
+)
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_engine.server.util.zip_handler import ZipHandler
 from .server.engine_client import EngineClient
@@ -136,6 +143,10 @@ class SpineToolboxProject(MetaObject):
             ToolboxUI: main window
         """
         return self._toolbox
+
+    @property
+    def all_item_names(self):
+        return list(self._project_items)
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -857,7 +868,7 @@ class SpineToolboxProject(MetaObject):
         """Iterates directed graphs in the project.
 
         Yields:
-            nx.DiGraph
+            DiGraph
         """
         graph = nx.DiGraph()
         graph.add_nodes_from(self._project_items)
@@ -865,27 +876,8 @@ class SpineToolboxProject(MetaObject):
         for nodes in nx.weakly_connected_components(graph):
             yield graph.subgraph(nodes)
 
-    def dags(self):
-        """Used in tests. Returns a list of dags in the project.
-
-        Returns:
-            list
-        """
-        return list(self._dag_iterator())
-
-    def node_is_isolated(self, node):
-        """Used in tests. Checks if the project item with the given name has any connections.
-
-        Args:
-            node (str): Project item name
-
-        Returns:
-            bool
-        """
-        g = self.dag_with_node(node)
-        return nx.is_isolate(g, node)
-
     def dag_with_node(self, node):
+        """Returns the DiGraph that contains the given node (project item) name (str)."""
         return next((x for x in self._dag_iterator() if x.has_node(node)), None)
 
     def restore_project_items(self, items_dict, item_factories, silent):
@@ -958,9 +950,9 @@ class SpineToolboxProject(MetaObject):
         """Executes given dags.
 
         Args:
-            dags (Sequence(DiGraph))
-            execution_permits_list (Sequence(dict))
-            msg (str): message to log before execution
+            dags (list(DiGraph)): List of DAGs
+            execution_permits_list (list(dict)), Permitted nodes by DAG
+            msg (str): Message to log before execution
         """
         if not dags:
             self._logger.msg.emit("Nothing to execute.")
@@ -1006,7 +998,7 @@ class SpineToolboxProject(MetaObject):
         """Creates and returns a SpineEngineWorker to execute given *validated* dag.
 
         Args:
-            dag (nx.DiGraph): The dag
+            dag (DiGraph): The dag
             execution_permits (dict): mapping item names to a boolean indicating whether to execute it or skip it
             dag_identifier (str): A string identifying the dag, for logging
             settings (dict): project and app settings to send to the spine engine.
@@ -1076,7 +1068,7 @@ class SpineToolboxProject(MetaObject):
         """Executes DAGs corresponding to given project items.
 
         Args:
-            names (Iterable of str): item names to execute
+            names (Iterable of str): Names of selected items
         """
         if not self._project_items:
             self._logger.msg_warning.emit("Project has no items to execute")
@@ -1084,13 +1076,38 @@ class SpineToolboxProject(MetaObject):
         if not names:
             self._logger.msg_warning.emit("Please select a project item and try again.")
             return
-        dags = [dag for dag in self._dag_iterator() if set(names) & dag.nodes]
-        dags = self._validate_dags(dags)
+        dags = list()
+        for dag in [dag for dag in self._dag_iterator() if set(names) & dag.nodes]:
+            more_dags = self._split_to_subdags(dag, names)
+            dags += more_dags
         execution_permit_list = list()
         for dag in dags:
             execution_permits = {name: name in names for name in dag.nodes}
             execution_permit_list.append(execution_permits)
+        self._validate_dags(dags)
         self.execute_dags(dags, execution_permit_list, "Executing Selected Directed Acyclic Graphs")
+
+    def _split_to_subdags(self, dag, selected_items):
+        """Checks if given dag contains weakly connected components. If it does,
+        the weakly connected components are split into their own (sub)dags. If not,
+        the dag is returned unaltered.
+
+        Args:
+            dag (list(DiGraph): Dag that is checked if it needs to be split into subdags
+            selected_items (list): Names of selected items
+
+        Returns:
+            list(DiGraph)): List of dags, ready for execution
+        """
+        if len(dag.nodes) == 1:
+            return [dag]
+        # List of Connections that have a selected item as its source or destination item
+        connections = connections_to_selected_items(self._connections, selected_items)
+        edges = dag_edges(connections)
+        d = make_dag(edges)  # Make DAG as SpineEngine does it
+        if nx.number_weakly_connected_components(d) > 1:
+            return [d.subgraph(c) for c in nx.weakly_connected_components(d)]
+        return [dag]
 
     def execute_project(self):
         """Executes all dags in the project."""
@@ -1484,7 +1501,7 @@ def node_successors(g):
     """Returns a dict mapping nodes in topological order to a list of successors.
 
     Args:
-        g (nx.DiGraph)
+        g (DiGraph)
 
     Returns:
         dict
@@ -1496,7 +1513,7 @@ def _edges_causing_loops(g):
     """Returns a list of edges whose removal from g results in it becoming acyclic.
 
     Args:
-        g (nx.DiGraph)
+        g (DiGraph)
 
     Returns:
         list

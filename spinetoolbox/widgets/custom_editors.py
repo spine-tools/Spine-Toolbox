@@ -131,7 +131,7 @@ class SearchBarEditor(QTableView):
     def __init__(self, parent, tutor=None):
         """
         Args:
-            parent (QWidget): parent widget
+            parent (QWidget, optional): parent widget
             tutor (QWidget, optional): another widget used for positioning.
         """
         super().__init__(parent)
@@ -164,7 +164,7 @@ class SearchBarEditor(QTableView):
             items (Sequence of str): items to show in the list
         """
         item_list = [QStandardItem(current)]
-        for item in items:
+        for item in sorted(items, key=lambda x: x.casefold()):
             qitem = QStandardItem(item)
             item_list.append(qitem)
             qitem.setFlags(~Qt.ItemIsEditable)
