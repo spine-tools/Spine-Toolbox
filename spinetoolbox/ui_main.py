@@ -58,6 +58,7 @@ from .project_item_icon import ProjectItemIcon
 from .load_project_items import load_project_items
 from .mvcmodels.project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .mvcmodels.project_item_model import ProjectItemModel
+from .mvcmodels.project_tree_item import LeafProjectTreeItem
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.set_description_dialog import SetDescriptionDialog
@@ -1222,7 +1223,10 @@ class ToolboxUI(QMainWindow):
             return
         specification = self.specification_model.specification(index.row())
         # Open spec in Tool specification edit widget
-        self.show_specification_form(specification.item_type, specification, item)
+        if item.item_type() == "Importer":
+            item.edit_specification()
+        else:
+            self.show_specification_form(specification.item_type, specification, item)
 
     @Slot(QModelIndex)
     def remove_specification(self, index):
