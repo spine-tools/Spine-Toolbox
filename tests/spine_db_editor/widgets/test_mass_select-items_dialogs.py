@@ -41,7 +41,7 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
 

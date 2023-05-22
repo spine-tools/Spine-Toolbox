@@ -20,25 +20,26 @@ from PySide6.QtWidgets import QMessageBox, QWidget
 from PySide6.QtGui import QFontMetrics, QFont, QWindow
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
-    is_empty,
+    Array,
+    Asterisk,
     create_new_spine_database,
     DatabaseMapping,
+    export_data,
+    from_database,
+    get_data_for_import,
+    IndexedValue,
+    import_data,
+    is_empty,
+    Map,
+    ParameterValueFormatError,
+    relativedelta_to_duration,
     SpineDBVersionError,
     SpineDBAPIError,
-    from_database,
-    to_database,
-    relativedelta_to_duration,
-    ParameterValueFormatError,
-    IndexedValue,
-    Array,
+    TimePattern,
     TimeSeries,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
-    TimePattern,
-    Map,
-    get_data_for_import,
-    import_data,
-    export_data,
+    to_database,
 )
 from spinedb_api.parameter_value import load_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
@@ -1146,18 +1147,15 @@ class SpineDBManager(QObject):
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
-    def purge_items(self, db_map_purgable_items):
+    def purge_items(self, db_map_item_types):
         """Purges selected items from given database.
 
         Args:
-            db_map_purgable_items (dict): mapping from database map to list of purgable item types
+            db_map_item_types (dict): mapping from database map to list of purgable item types
         """
         db_map_typed_data = {
-            db_map: {
-                item_type: {x["id"] for x in self.get_items(db_map, item_type, only_visible=False)}
-                for item_type in item_types
-            }
-            for db_map, item_types in db_map_purgable_items.items()
+            db_map: {item_type: {Asterisk} for item_type in item_types}
+            for db_map, item_types in db_map_item_types.items()
         }
         self.remove_items(db_map_typed_data)
 

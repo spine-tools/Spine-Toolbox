@@ -79,21 +79,21 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
             ),
         )
         db_map.commit_session("Add test data.")
-        db_map.connection.close()
+        db_map.close()
         mock_settings = mock.Mock()
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
         self._db_mngr = TestSpineDBManager(mock_settings, None)
         logger = mock.MagicMock()
         self._db_map = self._db_mngr.get_db_map(self._url, logger, codename="database")
         QApplication.processEvents()
-        self._db_mngr.get_db_map_cache(self._db_map)
+        self._db_map.fetch_all()
         self._model = ItemMetadataTableModel(self._db_mngr, [self._db_map], None)
         if self._model.canFetchMore(None):
             self._model.fetchMore(None)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._model.deleteLater()

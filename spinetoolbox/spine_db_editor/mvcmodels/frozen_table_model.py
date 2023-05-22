@@ -343,7 +343,7 @@ class FrozenTableModel(QAbstractTableModel):
         if header == "database":
             return value.codename
         db_map, id_ = value
-        item = self.db_mngr.get_item(db_map, "object", id_)
+        item = self.db_mngr.get_item(db_map, "entity", id_)
         return item.get("name")
 
     @property

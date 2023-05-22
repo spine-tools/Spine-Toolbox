@@ -211,28 +211,25 @@ class TestAddItems(unittest.TestCase):
 
     def test_add_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
-
-        def callback(db_map_data):
-            self.assertEqual(
-                db_map_data, {db_map: [{"id": 1, "name": "my_metadata", "value": "Metadata value.", "commit_id": 2}]}
-            )
-
-        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
-        self._db_mngr.add_items(db_map_data, "metadata", callback=callback)
+        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value.", "id": 1}]}
+        self._db_mngr.add_items("metadata", db_map_data)
+        self.assertEqual(
+            self._db_mngr.get_item(db_map, "metadata", 1)._asdict(),
+            {'name': 'my_metadata', 'value': 'Metadata value.', 'id': 1},
+        )
 
     def test_add_object_metadata(self):
-        db_map = DatabaseMapping(self._db_url, create=True)
+        db_map = self._db_mngr.get_db_map(self._db_url, None, create=True)
         import_functions.import_object_classes(db_map, ("my_class",))
         import_functions.import_objects(db_map, (("my_class", "my_object"),))
         import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
         db_map.commit_session("Add test data.")
-        db_map.connection.close()
-
-        def callback(db_map_data):
-            self.assertEqual(db_map_data, {db_map: [{'entity_id': 1, 'metadata_id': 1, 'commit_id': None, 'id': 1}]})
-
-        db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1}]}
-        self._db_mngr.add_items(db_map_data, "entity_metadata", callback=callback)
+        db_map.close()
+        db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1, "id": 1}]}
+        self._db_mngr.add_items("entity_metadata", db_map_data)
+        self.assertEqual(
+            self._db_mngr.get_item(db_map, "entity_metadata", 1)._asdict(), {'entity_id': 1, 'metadata_id': 1, 'id': 1}
+        )
 
 
 class TestImportData(unittest.TestCase):
@@ -252,7 +249,7 @@ class TestImportData(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._temp_dir.cleanup()
@@ -269,12 +266,11 @@ class TestImportData(unittest.TestCase):
         list_values = self._db_mngr.get_items(self._db_map, "list_value")
         self.assertEqual(len(value_lists), 1)
         value_list = value_lists[0]
-        index_to_id = dict(zip(value_list["value_id_list"], value_list["value_index_list"]))
-        values = len(index_to_id) * [None]
-        for row in list_values:
-            value = from_database(row["value"], row["type"])
-            values[index_to_id[row["id"]]] = value
-        self.assertEqual(values, ["first value", "second value"])
+        self.assertEqual(value_list["name"], "list_1")
+        self.assertEqual(
+            [(from_database(x["value"], x["type"]), x["index"]) for x in list_values],
+            [("first value", 0), ("second value", 1)],
+        )
 
 
 class TestOpenDBEditor(unittest.TestCase):

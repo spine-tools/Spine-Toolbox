@@ -149,7 +149,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         return self.link
 
     def has_filters(self):
-        """Returns True if connection has scenario or tool filters.
+        """Returns True if connection has scenario filters.
 
         Returns:
             bool: True if connection has filters, False otherwise
@@ -208,7 +208,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
 
     def _fetch_more_if_possible(self):
         for db_map in self._db_maps.values():
-            for item_type in ("scenario", "tool"):
+            for item_type in ("scenario",):
                 fetch_parent = self._make_fetch_parent(db_map, item_type)
                 if self._toolbox.db_mngr.can_fetch_more(db_map, fetch_parent):
                     self._toolbox.db_mngr.fetch_more(db_map, fetch_parent)
@@ -232,12 +232,6 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         if db_map is None:
             return []
         return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario", only_visible=True))
-
-    def get_tool_names(self, url):
-        db_map = self._get_db_map(url)
-        if db_map is None:
-            return []
-        return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "tool", only_visible=True))
 
     def may_have_filters(self):
         """Returns whether this connection may have filters.
@@ -304,7 +298,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         Args:
             resource (str): Resource label
             filter_type (str): Always SCENARIO_FILTER_TYPE, for now.
-            online (dict): mapping from scenario/tool name to online flag
+            online (dict): mapping from scenario name to online flag
         """
         self._filter_settings.known_filters.setdefault(resource, {}).setdefault(filter_type, {}).update(online)
 

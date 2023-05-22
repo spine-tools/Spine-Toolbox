@@ -322,6 +322,9 @@ class _MockFuture:
     def result(self):
         return self._result
 
+    def add_done_callback(self, callback):
+        callback(self)
+
 
 @contextmanager
 def q_object(o):

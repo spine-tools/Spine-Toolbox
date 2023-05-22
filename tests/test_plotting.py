@@ -79,19 +79,21 @@ class TestBase(unittest.TestCase):
             "spinetoolbox.spine_db_manager.QMessageBox"
         ):
             self._db_editor.close()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
         self._db_editor = None
 
     def _add_object_parameter_values(self, values):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "class"}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "class", "id": 1}]})
         self._db_mngr.add_parameter_definitions(
-            {self._db_map: [{"entity_class_id": 1, "name": name} for name in values]}
+            {self._db_map: [{"entity_class_id": 1, "name": name, "id": i + 1} for i, name in enumerate(values)]}
         )
         object_count = max(len(x) for x in values.values())
-        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": f"o{i + 1}"} for i in range(object_count)]})
+        self._db_mngr.add_entities(
+            {self._db_map: [{"class_id": 1, "name": f"o{i + 1}", "id": i + 1} for i in range(object_count)]}
+        )
         db_values = {
             name: [(value, type_) for value, type_ in map(to_database, value_list)]
             for name, value_list in values.items()

@@ -31,7 +31,6 @@ class TestSelectDatabaseItems(unittest.TestCase):
                     "alternative": False,
                     "entity_group": False,
                     "entity_metadata": False,
-                    "feature": True,
                     "list_value": False,
                     "metadata": False,
                     "entity": True,
@@ -42,9 +41,6 @@ class TestSelectDatabaseItems(unittest.TestCase):
                     "parameter_value_metadata": False,
                     "scenario": False,
                     "scenario_alternative": False,
-                    "tool": False,
-                    "tool_feature": False,
-                    "tool_feature_method": False,
                 },
             )
 

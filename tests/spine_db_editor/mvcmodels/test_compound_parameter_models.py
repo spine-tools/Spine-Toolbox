@@ -43,7 +43,7 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
@@ -67,8 +67,8 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
+        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
@@ -96,7 +96,7 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
@@ -120,9 +120,9 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1]}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
+        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
         self._db_mngr.fetch_all(self._db_map)
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
@@ -152,7 +152,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
@@ -176,9 +176,9 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1}]})
-        self._db_mngr.add_entities({self._db_map: [{"name": "o", "class_id": 1}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
+        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
+        self._db_mngr.add_entities({self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
         self._db_mngr.add_parameter_values(
             {
                 self._db_map: [
@@ -189,6 +189,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
                         "entity_id": 1,
                         "entity_class_id": 1,
                         "alternative_id": 1,
+                        "id": 1,
                     }
                 ]
             }
@@ -221,7 +222,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
@@ -245,11 +246,11 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_entities({self._db_map: [{"name": "o", "class_id": 1}]})
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1]}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2}]})
-        self._db_mngr.add_entities({self._db_map: [{"name": "r", "class_id": 2, "element_id_list": [1]}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
+        self._db_mngr.add_entities({self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
+        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
+        self._db_mngr.add_entities({self._db_map: [{"name": "r", "class_id": 2, "element_id_list": [1], "id": 2}]})
         self._db_mngr.add_parameter_values(
             {
                 self._db_map: [
@@ -260,6 +261,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
                         "entity_id": 2,
                         "entity_class_id": 2,
                         "alternative_id": 1,
+                        "id": 1,
                     }
                 ]
             }

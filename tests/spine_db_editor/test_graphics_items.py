@@ -103,15 +103,16 @@ class TestEntityItem(unittest.TestCase):
         self.assertEqual(self._item.db_maps, [self._db_map])
 
     def test_db_map_data(self):
+        print(self._item.db_map_data(self._db_map)._asdict())
         self.assertEqual(
-            self._item.db_map_data(self._db_map),
+            self._item.db_map_data(self._db_map)._asdict(),
             {
                 'name': 'r',
                 'id': 2,
                 'class_id': 2,
                 'class_name': 'rc',
                 'element_id_list': (1,),
-                'commit_id': 2,
+                'description': None,
             },
         )
 

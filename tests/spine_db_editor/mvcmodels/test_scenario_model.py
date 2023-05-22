@@ -53,7 +53,7 @@ class TestScenarioModel(_TestBase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
@@ -88,7 +88,7 @@ class TestScenarioModel(_TestBase):
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
-        self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
+        self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1", "description": "Just a test.", "id": 1}]})
         self._db_mngr.update_scenarios(
             {self._db_map: [{"name": "scenario_2.0", "description": "More than just a test.", "id": 1}]}
         )
@@ -110,7 +110,7 @@ class TestScenarioModel(_TestBase):
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
-        self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
+        self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1", "description": "Just a test.", "id": 1}]})
         self._db_mngr.remove_items({self._db_map: {"scenario": {1}}})
         data = model_data_to_dict(model)
         expected = [[{"test_db": [["Type new scenario name here...", ""]]}, None]]
@@ -193,7 +193,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_dropMimeData_reorders_alternatives(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
@@ -284,7 +284,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_paste_alternative_mime_data(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
@@ -315,7 +315,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_paste_alternative_mime_data_ranks_alternatives(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
@@ -381,8 +381,10 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_duplicate_scenario(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
-        self._db_mngr.add_scenarios({self._db_map: [{"name": "my_scenario", "description": "My test scenario"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
+        self._db_mngr.add_scenarios(
+            {self._db_map: [{"name": "my_scenario", "description": "My test scenario", "id": 1}]}
+        )
         self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": 1, "alternative_id_list": [2, 1]}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
@@ -444,14 +446,14 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map1.connection.closed and self._db_map2.connection.closed:
+        while not self._db_map1.closed and self._db_map2.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
         self._temp_dir.cleanup()
 
     def test_paste_alternative_mime_data_doesnt_paste_across_databases(self):
-        self._db_mngr.add_alternatives({self._db_map1: [{"name": "alternative_1"}]})
+        self._db_mngr.add_alternatives({self._db_map1: [{"name": "alternative_1", "id": 2}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
         model.build_tree()
         self._fetch_recursively(model)
@@ -483,8 +485,8 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_paste_scenario_mime_data(self):
-        self._db_mngr.add_scenarios({self._db_map1: [{"name": "my_scenario"}]})
-        self._db_mngr.add_alternatives({self._db_map1: [{"name": "alternative_1"}]})
+        self._db_mngr.add_scenarios({self._db_map1: [{"name": "my_scenario", "id": 1}]})
+        self._db_mngr.add_alternatives({self._db_map1: [{"name": "alternative_1", "id": 2}]})
         self._db_mngr.set_scenario_alternatives({self._db_map1: [{"id": 1, "alternative_id_list": [2, 1]}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
         model.build_tree()

@@ -60,7 +60,7 @@ class SpineDBWorker(QObject):
 
     def reset_queries(self):
         """Resets queries and clears caches."""
-        self._cache.reset_queries()
+        self._db_map.cache.reset_queries()
         self._reset_queries()
 
     def _reset_queries(self):

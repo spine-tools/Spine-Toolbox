@@ -20,7 +20,6 @@ from PySide6.QtWidgets import QApplication
 
 from spine_engine.project_item.project_item_resource import database_resource
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
-from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
 
 
@@ -45,7 +44,7 @@ class TestResourceFilterModel(unittest.TestCase):
         project.find_connection.return_value = connection
 
         def online_filters(resource_label, resource_type):
-            return {SCENARIO_FILTER_TYPE: {}, TOOL_FILTER_TYPE: {}}[resource_type]
+            return {SCENARIO_FILTER_TYPE: {}}[resource_type]
 
         connection.online_filters.side_effect = online_filters
         connection.get_scenario_names.return_value = ["my_scenario"]
@@ -55,7 +54,7 @@ class TestResourceFilterModel(unittest.TestCase):
             connection.resource_filter_model = model
             model.build_tree()
             root_index = model.index(0, 0)
-            self.assertEqual(model.rowCount(root_index), 2)
+            self.assertEqual(model.rowCount(root_index), 1)
             scenario_root_index = model.index(0, 0, root_index)
             self.assertEqual(model.rowCount(scenario_root_index), 2)
             my_scenario_index = model.index(1, 0, scenario_root_index)
@@ -71,15 +70,6 @@ class TestResourceFilterModel(unittest.TestCase):
                 model.setData(my_scenario_index, Qt.CheckState.Checked.value, Qt.ItemDataRole.CheckStateRole)
             )
             self.assertEqual(model.data(my_scenario_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked.value)
-            tool_root_index = model.index(1, 0, root_index)
-            self.assertEqual(model.rowCount(tool_root_index), 2)
-            my_tool_index = model.index(1, 0, tool_root_index)
-            self.assertEqual(my_tool_index.data(), "my_tool")
-            self.assertEqual(model.data(my_tool_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked.value)
-            self.assertTrue(model.setData(my_tool_index, Qt.CheckState.Unchecked.value, Qt.ItemDataRole.CheckStateRole))
-            self.assertEqual(model.data(my_tool_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Unchecked.value)
-            self.assertTrue(model.setData(my_tool_index, Qt.CheckState.Checked.value, Qt.ItemDataRole.CheckStateRole))
-            self.assertEqual(model.data(my_tool_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked.value)
 
 
 @contextmanager

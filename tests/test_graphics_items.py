@@ -19,7 +19,7 @@ from unittest.mock import patch, MagicMock
 from PySide6.QtCore import QEvent, QPoint, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QGraphicsSceneMouseEvent
-from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
+from spinedb_api import DatabaseMapping, import_scenarios
 from spine_engine.project_item.project_item_resource import database_resource
 from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
 from spinetoolbox.project_item.logging_connection import LoggingConnection
@@ -173,10 +173,10 @@ class TestLink(unittest.TestCase):
 
     def test_scenario_filter_gets_added_to_filter_model(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
-        db_map = DiffDatabaseMapping(url, create=True)
+        db_map = DatabaseMapping(url, create=True)
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
-        db_map.connection.close()
+        db_map.close()
         self._link.connection.receive_resources_from_source(
             [database_resource("provider", url, "my_database", filterable=True)]
         )
@@ -187,7 +187,7 @@ class TestLink(unittest.TestCase):
         index = filter_model.index(0, 0)
         self.assertEqual(index.data(), "my_database")
         root_item = filter_model.itemFromIndex(index)
-        self.assertEqual(root_item.rowCount(), 2)
+        self.assertEqual(root_item.rowCount(), 1)
         self.assertEqual(root_item.columnCount(), 1)
         scenario_title_item = root_item.child(0, 0)
         self.assertEqual(scenario_title_item.index().data(), "Scenario filter")
@@ -202,62 +202,18 @@ class TestLink(unittest.TestCase):
         filter_model.setData(scenario_index, Qt.CheckState.Unchecked.value, role=Qt.ItemDataRole.CheckStateRole)
         self.assertEqual(self._link.connection.online_filters("my_database", "scenario_filter"), {"scenario": False})
 
-    def test_tool_filter_gets_added_to_filter_model(self):
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
-        db_map = DiffDatabaseMapping(url, create=True)
-        import_tools(db_map, ("tool",))
-        db_map.commit_session("Add test data.")
-        db_map.connection.close()
-        self._link.connection.receive_resources_from_source(
-            [database_resource("provider", url, "my_database", filterable=True)]
-        )
-        self._link.connection.refresh_resource_filter_model()
-        filter_model = self._link.connection.resource_filter_model
-        self.assertEqual(filter_model.rowCount(), 2)
-        self.assertEqual(filter_model.columnCount(), 1)
-        index = filter_model.index(0, 0)
-        self.assertEqual(index.data(), "my_database")
-        root_item = filter_model.itemFromIndex(index)
-        self.assertEqual(root_item.rowCount(), 2)
-        self.assertEqual(root_item.columnCount(), 1)
-        tool_title_item = root_item.child(1, 0)
-        self.assertEqual(tool_title_item.index().data(), "Tool filter")
-        self.assertEqual(tool_title_item.rowCount(), 2)
-        self.assertEqual(tool_title_item.columnCount(), 1)
-        tool_item = tool_title_item.child(0, 0)
-        self.assertEqual(tool_item.index().data(), "Select all")
-        tool_item = tool_title_item.child(1, 0)
-        self.assertEqual(tool_item.index().data(), "tool")
-        tool_index = filter_model.indexFromItem(tool_item)
-        self.assertEqual(self._link.connection.online_filters("my_database", "tool_filter"), {"tool": True})
-        filter_model.setData(tool_index, Qt.CheckState.Unchecked.value, role=Qt.ItemDataRole.CheckStateRole)
-        self.assertEqual(self._link.connection.online_filters("my_database", "tool_filter"), {"tool": False})
-
     def test_toggle_scenario_filter(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
-        db_map = DiffDatabaseMapping(url, create=True)
+        db_map = DatabaseMapping(url, create=True)
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
-        db_map.connection.close()
+        db_map.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url, filterable=True)])
         self._link.connection.refresh_resource_filter_model()
         self.assertEqual(self._link.connection.online_filters(url, "scenario_filter"), {"scenario": True})
         filter_model = self._link.connection.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {"scenario": False})
         self.assertEqual(self._link.connection.online_filters(url, "scenario_filter"), {"scenario": False})
-
-    def test_toggle_tool_filter(self):
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
-        db_map = DiffDatabaseMapping(url, create=True)
-        import_tools(db_map, ("tool",))
-        db_map.commit_session("Add test data.")
-        db_map.connection.close()
-        self._link.connection.receive_resources_from_source([database_resource("provider", url, filterable=True)])
-        self._link.connection.refresh_resource_filter_model()
-        self.assertEqual(self._link.connection.online_filters(url, "tool_filter"), {"tool": True})
-        filter_model = self._link.connection.resource_filter_model
-        filter_model.set_online(url, "tool_filter", {"tool": False})
-        self.assertEqual(self._link.connection.online_filters(url, "tool_filter"), {"tool": False})
 
 
 if __name__ == "__main__":

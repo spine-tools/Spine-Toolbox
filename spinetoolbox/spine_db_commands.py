@@ -168,8 +168,10 @@ class RemoveItemsCommand(SpineDBCommand):
 
     def redo(self):
         super().redo()
-        if not self.db_mngr.do_remove_items(self.db_map, self.item_type, self.ids):
+        items = self.db_mngr.do_remove_items(self.db_map, self.item_type, self.ids)
+        if not items:
             self.setObsolete(True)
+        self.ids = {x["id"] for x in items}
 
     def undo(self):
         super().undo()

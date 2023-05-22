@@ -164,7 +164,7 @@ class TestSpineDBEditor(
             self.spine_db_editor.close()
             mock_save_w_s.assert_called_once()
         self.db_mngr.close_all_sessions()
-        while not self.mock_db_map.connection.closed:
+        while not self.mock_db_map.closed:
             QApplication.processEvents()
         self.db_mngr.clean_up()
         self.spine_db_editor.deleteLater()
@@ -274,7 +274,7 @@ class TestClosingDBEditors(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         for editor in self._editors:

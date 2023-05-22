@@ -328,7 +328,7 @@ class SingleParameterValueMixin(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return tuple(item[k] for k in ("entity_name", "parameter_name", "alternative_name"))
+        return tuple(item[k] for k in ("entity_byname", "parameter_name", "alternative_name"))
 
     def set_filter_entity_ids(self, db_map_entity_ids):
         filter_entity_ids = db_map_entity_ids.get(self.db_map, set())

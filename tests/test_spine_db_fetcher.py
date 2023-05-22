@@ -45,13 +45,14 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._db_mngr.clean_up()
 
     def test_fetch_empty_database(self):
-        self._db_map.remove_items(alternative={1})
-        self._db_map.commit_session("ddd")
         for item_type in DatabaseMapping.ITEM_TYPES:
             fetcher = TestItemTypeFetchParent(item_type)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
-            fetcher.handle_items_added.assert_not_called()
+            if item_type == "alternative":
+                fetcher.handle_items_added.assert_called_once()
+            else:
+                fetcher.handle_items_added.assert_not_called()
             fetcher.set_obsolete(True)
 
     def _import_data(self, **data):
@@ -109,7 +110,6 @@ class TestSpineDBFetcher(unittest.TestCase):
             'display_icon': None,
             'hidden': 0,
             'dimension_id_list': (),
-            'dimension_name_list': None,
         }
         fetcher = TestItemTypeFetchParent("entity_class")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
@@ -126,7 +126,6 @@ class TestSpineDBFetcher(unittest.TestCase):
             'class_id': 1,
             'name': 'obj',
             'element_id_list': (),
-            'element_name_list': None,
             'description': None,
             'commit_id': 2,
         }
@@ -152,9 +151,8 @@ class TestSpineDBFetcher(unittest.TestCase):
             'display_icon': None,
             'hidden': 0,
             'dimension_id_list': (1,),
-            'dimension_name_list': "oc",
         }
-        for item_type in ("object_class",):
+        for item_type in ("entity_class",):
             dep_fetcher = TestItemTypeFetchParent(item_type)
             self._db_mngr.fetch_more(self._db_map, dep_fetcher)
             dep_fetcher.set_obsolete(True)
@@ -173,7 +171,6 @@ class TestSpineDBFetcher(unittest.TestCase):
             'name': 'rc_obj',
             'class_id': 2,
             'element_id_list': (1,),
-            'element_name_list': "obj",
             'description': None,
             'commit_id': 3,
         }
@@ -192,7 +189,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._import_data(
             object_classes=("oc",), objects=(("oc", "obj"), ("oc", "group")), object_groups=(("oc", "group", "obj"),)
         )
-        item = {'id': 1, 'entity_class_id': 1, 'entity_id': 2, 'member_id': 1}
+        item = {'id': 1, 'entity_class_id': 1, 'entity_id': 2, 'member_id': 1, 'commit_id': 2}
         fetcher = TestItemTypeFetchParent("entity_group")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
@@ -205,8 +202,6 @@ class TestSpineDBFetcher(unittest.TestCase):
         item = {
             'id': 1,
             'entity_class_id': 1,
-            'object_class_id': 1,
-            'relationship_class_id': None,
             'name': 'param',
             'parameter_value_list_id': None,
             'default_value': None,
@@ -215,7 +210,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'description': None,
             'commit_id': 2,
         }
-        for item_type in ("object_class",):
+        for item_type in ("entity_class",):
             dep_fetcher = TestItemTypeFetchParent(item_type)
             self._db_mngr.fetch_more(self._db_map, dep_fetcher)
             dep_fetcher.set_obsolete(True)
@@ -236,11 +231,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         item = {
             'id': 1,
             'entity_class_id': 1,
-            'object_class_id': 1,
-            'relationship_class_id': None,
             'entity_id': 1,
-            'object_id': 1,
-            'relationship_id': None,
             'parameter_definition_id': 1,
             'alternative_id': 1,
             'value': b'2.3',
@@ -248,7 +239,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'list_value_id': None,
             'commit_id': 2,
         }
-        for item_type in ("object_class", "object", "parameter_definition", "alternative"):
+        for item_type in ("entity_class", "entity", "parameter_definition", "alternative"):
             dep_fetcher = TestItemTypeFetchParent(item_type)
             self._db_mngr.fetch_more(self._db_map, dep_fetcher)
             dep_fetcher.set_obsolete(True)
@@ -273,92 +264,6 @@ class TestSpineDBFetcher(unittest.TestCase):
             self._db_mngr.fetch_more(self._db_map, fetcher)
         fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "list_value", 1), item)
-        fetcher.set_obsolete(True)
-
-    def test_fetch_features(self):
-        self._import_data(
-            object_classes=("oc",),
-            parameter_value_lists=(("value_list", 2.3),),
-            object_parameters=(("oc", "param", 2.3, "value_list"),),
-            features=(("oc", "param"),),
-        )
-        item = {
-            'id': 1,
-            'parameter_definition_id': 1,
-            'parameter_value_list_id': 1,
-            'description': None,
-            'commit_id': 2,
-        }
-        for item_type in ("object_class", "parameter_definition", "parameter_value_list"):
-            dep_fetcher = TestItemTypeFetchParent(item_type)
-            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
-            dep_fetcher.set_obsolete(True)
-        fetcher = TestItemTypeFetchParent("feature")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "feature", 1), item)
-        fetcher.set_obsolete(True)
-
-    def test_fetch_tools(self):
-        self._import_data(tools=("tool",))
-        item = {'id': 1, 'name': 'tool', 'description': None, 'commit_id': 2}
-        fetcher = TestItemTypeFetchParent("tool")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "tool", 1), item)
-        fetcher.set_obsolete(True)
-
-    def test_fetch_tool_features(self):
-        self._import_data(
-            object_classes=("oc",),
-            parameter_value_lists=(("value_list", 2.3),),
-            object_parameters=(("oc", "param", 2.3, "value_list"),),
-            features=(("oc", "param"),),
-            tools=("tool",),
-            tool_features=(("tool", "oc", "param"),),
-        )
-        item = {'id': 1, 'tool_id': 1, 'feature_id': 1, 'parameter_value_list_id': 1, 'required': False, 'commit_id': 2}
-        for item_type in ("tool", "feature", "object_class", "parameter_definition", "parameter_value_list"):
-            dep_fetcher = TestItemTypeFetchParent(item_type)
-            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
-            dep_fetcher.set_obsolete(True)
-        fetcher = TestItemTypeFetchParent("tool_feature")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "tool_feature", 1), item)
-        fetcher.set_obsolete(True)
-
-    def test_fetch_tool_feature_methods(self):
-        self._import_data(
-            object_classes=("oc",),
-            parameter_value_lists=(("value_list", "m"),),
-            object_parameters=(("oc", "param", "m", "value_list"),),
-            features=(("oc", "param"),),
-            tools=("tool",),
-            tool_features=(("tool", "oc", "param"),),
-            tool_feature_methods=(("tool", "oc", "param", "m"),),
-        )
-        item = {'id': 1, 'tool_feature_id': 1, 'parameter_value_list_id': 1, 'method_index': 0, 'commit_id': 2}
-        for item_type in (
-            "object_class",
-            "parameter_definition",
-            "parameter_value_list",
-            "list_value",
-            "tool",
-            "feature",
-            "tool_feature",
-        ):
-            dep_fetcher = TestItemTypeFetchParent(item_type)
-            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
-            dep_fetcher.set_obsolete(True)
-        fetcher = TestItemTypeFetchParent("tool_feature_method")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "tool_feature_method", 1), item)
         fetcher.set_obsolete(True)
 
 

@@ -72,9 +72,11 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
         self._db_mngr.deleteLater()
 
     def test_data_db_map_role(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class"}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"entity_class_id": 1, "name": "my_parameter"}]})
-        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "my_object"}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class", "id": 1}]})
+        self._db_mngr.add_parameter_definitions(
+            {self._db_map: [{"entity_class_id": 1, "name": "my_parameter", "id": 1}]}
+        )
+        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "my_object", "id": 1}]})
         value, type_ = to_database(2.3)
         self._db_mngr.add_parameter_values(
             {
@@ -86,6 +88,7 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
                         "value": value,
                         "type": type_,
                         "alternative_id": 1,
+                        "id": 1,
                     }
                 ]
             }

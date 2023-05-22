@@ -26,10 +26,6 @@ from spinedb_api import (
     import_entities,
     import_parameter_value_lists,
     import_parameter_definitions,
-    import_tools,
-    import_features,
-    import_tool_features,
-    import_tool_feature_methods,
 )
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntitiesDialog, AddEntityClassesDialog
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
@@ -156,7 +152,7 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(TestBase):
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), "database")
         self._commit_changes_to_database("Add object class.")
-        data = self._db_mngr.query(self._db_map, "object_class_sq")
+        data = self._db_map.query(self._db_map.object_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "an_object_class")
 
@@ -177,10 +173,10 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(TestBase):
         object_database_index = model.index(0, 1, class_index)
         self.assertEqual(object_database_index.data(), "database")
         self._commit_changes_to_database("Add object.")
-        data = self._db_mngr.query(self._db_map, "object_class_sq")
+        data = self._db_map.query(self._db_map.object_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "an_object_class")
-        data = self._db_mngr.query(self._db_map, "object_sq")
+        data = self._db_map.query(self._db_map.object_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "an_object")
 
@@ -203,7 +199,7 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(TestBase):
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), "database")
         self._commit_changes_to_database("Add object and relationship classes.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_class_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "a_relationship_class")
         self.assertEqual(data[0].object_class_name_list, "an_object_class")
@@ -217,7 +213,7 @@ class TestObjectTreeViewWithExistingData(TestBase):
         import_entity_classes(db_map, (("object_class_1",),))
         import_entities(db_map, (("object_class_1", "object_1"), ("object_class_1", "object_2")))
         db_map.commit_session("Add objects.")
-        db_map.connection.close()
+        db_map.close()
         self._common_setup(url, create=False)
         model = self._db_editor.ui.treeView_entity.model()
         root_index = model.index(0, 0)
@@ -271,7 +267,7 @@ class TestObjectTreeViewWithExistingData(TestBase):
         class_index = model.index(0, 0, root_index)
         self.assertEqual(class_index.data(), "renamed_class")
         self._commit_changes_to_database("Rename object class.")
-        data = self._db_mngr.query(self._db_map, "object_class_sq")
+        data = self._db_map.query(self._db_map.object_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "renamed_class")
 
@@ -292,7 +288,7 @@ class TestObjectTreeViewWithExistingData(TestBase):
         object_index = model.index(0, 0, class_index)
         self.assertEqual(object_index.data(), "renamed_object")
         self._commit_changes_to_database("Rename object.")
-        data = self._db_mngr.query(self._db_map, "object_sq")
+        data = self._db_map.query(self._db_map.object_sq).all()
         self.assertEqual(len(data), 2)
         self.assertEqual(data[0].name, "renamed_object")
 
@@ -305,7 +301,7 @@ class TestObjectTreeViewWithExistingData(TestBase):
         _remove_object_class(view)
         self.assertEqual(model.rowCount(root_index), 0)
         self._commit_changes_to_database("Remove object class.")
-        data = self._db_mngr.query(self._db_map, "object_class_sq")
+        data = self._db_map.query(self._db_map.object_class_sq).all()
         self.assertEqual(len(data), 0)
 
     def test_remove_object(self):
@@ -326,7 +322,7 @@ class TestObjectTreeViewWithExistingData(TestBase):
         object_index = model.index(0, 0, class_index)
         self.assertEqual(object_index.data(), "object_2")
         self._commit_changes_to_database("Remove object.")
-        data = self._db_mngr.query(self._db_map, "object_sq")
+        data = self._db_map.query(self._db_map.object_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "object_2")
 
@@ -370,7 +366,7 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(TestBase):
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), "database")
         self._commit_changes_to_database("Add object and relationship classes.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_class_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "a_relationship_class")
         self.assertEqual(data[0].object_class_name_list, "an_object_class")
@@ -398,7 +394,7 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(TestBase):
         relationship_database_index = model.index(0, 1, class_index)
         self.assertEqual(relationship_database_index.data(), "database")
         self._commit_changes_to_database("Add an object and a relationship.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "a_relationship")
         self.assertEqual(data[0].object_name_list, "an_object")
@@ -440,7 +436,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
             (("relationship_class", ("object_11", "object_21")), ("relationship_class", ("object_11", "object_22"))),
         )
         db_map.commit_session("Add relationships.")
-        db_map.connection.close()
+        db_map.close()
         self._common_setup(url, create=False)
         model = self._db_editor.ui.treeView_entity.model()
         root_index = model.index(0, 0)
@@ -497,7 +493,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
         class_index = model.index(2, 0, root_index)
         self.assertEqual(class_index.data(), "renamed_class")
         self._commit_changes_to_database("Rename relationship class.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_class_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "renamed_class")
 
@@ -516,7 +512,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
         view.setCurrentIndex(relationship_index)
         self._rename_relationship("renamed_relationship")
         self._commit_changes_to_database("Rename relationship.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_sq).all()
         self.assertEqual(len(data), 2)
         names = {i.name for i in data}
         self.assertEqual(names, {"renamed_relationship", "relationship_class_object_11__object_22"})
@@ -538,7 +534,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
         _edit_entity_tree_item({0: "object_12"}, view, "Edit...", EditEntitiesDialog)
         self.assertEqual(relationship_index.data(), "object_12 ǀ object_21")
         self._commit_changes_to_database("Change relationship's objects.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_sq).all()
         self.assertEqual(len(data), 2)
         objects = {i.object_name_list for i in data}
         self.assertEqual(objects, {"object_12,object_21", "object_11,object_22"})
@@ -556,7 +552,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
         self._remove_relationship_class()
         self.assertEqual(model.rowCount(root_index), 2)
         self._commit_changes_to_database("Remove relationship class.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_class_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_class_sq).all()
         self.assertEqual(len(data), 0)
 
     def test_remove_relationship(self):
@@ -576,7 +572,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
         self._remove_relationship()
         self.assertEqual(model.rowCount(class_index), 1)
         self._commit_changes_to_database("Remove relationship.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "relationship_class_object_11__object_22")
 
@@ -597,7 +593,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
         QApplication.processEvents()
         self.assertEqual(model.rowCount(root_index), 1)
         self._commit_changes_to_database("Remove object class.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_class_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_class_sq).all()
         self.assertEqual(len(data), 0)
 
     def test_removing_object_removes_corresponding_relationship(self):
@@ -629,7 +625,7 @@ class TestRelationshipTreeViewWithExistingData(TestBase):
         relationship_index = model.index(0, 0, class_index)
         self.assertEqual(relationship_index.data(), "object_11 ǀ object_22")
         self._commit_changes_to_database("Remove object.")
-        data = self._db_mngr.query(self._db_map, "wide_relationship_sq")
+        data = self._db_map.query(self._db_map.wide_relationship_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "relationship_class_object_11__object_22")
 
@@ -707,10 +703,10 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
             QApplication.processEvents()
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
         self._commit_changes_to_database("Add parameter value list.")
-        data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
+        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "a_value_list")
-        data = self._db_mngr.query(self._db_map, "list_value_sq")
+        data = self._db_map.query(self._db_map.list_value_sq).all()
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("value_1", "value_2")):
             self.assertEqual(from_database(data[i].value), expected_value)
@@ -723,7 +719,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         db_map = DatabaseMapping(url, create=True)
         import_parameter_value_lists(db_map, (("value_list_1", "value_1"), ("value_list_1", "value_2")))
         db_map.commit_session("Add parameter value list.")
-        db_map.connection.close()
+        db_map.close()
         self._common_setup(url, create=False)
 
         view = self._db_editor.ui.treeView_parameter_value_list
@@ -773,10 +769,10 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         list_name_index = model.index(1, 0, root_index)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Remove parameter value list value.")
-        data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
+        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "value_list_1")
-        data = self._db_mngr.query(self._db_map, "list_value_sq")
+        data = self._db_map.query(self._db_map.list_value_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(from_database(data[0].value, data[0].type), "value_2")
 
@@ -793,7 +789,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         self.assertEqual(model.rowCount(list_name_index), 0)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Remove parameter value list.")
-        data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
+        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
         self.assertEqual(len(data), 0)
 
     def test_change_value(self):
@@ -806,10 +802,10 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         self.assertEqual(model.index(0, 0, list_name_index).data(), "new_value")
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
         self._commit_changes_to_database("Update parameter value list value.")
-        data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
+        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "value_list_1")
-        data = self._db_mngr.query(self._db_map, "list_value_sq")
+        data = self._db_map.query(self._db_map.list_value_sq).all()
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("new_value", "value_2")):
             self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
@@ -830,330 +826,13 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         list_name_index = model.index(1, 0, root_index)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Rename parameter value list.")
-        data = self._db_mngr.query(self._db_map, "parameter_value_list_sq")
+        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "new_list_name")
-        data = self._db_mngr.query(self._db_map, "list_value_sq")
+        data = self._db_map.query(self._db_map.list_value_sq).all()
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("value_1", "value_2")):
             self.assertEqual(from_database(data[i].value), expected_value)
-
-
-class TestToolFeatureTreeViewWithInitiallyEmptyDatabase(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-        self._value_list_edits = _ParameterValueListEdits(self._db_editor.ui.treeView_parameter_value_list)
-
-    def tearDown(self):
-        self._common_tear_down()
-
-    def test_empty_tree_has_correct_contents(self):
-        model = self._db_editor.ui.treeView_tool_feature.model()
-        db_index = model.index(0, 0)
-        self.assertTrue(db_index.isValid())
-        self.assertEqual(model.rowCount(db_index), 2)
-        feature_root_index = model.index(0, 0, db_index)
-        self.assertEqual(feature_root_index.data(), "feature")
-        self.assertEqual(model.rowCount(feature_root_index), 1)
-        feature_index = model.index(0, 0, feature_root_index)
-        self.assertEqual(feature_index.data(), "Enter new feature here...")
-        self.assertEqual(model.rowCount(feature_index), 0)
-        tool_root_index = model.index(1, 0, db_index)
-        self.assertEqual(tool_root_index.data(), "tool")
-        self.assertEqual(model.rowCount(tool_root_index), 1)
-        tool_index = model.index(0, 0, tool_root_index)
-        self.assertEqual(tool_index.data(), "Type new tool name here...")
-        self.assertEqual(model.rowCount(tool_index), 0)
-
-    def test_add_feature_without_parameter_definitions_opens_error_box(self):
-        tree_view = self._db_editor.ui.treeView_tool_feature
-        model = tree_view.model()
-        db_index = model.index(0, 0)
-        feature_root_index = model.index(0, 0, db_index)
-        feature_index = model.index(0, 0, feature_root_index)
-        view_edit = EditorDelegateMocking()
-        with mock.patch.object(self._db_editor, "msg_error") as mock_error:
-            view_edit.try_to_edit_index(tree_view, feature_index)
-            mock_error.emit.assert_called_once_with(
-                "There aren't any listed parameter definitions to create features from."
-            )
-
-    def test_add_feature(self):
-        self._add_parameter_with_value_list()
-        self._add_feature()
-        model = self._db_editor.ui.treeView_tool_feature.model()
-        db_index = model.index(0, 0)
-        feature_root_index = model.index(0, 0, db_index)
-        self.assertEqual(model.rowCount(feature_root_index), 2)
-        self.assertEqual(model.index(0, 0, feature_root_index).data(), "my_object_class/my_parameter")
-        self.assertEqual(model.index(1, 0, feature_root_index).data(), "Enter new feature here...")
-
-    def test_add_tool(self):
-        self._add_tool()
-        view = self._db_editor.ui.treeView_tool_feature
-        model = view.model()
-        db_index = model.index(0, 0)
-        tool_root_index = model.index(1, 0, db_index)
-        self.assertEqual(model.rowCount(tool_root_index), 2)
-        tool_index = model.index(0, 0, tool_root_index)
-        self.assertEqual(tool_index.data(), "my_tool")
-        self.assertEqual(model.index(1, 0, tool_root_index).data(), "Type new tool name here...")
-        self.assertEqual(model.rowCount(tool_index), 1)
-        tool_feature_root_index = model.index(0, 0, tool_index)
-        self.assertEqual(tool_feature_root_index.data(), "tool_feature")
-        self.assertEqual(model.rowCount(tool_feature_root_index), 1)
-        tool_feature_index = model.index(0, 0, tool_feature_root_index)
-        self.assertEqual(tool_feature_index.data(), "Type tool feature name here...")
-        self.assertEqual(model.rowCount(tool_feature_index), 0)
-
-    def test_add_tool_feature(self):
-        self._add_parameter_with_value_list()
-        view = self._db_editor.ui.treeView_tool_feature
-        model = view.model()
-        for item in model.visit_all():
-            if item.can_fetch_more():
-                item.fetch_more()
-        self._add_feature()
-        self._add_tool()
-        self._add_tool_feature()
-        db_index = model.index(0, 0)
-        tool_root_index = model.index(1, 0, db_index)
-        tool_index = model.index(0, 0, tool_root_index)
-        tool_feature_root_index = model.index(0, 0, tool_index)
-        self.assertEqual(model.rowCount(tool_feature_root_index), 2)
-        tool_feature_index = model.index(0, 0, tool_feature_root_index)
-        self.assertEqual(tool_feature_index.data(), "my_object_class/my_parameter")
-        self.assertEqual(model.rowCount(tool_feature_index), 2)
-        self.assertEqual(model.index(1, 0, tool_feature_root_index).data(), "Type tool feature name here...")
-        self.assertEqual(model.index(0, 0, tool_feature_index).data(), "required: no")
-        method_root_index = model.index(1, 0, tool_feature_index)
-        self.assertEqual(method_root_index.data(), "tool_feature_method")
-        self.assertEqual(model.rowCount(method_root_index), 1)
-        method_index = model.index(0, 0, method_root_index)
-        self.assertEqual(method_index.data(), "Enter new method here...")
-        self.assertEqual(model.rowCount(method_index), 0)
-
-    def test_add_tool_feature_method(self):
-        self._add_parameter_with_value_list()
-        self._add_feature()
-        self._add_tool()
-        self._add_tool_feature()
-        view = self._db_editor.ui.treeView_tool_feature
-        model = view.model()
-        for item in model.visit_all():
-            if item.can_fetch_more():
-                item.fetch_more()
-        db_index = model.index(0, 0)
-        tool_root_index = model.index(1, 0, db_index)
-        tool_index = model.index(0, 0, tool_root_index)
-        tool_feature_root_index = model.index(0, 0, tool_index)
-        tool_feature_index = model.index(0, 0, tool_feature_root_index)
-        method_root_index = model.index(1, 0, tool_feature_index)
-        method_index = model.index(0, 0, method_root_index)
-        view_edit = EditorDelegateMocking()
-        view_edit.write_to_index(view, method_index, "2.3")
-        method_root_index = model.index(1, 0, tool_feature_index)
-        self.assertEqual(model.rowCount(method_root_index), 2)
-        method_index = model.index(0, 0, method_root_index)
-        self.assertEqual(method_index.data(), "2.3")
-        self.assertEqual(model.rowCount(method_index), 0)
-        self.assertEqual(model.index(1, 0, method_root_index).data(), "Enter new method here...")
-
-    def _add_parameter_with_value_list(self):
-        self._value_list_edits.append_value_list(self._db_mngr, "my_value_list")
-        self._value_list_edits.append_value(self._db_mngr, "my_value_list", 2.3)
-        object_tree_view = self._db_editor.ui.treeView_entity
-        add_object_class(object_tree_view, "my_object_class")
-        object_parameter_definition_view = self._db_editor.ui.tableView_parameter_definition
-        _append_table_row(object_parameter_definition_view, ["my_object_class", "my_parameter", "my_value_list"])
-
-    def _add_feature(self):
-        view = self._db_editor.ui.treeView_tool_feature
-        model = view.model()
-        db_index = model.index(0, 0)
-        feature_root_index = model.index(0, 0, db_index)
-        feature_index = model.index(0, 0, feature_root_index)
-        view_edit = EditorDelegateMocking()
-        view_edit.write_to_index(view, feature_index, "my_object_class/my_parameter")
-        for item in model.visit_all():
-            if item.can_fetch_more():
-                item.fetch_more()
-
-    def _add_tool(self):
-        view = self._db_editor.ui.treeView_tool_feature
-        model = view.model()
-        db_index = model.index(0, 0)
-        tool_root_index = model.index(1, 0, db_index)
-        tool_index = model.index(0, 0, tool_root_index)
-        view_edit = EditorDelegateMocking()
-        view_edit.write_to_index(view, tool_index, "my_tool")
-        for item in model.visit_all():
-            if item.can_fetch_more():
-                item.fetch_more()
-
-    def _add_tool_feature(self):
-        view = self._db_editor.ui.treeView_tool_feature
-        model = view.model()
-        db_index = model.index(0, 0)
-        tool_root_index = model.index(1, 0, db_index)
-        tool_index = model.index(0, 0, tool_root_index)
-        tool_feature_root_index = model.index(0, 0, tool_index)
-        tool_feature_index = model.index(0, 0, tool_feature_root_index)
-        view_edit = EditorDelegateMocking()
-        view_edit.write_to_index(view, tool_feature_index, "my_object_class/my_parameter")
-        for item in model.visit_all():
-            if item.can_fetch_more():
-                item.fetch_more()
-
-
-class TestToolFeatureTreeViewWithExistingData(TestBase):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        db_map = DatabaseMapping(url, create=True)
-        import_parameter_value_lists(
-            db_map, (("value_list_1", 5.0), ("value_list_1", 2.3), ("value_list_2", "law_of_fives"))
-        )
-        import_entity_classes(db_map, (("my_object_class",),))
-        import_parameter_definitions(
-            db_map,
-            (
-                ("my_object_class", "parameter_1", None, "value_list_1"),
-                ("my_object_class", "parameter_2", None, "value_list_2"),
-            ),
-        )
-        import_features(db_map, (("my_object_class", "parameter_1"), ("my_object_class", "parameter_2")))
-        import_tools(db_map, ("tool_1", "tool_2"))
-        import_tool_features(
-            db_map,
-            (
-                ("tool_1", "my_object_class", "parameter_1"),
-                ("tool_1", "my_object_class", "parameter_2"),
-                ("tool_2", "my_object_class", "parameter_1"),
-                ("tool_2", "my_object_class", "parameter_2"),
-            ),
-        )
-        import_tool_feature_methods(
-            db_map,
-            (
-                ("tool_1", "my_object_class", "parameter_1", 5.0),
-                ("tool_1", "my_object_class", "parameter_1", 2.3),
-                ("tool_1", "my_object_class", "parameter_2", "law_of_fives"),
-                ("tool_2", "my_object_class", "parameter_1", 5.0),
-                ("tool_2", "my_object_class", "parameter_1", 2.3),
-                ("tool_2", "my_object_class", "parameter_2", "law_of_fives"),
-            ),
-        )
-        db_map.commit_session("Add tool feature methods.")
-        db_map.connection.close()
-        self._common_setup(url, create=False)
-        view = self._db_editor.ui.treeView_tool_feature
-        model = view.model()
-        # Fetch the entire model
-        db_index = model.index(0, 0)
-        feature_root_index = model.index(0, 0, db_index)
-        while model.rowCount(feature_root_index) != 3:
-            QApplication.processEvents()
-        tool_root_index = model.index(1, 0, db_index)
-        while model.rowCount(tool_root_index) != 3:
-            QApplication.processEvents()
-        tool_index = model.index(0, 0, tool_root_index)
-        tool_feature_root_index = model.index(0, 0, tool_index)
-        while model.rowCount(tool_feature_root_index) != 3:
-            model.fetchMore(tool_feature_root_index)
-            QApplication.processEvents()
-        tool_feature_index = model.index(0, 0, tool_feature_root_index)
-        method_root_index = model.index(1, 0, tool_feature_index)
-        while model.rowCount(method_root_index) != 3:
-            model.fetchMore(method_root_index)
-            QApplication.processEvents()
-        tool_feature_index = model.index(1, 0, tool_feature_root_index)
-        method_root_index = model.index(1, 0, tool_feature_index)
-        while model.rowCount(method_root_index) != 2:
-            model.fetchMore(method_root_index)
-            QApplication.processEvents()
-        tool_index = model.index(1, 0, tool_root_index)
-        tool_feature_root_index = model.index(0, 0, tool_index)
-        while model.rowCount(tool_feature_root_index) != 3:
-            model.fetchMore(tool_feature_root_index)
-            QApplication.processEvents()
-        tool_feature_index = model.index(0, 0, tool_feature_root_index)
-        method_root_index = model.index(1, 0, tool_feature_index)
-        while model.rowCount(method_root_index) != 3:
-            model.fetchMore(method_root_index)
-            QApplication.processEvents()
-        tool_feature_index = model.index(1, 0, tool_feature_root_index)
-        method_root_index = model.index(1, 0, tool_feature_index)
-        while model.rowCount(method_root_index) != 2:
-            model.fetchMore(method_root_index)
-            QApplication.processEvents()
-
-    def tearDown(self):
-        self._common_tear_down()
-        self._temp_dir.cleanup()
-
-    def test_tree_has_correct_initial_contents(self):
-        view = self._db_editor.ui.treeView_tool_feature
-        model = view.model()
-        db_index = model.index(0, 0)
-        feature_root_index = model.index(0, 0, db_index)
-        self.assertEqual(model.rowCount(feature_root_index), 3)
-        self.assertEqual(model.index(0, 0, feature_root_index).data(), "my_object_class/parameter_1")
-        self.assertEqual(model.index(1, 0, feature_root_index).data(), "my_object_class/parameter_2")
-        self.assertEqual(model.index(2, 0, feature_root_index).data(), "Enter new feature here...")
-        tool_root_index = model.index(1, 0, db_index)
-        self.assertEqual(model.rowCount(tool_root_index), 3)
-        self.assertEqual(model.index(0, 0, tool_root_index).data(), "tool_1")
-        self.assertEqual(model.index(1, 0, tool_root_index).data(), "tool_2")
-        self.assertEqual(model.index(2, 0, tool_root_index).data(), "Type new tool name here...")
-        tool_index = model.index(0, 0, tool_root_index)
-        self.assertEqual(model.rowCount(tool_index), 1)
-        tool_feature_root_index = model.index(0, 0, tool_index)
-        self.assertEqual(model.rowCount(tool_feature_root_index), 3)
-        self.assertEqual(model.index(0, 0, tool_feature_root_index).data(), "my_object_class/parameter_1")
-        self.assertEqual(model.index(1, 0, tool_feature_root_index).data(), "my_object_class/parameter_2")
-        self.assertEqual(model.index(2, 0, tool_feature_root_index).data(), "Type tool feature name here...")
-        tool_feature_index = model.index(0, 0, tool_feature_root_index)
-        self.assertEqual(model.rowCount(tool_feature_index), 2)
-        self.assertEqual(model.index(0, 0, tool_feature_index).data(), "required: no")
-        self.assertEqual(model.index(1, 0, tool_feature_index).data(), "tool_feature_method")
-        method_root_index = model.index(1, 0, tool_feature_index)
-        self.assertEqual(model.rowCount(method_root_index), 3)
-        self.assertEqual(model.index(0, 0, method_root_index).data(), "2.3")
-        self.assertEqual(model.index(1, 0, method_root_index).data(), "5.0")
-        self.assertEqual(model.index(2, 0, method_root_index).data(), "Enter new method here...")
-        tool_feature_index = model.index(1, 0, tool_feature_root_index)
-        self.assertEqual(model.rowCount(tool_feature_index), 2)
-        self.assertEqual(model.index(0, 0, tool_feature_index).data(), "required: no")
-        self.assertEqual(model.index(1, 0, tool_feature_index).data(), "tool_feature_method")
-        method_root_index = model.index(1, 0, tool_feature_index)
-        self.assertEqual(model.rowCount(method_root_index), 2)
-        self.assertEqual(model.index(0, 0, method_root_index).data(), "law_of_fives")
-        self.assertEqual(model.index(1, 0, method_root_index).data(), "Enter new method here...")
-        tool_index = model.index(1, 0, tool_root_index)
-        self.assertEqual(model.rowCount(tool_index), 1)
-        tool_feature_root_index = model.index(0, 0, tool_index)
-        self.assertEqual(model.rowCount(tool_feature_root_index), 3)
-        self.assertEqual(model.index(0, 0, tool_feature_root_index).data(), "my_object_class/parameter_1")
-        self.assertEqual(model.index(1, 0, tool_feature_root_index).data(), "my_object_class/parameter_2")
-        self.assertEqual(model.index(2, 0, tool_feature_root_index).data(), "Type tool feature name here...")
-        tool_feature_index = model.index(0, 0, tool_feature_root_index)
-        self.assertEqual(model.rowCount(tool_feature_index), 2)
-        self.assertEqual(model.index(0, 0, tool_feature_index).data(), "required: no")
-        self.assertEqual(model.index(1, 0, tool_feature_index).data(), "tool_feature_method")
-        method_root_index = model.index(1, 0, tool_feature_index)
-        self.assertEqual(model.rowCount(method_root_index), 3)
-        self.assertEqual(model.index(0, 0, method_root_index).data(), "2.3")
-        self.assertEqual(model.index(1, 0, method_root_index).data(), "5.0")
-        self.assertEqual(model.index(2, 0, method_root_index).data(), "Enter new method here...")
-        tool_feature_index = model.index(1, 0, tool_feature_root_index)
-        self.assertEqual(model.rowCount(tool_feature_index), 2)
-        self.assertEqual(model.index(0, 0, tool_feature_index).data(), "required: no")
-        self.assertEqual(model.index(1, 0, tool_feature_index).data(), "tool_feature_method")
-        method_root_index = model.index(1, 0, tool_feature_index)
-        self.assertEqual(model.rowCount(method_root_index), 2)
-        self.assertEqual(model.index(0, 0, method_root_index).data(), "law_of_fives")
-        self.assertEqual(model.index(1, 0, method_root_index).data(), "Enter new method here...")
 
 
 if __name__ == '__main__':

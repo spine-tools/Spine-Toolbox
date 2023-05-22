@@ -36,7 +36,7 @@ class TestFrozenTableModel(unittest.TestCase):
     def tearDown(self):
         self._parent.deleteLater()
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
 
@@ -209,13 +209,13 @@ class TestFrozenTableModel(unittest.TestCase):
 
     def test_table_stays_sorted(self):
         self._model.insert_column_data("database", {self._db_map}, 0)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
-        self._db_mngr.add_object_classes({self._db_map: [{"name": "Gadget"}]})
-        self._db_mngr.add_objects({self._db_map: [{"class_id": 1, "name": "fork"}, {"class_id": 1, "name": "spoon"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Gadget", "id": 1}]})
+        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "fork"}, {"class_id": 1, "name": "spoon"}]})
         alternatives = self._db_mngr.get_items(self._db_map, "alternative")
         ids = {item["id"] for item in alternatives}
         self._model.insert_column_data("alternative", {(self._db_map, id_) for id_ in ids}, 0)
-        objects = self._db_mngr.get_items(self._db_map, "object")
+        objects = self._db_mngr.get_items(self._db_map, "entity")
         ids = {item["id"] for item in objects}
         self._model.insert_column_data("Gadget", {(self._db_map, id_) for id_ in ids}, 0)
         self.assertEqual(self._model.headers, ["Gadget", "alternative", "database"])

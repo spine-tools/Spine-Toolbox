@@ -53,7 +53,7 @@ class TestAddItemsDialog(unittest.TestCase):
         ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
@@ -74,7 +74,7 @@ class TestAddItemsDialog(unittest.TestCase):
         model.batch_set_data(indexes, values)
         dialog.accept()
         self._commit_changes_to_database("Add object class.")
-        data = self._db_mngr.query(self._db_map, "object_class_sq")
+        data = self._db_map.query(self._db_map.object_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "fish")
 
@@ -115,14 +115,14 @@ class TestManageElementsDialog(TestBase):
         self._db_mngr.add_entities(
             {
                 self._db_map: [
-                    {"class_id": 1, "name": "object_11"},
-                    {"class_id": 1, "name": "object_12"},
-                    {"class_id": 2, "name": "object_21"},
+                    {"class_id": 1, "name": "object_11", "id": 1},
+                    {"class_id": 1, "name": "object_12", "id": 2},
+                    {"class_id": 2, "name": "object_21", "id": 3},
                 ]
             }
         )
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "id": 3, "dimension_id_list": [1, 2]}]})
-        self._db_mngr.add_entities({self._db_map: [{"name": "r", "class_id": 3, "element_id_list": [1, 3]}]})
+        self._db_mngr.add_entities({self._db_map: [{"name": "r", "class_id": 3, "element_id_list": [1, 3], "id": 4}]})
         root_index = self._db_editor.entity_tree_model.index(0, 0)
         class_index = self._db_editor.entity_tree_model.index(2, 0, root_index)
         self.assertEqual(class_index.data(), "rc")
@@ -146,9 +146,9 @@ class TestManageElementsDialog(TestBase):
         self._db_mngr.add_entities(
             {
                 self._db_map: [
-                    {"class_id": 1, "name": "object_11"},
-                    {"class_id": 1, "name": "object_12"},
-                    {"class_id": 2, "name": "object_21"},
+                    {"class_id": 1, "name": "object_11", "id": 1},
+                    {"class_id": 1, "name": "object_12", "id": 2},
+                    {"class_id": 2, "name": "object_21", "id": 3},
                 ]
             }
         )
@@ -156,8 +156,8 @@ class TestManageElementsDialog(TestBase):
         self._db_mngr.add_entities(
             {
                 self._db_map: [
-                    {"name": "r11", "class_id": 3, "element_id_list": [1, 3]},
-                    {"name": "r21", "class_id": 3, "element_id_list": [2, 3]},
+                    {"name": "r11", "class_id": 3, "element_id_list": [1, 3], "id": 4},
+                    {"name": "r21", "class_id": 3, "element_id_list": [2, 3], "id": 5},
                 ]
             }
         )
@@ -187,7 +187,7 @@ class TestManageElementsDialog(TestBase):
         relationships = [x for x in self._db_mngr.get_items(self._db_map, "entity") if x["element_id_list"]]
         self.assertEqual(
             relationships,
-            [{'class_id': 3, 'commit_id': 2, 'id': 5, 'name': 'r21', 'element_id_list': (2, 3)}],
+            [{'class_id': 3, 'description': None, 'id': 5, 'name': 'r21', 'element_id_list': (2, 3)}],
         )
 
 

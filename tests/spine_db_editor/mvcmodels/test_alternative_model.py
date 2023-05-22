@@ -42,7 +42,7 @@ class TestAlternativeModel(unittest.TestCase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
@@ -78,7 +78,7 @@ class TestAlternativeModel(unittest.TestCase):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         _fetch_all_recursively(model)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
         self._db_mngr.update_alternatives({self._db_map: [{"id": 2, "name": "renamed"}]})
         data = model_data_to_dict(model)
         expected = [
@@ -93,7 +93,7 @@ class TestAlternativeModel(unittest.TestCase):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         _fetch_all_recursively(model)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
         self._db_mngr.remove_items({self._db_map: {"alternative": {2}}})
         data = model_data_to_dict(model)
         expected = [[{"test_db": [["Base", "Base alternative"], ["Type new alternative name here...", ""]]}, None]]
@@ -137,7 +137,7 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map1.connection.closed and not self._db_map2.connection.closed:
+        while not self._db_map1.closed and not self._db_map2.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()

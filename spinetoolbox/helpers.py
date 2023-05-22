@@ -54,6 +54,7 @@ from PySide6.QtGui import (
 )
 from spine_engine.utils.serialization import deserialize_path
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
+from spinedb_api.helpers import group_consecutive
 from .config import (
     DEFAULT_WORK_DIR,
     PLUGINS_PATH,
@@ -406,8 +407,7 @@ def format_string_list(str_list):
 
 
 def rows_to_row_count_tuples(rows):
-    """Breaks a list of rows into a list of (row, count) tuples to corresponding
-    chunks of successive rows.
+    """Breaks a list of rows into a list of (row, count) tuples corresponding to chunks of successive rows.
 
     Args:
         rows (Iterable of int): rows
@@ -415,14 +415,7 @@ def rows_to_row_count_tuples(rows):
     Returns:
         list of tuple: row count tuples
     """
-    rows = set(rows)
-    if not rows:
-        return []
-    sorted_rows = sorted(rows)
-    break_points = [k + 1 for k in range(len(sorted_rows) - 1) if sorted_rows[k] + 1 != sorted_rows[k + 1]]
-    break_points = [0] + break_points + [len(sorted_rows)]
-    ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
-    return [(sorted_rows[start], stop - start) for start, stop in ranges]
+    return [(first, last - first + 1) for first, last in group_consecutive(rows)]
 
 
 class IconListManager:
