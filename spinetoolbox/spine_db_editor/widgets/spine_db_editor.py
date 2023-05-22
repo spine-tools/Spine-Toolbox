@@ -479,9 +479,6 @@ class SpineDBEditorBase(QMainWindow):
             except json.decoder.JSONDecodeError as err:
                 self.msg_error.emit(f"File {file_path} is not a valid json: {err}")
                 return
-        with DatabaseMapping("sqlite://", create=True) as db_map:
-            import_data(db_map, **data)
-            data = export_data(db_map)
         self.import_data(data)
         filename = os.path.split(file_path)[1]
         self.msg.emit(f"File {filename} successfully imported.")
