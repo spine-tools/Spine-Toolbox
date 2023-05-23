@@ -248,8 +248,9 @@ class SpecificationEditorWindowBase(QMainWindow):
     def tear_down(self):
         if self.focusWidget():
             self.focusWidget().clearFocus()
-        if not self._undo_stack.isClean() and not prompt_to_save_changes(self, self._toolbox.qsettings(),
-                                                                         self._save, True):
+        if not self._undo_stack.isClean() and not prompt_to_save_changes(
+            self, self._toolbox.qsettings(), self._save, True
+        ):
             return False
         self._change_notifier.tear_down()
         self._undo_stack.cleanChanged.disconnect(self._update_window_modified)
