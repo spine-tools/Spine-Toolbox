@@ -58,15 +58,6 @@ class SpineDBWorker(QObject):
         self._db_map = DatabaseMapping(self._db_url, *args, sqlite_timeout=2, chunk_size=_CHUNK_SIZE, **kwargs)
         return self._db_map
 
-    def reset_queries(self):
-        """Resets queries and clears caches."""
-        self._db_map.cache.reset_queries()
-        self._reset_queries()
-
-    def _reset_queries(self):
-        self._current_fetch_token += 1
-        self._advance_query_callbacks.clear()
-
     def _reset_fetching_if_required(self, parent):
         """Sets fetch parent's token or resets the parent if fetch tokens don't match.
 
@@ -274,8 +265,7 @@ class SpineDBWorker(QObject):
         self._populate_commit_cache(item_type, chunk)
         self._db_mngr.update_icons(self._db_map, item_type, chunk)
         for callback in self._advance_query_callbacks.pop(item_type, ()):
-            if callback is not None:
-                callback()
+            callback()
 
     def fetch_all(self, fetch_item_types=None):
         self._db_map.fetch_all(fetch_item_types)
@@ -367,7 +357,7 @@ class SpineDBWorker(QObject):
         """Rollbacks session."""
         try:
             self._db_map.rollback_session()
-            self._db_mngr.undo_stack[self._db_map].setClean()
+            self._db_mngr.undo_stack[self._db_map].setClean()  # FIXME: What happens if users redo or undo after this??
             self._db_mngr.receive_session_rolled_back({self._db_map})
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
