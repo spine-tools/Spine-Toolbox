@@ -118,12 +118,11 @@ class SpecificationEditorWindowBase(QMainWindow):
         """Restores dockWidgets to some default state. Called in the constructor, before restoring the ui from settings.
         Reimplement in subclasses if needed."""
 
-    def _make_new_specification(self, spec_name, exiting=None):
+    def _make_new_specification(self, spec_name):
         """Returns a ProjectItemSpecification from current form settings.
 
         Args:
             spec_name (str): Name of the spec
-            exiting (bool, optional): Set as True if called when trying to exit the editor window
 
         Returns:
             ProjectItemSpecification
@@ -189,7 +188,7 @@ class SpecificationEditorWindowBase(QMainWindow):
                 return self.prompt_exit_without_saving()
             self.show_error("Please enter a name for the specification.")
             return False
-        spec = self._make_new_specification(name, exiting)
+        spec = self._make_new_specification(name)
         if spec is None:
             return self.prompt_exit_without_saving() if exiting else False
         if not self._original_spec_name:
@@ -248,8 +247,9 @@ class SpecificationEditorWindowBase(QMainWindow):
     def tear_down(self):
         if self.focusWidget():
             self.focusWidget().clearFocus()
-        if not self._undo_stack.isClean() and not prompt_to_save_changes(self, self._toolbox.qsettings(),
-                                                                         self._save, True):
+        if not self._undo_stack.isClean() and not prompt_to_save_changes(
+            self, self._toolbox.qsettings(), self._save, True
+        ):
             return False
         self._change_notifier.tear_down()
         self._undo_stack.cleanChanged.disconnect(self._update_window_modified)
