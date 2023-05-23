@@ -56,11 +56,3 @@ class MetadataEditor:
             MetadataModel: model
         """
         return self._metadata_table_model
-
-    def rollback(self, db_maps):
-        """Rolls back database changes.
-
-        Args:
-            db_maps (Iterable of DiffDatabaseMapping): rolled back databases
-        """
-        self._metadata_table_model.rollback(db_maps)

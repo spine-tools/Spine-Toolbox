@@ -19,7 +19,6 @@ from tempfile import TemporaryDirectory
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, ManageElementsDialog
@@ -98,9 +97,7 @@ class TestAddItemsDialog(unittest.TestCase):
     def _commit_changes_to_database(self, commit_message):
         with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
             commit_msg.return_value = commit_message
-            with signal_waiter(self._db_mngr.session_committed) as waiter:
-                self._db_editor.ui.actionCommit.trigger()
-                waiter.wait()
+            self._db_editor.ui.actionCommit.trigger()
 
 
 class TestManageElementsDialog(TestBase):

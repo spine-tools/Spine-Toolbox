@@ -56,7 +56,7 @@ class FetchParent(QObject):
             self._owner.destroyed.connect(lambda obj=None: self.set_obsolete(True))
         self.chunk_size = chunk_size
 
-    def reset_fetching(self, fetch_token):
+    def reset(self, fetch_token):
         """Resets fetch parent as if nothing was ever fetched.
 
         Args:

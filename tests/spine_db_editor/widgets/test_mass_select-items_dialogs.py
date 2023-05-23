@@ -16,7 +16,6 @@ from unittest import mock
 
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
 
-from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.mass_select_items_dialogs import MassRemoveItemsDialog
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -74,12 +73,8 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
         self.assertTrue(dialog._db_map_check_boxes[self._db_map].isChecked())
 
     def test_purge_objects(self):
-        with signal_waiter(self._db_mngr.object_classes_added) as waiter:
-            self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class"}]})
-            waiter.wait()
-        with signal_waiter(self._db_mngr.objects_added) as waiter:
-            self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "my_object"}]})
-            waiter.wait()
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class"}]})
+        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "my_object"}]})
         self.assertEqual(
             self._db_mngr.get_items(self._db_map, "object"),
             [
@@ -97,10 +92,8 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
         dialog = MassRemoveItemsDialog(None, self._db_mngr, self._db_map)
         dialog._db_map_check_boxes[self._db_map].setChecked(True)
         dialog._item_check_boxes_widget._item_check_boxes["object"].setChecked(True)
-        with signal_waiter(self._db_mngr.objects_removed) as waiter:
-            dialog._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).click()
-            waiter.wait()
-        self.assertEqual(self._db_mngr.get_items(self._db_map, "object"), [])
+        dialog._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).click()
+        self.assertEqual(self._db_mngr.get_items(self._db_map, "entity"), [])
 
 
 if __name__ == "__main__":

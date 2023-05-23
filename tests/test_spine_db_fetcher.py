@@ -206,7 +206,6 @@ class TestSpineDBFetcher(unittest.TestCase):
             'parameter_value_list_id': None,
             'default_value': None,
             'default_type': None,
-            'list_value_id': None,
             'description': None,
             'commit_id': 2,
         }
@@ -236,7 +235,6 @@ class TestSpineDBFetcher(unittest.TestCase):
             'alternative_id': 1,
             'value': b'2.3',
             'type': None,
-            'list_value_id': None,
             'commit_id': 2,
         }
         for item_type in ("entity_class", "entity", "parameter_definition", "alternative"):

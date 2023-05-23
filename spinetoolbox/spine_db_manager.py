@@ -62,9 +62,6 @@ class SpineDBManager(QObject):
     """Class to manage DBs within a project."""
 
     error_msg = Signal(dict)
-    session_refreshed = Signal(set)
-    session_committed = Signal(set, object)
-    session_rolled_back = Signal(set)
     # Data changed signals
     items_added = Signal(str, dict)
     """Emitted whenever items are added to a DB.
@@ -107,9 +104,6 @@ class SpineDBManager(QObject):
         self._connect_signals()
 
     def _connect_signals(self):
-        self.session_refreshed.connect(self.receive_session_refreshed)
-        self.session_committed.connect(self.receive_session_committed)
-        self.session_rolled_back.connect(self.receive_session_rolled_back)
         self.error_msg.connect(self.receive_error_msg)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
@@ -223,7 +217,7 @@ class SpineDBManager(QObject):
         Returns:
             int: identification key
         """
-        return hash(db_map)
+        return str(hash(db_map))
 
     def db_map_from_key(self, key):
         """Returns database mapping that corresponds to given identification key.
@@ -490,16 +484,12 @@ class SpineDBManager(QObject):
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
-        refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self.db_maps)
-        if not refreshed_db_maps:
-            return
-        for db_map in refreshed_db_maps:
+        for db_map in db_maps:
             try:
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            worker.reset_queries()
-        self.session_refreshed.emit(refreshed_db_maps)
+            worker.refresh_session()
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
         """
@@ -508,7 +498,7 @@ class SpineDBManager(QObject):
         Args:
             commit_msg (str): commit message for all database maps
             *dirty_db_maps: dirty database maps to commit
-            cookie (object, optional): a free form identifier which will be forwarded to ``session_committed`` signal
+            cookie (object, optional): a free form identifier which will be forwarded to ``SpineDBWorker.commit_session``
         """
         for db_map in dirty_db_maps:
             try:
@@ -525,7 +515,7 @@ class SpineDBManager(QObject):
             *db_maps: database maps that were committed
         """
         self.refresh_session(*db_maps)
-        self.session_committed.emit(set(db_maps), cookie)
+        self.receive_session_committed(set(db_maps), cookie)
 
     def rollback_session(self, *dirty_db_maps):
         """
@@ -724,10 +714,7 @@ class SpineDBManager(QObject):
             return self._format_list_value(db_map, item_type, complex_types[item[type_field]], list_value_id)
         if role == Qt.ItemDataRole.EditRole:
             return join_value_and_type(item[value_field], item[type_field])
-        key = "parsed_value"
-        if key not in item:
-            item[key] = self._parse_value(item[value_field], item[type_field])
-        return self._format_value(item[key], role=role)
+        return self._format_value(item["parsed_value"], role=role)
 
     def get_value_from_data(self, data, role=Qt.ItemDataRole.DisplayRole):
         """Returns the value or default value of a parameter directly from data.
@@ -1110,13 +1097,23 @@ class SpineDBManager(QObject):
         """
         self.update_items("parameter_value_metadata", db_map_data)
 
+    def _update_ext_item_metadata(self, db_map_data, item_type):
+        for db_map, items in db_map_data.items():
+            macro = AgedUndoCommand()
+            macro.setText(f"update {item_type} to {db_map.codename}")
+            metadata_items = db_map.get_metadata_to_add_with_entity_metadata_items(*items)
+            if metadata_items:
+                AddItemsCommand(self, db_map, "metadata", metadata_items, parent=macro)
+            UpdateItemsCommand(self, db_map, item_type, items, parent=macro)
+            self.undo_stack[db_map].push(macro)
+
     def update_ext_entity_metadata(self, db_map_data):
         """Updates entity metadata in db.
 
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        # TODO
+        self._update_ext_item_metadata(db_map_data, "entity_metadata")
 
     def update_ext_parameter_value_metadata(self, db_map_data):
         """Updates parameter value metadata in db.
@@ -1124,7 +1121,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
-        # TODO
+        self._update_ext_item_metadata(db_map_data, "parameter_value_metadata")
 
     def set_scenario_alternatives(self, db_map_data):
         """Sets scenario alternatives in db.

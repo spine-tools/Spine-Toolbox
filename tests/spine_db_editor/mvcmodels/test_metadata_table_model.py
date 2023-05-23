@@ -19,7 +19,6 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
 from ...mock_helpers import TestSpineDBManager
@@ -124,7 +123,7 @@ class TestMetadataTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(row, Column.DB_MAP).data(), "2nd database")
 
     def test_add_and_update_via_adding_entity_metadata(self):
-        db_map_data = {self._db_map: [{"name": "object class"}]}
+        db_map_data = {self._db_map: [{"name": "object class", "id": 1}]}
         self._db_mngr.add_entity_classes(db_map_data)
         db_map_data = {self._db_map: [{"class_id": 1, "name": "object"}]}
         self._db_mngr.add_entities(db_map_data)
@@ -141,7 +140,7 @@ class TestMetadataTableModel(unittest.TestCase):
                 {"entity_name": "object", "metadata_name": "source", "metadata_value": "The Internet"},
             ]
         }
-        self._db_mngr.add_entity_metadata(db_map_data)
+        self._db_mngr.add_ext_entity_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -251,14 +250,11 @@ class TestMetadataTableModel(unittest.TestCase):
     def test_roll_back(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
         self._db_mngr.add_metadata(db_map_data)
-        with signal_waiter(self._db_mngr.session_committed) as waiter:
-            self._db_mngr.commit_session("Add test data.", self._db_map)
-            waiter.wait()
+        self._db_mngr.commit_session("Add test data.", self._db_map)
         index = self._model.index(1, Column.NAME)
         self.assertTrue(self._model.setData(index, "title"))
         index = self._model.index(1, Column.VALUE)
         self.assertTrue(self._model.setData(index, "My precious."))
-        self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -267,10 +263,7 @@ class TestMetadataTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(1, Column.VALUE).data(), "My precious.")
         self.assertEqual(self._model.index(1, Column.DB_MAP).data(), "database")
         self._assert_empty_last_row()
-        with signal_waiter(self._db_mngr.session_rolled_back) as waiter:
-            self._db_mngr.rollback_session(self._db_map)
-            waiter.wait()
-        self._model.rollback([self._db_map])
+        self._db_mngr.rollback_session(self._db_map)
         self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")

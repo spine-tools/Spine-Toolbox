@@ -31,7 +31,6 @@ from spinedb_api import (
     TimePattern,
     Array,
 )
-from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.plotting import (
     PlottingError,
     convert_indexed_value_to_tree,
@@ -71,10 +70,7 @@ class TestBase(unittest.TestCase):
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as message_box:
             message_box.exec.return_value = QMessageBox.StandardButton.Ok
-            with signal_waiter(self._db_mngr.session_rolled_back) as waiter:
-                self._db_editor.rollback_session()
-                if message_box.exec.call_count > 0:
-                    waiter.wait()
+            self._db_editor.rollback_session()
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
             "spinetoolbox.spine_db_manager.QMessageBox"
         ):

@@ -25,7 +25,6 @@ from spinedb_api import (
     import_entity_classes,
     import_entities,
     import_parameter_value_lists,
-    import_parameter_definitions,
 )
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntitiesDialog, AddEntityClassesDialog
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (

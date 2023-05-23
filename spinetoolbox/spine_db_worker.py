@@ -79,7 +79,7 @@ class SpineDBWorker(QObject):
             self._restore_item_callbacks.pop(parent, None)
             self._update_item_callbacks.pop(parent, None)
             self._remove_item_callbacks.pop(parent, None)
-            parent.reset_fetching(self._current_fetch_token)
+            parent.reset(self._current_fetch_token)
 
     def _register_fetch_parent(self, parent):
         """Registers the given parent and starts checking whether it will have children if fetched.
@@ -209,17 +209,17 @@ class SpineDBWorker(QObject):
 
     def _make_restore_item_callback(self, parent):
         if parent not in self._restore_item_callbacks:
-            self._restore_item_callbacks[parent] = lambda item, parent=parent: self._add_item(parent, item)
+            self._restore_item_callbacks[parent] = _ItemCallback(self._add_item, parent)
         return self._restore_item_callbacks[parent]
 
     def _make_update_item_callback(self, parent):
         if parent not in self._update_item_callbacks:
-            self._update_item_callbacks[parent] = lambda item, parent=parent: self._update_item(parent, item)
+            self._update_item_callbacks[parent] = _ItemCallback(self._update_item, parent)
         return self._update_item_callbacks[parent]
 
     def _make_remove_item_callback(self, parent):
         if parent not in self._remove_item_callbacks:
-            self._remove_item_callbacks[parent] = lambda item, parent=parent: self._remove_item(parent, item)
+            self._remove_item_callbacks[parent] = _ItemCallback(self._remove_item, parent)
         return self._remove_item_callbacks[parent]
 
     def can_fetch_more(self, parent):
@@ -350,25 +350,43 @@ class SpineDBWorker(QObject):
         return items
 
     def commit_session(self, commit_msg, cookie=None):
-        """Initiates commit session.
+        """Commits session.
 
         Args:
             commit_msg (str): commit message
-            cookie (Any): a cookie to include in session_committed signal
+            cookie (Any): a cookie to include in receive_session_committed call
         """
         try:
-            self._db_map.commit_session(commit_msg)  # This blocks until session is committed
+            self._db_map.commit_session(commit_msg)
             self._db_mngr.undo_stack[self._db_map].setClean()
-            self._db_mngr.session_committed.emit({self._db_map}, cookie)
+            self._db_mngr.receive_session_committed({self._db_map}, cookie)
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
 
     def rollback_session(self):
-        """Initiates rollback session in the worker thread."""
+        """Rollbacks session."""
         try:
-            self._db_map.rollback_session()  # This blocks until session is rolled back
-            self._reset_queries()
+            self._db_map.rollback_session()
             self._db_mngr.undo_stack[self._db_map].setClean()
-            self._db_mngr.session_rolled_back.emit({self._db_map})
+            self._db_mngr.receive_session_rolled_back({self._db_map})
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
+
+    def refresh_session(self):
+        """Refreshes session."""
+        self._db_map.refresh_session()
+        self._current_fetch_token += 1
+        self._advance_query_callbacks.clear()
+        self._db_mngr.receive_session_refreshed({self._db_map})
+
+
+class _ItemCallback:
+    def __init__(self, fn, parent):
+        self._fn = fn
+        self._parent = parent
+
+    def __call__(self, item):
+        return self._fn(self._parent, item)
+
+    def __str__(self):
+        return str(self._fn) + " with " + str(self._parent)

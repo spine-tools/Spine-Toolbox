@@ -14,9 +14,6 @@ Contains :class:`ItemMetadataTableModel` and associated functionality.
 """
 from enum import auto, Enum, IntEnum, unique
 
-from PySide6.QtCore import QModelIndex
-
-from spinetoolbox.helpers import rows_to_row_count_tuples
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from .metadata_table_model_base import Column, FLAGS_EDITABLE, FLAGS_FIXED, MetadataTableModelBase
 
@@ -133,7 +130,7 @@ class ItemMetadataTableModel(MetadataTableModelBase):
 
     def _reset_fetch_parents(self):
         for parent in self._fetch_parents():
-            parent.reset_fetching(None)
+            parent.reset(None)
         if self.canFetchMore(None):
             self.fetchMore(None)
 
@@ -159,17 +156,6 @@ class ItemMetadataTableModel(MetadataTableModelBase):
             self._db_mngr.update_ext_parameter_value_metadata(
                 {db_map: [{"id": id_, "metadata_name": name, "metadata_value": value}]}
             )
-
-    def rollback(self, _db_maps):
-        """Rolls back changes in database.
-
-        Args:
-            db_maps (Iterable of DiffDatabaseMapping): database mappings that have been rolled back
-        """
-        self.beginResetModel()
-        self._data = []
-        self.endResetModel()
-        self._reset_fetch_parents()
 
     def flags(self, index):
         row = index.row()
@@ -217,13 +203,7 @@ class ItemMetadataTableModel(MetadataTableModelBase):
         Args:
             db_map_data (dict): updated metadata records
         """
-        for db_map, items in db_map_data.items():
-            for item in items:
-                for row in self._data:
-                    if db_map != row[Column.DB_MAP] or item["id"] != row[ExtraColumn.ITEM_METADATA_ID]:
-                        continue
-                    row[ExtraColumn.METADATA_ID] = item["metadata_id"]
-                    break
+        self._update_data(db_map_data, ExtraColumn.ITEM_METADATA_ID)
 
     def remove_item_metadata(self, db_map_data):
         """Removes item metadata from model after it has been removed from databases.

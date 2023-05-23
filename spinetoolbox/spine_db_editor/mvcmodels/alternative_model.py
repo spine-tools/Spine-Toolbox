@@ -9,11 +9,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """Contains alternative tree model."""
-import csv
-import pickle
-from io import StringIO
+import json
 
-from PySide6.QtCore import QMimeData
+from PySide6.QtCore import QMimeData, QByteArray
 from .tree_model_base import TreeModelBase
 from .alternative_item import DBItem
 from .utils import two_column_as_csv
@@ -55,7 +53,7 @@ class AlternativeModel(TreeModelBase):
             d.setdefault(db_key, []).append(item.id)
         mime = QMimeData()
         mime.setText(two_column_as_csv(indexes))
-        mime.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(d))
+        mime.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(d)))
         return mime
 
     def paste_alternative_mime_data(self, mime_data, database_item):
@@ -65,7 +63,7 @@ class AlternativeModel(TreeModelBase):
             mime_data (QMimeData): mime data
             database_item (DBItem): target database item
         """
-        alternative_data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA))
+        alternative_data = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
         names_to_descriptions = {}
         for db_key, alternative_ids in alternative_data.items():
             db_map = self.db_mngr.db_map_from_key(db_key)

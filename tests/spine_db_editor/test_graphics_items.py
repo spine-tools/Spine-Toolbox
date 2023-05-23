@@ -103,7 +103,6 @@ class TestEntityItem(unittest.TestCase):
         self.assertEqual(self._item.db_maps, [self._db_map])
 
     def test_db_map_data(self):
-        print(self._item.db_map_data(self._db_map)._asdict())
         self.assertEqual(
             self._item.db_map_data(self._db_map)._asdict(),
             {

@@ -19,7 +19,6 @@ from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from spinedb_api import DatabaseMapping, import_functions
-from spinetoolbox.helpers import signal_waiter
 from tests.spine_db_editor.widgets.helpers import add_object, add_object_class, TestBase, EditorDelegateMocking
 
 
@@ -184,9 +183,7 @@ class TestParameterTableView(TestBase):
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
         self._commit_changes_to_database("Add test data.")
-        with signal_waiter(self._db_mngr.session_refreshed) as waiter:
-            self._db_editor.refresh_session()
-            waiter.wait()
+        self._db_editor.refresh_session()
         while model.rowCount() != 4:
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
@@ -287,7 +284,6 @@ class TestParameterTableWithExistingData(TestBase):
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
-    @unittest.skip
     def test_rolling_back_purge(self):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
@@ -300,8 +296,8 @@ class TestParameterTableWithExistingData(TestBase):
             instance.exec.return_value = QMessageBox.StandardButton.Ok
             self._db_editor.ui.actionRollback.trigger()
         while model.rowCount() != self._n_objects * self._n_parameters + 1:
-            # Wait for fetching to finish.
-            print(model.rowCount(), self._n_objects * self._n_parameters + 1)
+            # Fetch the entire model, because we want to validate all the data.
+            model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = sorted(
             [

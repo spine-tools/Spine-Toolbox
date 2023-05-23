@@ -154,7 +154,6 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Magician's hat")
         self._assert_empty_last_row()
         self._db_mngr.rollback_session(self._db_map)
-        self._model.rollback([self._db_map])
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of objects")

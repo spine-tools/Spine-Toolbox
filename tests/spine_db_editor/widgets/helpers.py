@@ -154,6 +154,4 @@ class TestBase(unittest.TestCase):
     def _commit_changes_to_database(self, commit_message):
         with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
             commit_msg.return_value = commit_message
-            with signal_waiter(self._db_mngr.session_committed) as waiter:
-                self._db_editor.ui.actionCommit.trigger()
-                waiter.wait()
+            self._db_editor.ui.actionCommit.trigger()

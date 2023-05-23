@@ -352,7 +352,7 @@ class PivotTableModelBase(QAbstractTableModel):
 
     def reset_fetch_parents(self):
         for parent in self._fetch_parents():
-            parent.reset_fetching(None)
+            parent.reset(None)
 
     def _fetch_parents(self):
         """Yields fetch parents for this model.

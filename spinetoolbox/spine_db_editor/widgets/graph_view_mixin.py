@@ -90,6 +90,7 @@ class GraphViewMixin:
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
+        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed_in_graph)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
         self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
         self.db_mngr.items_added.connect(self._refresh_icons)
@@ -225,9 +226,8 @@ class GraphViewMixin:
             QTimer.singleShot(100, self.build_graph)
 
     @Slot(dict)
-    def _handle_entity_tree_selection_changed(self, selected):
+    def _handle_entity_tree_selection_changed_in_graph(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
-        super()._handle_entity_tree_selection_changed(selected)
         self._renew_fetch_parents()
         self.selected_tree_inds = selected
         self.added_db_map_entity_ids.clear()
@@ -518,7 +518,7 @@ class GraphViewMixin:
         Args:
             event (QCloseEvent): Closing event
         """
-        super().closeEvent(event)
+        self.ui.treeView_entity.tree_selection_changed.disconnect(self._handle_entity_tree_selection_changed_in_graph)
         if self.scene is not None:
             self.scene.deleteLater()
-        self.scene = None
+        super().closeEvent(event)

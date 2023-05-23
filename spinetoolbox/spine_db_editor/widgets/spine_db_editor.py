@@ -682,7 +682,6 @@ class SpineDBEditorBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.init_models()
         db_names = ", ".join([x.codename for x in db_maps])
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
@@ -1086,11 +1085,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Orientation.Vertical)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
-
-    def receive_session_rolled_back(self, db_maps):
-        super().receive_session_rolled_back(db_maps)
-        self._metadata_editor.rollback(db_maps)
-        self._item_metadata_editor.rollback(db_maps)
 
     def tear_down(self):
         if not super().tear_down():

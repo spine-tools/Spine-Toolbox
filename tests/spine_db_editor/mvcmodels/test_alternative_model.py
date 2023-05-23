@@ -9,7 +9,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """Unit tests for :class:`AlternativeModel`."""
-import pickle
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -110,7 +110,7 @@ class TestAlternativeModel(unittest.TestCase):
         self.assertTrue(mime_data.hasText())
         self.assertEqual(mime_data.text(), "Base\tBase alternative\r\n")
         self.assertTrue(mime_data.hasFormat(mime_types.ALTERNATIVE_DATA))
-        alternative_data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA))
+        alternative_data = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
         self.assertEqual(alternative_data, {self._db_mngr.db_map_key(self._db_map): [1]})
 
 

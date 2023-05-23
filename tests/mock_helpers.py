@@ -308,22 +308,21 @@ class TestSpineDBManager(SpineDBManager):
 
 
 class _MockExecutor:
+    class _MockFuture:
+        def __init__(self, result):
+            self._result = result
+
+        def result(self):
+            return self._result
+
+        def add_done_callback(self, callback):
+            callback(self)
+
     def submit(self, fn, *args, **kwargs):
-        return _MockFuture(result=fn(*args, **kwargs))
+        return self._MockFuture(result=fn(*args, **kwargs))
 
     def shutdown(self):
         pass
-
-
-class _MockFuture:
-    def __init__(self, result):
-        self._result = result
-
-    def result(self):
-        return self._result
-
-    def add_done_callback(self, callback):
-        callback(self)
 
 
 @contextmanager

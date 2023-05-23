@@ -132,7 +132,7 @@ class UpdateItemsCommand(SpineDBCommand):
             self.setObsolete(True)
         self.item_type = item_type
         self.undo_data = [self.db_mngr.get_item(self.db_map, item_type, item["id"])._asdict() for item in data]
-        self.redo_data = [{**undo_item, **item} for undo_item, item in zip(self.undo_data, data)]
+        self.redo_data = data
         if self.redo_data == self.undo_data:
             self.setObsolete(True)
         self._check = check

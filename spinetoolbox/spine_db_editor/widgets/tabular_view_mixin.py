@@ -90,6 +90,9 @@ class TabularViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
+        self.ui.treeView_entity.tree_selection_changed.connect(
+            self._handle_entity_tree_selection_changed_in_pivot_table
+        )
         self.ui.pivot_table.header_changed.connect(self._connect_pivot_table_header_signals)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self._change_selected_frozen_row)
@@ -220,8 +223,7 @@ class TabularViewMixin:
             self.do_reload_pivot_table()
 
     @Slot(dict)
-    def _handle_entity_tree_selection_changed(self, selected_indexes):
-        super()._handle_entity_tree_selection_changed(selected_indexes)
+    def _handle_entity_tree_selection_changed_in_pivot_table(self, selected_indexes):
         current_index = self.ui.treeView_entity.currentIndex()
         self._update_class_attributes(current_index)
         if self.current_input_type != self._SCENARIO_ALTERNATIVE:
@@ -813,9 +815,7 @@ class TabularViewMixin:
         frozen_value = self.frozen_table_model.get_frozen_value()
         if not self.pivot_table_model.set_frozen_value(frozen_value):
             return
-        self.class_pivot_preferences[
-            (self.current_class_name, self.current_class_type, self.current_input_type)
-        ] = self.PivotPreferences(
+        self.class_pivot_preferences[(self.current_class_name, self.current_input_type)] = self.PivotPreferences(
             self.pivot_table_model.model.pivot_rows,
             self.pivot_table_model.model.pivot_columns,
             self.pivot_table_model.model.pivot_frozen,

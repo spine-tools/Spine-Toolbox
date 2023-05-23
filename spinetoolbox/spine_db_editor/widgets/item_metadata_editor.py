@@ -90,11 +90,3 @@ class ItemMetadataEditor:
         db_map_ids = {db_map: id_}
         self._item_metadata_table_model.set_parameter_value_ids(db_map_ids)
         self._item_metadata_table_view.setEnabled(True)
-
-    def rollback(self, db_maps):
-        """Rolls back database changes.
-
-        Args:
-            db_maps (Iterable of DiffDatabaseMapping): rolled back databases
-        """
-        self._item_metadata_table_model.rollback(db_maps)
