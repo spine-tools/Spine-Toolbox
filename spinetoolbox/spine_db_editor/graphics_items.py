@@ -453,7 +453,7 @@ class EntityItem(QGraphicsRectItem):
         db_map_entity_class_ids = {db_map: {self.entity_class_id(db_map)} for db_map in self.db_maps}
         for db_map, ent_clss in self.db_mngr.find_cascading_entity_classes(db_map_entity_class_ids).items():
             for ent_cls in ent_clss:
-                ent_cls = ent_cls.copy()
+                ent_cls = ent_cls._extended()
                 ent_cls["dimension_id_list"] = list(ent_cls["dimension_id_list"])
                 ent_cls["entity_ids"] = entity_ids_per_class.get((db_map, ent_cls["id"]), set())
                 self._db_map_entity_class_lists.setdefault(ent_cls["name"], []).append((db_map, ent_cls))

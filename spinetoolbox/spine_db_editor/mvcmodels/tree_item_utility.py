@@ -134,15 +134,6 @@ class SortChildrenMixin:
                 return False
         return True
 
-    def _resort(self):
-        # FIXME MM Needed?
-        non_empty_children, empty_child = self.children[:-1], self.children[-1]
-        non_empty_children.sort(key=self._children_sort_key)
-        self.children = non_empty_children + [empty_child]
-        top = self.model.index_from_item(self.child(0))
-        bottom = self.model.index_from_item(self.child(-1))
-        self.model.dataChanged.emit(top, bottom)
-
 
 class FetchMoreMixin:
     def __init__(self, *args, **kwargs):

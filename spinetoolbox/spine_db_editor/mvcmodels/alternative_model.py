@@ -65,7 +65,7 @@ class AlternativeModel(TreeModelBase):
         """
         alternative_data = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
         names_to_descriptions = {}
-        for db_key, alternative_ids in alternative_data.items():
+        for db_key in alternative_data:
             db_map = self.db_mngr.db_map_from_key(db_key)
             items = self.db_mngr.get_items(db_map, "alternative", only_visible=False)
             names_to_descriptions.update({i.name: i.description for i in items})

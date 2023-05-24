@@ -479,6 +479,9 @@ class SpineDBEditorBase(QMainWindow):
             except json.decoder.JSONDecodeError as err:
                 self.msg_error.emit(f"File {file_path} is not a valid json: {err}")
                 return
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            import_data(db_map, **data)
+            data = export_data(db_map)
         self.import_data(data)
         filename = os.path.split(file_path)[1]
         self.msg.emit(f"File {filename} successfully imported.")
@@ -534,16 +537,13 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def export_session(self, checked=False):
-        """Exports changes made in the current session as reported by DiffDatabaseMapping."""
-        db_map_diff_ids = {db_map: db_map.diff_ids() for db_map in self.db_maps}  # FIXME: diff_ids()
-        db_map_ent_cls_ids = {db_map: diff_ids["entity_class"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_ent_ids = {db_map: diff_ids["entity"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_par_val_lst_ids = {
-            db_map: diff_ids["parameter_value_list"] for db_map, diff_ids in db_map_diff_ids.items()
-        }
-        db_map_par_def_ids = {db_map: diff_ids["parameter_definition"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_par_val_ids = {db_map: diff_ids["parameter_value"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_ent_group_ids = {db_map: diff_ids["entity_group"] for db_map, diff_ids in db_map_diff_ids.items()}
+        """Exports changes made in the current session."""
+        db_map_ent_cls_ids = {db_map: db_map.cache.dirty_ids("entity_class") for db_map in self.db_maps}
+        db_map_ent_ids = {db_map: db_map.cache.dirty_ids("entity") for db_map in self.db_maps}
+        db_map_par_val_lst_ids = {db_map: db_map.cache.dirty_ids("parameter_value_list") for db_map in self.db_maps}
+        db_map_par_def_ids = {db_map: db_map.cache.dirty_ids("parameter_definition") for db_map in self.db_maps}
+        db_map_par_val_ids = {db_map: db_map.cache.dirty_ids("parameter_value") for db_map in self.db_maps}
+        db_map_ent_group_ids = {db_map: db_map.cache.dirty_ids("entity_group") for db_map in self.db_maps}
         parcel = SpineDBParcel(self.db_mngr)
         parcel.push_entity_class_ids(db_map_ent_cls_ids)
         parcel.push_entity_ids(db_map_ent_ids)

@@ -9,9 +9,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """Contains scenario tree model."""
-import pickle
+import json
 
-from PySide6.QtCore import QMimeData, Qt
+from PySide6.QtCore import QMimeData, Qt, QByteArray
 from spinetoolbox.helpers import unique_name
 from .tree_model_base import TreeModelBase
 from .scenario_item import ScenarioDBItem, ScenarioAlternativeItem, ScenarioItem
@@ -66,7 +66,7 @@ class ScenarioModel(TreeModelBase):
                 db_item = item.parent_item
                 db_key = self.db_mngr.db_map_key(db_item.db_map)
                 scenario_data.setdefault(db_key, []).append(item.id)
-            mime.setData(mime_types.SCENARIO_DATA, pickle.dumps(scenario_data))
+            mime.setData(mime_types.SCENARIO_DATA, QByteArray(json.dumps(scenario_data)))
             mime.setText(two_column_as_csv(scenario_indexes))
             return mime
         alternative_indexes = []
@@ -84,19 +84,19 @@ class ScenarioModel(TreeModelBase):
                 db_item = item.parent_item.parent_item
                 db_key = self.db_mngr.db_map_key(db_item.db_map)
                 alternative_data.setdefault(db_key, []).append(item.alternative_id)
-            mime.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(alternative_data))
+            mime.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(alternative_data)))
             mime.setText(two_column_as_csv(alternative_indexes))
             return mime
         return None
 
-    def canDropMimeData(self, data, drop_action, row, column, parent):
+    def canDropMimeData(self, mime_data, drop_action, row, column, parent):
         if drop_action & self.supportedDropActions() == 0:
             return False
-        if not data.hasFormat(mime_types.ALTERNATIVE_DATA):
+        if not mime_data.hasFormat(mime_types.ALTERNATIVE_DATA):
             return False
         try:
-            payload = pickle.loads(data.data(mime_types.ALTERNATIVE_DATA))
-        except pickle.UnpicklingError:
+            payload = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
+        except json.JSONDecodeError:
             return False
         if not isinstance(payload, dict):
             return False
@@ -115,12 +115,12 @@ class ScenarioModel(TreeModelBase):
         db_item = self.db_item(parent_item)
         if db_map != db_item.db_map:
             return False
-        if data.hasFormat("application/vnd.spinetoolbox.scenario-alternative"):
+        if mime_data.hasFormat("application/vnd.spinetoolbox.scenario-alternative"):
             # Check that reordering only happens within the same scenario
             return False
         return True
 
-    def dropMimeData(self, data, drop_action, row, column, parent):
+    def dropMimeData(self, mime_data, drop_action, row, column, parent):
         # This function expects that data has be verified by canDropMimeData() already.
         scenario_item = self.item_from_index(parent)
         if not isinstance(scenario_item, ScenarioItem):
@@ -131,7 +131,7 @@ class ScenarioModel(TreeModelBase):
         old_alternative_id_list = list(scenario_item.alternative_id_list)
         if row == -1:
             row = len(old_alternative_id_list)
-        db_map_key, alternative_ids = pickle.loads(data.data(mime_types.ALTERNATIVE_DATA)).popitem()
+        _db_map_key, alternative_ids = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data()).popitem()
         alternative_id_list = [id_ for id_ in old_alternative_id_list[:row] if id_ not in alternative_ids]
         alternative_id_list += alternative_ids
         alternative_id_list += [id_ for id_ in old_alternative_id_list[row:] if id_ not in alternative_ids]
@@ -151,7 +151,7 @@ class ScenarioModel(TreeModelBase):
         if row == -1:
             row = len(old_alternative_id_list)
         data_to_add = {}
-        for db_map_key, alternative_ids in pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA)).items():
+        for db_map_key, alternative_ids in json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data()).items():
             target_db_map = self.db_mngr.db_map_from_key(db_map_key)
             if target_db_map != scenario_item.db_map:
                 continue
@@ -175,7 +175,7 @@ class ScenarioModel(TreeModelBase):
         existing_alternatives = {
             i.name for i in self.db_mngr.get_items(db_item.db_map, "alternative", only_visible=False)
         }
-        for db_map_key, scenario_ids in pickle.loads(mime_data.data(mime_types.SCENARIO_DATA)).items():
+        for db_map_key, scenario_ids in json.loads(mime_data.data(mime_types.SCENARIO_DATA).data()).items():
             db_map = self.db_mngr.db_map_from_key(db_map_key)
             if db_map is db_item.db_map:
                 continue
