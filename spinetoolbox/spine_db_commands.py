@@ -32,21 +32,43 @@ class AgedUndoStack(QUndoStack):
 
 
 class AgedUndoCommand(QUndoCommand):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, identifier=-1):
         """
         Args:
             parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
         super().__init__(parent=parent)
-        self.parent = parent
         self._age = -1
-        self.children = []
+        self._id = identifier
+        self._buddies = []
+        self.merged = False
+
+    def id(self):
+        return self._id
+
+    def ours(self):
+        return [self] + self._buddies
+
+    def mergeWith(self, command):
+        if not isinstance(command, AgedUndoCommand):
+            return False
+        self._buddies += command.ours()
+        command.merged = True
+        return True
 
     def redo(self):
+        if self.merged:
+            return
         super().redo()
+        for cmd in self._buddies:
+            cmd.redo()
         self._age = time.time()
 
     def undo(self):
+        if self.merged:
+            return
+        for cmd in reversed(self._buddies):
+            cmd.undo()
         super().undo()
         self._age = time.time()
 
@@ -54,38 +76,23 @@ class AgedUndoCommand(QUndoCommand):
     def age(self):
         return self._age
 
-    def check(self):
-        if self.children and all(cmd.isObsolete() for cmd in self.children):
-            self.setObsolete(True)
-
-    def __del__(self):
-        # TODO: try to make sure this works as intended. The idea is to fix a segfault at exiting the app
-        # after running an 'import_data' command.
-        if self.parent is not None:
-            return
-        while self.children:
-            self.children.pop().parent = None
-
 
 class SpineDBCommand(AgedUndoCommand):
     """Base class for all commands that modify a Spine DB."""
 
-    def __init__(self, db_mngr, db_map, parent=None):
+    def __init__(self, db_mngr, db_map, **kwargs):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
             db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
         """
-        super().__init__(parent=parent)
+        super().__init__(**kwargs)
         self.db_mngr = db_mngr
         self.db_map = db_map
-        if isinstance(parent, AgedUndoCommand):
-            # Stores a ref to this in the parent so Python doesn't delete it
-            parent.children.append(self)
 
 
 class AddItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, item_type, data, check=True, parent=None):
+    def __init__(self, db_mngr, db_map, item_type, data, check=True, **kwargs):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
@@ -93,7 +100,7 @@ class AddItemsCommand(SpineDBCommand):
             data (list): list of dict-items to add
             item_type (str): the item type
         """
-        super().__init__(db_mngr, db_map, parent=parent)
+        super().__init__(db_mngr, db_map, **kwargs)
         if not data:
             self.setObsolete(True)
         self.item_type = item_type
@@ -119,7 +126,7 @@ class AddItemsCommand(SpineDBCommand):
 
 
 class UpdateItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, item_type, data, check=True, parent=None):
+    def __init__(self, db_mngr, db_map, item_type, data, check=True, **kwargs):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
@@ -127,7 +134,7 @@ class UpdateItemsCommand(SpineDBCommand):
             item_type (str): the item type
             data (list): list of dict-items to update
         """
-        super().__init__(db_mngr, db_map, parent=parent)
+        super().__init__(db_mngr, db_map, **kwargs)
         if not data:
             self.setObsolete(True)
         self.item_type = item_type
@@ -151,7 +158,7 @@ class UpdateItemsCommand(SpineDBCommand):
 
 
 class RemoveItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, item_type, ids, parent=None):
+    def __init__(self, db_mngr, db_map, item_type, ids, **kwargs):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
@@ -159,7 +166,7 @@ class RemoveItemsCommand(SpineDBCommand):
             item_type (str): the item type
             ids (set): set of ids to remove
         """
-        super().__init__(db_mngr, db_map, parent=parent)
+        super().__init__(db_mngr, db_map, **kwargs)
         if not ids:
             self.setObsolete(True)
         self.item_type = item_type

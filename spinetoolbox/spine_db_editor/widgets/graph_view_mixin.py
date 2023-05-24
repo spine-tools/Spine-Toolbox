@@ -170,8 +170,6 @@ class GraphViewMixin:
         Returns:
             list: tuples (db_map, id) that didn't match any item in the view.
         """
-        # FIXME: It looks like undoing twice and then redoing once restores all the items.
-        # It should only restores the items corresponding to one redo operation at a time
         added_db_map_ids_by_key = {}
         for db_map, entities in db_map_data.items():
             for entity in entities:

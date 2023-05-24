@@ -13,8 +13,8 @@
 The SpineDBManager class
 """
 
-import json
 import os
+import json
 from PySide6.QtCore import Qt, QObject, Signal, Slot
 from PySide6.QtWidgets import QMessageBox, QWidget
 from PySide6.QtGui import QFontMetrics, QFont, QWindow
@@ -46,7 +46,7 @@ from spinedb_api.parameter_value import join_value_and_type, split_value_and_typ
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
-from .spine_db_commands import AgedUndoStack, AgedUndoCommand, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
+from .spine_db_commands import AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .helpers import get_upgrade_db_promt_text, busy_effect
@@ -102,6 +102,7 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self._icon_mngr = {}
         self._connect_signals()
+        self._cmd_id = 0
 
     def _connect_signals(self):
         self.error_msg.connect(self.receive_error_msg)
@@ -836,7 +837,7 @@ class SpineDBManager(QObject):
                 to `get_data_for_import`
             command_text (str, optional): What to call the command that condenses the operation.
         """
-        db_map_error_log = dict()
+        db_map_error_log = {}
         for db_map, data in db_map_data.items():
             try:
                 data_for_import = get_data_for_import(db_map, **data)
@@ -844,22 +845,15 @@ class SpineDBManager(QObject):
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
                 db_map_error_log.setdefault(db_map, []).append(msg)
                 continue
-            macro = AgedUndoCommand()
-            macro.setText(command_text)
-            # NOTE: we push the import macro before adding the children,
-            # because we *need* to call redo() on the children one by one so the data gets in gradually
-            self.undo_stack[db_map].push(macro)
+            identifier = self.get_command_identifier()
             for item_type, (to_add, to_update, import_error_log) in data_for_import:
                 if item_type in ("object_class", "relationship_class", "object", "relationship"):
                     continue
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
                 if to_update:
-                    UpdateItemsCommand(self, db_map, item_type, to_update, check=False, parent=macro).redo()
+                    self.update_items(item_type, {db_map: to_update}, check=False, identifier=identifier)
                 if to_add:
-                    AddItemsCommand(self, db_map, item_type, to_add, check=False, parent=macro).redo()
-            macro.check()
-            if macro.isObsolete():
-                self.undo_stack[db_map].undo()
+                    self.add_items(item_type, {db_map: to_add}, check=False, identifier=identifier)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
@@ -961,13 +955,11 @@ class SpineDBManager(QObject):
 
     def _add_ext_item_metadata(self, db_map_data, item_type):
         for db_map, items in db_map_data.items():
-            macro = AgedUndoCommand()
-            macro.setText(f"add {item_type} to {db_map.codename}")
+            identifier = self.get_command_identifier()
             metadata_items = db_map.get_metadata_to_add_with_entity_metadata_items(*items)
             if metadata_items:
-                AddItemsCommand(self, db_map, "metadata", metadata_items, parent=macro)
-            AddItemsCommand(self, db_map, item_type, items, parent=macro)
-            self.undo_stack[db_map].push(macro)
+                self.add_items("metadata", {db_map: metadata_items}, identifier=identifier)
+            self.add_items(item_type, {db_map: items}, identifier=identifier)
 
     def add_ext_entity_metadata(self, db_map_data):
         """Adds entity metadata together with all necessary metadata to db.
@@ -1099,13 +1091,11 @@ class SpineDBManager(QObject):
 
     def _update_ext_item_metadata(self, db_map_data, item_type):
         for db_map, items in db_map_data.items():
-            macro = AgedUndoCommand()
-            macro.setText(f"update {item_type} to {db_map.codename}")
+            identifier = self.get_command_identifier()
             metadata_items = db_map.get_metadata_to_add_with_entity_metadata_items(*items)
             if metadata_items:
-                AddItemsCommand(self, db_map, "metadata", metadata_items, parent=macro)
-            UpdateItemsCommand(self, db_map, item_type, items, parent=macro)
-            self.undo_stack[db_map].push(macro)
+                self.add_items("metadata", {db_map: metadata_items}, identifier=identifier)
+            self.update_items(item_type, {db_map: items}, identifier=identifier)
 
     def update_ext_entity_metadata(self, db_map_data):
         """Updates entity metadata in db.
@@ -1131,20 +1121,18 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = {}
         for db_map, data in db_map_data.items():
-            macro = AgedUndoCommand()
-            macro.setText(f"set scenario alternatives in {db_map.codename}")
+            identifier = self.get_command_identifier()
             items_to_add, ids_to_remove, errors = db_map.get_data_to_set_scenario_alternatives(*data)
             if ids_to_remove:
-                RemoveItemsCommand(self, db_map, "scenario_alternative", ids_to_remove, parent=macro)
+                self.remove_items({db_map: {"scenario_alternative": ids_to_remove}}, identifier=identifier)
             if items_to_add:
-                AddItemsCommand(self, db_map, "scenario_alternative", items_to_add, parent=macro)
+                self.add_items("scenario_alternative", {db_map: items_to_add}, identifier=identifier)
             if errors:
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in errors])
-            self.undo_stack[db_map].push(macro)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
-    def purge_items(self, db_map_item_types):
+    def purge_items(self, db_map_item_types, **kwargs):
         """Purges selected items from given database.
 
         Args:
@@ -1154,25 +1142,41 @@ class SpineDBManager(QObject):
             db_map: {item_type: {Asterisk} for item_type in item_types}
             for db_map, item_types in db_map_item_types.items()
         }
-        self.remove_items(db_map_typed_data)
+        self.remove_items(db_map_typed_data, **kwargs)
 
-    def add_items(self, item_type, db_map_data):
+    def add_items(self, item_type, db_map_data, identifier=None, **kwargs):
         """Pushes commands to add items to undo stack."""
+        if identifier is None:
+            identifier = self.get_command_identifier()
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, item_type, data))
+            self.undo_stack[db_map].push(
+                AddItemsCommand(self, db_map, item_type, data, identifier=identifier, **kwargs)
+            )
 
-    def update_items(self, item_type, db_map_data):
+    def update_items(self, item_type, db_map_data, identifier=None, **kwargs):
         """Pushes commands to update items to undo stack."""
+        if identifier is None:
+            identifier = self.get_command_identifier()
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, item_type, data))
+            self.undo_stack[db_map].push(
+                UpdateItemsCommand(self, db_map, item_type, data, identifier=identifier, **kwargs)
+            )
 
-    def remove_items(self, db_map_typed_ids):
+    def remove_items(self, db_map_typed_ids, identifier=None, **kwargs):
         """Pushes commands to remove items to undo stack."""
+        if identifier is None:
+            identifier = self.get_command_identifier()
         for db_map, ids_per_type in db_map_typed_ids.items():
-            macro = AgedUndoCommand()
             for item_type, ids in ids_per_type.items():
-                RemoveItemsCommand(self, db_map, item_type, ids, parent=macro)
-            self.undo_stack[db_map].push(macro)
+                self.undo_stack[db_map].push(
+                    RemoveItemsCommand(self, db_map, item_type, ids, identifier=identifier, **kwargs)
+                )
+
+    def get_command_identifier(self):
+        try:
+            return self._cmd_id
+        finally:
+            self._cmd_id += 1
 
     @busy_effect
     def do_add_items(self, db_map, item_type, data, check=True):

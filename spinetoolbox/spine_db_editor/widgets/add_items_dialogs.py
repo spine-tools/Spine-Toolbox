@@ -47,7 +47,6 @@ from .manage_items_dialogs import (
     ManageItemsDialog,
     ManageItemsDialogBase,
 )
-from ...spine_db_commands import AgedUndoCommand, AddItemsCommand, RemoveItemsCommand
 
 
 class AddReadyEntitiesDialog(ManageItemsDialogBase):
@@ -492,32 +491,8 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                         return
                     element_id = entities[entity_class_id, element_name]["id"]
                     element_id_list.append(element_id)
-                active_alt_ids = []
-                inactive_alt_ids = []
-                alternative_ids = self.db_map_alt_id_lookup[db_map]
-                for alt_name in active_alts:
-                    if alt_name not in alternative_ids:
-                        self.parent().msg_error.emit(
-                            f"Invalid alternative '{alt_name}' for db '{db_name}' at row {i + 1}"
-                        )
-                        return
-                    active_alt_ids.append(alternative_ids[alt_name])
-                for alt_name in inactive_alts:
-                    if alt_name not in alternative_ids:
-                        self.parent().msg_error.emit(
-                            f"Invalid alternative '{alt_name}' for db '{db_name}' at row {i + 1}"
-                        )
-                        return
-                    inactive_alt_ids.append(alternative_ids[alt_name])
                 item = pre_item.copy()
-                item.update(
-                    {
-                        'element_id_list': element_id_list,
-                        'class_id': class_id,
-                        'active_alternative_id_list': active_alt_ids,
-                        'inactive_alternative_id_list': inactive_alt_ids,
-                    }
-                )
+                item.update({'element_id_list': element_id_list, 'class_id': class_id})
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
@@ -913,11 +888,9 @@ class ManageMembersDialog(EntityGroupDialogBase):
             {"entity_id": ent["id"], "entity_class_id": ent["class_id"], "member_id": member_id} for member_id in added
         ]
         ids_to_remove = [x["id"] for x in self._entity_groups() if x["member_id"] in removed]
-        macro = AgedUndoCommand()
-        macro.setText(f"manage {self.entity_item.display_data}'s members")
+        identifier = self.db_mngr.get_command_identifier()
         if items_to_add:
-            AddItemsCommand(self.db_mngr, self.db_map, "entity_group", items_to_add, parent=macro)
+            self.db_mngr.add_items("entity_group", {self.db_map: items_to_add}, identifier=identifier)
         if ids_to_remove:
-            RemoveItemsCommand(self.db_mngr, self.db_map, "entity_group", ids_to_remove, parent=macro)
-        self.db_mngr.undo_stack[self.db_map].push(macro)
+            self.db_mngr.remove_items({self.db_map: {"entity_group": ids_to_remove}}, identifier=identifier)
         super().accept()
