@@ -9,13 +9,13 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """Unit tests for ``scenario_model`` module."""
-import pickle
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 
-from PySide6.QtCore import QMimeData, Qt
+from PySide6.QtCore import QMimeData, Qt, QByteArray
 from PySide6.QtWidgets import QApplication
 
 from spinetoolbox.helpers import signal_waiter
@@ -139,7 +139,7 @@ class TestScenarioModel(_TestBase):
         self.assertTrue(mime_data.hasText())
         self.assertEqual(mime_data.text(), "Base\tBase alternative\r\n")
         self.assertTrue(mime_data.hasFormat(mime_types.ALTERNATIVE_DATA))
-        data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA))
+        data = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
         self.assertEqual(data, {self._db_mngr.db_map_key(self._db_map): [1]})
 
     def test_canDropMimeData_returns_true_when_dropping_alternative_to_empty_scenario(self):
@@ -153,7 +153,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(scenario_index.data(), "my_scenario")
         mime_data = QMimeData()
         data = {self._db_mngr.db_map_key(self._db_map): [1]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(data)))
         self.assertTrue(model.canDropMimeData(mime_data, Qt.DropAction.CopyAction, -1, -1, scenario_index))
 
     def test_dropMimeData_adds_alternative_to_model(self):
@@ -167,7 +167,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(scenario_index.data(), "my_scenario")
         mime_data = QMimeData()
         data = {self._db_mngr.db_map_key(self._db_map): [1]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(data)))
         self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, -1, -1, scenario_index))
         self._fetch_recursively(model)
         model_data = model_data_to_dict(model)
@@ -204,7 +204,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(scenario_index.data(), "my_scenario")
         mime_data = QMimeData()
         data = {self._db_mngr.db_map_key(self._db_map): [1]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(data)))
         self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, -1, -1, scenario_index))
         self._fetch_recursively(model)
         model_data = model_data_to_dict(model)
@@ -230,7 +230,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
         mime_data = QMimeData()
         data = {self._db_mngr.db_map_key(self._db_map): [2]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(data)))
         self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, 0, 0, scenario_index))
         self._fetch_recursively(model)
         model_data = model_data_to_dict(model)
@@ -257,7 +257,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
         mime_data = QMimeData()
         data = {self._db_mngr.db_map_key(self._db_map): [1]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(data)))
         self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, 0, 0, scenario_index))
         self._fetch_recursively(model)
         model_data = model_data_to_dict(model)
@@ -296,7 +296,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(scenario_index.data(), "my_scenario")
         mime_data = QMimeData()
         data = {self._db_mngr.db_map_key(self._db_map): [2]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(data)))
         scenario_item = model.item_from_index(scenario_index)
         model.paste_alternative_mime_data(mime_data, -1, scenario_item)
         self._fetch_recursively(model)
@@ -327,7 +327,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(scenario_index.data(), "my_scenario")
         mime_data = QMimeData()
         data = {self._db_mngr.db_map_key(self._db_map): [1]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(data)))
         scenario_item = model.item_from_index(scenario_index)
         model.paste_alternative_mime_data(mime_data, -1, scenario_item)
         self._fetch_recursively(model)
@@ -353,7 +353,7 @@ class TestScenarioModel(_TestBase):
         ]
         self.assertEqual(model_data, expected)
         data = {self._db_mngr.db_map_key(self._db_map): [2]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(data)))
         scenario_item = model.item_from_index(scenario_index)
         model.paste_alternative_mime_data(mime_data, 0, scenario_item)
         self._fetch_recursively(model)
@@ -465,7 +465,7 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         self.assertEqual(scenario_index.data(), "my_scenario")
         mime_data = QMimeData()
         data = {self._db_mngr.db_map_key(self._db_map1): [2]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(data)))
         scenario_item = model.item_from_index(scenario_index)
         model.paste_alternative_mime_data(mime_data, -1, scenario_item)
         self._fetch_recursively(model)
@@ -493,7 +493,7 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         self._fetch_recursively(model)
         mime_data = QMimeData()
         data = {self._db_mngr.db_map_key(self._db_map1): [1]}
-        mime_data.setData(mime_types.SCENARIO_DATA, pickle.dumps(data))
+        mime_data.setData(mime_types.SCENARIO_DATA, QByteArray(json.dumps(data)))
         root_index = model.index(1, 0)
         self.assertEqual(root_index.data(), "test_db_2")
         db_item = model.item_from_index(root_index)
