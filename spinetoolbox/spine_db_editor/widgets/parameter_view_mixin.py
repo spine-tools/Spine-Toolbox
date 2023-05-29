@@ -15,6 +15,7 @@ Contains the ParameterViewMixin class.
 
 from PySide6.QtCore import Qt, Slot, QModelIndex
 from PySide6.QtWidgets import QHeaderView
+from PySide6.QtGui import QGuiApplication, QFocusEvent
 from .object_name_list_editor import ObjectNameListEditor
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
@@ -23,6 +24,7 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterValueModel,
 )
 from ...helpers import preferred_row_height, DB_ITEM_SEPARATOR
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import AlternativeTreeView, ScenarioTreeView
 
 
 class ParameterViewMixin:
@@ -218,23 +220,29 @@ class ParameterViewMixin:
     @Slot(dict)
     def _handle_alternative_selection_changed(self, selected_db_map_alt_ids):
         """Resets filter according to selection in alternative tree view."""
-        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.scenario_tree_view)
+        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.scenario_tree_view, self.ui.alternative_tree_view)
 
     @Slot(dict)
     def _handle_scenario_alternative_selection_changed(self, selected_db_map_alt_ids):
         """Resets filter according to selection in scenario tree view."""
-        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.alternative_tree_view)
 
-    def _update_alternative_selection(self, selected_db_map_alt_ids, other_tree_view):
+        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.alternative_tree_view, self.ui.scenario_tree_view)
+
+    def _update_alternative_selection(self, selected_db_map_alt_ids, other_tree_view, this_tree_view):
         """Combines alternative selections from alternative and scenario tree views.
 
         Args:
             selected_db_map_alt_ids (dict): mapping from database map to set of alternative ids
             other_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection didn't change
         """
-        alternative_ids = {
-            db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
-        }
+        # print(isinstance(other_tree_view, AlternativeTreeView), isinstance(this_tree_view, AlternativeTreeView))
+        if QGuiApplication.keyboardModifiers() == Qt.KeyboardModifier.ControlModifier:
+            alternative_ids = {
+                db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
+            }
+        else:
+            alternative_ids = {}
+            other_tree_view.selectionModel().clearSelection()
         for db_map, alt_ids in selected_db_map_alt_ids.items():
             alternative_ids.setdefault(db_map, set()).update(alt_ids)
         self._filter_alternative_ids = alternative_ids
