@@ -203,14 +203,10 @@ class ParameterViewMixin:
             self._filter_class_ids.setdefault(db_map, set()).update(ids)
         for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rels).items():
             self._filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
-        if QGuiApplication.keyboardModifiers() != Qt.KeyboardModifier.ControlModifier:
+        if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
             self._clear_all_other_selections(self.ui.treeView_object)
-            #if self.ui.scenario_tree_view.selectionModel().hasSelection():
-            #        self.ui.scenario_tree_view.selectionModel().clearSelection()
-            #if self.ui.alternative_tree_view.selectionModel().hasSelection():
-            #        self.ui.alternative_tree_view.selectionModel().clearSelection()
-            #if self.ui.treeView_relationship.selectionModel().hasSelection():
-            #        self.ui.treeView_relationship.selectionModel().clearSelection()
+            self._filter_entity_ids.clear()
+            self._filter_alternative_ids.clear()
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_object.selectionModel().currentIndex())
 
@@ -220,6 +216,8 @@ class ParameterViewMixin:
         rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
         active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
+        if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
+            pass
         self._filter_class_ids = self._db_map_ids(active_rel_cls_inds)
         self._filter_entity_ids = self._db_map_class_ids(active_rel_inds)
         self._reset_filters()
@@ -236,7 +234,7 @@ class ParameterViewMixin:
     def _handle_scenario_alternative_selection_changed(self, selected_db_map_alt_ids):
         """Resets filter according to selection in scenario tree view."""
         self._update_alternative_selection(
-            selected_db_map_alt_ids, self.ui.alternative_tree_view,self.ui.scenario_tree_view
+            selected_db_map_alt_ids, self.ui.alternative_tree_view, self.ui.scenario_tree_view
         )
 
     def _update_alternative_selection(self, selected_db_map_alt_ids, other_tree_view, this_tree_view):
@@ -246,21 +244,18 @@ class ParameterViewMixin:
             selected_db_map_alt_ids (dict): mapping from database map to set of alternative ids
             other_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection didn't change
         """
-        if QGuiApplication.keyboardModifiers() == Qt.KeyboardModifier.ControlModifier:
+        if Qt.KeyboardModifier.ControlModifier in QGuiApplication.keyboardModifiers():
+            print(QGuiApplication.keyboardModifiers())
             alternative_ids = {
                 db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
             }
         else:
             alternative_ids = {}
             self._clear_all_other_selections(this_tree_view)
-        #    with QSignalBlocker(other_tree_view) as _:
-        #        other_tree_view.selectionModel().clearSelection()
-        #    if self.ui.treeView_object.selectionModel().hasSelection():
-        #        self.ui.treeView_object.selectionModel().clearSelection()
-        #    if self.ui.treeView_relationship.selectionModel().hasSelection():
-        #        self.ui.treeView_relationship.selectionModel().clearSelection()
+            self._filter_class_ids.clear()
         for db_map, alt_ids in selected_db_map_alt_ids.items():
             alternative_ids.setdefault(db_map, set()).update(alt_ids)
+        # self.clear_all_filters()
         self._filter_alternative_ids = alternative_ids
         self._reset_filters()
 
