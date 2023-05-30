@@ -150,8 +150,10 @@ class EntityTreeView(ResizableTreeView):
         """Classifies selection by item type and emits signal."""
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
-        if not self.selectionModel().hasSelection():
-            return
+        # if not self.selectionModel().hasSelection():
+        #     return
+        # print(selected)
+        # print(self._selected_indexes)
         self.tree_selection_changed.emit(self._selected_indexes)
 
     def _refresh_selected_indexes(self):
@@ -671,7 +673,7 @@ class AlternativeTreeView(ItemTreeView):
 class ScenarioTreeView(ItemTreeView):
     """Custom QTreeView for the scenario tree in SpineDBEditor."""
 
-    alternative_selection_changed = Signal(dict)
+    scenario_selection_changed = Signal(dict)
 
     def __init__(self, parent):
         """
@@ -729,7 +731,7 @@ class ScenarioTreeView(ItemTreeView):
 
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
-        """Emits alternative_selection_changed with the current selection."""
+        """Emits scenario_selection_changed with the current selection."""
         self._selected_alternative_ids.clear()
         for index in self.selectionModel().selectedRows(column=0):
             item = self.model().item_from_index(index)
@@ -737,7 +739,7 @@ class ScenarioTreeView(ItemTreeView):
                 self._selected_alternative_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
             elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
                 self._selected_alternative_ids.setdefault(item.db_map, set()).add(item.alternative_id)
-        self.alternative_selection_changed.emit(self._selected_alternative_ids)
+        self.scenario_selection_changed.emit(self._selected_alternative_ids)
 
     def remove_selected(self):
         """See base class."""

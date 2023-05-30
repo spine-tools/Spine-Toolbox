@@ -13,9 +13,9 @@
 Contains the ParameterViewMixin class.
 """
 
-from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtCore import Qt, Slot, QModelIndex, QSignalBlocker
 from PySide6.QtWidgets import QHeaderView
-from PySide6.QtGui import QGuiApplication, QFocusEvent
+from PySide6.QtGui import QGuiApplication
 from .object_name_list_editor import ObjectNameListEditor
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
@@ -67,7 +67,7 @@ class ParameterViewMixin:
         """Connects signals to slots."""
         super().connect_signals()
         self.ui.alternative_tree_view.alternative_selection_changed.connect(self._handle_alternative_selection_changed)
-        self.ui.scenario_tree_view.alternative_selection_changed.connect(
+        self.ui.scenario_tree_view.scenario_selection_changed.connect(
             self._handle_scenario_alternative_selection_changed
         )
         self.ui.treeView_object.tree_selection_changed.connect(self._handle_object_tree_selection_changed)
@@ -203,6 +203,14 @@ class ParameterViewMixin:
             self._filter_class_ids.setdefault(db_map, set()).update(ids)
         for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rels).items():
             self._filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
+        if QGuiApplication.keyboardModifiers() != Qt.KeyboardModifier.ControlModifier:
+            self._clear_all_other_selections(self.ui.treeView_object)
+            #if self.ui.scenario_tree_view.selectionModel().hasSelection():
+            #        self.ui.scenario_tree_view.selectionModel().clearSelection()
+            #if self.ui.alternative_tree_view.selectionModel().hasSelection():
+            #        self.ui.alternative_tree_view.selectionModel().clearSelection()
+            #if self.ui.treeView_relationship.selectionModel().hasSelection():
+            #        self.ui.treeView_relationship.selectionModel().clearSelection()
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_object.selectionModel().currentIndex())
 
@@ -220,13 +228,16 @@ class ParameterViewMixin:
     @Slot(dict)
     def _handle_alternative_selection_changed(self, selected_db_map_alt_ids):
         """Resets filter according to selection in alternative tree view."""
-        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.scenario_tree_view, self.ui.alternative_tree_view)
+        self._update_alternative_selection(
+            selected_db_map_alt_ids, self.ui.scenario_tree_view, self.ui.alternative_tree_view
+        )
 
     @Slot(dict)
     def _handle_scenario_alternative_selection_changed(self, selected_db_map_alt_ids):
         """Resets filter according to selection in scenario tree view."""
-
-        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.alternative_tree_view, self.ui.scenario_tree_view)
+        self._update_alternative_selection(
+            selected_db_map_alt_ids, self.ui.alternative_tree_view,self.ui.scenario_tree_view
+        )
 
     def _update_alternative_selection(self, selected_db_map_alt_ids, other_tree_view, this_tree_view):
         """Combines alternative selections from alternative and scenario tree views.
@@ -235,15 +246,32 @@ class ParameterViewMixin:
             selected_db_map_alt_ids (dict): mapping from database map to set of alternative ids
             other_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection didn't change
         """
-        # print(isinstance(other_tree_view, AlternativeTreeView), isinstance(this_tree_view, AlternativeTreeView))
         if QGuiApplication.keyboardModifiers() == Qt.KeyboardModifier.ControlModifier:
             alternative_ids = {
                 db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
             }
         else:
             alternative_ids = {}
-            other_tree_view.selectionModel().clearSelection()
+            self._clear_all_other_selections(this_tree_view)
+        #    with QSignalBlocker(other_tree_view) as _:
+        #        other_tree_view.selectionModel().clearSelection()
+        #    if self.ui.treeView_object.selectionModel().hasSelection():
+        #        self.ui.treeView_object.selectionModel().clearSelection()
+        #    if self.ui.treeView_relationship.selectionModel().hasSelection():
+        #        self.ui.treeView_relationship.selectionModel().clearSelection()
         for db_map, alt_ids in selected_db_map_alt_ids.items():
             alternative_ids.setdefault(db_map, set()).update(alt_ids)
         self._filter_alternative_ids = alternative_ids
         self._reset_filters()
+
+    def _clear_all_other_selections(self, current):
+        """Clears all the other selections besides the one that was just made.
+
+        Args:
+            current: the selection that was just made
+        """
+        trees = [self.ui.treeView_object, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
+        for tree in trees:
+            if tree != current:
+                with QSignalBlocker(tree) as _:
+                    tree.selectionModel().clearSelection()
