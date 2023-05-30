@@ -150,10 +150,6 @@ class EntityTreeView(ResizableTreeView):
         """Classifies selection by item type and emits signal."""
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
-        # if not self.selectionModel().hasSelection():
-        #     return
-        # print(selected)
-        # print(self._selected_indexes)
         self.tree_selection_changed.emit(self._selected_indexes)
 
     def _refresh_selected_indexes(self):

@@ -205,7 +205,6 @@ class ParameterViewMixin:
             self._filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
             self._clear_all_other_selections(self.ui.treeView_object)
-            self._filter_entity_ids.clear()
             self._filter_alternative_ids.clear()
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_object.selectionModel().currentIndex())
@@ -217,7 +216,7 @@ class ParameterViewMixin:
         active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
-            pass
+            self._clear_all_other_selections(self.ui.treeView_relationship)
         self._filter_class_ids = self._db_map_ids(active_rel_cls_inds)
         self._filter_entity_ids = self._db_map_class_ids(active_rel_inds)
         self._reset_filters()
@@ -245,7 +244,6 @@ class ParameterViewMixin:
             other_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection didn't change
         """
         if Qt.KeyboardModifier.ControlModifier in QGuiApplication.keyboardModifiers():
-            print(QGuiApplication.keyboardModifiers())
             alternative_ids = {
                 db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
             }
@@ -255,7 +253,6 @@ class ParameterViewMixin:
             self._filter_class_ids.clear()
         for db_map, alt_ids in selected_db_map_alt_ids.items():
             alternative_ids.setdefault(db_map, set()).update(alt_ids)
-        # self.clear_all_filters()
         self._filter_alternative_ids = alternative_ids
         self._reset_filters()
 
@@ -265,7 +262,12 @@ class ParameterViewMixin:
         Args:
             current: the selection that was just made
         """
-        trees = [self.ui.treeView_object, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
+        trees = [
+            self.ui.treeView_object,
+            self.ui.scenario_tree_view,
+            self.ui.alternative_tree_view,
+            self.ui.treeView_relationship,
+        ]
         for tree in trees:
             if tree != current:
                 with QSignalBlocker(tree) as _:
