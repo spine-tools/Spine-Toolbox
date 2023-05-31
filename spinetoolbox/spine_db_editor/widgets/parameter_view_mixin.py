@@ -251,6 +251,7 @@ class ParameterViewMixin:
             alternative_ids = {}
             self._clear_all_other_selections(this_tree_view)
             self._filter_class_ids.clear()
+            self._filter_entity_ids.clear()
         for db_map, alt_ids in selected_db_map_alt_ids.items():
             alternative_ids.setdefault(db_map, set()).update(alt_ids)
         self._filter_alternative_ids = alternative_ids
