@@ -15,7 +15,7 @@ Classes for custom QTreeView.
 import pickle
 
 from PySide6.QtWidgets import QApplication, QMenu, QAbstractItemView
-from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
+from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
 from PySide6.QtGui import QMouseEvent, QIcon
 
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
@@ -150,8 +150,6 @@ class EntityTreeView(ResizableTreeView):
         """Classifies selection by item type and emits signal."""
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
-        if not self.selectionModel().hasSelection():
-            return
         self.tree_selection_changed.emit(self._selected_indexes)
 
     def _refresh_selected_indexes(self):
@@ -168,7 +166,8 @@ class EntityTreeView(ResizableTreeView):
         """Clears the selection if any."""
         selection_model = self.selectionModel()
         if selection_model.hasSelection():
-            selection_model.clearSelection()
+            with QSignalBlocker(selection_model) as _:
+                selection_model.clearSelection()
 
     @busy_effect
     def fully_expand(self):
