@@ -592,11 +592,8 @@ class SpineDBEditorBase(QMainWindow):
             entity_item (EntityTreeItem of EntityItem)
         """
         orig_name = entity_item.display_data
-        dup_name, ok = QInputDialog.getText(
-            self, "Duplicate entity", "Enter a name for the duplicate:", text=orig_name + "_copy"
-        )
-        if not ok:
-            return
+        existing_names = {ent.display_data for ent in entity_item.parent_item.children}
+        dup_name = unique_name(orig_name, existing_names)
         parcel = SpineDBParcel(self.db_mngr)
         db_map_ent_ids = {db_map: {entity_item.db_map_id(db_map)} for db_map in entity_item.db_maps}
         parcel.inner_push_entity_ids(db_map_ent_ids)

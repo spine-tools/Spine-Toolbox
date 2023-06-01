@@ -87,11 +87,9 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
         nemo_item = fish_item.child(0)
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QInputDialog") as mock_input_dialog:
-            mock_input_dialog.getText.side_effect = lambda *args, **kwargs: ("nemo_copy", True)
-            self.spine_db_editor.duplicate_entity(nemo_item)
+        self.spine_db_editor.duplicate_entity(nemo_item)
         nemo_dupe = fish_item.child(1)
-        self.assertEqual(nemo_dupe.display_data, "nemo_copy")
+        self.assertEqual(nemo_dupe.display_data, "nemo (1)")
 
 
 if __name__ == '__main__':

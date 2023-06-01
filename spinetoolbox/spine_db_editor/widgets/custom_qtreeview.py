@@ -13,7 +13,7 @@
 Classes for custom QTreeView.
 """
 from PySide6.QtWidgets import QApplication, QMenu, QAbstractItemView
-from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
+from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
 from PySide6.QtGui import QMouseEvent, QIcon
 
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
@@ -179,8 +179,6 @@ class EntityTreeView(ResizableTreeView):
         """Classifies selection by item type and emits signal."""
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
-        if not self.selectionModel().hasSelection():
-            return
         self.tree_selection_changed.emit(self._selected_indexes)
 
     def _refresh_selected_indexes(self):
@@ -197,7 +195,8 @@ class EntityTreeView(ResizableTreeView):
         """Clears the selection if any."""
         selection_model = self.selectionModel()
         if selection_model.hasSelection():
-            selection_model.clearSelection()
+            with QSignalBlocker(selection_model) as _:
+                selection_model.clearSelection()
 
     @busy_effect
     def fully_expand(self):
@@ -554,7 +553,7 @@ class AlternativeTreeView(ItemTreeView):
 class ScenarioTreeView(ItemTreeView):
     """Custom QTreeView for the scenario tree in SpineDBEditor."""
 
-    alternative_selection_changed = Signal(dict)
+    scenario_selection_changed = Signal(dict)
 
     def __init__(self, parent):
         """
@@ -612,7 +611,7 @@ class ScenarioTreeView(ItemTreeView):
 
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
-        """Emits alternative_selection_changed with the current selection."""
+        """Emits scenario_selection_changed with the current selection."""
         self._selected_alternative_ids.clear()
         for index in self.selectionModel().selectedRows(column=0):
             item = self.model().item_from_index(index)
@@ -620,7 +619,7 @@ class ScenarioTreeView(ItemTreeView):
                 self._selected_alternative_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
             elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
                 self._selected_alternative_ids.setdefault(item.db_map, set()).add(item.alternative_id)
-        self.alternative_selection_changed.emit(self._selected_alternative_ids)
+        self.scenario_selection_changed.emit(self._selected_alternative_ids)
 
     def remove_selected(self):
         """See base class."""
