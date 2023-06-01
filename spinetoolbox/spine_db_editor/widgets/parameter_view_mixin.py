@@ -24,7 +24,6 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterValueModel,
 )
 from ...helpers import preferred_row_height, DB_ITEM_SEPARATOR
-from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import AlternativeTreeView, ScenarioTreeView
 
 
 class ParameterViewMixin:
@@ -242,6 +241,7 @@ class ParameterViewMixin:
         Args:
             selected_db_map_alt_ids (dict): mapping from database map to set of alternative ids
             other_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection didn't change
+            this_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection changed
         """
         if Qt.KeyboardModifier.ControlModifier in QGuiApplication.keyboardModifiers():
             alternative_ids = {
