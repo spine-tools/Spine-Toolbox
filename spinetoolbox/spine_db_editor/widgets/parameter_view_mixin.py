@@ -69,8 +69,8 @@ class ParameterViewMixin:
         self.ui.scenario_tree_view.scenario_selection_changed.connect(
             self._handle_scenario_alternative_selection_changed
         )
-        self.ui.treeView_object.tree_selection_changed.connect(self._handle_object_tree_selection_changed)
-        self.ui.treeView_relationship.tree_selection_changed.connect(self._handle_relationship_tree_selection_changed)
+        self.ui.treeView_object.object_selection_changed.connect(self._handle_object_tree_selection_changed)
+        self.ui.treeView_relationship.relationship_selection_changed.connect(self._handle_relationship_tree_selection_changed)
         self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
@@ -203,7 +203,7 @@ class ParameterViewMixin:
         for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rels).items():
             self._filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
-            self._clear_all_other_selections(self.ui.treeView_object)
+            self._clear_all_other_selections(self.ui.treeView_object, self.ui.treeView_relationship)
             self._filter_alternative_ids.clear()
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_object.selectionModel().currentIndex())
@@ -215,9 +215,17 @@ class ParameterViewMixin:
         active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
-            self._clear_all_other_selections(self.ui.treeView_relationship)
-        self._filter_class_ids = self._db_map_ids(active_rel_cls_inds)
-        self._filter_entity_ids = self._db_map_class_ids(active_rel_inds)
+            self._clear_all_other_selections(self.ui.treeView_relationship, self.ui.treeView_object)
+            self._filter_class_ids = self._db_map_ids(active_rel_cls_inds)
+            self._filter_entity_ids = self._db_map_class_ids(active_rel_inds)
+        else:
+            for db_map, ids in self._db_map_ids(active_rel_cls_inds).items():
+                self._filter_class_ids.setdefault(db_map, set()).update(ids)
+            for (db_map, class_id), ids in self._db_map_ids(active_rel_inds).items():
+                self._filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
+        print(self._filter_class_ids)
+        print(self._filter_entity_ids)
+        print()
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_relationship.selectionModel().currentIndex())
 
@@ -257,11 +265,12 @@ class ParameterViewMixin:
         self._filter_alternative_ids = alternative_ids
         self._reset_filters()
 
-    def _clear_all_other_selections(self, current):
+    def _clear_all_other_selections(self, current, other=None):
         """Clears all the other selections besides the one that was just made.
 
         Args:
-            current: the selection that was just made
+            current: the tree where the selection that was just made
+            other (optional): other optional tree
         """
         trees = [
             self.ui.treeView_object,
@@ -270,6 +279,6 @@ class ParameterViewMixin:
             self.ui.treeView_relationship,
         ]
         for tree in trees:
-            if tree != current:
+            if tree != current and tree != other:
                 with QSignalBlocker(tree) as _:
                     tree.selectionModel().clearSelection()
