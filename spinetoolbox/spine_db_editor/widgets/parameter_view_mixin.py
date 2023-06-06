@@ -218,13 +218,8 @@ class ParameterViewMixin:
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
             self._clear_all_other_selections(self.ui.treeView_relationship, self.ui.treeView_object)
-            self._filter_class_ids = self._db_map_ids(active_rel_cls_inds)
-            self._filter_entity_ids = self._db_map_class_ids(active_rel_inds)
-        else:
-            for db_map, ids in self._db_map_ids(active_rel_cls_inds).items():
-                self._filter_class_ids.setdefault(db_map, set()).update(ids)
-            for db_map, ids in self._db_map_ids(active_rel_inds).items():
-                self._filter_entity_ids.setdefault(db_map, set()).update(ids)
+        self._filter_class_ids = self._db_map_ids(active_rel_cls_inds)
+        self._filter_entity_ids = self._db_map_class_ids(active_rel_inds)
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_relationship.selectionModel().currentIndex())
 
