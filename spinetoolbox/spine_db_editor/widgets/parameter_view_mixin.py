@@ -221,11 +221,8 @@ class ParameterViewMixin:
         else:
             for db_map, ids in self._db_map_ids(active_rel_cls_inds).items():
                 self._filter_class_ids.setdefault(db_map, set()).update(ids)
-            for (db_map, class_id), ids in self._db_map_ids(active_rel_inds).items():
-                self._filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
-        print(self._filter_class_ids)
-        print(self._filter_entity_ids)
-        print()
+            for db_map, ids in self._db_map_ids(active_rel_inds).items():
+                self._filter_entity_ids.setdefault(db_map, set()).update(ids)
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_relationship.selectionModel().currentIndex())
 

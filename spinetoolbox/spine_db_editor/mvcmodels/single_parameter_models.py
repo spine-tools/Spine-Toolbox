@@ -426,7 +426,12 @@ class SingleParameterValueMixin(
 
     def _entity_filter_accepts_item(self, item):
         """Returns the result of the entity filter."""
-        if not self._filter_db_map_class_entity_ids:
+        object_class_id = item["object_class_id"]
+        try:
+            active_class_ids = [i[1] for i in self._filter_db_map_class_entity_ids.keys()]
+        except TypeError:
+            active_class_ids = []
+        if not self._filter_db_map_class_entity_ids or object_class_id not in active_class_ids:
             return True
         entity_id = item["entity_id"]
         return entity_id in self._filter_entity_ids
