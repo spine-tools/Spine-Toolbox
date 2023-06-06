@@ -70,7 +70,9 @@ class ParameterViewMixin:
             self._handle_scenario_alternative_selection_changed
         )
         self.ui.treeView_object.object_selection_changed.connect(self._handle_object_tree_selection_changed)
-        self.ui.treeView_relationship.relationship_selection_changed.connect(self._handle_relationship_tree_selection_changed)
+        self.ui.treeView_relationship.relationship_selection_changed.connect(
+            self._handle_relationship_tree_selection_changed
+        )
         self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
