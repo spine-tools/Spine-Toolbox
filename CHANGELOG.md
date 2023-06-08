@@ -64,6 +64,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   in Tool Properties instead.
 
 ### Fixed
+- Deleting the last item of a mapping in the importer specification editor no longer disables the 'add' button.
 
 ### Security
 

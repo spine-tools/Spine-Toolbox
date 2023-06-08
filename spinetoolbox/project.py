@@ -950,8 +950,8 @@ class SpineToolboxProject(MetaObject):
         """Executes given dags.
 
         Args:
-            dags (list(DiGraph)): List of DAGs
-            execution_permits_list (list(dict)), Permitted nodes by DAG
+            dags (list of DiGraph): List of DAGs
+            execution_permits_list (list of dict), Permitted nodes by DAG
             msg (str): Message to log before execution
         """
         if not dags:
@@ -1046,7 +1046,6 @@ class SpineToolboxProject(MetaObject):
             "COMPLETED": [self._logger.msg_success, "completed successfully"],
         }
         outcome = finished_outcomes.get(worker.engine_final_state())
-        # print("project._handle_engine_worker_finished() worker state: %s"%outcome)
         if outcome is not None:
             outcome[0].emit(f"<b>DAG {worker.dag_identifier} {outcome[1]}</b>")
         if any(worker.engine_final_state() not in finished_outcomes for worker in self._engine_workers):
@@ -1093,16 +1092,16 @@ class SpineToolboxProject(MetaObject):
         the dag is returned unaltered.
 
         Args:
-            dag (list(DiGraph): Dag that is checked if it needs to be split into subdags
+            dag (DiGraph): Dag that is checked if it needs to be split into subdags
             selected_items (list): Names of selected items
 
         Returns:
-            list(DiGraph)): List of dags, ready for execution
+            list of DiGraph: List of dags, ready for execution
         """
         if len(dag.nodes) == 1:
             return [dag]
         # List of Connections that have a selected item as its source or destination item
-        connections = connections_to_selected_items(self._connections, selected_items)
+        connections = connections_to_selected_items(self._connections, set(selected_items))
         edges = dag_edges(connections)
         d = make_dag(edges)  # Make DAG as SpineEngine does it
         if nx.number_weakly_connected_components(d) > 1:

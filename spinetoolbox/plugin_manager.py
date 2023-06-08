@@ -166,8 +166,11 @@ class PluginManager:
         worker.clean_up()
 
     def _load_registry(self):
-        with urllib.request.urlopen(PLUGIN_REGISTRY_URL) as url:
-            registry = json.loads(url.read().decode())
+        try:
+            with urllib.request.urlopen(PLUGIN_REGISTRY_URL) as url:
+                registry = json.loads(url.read().decode())
+        except urllib.error.URLError:
+            raise PluginWorkFailed("Failed to load plugin registry. Are you connected to a network?")
         self._registry_plugins = {plugin_dict["name"]: plugin_dict for plugin_dict in registry["plugins"]}
 
     @Slot(bool)
@@ -176,6 +179,7 @@ class PluginManager:
         worker = self._create_worker()
         worker.succeeded.connect(self._do_show_install_plugin_dialog)
         worker.failed.connect(self._toolbox.msg_error)
+        worker.failed.connect(lambda: self._toolbox.ui.menuPlugins.setEnabled(True))
         worker.start(self._load_registry)
 
     @Slot()
@@ -215,6 +219,7 @@ class PluginManager:
         worker = self._create_worker()
         worker.succeeded.connect(self._do_show_manage_plugins_dialog)
         worker.failed.connect(self._toolbox.msg_error)
+        worker.failed.connect(lambda: self._toolbox.ui.menuPlugins.setEnabled(True))
         worker.start(self._load_registry)
 
     @Slot()
