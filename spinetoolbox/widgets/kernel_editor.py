@@ -33,9 +33,7 @@ from spinetoolbox.helpers import (
     ensure_window_is_on_screen,
     get_datetime,
 )
-from spinetoolbox.config import MAINWINDOW_SS
 from spinetoolbox.logger_interface import LoggerInterface
-from spinetoolbox.helpers import unique_name
 
 
 class KernelEditorBase(QDialog):
@@ -44,12 +42,11 @@ class KernelEditorBase(QDialog):
     def __init__(self, parent, python_or_julia):
         """
         Args:
-            parent (QSettingsWidget): Toolbox settings widget
+            parent (QWidget): Parent widget
             python_or_julia (str): kernel type; valid values: "julia", "python"
         """
-        super().__init__(parent=parent)  # Inherits stylesheet from SettingsWindow
+        super().__init__(parent=parent)
         self.setWindowFlags(Qt.WindowType.Window)
-        self.setup_dialog_style()
         # Class attributes
         self._parent = parent
         self._app_settings = self._parent.qsettings
@@ -61,17 +58,10 @@ class KernelEditorBase(QDialog):
         self._rebuild_ijulia_process = None
         self._install_julia_kernel_process = None
         self._ready_to_install_kernel = False
-        self.old_kernel_names = list()
+        self.kernel_names_before = find_kernel_specs().keys()
+        self._new_kernel_name = ""
         self.python_or_julia = python_or_julia
-        # Set up
         self.setAttribute(Qt.WA_DeleteOnClose)
-
-    def setup_dialog_style(self):
-        """Sets windows icon and stylesheet.
-        This can be removed when SettingsWidget
-        inherits stylesheet from ToolboxUI."""
-        self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        self.setStyleSheet(MAINWINDOW_SS)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -80,6 +70,18 @@ class KernelEditorBase(QDialog):
         self._logger.msg_warning.connect(self.add_warning_message)
         self._logger.msg_proc.connect(self.add_process_message)
         self._logger.msg_error.connect(self.add_process_error_message)
+
+    def new_kernel_name(self):
+        """Returns the new kernel name after it's been created."""
+        return self._new_kernel_name
+
+    def _solve_new_kernel_name(self):
+        """Finds out the new kernel name after a new kernel has been created."""
+        kernel_names_after = find_kernel_specs().keys()
+        try:
+            self._new_kernel_name = list(set(kernel_names_after) - set(self.kernel_names_before))[0]
+        except IndexError:
+            pass
 
     def check_options(self, prgm, kernel_name, display_name, python_or_julia):
         """Checks that user options are valid before advancing with kernel making.
@@ -235,7 +237,6 @@ class KernelEditorBase(QDialog):
             k_name (str): Kernel name
             d_name (str): Kernel display name
         """
-        self.old_kernel_names = find_python_kernels().keys()
         self._logger.msg.emit("Starting Python kernel spec install process")
         args = ["-m", "ipykernel", "install", "--user", "--name", k_name, "--display-name", d_name]
         self._install_kernel_process = QProcessExecutionManager(self._logger, prgm, args)  # , semisilent=True)
@@ -417,12 +418,11 @@ class KernelEditorBase(QDialog):
     @busy_effect
     def start_ijulia_installkernel_process(self, program, project, kernel_name):
         """Installs the kernel using IJulia.installkernel function. Given kernel_name
-        is actually the new kernel DISPLAY name. IJulia strips the whitespace and
+        is the new kernel DISPLAY name prefix. IJulia strips the whitespace and
         uncapitalizes this to make the kernel name automatically. Julia version is
-        concatenated to both names automatically (This cannot be changed).
+        concatenated to both kernel and display names automatically (This cannot be changed).
         """
         self._logger.msg.emit("Installing Julia kernel")
-        self.old_kernel_names = find_julia_kernels().keys()
         args = [
             f"--project={project}",
             "-e",
@@ -437,7 +437,7 @@ class KernelEditorBase(QDialog):
     @busy_effect
     @Slot(int)
     def handle_installkernel_process_finished(self, retval):
-        """Checks whether or not the IJulia.installkernel process finished successfully.
+        """Checks whether the IJulia.installkernel process finished successfully.
 
         Args:
             retval (int): Process return value. 0: success, !0: failure
@@ -550,7 +550,7 @@ class KernelEditor(KernelEditorBase):
         """
 
         Args:
-            parent (QWidget): Parent widget (Settings widget)
+            parent (QWidget): Parent widget
             python (str): Python interpreter, may be empty string
             julia (str): Julia executable, may be empty string
             python_or_julia (str): Setup KernelEditor according to selected mode
@@ -893,55 +893,6 @@ class KernelEditor(KernelEditorBase):
         [n] = new_kernel  # Unpack the set
         self.set_kernel_selected(n)
 
-    @staticmethod
-    def get_kernel_deats(kernel_path):
-        """Reads kernel.json from given kernel path and returns the details in a dictionary.
-
-        Args:
-            kernel_path (str): Full path to kernel directory
-
-        Returns:
-            dict: language (str), path to interpreter (str), display name (str), project (str) (NA for Python kernels)
-        """
-        deats = {"language": "", "exe": "", "display_name": "", "project": ""}
-        kernel_json = os.path.join(kernel_path, "kernel.json")
-        if not os.path.exists(kernel_json):
-            return deats
-        if os.stat(kernel_json).st_size == 0:  # File is empty
-            return deats
-        with open(kernel_json, "r") as fh:
-            try:
-                kernel_dict = json.load(fh)
-            except json.decoder.JSONDecodeError:
-                return deats
-            try:
-                language = kernel_dict["language"]
-            except KeyError:
-                language = ""
-            try:
-                exe = kernel_dict["argv"][0]
-            except KeyError:
-                exe = ""
-            except IndexError:
-                exe = ""
-            try:
-                display_name = kernel_dict["display_name"]
-            except KeyError:
-                display_name = ""
-            try:
-                # loop argv and find a string that starts with --project=
-                project = ""
-                for arg in kernel_dict["argv"]:
-                    if arg.startswith("--project="):
-                        project = arg[10:]
-            except (KeyError, IndexError):
-                project = ""
-            deats["language"] = language
-            deats["exe"] = exe
-            deats["display_name"] = display_name
-            deats["project"] = project
-            return deats
-
     @Slot(QPoint)
     def show_kernel_list_context_menu(self, pos):
         """Shows the context-menu in the kernel list table view."""
@@ -1104,6 +1055,7 @@ class MiniKernelEditorBase(KernelEditorBase):
 
         self.ui = mini_kernel_editor_dialog.Ui_Dialog()
         self.ui.setupUi(self)
+        self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self._cursors = {w: w.cursor() for w in self.findChildren(QWidget)}
         for widget in self._cursors:
             widget.setCursor(Qt.BusyCursor)
@@ -1146,10 +1098,8 @@ class MiniPythonKernelEditor(MiniKernelEditorBase):
         self.setWindowTitle("Python Kernel Specification Creator")
         python_exe = resolve_python_interpreter(python_exe)
         self.ui.lineEdit_python_interpreter.setText(python_exe)
-        prefix = os.path.basename(python_exe)
-        existing = find_python_kernels().keys()
-        self._kernel_name = unique_name(prefix, existing)
-        self._kernel_name = self._kernel_name.replace(" ", "_")
+        self.python_exe = python_exe
+        self._kernel_name = "python_kernel"  # Fallback name
         self.connect_signals()
 
     def _python_kernel_name(self):
@@ -1157,6 +1107,21 @@ class MiniPythonKernelEditor(MiniKernelEditorBase):
 
     def _python_kernel_display_name(self):
         return ""
+
+    def set_kernel_name(self):
+        """Retrieves Python version in a subprocess and makes a kernel name based on it."""
+        manager = QProcessExecutionManager(self, self.python_exe, args=["--version"], silent=True)
+        manager.start_execution()
+        manager.wait_for_process_finished()
+        out = manager.process_output  # e.g. 'Python 3.10.8'
+        if not out:
+            return
+        try:
+            ver = out.split()[1].split(".")
+            ver = ver[0] + ver[1]
+        except IndexError:
+            return
+        self._kernel_name = "python" + ver
 
     def _do_make_kernel(self):
         if not self.make_python_kernel():
@@ -1166,6 +1131,7 @@ class MiniPythonKernelEditor(MiniKernelEditorBase):
     @Slot(int)
     def handle_kernelspec_install_process_finished(self, retval):
         super().handle_kernelspec_install_process_finished(retval)
+        self._solve_new_kernel_name()
         self._show_close_button(failed=retval != 0)
 
 
@@ -1182,10 +1148,7 @@ class MiniJuliaKernelEditor(MiniKernelEditorBase):
         julia_exe = resolve_julia_executable(julia_exe)
         self.ui.lineEdit_julia_executable.setText(julia_exe)
         self.ui.lineEdit_julia_project.setText(julia_project)
-        prefix = os.path.basename(julia_exe)
-        existing = find_julia_kernels().keys()
-        self._kernel_name = unique_name(prefix, existing)
-        self._kernel_name = self._kernel_name.replace(" ", "_")
+        self._kernel_name = "julia"  # This is a prefix, IJulia decides the final kernel name
         self.connect_signals()
 
     def _julia_kernel_name(self):
@@ -1199,6 +1162,7 @@ class MiniJuliaKernelEditor(MiniKernelEditorBase):
     @Slot(int)
     def handle_installkernel_process_finished(self, retval):
         super().handle_installkernel_process_finished(retval)
+        self._solve_new_kernel_name()
         self._show_close_button(failed=retval != 0)
 
 

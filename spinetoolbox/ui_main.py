@@ -58,7 +58,6 @@ from .project_item_icon import ProjectItemIcon
 from .load_project_items import load_project_items
 from .mvcmodels.project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .mvcmodels.project_item_model import ProjectItemModel
-from .mvcmodels.project_tree_item import LeafProjectTreeItem
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.set_description_dialog import SetDescriptionDialog
@@ -110,6 +109,7 @@ from .plugin_manager import PluginManager
 from .link import JumpLink, Link, LINK_COLOR, JUMP_COLOR
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.server.engine_client import EngineClient, RemoteEngineInitFailed, ClientSecurityModel
+from .kernel_fetcher import KernelFetcher
 
 
 class ToolboxUI(QMainWindow):
@@ -196,13 +196,14 @@ class ToolboxUI(QMainWindow):
         self.ui.menuFile.setToolTipsVisible(True)
         self.ui.menuEdit.setToolTipsVisible(True)
         self.ui.menuConsoles.setToolTipsVisible(True)
+        self._add_execute_actions()
+        self.kernel_fetcher = None
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
-        self._add_actions()
         self.set_debug_qactions()
-        self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
+        self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         self.restore_dock_widgets()
         self.restore_ui()
         self.ui.listView_console_executions.hide()
@@ -266,7 +267,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
         self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
         self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
-        self.ui.actionStart_jupyter_console.hovered.connect(self.show_kernels_menu)
+        self.kernels_menu.aboutToShow.connect(self.fetch_kernels)
+        self.kernels_menu.aboutToHide.connect(self.stop_fetching_kernels)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
@@ -639,11 +641,29 @@ class ToolboxUI(QMainWindow):
             self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
 
     @Slot()
-    def show_kernels_menu(self):
-        if not self.kernels_menu.isVisible():
-            self.kernels_menu = KernelsPopupMenu(self)
-            self.kernels_menu.add_kernels()
-            self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
+    def fetch_kernels(self):
+        """Starts a thread for fetching local kernels."""
+        if self.kernel_fetcher is not None and self.kernel_fetcher.isRunning():
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
+        self.kernels_menu.clear()
+        conda_path = self.qsettings().value("appSettings/condaPath", defaultValue="")
+        self.kernel_fetcher = KernelFetcher(conda_path)
+        self.kernel_fetcher.kernel_found.connect(self.kernels_menu.add_kernel)
+        self.kernel_fetcher.finished.connect(self.restore_override_cursor)
+        self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
+        self.kernel_fetcher.start()
+
+    @Slot()
+    def stop_fetching_kernels(self):
+        """Terminates kernel fetcher thread."""
+        if self.kernel_fetcher is not None:
+            self.kernel_fetcher.stop_fetcher.emit()
+
+    @Slot()
+    def restore_override_cursor(self):
+        """Restores default mouse cursor."""
+        QApplication.restoreOverrideCursor()
 
     @Slot()
     def save_project(self):
@@ -1265,7 +1285,6 @@ class ToolboxUI(QMainWindow):
         specification = self.specification_model.specification(index.row())
         file_path = specification.definition_file_path
         # Check if file exists first. openUrl may return True if file doesn't exist
-        # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for %s", file_path)
             self.msg_error.emit("Specification file <b>{0}</b> not found.".format(file_path))
@@ -1329,8 +1348,8 @@ class ToolboxUI(QMainWindow):
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.6 * width, 0.4 * width], Qt.Orientation.Vertical)
 
-    def _add_actions(self):
-        """Adds actions to the main window."""
+    def _add_execute_actions(self):
+        """Adds execution handler actions to the main window."""
         self.addAction(self.ui.actionExecute_project)
         self.addAction(self.ui.actionExecute_selection)
         self.addAction(self.ui.actionStop_execution)
@@ -2349,6 +2368,7 @@ class ToolboxUI(QMainWindow):
         c.setWindowTitle(f"{kernel_name} on Jupyter Console [Detached]")
         c.connect_to_kernel()
         self._jupyter_consoles[connection_file] = c
+        c.console_closed.connect(self._cleanup_jupyter_console)
         c.show()
 
     @Slot(object, str, str, str, dict)
@@ -2442,6 +2462,16 @@ class ToolboxUI(QMainWindow):
         console = self._persistent_consoles[key] = PersistentConsoleWidget(self, key, language, owner=item)
         return console
 
+    @Slot(str)
+    def _cleanup_jupyter_console(self, conn_file):
+        """Removes reference to a Jupyter Console and closes the kernel manager on Engine."""
+        c = self._jupyter_consoles.pop(conn_file, None)
+        if not c:
+            return
+        exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        engine_mngr = make_engine_manager(exec_remotely)
+        engine_mngr.shutdown_kernel(conn_file)
+
     def _shutdown_engine_kernels(self):
         """Shuts down all persistent and Jupyter kernels managed by Spine Engine."""
         exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
@@ -2452,13 +2482,11 @@ class ToolboxUI(QMainWindow):
             engine_mngr.shutdown_kernel(connection_file)
 
     def _close_consoles(self):
-        """Closes Persistent and Jupyter Console widgets."""
+        """Closes all Persistent and Jupyter Console widgets."""
         while self._persistent_consoles:
             self._persistent_consoles.popitem()[1].close()
         while self._jupyter_consoles:
-            c = self._jupyter_consoles.popitem()[1]
-            c.shutdown_kernel_client()
-            c.close()
+            self._jupyter_consoles.popitem()[1].close()
         while self._item_consoles:
             self._item_consoles.popitem()[1].close()
         while self._filter_item_consoles:

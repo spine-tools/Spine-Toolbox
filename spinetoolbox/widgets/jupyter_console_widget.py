@@ -18,7 +18,7 @@ import multiprocessing
 from queue import Empty
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QAction
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.client import QtKernelClient
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
@@ -39,6 +39,8 @@ asyncio_logger.setLevel(level=logging.WARNING)
 
 class JupyterConsoleWidget(RichJupyterWidget):
     """Base class for all embedded console widgets that can run tool instances."""
+
+    console_closed = Signal(str)
 
     def __init__(self, toolbox, kernel_name, owner=None):
         """
@@ -143,7 +145,6 @@ class JupyterConsoleWidget(RichJupyterWidget):
             )
             self._toolbox.msg_error.emit(msg_text)
         elif msg["type"] == "execution_started":
-            print(f"execution_started: {msg}")
             self._toolbox.msg.emit(f"*** Starting execution on kernel spec <b>{msg['kernel_name']}</b> ***")
         else:
             self._toolbox.msg.emit(f"Unhandled message: {msg}")
@@ -244,3 +245,11 @@ class JupyterConsoleWidget(RichJupyterWidget):
         if was_newline:  # user doesn't need newline
             text = text[:-1]
         QApplication.clipboard().setText(text)
+
+    def closeEvent(self, e):
+        """Catches close event to shut down the kernel client
+        and sends a signal to Toolbox to request Spine Engine
+        to shut down the kernel manager."""
+        self.shutdown_kernel_client()
+        super().closeEvent(e)
+        self.console_closed.emit(self._connection_file)
