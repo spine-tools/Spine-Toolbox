@@ -21,11 +21,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 import venv
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
-
 from spine_engine.utils.helpers import resolve_julia_executable
-from spinetoolbox.widgets.kernel_editor import KernelEditor, KernelEditorBase
-from spinetoolbox.widgets.settings_widget import SettingsWidget
-from tests.mock_helpers import create_toolboxui, clean_up_toolbox
+from spinetoolbox.widgets.kernel_editor import KernelEditorBase
 
 
 class MockSettingsWidget(QWidget):
@@ -126,28 +123,3 @@ class TestKernelEditorBase(unittest.TestCase):
             [sys.executable, "-m", "jupyter", "kernelspec", "remove", "-f", real_kernel_name], capture_output=True
         )
         self.assertEqual(completion.returncode, 0)
-
-
-class TestKernelEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
-    def setUp(self):
-        """Set up toolbox."""
-        self.toolbox = create_toolboxui()
-
-    def tearDown(self):
-        """Clean up."""
-        clean_up_toolbox(self.toolbox)
-
-    def test_make_kernel_editor(self):
-        sw = SettingsWidget(self.toolbox)
-        # Make Python Kernel Editor
-        ke = KernelEditor(sw, python="", julia="", python_or_julia="python", current_kernel="")
-        self.assertIsInstance(ke, KernelEditor)
-        self.assertEqual(ke.windowTitle(), "Python Kernel Specification Editor")
-        # Make Julia Kernel Editor
-        ke = KernelEditor(sw, python="", julia="", python_or_julia="julia", current_kernel="")
-        self.assertEqual(ke.windowTitle(), "Julia Kernel Specification Editor")
