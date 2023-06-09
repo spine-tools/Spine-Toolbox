@@ -30,14 +30,17 @@ class TestInstallJuliaWizard(unittest.TestCase):
     def setUp(self):
         """Set up toolbox."""
         self.toolbox = create_toolboxui()
+        with mock.patch("spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_python_kernels") as mock_fetch_python_kernels, mock.patch("spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_julia_kernels") as mock_fetch_julia_kernels:
+            self._settings_widget = SettingsWidget(self.toolbox)
+            mock_fetch_python_kernels.assert_called()
+            mock_fetch_julia_kernels.assert_called()
 
     def tearDown(self):
         """Clean up."""
         clean_up_toolbox(self.toolbox)
 
     def test_julia_installation_succeeds(self):
-        settings_widget = SettingsWidget(self.toolbox)
-        wizard = InstallJuliaWizard(settings_widget)
+        wizard = InstallJuliaWizard(self._settings_widget)
         wizard.restart()
         self.assertEqual("Welcome", wizard.currentPage().title())
         wizard.next()
@@ -59,8 +62,7 @@ class TestInstallJuliaWizard(unittest.TestCase):
         wizard.julia_exe_selected.emit.assert_called_with("path/to/julia")
 
     def test_julia_installation_fails(self):
-        settings_widget = SettingsWidget(self.toolbox)
-        wizard = InstallJuliaWizard(settings_widget)
+        wizard = InstallJuliaWizard(self._settings_widget)
         wizard.restart()
         self.assertEqual("Welcome", wizard.currentPage().title())
         wizard.next()
@@ -80,8 +82,7 @@ class TestInstallJuliaWizard(unittest.TestCase):
         wizard.julia_exe_selected.emit.assert_not_called()
 
     def test_julia_installation_crashes(self):
-        settings_widget = SettingsWidget(self.toolbox)
-        wizard = InstallJuliaWizard(settings_widget)
+        wizard = InstallJuliaWizard(self._settings_widget)
         wizard.restart()
         self.assertEqual("Welcome", wizard.currentPage().title())
         wizard.next()
