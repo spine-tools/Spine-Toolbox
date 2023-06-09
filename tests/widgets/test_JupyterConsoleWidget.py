@@ -107,6 +107,8 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         # Check that command was executed successfully
         self.assertTrue(execute_reply["content"]["status"] == "ok")
         jcw.request_shutdown_kernel_manager()
+        # This prevents a traceback in upcoming tests by letting the JupyterWidget finalize the shutdown process
+        QApplication.processEvents()
         self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
         jcw.shutdown_kernel_client()
         self.assertIsNone(jcw.kernel_client)
