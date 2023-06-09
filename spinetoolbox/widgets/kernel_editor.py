@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Dialog for selecting a kernel or creating a new Julia or Python kernel.
+Widget for showing the progress of making a Julia or Python kernel.
 """
 import subprocess
 from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QWidget
