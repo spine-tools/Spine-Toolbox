@@ -26,7 +26,6 @@ from .scenario_generator import ScenarioGenerator
 from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
 from ..mvcmodels.scenario_item import ScenarioDBItem, ScenarioAlternativeItem, ScenarioItem
-from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
 
 
 class ResizableTreeView(ResizingViewMixin, CopyPasteTreeView):
@@ -37,8 +36,8 @@ class ResizableTreeView(ResizingViewMixin, CopyPasteTreeView):
 class EntityTreeView(ResizableTreeView):
     """Tree view base class for object and relationship tree views."""
 
-    relationship_selection_changed = Signal(dict)
-    object_selection_changed = Signal(dict)
+    relationship_selection_changed = Signal(dict, bool)
+    object_selection_changed = Signal(dict, bool)
 
     def __init__(self, parent):
         """
@@ -152,16 +151,8 @@ class EntityTreeView(ResizableTreeView):
         """Classifies selection by item type and emits signal."""
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
-        # Checks if the selections are from the object treeview, relationship treeview or both
-        # and updates the treeViews accordingly
-        selected_items = [isinstance(i.model(), ObjectTreeModel) for i in selected.indexes()]
-        if True in selected_items:
-            self.object_selection_changed.emit(self._selected_indexes)
-        elif False in selected_items:
-            self.relationship_selection_changed.emit(self._selected_indexes)
-        else:
-            self.relationship_selection_changed.emit(self._selected_indexes)
-            self.object_selection_changed.emit(self._selected_indexes)
+        self.object_selection_changed.emit(self._selected_indexes, True)
+        self.relationship_selection_changed.emit(self._selected_indexes, False)
 
     def _refresh_selected_indexes(self):
         self._selected_indexes.clear()

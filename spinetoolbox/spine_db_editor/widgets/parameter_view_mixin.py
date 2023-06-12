@@ -35,6 +35,10 @@ class ParameterViewMixin:
         super().__init__(*args, **kwargs)
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
+        self._filter_class_ids_in_cls = {}
+        self._filter_class_ids_in_rel = {}
+        self._filter_entity_ids_in_cls = {}
+        self._filter_entity_ids_in_rel = {}
         self._filter_alternative_ids = {}
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr)
@@ -69,10 +73,8 @@ class ParameterViewMixin:
         self.ui.scenario_tree_view.scenario_selection_changed.connect(
             self._handle_scenario_alternative_selection_changed
         )
-        self.ui.treeView_object.object_selection_changed.connect(self._handle_object_tree_selection_changed)
-        self.ui.treeView_relationship.relationship_selection_changed.connect(
-            self._handle_relationship_tree_selection_changed
-        )
+        self.ui.treeView_object.object_selection_changed.connect(self._handle_entity_tree_selection_changed)
+        self.ui.treeView_relationship.relationship_selection_changed.connect(self._handle_entity_tree_selection_changed)
         self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
@@ -182,7 +184,6 @@ class ParameterViewMixin:
         self._filter_entity_ids.update(self.db_mngr.db_map_class_ids(active_rels))
         self._reset_filters()
 
-    @Slot(dict)
     def _handle_object_tree_selection_changed(self, selected_indexes):
         """Resets filter according to object tree selection."""
         obj_cls_inds = set(selected_indexes.get("object_class", {}).keys())
@@ -193,35 +194,59 @@ class ParameterViewMixin:
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
         active_obj_inds = obj_inds | {ind.parent() for ind in active_rel_cls_inds}
         active_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in active_obj_inds}
-        self._filter_class_ids = self._db_map_ids(active_obj_cls_inds | active_rel_cls_inds)
-        self._filter_entity_ids = self._db_map_class_ids(active_obj_inds | active_rel_inds)
+        filter_class_ids = self._db_map_ids(active_obj_cls_inds | active_rel_cls_inds)
+        filter_entity_ids = self._db_map_class_ids(active_obj_inds | active_rel_inds)
         # Cascade (note that we carefully select where to cascade from, to avoid 'circularity')
         obj_cls_ids = self._db_map_ids(obj_cls_inds | {ind.parent() for ind in obj_inds})
         obj_ids = self._db_map_ids(obj_inds | {ind.parent() for ind in rel_cls_inds})
         cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(obj_cls_ids, only_visible=False)
         cascading_rels = self.db_mngr.find_cascading_relationships(obj_ids, only_visible=False)
         for db_map, ids in self.db_mngr.db_map_ids(cascading_rel_clss).items():
-            self._filter_class_ids.setdefault(db_map, set()).update(ids)
+            filter_class_ids.setdefault(db_map, set()).update(ids)
         for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rels).items():
-            self._filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
-        if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
-            self._clear_all_other_selections(self.ui.treeView_object, self.ui.treeView_relationship)
-            self._filter_alternative_ids.clear()
-        self._reset_filters()
-        self._set_default_parameter_data(self.ui.treeView_object.selectionModel().currentIndex())
+            filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
+        return filter_class_ids, filter_entity_ids
 
-    @Slot(dict)
     def _handle_relationship_tree_selection_changed(self, selected_indexes):
         """Resets filter according to relationship tree selection."""
         rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
         active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
+        return self._db_map_ids(active_rel_cls_inds), self._db_map_class_ids(active_rel_inds)
+
+    @Slot(dict, bool)
+    def _handle_entity_tree_selection_changed(self, selected_indexes, object_tree):
+        """Combines object and relationship selections from object and relationship tree views.
+
+        Args:
+            selected_indexes (dict): mapping from database map to set of alternative ids
+            object_tree (bool): if True, the selection was made in the Object tree, else in the Relationship tree
+        """
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
-            self._clear_all_other_selections(self.ui.treeView_relationship, self.ui.treeView_object)
-        self._filter_class_ids = self._db_map_ids(active_rel_cls_inds)
-        self._filter_entity_ids = self._db_map_class_ids(active_rel_inds)
+            self._clear_all_other_selections(self.ui.treeView_object, self.ui.treeView_relationship)
+            if object_tree:
+                self._filter_class_ids_in_rel = {}
+                self._filter_entity_ids_in_rel = {}
+            else:
+                self._filter_class_ids_in_cls = {}
+                self._filter_entity_ids_in_cls = {}
+            self._filter_alternative_ids.clear()
+        if object_tree:
+            self._filter_class_ids_in_cls, self._filter_entity_ids_in_cls = self._handle_object_tree_selection_changed(
+                selected_indexes
+            )
+            self._set_default_parameter_data(self.ui.treeView_object.selectionModel().currentIndex())
+        else:
+            (
+                self._filter_class_ids_in_rel,
+                self._filter_entity_ids_in_rel,
+            ) = self._handle_relationship_tree_selection_changed(selected_indexes)
+            self._set_default_parameter_data(self.ui.treeView_relationship.selectionModel().currentIndex())
+        self._filter_class_ids = self._dict_intersection(self._filter_class_ids_in_cls, self._filter_class_ids_in_rel)
+        self._filter_entity_ids = self._dict_intersection(
+            self._filter_entity_ids_in_cls, self._filter_entity_ids_in_rel
+        )
         self._reset_filters()
-        self._set_default_parameter_data(self.ui.treeView_relationship.selectionModel().currentIndex())
 
     @Slot(dict)
     def _handle_alternative_selection_changed(self, selected_db_map_alt_ids):
@@ -276,3 +301,18 @@ class ParameterViewMixin:
             if tree != current and tree != other:
                 with QSignalBlocker(tree) as _:
                     tree.selectionModel().clearSelection()
+
+    @staticmethod
+    def _dict_intersection(dict1, dict2):
+        """Creates a dictionary from two dicts that is either their union or intersection based on their keys."""
+        intersection_dict = {}
+        for key1, value1 in dict1.items():
+            for key2, value2 in dict2.items():
+                if key2 == key1:
+                    intersection_dict = {key2: value2 & value1}
+                else:
+                    intersection_dict.update(dict1)
+                    intersection_dict.update(dict2)
+        if not intersection_dict:
+            intersection_dict = dict1 or dict2
+        return intersection_dict

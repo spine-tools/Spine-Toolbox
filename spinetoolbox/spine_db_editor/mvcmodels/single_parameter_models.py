@@ -428,15 +428,13 @@ class SingleParameterValueMixin(
         """Returns the result of the entity filter."""
         object_class_id = item["object_class_id"]
         rel_class_id = item["relationship_class_id"]
+        if not self._filter_db_map_class_entity_ids:
+            return True
         try:
             active_class_ids = [i[1] for i in self._filter_db_map_class_entity_ids.keys()]
         except TypeError:
             active_class_ids = []
-        if not self._filter_db_map_class_entity_ids:
-            return True
-        if object_class_id not in active_class_ids and item["object_id"]:
-            return True
-        if rel_class_id not in active_class_ids and item["relationship_id"]:
+        if (rel_class_id or object_class_id) not in active_class_ids:
             return True
         entity_id = item["entity_id"]
         return entity_id in self._filter_entity_ids
