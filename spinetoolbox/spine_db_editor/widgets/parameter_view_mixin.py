@@ -160,7 +160,6 @@ class ParameterViewMixin:
         self._filter_class_ids = self._db_map_ids(ent_cls_inds)
         self._filter_entity_ids = self._db_map_ids(ent_inds)
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
-            self._clear_all_other_selections(self.ui.treeView_object)
             self._filter_alternative_ids.clear()
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
@@ -207,12 +206,7 @@ class ParameterViewMixin:
         Args:
             current: the selection that was just made
         """
-        trees = [
-            self.ui.treeView_object,
-            self.ui.scenario_tree_view,
-            self.ui.alternative_tree_view,
-            self.ui.treeView_relationship,
-        ]
+        trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
         for tree in trees:
             if tree != current:
                 with QSignalBlocker(tree) as _:

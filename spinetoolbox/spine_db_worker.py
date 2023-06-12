@@ -173,6 +173,9 @@ class SpineDBWorker(QObject):
         return added_count > 0
 
     def _bind_item(self, parent, item):
+        # NOTE: If `item` is in the process of calling callbacks in another thread,
+        # the ones added below won't be called.
+        # So, it is important to call this function before parent.add_item(item)
         item.restore_callbacks.add(self._make_restore_item_callback(parent))
         item.update_callbacks.add(self._make_update_item_callback(parent))
         item.remove_callbacks.add(self._make_remove_item_callback(parent))
