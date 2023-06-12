@@ -13,11 +13,12 @@
 Class for a custom RichJupyterWidget that can run Tool instances.
 """
 
+import time
 import logging
 import multiprocessing
 from queue import Empty
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QTextCursor
 from PySide6.QtCore import Qt, Signal
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.client import QtKernelClient
@@ -154,6 +155,21 @@ class JupyterConsoleWidget(RichJupyterWidget):
             self._toolbox.msg.emit(f"Unhandled message: {msg}")
         return None
 
+    def _execute(self, source, hidden):
+        """Catches exit or similar commands and closes detached consoles immediately.
+        Consoles with owners behave as before."""
+        if source.strip() == "exit" or source.strip() == "exit()" or source.strip() == "quit" or source.strip() == "quit()":
+            self._print_to_console("\nThis console has been closed! Restart the console from the "
+                                   "mouse right-click menu or by executing the item again.")
+            self.close()
+            return
+        super()._execute(source, hidden)
+
+    def _print_to_console(self, msg):
+        cursor = self._control.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self._insert_plain_text(cursor, msg, flush=True)
+
     def set_connection_file(self, connection_file):
         """Sets connection file obtained from engine to this console.
 
@@ -183,7 +199,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
 
     def request_shutdown_kernel_manager(self):
         """Sends a shutdown kernel manager request to engine."""
-        # TODO: Shutting down Conda kernel managers does not work!
+        # TODO: Shutting down Conda or other kernel managers (e.g. Javascript) does not work!
         self._engine_manager.shutdown_kernel(self._connection_file)
 
     def name(self):
@@ -217,7 +233,6 @@ class JupyterConsoleWidget(RichJupyterWidget):
                 menu.insertAction(before_action, self._copy_input_action)
                 break
         first_action = menu.actions()[0]
-        self.restart_kernel_action.setEnabled(self.kernel_client.is_alive())
         menu.insertAction(first_action, self.restart_kernel_action)
         menu.insertSeparator(first_action)
         return menu
