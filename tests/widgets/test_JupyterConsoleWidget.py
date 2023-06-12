@@ -80,11 +80,15 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         clean_up_toolbox(self.toolbox)
 
     def test_make_jupyter_console_widget(self):
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
         jcw = JupyterConsoleWidget(self.toolbox, kernel_name="testkernel")
         self.assertIsInstance(jcw, JupyterConsoleWidget)
         self.assertIsInstance(jcw, QObject)
+        jcw.close()
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
 
     def test_connect_jcw_to_kernel_manager_on_engine(self):
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
         jcw = JupyterConsoleWidget(self.toolbox, NATIVE_KERNEL_NAME)
         connection_file = jcw.request_start_kernel()
         self.assertIsNotNone(connection_file)
@@ -106,9 +110,38 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         execute_reply = jcw.kernel_client.shell_channel.last_msg
         # Check that command was executed successfully
         self.assertTrue(execute_reply["content"]["status"] == "ok")
+        # Check Toolbox and Engine kernel managers are the same
+        self.assertEqual(jcw._execution_manager._kernel_manager, _kernel_manager_factory.get_kernel_manager(jcw._connection_file))
         jcw.request_shutdown_kernel_manager()
         # This prevents a traceback in upcoming tests by letting the JupyterWidget finalize the shutdown process
         QApplication.processEvents()
         self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
         jcw.shutdown_kernel_client()
         self.assertIsNone(jcw.kernel_client)
+
+    def test_connect_to_unknown_kernel_fails(self):
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
+        jcw = JupyterConsoleWidget(self.toolbox, "nonexistent_kernel")
+        connection_file = jcw.request_start_kernel()
+        self.assertIsNone(connection_file)
+        jcw.close()
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
+
+    def test_connect_to_unknown_conda_fails(self):
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
+        jcw = JupyterConsoleWidget(self.toolbox, "nonexistent_conda_kernel")
+        connection_file = jcw.request_start_kernel(conda=True)
+        self.assertIsNone(connection_file)
+        jcw.close()
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
+
+    def test_connect_to_conda_kernel_when_conda_is_not_found(self):
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
+        jcw = JupyterConsoleWidget(self.toolbox, "nonexistent_conda_kernel")
+        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.resolve_conda_executable") as mock_resolve_conda:
+            mock_resolve_conda.return_value = "conda_that_does_not_exist.bat"
+            connection_file = jcw.request_start_kernel(conda=True)
+            mock_resolve_conda.assert_called()
+        self.assertIsNone(connection_file)
+        jcw.close()
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())

@@ -123,20 +123,21 @@ class JupyterConsoleWidget(RichJupyterWidget):
             return self._connection_file
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
-                f"Unable to find kernel spec <b>{msg['kernel_name']}</b> <br/>For Python Tools, "
-                f"select a kernel spec in the Tool specification editor. <br/>For Julia Tools, "
+                f"Unable to find kernel spec <b>{msg['kernel_name']}</b>.<br/>For Python Tools, "
+                f"select a kernel spec in the Tool specification editor.<br/>For Julia Tools, "
                 f"select a kernel spec from File->Settings->Tools."
             )
-            self._toolbox.msg_error.emit(f"Could not connect to kernel manager on Engine:<br/>{msg_text}")
-        elif msg["type"] == "conda_not_found":
+            self._toolbox.msg_error.emit(f"Kernel failed to start:<br/>{msg_text}")
+        elif msg["type"] == "conda_kernel_spec_not_found":
             msg_text = (
-                f"{msg['error']}<br/>Conda not found. Please set a path for <b>Conda executable</b> "
-                f"in <b>File->Settings->Tools</b>."
+                f"Unable to make Conda kernel spec <b>{msg['kernel_name']}</b>. Make sure <b>ipykernel</b> "
+                f"package and the IPython kernel have been installed successfully."
             )
-            self._toolbox.msg_error.emit(f"{msg_text}")
-        elif msg["type"] == "execution_failed_to_start":
-            msg_text = f"Execution on kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
-            self._toolbox.msg_error.emit(msg_text)
+            self._toolbox.msg_error.emit(f"Kernel failed to start:<br/>{msg_text}")
+        elif msg["type"] == "conda_not_found":
+            self._toolbox.msg_error.emit(
+                "Conda not found. Please set a path for <b>Conda executable</b> in <b>File->Settings->Tools</b>."
+            )
         elif msg["type"] == "kernel_spec_exe_not_found":
             msg_text = (
                 f"Invalid kernel spec ({msg['kernel_name']}). File "
