@@ -470,9 +470,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if julia_kernel:  # Kernel with matching executable found
             match = _selected_project_matches_kernel_project(julia_kernel, julia_project, self._julia_kernel_model)
             if not match:  # Julia project does not match, ask what to do
-                msg = f"Julia kernel <b>{julia_kernel}</b> pointing to executable <b>{julia_exe}</b> " \
-                      f"already exists, but the Julia project is different. If you click <b>Make kernel</b>, " \
-                      f"this kernel <b>may be overwritten</b>. Continue?"
+                msg = (
+                    f"Julia kernel <b>{julia_kernel}</b> pointing to executable <b>{julia_exe}</b> "
+                    f"already exists, but the Julia project is different. If you click <b>Make kernel</b>, "
+                    f"this kernel <b>may be overwritten</b>. Continue?"
+                )
                 box = QMessageBox(
                     QMessageBox.Icon.Question,
                     "Make a new Julia kernel?",
@@ -828,11 +830,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         # Julia
         use_julia_jupyter_console, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
         if use_julia_jupyter_console == "2" and not julia_kernel:
-            msg = f"You have selected <b>Jupyter Console</b> for Julia Tools " \
-                  f"but you did not select a kernel, please" \
-                  f"<br><br>1. Select one from the dropdown menu" \
-                  f"<br>2. Click <b>Make Julia Kernel</b> button to create one, or" \
-                  f"<br>3. Select <b>Basic Console</b>"
+            msg = (
+                f"You have selected <b>Jupyter Console</b> for Julia Tools "
+                f"but you did not select a kernel, please"
+                f"<br><br>1. Select one from the dropdown menu"
+                f"<br>2. Click <b>Make Julia Kernel</b> button to create one, or"
+                f"<br>3. Select <b>Basic Console</b>"
+            )
             box = QMessageBox(QMessageBox.Icon.Warning, "No Julia kernel selected", msg, parent=self)
             box.setWindowIcon(QIcon(":/symbols/app.ico"))
             box.exec()
@@ -855,11 +859,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             python_kernel = self.ui.comboBox_python_kernel.currentText()
         if use_python_jupyter_console == "2" and not python_kernel:
-            msg = f"You have selected <b>Jupyter Console</b> for Python Tools " \
-                  f"but you did not select a kernel, please" \
-                  f"<br><br>1. Select one from the dropdown menu" \
-                  f"<br>2. Click <b>Make Python Kernel</b> button to create one, or" \
-                  f"<br>3. Select <b>Basic Console</b>"
+            msg = (
+                f"You have selected <b>Jupyter Console</b> for Python Tools "
+                f"but you did not select a kernel, please"
+                f"<br><br>1. Select one from the dropdown menu"
+                f"<br>2. Click <b>Make Python Kernel</b> button to create one, or"
+                f"<br>3. Select <b>Basic Console</b>"
+            )
             box = QMessageBox(QMessageBox.Icon.Warning, "No Python kernel selected", msg, parent=self)
             box.setWindowIcon(QIcon(":/symbols/app.ico"))
             box.exec()
@@ -971,7 +977,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """
         prep_str = "tcp://"
         if new_text.startswith(prep_str):  # prep str already present
-            new = new_text[len(prep_str):]
+            new = new_text[len(prep_str) :]
         else:  # First letter has been entered
             new = new_text
         # Clear when only prep str present or when clear (x) button is clicked

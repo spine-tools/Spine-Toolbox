@@ -82,29 +82,33 @@ class JupyterConsoleWidget(RichJupyterWidget):
             environment = "conda"
         conda_exe = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
         conda_exe = resolve_conda_executable(conda_exe)
+        self._execution_manager = KernelExecutionManager(
+            self._logger,
+            self.kernel_name,
+            [],
+            group_id="DetachedConsoleGroup",
+            server_ip="127.0.0.1",
+            environment=environment,
+            conda_exe=conda_exe,
+        )
         try:
-            self._execution_manager = KernelExecutionManager(
-                self._logger,
-                self.kernel_name,
-                [],
-                group_id="DetachedConsoleGroup",
-                server_ip="127.0.0.1",
-                environment=environment,
-                conda_exe=conda_exe,
-            )
-        except RuntimeError:
-            pass
-        try:
-            response = self._q.get(timeout=20)  # Blocks until msg is received, or timeout.
+            msg_type, msg = self._q.get(timeout=20)  # Blocks until msg (tuple(str, dict)  is received, or timeout.
         except Empty:
-            self._toolbox.msg_error.emit(f"No response from Engine")
-            return None
-        msg_type, msg = response  # ([str], [dict])
+            msg_type, msg = "No response from Engine", {}
         if msg_type != "kernel_execution_msg":
-            self._toolbox.msg_error.emit(f"Unexpected response received: msg_type:{msg_type} received:{msg}")
-            return None
+            self._toolbox.msg_error.emit(f"Starting console failed: {msg_type} [{msg}]")
+            retval = None
         else:
-            return self._handle_kernel_started_msg(msg)
+            retval = self._handle_kernel_started_msg(msg)
+        if not retval:
+            self.release_exec_mngr_resources()
+        return retval
+
+    def release_exec_mngr_resources(self):
+        """Closes _io.TextIOWrapper files."""
+        self._execution_manager.std_out.close()
+        self._execution_manager.std_err.close()
+        self._execution_manager = None
 
     def _handle_kernel_started_msg(self, msg):
         """Handles the response message from KernelExecutionManager.
@@ -113,7 +117,8 @@ class JupyterConsoleWidget(RichJupyterWidget):
             msg (dict): Message with item_name, type, etc. keys
 
         Returns:
-            str or None: Path to a connection file if engine started the requested kernel manager successfully, None otherwise.
+            str or None: Path to a connection file if engine started the requested kernel
+            manager successfully, None otherwise.
         """
         item = msg["item_name"]  # DetachedPythonConsole
         if msg["type"] == "kernel_started":
@@ -145,8 +150,6 @@ class JupyterConsoleWidget(RichJupyterWidget):
                 f"Please try reinstalling the kernel specs."
             )
             self._toolbox.msg_error.emit(msg_text)
-        elif msg["type"] == "execution_started":
-            self._toolbox.msg.emit(f"*** Starting execution on kernel spec <b>{msg['kernel_name']}</b> ***")
         else:
             self._toolbox.msg.emit(f"Unhandled message: {msg}")
         return None

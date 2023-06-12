@@ -40,6 +40,7 @@ class KernelEditorBase(QDialog):
         """
         super().__init__(parent=parent)
         from ..ui import mini_kernel_editor_dialog  # pylint: disable=import-outside-toplevel
+
         self.ui = mini_kernel_editor_dialog.Ui_Dialog()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.WindowType.Window)
