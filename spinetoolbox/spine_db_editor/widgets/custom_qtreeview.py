@@ -34,8 +34,7 @@ class ResizableTreeView(ResizingViewMixin, CopyPasteTreeView):
 class EntityTreeView(ResizableTreeView):
     """Tree view base class for object and relationship tree views."""
 
-    relationship_selection_changed = Signal(dict, bool)
-    object_selection_changed = Signal(dict, bool)
+    tree_selection_changed = Signal(dict)
 
     def __init__(self, parent):
         """
@@ -180,8 +179,7 @@ class EntityTreeView(ResizableTreeView):
         """Classifies selection by item type and emits signal."""
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
-        self.object_selection_changed.emit(self._selected_indexes, True)
-        self.relationship_selection_changed.emit(self._selected_indexes, False)
+        self.tree_selection_changed.emit(self._selected_indexes)
 
     def _refresh_selected_indexes(self):
         self._selected_indexes.clear()
