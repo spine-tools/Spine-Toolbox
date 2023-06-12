@@ -14,7 +14,7 @@ Classes for custom QTreeView.
 """
 from PySide6.QtWidgets import QApplication, QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
-from PySide6.QtGui import QMouseEvent, QIcon
+from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication
 
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
@@ -34,7 +34,8 @@ class ResizableTreeView(ResizingViewMixin, CopyPasteTreeView):
 class EntityTreeView(ResizableTreeView):
     """Tree view base class for object and relationship tree views."""
 
-    tree_selection_changed = Signal(dict)
+    relationship_selection_changed = Signal(dict, bool)
+    object_selection_changed = Signal(dict, bool)
 
     def __init__(self, parent):
         """
@@ -179,7 +180,8 @@ class EntityTreeView(ResizableTreeView):
         """Classifies selection by item type and emits signal."""
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
-        self.tree_selection_changed.emit(self._selected_indexes)
+        self.object_selection_changed.emit(self._selected_indexes, True)
+        self.relationship_selection_changed.emit(self._selected_indexes, False)
 
     def _refresh_selected_indexes(self):
         self._selected_indexes.clear()
@@ -194,6 +196,8 @@ class EntityTreeView(ResizableTreeView):
     def clear_any_selections(self):
         """Clears the selection if any."""
         selection_model = self.selectionModel()
+        if Qt.KeyboardModifier.ControlModifier in QGuiApplication.keyboardModifiers():
+            return
         if selection_model.hasSelection():
             with QSignalBlocker(selection_model) as _:
                 selection_model.clearSelection()

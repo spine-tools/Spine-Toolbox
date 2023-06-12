@@ -30,6 +30,10 @@ class ParameterViewMixin:
         super().__init__(*args, **kwargs)
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
+        self._filter_class_ids_in_cls = {}
+        self._filter_class_ids_in_rel = {}
+        self._filter_entity_ids_in_cls = {}
+        self._filter_entity_ids_in_rel = {}
         self._filter_alternative_ids = {}
         self.parameter_value_model = CompoundParameterValueModel(self, self.db_mngr)
         self.parameter_definition_model = CompoundParameterDefinitionModel(self, self.db_mngr)
@@ -200,14 +204,30 @@ class ParameterViewMixin:
         self._filter_alternative_ids = alternative_ids
         self._reset_filters()
 
-    def _clear_all_other_selections(self, current):
+    def _clear_all_other_selections(self, current, other=None):
         """Clears all the other selections besides the one that was just made.
 
         Args:
-            current: the selection that was just made
+            current: the tree where the selection that was just made
+            other (optional): other optional tree
         """
         trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
         for tree in trees:
-            if tree != current:
+            if tree != current and tree != other:
                 with QSignalBlocker(tree) as _:
                     tree.selectionModel().clearSelection()
+
+    @staticmethod
+    def _dict_intersection(dict1, dict2):
+        """Creates a dictionary from two dicts that is either their union or intersection based on their keys."""
+        intersection_dict = {}
+        for key1, value1 in dict1.items():
+            for key2, value2 in dict2.items():
+                if key2 == key1:
+                    intersection_dict = {key2: value2 & value1}
+                else:
+                    intersection_dict.update(dict1)
+                    intersection_dict.update(dict2)
+        if not intersection_dict:
+            intersection_dict = dict1 or dict2
+        return intersection_dict
