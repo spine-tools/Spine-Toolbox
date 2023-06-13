@@ -125,6 +125,7 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         jcw._control.hasFocus = fake_focus
         jcw._control.selectAll()
         jcw.copy_input()
+        QApplication.processEvents()  # Let clipboard copy text
         copied_text = QApplication.clipboard().text()
         self.assertEqual("print('hi')", copied_text)
         jcw.request_shutdown_kernel_manager()
