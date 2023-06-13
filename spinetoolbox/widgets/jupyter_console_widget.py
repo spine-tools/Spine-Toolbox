@@ -175,7 +175,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
             if answer == QMessageBox.StandardButton.Cancel:
                 super()._execute("", hidden)
                 return
-            self._print_to_console(
+            self._insert_text_to_console(
                 "\nThis console has been closed! Restart the console by executing the item again."
             )
             self.request_shutdown_kernel_manager()
@@ -183,7 +183,12 @@ class JupyterConsoleWidget(RichJupyterWidget):
             return
         super()._execute(source, hidden)
 
-    def _print_to_console(self, msg):
+    def _insert_text_to_console(self, msg):
+        """Inserts given message to console.
+
+        Args:
+            msg (str): Text to insert
+        """
         cursor = self._control.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         self._insert_plain_text(cursor, msg, flush=True)
