@@ -13,7 +13,6 @@
 Class for a custom RichJupyterWidget that can run Tool instances.
 """
 
-import time
 import logging
 import multiprocessing
 from queue import Empty
@@ -121,19 +120,18 @@ class JupyterConsoleWidget(RichJupyterWidget):
             str or None: Path to a connection file if engine started the requested kernel
             manager successfully, None otherwise.
         """
-        item = msg["item_name"]  # DetachedPythonConsole
         if msg["type"] == "kernel_started":
             self._connection_file = solve_connection_file(
                 msg["connection_file"], msg.get("connection_file_dict", dict())
             )
             return self._connection_file
         elif msg["type"] == "kernel_spec_not_found":
-            msg_text = (
-                f"Unable to find kernel spec <b>{msg['kernel_name']}</b>.<br/>For Python Tools, "
-                f"select a kernel spec in the Tool specification editor.<br/>For Julia Tools, "
-                f"select a kernel spec from File->Settings->Tools."
+            self._toolbox.msg_error.emit(
+                f"Kernel failed to start:<br/>"
+                f"Unable to find kernel spec <b>{msg['kernel_name']}</b>.<br/>"
+                f"For Python Tools, select a kernel spec in the Tool specification editor.<br/>"
+                f"For Julia Tools, select a kernel spec from File->Settings->Tools."
             )
-            self._toolbox.msg_error.emit(f"Kernel failed to start:<br/>{msg_text}")
         elif msg["type"] == "conda_kernel_spec_not_found":
             msg_text = (
                 f"Unable to make Conda kernel spec <b>{msg['kernel_name']}</b>. Make sure <b>ipykernel</b> "
@@ -145,12 +143,10 @@ class JupyterConsoleWidget(RichJupyterWidget):
                 "Conda not found. Please set a path for <b>Conda executable</b> in <b>File->Settings->Tools</b>."
             )
         elif msg["type"] == "kernel_spec_exe_not_found":
-            msg_text = (
-                f"Invalid kernel spec ({msg['kernel_name']}). File "
-                f"<b>{msg['kernel_exe_path']}</b> does not exist. "
-                f"Please try reinstalling the kernel specs."
+            self._toolbox.msg_error.emit(
+                f"Invalid kernel spec ({msg['kernel_name']}). File <b>{msg['kernel_exe_path']}</b> "
+                f"does not exist. Please try reinstalling the kernel specs."
             )
-            self._toolbox.msg_error.emit(msg_text)
         else:
             self._toolbox.msg.emit(f"Unhandled message: {msg}")
         return None
