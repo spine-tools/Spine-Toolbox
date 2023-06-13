@@ -17,7 +17,7 @@ import time
 import logging
 import multiprocessing
 from queue import Empty
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtGui import QAction, QTextCursor
 from PySide6.QtCore import Qt, Signal
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
@@ -156,11 +156,29 @@ class JupyterConsoleWidget(RichJupyterWidget):
         return None
 
     def _execute(self, source, hidden):
-        """Catches exit or similar commands and closes detached consoles immediately.
-        Consoles with owners behave as before."""
-        if source.strip() == "exit" or source.strip() == "exit()" or source.strip() == "quit" or source.strip() == "quit()":
-            self._print_to_console("\nThis console has been closed! Restart the console from the "
-                                   "mouse right-click menu or by executing the item again.")
+        """Catches exit or similar commands and closes the console immediately if user so chooses."""
+        if (
+            source.strip() == "exit"
+            or source.strip() == "exit()"
+            or source.strip() == "quit"
+            or source.strip() == "quit()"
+        ):
+            message_box = QMessageBox(
+                QMessageBox.Icon.Question,
+                "Close Console?",
+                "Are you sure?",
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self,
+            )
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Close")
+            answer = message_box.exec()
+            if answer == QMessageBox.StandardButton.Cancel:
+                super()._execute("", hidden)
+                return
+            self._print_to_console(
+                "\nThis console has been closed! Restart the console by executing the item again."
+            )
+            self.request_shutdown_kernel_manager()
             self.close()
             return
         super()._execute(source, hidden)
