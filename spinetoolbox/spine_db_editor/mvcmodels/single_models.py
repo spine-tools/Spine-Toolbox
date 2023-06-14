@@ -332,6 +332,10 @@ class SingleParameterDefinitionModel(
     def item_type(self):
         return "parameter_definition"
 
+    @property
+    def _field_map(self):
+        return {"value_list_name": "parameter_value_list_name"}
+
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
         return item["parameter_name"]
