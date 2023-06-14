@@ -44,6 +44,10 @@ jobs:
     - name: List packages
       run: 
         pip list
+    - name: Install python3 kernelspecs
+      run: |
+        pip install ipykernel
+        python -m ipykernel install --user
     - name: Run tests
       run: |
         if [ "$RUNNER_OS" != "Windows" ]; then

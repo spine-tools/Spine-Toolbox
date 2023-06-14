@@ -46,7 +46,7 @@ PLUGINS_PATH = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "
 
 PLUGIN_REGISTRY_URL = "https://spine-tools.github.io/PluginRegistry/registry.json"
 # Jupyter kernel constants
-JUPYTER_KERNEL_TIME_TO_DEAD = 8.0
+JUPYTER_KERNEL_TIME_TO_DEAD = 20
 
 # Project constants
 PROJECT_FILENAME = "project.json"

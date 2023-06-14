@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for the KernelEditor widget.
+Unit tests for the Add/Update SpineOpt Wizard.
 """
 
 import unittest
@@ -30,7 +30,14 @@ class TestAddUpSpineOptWizard(unittest.TestCase):
     def setUp(self):
         """Set up toolbox."""
         self.toolbox = create_toolboxui()
-        self.settings_widget = SettingsWidget(self.toolbox)
+        with mock.patch(
+            "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_python_kernels"
+        ) as mock_fetch_python_kernels, mock.patch(
+            "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_julia_kernels"
+        ) as mock_fetch_julia_kernels:
+            self.settings_widget = SettingsWidget(self.toolbox)
+            mock_fetch_python_kernels.assert_called()
+            mock_fetch_julia_kernels.assert_called()
 
     def tearDown(self):
         """Clean up."""

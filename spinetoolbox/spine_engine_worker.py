@@ -379,6 +379,8 @@ class SpineEngineWorker(QObject):
                 item, msg["filter_id"], "msg", f"*** Starting execution on kernel spec <b>{msg['kernel_name']}</b> ***"
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages")
+        elif msg["type"] == "kernel_shutdown":
+            self._logger.kernel_shutdown.emit(item, msg["filter_id"])
 
     def _handle_process_msg(self, data):
         self._do_handle_process_msg(**data)

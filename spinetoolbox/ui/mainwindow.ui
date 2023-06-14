@@ -43,7 +43,7 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>&amp;File</string>
     </property>
     <property name="toolTipsVisible">
      <bool>true</bool>
@@ -64,7 +64,7 @@
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
-     <string>Help</string>
+     <string>&amp;Help</string>
     </property>
     <addaction name="actionUser_Guide"/>
     <addaction name="actionGetting_started"/>
@@ -74,7 +74,7 @@
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Edit</string>
+     <string>&amp;Edit</string>
     </property>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
@@ -87,7 +87,7 @@
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
-     <string>View</string>
+     <string>&amp;View</string>
     </property>
     <widget class="QMenu" name="menuToolbars">
      <property name="title">
@@ -106,7 +106,7 @@
    </widget>
    <widget class="QMenu" name="menuPlugins">
     <property name="title">
-     <string>Plugins</string>
+     <string>&amp;Plugins</string>
     </property>
     <addaction name="actionInstall_plugin"/>
     <addaction name="actionManage_plugins"/>
@@ -115,14 +115,13 @@
    </widget>
    <widget class="QMenu" name="menuConsoles">
     <property name="title">
-     <string>Consoles</string>
+     <string>&amp;Consoles</string>
     </property>
-    <addaction name="actionStartPythonConsole"/>
-    <addaction name="actionStartJuliaConsole"/>
+    <addaction name="actionStart_jupyter_console"/>
    </widget>
    <widget class="QMenu" name="menuServer">
     <property name="title">
-     <string>Server</string>
+     <string>&amp;Server</string>
     </property>
     <addaction name="actionRetrieve_project"/>
    </widget>
@@ -773,14 +772,6 @@
     <string>Shift+F2</string>
    </property>
   </action>
-  <action name="actionUpgrade_project">
-   <property name="text">
-    <string>Upgrade project</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Upgrade old (.proj) Spine Toolbox project into a new style directory based project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </action>
   <action name="actionRemove">
    <property name="text">
     <string>Remove</string>
@@ -871,36 +862,6 @@
     <bool>false</bool>
    </property>
   </action>
-  <action name="actionStartJuliaConsole">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/julia-dots.svg</normaloff>:/icons/julia-dots.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Start Jupyter Console</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Start selected Julia kernel spec in Jupyter Console. Select kernel spec in File-&amp;gt;Settings-&amp;gt;Tools.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+2</string>
-   </property>
-  </action>
-  <action name="actionStartPythonConsole">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/python.svg</normaloff>:/icons/python.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Start Jupyter Console</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Start selected Python kernel spec in Jupyter Console. Select kernel spec in File-&amp;gt;Settings-&amp;gt;Tools.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+1</string>
-   </property>
-  </action>
   <action name="actionClose">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -972,6 +933,15 @@
   <action name="actionRetrieve_project">
    <property name="text">
     <string>Retrieve project</string>
+   </property>
+  </action>
+  <action name="actionStart_jupyter_console">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/desktop.svg</normaloff>:/icons/desktop.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Start Jupyter Console</string>
    </property>
   </action>
  </widget>

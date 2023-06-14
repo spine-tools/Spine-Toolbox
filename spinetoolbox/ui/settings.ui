@@ -787,6 +787,9 @@
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
+                   <property name="contextMenuPolicy">
+                    <enum>Qt::CustomContextMenu</enum>
+                   </property>
                    <property name="toolTip">
                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
@@ -796,7 +799,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
+                  <widget class="QPushButton" name="pushButton_make_julia_kernel">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -804,10 +807,10 @@
                     </sizepolicy>
                    </property>
                    <property name="toolTip">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Julia kernel spec editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;- Selects a Julia kernel for selected Julia executable and Julia project if it already exists.&lt;/p&gt;&lt;p&gt;- Creates a Julia kernel for selected Julia executable and Julia project if it does not exist.&lt;/p&gt;&lt;p&gt;- Overwrites a Julia kernel if a Julia kernel for selected Julia executable already exists but the Julia project is different.&lt;/p&gt;&lt;p&gt;You can also create Julia kernels manually using the IJulia package.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                    </property>
                    <property name="text">
-                    <string>Kernel spec editor</string>
+                    <string>Make Julia Kernel</string>
                    </property>
                   </widget>
                  </item>
@@ -956,13 +959,16 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
+                 <property name="contextMenuPolicy">
+                  <enum>Qt::CustomContextMenu</enum>
+                 </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="pushButton_open_kernel_editor_python">
+                <widget class="QPushButton" name="pushButton_make_python_kernel">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -976,10 +982,10 @@
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Python kernel spec editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;- Selects a Python kernel for selected Python interpreter if it already exists.&lt;/p&gt;&lt;p&gt;- Creates a new Python kernel for selected Python interpreter if it does not exist.&lt;/p&gt;&lt;p&gt;You can also create Python kernels manually using the ipykernel package.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>Kernel spec editor</string>
+                  <string>Make Python Kernel</string>
                  </property>
                 </widget>
                </item>
@@ -1001,10 +1007,10 @@
              <item>
               <widget class="QLineEdit" name="lineEdit_conda_path">
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select Conda executable for running Tool specifications in a Conda environment.&lt;/p&gt;&lt;p&gt;If you started Spine Toolbox in Conda, the &lt;span style=&quot; font-weight:600;&quot;&gt;Conda executable is set up automatically&lt;/span&gt;.&lt;/p&gt;&lt;p&gt;If not on Conda, please select &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;lt;base_env&amp;gt;\scripts\conda.exe&lt;/span&gt; (on Win10), where &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;lt;base_env&amp;gt;&lt;/span&gt; is the root directory of your Conda installation (i.e. base environment location).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select Miniconda executable for running Tool specifications in a Conda environment.&lt;/p&gt;&lt;p&gt;If you started Spine Toolbox in Miniconda, the &lt;span style=&quot; font-weight:600;&quot;&gt;Conda executable is set up automatically&lt;/span&gt;.&lt;/p&gt;&lt;p&gt;If not on Miniconda, please select &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;lt;base_env&amp;gt;\scripts\conda.exe&lt;/span&gt; (on Win10), where &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;lt;base_env&amp;gt;&lt;/span&gt; is the root directory of your Miniconda installation (i.e. base environment location).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="placeholderText">
-                <string>Select Conda executable...</string>
+                <string>Select Miniconda executable...</string>
                </property>
                <property name="clearButtonEnabled">
                 <bool>true</bool>
@@ -1534,13 +1540,19 @@
   <tabstop>checkBox_custom_open_project_dialog</tabstop>
   <tabstop>checkBox_delete_data</tabstop>
   <tabstop>checkBox_open_previous_project</tabstop>
-  <tabstop>checkBox_datetime</tabstop>
-  <tabstop>checkBox_color_toolbar_icons</tabstop>
-  <tabstop>checkBox_use_smooth_zoom</tabstop>
-  <tabstop>checkBox_use_curved_links</tabstop>
-  <tabstop>checkBox_prevent_overlapping</tabstop>
+  <tabstop>checkBox_exit_prompt</tabstop>
+  <tabstop>project_save_options_combo_box</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>toolButton_browse_work</tabstop>
+  <tabstop>checkBox_color_toolbar_icons</tabstop>
+  <tabstop>checkBox_color_properties_widgets</tabstop>
+  <tabstop>checkBox_use_curved_links</tabstop>
+  <tabstop>checkBox_drag_to_draw_links</tabstop>
+  <tabstop>checkBox_prevent_overlapping</tabstop>
+  <tabstop>checkBox_use_rounded_items</tabstop>
+  <tabstop>checkBox_datetime</tabstop>
+  <tabstop>checkBox_use_smooth_zoom</tabstop>
+  <tabstop>radioButton_bg_grid</tabstop>
   <tabstop>radioButton_bg_tree</tabstop>
   <tabstop>radioButton_bg_solid</tabstop>
   <tabstop>toolButton_bg_color</tabstop>
@@ -1554,7 +1566,7 @@
   <tabstop>lineEdit_julia_project_path</tabstop>
   <tabstop>toolButton_browse_julia_project</tabstop>
   <tabstop>comboBox_julia_kernel</tabstop>
-  <tabstop>pushButton_open_kernel_editor_julia</tabstop>
+  <tabstop>pushButton_make_julia_kernel</tabstop>
   <tabstop>pushButton_install_julia</tabstop>
   <tabstop>pushButton_add_up_spine_opt</tabstop>
   <tabstop>radioButton_use_python_basic_console</tabstop>
@@ -1562,7 +1574,7 @@
   <tabstop>lineEdit_python_path</tabstop>
   <tabstop>toolButton_browse_python</tabstop>
   <tabstop>comboBox_python_kernel</tabstop>
-  <tabstop>pushButton_open_kernel_editor_python</tabstop>
+  <tabstop>pushButton_make_python_kernel</tabstop>
   <tabstop>lineEdit_conda_path</tabstop>
   <tabstop>toolButton_browse_conda</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
@@ -1572,13 +1584,10 @@
   <tabstop>checkBox_smooth_entity_graph_zoom</tabstop>
   <tabstop>checkBox_smooth_entity_graph_rotation</tabstop>
   <tabstop>checkBox_auto_expand_objects</tabstop>
+  <tabstop>checkBox_merge_dbs</tabstop>
   <tabstop>checkBox_save_spec_before_closing</tabstop>
   <tabstop>checkBox_spec_show_undo</tabstop>
-  <tabstop>listWidget</tabstop>
-  <tabstop>checkBox_use_rounded_items</tabstop>
-  <tabstop>radioButton_bg_grid</tabstop>
-  <tabstop>checkBox_color_properties_widgets</tabstop>
-  <tabstop>checkBox_merge_dbs</tabstop>
+  <tabstop>unlimited_engine_process_radio_button</tabstop>
   <tabstop>automatic_engine_process_limit_radio_button</tabstop>
   <tabstop>user_defined_engine_process_limit_radio_button</tabstop>
   <tabstop>engine_process_limit_spin_box</tabstop>
@@ -1587,11 +1596,12 @@
   <tabstop>user_defined_persistent_process_limit_radio_button</tabstop>
   <tabstop>persistent_process_limit_spin_box</tabstop>
   <tabstop>checkBox_enable_remote_exec</tabstop>
-  <tabstop>lineEdit_secfolder</tabstop>
-  <tabstop>toolButton_pick_secfolder</tabstop>
   <tabstop>lineEdit_host</tabstop>
   <tabstop>spinBox_port</tabstop>
   <tabstop>comboBox_security</tabstop>
+  <tabstop>lineEdit_secfolder</tabstop>
+  <tabstop>toolButton_pick_secfolder</tabstop>
+  <tabstop>listWidget</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
@@ -1615,7 +1625,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="persistent_processes_button_group"/>
   <buttongroup name="engine_processes_button_group"/>
+  <buttongroup name="persistent_processes_button_group"/>
  </buttongroups>
 </ui>
