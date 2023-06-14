@@ -25,6 +25,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   that kills Python and Julia console processes after execution saving some memory and computing resources.
 - You can now open a 'Detached' Jupyter Console on any kernel you have installed in your system from the *Consoles*
   main window menu.
+- "Make Julia Kernel" and "Make Python Kernel" buttons in Settings->Tools page. Clicking them creates a new 
+  Julia or Python kernel based on selected Julia/Python executable on the same page if the kernel does not exist. 
+  If the kernel already exists, it is selected automatically.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools
@@ -47,6 +50,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   Data Transformers if needed.
 - Names for duplicate items/scenarios/etc now use the format `prefix (xx)` instead of `prefix xx`.
   Duplicating a previously duplicated item now has the number `xx` incremented instead of having a new number appended.
+- "Open kernel spec editor" buttons in Settings->Tools page have been changed "Make Julia kernel" and 
+  "Make Python Kernel" buttons
 
 ### Deprecated
 
@@ -62,9 +67,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   Please add explicit parameter export mappings if needed.
 - Execute in work setting in Tool Specification Editor. Please use Execute in work setting 
   in Tool Properties instead.
+- Kernel Spec Editor widget and the "Open Kernel Spec Editor" button in Tool Specification Editor
 
 ### Fixed
 - Deleting the last item of a mapping in the importer specification editor no longer disables the 'add' button.
+- Group Id's for Jupyter Consoles
+- Kill consoles at end of execution for Jupyter Consoles
+- Crash when typing exit, exit(), quit, or quit() into Jupyter Console
 
 ### Security
 
