@@ -735,7 +735,7 @@ class EntityLabelItem(QGraphicsTextItem):
         self.setAcceptHoverEvents(False)
 
     def boundingRect(self):
-        if self.entity_item.has_dimensions:
+        if not self.isVisible():
             return QRectF()
         return super().boundingRect()
 

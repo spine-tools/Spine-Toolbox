@@ -378,6 +378,9 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="ProgressBarWidget" name="progress_bar_widget" native="true"/>
+     </item>
     </layout>
    </widget>
   </widget>
@@ -1035,6 +1038,12 @@
    <class>EntityAlternativeTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ProgressBarWidget</class>
+   <extends>QWidget</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources>

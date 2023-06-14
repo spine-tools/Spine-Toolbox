@@ -14,7 +14,18 @@ Custom QWidgets.
 """
 
 import os
-from PySide6.QtWidgets import QMenu, QToolButton, QLabel, QGraphicsOpacityEffect
+from PySide6.QtWidgets import (
+    QWidget,
+    QMenu,
+    QToolButton,
+    QLabel,
+    QGraphicsOpacityEffect,
+    QProgressBar,
+    QDialogButtonBox,
+    QVBoxLayout,
+    QHBoxLayout,
+)
+from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import Slot, QVariantAnimation, QPointF, Qt
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url
@@ -113,3 +124,56 @@ class ShootingLabel(QLabel):
     def show(self):
         self.anim.start(QVariantAnimation.DeleteWhenStopped)
         super().show()
+
+
+class ProgressBarWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        inner_widget = QWidget(self)
+        layout = QHBoxLayout(self)
+        layout.addStretch()
+        layout.addWidget(inner_widget)
+        layout.addStretch()
+        self._label = QLabel()
+        self._label.setStyleSheet("QLabel{color:white; font-weight: bold; font-size:18px;}")
+        self._label.setAlignment(Qt.AlignHCenter)
+        self._progress_bar = QProgressBar()
+        button_box = QDialogButtonBox()
+        button_box.setCenterButtons(True)
+        self._previews_button = button_box.addButton("Show previews", QDialogButtonBox.ButtonRole.NoRole)
+        self._previews_button.setCheckable(True)
+        self._previews_button.toggled.connect(
+            lambda checked: self._previews_button.setText(f"{'Hide' if checked else 'Show'} previews")
+        )
+        self.stop_button = button_box.addButton("Stop", QDialogButtonBox.ButtonRole.NoRole)
+        inner_layout = QVBoxLayout(inner_widget)
+        inner_layout.addStretch()
+        inner_layout.addWidget(self._label)
+        inner_layout.addWidget(self._progress_bar)
+        inner_layout.addWidget(button_box)
+        inner_layout.addStretch()
+        self._layout_gen = None
+
+    def set_layout_generator(self, layout_generator):
+        if self._layout_gen is not None:
+            self._layout_gen.finished.disconnect(self.hide)
+            self._layout_gen.progressed.disconnect(self._progress_bar.setValue)
+            self._layout_gen.msg.disconnect(self._progress_bar.setFormat)
+            self._previews_button.toggled.disconnect(self._layout_gen.set_show_previews)
+            self.stop_button.clicked.disconnect(self._layout_gen.stop)
+        self._layout_gen = layout_generator
+        self._label.setText(f"Processing {self._layout_gen.vertex_count} elements")
+        self._progress_bar.setRange(0, self._layout_gen.max_iters - 1)
+        self._previews_button.toggled.connect(self._layout_gen.set_show_previews)
+        self.stop_button.clicked.connect(self._layout_gen.stop)
+        self._layout_gen.finished.connect(self.hide)
+        self._layout_gen.progressed.connect(self._progress_bar.setValue)
+        self._layout_gen.progressed.connect(self.show)
+        self._layout_gen.msg.connect(self._progress_bar.setFormat)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(event.rect(), QColor(0, 0, 0, 96))
+        painter.end()
+        super().paintEvent(event)

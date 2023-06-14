@@ -290,6 +290,7 @@ class ParameterDataMixin:
     def parameter_definition_id_key(self):
         return {"parameter_definition": "id", "parameter_value": "parameter_id"}[self.item_type]
 
+    @property
     def _references(self):
         return {
             "entity_class_name": ("entity_class_id", "entity_class"),

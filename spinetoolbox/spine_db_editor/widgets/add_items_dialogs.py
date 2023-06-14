@@ -408,7 +408,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
     def reset_model(self, index):
         """Setup model according to current entity_class selected in combobox."""
         self.class_name, self.dimension_name_list = self.entity_class_keys[index]
-        header = self.dimension_name_list + ('entity name', 'active alternatives', 'inactive alternatives', 'databases')
+        header = self.dimension_name_list + ('entity name', 'databases')
         self.model.set_horizontal_header_labels(header)
         default_db_maps = [
             db_map
@@ -416,7 +416,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             if (self.class_name, self.dimension_name_list) in ent_cls_list
         ]
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
-        defaults = {'active alternatives': 'Base', 'inactive alternatives': '', 'databases': db_names}
+        defaults = {'databases': db_names}
         defaults.update(self.entity_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
@@ -447,8 +447,6 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("entity name")
-        active_column = self.model.horizontal_header_labels().index("active alternatives")
-        inactive_column = self.model.horizontal_header_labels().index("inactive alternatives")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
@@ -456,12 +454,6 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             entity_name = row_data[name_column]
             if not entity_name:
                 self.parent().msg_error.emit("Entity missing at row {}".format(i + 1))
-                return
-            active_alts = [x for x in row_data[active_column].split(",") if x]
-            inactive_alts = [x for x in row_data[inactive_column].split(",") if x]
-            conflicting = set(active_alts) & set(inactive_alts)
-            if conflicting:
-                self.parent().msg_error.emit(f"Conflicting alternatives {conflicting} at row {i + 1}")
                 return
             pre_item = {'name': entity_name}
             db_names = row_data[db_column]

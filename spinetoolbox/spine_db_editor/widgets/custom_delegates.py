@@ -764,11 +764,6 @@ class ManageEntitiesDelegate(ManageItemsDelegate):
             editor.set_data(data)
         elif header[index.column()] == 'databases':
             editor = self._create_database_editor(parent, index)
-        elif header[index.column()] in ('active alternatives', 'inactive alternatives'):
-            editor = CheckListEditor(parent)
-            all_alternative_name_list = self.parent().alternative_name_list(index.row())
-            alternative_name_list = index.data(Qt.ItemDataRole.DisplayRole).split(",")
-            editor.set_data(all_alternative_name_list, alternative_name_list)
         else:
             editor = SearchBarEditor(parent)
             entity_name_list = self.parent().entity_name_list(index.row(), index.column())

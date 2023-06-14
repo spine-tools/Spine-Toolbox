@@ -17,13 +17,12 @@ import sys
 import itertools
 from time import monotonic
 from PySide6.QtCore import Slot, QTimer, QThreadPool
-from PySide6.QtWidgets import QHBoxLayout
 from spinedb_api import from_database
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
 from ...helpers import get_save_file_name_in_last_dir
 from ...fetch_parent import FlexibleFetchParent
 from ..graphics_items import EntityItem, ArcItem, CrossHairsItem, CrossHairsEntityItem, CrossHairsArcItem
-from .graph_layout_generator import GraphLayoutGeneratorRunnable, ProgressBarWidget
+from .graph_layout_generator import GraphLayoutGenerator, GraphLayoutGeneratorRunnable
 from .add_items_dialogs import AddEntitiesDialog, AddReadyEntitiesDialog
 
 
@@ -36,16 +35,13 @@ class GraphViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.ui.graphicsView.connect_spine_db_editor(self)
-        self._progress_bar_widget = ProgressBarWidget()
-        self._progress_bar_widget.hide()
-        self._progress_bar_widget.stop_button.clicked.connect(self._stop_extending_graph)
-        layout = QHBoxLayout(self.ui.graphicsView)
-        layout.addWidget(self._progress_bar_widget)
         self._persistent = False
         self._owes_graph = False
         self.scene = CustomGraphicsScene(self)
         self.ui.graphicsView.setScene(self.scene)
+        self.ui.graphicsView.connect_spine_db_editor(self)
+        self.ui.progress_bar_widget.hide()
+        self.ui.progress_bar_widget.stop_button.clicked.connect(self._stop_extending_graph)
         self.entity_items = []
         self.arc_items = []
         self.selected_tree_inds = {}
@@ -121,11 +117,11 @@ class GraphViewMixin:
             return
         if self._pos_for_added_entities is not None:
             spread = self.VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
-            gen = GraphLayoutGeneratorRunnable(None, len(new_db_map_id_sets), spread=spread)
-            gen.run()
+            gen = GraphLayoutGenerator(len(new_db_map_id_sets), spread=spread)
+            layout_x, layout_y = gen.compute_layout()
             x = self._pos_for_added_entities.x()
             y = self._pos_for_added_entities.y()
-            for dx, dy, db_map_ids in zip(gen.x, gen.y, new_db_map_id_sets):
+            for dx, dy, db_map_ids in zip(layout_x, layout_y, new_db_map_id_sets):
                 entity_item = EntityItem(self, x + dx, y + dy, self.VERTEX_EXTENT, tuple(db_map_ids))
                 self.scene.addItem(entity_item)
                 entity_item.apply_zoom(self.ui.graphicsView.zoom_factor)
@@ -255,8 +251,8 @@ class GraphViewMixin:
         self._stop_layout_generators()
         self._layout_gen_id = monotonic()
         self.layout_gens[self._layout_gen_id] = layout_gen = self._make_layout_generator()
-        self._progress_bar_widget.set_layout_generator(layout_gen)
-        self._progress_bar_widget.show()
+        self.ui.progress_bar_widget.set_layout_generator(layout_gen)
+        self.ui.progress_bar_widget.show()
         layout_gen.layout_available.connect(self._complete_graph)
         layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_, None))  # Lambda to avoid issues in Python 3.7
         self._thread_pool.start(layout_gen)

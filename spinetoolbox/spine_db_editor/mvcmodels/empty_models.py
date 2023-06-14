@@ -44,6 +44,10 @@ class EmptyModelBase(EmptyRowModel):
         self.db_map = None
         self.entity_class_id = None
 
+    @property
+    def item_type(self):
+        raise NotImplementedError()
+
     def add_items_to_db(self, db_map_data):
         """Add items to db.
 
@@ -131,7 +135,7 @@ class EmptyModelBase(EmptyRowModel):
 class ParameterDataMixin:
     @property
     def value_field(self):
-        raise NotImplementedError()
+        return {"parameter_value": "value", "parameter_definition": "default_value"}
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == DB_MAP_ROLE:
@@ -154,8 +158,8 @@ class EmptyParameterDefinitionModel(
     """An empty parameter_definition model."""
 
     @property
-    def value_field(self):
-        return "default_value"
+    def item_type(self):
+        return "parameter_definition"
 
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
@@ -197,8 +201,8 @@ class EmptyParameterValueModel(
     """An empty parameter_value model."""
 
     @property
-    def value_field(self):
-        return "value"
+    def item_type(self):
+        return "parameter_value"
 
     def add_items_to_db(self, db_map_data):
         """See base class."""

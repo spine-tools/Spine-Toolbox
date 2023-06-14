@@ -34,6 +34,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGr
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EntityAlternativeTableView, FrozenTableView, ItemMetadataTableView, MetadataTableView,
     ParameterDefinitionTableView, ParameterValueTableView, PivotTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, EntityTreeView, ParameterValueListTreeView, ScenarioTreeView)
+from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import ProgressBarWidget
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindow(object):
@@ -299,6 +300,11 @@ class Ui_MainWindow(object):
         self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
 
         self.verticalLayout_7.addWidget(self.graphicsView)
+
+        self.progress_bar_widget = ProgressBarWidget(self.dockWidgetContents_8)
+        self.progress_bar_widget.setObjectName(u"progress_bar_widget")
+
+        self.verticalLayout_7.addWidget(self.progress_bar_widget)
 
         self.dockWidget_entity_graph.setWidget(self.dockWidgetContents_8)
         MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_entity_graph)
