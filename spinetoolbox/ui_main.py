@@ -126,6 +126,7 @@ class ToolboxUI(QMainWindow):
     error_box = Signal(str, str)
     # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
     jupyter_console_requested = Signal(object, str, str, str, dict)
+    kernel_shutdown = Signal(object, str)
     persistent_console_requested = Signal(object, str, tuple, str)
 
     def __init__(self):
@@ -323,6 +324,7 @@ class ToolboxUI(QMainWindow):
         self._button_item_dir.clicked.connect(self._open_active_item_dir)
         # Consoles
         self.jupyter_console_requested.connect(self._setup_jupyter_console)
+        self.kernel_shutdown.connect(self._handle_kernel_shutdown)
         self.persistent_console_requested.connect(self._setup_persistent_console, Qt.BlockingQueuedConnection)
 
     @Slot(bool)
@@ -2389,6 +2391,21 @@ class ToolboxUI(QMainWindow):
             d = self._filter_item_consoles.setdefault(item, dict())
             d[filter_id] = self._make_jupyter_console(item, kernel_name, connection_file)
         self.override_console_and_execution_list()
+
+    @Slot(object, str)
+    def _handle_kernel_shutdown(self, item, filter_id):
+        """Closes the kernel client when kernel manager has been shutdown due to an
+        enabled 'Kill consoles at the end of execution' option.
+
+        Args:
+            item (ProjectItem): Item
+            filter_id (str): Filter identifier
+        """
+        console = self._get_console(item, filter_id)
+        console.insert_text_to_console(
+            "\n\nConsole killed (can be restarted from the right-click menu or by executing the item again)"
+        )
+        console.shutdown_kernel_client()
 
     @Slot(object, str, tuple, str)
     def _setup_persistent_console(self, item, filter_id, key, language):

@@ -130,7 +130,7 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         jcw.shutdown_kernel_client()
         self.assertIsNone(jcw.kernel_client)
 
-    def test_restart_kernel_manager_on_engine(self):
+    def test_restart_when_kernel_manager_is_running(self):
         self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
         jcw = JupyterConsoleWidget(self.toolbox, NATIVE_KERNEL_NAME)
         connection_file = jcw.request_start_kernel()
@@ -155,6 +155,51 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         )
         # Restart kernel manager
         jcw.kernel_client.shell_channel.kernel_info_event.clear()
+        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
+            jcw.request_restart_kernel_manager()
+        jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)
+        kernel_info_reply = jcw.kernel_client.shell_channel.last_msg
+        self.assertTrue(kernel_info_reply["content"]["status"] == "ok")  # If status == "ok" -> assume we're connected
+        self.assertTrue(jcw.kernel_client.is_alive())
+        jcw.request_shutdown_kernel_manager()
+        # This prevents a traceback in upcoming tests by letting the JupyterWidget finalize the shutdown process
+        QApplication.processEvents()
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
+        jcw.shutdown_kernel_client()
+        self.assertIsNone(jcw.kernel_client)
+
+    def test_restart_when_kernel_manager_is_not_running(self):
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
+        jcw = JupyterConsoleWidget(self.toolbox, NATIVE_KERNEL_NAME)
+        connection_file = jcw.request_start_kernel()
+        self.assertIsNotNone(connection_file)
+        jcw.set_connection_file(connection_file)
+        self.assertEqual(1, _kernel_manager_factory.n_kernel_managers())
+        # Replace QtKernelClient class with a custom one
+        # Inspired by jupyter_client/tests/test_client.py
+        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
+            jcw.connect_to_kernel()
+        jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)  # Wait until we get a kernel_info_reply
+        kernel_info_reply = jcw.kernel_client.shell_channel.last_msg
+        self.assertTrue(kernel_info_reply["content"]["status"] == "ok")  # If status == "ok" -> assume we're connected
+        self.assertTrue(jcw.kernel_client.is_alive())
+        jcw.kernel_client.execute("print('hi')")
+        jcw.kernel_client.shell_channel.execute_reply_event.wait(timeout=10)  # Wait until an execute_reply is received
+        execute_reply = jcw.kernel_client.shell_channel.last_msg
+        self.assertTrue(execute_reply["content"]["status"] == "ok")  # Check that command was executed successfully
+        # Check Toolbox and Engine kernel managers are the same
+        self.assertEqual(
+            jcw._execution_manager._kernel_manager, _kernel_manager_factory.get_kernel_manager(jcw._connection_file)
+        )
+        # Shutdown kernel manager, simulates situation when 'kill consoles at end of execution' has been selected
+        jcw.request_shutdown_kernel_manager()
+        # This prevents a traceback in upcoming tests by letting the JupyterWidget finalize the shutdown process
+        QApplication.processEvents()
+        self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
+        jcw.shutdown_kernel_client()
+        self.assertIsNone(jcw.kernel_client)
+        # Restart kernel manager
+        # jcw.kernel_client.shell_channel.kernel_info_event.clear()
         with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.request_restart_kernel_manager()
         jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)

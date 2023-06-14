@@ -106,9 +106,10 @@ class JupyterConsoleWidget(RichJupyterWidget):
 
     def release_exec_mngr_resources(self):
         """Closes _io.TextIOWrapper files."""
-        self._execution_manager.std_out.close()
-        self._execution_manager.std_err.close()
-        self._execution_manager = None
+        if self._execution_manager is not None:
+            self._execution_manager.std_out.close()
+            self._execution_manager.std_err.close()
+            self._execution_manager = None
 
     def _handle_kernel_started_msg(self, msg):
         """Handles the response message from KernelExecutionManager.
@@ -171,15 +172,15 @@ class JupyterConsoleWidget(RichJupyterWidget):
             if answer == QMessageBox.StandardButton.Cancel:
                 super()._execute("", hidden)
                 return
-            self._insert_text_to_console(
-                "\nThis console has been closed! Restart the console by executing the item again."
+            self.insert_text_to_console(
+                "\n\nConsole killed (can be restarted from the right-click menu)"
             )
             self.request_shutdown_kernel_manager()
             self.close()
             return
         super()._execute(source, hidden)
 
-    def _insert_text_to_console(self, msg):
+    def insert_text_to_console(self, msg):
         """Inserts given message to console.
 
         Args:
@@ -211,15 +212,18 @@ class JupyterConsoleWidget(RichJupyterWidget):
     def request_restart_kernel_manager(self):
         """Restarts kernel manager on engine and connects a new kernel client to it."""
         if not self._engine_manager.restart_kernel(self._connection_file):
-            Notification(self, "Restarting kernel manager failed", corner=Qt.Corner.TopLeftCorner).show()
-            self.shutdown_kernel_client()
-            return
+            # If the kernel manager is not running, we need to start it again
+            if not self.request_start_kernel():
+                Notification(self, "Restarting kernel manager failed", corner=Qt.Corner.TopLeftCorner).show()
+                self.shutdown_kernel_client()
+                return
         self.connect_to_kernel()
 
     def request_shutdown_kernel_manager(self):
         """Sends a shutdown kernel manager request to engine."""
         # TODO: Shutting down Conda or other kernel managers (e.g. Javascript) does not work!
         self._engine_manager.shutdown_kernel(self._connection_file)
+        self.release_exec_mngr_resources()
 
     def name(self):
         """Returns console name for display purposes."""
