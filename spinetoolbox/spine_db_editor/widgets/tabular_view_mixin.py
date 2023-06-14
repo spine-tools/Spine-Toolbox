@@ -233,15 +233,17 @@ class TabularViewMixin:
 
     @Slot(dict)
     def _handle_object_tree_selection_changed(self, selected_indexes):
-        super()._handle_object_tree_selection_changed(selected_indexes)
+        filter_class_ids, filter_entity_ids = super()._handle_object_tree_selection_changed(selected_indexes)
         current = self.ui.treeView_object.currentIndex()
         self._handle_entity_tree_current_changed(current)
+        return filter_class_ids, filter_entity_ids
 
     @Slot(dict)
     def _handle_relationship_tree_selection_changed(self, selected_indexes):
-        super()._handle_relationship_tree_selection_changed(selected_indexes)
+        filter_class_ids, filter_entity_ids = super()._handle_relationship_tree_selection_changed(selected_indexes)
         current = self.ui.treeView_relationship.currentIndex()
         self._handle_entity_tree_current_changed(current)
+        return filter_class_ids, filter_entity_ids
 
     def _handle_entity_tree_current_changed(self, current_index):
         self._update_class_attributes(current_index)

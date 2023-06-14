@@ -72,8 +72,10 @@ class TreeViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.treeView_object.tree_selection_changed.connect(self.ui.treeView_relationship.clear_any_selections)
-        self.ui.treeView_relationship.tree_selection_changed.connect(self.ui.treeView_object.clear_any_selections)
+        self.ui.treeView_object.object_selection_changed.connect(self.ui.treeView_relationship.clear_any_selections)
+        self.ui.treeView_relationship.relationship_selection_changed.connect(
+            self.ui.treeView_object.clear_any_selections
+        )
 
     def init_models(self):
         """Initializes models."""

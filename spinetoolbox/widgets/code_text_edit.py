@@ -44,10 +44,14 @@ class CodeTextEdit(QPlainTextEdit):
         self._cursor_block = None
         self.cursorPositionChanged.connect(self._update_line_number_area_cursor_position)
         self._update_line_number_area_width()
+        self._file_selected = False
 
     def insertFromMimeData(self, source):
         if source.hasText():
             self.insertPlainText(source.text())
+
+    def file_selected(self, status):
+        self._file_selected = status
 
     def set_lexer_name(self, lexer_name):
         try:
@@ -121,11 +125,12 @@ class CodeTextEdit(QPlainTextEdit):
         bottom = top + round(self.blockBoundingRect(block).height())
         width = self._line_number_area.width()
         while block.isValid() and top <= ev.rect().bottom():
-            if block.isVisible() and bottom >= ev.rect().top():
-                if block_number == self.textCursor().blockNumber():
-                    painter.fillRect(0, top, width, bottom - top, foreground_color.darker())
-                number = str(block_number + 1)
-                painter.drawText(0, top, width - self._right_margin, bottom - top, Qt.AlignRight, number)
+            if self._file_selected:
+                if block.isVisible() and bottom >= ev.rect().top():
+                    if block_number == self.textCursor().blockNumber():
+                        painter.fillRect(0, top, width, bottom - top, foreground_color.darker())
+                    number = str(block_number + 1)
+                    painter.drawText(0, top, width - self._right_margin, bottom - top, Qt.AlignRight, number)
             block = block.next()
             top = bottom
             bottom = top + round(self.blockBoundingRect(block).height())
