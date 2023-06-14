@@ -30,14 +30,14 @@ from PySide6.QtWidgets import (
     QToolButton,
 )
 from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
-from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QAction
+from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon
 from spinedb_api import import_data, export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
 from .custom_menus import MainMenu
 from .commit_viewer import CommitViewer
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
-from .parameter_view_mixin import ParameterViewMixin
+from .stacked_view_mixin import StackedViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
@@ -890,7 +890,7 @@ class SpineDBEditorBase(QMainWindow):
         super().closeEvent(event)
 
 
-class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
+class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
 
     pinned_values_updated = Signal(list)
@@ -1036,7 +1036,13 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
         self.ui.dockWidget_parameter_value_list.raise_()
         # center
-        self.tabify_and_raise([self.ui.dockWidget_parameter_value, self.ui.dockWidget_parameter_definition])
+        self.tabify_and_raise(
+            [
+                self.ui.dockWidget_parameter_value,
+                self.ui.dockWidget_parameter_definition,
+                self.ui.dockWidget_entity_alternative,
+            ]
+        )
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
         docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_parameter_value, self.ui.alternative_dock_widget]
@@ -1082,13 +1088,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Orientation.Vertical)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
-
-    def tear_down(self):
-        if not super().tear_down():
-            return False
-        for model in self._parameter_models:
-            model.stop_invalidating_filter()
-        return True
 
     @staticmethod
     def _get_base_dir():

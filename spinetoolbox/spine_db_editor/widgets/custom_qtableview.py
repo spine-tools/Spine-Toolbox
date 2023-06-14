@@ -61,9 +61,8 @@ def _set_parameter_data(index, new_value):
     index.model().setData(index, new_value)
 
 
-class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
-    value_column_header: str = NotImplemented
-    """Either "default value" or "value". Used to identify the value column for advanced editing and plotting."""
+class StackedTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
+    """Base stacked view."""
 
     def __init__(self, parent):
         """
@@ -73,10 +72,6 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         super().__init__(parent=parent)
         self._menu = QMenu(self)
         self._spine_db_editor = None
-        self._open_in_editor_action = None
-        self._plot_action = None
-        self._plot_separator = None
-        self.pinned_values = []
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -111,53 +106,8 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         self._make_delegate("database", DatabaseNameDelegate)
         self._make_delegate("entity_class_name", EntityClassNameDelegate)
 
-    def open_in_editor(self):
-        """Opens the current index in a parameter_value editor using the connected Spine db editor."""
-        index = self.currentIndex()
-        self._spine_db_editor.show_parameter_value_editor(index)
-
-    @Slot(bool)
-    def plot(self, checked=False):
-        """Plots current index."""
-        selection = self.selectedIndexes()
-        try:
-            plot_widget = self._plot_selection(selection)
-        except PlottingError as error:
-            report_plotting_failure(error, self._spine_db_editor)
-        else:
-            plot_widget.use_as_window(self.window(), self.value_column_header)
-            plot_widget.show()
-
-    def _plot_selection(self, selection, plot_widget=None):
-        """Adds selected indexes to existing plot or creates a new plot window.
-
-        Args:
-            selection (Iterable of QModelIndex): a list of QModelIndex objects for plotting
-            plot_widget (PlotWidget, optional): an existing plot widget to draw into or None to create a new widget
-
-        Returns:
-            PlotWidget: a PlotWidget object
-        """
-        raise NotImplementedError()
-
-    @Slot(QAction)
-    def plot_in_window(self, action):
-        """Plots current index in the window given by action's name."""
-        plot_window_name = action.text()
-        plot_window = PlotWidget.plot_windows.get(plot_window_name)
-        selection = self.selectedIndexes()
-        try:
-            self._plot_selection(selection, plot_window)
-            plot_window.raise_()
-        except PlottingError as error:
-            report_plotting_failure(error, self._spine_db_editor)
-
     def populate_context_menu(self):
         """Creates a context menu for this view."""
-        self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
-        self._menu.addSeparator()
-        self._plot_action = self._menu.addAction("Plot...", self.plot)
-        self._plot_separator = self._menu.addSeparator()
         self._menu.addAction(self._spine_db_editor.ui.actionCopy)
         self._menu.addAction(self._spine_db_editor.ui.actionPaste)
         self._menu.addSeparator()
@@ -172,28 +122,6 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         remove_rows_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Delete))
         remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
         self.addAction(remove_rows_action)
-
-    def contextMenuEvent(self, event):
-        """Shows context menu.
-
-        Args:
-            event (QContextMenuEvent)
-        """
-        index = self.indexAt(event.pos())
-        if not index.isValid():
-            return
-        model = self.model()
-        is_value = model.headerData(index.column(), Qt.Orientation.Horizontal) == self.value_column_header
-        self._open_in_editor_action.setEnabled(is_value)
-        self._plot_action.setEnabled(is_value)
-        if is_value:
-            plot_in_window_menu = QMenu("Plot in window")
-            plot_in_window_menu.triggered.connect(self.plot_in_window)
-            prepare_plot_in_window_menu(plot_in_window_menu)
-            self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
-        self._menu.exec(event.globalPos())
-        if is_value:
-            plot_in_window_menu.deleteLater()
 
     def _selected_rows_per_column(self):
         """Computes selected rows per column.
@@ -260,6 +188,93 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
     def _refresh_copy_paste_actions(self, _, __):
         """Enables or disables copy and paste actions."""
         self._spine_db_editor.refresh_copy_paste_actions()
+
+
+class ParameterTableView(StackedTableView):
+    value_column_header: str = NotImplemented
+    """Either "default value" or "value". Used to identify the value column for advanced editing and plotting."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QObject): parent object
+        """
+        super().__init__(parent=parent)
+        self._open_in_editor_action = None
+        self._plot_action = None
+        self._plot_separator = None
+        self.pinned_values = []
+
+    def populate_context_menu(self):
+        """Creates a context menu for this view."""
+        self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
+        self._menu.addSeparator()
+        self._plot_action = self._menu.addAction("Plot...", self.plot)
+        self._plot_separator = self._menu.addSeparator()
+        super().populate_context_menu()
+
+    def contextMenuEvent(self, event):
+        """Shows context menu.
+
+        Args:
+            event (QContextMenuEvent)
+        """
+        index = self.indexAt(event.pos())
+        if not index.isValid():
+            return
+        model = self.model()
+        is_value = model.headerData(index.column(), Qt.Orientation.Horizontal) == self.value_column_header
+        self._open_in_editor_action.setEnabled(is_value)
+        self._plot_action.setEnabled(is_value)
+        if is_value:
+            plot_in_window_menu = QMenu("Plot in window")
+            plot_in_window_menu.triggered.connect(self.plot_in_window)
+            prepare_plot_in_window_menu(plot_in_window_menu)
+            self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
+        self._menu.exec(event.globalPos())
+        if is_value:
+            plot_in_window_menu.deleteLater()
+
+    def open_in_editor(self):
+        """Opens the current index in a parameter_value editor using the connected Spine db editor."""
+        index = self.currentIndex()
+        self._spine_db_editor.show_parameter_value_editor(index)
+
+    @Slot(bool)
+    def plot(self, checked=False):
+        """Plots current index."""
+        selection = self.selectedIndexes()
+        try:
+            plot_widget = self._plot_selection(selection)
+        except PlottingError as error:
+            report_plotting_failure(error, self._spine_db_editor)
+        else:
+            plot_widget.use_as_window(self.window(), self.value_column_header)
+            plot_widget.show()
+
+    def _plot_selection(self, selection, plot_widget=None):
+        """Adds selected indexes to existing plot or creates a new plot window.
+
+        Args:
+            selection (Iterable of QModelIndex): a list of QModelIndex objects for plotting
+            plot_widget (PlotWidget, optional): an existing plot widget to draw into or None to create a new widget
+
+        Returns:
+            PlotWidget: a PlotWidget object
+        """
+        raise NotImplementedError()
+
+    @Slot(QAction)
+    def plot_in_window(self, action):
+        """Plots current index in the window given by action's name."""
+        plot_window_name = action.text()
+        plot_window = PlotWidget.plot_windows.get(plot_window_name)
+        selection = self.selectedIndexes()
+        try:
+            self._plot_selection(selection, plot_window)
+            plot_window.raise_()
+        except PlottingError as error:
+            report_plotting_failure(error, self._spine_db_editor)
 
 
 class ParameterDefinitionTableView(ParameterTableView):
@@ -332,6 +347,10 @@ class ParameterValueTableView(ParameterTableView):
         return plot_parameter_table_selection(
             self.model(), selection, header_sections, self.value_column_header, plot_widget
         )
+
+
+class EntityAlternativeTableView(StackedTableView):
+    """Visualize entities and their alternatives."""
 
 
 class PivotTableView(ResizingViewMixin, CopyPasteTableView):

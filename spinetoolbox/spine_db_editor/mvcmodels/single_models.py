@@ -51,11 +51,8 @@ class HalfSortedTableModel(MinimalTableModel):
         return element
 
 
-class SingleParameterModel(HalfSortedTableModel):
-    """A parameter model for a single entity_class to go in a CompoundParameterModel.
-    Provides methods to associate the model to an entity_class as well as
-    to filter entities within the class.
-    """
+class SingleModelBase(HalfSortedTableModel):
+    """Base class for all single models that go in a CompoundModelBase subclass."""
 
     def __init__(self, header, db_mngr, db_map, entity_class_id, committed, lazy=False):
         """Init class.
@@ -77,7 +74,15 @@ class SingleParameterModel(HalfSortedTableModel):
 
     @property
     def item_type(self):
-        """The item type, either 'parameter_value' or 'parameter_definition', required by the data method."""
+        """The DB item type, required by the data method."""
+        raise NotImplementedError()
+
+    def update_items_in_db(self, items):
+        """Update items in db. Required by batch_set_data"""
+        raise NotImplementedError()
+
+    @property
+    def _references(self):
         raise NotImplementedError()
 
     @property
@@ -89,24 +94,23 @@ class SingleParameterModel(HalfSortedTableModel):
         return self.db_mngr.get_item(self.db_map, "entity_class", self.entity_class_id)["dimension_id_list"]
 
     @property
-    def value_field(self):
-        return {"parameter_definition": "default_value", "parameter_value": "value"}[self.item_type]
-
-    @property
     def fixed_fields(self):
         return ["entity_class_name", "database"]
 
     @property
     def group_fields(self):
-        return "entity_byname"
+        return ["entity_byname"]
 
     @property
-    def parameter_definition_id_key(self):
-        return {"parameter_definition": "id", "parameter_value": "parameter_id"}[self.item_type]
+    def _field_map(self):
+        return {}
 
     @property
     def can_be_filtered(self):
         return True
+
+    def _mapped_field(self, field):
+        return self._field_map.get(field, field)
 
     def item_id(self, row):
         """Returns parameter id for row.
@@ -147,73 +151,59 @@ class SingleParameterModel(HalfSortedTableModel):
             return flags & ~Qt.ItemIsEditable
         return flags
 
-    def get_field_item_data(self, field):
-        """Returns item data for given field.
+    def _filter_accepts_row(self, row):
+        item = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])
+        return self.filter_accepts_item(item)
 
-        Args:
-            field (str): A field from the header
+    def filter_accepts_item(self, item):
+        return self._auto_filter_accepts_item(item)
 
-        Returns:
-            str, str
-        """
-        return {
-            "entity_class_name": ("entity_class_id", "entity_class"),
-            "entity_label": ("entity_id", "entity"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter_definition"),
-            "value_list_name": ("value_list_id", "parameter_value_list"),
-            "description": ("id", "parameter_definition"),
-            "value": ("id", "parameter_value"),
-            "default_value": ("id", "parameter_definition"),
-            "database": ("database", None),
-            "alternative_id": ("alternative_id", "alternative"),
-        }.get(field)
+    def set_auto_filter(self, field, values):
+        if values == self._auto_filter.get(field, set()):
+            return False
+        self._auto_filter[field] = values
+        return True
 
-    def get_id_key(self, field):
-        field_item_data = self.get_field_item_data(field)
-        if field_item_data is None:
-            return None
-        return field_item_data[0]
+    def _auto_filter_accepts_item(self, item):
+        """Returns the result of the auto filter."""
+        if self._auto_filter is None:
+            return False
+        for field, values in self._auto_filter.items():
+            if values and item.get(field) not in values:
+                return False
+        return True
 
-    def get_field_item(self, field, db_item):
-        """Returns a db item corresponding to the given field from the table header,
-        or an empty dict if the field doesn't contain db items.
-        """
-        field_item_data = self.get_field_item_data(field)
-        if field_item_data is None:
+    def accepted_rows(self):
+        """Yields accepted rows, for convenience."""
+        for row in range(self.rowCount()):
+            if self._filter_accepts_row(row):
+                yield row
+
+    def _get_ref(self, db_item, field):
+        """Returns the item referred by the given field."""
+        ref = self._references.get(field)
+        if ref is None:
             return {}
-        id_key, item_type = field_item_data
-        item_id = db_item.get(id_key)
-        return self.db_mngr.get_item(self.db_map, item_type, item_id)
+        src_id_key, ref_type = ref
+        ref_if = db_item.get(src_id_key)
+        return self.db_mngr.get_item(self.db_map, ref_type, ref_if)
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        """Gets the id and database for the row, and reads data from the db manager
-        using the item_type property.
-        Paint the object_class icon next to the name.
-        Also paint background of fixed indexes gray and apply custom format to JSON fields."""
         field = self.header[index.column()]
         # Background role
         if role == Qt.ItemDataRole.BackgroundRole and field in self.fixed_fields:
             return FIXED_FIELD_COLOR
-        # Display, edit, tool tip, alignment role of 'json fields'
-        if field == self.value_field and role in (
-            Qt.ItemDataRole.DisplayRole,
-            Qt.ItemDataRole.EditRole,
-            Qt.ItemDataRole.ToolTipRole,
-            Qt.TextAlignmentRole,
-            PARSED_ROLE,
-        ):
-            id_ = self._main_data[index.row()]
-            return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             if role == Qt.ItemDataRole.ToolTipRole:
-                description = self.get_field_item(field, item).get("description", None)
-                if description not in (None, ""):
+                description = self._get_ref(item, field).get("description")
+                if description:
                     return description
-            data = item.get(field)
+            mapped_field = self._mapped_field(field)
+            data = item.get(mapped_field)
             if data and field in self.group_fields:
                 data = DB_ITEM_SEPARATOR.join(data)
             return data
@@ -243,40 +233,98 @@ class SingleParameterModel(HalfSortedTableModel):
         self.update_items_in_db(items)
         return True
 
-    def update_items_in_db(self, items):
-        """Update items in db. Required by batch_set_data"""
-        raise NotImplementedError()
 
-    def _filter_accepts_row(self, row):
-        item = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])
-        return self.filter_accepts_item(item)
+class FilterEntityAlternativeMixin:
+    """Provides the interface to filter by entity and alternative."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._filter_alternative_ids = set()
+        self._filter_entity_ids = set()
+
+    def set_filter_entity_ids(self, db_map_entity_ids):
+        filter_entity_ids = db_map_entity_ids.get(self.db_map, set())
+        if self._filter_entity_ids == filter_entity_ids:
+            return False
+        self._filter_entity_ids = filter_entity_ids
+        return True
+
+    def set_filter_alternative_ids(self, db_map_alternative_ids):
+        alternative_ids = db_map_alternative_ids.get(self.db_map, set())
+        if self._filter_alternative_ids == alternative_ids:
+            return False
+        self._filter_alternative_ids = alternative_ids
+        return True
 
     def filter_accepts_item(self, item):
-        return self._auto_filter_accepts_item(item)
+        """Reimplemented to also account for the entity and alternative filter."""
+        return (
+            super().filter_accepts_item(item)
+            and self._entity_filter_accepts_item(item)
+            and self._alternative_filter_accepts_item(item)
+        )
 
-    def set_auto_filter(self, field, values):
-        if values == self._auto_filter.get(field, set()):
-            return False
-        self._auto_filter[field] = values
-        return True
+    def _entity_filter_accepts_item(self, item):
+        """Returns the result of the entity filter."""
+        if not self._filter_entity_ids:
+            return True
+        entity_id = item[self._mapped_field("entity_id")]
+        return entity_id in self._filter_entity_ids or bool(set(item["element_id_list"]) & self._filter_entity_ids)
 
-    def _auto_filter_accepts_item(self, item):
-        """Returns the result of the auto filter."""
-        if self._auto_filter is None:
-            return False
-        for field, values in self._auto_filter.items():
-            if values and item.get(field) not in values:
-                return False
-        return True
-
-    def accepted_rows(self):
-        """Yields accepted rows, for convenience."""
-        for row in range(self.rowCount()):
-            if self._filter_accepts_row(row):
-                yield row
+    def _alternative_filter_accepts_item(self, item):
+        """Returns the result of the alternative filter."""
+        if not self._filter_alternative_ids:
+            return True
+        alternative_id = item.get("alternative_id")
+        return alternative_id is None or alternative_id in self._filter_alternative_ids
 
 
-class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListIdMixin):
+class ParameterDataMixin:
+    """Provides the data method for parameter values and definitions."""
+
+    @property
+    def value_field(self):
+        return {"parameter_definition": "default_value", "parameter_value": "value"}[self.item_type]
+
+    @property
+    def parameter_definition_id_key(self):
+        return {"parameter_definition": "id", "parameter_value": "parameter_id"}[self.item_type]
+
+    def _references(self):
+        return {
+            "entity_class_name": ("entity_class_id", "entity_class"),
+            "entity_byname": ("entity_id", "entity"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter_definition"),
+            "value_list_name": ("value_list_id", "parameter_value_list"),
+            "description": ("id", "parameter_definition"),
+            "value": ("id", "parameter_value"),
+            "default_value": ("id", "parameter_definition"),
+            "database": ("database", None),
+            "alternative_id": ("alternative_id", "alternative"),
+        }
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        """Gets the id and database for the row, and reads data from the db manager
+        using the item_type property.
+        Paint the object_class icon next to the name.
+        Also paint background of fixed indexes gray and apply custom format to JSON fields."""
+        field = self.header[index.column()]
+        # Display, edit, tool tip, alignment role of 'value fields'
+        if field == self.value_field and role in (
+            Qt.ItemDataRole.DisplayRole,
+            Qt.ItemDataRole.EditRole,
+            Qt.ItemDataRole.ToolTipRole,
+            Qt.TextAlignmentRole,
+            PARSED_ROLE,
+        ):
+            id_ = self._main_data[index.row()]
+            return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
+        return super().data(index, role)
+
+
+class SingleParameterDefinitionModel(
+    FillInParameterNameMixin, FillInValueListIdMixin, ParameterDataMixin, SingleModelBase
+):
     """A parameter_definition model for a single entity_class."""
 
     @property
@@ -308,19 +356,17 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
             self.db_mngr.error_msg.emit({self.db_map: error_log})
 
 
-class SingleParameterValueMixin(
+class SingleParameterValueModel(
     MakeEntityOnTheFlyMixin,
     FillInAlternativeIdMixin,
     ImposeEntityClassIdMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
+    ParameterDataMixin,
+    FilterEntityAlternativeMixin,
+    SingleModelBase,
 ):
     """A parameter_value model for a single entity_class."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._filter_alternative_ids = set()
-        self._filter_entity_ids = set()
 
     @property
     def item_type(self):
@@ -329,42 +375,6 @@ class SingleParameterValueMixin(
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
         return tuple(item[k] for k in ("entity_byname", "parameter_name", "alternative_name"))
-
-    def set_filter_entity_ids(self, db_map_entity_ids):
-        filter_entity_ids = db_map_entity_ids.get(self.db_map, set())
-        if self._filter_entity_ids == filter_entity_ids:
-            return False
-        self._filter_entity_ids = filter_entity_ids
-        return True
-
-    def set_filter_alternative_ids(self, db_map_alternative_ids):
-        alternative_ids = db_map_alternative_ids.get(self.db_map, set())
-        if self._filter_alternative_ids == alternative_ids:
-            return False
-        self._filter_alternative_ids = alternative_ids
-        return True
-
-    def filter_accepts_item(self, item):
-        """Reimplemented to also account for the entity and alternative filter."""
-        return (
-            super().filter_accepts_item(item)
-            and self._entity_filter_accepts_item(item)
-            and self._alternative_filter_accepts_item(item)
-        )
-
-    def _entity_filter_accepts_item(self, item):
-        """Returns the result of the entity filter."""
-        if not self._filter_entity_ids:
-            return True
-        entity_id = item["entity_id"]
-        return entity_id in self._filter_entity_ids or bool(set(item["element_id_list"]) & self._filter_entity_ids)
-
-    def _alternative_filter_accepts_item(self, item):
-        """Returns the result of the alternative filter."""
-        if not self._filter_alternative_ids:
-            return True
-        alternative_id = item["alternative_id"]
-        return alternative_id in self._filter_alternative_ids
 
     def update_items_in_db(self, items):
         """Update items in db.
@@ -399,9 +409,35 @@ class SingleParameterValueMixin(
             self.db_mngr.error_msg.emit({self.db_map: error_log})
 
 
-class SingleParameterDefinitionModel(SingleParameterDefinitionMixin, SingleParameterModel):
-    """A parameter_definition model for a single entity_class."""
+class SingleEntityAlternativeModel(
+    MakeEntityOnTheFlyMixin,
+    FillInAlternativeIdMixin,
+    ImposeEntityClassIdMixin,
+    FillInEntityIdsMixin,
+    FilterEntityAlternativeMixin,
+    SingleModelBase,
+):
+    """An entity_alternative model for a single entity_class."""
 
+    @property
+    def item_type(self):
+        return "entity"
 
-class SingleParameterValueModel(SingleParameterValueMixin, SingleParameterModel):
-    """A parameter_value model for a single entity_class."""
+    def _sort_key(self, element):
+        item = self.db_item_from_id(element)
+        return (item["name"], item.get("alternative_name", ""), item.get("active", True))
+
+    @property
+    def _references(self):
+        return {
+            "class_name": ("class_id", "entity_class"),
+            "database": ("database", None),
+            "alternative_id": ("alternative_id", "alternative"),
+        }
+
+    @property
+    def _field_map(self):
+        return {"entity_class_name": "class_name", "entity_byname": "byname", "entity_id": "id"}
+
+    def update_items_in_db(self, items):
+        raise NotImplementedError()

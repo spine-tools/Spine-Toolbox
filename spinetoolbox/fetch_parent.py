@@ -110,7 +110,7 @@ class FetchParent(QObject):
 
     @property
     def fetch_item_type(self):
-        """Returns the type of item to fetch, e.g., "object_class".
+        """Returns the DB item type to fetch, e.g., "entity_class".
 
         Returns:
             str

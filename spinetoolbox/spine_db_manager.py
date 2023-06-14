@@ -826,7 +826,7 @@ class SpineDBManager(QObject):
 
     def get_scenario_alternative_id_list(self, db_map, scen_id, only_visible=True):
         scen = self.get_item(db_map, "scenario", scen_id, only_visible=only_visible)
-        return scen.alternative_id_list if scen else []
+        return scen["alternative_id_list"] if scen else []
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.

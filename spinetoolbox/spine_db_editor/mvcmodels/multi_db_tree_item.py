@@ -377,10 +377,7 @@ class MultiDBTreeItem(TreeItem):
                 db_map = child.first_db_map
                 new_child = child.deep_take_db_map(db_map)
                 new_children.append(new_child)
-            if child.will_always_be_merged():
-                continue
-            child.update(**kwargs)
-            if child.display_id in display_ids[:row] + display_ids[row + 1 :] or child.will_always_be_merged():
+            if child.display_id in display_ids[:row] + display_ids[row + 1 :]:
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
                 self.remove_children(row, 1, tear_down=False)
@@ -390,12 +387,6 @@ class MultiDBTreeItem(TreeItem):
         top_left = self.model.index(0, 0, self.index())
         bottom_right = self.model.index(self.child_count() - 1, 0, self.index())
         self.model.dataChanged.emit(top_left, bottom_right)
-
-    def update(self, **kwargs):
-        pass
-
-    def will_always_be_merged(self):
-        return False
 
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
@@ -418,6 +409,16 @@ class MultiDBTreeItem(TreeItem):
             self._refresh_child_map()
             return True
         return False
+
+    def reinsert_children(self, rows):
+        children = []
+        for row in sorted(rows, reverse=True):
+            child = self.child(row)
+            if not child:
+                continue
+            children.append(child)
+            self.remove_children(row, 1, tear_down=False)
+        self._insert_children_sorted(children)
 
     def clear_children(self):
         """Clear children list."""

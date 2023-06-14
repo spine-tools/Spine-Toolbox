@@ -10,24 +10,22 @@
 ######################################################################################################################
 
 """
-Compound models for object parameter definitions and values.
+Compound models.
 These models concatenate several 'single' models and one 'empty' model.
 """
 from PySide6.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide6.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
-from ...helpers import rows_to_row_count_tuples, parameter_identifier
+from ...helpers import parameter_identifier, rows_to_row_count_tuples
 from ...fetch_parent import FlexibleFetchParent
-from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
-from .empty_parameter_models import EmptyParameterDefinitionModel, EmptyParameterValueModel
-from .single_parameter_models import SingleParameterDefinitionModel, SingleParameterValueModel
+from ..widgets.custom_menus import AutoFilterMenu
+from .empty_models import EmptyParameterDefinitionModel, EmptyParameterValueModel, EmptyEntityAlternativeModel
+from .single_models import SingleParameterDefinitionModel, SingleParameterValueModel, SingleEntityAlternativeModel
 
 
-class CompoundParameterModel(CompoundWithEmptyTableModel):
-    """A model that concatenates several single parameter models
-    and one empty parameter model.
-    """
+class CompoundModelBase(CompoundWithEmptyTableModel):
+    """A base model for all models that show data in stacked format."""
 
     def __init__(self, parent, db_mngr, *db_maps):
         """
@@ -56,25 +54,12 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             owner=self,
         )
 
-    def canFetchMore(self, _parent):
-        result = False
-        for db_map in self.db_maps:
-            result |= self.db_mngr.can_fetch_more(db_map, self._fetch_parent)
-        return result
-
-    def fetchMore(self, _parent):
-        for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self._fetch_parent)
-
-    def shows_item(self, item, db_map):
-        return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
-
     def _make_header(self):
         raise NotImplementedError()
 
     @property
     def item_type(self):
-        """Returns the parameter item type, either 'parameter_definition' or 'parameter_value'.
+        """Returns the DB item type, e.g., 'parameter_value'.
 
         Returns:
             str
@@ -89,9 +74,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Returns:
             SingleParameterModel
         """
-        return {"parameter_definition": SingleParameterDefinitionModel, "parameter_value": SingleParameterValueModel}[
-            self.item_type
-        ]
+        raise NotImplementedError()
 
     @property
     def _empty_model_type(self):
@@ -101,13 +84,24 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Returns:
             EmptyParameterModel
         """
-        return {"parameter_definition": EmptyParameterDefinitionModel, "parameter_value": EmptyParameterValueModel}[
-            self.item_type
-        ]
+        raise NotImplementedError()
 
     @property
-    def parameter_definition_id_key(self):
-        return {"parameter_definition": "id", "parameter_value": "parameter_id"}[self.item_type]
+    def entity_class_id_field(self):
+        return "entity_class_id"
+
+    def canFetchMore(self, _parent):
+        result = False
+        for db_map in self.db_maps:
+            result |= self.db_mngr.can_fetch_more(db_map, self._fetch_parent)
+        return result
+
+    def fetchMore(self, _parent):
+        for db_map in self.db_maps:
+            self.db_mngr.fetch_more(db_map, self._fetch_parent)
+
+    def shows_item(self, item, db_map):
+        return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
 
     def init_model(self):
         """Initializes the model."""
@@ -126,13 +120,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             logical_index (int)
 
         Returns:
-            ParameterViewFilterMenu
+            AutoFilterMenu
         """
         return self._make_auto_filter_menu(self.header[logical_index])
 
     def _make_auto_filter_menu(self, field):
         if field not in self._auto_filter_menus:
-            self._auto_filter_menus[field] = menu = ParameterViewFilterMenu(
+            self._auto_filter_menus[field] = menu = AutoFilterMenu(
                 self._parent, self.db_mngr, self.db_maps, self.item_type, field, show_empty=False
             )
             menu.filterChanged.connect(self.set_auto_filter)
@@ -296,7 +290,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         d = {}
         for item in items:
-            entity_class_id = item.get("entity_class_id")
+            entity_class_id = item.get(self.entity_class_id_field)
             if not entity_class_id:
                 continue
             d.setdefault(entity_class_id, []).append(item)
@@ -325,8 +319,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                         ids_committed.append(item_id)
                     else:
                         ids_uncommitted.append(item_id)
-                self._add_parameter_data(db_map, entity_class_id, ids_committed, committed=True)
-                self._add_parameter_data(db_map, entity_class_id, ids_uncommitted, committed=False)
+                self._add_items(db_map, entity_class_id, ids_committed, committed=True)
+                self._add_items(db_map, entity_class_id, ids_uncommitted, committed=False)
         self.empty_model.handle_items_added(db_map_data)
 
     def _get_insert_position(self, model):
@@ -341,7 +335,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self._set_single_auto_filter(model, field)
         return model
 
-    def _add_parameter_data(self, db_map, entity_class_id, ids, committed):
+    def _add_items(self, db_map, entity_class_id, ids, committed):
         """Creates new single model and resets it with the given parameter ids.
 
         Args:
@@ -404,6 +398,61 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return None, None
         return sub_model.db_map, sub_model.item_id(sub_index.row())
 
+    def get_entity_class_id(self, index, db_map):
+        entity_class_name = index.sibling(index.row(), self.header.index("entity_class_name")).data()
+        entity_class = self.db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class_name)
+        return entity_class.get("id")
+
+    def filter_by(self, rows_per_column):
+        for column, rows in rows_per_column.items():
+            field = self.headerData(column)
+            menu = self._make_auto_filter_menu(field)
+            accepted_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
+            menu.set_filter_accepted_values(accepted_values)
+
+    def filter_excluding(self, rows_per_column):
+        for column, rows in rows_per_column.items():
+            field = self.headerData(column)
+            menu = self._make_auto_filter_menu(field)
+            rejected_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
+            menu.set_filter_rejected_values(rejected_values)
+
+
+class FilterEntityAlternativeMixin:
+    """Provides the interface to filter by entity and alternative."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._filter_entity_ids = {}
+        self._filter_alternative_ids = {}
+
+    def init_model(self):
+        super().init_model()
+        self._filter_entity_ids = {}
+        self._filter_alternative_ids = {}
+
+    def set_filter_entity_ids(self, entity_ids):
+        self._filter_entity_ids = entity_ids
+        for model in self.single_models:
+            if model.set_filter_entity_ids(entity_ids):
+                self._invalidate_filter()
+
+    def set_filter_alternative_ids(self, alternative_ids):
+        self._filter_alternative_ids = alternative_ids
+        for model in self.single_models:
+            if model.set_filter_alternative_ids(alternative_ids):
+                self._invalidate_filter()
+
+    def _create_single_model(self, db_map, entity_class_id, committed):
+        model = super()._create_single_model(db_map, entity_class_id, committed)
+        model.set_filter_entity_ids(self._filter_entity_ids)
+        model.set_filter_alternative_ids(self._filter_alternative_ids)
+        return model
+
+
+class EditParameterValueMixin:
+    """Provides the interface for ParameterValueEditor to edit values."""
+
     def index_name(self, index):
         """Generates a name for data at given index.
 
@@ -449,74 +498,15 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             [{"id": id_, value_field: join_value_and_type(*value_and_type)}]
         )
 
-    def get_entity_class_id(self, index, db_map):
-        entity_class_name = index.sibling(index.row(), self.header.index("entity_class_name")).data()
-        entity_class = self.db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class_name)
-        return entity_class.get("id")
 
-    def filter_by(self, rows_per_column):
-        for column, rows in rows_per_column.items():
-            field = self.headerData(column)
-            menu = self._make_auto_filter_menu(field)
-            accepted_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
-            menu.set_filter_accepted_values(accepted_values)
-
-    def filter_excluding(self, rows_per_column):
-        for column, rows in rows_per_column.items():
-            field = self.headerData(column)
-            menu = self._make_auto_filter_menu(field)
-            rejected_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
-            menu.set_filter_rejected_values(rejected_values)
-
-
-class CompoundParameterDefinitionMixin:
-    """Handles signals from db mngr for parameter_definition models."""
+class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundModelBase):
+    """A model that concatenates several single object parameter_definition models
+    and one empty object parameter_definition model.
+    """
 
     @property
     def item_type(self):
         return "parameter_definition"
-
-
-class CompoundParameterValueMixin:
-    """Handles signals from db mngr for parameter_value models."""
-
-    @property
-    def item_type(self):
-        return "parameter_value"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._filter_entity_ids = {}
-        self._filter_alternative_ids = {}
-
-    def init_model(self):
-        super().init_model()
-        self._filter_entity_ids = {}
-        self._filter_alternative_ids = {}
-
-    def set_filter_entity_ids(self, entity_ids):
-        self._filter_entity_ids = entity_ids
-        for model in self.single_models:
-            if model.set_filter_entity_ids(entity_ids):
-                self._invalidate_filter()
-
-    def set_filter_alternative_ids(self, alternative_ids):
-        self._filter_alternative_ids = alternative_ids
-        for model in self.single_models:
-            if model.set_filter_alternative_ids(alternative_ids):
-                self._invalidate_filter()
-
-    def _create_single_model(self, db_map, entity_class_id, committed):
-        model = super()._create_single_model(db_map, entity_class_id, committed)
-        model.set_filter_entity_ids(self._filter_entity_ids)
-        model.set_filter_alternative_ids(self._filter_alternative_ids)
-        return model
-
-
-class CompoundParameterDefinitionModel(CompoundParameterDefinitionMixin, CompoundParameterModel):
-    """A model that concatenates several single object parameter_definition models
-    and one empty object parameter_definition model.
-    """
 
     def _make_header(self):
         return [
@@ -528,11 +518,23 @@ class CompoundParameterDefinitionModel(CompoundParameterDefinitionMixin, Compoun
             "database",
         ]
 
+    @property
+    def _single_model_type(self):
+        return SingleParameterDefinitionModel
 
-class CompoundParameterValueModel(CompoundParameterValueMixin, CompoundParameterModel):
+    @property
+    def _empty_model_type(self):
+        return EmptyParameterDefinitionModel
+
+
+class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterValueMixin, CompoundModelBase):
     """A model that concatenates several single object parameter_value models
     and one empty object parameter_value model.
     """
+
+    @property
+    def item_type(self):
+        return "parameter_value"
 
     def _make_header(self):
         return [
@@ -543,3 +545,39 @@ class CompoundParameterValueModel(CompoundParameterValueMixin, CompoundParameter
             "value",
             "database",
         ]
+
+    @property
+    def _single_model_type(self):
+        return SingleParameterValueModel
+
+    @property
+    def _empty_model_type(self):
+        return EmptyParameterValueModel
+
+
+class CompoundEntityAlternativeModel(FilterEntityAlternativeMixin, CompoundModelBase):
+    @property
+    def item_type(self):
+        return "entity"  # entity_alternative
+
+    @property
+    def entity_class_id_field(self):
+        return "class_id"
+
+    def _make_header(self):
+        return [
+            "entity_class_name",
+            "entity_byname",
+            "alternative_name",
+            "active",
+            "description",
+            "database",
+        ]
+
+    @property
+    def _single_model_type(self):
+        return SingleEntityAlternativeModel
+
+    @property
+    def _empty_model_type(self):
+        return EmptyEntityAlternativeModel

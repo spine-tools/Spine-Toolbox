@@ -10,18 +10,22 @@
 ######################################################################################################################
 
 """
-Contains the ParameterViewMixin class.
+Contains the StackedViewMixin class.
 """
 
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSignalBlocker
 from PySide6.QtWidgets import QHeaderView
 from PySide6.QtGui import QGuiApplication
 from .element_name_list_editor import ElementNameListEditor
-from ..mvcmodels.compound_parameter_models import CompoundParameterValueModel, CompoundParameterDefinitionModel
+from ..mvcmodels.compound_models import (
+    CompoundParameterValueModel,
+    CompoundParameterDefinitionModel,
+    CompoundEntityAlternativeModel,
+)
 from ...helpers import preferred_row_height, DB_ITEM_SEPARATOR
 
 
-class ParameterViewMixin:
+class StackedViewMixin:
     """
     Provides stacked parameter tables for the Spine db editor.
     """
@@ -37,10 +41,13 @@ class ParameterViewMixin:
         self._filter_alternative_ids = {}
         self.parameter_value_model = CompoundParameterValueModel(self, self.db_mngr)
         self.parameter_definition_model = CompoundParameterDefinitionModel(self, self.db_mngr)
-        self._parameter_models = (self.parameter_value_model, self.parameter_definition_model)
-        self._parameter_value_models = (self.parameter_value_model,)
-        views = (self.ui.tableView_parameter_value, self.ui.tableView_parameter_definition)
-        for view, model in zip(views, self._parameter_models):
+        self.entity_alternative_model = CompoundEntityAlternativeModel(self, self.db_mngr)
+        self._all_stacked_models = {
+            self.parameter_value_model: self.ui.tableView_parameter_value,
+            self.parameter_definition_model: self.ui.tableView_parameter_definition,
+            self.entity_alternative_model: self.ui.tableView_entity_alternative,
+        }
+        for model, view in self._all_stacked_models.items():
             view.setModel(model)
             view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -64,10 +71,9 @@ class ParameterViewMixin:
     def init_models(self):
         """Initializes models."""
         super().init_models()
-        self.parameter_value_model.db_maps = self.db_maps
-        self.parameter_definition_model.db_maps = self.db_maps
-        self.parameter_value_model.init_model()
-        self.parameter_definition_model.init_model()
+        for model in self._all_stacked_models:
+            model.db_maps = self.db_maps
+            model.init_model()
         self._set_default_parameter_data()
 
     @Slot(QModelIndex, int, object)
@@ -116,15 +122,13 @@ class ParameterViewMixin:
         self.set_default_parameter_data(default_data, default_db_map)
 
     def set_default_parameter_data(self, default_data, default_db_map):
-        for model in self._parameter_models:
+        for model in self._all_stacked_models:
             model.empty_model.db_map = default_db_map
             model.empty_model.set_default_row(**default_data)
             model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
 
     def clear_all_filters(self):
-        for model in self._parameter_models:
-            model.clear_auto_filter()
-        for model in self._parameter_value_models:
+        for model in self._all_stacked_models:
             model.clear_auto_filter()
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
@@ -133,9 +137,9 @@ class ParameterViewMixin:
 
     def _reset_filters(self):
         """Resets filters."""
-        for model in self._parameter_models:
+        for model in self._all_stacked_models:
             model.set_filter_class_ids(self._filter_class_ids)
-        for model in self._parameter_value_models:
+        for model in (self.parameter_value_model, self.entity_alternative_model):
             model.set_filter_entity_ids(self._filter_entity_ids)
             model.set_filter_alternative_ids(self._filter_alternative_ids)
 
@@ -213,21 +217,13 @@ class ParameterViewMixin:
         """
         trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
         for tree in trees:
-            if tree != current and tree != other:
+            if tree not in (current, other):
                 with QSignalBlocker(tree) as _:
                     tree.selectionModel().clearSelection()
 
-    @staticmethod
-    def _dict_intersection(dict1, dict2):
-        """Creates a dictionary from two dicts that is either their union or intersection based on their keys."""
-        intersection_dict = {}
-        for key1, value1 in dict1.items():
-            for key2, value2 in dict2.items():
-                if key2 == key1:
-                    intersection_dict = {key2: value2 & value1}
-                else:
-                    intersection_dict.update(dict1)
-                    intersection_dict.update(dict2)
-        if not intersection_dict:
-            intersection_dict = dict1 or dict2
-        return intersection_dict
+    def tear_down(self):
+        if not super().tear_down():
+            return False
+        for model in self._all_stacked_models:
+            model.stop_invalidating_filter()
+        return True

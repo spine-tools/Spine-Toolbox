@@ -28,8 +28,8 @@ from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from ...helpers import rows_to_row_count_tuples, DB_ITEM_SEPARATOR
 
 
-class EmptyParameterModel(EmptyRowModel):
-    """An empty parameter model."""
+class EmptyModelBase(EmptyRowModel):
+    """Base class for all empty models that go in a CompoundModelBase subclass."""
 
     def __init__(self, parent, header, db_mngr):
         """Initialize class.
@@ -44,18 +44,21 @@ class EmptyParameterModel(EmptyRowModel):
         self.db_map = None
         self.entity_class_id = None
 
-    @property
-    def item_type(self):
-        """The item type, either 'parameter_value' or 'parameter_definition', required by the value_field property."""
+    def add_items_to_db(self, db_map_data):
+        """Add items to db.
+
+        Args:
+            db_map_data (dict): mapping DiffDatabaseMapping instance to list of items
+        """
+        raise NotImplementedError()
+
+    def _make_unique_id(self, item):
+        """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
         raise NotImplementedError()
 
     @property
     def can_be_filtered(self):
         return False
-
-    @property
-    def value_field(self):
-        return {"parameter_definition": "default_value", "parameter_value": "value"}[self.item_type]
 
     def accepted_rows(self):
         return range(self.rowCount())
@@ -65,24 +68,6 @@ class EmptyParameterModel(EmptyRowModel):
 
     def item_id(self, _row):  # pylint: disable=no-self-use
         return None
-
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if role == DB_MAP_ROLE:
-            database = self.data(index, Qt.ItemDataRole.DisplayRole)
-            return next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
-        if self.header[index.column()] == self.value_field and role in (
-            Qt.ItemDataRole.DisplayRole,
-            Qt.ItemDataRole.ToolTipRole,
-            Qt.TextAlignmentRole,
-            PARSED_ROLE,
-        ):
-            data = super().data(index, role=Qt.ItemDataRole.EditRole)
-            return self.db_mngr.get_value_from_data(data, role)
-        return super().data(index, role)
-
-    def _make_unique_id(self, item):
-        """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
-        return (item.get("entity_class_name"), item.get("parameter_name"))
 
     def handle_items_added(self, db_map_data):
         """Runs when parameter definitions or values are added.
@@ -118,14 +103,6 @@ class EmptyParameterModel(EmptyRowModel):
             entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
             self._main_data[item["row"]][self.header.index("entity_class_name")] = entity_class["name"]
 
-    def add_items_to_db(self, db_map_data):
-        """Add items to db.
-
-        Args:
-            db_map_data (dict): mapping DiffDatabaseMapping instance to list of items
-        """
-        raise NotImplementedError()
-
     def _make_item(self, row):
         return dict(zip(self.header, self._main_data[row]), row=row)
 
@@ -151,14 +128,38 @@ class EmptyParameterModel(EmptyRowModel):
         return db_map_data
 
 
+class ParameterDataMixin:
+    @property
+    def value_field(self):
+        raise NotImplementedError()
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role == DB_MAP_ROLE:
+            database = self.data(index, Qt.ItemDataRole.DisplayRole)
+            return next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
+        if self.header[index.column()] == self.value_field and role in (
+            Qt.ItemDataRole.DisplayRole,
+            Qt.ItemDataRole.ToolTipRole,
+            Qt.TextAlignmentRole,
+            PARSED_ROLE,
+        ):
+            data = super().data(index, role=Qt.ItemDataRole.EditRole)
+            return self.db_mngr.get_value_from_data(data, role)
+        return super().data(index, role)
+
+
 class EmptyParameterDefinitionModel(
-    FillInValueListIdMixin, FillInEntityClassIdMixin, FillInParameterNameMixin, EmptyParameterModel
+    FillInValueListIdMixin, FillInEntityClassIdMixin, FillInParameterNameMixin, ParameterDataMixin, EmptyModelBase
 ):
     """An empty parameter_definition model."""
 
     @property
-    def item_type(self):
-        return "parameter_definition"
+    def value_field(self):
+        return "default_value"
+
+    def _make_unique_id(self, item):
+        """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
+        return (item.get("entity_class_name"), item.get("parameter_name"))
 
     def add_items_to_db(self, db_map_data):
         """See base class."""
@@ -190,13 +191,14 @@ class EmptyParameterValueModel(
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,
-    EmptyParameterModel,
+    ParameterDataMixin,
+    EmptyModelBase,
 ):
     """An empty parameter_value model."""
 
     @property
-    def item_type(self):
-        return "parameter_value"
+    def value_field(self):
+        return "value"
 
     def add_items_to_db(self, db_map_data):
         """See base class."""
@@ -237,10 +239,35 @@ class EmptyParameterValueModel(
         entity_byname = item.get("entity_byname")
         if entity_byname is None:
             entity_byname = ()
-        return (*super()._make_unique_id(item), DB_ITEM_SEPARATOR.join(entity_byname), item.get("alternative_name"))
+        return (
+            item.get("entity_class_name"),
+            DB_ITEM_SEPARATOR.join(entity_byname),
+            item.get("parameter_name"),
+            item.get("alternative_name"),
+        )
 
     def _make_item(self, row):
         item = super()._make_item(row)
         if item["entity_byname"]:
             item["entity_byname"] = tuple(item["entity_byname"].split(DB_ITEM_SEPARATOR))
         return item
+
+
+class EmptyEntityAlternativeModel(
+    MakeEntityOnTheFlyMixin,
+    InferEntityClassIdMixin,
+    FillInAlternativeIdMixin,
+    FillInParameterDefinitionIdsMixin,
+    FillInEntityIdsMixin,
+    FillInEntityClassIdMixin,
+    EmptyModelBase,
+):
+    def _make_unique_id(self, item):
+        entity_byname = item.get("entity_byname")
+        if entity_byname is None:
+            entity_byname = ()
+        return (
+            item.get("entity_class_name"),
+            DB_ITEM_SEPARATOR.join(entity_byname),
+            item.get("alternative_name"),
+        )

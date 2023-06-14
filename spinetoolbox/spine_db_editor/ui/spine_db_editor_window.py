@@ -18,60 +18,23 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QDate,
-    QDateTime,
-    QLocale,
-    QMetaObject,
-    QObject,
-    QPoint,
-    QRect,
-    QSize,
-    QTime,
-    QUrl,
-    Qt,
-)
-from PySide6.QtGui import (
-    QAction,
-    QBrush,
-    QColor,
-    QConicalGradient,
-    QCursor,
-    QFont,
-    QFontDatabase,
-    QGradient,
-    QIcon,
-    QImage,
-    QKeySequence,
-    QLinearGradient,
-    QPainter,
-    QPalette,
-    QPixmap,
-    QRadialGradient,
-    QTransform,
-)
-from PySide6.QtWidgets import (
-    QAbstractItemView,
-    QApplication,
-    QDockWidget,
-    QFrame,
-    QGraphicsView,
-    QHBoxLayout,
-    QHeaderView,
-    QMainWindow,
-    QSizePolicy,
-    QSpacerItem,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDockWidget, QFrame,
+    QGraphicsView, QHBoxLayout, QHeaderView, QMainWindow,
+    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
 
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (FrozenTableView, ItemMetadataTableView, MetadataTableView, ParameterDefinitionTableView,
-    ParameterValueTableView, PivotTableView)
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EntityAlternativeTableView, FrozenTableView, ItemMetadataTableView, MetadataTableView,
+    ParameterDefinitionTableView, ParameterValueTableView, PivotTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, EntityTreeView, ParameterValueListTreeView, ScenarioTreeView)
 from spinetoolbox import resources_icons_rc
-
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -79,12 +42,7 @@ class Ui_MainWindow(object):
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(969, 1167)
         MainWindow.setLayoutDirection(Qt.LeftToRight)
-        MainWindow.setDockOptions(
-            QMainWindow.AllowNestedDocks
-            | QMainWindow.AllowTabbedDocks
-            | QMainWindow.AnimatedDocks
-            | QMainWindow.GroupedDragging
-        )
+        MainWindow.setDockOptions(QMainWindow.AllowNestedDocks|QMainWindow.AllowTabbedDocks|QMainWindow.AnimatedDocks|QMainWindow.GroupedDragging)
         self.actionCommit = QAction(MainWindow)
         self.actionCommit.setObjectName(u"actionCommit")
         self.actionCommit.setEnabled(True)
@@ -214,9 +172,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_18.setContentsMargins(0, 0, 0, 0)
         self.alternative_tree_view = AlternativeTreeView(self.dockWidgetContents_15)
         self.alternative_tree_view.setObjectName(u"alternative_tree_view")
-        self.alternative_tree_view.setEditTriggers(
-            QAbstractItemView.AnyKeyPressed | QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed
-        )
+        self.alternative_tree_view.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.alternative_tree_view.setDragEnabled(True)
         self.alternative_tree_view.setDragDropMode(QAbstractItemView.DragOnly)
         self.alternative_tree_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -236,9 +192,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.treeView_parameter_value_list = ParameterValueListTreeView(self.dockWidgetContents)
         self.treeView_parameter_value_list.setObjectName(u"treeView_parameter_value_list")
-        self.treeView_parameter_value_list.setEditTriggers(
-            QAbstractItemView.AnyKeyPressed | QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed
-        )
+        self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.treeView_parameter_value_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.treeView_parameter_value_list.setUniformRowHeights(True)
         self.treeView_parameter_value_list.header().setVisible(True)
@@ -257,11 +211,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
         self.tableView_parameter_value = ParameterValueTableView(self.dockWidgetContents_2)
         self.tableView_parameter_value.setObjectName(u"tableView_parameter_value")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy1.setHorizontalStretch(2)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.tableView_parameter_value.sizePolicy().hasHeightForWidth())
-        self.tableView_parameter_value.setSizePolicy(sizePolicy1)
         self.tableView_parameter_value.setMouseTracking(True)
         self.tableView_parameter_value.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.tableView_parameter_value.setLayoutDirection(Qt.LeftToRight)
@@ -288,8 +237,6 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
         self.tableView_parameter_definition = ParameterDefinitionTableView(self.dockWidgetContents_5)
         self.tableView_parameter_definition.setObjectName(u"tableView_parameter_definition")
-        sizePolicy1.setHeightForWidth(self.tableView_parameter_definition.sizePolicy().hasHeightForWidth())
-        self.tableView_parameter_definition.setSizePolicy(sizePolicy1)
         self.tableView_parameter_definition.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.tableView_parameter_definition.setLayoutDirection(Qt.LeftToRight)
         self.tableView_parameter_definition.setTabKeyNavigation(False)
@@ -316,11 +263,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.treeView_entity = EntityTreeView(self.dockWidgetContents_6)
         self.treeView_entity.setObjectName(u"treeView_entity")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy2.setHorizontalStretch(1)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.treeView_entity.sizePolicy().hasHeightForWidth())
-        self.treeView_entity.setSizePolicy(sizePolicy2)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy1.setHorizontalStretch(1)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.treeView_entity.sizePolicy().hasHeightForWidth())
+        self.treeView_entity.setSizePolicy(sizePolicy1)
         self.treeView_entity.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.treeView_entity.setEditTriggers(QAbstractItemView.EditKeyPressed)
         self.treeView_entity.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -342,8 +289,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.graphicsView = EntityQGraphicsView(self.dockWidgetContents_8)
         self.graphicsView.setObjectName(u"graphicsView")
-        sizePolicy1.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
-        self.graphicsView.setSizePolicy(sizePolicy1)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy2.setHorizontalStretch(2)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
+        self.graphicsView.setSizePolicy(sizePolicy2)
         self.graphicsView.setMouseTracking(True)
         self.graphicsView.setFrameShape(QFrame.NoFrame)
         self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
@@ -408,6 +358,7 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_exports.addItem(self.horizontalSpacer)
 
+
         self.horizontalLayout_3.addLayout(self.horizontalLayout_exports)
 
         self.dockWidget_exports.setWidget(self.dockWidgetContents_12)
@@ -458,9 +409,7 @@ class Ui_MainWindow(object):
         self.scenario_tree_view = ScenarioTreeView(self.dockWidgetContents_9)
         self.scenario_tree_view.setObjectName(u"scenario_tree_view")
         self.scenario_tree_view.setAcceptDrops(True)
-        self.scenario_tree_view.setEditTriggers(
-            QAbstractItemView.AnyKeyPressed | QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed
-        )
+        self.scenario_tree_view.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.scenario_tree_view.setDragEnabled(True)
         self.scenario_tree_view.setDragDropMode(QAbstractItemView.DragDrop)
         self.scenario_tree_view.setDefaultDropAction(Qt.MoveAction)
@@ -471,103 +420,99 @@ class Ui_MainWindow(object):
 
         self.scenario_dock_widget.setWidget(self.dockWidgetContents_9)
         MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.scenario_dock_widget)
+        self.dockWidget_entity_alternative = QDockWidget(MainWindow)
+        self.dockWidget_entity_alternative.setObjectName(u"dockWidget_entity_alternative")
+        self.dockWidgetContents_3 = QWidget()
+        self.dockWidgetContents_3.setObjectName(u"dockWidgetContents_3")
+        self.verticalLayout_2 = QVBoxLayout(self.dockWidgetContents_3)
+        self.verticalLayout_2.setSpacing(0)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.tableView_entity_alternative = EntityAlternativeTableView(self.dockWidgetContents_3)
+        self.tableView_entity_alternative.setObjectName(u"tableView_entity_alternative")
+        self.tableView_entity_alternative.setTabKeyNavigation(False)
+        self.tableView_entity_alternative.setWordWrap(False)
+        self.tableView_entity_alternative.horizontalHeader().setHighlightSections(False)
+        self.tableView_entity_alternative.horizontalHeader().setStretchLastSection(True)
+        self.tableView_entity_alternative.verticalHeader().setVisible(False)
+        self.tableView_entity_alternative.verticalHeader().setHighlightSections(False)
+
+        self.verticalLayout_2.addWidget(self.tableView_entity_alternative)
+
+        self.dockWidget_entity_alternative.setWidget(self.dockWidgetContents_3)
+        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_entity_alternative)
 
         self.retranslateUi(MainWindow)
 
         QMetaObject.connectSlotsByName(MainWindow)
-
     # setupUi
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.actionCommit.setText(QCoreApplication.translate("MainWindow", u"&Commit...", None))
-        # if QT_CONFIG(shortcut)
+#if QT_CONFIG(shortcut)
         self.actionCommit.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Return", None))
-        # endif // QT_CONFIG(shortcut)
+#endif // QT_CONFIG(shortcut)
         self.actionRollback.setText(QCoreApplication.translate("MainWindow", u"Roll&back", None))
-        # if QT_CONFIG(shortcut)
+#if QT_CONFIG(shortcut)
         self.actionRollback.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Backspace", None))
-        # endif // QT_CONFIG(shortcut)
+#endif // QT_CONFIG(shortcut)
         self.actionClose.setText(QCoreApplication.translate("MainWindow", u"Close", None))
         self.actionImport.setText(QCoreApplication.translate("MainWindow", u"I&mport...", None))
-        # if QT_CONFIG(tooltip)
-        self.actionImport.setToolTip(
-            QCoreApplication.translate(
-                "MainWindow", u"<html><head/><body><p>Import data from file</p></body></html>", None
-            )
-        )
-        # endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.actionImport.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Import data from file</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.actionExport.setText(QCoreApplication.translate("MainWindow", u"&Export...", None))
-        # if QT_CONFIG(tooltip)
-        self.actionExport.setToolTip(
-            QCoreApplication.translate(
-                "MainWindow", u"<html><head/><body><p>Export data into file</p></body></html>", None
-            )
-        )
-        # endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.actionExport.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Export data into file</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.actionCopy.setText(QCoreApplication.translate("MainWindow", u"Cop&y name(s) as text", None))
-        # if QT_CONFIG(shortcut)
+#if QT_CONFIG(shortcut)
         self.actionCopy.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+C", None))
-        # endif // QT_CONFIG(shortcut)
+#endif // QT_CONFIG(shortcut)
         self.actionPaste.setText(QCoreApplication.translate("MainWindow", u"P&aste", None))
-        # if QT_CONFIG(shortcut)
+#if QT_CONFIG(shortcut)
         self.actionPaste.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+V", None))
-        # endif // QT_CONFIG(shortcut)
+#endif // QT_CONFIG(shortcut)
         self.actionStacked_style.setText(QCoreApplication.translate("MainWindow", u"T&able", None))
-        # if QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
         self.actionStacked_style.setToolTip(QCoreApplication.translate("MainWindow", u"Table", None))
-        # endif // QT_CONFIG(tooltip)
+#endif // QT_CONFIG(tooltip)
         self.actionGraph_style.setText(QCoreApplication.translate("MainWindow", u"&Graph", None))
-        # if QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
         self.actionGraph_style.setToolTip(QCoreApplication.translate("MainWindow", u"Graph", None))
-        # endif // QT_CONFIG(tooltip)
+#endif // QT_CONFIG(tooltip)
         self.actionView_history.setText(QCoreApplication.translate("MainWindow", u"&History...", None))
         self.actionMass_remove_items.setText(QCoreApplication.translate("MainWindow", u"P&urge...", None))
-        # if QT_CONFIG(tooltip)
-        self.actionMass_remove_items.setToolTip(
-            QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Mass-remove items</p></body></html>", None)
-        )
-        # endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.actionMass_remove_items.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Mass-remove items</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.actionExport_session.setText(QCoreApplication.translate("MainWindow", u"E&xport session...", None))
-        # if QT_CONFIG(tooltip)
-        self.actionExport_session.setToolTip(
-            QCoreApplication.translate(
-                "MainWindow",
-                u"<html><head/><body><p>Export current session (changes since last commit) into file</p></body></html>",
-                None,
-            )
-        )
-        # endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.actionExport_session.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Export current session (changes since last commit) into file</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.actionSettings.setText(QCoreApplication.translate("MainWindow", u"Settings...", None))
-        # if QT_CONFIG(shortcut)
+#if QT_CONFIG(shortcut)
         self.actionSettings.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+,", None))
-        # endif // QT_CONFIG(shortcut)
+#endif // QT_CONFIG(shortcut)
         self.actionUser_guide.setText(QCoreApplication.translate("MainWindow", u"User guide", None))
-        # if QT_CONFIG(shortcut)
+#if QT_CONFIG(shortcut)
         self.actionUser_guide.setShortcut(QCoreApplication.translate("MainWindow", u"F1", None))
-        # endif // QT_CONFIG(shortcut)
+#endif // QT_CONFIG(shortcut)
         self.actionUndo.setText(QCoreApplication.translate("MainWindow", u"Un&do", None))
         self.actionRedo.setText(QCoreApplication.translate("MainWindow", u"&Redo", None))
         self.actionNew_db_file.setText(QCoreApplication.translate("MainWindow", u"&New...", None))
-        # if QT_CONFIG(tooltip)
-        self.actionNew_db_file.setToolTip(
-            QCoreApplication.translate("MainWindow", u"<html><head/><body><p>New database file</p></body></html>", None)
-        )
-        # endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.actionNew_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>New database file</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.actionOpen_db_file.setText(QCoreApplication.translate("MainWindow", u"&Open...", None))
-        # if QT_CONFIG(tooltip)
-        self.actionOpen_db_file.setToolTip(
-            QCoreApplication.translate(
-                "MainWindow", u"<html><head/><body><p>Open database file</p></body></html>", None
-            )
-        )
-        # endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.actionOpen_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open database file</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.actionAdd_db_file.setText(QCoreApplication.translate("MainWindow", u"Add...", None))
-        # if QT_CONFIG(tooltip)
-        self.actionAdd_db_file.setToolTip(
-            QCoreApplication.translate("MainWindow", u"Add database file to the current view", None)
-        )
-        # endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.actionAdd_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"Add database file to the current view", None))
+#endif // QT_CONFIG(tooltip)
         self.actionVacuum.setText(QCoreApplication.translate("MainWindow", u"Vacuum", None))
         self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative tree", None))
 #if QT_CONFIG(accessibility)
@@ -579,11 +524,11 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(accessibility)
         self.dockWidget_parameter_value.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter value", None))
 #if QT_CONFIG(accessibility)
-        self.tableView_parameter_value.setAccessibleName(QCoreApplication.translate("MainWindow", u"relationship parameter value", None))
+        self.tableView_parameter_value.setAccessibleName(QCoreApplication.translate("MainWindow", u"parameter value", None))
 #endif // QT_CONFIG(accessibility)
         self.dockWidget_parameter_definition.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter definition", None))
 #if QT_CONFIG(accessibility)
-        self.tableView_parameter_definition.setAccessibleName(QCoreApplication.translate("MainWindow", u"relationship parameter definition", None))
+        self.tableView_parameter_definition.setAccessibleName(QCoreApplication.translate("MainWindow", u"parameter definition", None))
 #endif // QT_CONFIG(accessibility)
         self.dockWidget_entity_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity tree", None))
 #if QT_CONFIG(accessibility)
@@ -596,9 +541,9 @@ class Ui_MainWindow(object):
         self.metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Metadata", None))
         self.item_metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Item metadata", None))
         self.scenario_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scenario tree", None))
-        # if QT_CONFIG(accessibility)
+#if QT_CONFIG(accessibility)
         self.scenario_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"scenario tree", None))
+#endif // QT_CONFIG(accessibility)
+        self.dockWidget_entity_alternative.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity alternative", None))
+    # retranslateUi
 
-
-# endif // QT_CONFIG(accessibility)
-# retranslateUi
