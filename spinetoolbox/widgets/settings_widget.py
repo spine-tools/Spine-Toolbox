@@ -992,14 +992,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if self.julia_kernel_fetcher is not None and self.julia_kernel_fetcher.isRunning():
             # Trying to start a new thread when the old one is still running
             return
-        QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
         self._julia_kernel_model.clear()
         self.ui.comboBox_julia_kernel.addItem("Select Julia kernel...")
         conda_path = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
         self.julia_kernel_fetcher = KernelFetcher(conda_path, fetch_mode=4)
         self.julia_kernel_fetcher.kernel_found.connect(self.add_julia_kernel)
         self.julia_kernel_fetcher.finished.connect(self.restore_saved_julia_kernel)
-        self.julia_kernel_fetcher.finished.connect(self._toolbox.restore_override_cursor)
         self.julia_kernel_fetcher.start()
 
     @Slot()
@@ -1042,14 +1040,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if self.python_kernel_fetcher is not None and self.python_kernel_fetcher.isRunning():
             # Trying to start a new thread when the old one is still running
             return
-        QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
         self._python_kernel_model.clear()
         self.ui.comboBox_python_kernel.addItem("Select Python kernel...")
         conda_path = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
         self.python_kernel_fetcher = KernelFetcher(conda_path, fetch_mode=2)
         self.python_kernel_fetcher.kernel_found.connect(self.add_python_kernel)
         self.python_kernel_fetcher.finished.connect(self.restore_saved_python_kernel)
-        self.python_kernel_fetcher.finished.connect(self._toolbox.restore_override_cursor)
         self.python_kernel_fetcher.start()
 
     @Slot()
