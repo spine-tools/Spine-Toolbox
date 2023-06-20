@@ -40,7 +40,6 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    data_import_export
    spine_engine_server
    terminology
-   dependencies
    contribution_guide
    developer_documentation
    autoapi/index
