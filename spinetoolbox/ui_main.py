@@ -1241,7 +1241,7 @@ class ToolboxUI(QMainWindow):
             index (QModelIndex): Index of the item (from double-click or context menu signal)
             item (ProjectItem, optional)
         """
-        if not index.isValid():
+        if not index.isValid() or not item:
             return
         specification = self.specification_model.specification(index.row())
         # Open spec in Tool specification edit widget
