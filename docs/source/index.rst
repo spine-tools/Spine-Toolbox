@@ -3,6 +3,11 @@
 
 Welcome to Spine Toolbox's User Guide!
 ======================================
+
+.. image:: img/spinetoolbox_on_wht.svg
+   :align: center
+   :scale: 30%
+
 `Spine Toolbox <https://github.com/spine-tools/Spine-Toolbox>`_ is an application, which provides means to define, manage, and execute complex data processing and
 computation tasks, such as energy system models.
 

@@ -13,6 +13,13 @@ Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badg
 Spine Toolbox is an open source Python package to manage data, scenarios and workflows for modelling and simulation. 
 You can have your local workflow, but work as a team through version control and SQL databases.
 
+<center>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./fig/spinetoolbox_logo.svg" width="50%">
+  <img alt="Spine Toolbox" src="./fig/spinetoolbox_on_wht.svg" width="50%">
+</picture>
+</center>
+
 ## Programming language
 
 - Python 3.8*
