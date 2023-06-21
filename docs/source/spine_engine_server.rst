@@ -2,7 +2,7 @@
    Created 31.10.2022
 
 .. |play-all| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
-            :width: 16
+   :width: 16
 
 .. _Spine Engine Server:
 
@@ -118,7 +118,7 @@ Setting up Spine Toolbox (client)
 
 2. Start Spine Toolbox and open a project
 
-3. Open the **Engine** page in Spine Toolbox Settings (**File -> Settings**)
+3. Open the **Engine** page in Spine Toolbox Settings (**File -> Settings...**)
 
    - Enable remote execution from the checkbox (Enabled)
    - Set up the Spine Engine Server settings (host, port, security model, and security folder).
