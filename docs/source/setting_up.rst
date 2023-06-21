@@ -10,9 +10,9 @@
 
 .. _Setting up External Tools:
 
-*************************
-Setting up External Tools
-*************************
+*******************
+Setting up Consoles
+*******************
 
 This section describes the default **Python** used by Spine Toolbox and how to change that. Here you can also find the
 instructions on how to set up **Julia** and **Gams** for executing Julia and Gams Tools. To get started with
@@ -21,20 +21,38 @@ instructions on how to set up **Julia** and **Gams** for executing Julia and Gam
 .. contents::
    :local:
 
+Basic Consoles
+--------------
+
 Python
 ******
-No set up required! Python Tools are executed using the **default Python**, which **depends on how you installed Spine Toolbox.** The
-installation options are:
-
-1. Using a single-file **installation bundle** (e.g. *spine-toolbox-0.6.0-final.2-x64.exe* or newer). You can
-   find this file and all releases from
-   `Spine Toolbox releases <https://github.com/spine-tools/Spine-Toolbox/releases>`_.
-   The installation bundles are only available for Windows at the moment.
-2. Cloning Spine Toolbox Git repository from `<https://github.com/spine-tools/Spine-Toolbox>`_. Checkout branch
-   **release-0.6** or **master** and run `pip install -r requirements.txt` in the repo root.
+No set up required! Python Tools are executed using the **default Python**,
 
 .. tip:: You can always see the current Python configured for Spine Toolbox from the `Tools` page in
-   `File->Settings...`.
+   **File -> Settings...**.
+
+Julia
+*****
+
+Jupyter Consoles
+----------------
+
+Python
+******
+
+Julia
+*****
+
+Conda
+*****
+
+Other kernels
+*************
+
+GAMS
+----
+
+
 
 Default Python for Spine Toolbox installed using an installation bundle
 -----------------------------------------------------------------------

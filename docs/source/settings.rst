@@ -1,13 +1,16 @@
 .. Settings form documentation
    Created 14.1.2019
 
+.. |open-folder| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
+   :width: 16
+
 .. _Settings:
 
 ********
 Settings
 ********
 
-You can open Spine Toolbox settings from the main window menu `File->Settings...`, or by
+You can open Spine Toolbox settings from the main window menu **File -> Settings...**, or by
 pressing **Ctrl+,**. Settings are categorized into five tabs;
 *General*, *Tools*, *Db editor*, *Spec. editors* and *Engine*.
 In addition to application settings, each Project item has user adjustable
@@ -16,7 +19,7 @@ properties (See :ref:`Project Items`)
 .. contents::
    :local:
 
-General settings
+General Settings
 ----------------
 
 .. image:: img/settings_general.png
@@ -79,13 +82,54 @@ Settings in the **UI** group:
 - **Link flash speed** This slider controls the speed of the link animation on Design
   View when execution is ongoing.
 
-Tools settings
+Tools Settings
 --------------
 
-The Tool settings tab contains settings for external tools.
+The Tools tab contains settings for external tools.
+
+.. image:: img/settings_tools_default.png
+   :align: center
+
+Settings in the **GAMS** group:
+- **GAMS executable** Set the path to GAMS executable you want to use in running GAMS tools. If you have GAMS in
+  your PATH environment variable, it will be automatically used. You can also choose another GAMS by clicking the
+  |open-folder| button.
+
+Settings in the **Julia** group:
+
+Choose the settings on how Julia Tools are executed in Spine Toolbox projects.
+
+- **Basic Console** (default) When selected, Julia Tools will be executed in a custom interactive Julia REPL.
+
+- **Julia executable** Set the path to a Julia Executable used in launching the Basic Console. If Julia is in PATH
+  this will be autofilled, but you can also choose another Julia executable.
+
+- **Julia project** Set the Julia project you want to activate in the Basic Console.
+
+- **Jupyter Console** Choosing this option runs Julia Tools in a custom Jupyter QtConsole embedded into Spine Toolbox.
+
+- **Select kernel drop-down menu** Select the kernel you want to launch in Jupyter Console
+
+- **Make Julia Kernel** clicking this button makes a new kernel based on the selected *Julia executable*, and *Julia
+  project*. The progress of the operation is shown in another window. If the selected *Julia project* is missing the
+  **IJulia** package it is installed first. After **IJulia** has been installed, the kernel is installed. This process
+  can take a couple of minutes to finish.
+
+- **Install Julia** Installs latest Julia on your system using the **jill** package.
+
+- **Add/Update SpineOpt** Installs the latest compatible SpineOpt to the selected Julia project. If the selected Julia
+  project already has SpineOpt, it is upgraded if there's a new version available.
+
+.. note:: These settings are *global* application settings. All Julia Tools are executed with the settings selected here.
+
+Settings in the **Python** group:
+
+Choose the settings on how Python Tools are executed in Spine Toolbox projects.
+
+
 See :ref:`Setting up External Tools` for more information and examples.
 
-Database editor settings
+Database Editor Settings
 ------------------------
 
 .. image:: img/settings_db_editor.png

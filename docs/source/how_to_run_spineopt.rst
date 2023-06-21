@@ -22,7 +22,7 @@ How to set up SpineOpt.jl
 #. Set a path to a Julia executable to the appropriate line edit (e.g. *C:\\Julia-1.5.4\\bin\\julia.exe*).
    Your selections should look similar to this now.
 
-   .. image:: img/settings_tools_filled_for_spineopt_github.png
+   .. image:: img/settings_tools_default.png
       :align: center
 
 #. *[Optional]* If you want to install and run SpineOpt in a specific Julia project environment (the place for
