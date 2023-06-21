@@ -14,8 +14,10 @@ Spine Toolbox is an open source Python package to manage data, scenarios and wor
 You can have your local workflow, but work as a team through version control and SQL databases.
 
 <p align="center" width="100%">
-  <source media="(prefers-color-scheme: dark)" srcset="./fig/spinetoolbox_logo.svg" width="50%">
-  <img alt="Spine Toolbox" src="./fig/spinetoolbox_on_wht.svg" width="50%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./fig/spinetoolbox_logo.svg" width="50%">
+    <img alt="Spine Toolbox" src="./fig/spinetoolbox_on_wht.svg" width="50%">
+  </picture>
 </p>
 
 ## Programming language
