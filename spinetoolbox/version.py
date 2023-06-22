@@ -12,10 +12,7 @@
 """Version info for Spine Toolbox package. Inspired by python sys.version and sys.version_info.
 """
 
-import re
 from typing import NamedTuple
-
-from ._version import version_tuple
 
 
 class VersionInfo(NamedTuple):
@@ -40,28 +37,10 @@ class VersionInfo(NamedTuple):
             return version + f"-{self.releaselevel}.{self.serial}"
 
 
-major, minor, micro, *dev = version_tuple
-
-if dev:
-    rel, commit = dev
-    if match := re.search(r"[0-9]+", rel):
-        split = match.span()[0]
-        releaselevel, serial = rel[:split], int(rel[split:])
-
-        # name cleanup
-        del split
-    else:
-        # shouldn't happen
-        releaselevel, serial = rel, 0
-
-    # name cleanup
-    del match, rel
-else:
-    # compat: move away gradually
-    releaselevel, serial = "final", 0
-
-# name cleanup
-del dev
-
+major = 0
+minor = 6
+micro = 19
+releaselevel = "dev"
+serial = 0
 __version_info__ = VersionInfo(major, minor, micro, releaselevel, serial)
 __version__ = str(__version_info__)
