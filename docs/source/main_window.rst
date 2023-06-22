@@ -34,36 +34,42 @@ programs. Julia and Python Consoles provide full iJulia and a iPython consoles. 
 in the embedded Julia Console, the Julia code will be included into the Julia Console and executed there. You can
 interact with the iJulia in the Julia Console like you would with any iJulia you use.
 
-.. tip:: You can configure the Julia and Python versions you want to use in ``File->Settings``.
+.. tip:: You can configure the Julia and Python versions you want to use in **File -> Settings**.
 
-The menu bar in the top of the application contains *File*, *Edit*, *View*, and *Help* menus. In the *File* menu
-you can create a new project, open an existing project, save the project,  upgrade an old project to modern
-directory-based project, and open the application Settings among other things.
-Spine Toolbox is project based, which means that you need to create
+The menu bar in the top of the application contains **File**, **Edit**, **View**, **Plugins**, **Consoles**, **Server**
+and **Help** menus. In the **File** menu you can create a new project, open an existing project, save the project and
+open the application Settings among other things. Spine Toolbox is project based, which means that you need to create
 a new project or open an existing one before you can do anything. You can create a new project by selecting
-``File->New project...`` from the menu bar. *Drag & Drop Icon* tool bar contains the available
-:ref:`project item <Project Items>` types. The |trash| button can be used to remove all items from your project.
-The *Execute* icons control the execution of the items in the *Design view* where you build your project.
+**File -> New project...** from the menu bar. In the **Edit** menu you can for example copy, paste and duplicate items
+as well as undo and redo actions. In the **Plugins** menu the user can install and manage plugins. **Consoles** menu
+provides a way to start detached consoles. In the **Server** menu you can retrieve projects from the server. **Help**
+contains a link to this documentation as well as other various information about Spine Toolbox.
+
+The **Items** section of the **Toolbar** contains the available
+:ref:`project item <Project Items>` types.
+The **Execute** section contains icons that control the execution of the items in the **Design view** where you build your project.
 The |play-all| button executes all Directed-Acyclic Graphs (DAG) in the project in a row. The |play-selected| button
 executes the selected project items only. The |stop| button terminates the execution (if running).
 
 You can add a new project item to your project by pointing your mouse cursor on any of the draggable items
-in the *Drag & Drop Icon* tool bar, then click-and-drag the item on to the *Design view*.
+in the **Toolbar**, then click-and-drag the item on to the **Design view**.
 After this you will be presented a dialog, which asks you to fill in basic information about the new project
 item (name, description, etc.).
 
-The main window is very customizable so you can e.g. close the dock widgets that you do not need and/or you can
-resize the views to fit your needs and display size or resolution.
+The main window is very customizable so you can e.g. close the dock widgets that you do not need, rearrange the order
+of the dock widgets by dragging them around and/or resize the views to fit your needs and display size or resolution. You can find more ways to
+customize the visual elements of Spine Toolbox in the :ref:`settings <Settings>`.
 
 .. note:: If you want to restore all dock widgets to their default place use the menu item
-   ``View->Dock Widgets->Restore Dock Widgets``.
+   **View -> Dock Widgets -> Restore Dock Widgets**.
    This will show all hidden dock widgets and restore them to the main window.
 
-Below is an example on how you can customize the main window. In the picture, a user has created a project *My First
-Project*, and created one project item from each of the seven categories. A Data Store called *Database*, a Data
-Connection called *Data files*, A Tool called *Julia model*, a View called *View*, an Importer called *Importer*,
-an Exporter called *Exporter*, and a Manipulator called *Combiner*.
-The project items are also listed in the *Project* dock widget.
+Below is an example on how you can customize the main window. In the picture, a user has created a project `New
+Project` and created one project item from each of the eight categories. A Data Connection called `Data files`,
+a Data Store called `Database`, a Data Transformer called `Data Transformer`, an Exporter called `Exporter`,
+an Importer called `Importer`, a Merger called `Merger`, a Tool called `Julia model` and a View called `View`. The
+project items are also listed in the **Project** dock widget. Some of the dock widgets have also been moved from
+their original places.
 
-.. image:: img/main_window_my_first_project_with_project_items.png
+.. image:: img/main_window_new_project_with_project_items.png
    :align: center
