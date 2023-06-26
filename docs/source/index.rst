@@ -25,7 +25,6 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
 
    getting_started
    how_to_run_spineopt
-   tutorials
    setting_up
    main_window
    project_items
