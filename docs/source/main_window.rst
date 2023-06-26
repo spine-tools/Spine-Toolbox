@@ -27,8 +27,11 @@ The application main window contains four dock widgets (**Project**, **Propertie
 **Toolbar**, a **Design View**, and a menu bar with **File**, **Edit**, **View**, **Plugins**, **Consoles**, **Server**
 and **Help** menus. The **Project** dock widget contains a list of project items in the project. The **Properties**
 dock widget shows the properties of the selected project item. **Event Log** shows messages based on user actions and
-item executions. It shows things like whether an item's execution was successful or not and when the project or an item
-specification is saved. **Console** provides Julia and Python consoles that can be interacted with. What kind of console
+item executions. It shows messages from processes that are spawned by the application, i.e. it shows the stdout and
+stderr streams of GAMS and executable programs. Also things like whether an item's execution was successful or not and
+when the project or an item specification is saved are shown.
+
+**Console** provides Julia and Python consoles that can be interacted with. What kind of console
 is shown depends on the Tool type of the specific Tool. Only an item that is currently executing or has already
 executed shows something in this dock widget. To view an item's console, the item must be selected. When executing
 Python/Julia tools, the Tool's Python/Julia code will be included into the console and executed there.
