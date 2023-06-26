@@ -23,26 +23,25 @@ The first time you start the application you will see the main window like this.
 .. image:: img/main_window_no_project.png
    :align: center
 
-The application main window contains six dock widgets (*Project*, *Properties*, *Event Log*, *Process Log*, *Julia
-Console*, and *Python Console*), a tool bar, a *Design View*, and a menu bar with *File*,
-*Edit*, *View*, and *Help* menus. The *Project* dock widget contains a list of project items and Tool specifications
-that are available in your project. The *Properties* dock widget shows the properties of the selected project item.
-*Event Log* shows messages depending on what you do in Spine Toolbox. *Process Log* shows messages from processes that
-are spawned by the application, i.e. it shows the stdout and stderr streams of GAMS, Julia, Python (if Tools are
-executed without embedded Julia and Python Consoles, see :ref:`Settings` section), and executable
-programs. Julia and Python Consoles provide full iJulia and a iPython consoles. If you choose to execute Julia tools
-in the embedded Julia Console, the Julia code will be included into the Julia Console and executed there. You can
-interact with the iJulia in the Julia Console like you would with any iJulia you use.
+The application main window contains four dock widgets (**Project**, **Properties**, **Event Log**, **Console**), a
+**Toolbar**, a **Design View**, and a menu bar with **File**, **Edit**, **View**, **Plugins**, **Consoles**, **Server**
+and **Help** menus. The **Project** dock widget contains a list of project items in the project. The **Properties**
+dock widget shows the properties of the selected project item. **Event Log** shows messages based on user actions and
+item executions. It shows things like whether an item's execution was successful or not and when the project or an item
+specification is saved. **Console** provides Julia and Python consoles that can be interacted with. What kind of console
+is shown depends on the Tool type of the specific Tool. Only an item that is currently executing or has already
+executed shows something in this dock widget. To view an item's console, the item must be selected. When executing
+Python/Julia tools, the Tool's Python/Julia code will be included into the console and executed there.
 
 .. tip:: You can configure the Julia and Python versions you want to use in **File -> Settings**.
 
 The menu bar in the top of the application contains **File**, **Edit**, **View**, **Plugins**, **Consoles**, **Server**
-and **Help** menus. In the **File** menu you can create a new project, open an existing project, save the project and
+and **Help** menus. In the **File** menu you can create a new project, open an existing project, save the project or
 open the application Settings among other things. Spine Toolbox is project based, which means that you need to create
 a new project or open an existing one before you can do anything. You can create a new project by selecting
 **File -> New project...** from the menu bar. In the **Edit** menu you can for example copy, paste and duplicate items
 as well as undo and redo actions. In the **Plugins** menu the user can install and manage plugins. **Consoles** menu
-provides a way to start detached consoles. In the **Server** menu you can retrieve projects from the server. **Help**
+provides a way to start detached consoles. In the **Server** menu you can retrieve projects from a server. **Help**
 contains a link to this documentation as well as other various information about Spine Toolbox.
 
 The **Items** section of the **Toolbar** contains the available
