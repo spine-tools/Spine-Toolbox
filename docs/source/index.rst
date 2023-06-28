@@ -28,6 +28,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    setting_up
    main_window
    project_items
+   links
    tool_specification_editor
    executing_projects
    execution_modes
