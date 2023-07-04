@@ -21,7 +21,6 @@ from unittest import mock
 import logging
 import os
 import sys
-
 import spinetoolbox.ui_main
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QSettings, Qt, QPoint, QItemSelectionModel, QPointF, QMimeData

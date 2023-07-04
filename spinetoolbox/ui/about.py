@@ -13,7 +13,7 @@
 ################################################################################
 ## Form generated from reading UI file 'about.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.1
+## Created by: Qt User Interface Compiler version 6.4.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -36,7 +36,7 @@ class Ui_Form(object):
         if not Form.objectName():
             Form.setObjectName(u"Form")
         Form.setWindowModality(Qt.ApplicationModal)
-        Form.resize(400, 573)
+        Form.resize(400, 614)
         sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -62,21 +62,27 @@ class Ui_Form(object):
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.label = QLabel(Form)
         self.label.setObjectName(u"label")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
         self.label.setSizePolicy(sizePolicy1)
-        self.label.setPixmap(QPixmap(u":/symbols/Spine_symbol.png"))
-        self.label.setScaledContents(False)
+        self.label.setMaximumSize(QSize(199, 132))
+        self.label.setFrameShape(QFrame.NoFrame)
+        self.label.setPixmap(QPixmap(u":/symbols/spinetoolbox_on_wht.png"))
+        self.label.setScaledContents(True)
         self.label.setAlignment(Qt.AlignCenter)
+        self.label.setWordWrap(False)
+        self.label.setMargin(15)
+        self.label.setIndent(-1)
 
         self.horizontalLayout.addWidget(self.label)
 
         self.frame_9 = QFrame(Form)
         self.frame_9.setObjectName(u"frame_9")
-        sizePolicy1.setHeightForWidth(self.frame_9.sizePolicy().hasHeightForWidth())
-        self.frame_9.setSizePolicy(sizePolicy1)
+        sizePolicy.setHeightForWidth(self.frame_9.sizePolicy().hasHeightForWidth())
+        self.frame_9.setSizePolicy(sizePolicy)
+        self.frame_9.setMaximumSize(QSize(199, 215))
         palette1 = QPalette()
         palette1.setBrush(QPalette.Active, QPalette.Base, brush)
         brush1 = QBrush(QColor(0, 74, 194, 255))
@@ -335,10 +341,13 @@ class Ui_Form(object):
         self.toolButton_copy_to_clipboard.setToolTip(QCoreApplication.translate("Form", u"Copy to clipboard", None))
 #endif // QT_CONFIG(tooltip)
         self.textBrowser.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:7pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None))
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Segoe UI'; font-size:7pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
         self.label_3.setText(QCoreApplication.translate("Form", u"<html><head/><body><p><a href=\"http://www.spine-model.org\"><span style=\" color:#ffffff; text-decoration: none\">www.spine-model.org</span></a></p></body></html>", None))
     # retranslateUi
 

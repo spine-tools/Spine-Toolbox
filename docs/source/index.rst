@@ -3,6 +3,11 @@
 
 Welcome to Spine Toolbox's User Guide!
 ======================================
+
+.. image:: img/spinetoolbox_on_wht.svg
+   :align: center
+   :scale: 30%
+
 `Spine Toolbox <https://github.com/spine-tools/Spine-Toolbox>`_ is an application, which provides means to define, manage, and execute complex data processing and
 computation tasks, such as energy system models.
 
@@ -20,10 +25,10 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
 
    getting_started
    how_to_run_spineopt
-   tutorials
    setting_up
    main_window
    project_items
+   links
    tool_specification_editor
    executing_projects
    execution_modes
@@ -35,7 +40,6 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    data_import_export
    spine_engine_server
    terminology
-   dependencies
    contribution_guide
    developer_documentation
    autoapi/index

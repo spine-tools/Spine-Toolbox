@@ -262,7 +262,7 @@ class ToolBarWidgetBase(QWidget):
         tool_bar (QToolBar)
     """
 
-    def __init__(self, text, parent=None):
+    def __init__(self, text, parent=None, io_files=None):
         """Class constructor.
 
         Args:
@@ -273,7 +273,10 @@ class ToolBarWidgetBase(QWidget):
         self._text = text
         self._parent = parent
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        if io_files:
+            layout.setContentsMargins(0, 0, 0, 0)
+        else:
+            layout.setContentsMargins(30, 0, 0, 0)
         layout.setSpacing(0)
         self.tool_bar = _MenuToolBar(self)
         layout.addStretch()
@@ -286,8 +289,8 @@ class ToolBarWidgetBase(QWidget):
 
 
 class ToolBarWidget(ToolBarWidgetBase):
-    def __init__(self, text, parent=None):
-        super().__init__(text, parent)
+    def __init__(self, text, parent=None, io_files=None):
+        super().__init__(text, parent, io_files)
         spacing = self.fontMetrics().horizontalAdvance(self._text)  # pylint: disable=undefined-variable
         self.layout().insertSpacing(0, spacing)
 

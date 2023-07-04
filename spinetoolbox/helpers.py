@@ -27,7 +27,7 @@ import re
 import pathlib
 import bisect
 from contextlib import contextmanager
-
+import tempfile
 import matplotlib
 from PySide6.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide6.QtCore import __version__ as qt_version
@@ -1584,3 +1584,24 @@ def same_path(path1, path2):
         bool: True if paths point to the same
     """
     return os.path.normcase(path1) == os.path.normcase(path2)
+
+
+def solve_connection_file(connection_file, connection_file_dict):
+    """Returns the connection_file path, if it exists on this computer. If the path
+    doesn't exist, assume that it points to a path on another computer, in which
+    case store the contents of connection_file_dict into a tempfile.
+
+    Args:
+        connection_file (str): Path to a connection file
+        connection_file_dict (dict) Contents of a connection file
+
+    Returns:
+        str: Path to a connection file on this computer.
+    """
+    if not os.path.exists(connection_file):
+        fp = tempfile.TemporaryFile(mode="w+", suffix=".json", delete=False)
+        json.dump(connection_file_dict, fp)
+        connection_file = fp.name
+        fp.close()
+        return connection_file
+    return connection_file

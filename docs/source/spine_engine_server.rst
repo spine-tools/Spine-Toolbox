@@ -1,6 +1,9 @@
 .. Spine Engine Server
    Created 31.10.2022
 
+.. |play-all| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
+   :width: 16
+
 .. _Spine Engine Server:
 
 *******************
@@ -11,42 +14,65 @@ Notes
 -----
 Here's a list of items that you should be aware of when running projects on Spine Engine Server.
 
-- Projects must be 'self-contained' for them to work in remote execution. Meaning that all input and output
-  files, file/db references, Specification files and scripts must be inside the project directory.
+- **Projects must be self-contained**. The project directory must contain all input and output
+  files, file/db references, Specification files and scripts.
 - **Work or Source directory execution mode** setting is ignored. Tools are always executed in 'source'
   directory, i.e. in the directory where the Tool Spec main script resides.
 - **Python Basic Console**. Interpreter setting in Tool Specification Editor is ignored. Basic Console runs the
   same Python that was used in starting the Server.
 - **Python Jupyter Console**. Kernel spec setting in Tool Specification Editor is ignored. Jupyter Console is
-  launched using the **python3** kernel spec.
+  launched using the **python3** kernel spec. This must be installed before the server is started. See instructions
+  below.
 - **Julia Basic Console**. Interpreter setting in app settings (Tools page in File->Settings) is ignored. Basic
   Console runs the Julia that is found in PATH. See installation instructions below.
 - **Julia Jupyter Console**. Kernel spec setting in app settings (Tools page in File->Settings) is ignored. Jupyter
-  Console is launched using the **julia-1.8** kernel spec. See installation instructions below.
+  Console is launched using the **julia-1.8** kernel spec. This must be installed before the server is started.
+  See instructions below.
 
 Setting up Spine Engine Server
 ------------------------------
+You can either install the entire Spine Toolbox or just the required parts to run the Spine Engine Server.
 
-1. Make a new environment for Spine Engine Server
+Minimal Installation
+********************
+Spine Engine server does not need the entire Spine Toolbox installation. Only *spine-engine*, *spinedb-api*
+and *spine-items*. Note that the dependencies of *spine-items* are not needed. Here are the step-by-step
+instructions for a minimal installation:
 
-   - Make a miniconda environment & activate it
-   - Clone and checkout spine-engine
-   - cd to spine-engine repo root, run::
+1.1 Make a miniconda environment & activate it
+1.2. Clone `spine-engine <https://github.com/spine-tools/spine-engine>`_
+1.3. cd to *spine-engine* repo root, run::
 
-      pip install -e .
+   pip install -e .
 
-   - Clone and checkout spine-items
-   - cd to spine-items repo root, run::
+1.4. Clone `spine-items <https://github.com/spine-tools/spine-items>`_
+1.5. cd to *spine-items* repo root
+1.6. Install *spine-items* **without dependencies** by running::
 
-      pip install --no-deps -e .
+   pip install --no-deps -e .
+
+
+Full Installation
+*****************
+Install Spine Toolbox regularly
+
+1.1. Make a miniconda environment & activate
+1.2. Clone `Spine Toolbox <https://github.com/spine-tools/Spine-Toolbox>`_
+1.3. Follow the `installation instructions in README.md <https://github.com/spine-tools/Spine-Toolbox#installation>`_
+
+Finalize Setting Up and Start Server
+************************************
 
 2. Create security credentials (optional)
 
-   - cd to <repo_root>/spine_engine/server/
-   - Create security certificates by running `python certificate_creator.py`
-   - The certificates are created into <repo_root>/spine_engine/server/certs/ directory.
+   - cd to `<spine_engine_repo_root>/spine_engine/server/`
+   - Create security certificates by running::
+
+      python certificate_creator.py
+
+   - The certificates are created into `<spine_engine_repo_root>/spine_engine/server/certs/` directory.
    - Configure allowed endpoints by creating file
-     *<repo_root>/spine_engine/server/connectivity/certs/allowEndpoints.txt*
+     `<spine_engine_repo_root>/spine_engine/server/connectivity/certs/allowEndpoints.txt`
    - Add IP addresses of the remote end points to the file
 
 3. Install IPython kernel spec (*python3*) to enable Jupyter Console execution of Python Tools
@@ -65,12 +91,12 @@ Setting up Spine Engine Server
 
          add IJulia
 
-   - This installs `julia-1.8` kernel spec to *~/.local/share/jupyter/kernels* on Ubuntu or to
-     *%APPDATA%\jupyter\kernels* on Windows
+   - This installs `julia-1.8` kernel spec to `~/.local/share/jupyter/kernels` on Ubuntu or to
+     `%APPDATA%\jupyter\kernels` on Windows
 
 6. Start Spine Engine Server
 
-   - cd to <repo_root>/spine_engine/server/
+   - cd to `<spine_engine_repo_root>/spine_engine/server/`
    - Without security, run::
 
       python start_server.py 50001
@@ -78,7 +104,7 @@ Setting up Spine Engine Server
    - where 50001 is the server port number.
    - With Stonehouse security, run::
 
-      python start_server.py 50001 StoneHouse <repo_root>/spine-engine/server/connectivity/certs
+      python start_server.py 50001 StoneHouse ./certs
 
    - where, 50001 is an example server port number, StoneHouse is the security model, and the path is the folder
      containing the security credentials.
@@ -87,17 +113,16 @@ Setting up Spine Engine Server
 
 Setting up Spine Toolbox (client)
 ---------------------------------
-
 1. (Optional) If server is started using StoneHouse security, copy security credentials from the server to
    some directory. Server's secret key does not need to be copied.
 
 2. Start Spine Toolbox and open a project
 
-3. Open the **Engine** page in application settings (**File->Settings**)
+3. Open the **Engine** page in Spine Toolbox Settings (**File -> Settings...**)
 
    - Enable remote execution from the checkbox (Enabled)
    - Set up the Spine Engine Server settings (host, port, security model, and security folder).
-     Host is 127.0.0.1 when the Server runs on the same computer as the client.
+     Host is 127.0.0.1 when the Server runs on the same computer as the client
    - Click Ok, to close and save the new Settings
 
-4. Click Play to execute the project.
+4. Click |play-all| to execute the project

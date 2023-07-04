@@ -191,6 +191,43 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             return
 
 
+class KernelsPopupMenu(CustomPopupMenu):
+    """Menu embedded into 'Consoles->Start Jupyter Console' QMenu."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): Parent widget of this menu (ToolboxUI)
+        """
+        super().__init__(parent=parent)
+        self._parent = parent
+        self.setToolTipsVisible(True)
+
+    @Slot(str, str, bool, QIcon, dict)
+    def add_kernel(self, kernel_name, resource_dir, cond, ico, deats):
+        """Adds a kernel entry as an action to this menu."""
+        self.add_action(
+            kernel_name,
+            lambda checked=False, kname=kernel_name, icon=ico, conda=cond: self.call_open_console(
+                checked, kname, icon, conda
+            ),
+            tooltip=resource_dir,
+            icon=ico,
+        )
+
+    @Slot(bool, str, QIcon, bool)
+    def call_open_console(self, checked, kernel_name, icon, conda):
+        """Slot for catching the user selected action from the kernel's menu.
+
+        Args:
+            checked (bool): Argument sent by triggered signal
+            kernel_name (str): Kernel name to launch
+            icon (QIcon): Icon representing the kernel language
+            conda (bool): Is this a Conda kernel spec?
+        """
+        self._parent.start_detached_jupyter_console(kernel_name, icon, conda)
+
+
 class FilterMenuBase(QMenu):
     """Filter menu."""
 
