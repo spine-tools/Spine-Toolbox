@@ -21,8 +21,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Scenarios can now be duplicated in Database editor.
 - Tool project item's Python and Julia consoles can now be killed from the right-click context menu.
   A killed console can be restored by restarting it.
-- A new option "Kill consoles at the end of execution" has been added to Tool properties.
+- A new option "Kill consoles at the end of execution" has been added to Tool properties,
   that kills Python and Julia console processes after execution saving some memory and computing resources.
+- A new option "Log process output to a file" has been added to Tool properties,
+  that logs all the 'console' output of the Tool to a file in the logs subfolder.
 - You can now open a 'Detached' Jupyter Console on any kernel you have installed in your system from the *Consoles*
   main window menu.
 - "Make Julia Kernel" and "Make Python Kernel" buttons in Settings->Tools page. Clicking them creates a new 
