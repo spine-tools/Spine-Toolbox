@@ -271,7 +271,7 @@ class SpineEngineWorker(QObject):
             if event_type == "dag_exec_finished":
                 self._engine_final_state = data
                 break
-            elif event_type == "remote_execution_init_failed" or event_type == "server_init_failed":
+            if event_type in ("remote_execution_init_failed", "server_init_failed"):
                 self._logger.msg_error.emit(f"{data}")
                 self._engine_final_state = str(SpineEngineState.FAILED)
                 self._all_items_failed.emit(list(self._project_items.values()))
