@@ -24,10 +24,7 @@ from spinedb_api import (
     import_relationship_parameters,
     import_relationships,
 )
-from spinetoolbox.spine_db_editor.mvcmodels.empty_parameter_models import (
-    EmptyParameterValueModel,
-    EmptyParameterDefinitionModel,
-)
+from spinetoolbox.spine_db_editor.mvcmodels.empty_models import EmptyParameterValueModel, EmptyParameterDefinitionModel
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinedb_api.parameter_value import join_value_and_type
 from ...mock_helpers import TestSpineDBManager

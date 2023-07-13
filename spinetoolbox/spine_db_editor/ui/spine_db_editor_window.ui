@@ -44,7 +44,7 @@
     <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle">
-    <string>Alternative tree</string>
+    <string>Alternative</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -84,7 +84,7 @@
         <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
        <property name="uniformRowHeights">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -125,9 +125,6 @@
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
-       </property>
-       <property name="uniformRowHeights">
-        <bool>true</bool>
        </property>
        <attribute name="headerVisible">
         <bool>true</bool>
@@ -328,7 +325,7 @@
         </size>
        </property>
        <property name="uniformRowHeights">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -654,7 +651,7 @@
         <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
        <property name="uniformRowHeights">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -985,11 +982,6 @@
    <header>spinetoolbox/spine_db_editor/widgets/custom_qgraphicsviews.h</header>
   </customwidget>
   <customwidget>
-   <class>EntityTreeView</class>
-   <extends>QTreeView</extends>
-   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
-  </customwidget>
-  <customwidget>
    <class>ParameterValueListTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
@@ -1001,16 +993,6 @@
   </customwidget>
   <customwidget>
    <class>PivotTableView</class>
-   <extends>QTableView</extends>
-   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>ParameterDefinitionTableView</class>
-   <extends>QTableView</extends>
-   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>ParameterValueTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
@@ -1033,6 +1015,21 @@
    <class>ScenarioTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>EntityTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ParameterDefinitionTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ParameterValueTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>EntityAlternativeTableView</class>

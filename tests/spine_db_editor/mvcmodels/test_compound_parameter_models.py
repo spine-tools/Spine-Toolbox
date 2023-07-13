@@ -15,7 +15,7 @@ Unit tests for the models in ``compound_parameter_models`` module.
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import (
+from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
 )

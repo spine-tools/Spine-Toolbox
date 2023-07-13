@@ -177,7 +177,7 @@ class Ui_MainWindow(object):
         self.alternative_tree_view.setDragEnabled(True)
         self.alternative_tree_view.setDragDropMode(QAbstractItemView.DragOnly)
         self.alternative_tree_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.alternative_tree_view.setUniformRowHeights(True)
+        self.alternative_tree_view.setUniformRowHeights(False)
 
         self.verticalLayout_18.addWidget(self.alternative_tree_view)
 
@@ -195,7 +195,6 @@ class Ui_MainWindow(object):
         self.treeView_parameter_value_list.setObjectName(u"treeView_parameter_value_list")
         self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.treeView_parameter_value_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.treeView_parameter_value_list.setUniformRowHeights(True)
         self.treeView_parameter_value_list.header().setVisible(True)
 
         self.verticalLayout.addWidget(self.treeView_parameter_value_list)
@@ -274,7 +273,7 @@ class Ui_MainWindow(object):
         self.treeView_entity.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.treeView_entity.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.treeView_entity.setIconSize(QSize(20, 20))
-        self.treeView_entity.setUniformRowHeights(True)
+        self.treeView_entity.setUniformRowHeights(False)
 
         self.verticalLayout_4.addWidget(self.treeView_entity)
 
@@ -420,7 +419,7 @@ class Ui_MainWindow(object):
         self.scenario_tree_view.setDragDropMode(QAbstractItemView.DragDrop)
         self.scenario_tree_view.setDefaultDropAction(Qt.MoveAction)
         self.scenario_tree_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.scenario_tree_view.setUniformRowHeights(True)
+        self.scenario_tree_view.setUniformRowHeights(False)
 
         self.verticalLayout_12.addWidget(self.scenario_tree_view)
 
@@ -520,7 +519,7 @@ class Ui_MainWindow(object):
         self.actionAdd_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"Add database file to the current view", None))
 #endif // QT_CONFIG(tooltip)
         self.actionVacuum.setText(QCoreApplication.translate("MainWindow", u"Vacuum", None))
-        self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative tree", None))
+        self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative", None))
 #if QT_CONFIG(accessibility)
         self.alternative_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"alternative tree", None))
 #endif // QT_CONFIG(accessibility)

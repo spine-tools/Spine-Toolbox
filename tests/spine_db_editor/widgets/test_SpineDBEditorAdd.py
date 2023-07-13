@@ -14,7 +14,7 @@ Unit tests for the TreeViewFormAddMixin class.
 """
 from unittest import mock
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
-from spinetoolbox.spine_db_editor.mvcmodels.single_parameter_models import SingleParameterModel
+from spinetoolbox.spine_db_editor.mvcmodels.single_models import SingleParameterDefinitionModel
 
 
 class TestSpineDBEditorAddMixin:
@@ -108,7 +108,7 @@ class TestSpineDBEditorAddMixin:
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
-        with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
+        with mock.patch.object(SingleParameterDefinitionModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_object_parameter_definitions_in_db_mngr()
         h = model.header.index
@@ -127,7 +127,7 @@ class TestSpineDBEditorAddMixin:
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
+        with mock.patch.object(SingleParameterDefinitionModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_relationship_parameter_definitions_in_db_mngr()
         h = model.header.index
@@ -147,7 +147,7 @@ class TestSpineDBEditorAddMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
-        with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
+        with mock.patch.object(SingleParameterDefinitionModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_object_parameter_values_in_db_mngr()
         h = model.header.index
@@ -175,7 +175,7 @@ class TestSpineDBEditorAddMixin:
         self.put_mock_relationships_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
-        with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
+        with mock.patch.object(SingleParameterDefinitionModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_relationship_parameter_values_in_db_mngr()
         h = model.header.index

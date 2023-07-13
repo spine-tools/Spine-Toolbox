@@ -15,8 +15,8 @@ from PySide6.QtWidgets import QApplication
 
 from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE
-from spinetoolbox.spine_db_editor.mvcmodels.single_parameter_models import (
-    SingleParameterModel,
+from spinetoolbox.spine_db_editor.mvcmodels.single_models import (
+    SingleParameterDefinitionModel,
     SingleParameterValueModel,
 )
 from tests.mock_helpers import q_object, TestSpineDBManager
@@ -31,18 +31,22 @@ OBJECT_PARAMETER_VALUE_HEADER = [
 ]
 
 
-class TestEmptySingleParameterModel(unittest.TestCase):
+class TestEmptySingleParameterDefinitionModel(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
 
     def test_rowCount_is_zero(self):
-        with q_object(SingleParameterModel(OBJECT_PARAMETER_VALUE_HEADER, None, None, None, False, False)) as model:
+        with q_object(
+            SingleParameterDefinitionModel(OBJECT_PARAMETER_VALUE_HEADER, None, None, None, False, False)
+        ) as model:
             self.assertEqual(model.rowCount(), 0)
 
     def test_columnCount_is_header_length(self):
-        with q_object(SingleParameterModel(OBJECT_PARAMETER_VALUE_HEADER, None, None, None, False, False)) as model:
+        with q_object(
+            SingleParameterDefinitionModel(OBJECT_PARAMETER_VALUE_HEADER, None, None, None, False, False)
+        ) as model:
             self.assertEqual(model.columnCount(), len(OBJECT_PARAMETER_VALUE_HEADER))
 
 

@@ -956,7 +956,7 @@ class SpineDBManager(QObject):
     def _add_ext_item_metadata(self, db_map_data, item_type):
         for db_map, items in db_map_data.items():
             identifier = self.get_command_identifier()
-            metadata_items = db_map.get_metadata_to_add_with_entity_metadata_items(*items)
+            metadata_items = db_map.get_metadata_to_add_with_item_metadata_items(*items)
             if metadata_items:
                 self.add_items("metadata", {db_map: metadata_items}, identifier=identifier)
             self.add_items(item_type, {db_map: items}, identifier=identifier)
@@ -1092,7 +1092,7 @@ class SpineDBManager(QObject):
     def _update_ext_item_metadata(self, db_map_data, item_type):
         for db_map, items in db_map_data.items():
             identifier = self.get_command_identifier()
-            metadata_items = db_map.get_metadata_to_add_with_entity_metadata_items(*items)
+            metadata_items = db_map.get_metadata_to_add_with_item_metadata_items(*items)
             if metadata_items:
                 self.add_items("metadata", {db_map: metadata_items}, identifier=identifier)
             self.update_items(item_type, {db_map: items}, identifier=identifier)
