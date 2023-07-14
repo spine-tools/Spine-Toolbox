@@ -58,6 +58,11 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
     def icon_code(self):
         return _SCENARIO_ICON
 
+    @property
+    def tool_tip(self):
+        if not self.id:
+            return "<p><b>Note</b>: Scenario names longer than 20 characters might appear shortened in generated files.</p>"
+
     def _do_set_up(self):
         """Doesn't add children to the last row."""
         if not self.id:
