@@ -180,14 +180,12 @@ class FileListModel(QAbstractItemModel):
         pack_paths = [Path(r.path) for item in self._pack_resources for r in item.resources if r.hasfilepath]
         paths = single_paths + pack_paths
         duplicates = set()
-        for p1, p2 in combinations(paths, 2):
-            try:
-                if p1 == p2:
-                    duplicates.add(str(p2))
-            except OSError:
-                # Sometimes file access fails e.g. in the middle of replacing
-                # resources when a connected DC is being renamed.
-                continue
+        seen = set()
+        for path in paths:
+            if str(path) in seen:
+                duplicates.add(str(path))
+            else:
+                seen.add(str(path))
         return duplicates
 
     def _pack_index(self, pack_label):
