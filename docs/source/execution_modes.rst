@@ -14,40 +14,36 @@
 Execution Modes
 ***************
 
-You can execute Python or Julia Tools in the Jupyter Console or as in the shell. Gams Tools are only executed as
-in the shell.
+Python and Julia Tools can be executed in either an embedded basic console or a Jupyter Console. GAMS Tools
+are only executed in the shell. Executable tools are a shell or by running the executable file straight.
 
 Python
-------
+******
 
-Shell execution (default)
-_________________________
+Under the **Tools** page in **File -> Settings...**, you can set the default console for new Python Tool specifications
+as either a Basic Console or a Jupyter Console. In the Tool Specification Editor, Tool specification specific selections
+can be made overriding the default settings.
 
-On `Tools` page in `File->Settings...`, check the *Run Python Tools in a subprocess* radiobutton (release-0.6)
-or uncheck the *Jupyter Console* check box (master). This is the default execution mode for Python Tools.
+Basic Console
+-------------
 
-.. #. Start Spine Toolbox
-   #. Create a project with a Tool and a Python Tool specification (See :ref:`Getting Started`)
-   #. Go to the `Tools` page in `File->Settings...`
-   #. Uncheck the `Use embedded Python Console` check box
-   #. Press |play| to execute the project (See :ref:`Executing Projects`)
-   #. Executing your Tool project item starts. You can see the output (stdout and stderr) in the
-      Process Log.
+If Basic Console is selected (it is by default) Tools are executed in the **Console** dock widget on a basic console.
+You can set the default Python interpreter in the settings and item specific interpreters in the
+Tool's specification editor.
 
-Jupyter Console / Python Console execution
-__________________________________________
-
-If you want to use the embedded Python Console (Jupyter Console). Check the *Run Python Tools in embedded console*
-radiobutton (release-0.6) or check the *Jupyter Console* check box (master). There is an extra step involved since
-the Jupyter Console requires a couple of extra packages (`ipykernel` and its dependencies) to be
-installed on the selected Python. In addition, kernel specifications for the selected Python need to be
-installed beforehand. **Spine Toolbox can install these for you**, from the **Kernel Spec Editor** widget that
-you can open from the `Tools` page in `File->Settings..` by clicking the `Kernel Spec Editor` button. In the Kernel
-Spec Editor, give the spec a name and click `Make kernel specification` button.
+Jupyter Console
+---------------
+Jupyter Console will also appear in the **Console** dock widget.
+If you want to use a Jupyter Console as the default, check the *Jupyter Console* check box.
+There is an extra step involved since
+the Jupyter Console requires a couple of extra packages (*ipykernel* and its dependencies) to be
+installed on the selected Python. In addition, kernel specifications for the selected Python needs to be
+installed beforehand. **Spine Toolbox can install these for you**, from the **Python Kernel Specification Creator** widget that
+you can open from the **Tools** page in **File -> Settings...** by clicking the **Make Python Kernel** button.
 
 .. note::
    You can install Python kernel specifications manually and Spine Toolbox will find them. You can select the kernel
-   spec used in the Jupyter Console from the drop-down menu *Select Python kernel spec...*.
+   spec used in the Jupyter Console from the drop-down menu *Select Python kernel...*.
 
 .. 1. Go to `<https://www.python.org/downloads/>`_ and download the Python you want
    2. Run the Python installer and follow instructions
@@ -101,12 +97,15 @@ Spec Editor, give the spec a name and click `Make kernel specification` button.
 
 
 Julia
------
+*****
 
-Shell execution (default)
-_________________________
-On `Tools` page in `File->Settings...`, check the *Run Julia Tools in a subprocess* radiobutton (release-0.6)
-or uncheck the *Jupyter Console* check box (master). This is the default execution mode for Julia Tools.
+As with Python, default console type can be selected in the settings and Julia kernels can also be created by pressing
+**Make Julia Kernel** -button. In addition a default project can be selected for Julia Tool specifications.
+
+Basic Console
+-------------
+On **Tools** page in **File -> Settings...**, check the **Basic Console** radiobutton.
+This is the default execution mode for Julia Tools.
 
 .. 1. Go to `<https://julialang.org/downloads/>`_ and download the Julia you want
    2. Run the Julia installer and follow instructions
@@ -123,17 +122,16 @@ or uncheck the *Jupyter Console* check box (master). This is the default executi
    10. Executing your Tool project item starts. You can see the output (stdout and stderr) in the
       Process Log.
 
-Jupyter Console / Julia Console execution
-_________________________________________
+Jupyter Console
+---------------
 
-Like the Python Console, Julia Console requires some extra setting up. The Julia Console requires a couple of
-additional packages (`IJulia`, etc.) to be installed and built. **Spine Toolbox can set this up for you
-automatically**. Just click the **Kernel spec Editor** button, give the spec a name and click
-`Make kernel specification` button.
+Like the Python Console, the Jupyter Console with Julia requires some extra setting up. A couple of
+additional packages (`IJulia`, etc.) are required to be installed and built. **Spine Toolbox can set this up for you
+automatically**. Just click the **Make Julia Kernel** button after selecting the **Jupyter Console** -radiobutton.
 
 .. note::
    You can install Julia kernel specifications manually and Spine Toolbox will find them. You can select the kernel
-   spec used in the Jupyter Console from the drop-down menu *Select Julia kernel spec...*.
+   spec used in the Jupyter Console from the drop-down menu *Select Julia kernel...*.
 
 .. 1. Go to `<https://julialang.org/downloads/>`_ and download the Julia you want
    2. Run the Julia installer and follow instructions
@@ -164,3 +162,24 @@ automatically**. Just click the **Kernel spec Editor** button, give the spec a n
       Julia Console immediately. You can see the executed command and the Tool output in the Julia
       Console. If nothing seems to be happening in the Julia Console. Just click |Stop| button and
       then try executing the project again by clicking the |play| button.
+
+Executable
+**********
+
+With executable Tool types there are two ways to run the executable file: using a shell or without one.
+
+Using a shell
+-------------
+
+To run an executable with a shell you need to select a shell out of the three available options that is
+appropriate for the operating system you are running Spine Toolbox on. Then you can write a command that
+runs the executable with the arguments that it needs into the *Command* textbox just like you would on a
+normal shell.
+
+Without a shell
+---------------
+
+To run an executable file without a shell you can either select the executable file as the main program
+file of the Tool and write the possible arguments into *Command line arguments* or select *no shell* and
+write the filepath of the executable file followed by it's arguments into the *Command* textbox.
+Either way the file is executed independent of a shell and with the provided arguments.
