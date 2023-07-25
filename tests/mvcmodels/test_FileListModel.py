@@ -51,7 +51,7 @@ class TestFileListModel(unittest.TestCase):
             dupe2,
             file_resource_in_pack("some name", "pack label", str(Path.cwd() / "path" / "to" / "pack_file21")),
             file_resource_in_pack("item name", "pack label", str(Path.cwd() / "path" / "to" / "pack_file3")),
-            dupe2
+            dupe2,
         ]
         self._model.update(single_resources + pack_resources)
         results = self._model.duplicate_paths()
