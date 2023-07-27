@@ -159,6 +159,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         """Updated the plot."""
         self._ui.plot_widget.canvas.axes.cla()
         add_time_series_plot(self._ui.plot_widget, self._model.value)
+        self._ui.plot_widget.canvas.axes.tick_params(axis='x', labelrotation=30)
         self._ui.plot_widget.canvas.draw()
 
     def value(self):
