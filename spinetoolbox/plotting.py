@@ -298,6 +298,9 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
     plot_widget.canvas.axes.set_xlabel(squeezed_data[0].x_label.label)
     plot_title = " | ".join(map(str, common_indexes))
     plot_widget.canvas.axes.set_title(plot_title)
+    for data in data_list:
+        if type(data.x[0]) not in (float, np.float_, int):
+            plot_widget.canvas.axes.tick_params(axis='x', labelrotation=30)
     if len(squeezed_data) > 1:
         plot_widget.add_legend(legend_handles)
     if needs_redraw:
