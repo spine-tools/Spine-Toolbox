@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
     QToolButton,
 )
 from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
-from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon
+from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QColor
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
@@ -108,13 +108,16 @@ class SpineDBEditorBase(QMainWindow):
         self.redo_action = None
         self.ui.actionUndo.setShortcuts(QKeySequence.Undo)
         self.ui.actionRedo.setShortcuts(QKeySequence.Redo)
-        self.update_commit_enabled()
         self.setContextMenuPolicy(Qt.NoContextMenu)
         self._torn_down = False
         self._purge_items_dialog = None
         self._purge_items_dialog_state = None
         self._export_items_dialog = None
         self._export_items_dialog_state = None
+        # Reload button doesn't want to change color just by setting it disabled, so create two different icons
+        self._enabled_reload_icon = QIcon(CharIconEngine("\uf021"))
+        self._disabled_reload_icon = QIcon(CharIconEngine("\uf021", QColor("Gray")))
+        self.update_commit_enabled()
 
     @property
     def toolbox(self):
@@ -416,6 +419,11 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRollback.setEnabled(dirty)
         self.setWindowModified(dirty)
         self.windowTitleChanged.emit(self.windowTitle())
+        self.url_toolbar.reload_action.setEnabled(not dirty)
+        if dirty:
+            self.url_toolbar.reload_action.setIcon(self._disabled_reload_icon)
+        else:
+            self.url_toolbar.reload_action.setIcon(self._enabled_reload_icon)
 
     def init_models(self):
         """Initializes models."""
