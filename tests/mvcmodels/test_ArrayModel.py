@@ -38,7 +38,7 @@ class TestArrayModel(unittest.TestCase):
     def test_data_for_first_row_returns_none_with_empty_array(self):
         model = ArrayModel(self._parent)
         roles = [Qt.ItemDataRole.DisplayRole, Qt.ToolTip]
-        self.assertEqual(model.index(0, 0).data(), 1)
+        self.assertEqual(model.index(0, 0).data(), 0)
         index = model.index(0, 1)
         self.assertTrue(index.isValid())
         for role in roles:
@@ -54,7 +54,7 @@ class TestArrayModel(unittest.TestCase):
         model = ArrayModel(self._parent)
         self.assertTrue(model.insertRows(0, 2))
         self.assertEqual(model.rowCount(), 3)
-        expected_index = [1, 2, 3]
+        expected_index = [0, 1, 2]
         expected_data = ["0.0", "0.0", None]
         for row, (index, data) in enumerate(zip(expected_index, expected_data)):
             self.assertEqual(model.index(row, 0).data(), index)
@@ -77,7 +77,7 @@ class TestArrayModel(unittest.TestCase):
         model.reset(Array([5.0]))
         model.batch_set_data([model.index(0, 0)], ["2.3"])
         self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.index(0, 0).data(), 1)
+        self.assertEqual(model.index(0, 0).data(), 0)
         self.assertEqual(model.index(0, 1).data(), "2.3")
 
     def test_batch_set_data_on_last_row_extends_table(self):
