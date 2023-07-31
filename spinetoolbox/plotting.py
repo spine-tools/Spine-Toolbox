@@ -408,8 +408,15 @@ def _plot_double_y_axis(data_list, y_labels, plot_widget, plot_type):
     for data in data_list:
         plot_label = " | ".join(map(str, data.data_index))
         x = _make_x_plottable(data.x)
-        plot = plot_left if data.y_label == left_label else plot_right
-        handles = plot(x, data.y, label=plot_label)
+        if data.y_label == left_label:
+            plot = plot_left
+            color = "crimson"
+            marker = "s"
+        else:
+            plot = plot_right
+            color = None
+            marker = "o"
+        handles = plot(x, data.y, label=plot_label, color=color, marker=marker)
         legend_handles += handles
     plot_widget.canvas.axes.set_ylabel(left_label)
     right_axes.set_ylabel(right_label)
