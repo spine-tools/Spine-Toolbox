@@ -1405,7 +1405,9 @@ class SpineDBManager(QObject):
         """Removes items from database.
 
         Args:
-            db_map_typed_ids (dict): mapping DiffDatabaseMapping to item type (str) to lists of items to remove
+            item_type (str): database item type
+            db_map_ids (dict): mapping DatabaseMapping to removable ids
+            callback (Callable): function to call after removal is finished
         """
         for db_map, ids in db_map_ids.items():
             try:
