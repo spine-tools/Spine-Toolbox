@@ -108,6 +108,7 @@ class PlotWidget(QWidget):
         widget.setWindowFlag(Qt.WindowType.Window, True)
         title = "Plot data"
         widget.setWindowTitle(title)
+        widget.set_size_according_to_parent()
         widget.show()
 
     def add_legend(self, handles):
@@ -157,17 +158,36 @@ class _PlotDataView(CopyPasteTableView):
 class _PlotDataWidget(QWidget):
     def __init__(self, rows, parent=None):
         super().__init__(parent=parent)
+        self._parent = parent
+        self._rows = rows
         self.setWindowTitle("Plot data")
         layout = QVBoxLayout(self)
         self._view = _PlotDataView(self)
         self._model = MinimalTableModel(self)
         self._view.setModel(self._model)
         self._model.reset_model(rows)
+        self._view.setHorizontalScrollMode(_PlotDataView.ScrollMode.ScrollPerPixel)
+        self._view.setVerticalScrollMode(_PlotDataView.ScrollMode.ScrollPerPixel)
         self._view.resizeColumnsToContents()
         self._view.horizontalHeader().hide()
         self._view.verticalHeader().hide()
         layout.addWidget(self._view)
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self.table_view_width = (
+            self._view.frameWidth() + self._view.verticalHeader().width() + self._view.horizontalHeader().length()
+        )
+
+    def set_size_according_to_parent(self):
+        """Sets the size of the widget according to the parent widget's dimensions and the data in the table"""
+        self.setMinimumWidth(274)
+        self.setMinimumHeight(210)
+        margins = self.layout().contentsMargins()
+        width = min(self.table_view_width + margins.left(), self._parent.size().width() * 0.8)
+        height = min(
+            self._view.verticalHeader().defaultSectionSize() * (len(self._rows) + 1) + margins.top(),
+            self._parent.size().height() * 0.8,
+        )
+        self.resize(width, height)
 
 
 def prepare_plot_in_window_menu(menu):
