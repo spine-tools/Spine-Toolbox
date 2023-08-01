@@ -877,11 +877,13 @@ class ObjectGroupDialogBase(QDialog):
         object_ids = self.db_map_object_ids[self.db_map]
         members = []
         non_members = []
+        initial_member_ids = self.initial_member_ids()
+        initial_entity_id = self.initial_entity_id()
         for obj_name in sorted(object_ids):
             obj_id = object_ids[obj_name]
-            if obj_id in self.initial_member_ids():
+            if obj_id in initial_member_ids:
                 members.append(obj_name)
-            elif obj_id != self.initial_entity_id():
+            elif obj_id != initial_entity_id:
                 non_members.append(obj_name)
         member_items = [QTreeWidgetItem([obj_name]) for obj_name in members]
         non_member_items = [QTreeWidgetItem([obj_name]) for obj_name in non_members]
