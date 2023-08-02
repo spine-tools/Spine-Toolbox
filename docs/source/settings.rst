@@ -13,7 +13,7 @@ Settings
 You can open Spine Toolbox settings from the main window menu **File -> Settings...**, or by
 pressing **Ctrl+,**. Settings are categorized into five tabs;
 *General*, *Tools*, *Db editor*, *Spec. editors* and *Engine*.
-In addition to application settings, each Project item has user adjustable
+In addition to application settings, each project item has user adjustable
 properties (See :ref:`Project Items`)
 
 .. contents::
@@ -58,29 +58,29 @@ Settings in the **UI** group:
 - **Color properties widgets** Check this box to make the background of Project item properties
   more colorful.
 
-- **Curved links** Controls the look of the arrows on Design View.
+- **Curved links** Controls the look of the arrows on **Design View**.
 
 - **Drag to draw links** When checked, the mouse button needs to be pressed while
   drawing links between project items. If unchecked, single clicks at link source and destination
   items suffices.
 
 - **Prevent items from overlapping** When checked, other project items can be pushed away when
-  moving an item around the Design view. If left unchecked, items can be piled on top of each other.
+  moving an item around the **Design view**. If left unchecked, items can be piled on top of each other.
 
 - **Rounded items** Check this box to round the corners of otherwise rectangular project items.
 
-- **Show date and time in Event Log messages** If checked, every Event Log message is prepended with
+- **Show date and time in Event Log messages** If checked, every **Event Log** message is prepended with
   a date and time 'tag'.
 
-- **Smooth zoom** Controls the way zooming (by using the mouse wheel) behaves in Design View and in
-  Spine database editor. Controls if the zoom in/out is continuous or discrete. On older computers,
+- **Smooth zoom** Controls the way zooming (by using the mouse wheel) behaves in **Design View** and in
+  **Spine DB Editor**. Controls if the zoom in/out is continuous or discrete. On older computers,
   smooth zoom is not recommended because it may be slower.
 
-- **Background** Has some pattern options for the background of the Design view.
+- **Background** Has some pattern options for the background of the **Design View**.
   Clicking on the square next to 'Color' let's you choose the pattern's color.
 
-- **Link flash speed** This slider controls the speed of the link animation on Design
-  View when execution is ongoing.
+- **Link flash speed** This slider controls the speed of the link animation on **Design
+  View** when execution is ongoing.
 
 Tools Settings
 --------------
@@ -91,15 +91,16 @@ The Tools tab contains settings for external tools.
    :align: center
 
 Settings in the **GAMS** group:
-- **GAMS executable** Set the path to GAMS executable you want to use in running GAMS tools. If you have GAMS in
+
+- **GAMS executable** Set the path to GAMS executable you want to use when executing GAMS tools. If you have GAMS in
   your PATH environment variable, it will be automatically used. You can also choose another GAMS by clicking the
   |open-folder| button.
 
 Settings in the **Julia** group:
 
-Choose the settings on how Julia Tools are executed in Spine Toolbox projects.
+Choose the settings on how Julia Tools are executed.
 
-- **Basic Console** (default) When selected, Julia Tools will be executed in a custom interactive Julia REPL.
+- **Basic Console** When selected, Julia Tools will be executed in a custom interactive Julia REPL.
 
 - **Julia executable** Set the path to a Julia Executable used in launching the Basic Console. If Julia is in PATH
   this will be autofilled, but you can also choose another Julia executable.
@@ -108,24 +109,47 @@ Choose the settings on how Julia Tools are executed in Spine Toolbox projects.
 
 - **Jupyter Console** Choosing this option runs Julia Tools in a custom Jupyter QtConsole embedded into Spine Toolbox.
 
-- **Select kernel drop-down menu** Select the kernel you want to launch in Jupyter Console
+- **Select Julia kernel... drop-dowm menu** Select the kernel you want to launch in Jupyter Console.
 
 - **Make Julia Kernel** clicking this button makes a new kernel based on the selected *Julia executable*, and *Julia
-  project*. The progress of the operation is shown in another window. If the selected *Julia project* is missing the
-  **IJulia** package it is installed first. After **IJulia** has been installed, the kernel is installed. This process
-  can take a couple of minutes to finish.
+  project*. The progress of the operation is shown in another dialog. Installing a Julia kernel requires the **IJulia**
+  package which will be installed to the selected *Julia project*. After **IJulia** has been installed, the kernel is
+  installed. This process can take a couple of minutes to finish.
 
-- **Install Julia** Installs latest Julia on your system using the **jill** package.
+- **Install Julia** Installs the latest Julia on your system using the **jill** package.
 
-- **Add/Update SpineOpt** Installs the latest compatible SpineOpt to the selected Julia project. If the selected Julia
-  project already has SpineOpt, it is upgraded if there's a new version available.
+- **Add/Update SpineOpt** Installs the latest compatible **SpineOpt** to the selected Julia project. If the selected
+  *Julia project* already has SpineOpt, it is upgraded if there's a new version available.
 
-.. note:: These settings are *global* application settings. All Julia Tools are executed with the settings selected here.
+.. note:: These Julia settings are *global* application settings. All Julia Tools are executed with the settings
+  selected here.
 
 Settings in the **Python** group:
 
-Choose the settings on how Python Tools are executed in Spine Toolbox projects.
+Choose the settings on how Python Tools are executed.
 
+- **Basic Console** When selected, Python Tools will be executed in a custom interactive Python REPL.
+
+- **Python executable** Set the path to a Python Executable used in launching the Basic Console. The default option
+  (if the line edit is blank) is the Python executable that was used in launching Spine Toolbox.
+
+- **Jupyter Console** Choosing this option runs Python Tools in a custom Jupyter QtConsole embedded into Spine
+  Toolbox.
+
+- **Select Python kernel... drop-dowm menu** Select the kernel you want to launch in Jupyter Console.
+
+- **Make Python Kernel** clicking this button makes a new kernel based on the selected *Python executable*. The
+  progress of the operation is shown in another dialog. Installing a Python kernel (actually IPython kernel)
+  requires the **ipykernel** package which will be installed to the selected *Python executables*. After
+  **ipykernel** has been installed, the kernel is installed. This process can take a couple of minutes to finish.
+
+.. note:: These Python settings are just the default settings *for new Python Tool Specs*. You can select a
+  specific Python kernel for each Python Tool Spec separately using the **Tool Specification Editor**.
+
+Settings in the **Conda** group:
+
+- **Miniconda executable** If you want to run Python Tools in an activated Conda environment, you can set the path
+  to your local Conda here.
 
 See :ref:`Setting up External Tools` for more information and examples.
 
