@@ -163,6 +163,11 @@ class ObjectClassItem(EntityClassItem):
         super().tear_down()
         self._entity_group_fetch_parent.set_obsolete(True)
 
+    def revitalize(self):
+        """See base class"""
+        super().revitalize()
+        self._entity_group_fetch_parent.set_obsolete(False)
+
 
 class RelationshipClassItem(EntityClassItem):
     """A relationship_class item."""

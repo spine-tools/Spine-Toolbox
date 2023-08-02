@@ -517,7 +517,9 @@ class SpineDBWorker(QObject):
         """Removes items from database.
 
         Args:
-            ids_per_type (dict): lists of items to remove keyed by item type (str)
+            item_type (str): item type
+            ids (Iterable of int): removable item ids
+            callback (Callable, optional): function to call after items have been removed
         """
         if self._committing:
             with self._db_map.override_committing(self._committing):
