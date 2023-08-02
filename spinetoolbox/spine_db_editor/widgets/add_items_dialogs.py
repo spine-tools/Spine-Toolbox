@@ -785,10 +785,17 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         keys_to_remove = set(self.relationship_ids) - {
             tuple(objects) for objects in self.existing_items_model._main_data
         }
-        to_remove = [self.relationship_ids[key] for key in keys_to_remove]
-        self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
+        commands = []
+        to_remove = {self.relationship_ids[key] for key in keys_to_remove}
+        if to_remove:
+            commands.append(RemoveItemsCommand(self.db_mngr, self.db_map, to_remove, "relationship"))
         to_add = [[self.class_name, object_name_list] for object_name_list in self.new_items_model._main_data]
-        self.db_mngr.import_data({self.db_map: {"relationships": to_add}}, command_text="Add relationships")
+        if to_add:
+            commands += list(self.db_mngr.import_data_commands(self.db_map, {"relationships": to_add}))
+        if commands:
+            macro = SpineDBMacro(iter(commands))
+            macro.setText(f"manage {self.class_name}'s dimensions")
+            self.db_mngr.undo_stack[self.db_map].push(macro)
         super().accept()
 
 

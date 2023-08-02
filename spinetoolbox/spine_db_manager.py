@@ -955,7 +955,10 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = dict()
         for db_map, data in db_map_data.items():
-            make_cache = lambda *args, db_map=db_map, **kwargs: self.get_db_map_cache(db_map)
+
+            def make_cache(*args, **kwargs):
+                return self.get_db_map_cache(db_map)
+
             try:
                 data_for_import = get_data_for_import(db_map, make_cache=make_cache, **data)
             except (TypeError, ValueError) as err:
@@ -968,6 +971,24 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].push(macro)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
+
+    def import_data_commands(self, db_map, data):
+        """Creates undo commands necessary to import given data.
+
+        Args:
+            db_map (DatabaseMapping): target database mapping
+            data (dict): data to import
+
+        Yields:
+            SpineDBCommand: import undo command
+        """
+
+        def make_cache(*args, **kwargs):
+            return self.get_db_map_cache(db_map)
+
+        db_map_error_log = dict()
+        data_for_import = get_data_for_import(db_map, make_cache=make_cache, **data)
+        yield from self._import_data_cmds(db_map, data_for_import, db_map_error_log)
 
     def _import_data_cmds(self, db_map, data_for_import, db_map_error_log):
         for item_type, (to_add, to_update, import_error_log) in data_for_import:
