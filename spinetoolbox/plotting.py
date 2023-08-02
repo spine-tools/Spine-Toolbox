@@ -298,6 +298,9 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
     plot_widget.canvas.axes.set_xlabel(squeezed_data[0].x_label.label)
     plot_title = " | ".join(map(str, common_indexes))
     plot_widget.canvas.axes.set_title(plot_title)
+    for data in data_list:
+        if type(data.x[0]) not in (float, np.float_, int):
+            plot_widget.canvas.axes.tick_params(axis='x', labelrotation=30)
     if len(squeezed_data) > 1:
         plot_widget.add_legend(legend_handles)
     if needs_redraw:
@@ -405,8 +408,15 @@ def _plot_double_y_axis(data_list, y_labels, plot_widget, plot_type):
     for data in data_list:
         plot_label = " | ".join(map(str, data.data_index))
         x = _make_x_plottable(data.x)
-        plot = plot_left if data.y_label == left_label else plot_right
-        handles = plot(x, data.y, label=plot_label)
+        if data.y_label == left_label:
+            plot = plot_left
+            color = "crimson"
+            marker = "s"
+        else:
+            plot = plot_right
+            color = None
+            marker = "o"
+        handles = plot(x, data.y, label=plot_label, color=color, marker=marker)
         legend_handles += handles
     plot_widget.canvas.axes.set_ylabel(left_label)
     right_axes.set_ylabel(right_label)

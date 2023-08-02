@@ -196,7 +196,7 @@ Here’s an example workflow. Your username is ``yourname`` and you’re submitt
 
 **Making your Changes**
 
-1. Add an entry to CHANGELOG.md.
+1. Add an entry to ``CHANGELOG.md``.
 2. Write tests expecting the correct/fixed functionality; make sure they fail.
 3. Hack, hack, hack.
 4. Run tests again, making sure they pass.

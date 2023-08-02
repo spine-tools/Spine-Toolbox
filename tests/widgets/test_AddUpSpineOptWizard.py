@@ -42,6 +42,7 @@ class TestAddUpSpineOptWizard(unittest.TestCase):
     def tearDown(self):
         """Clean up."""
         clean_up_toolbox(self.toolbox)
+        self.settings_widget.deleteLater()
 
     def test_spine_opt_installation_succeeds(self):
         wizard = AddUpSpineOptWizard(self.settings_widget, "path/to/julia", "path/to/julia_project")

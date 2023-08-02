@@ -21,7 +21,7 @@ Getting started
 ---------------
 
 Probably the most convenient way to start developing a new project item is to work with a copy of some simple
-project item. For example, **View** provides a good starting point.
+project item. For example, View provides a good starting point.
 
 Project items are mostly self-contained Python packages.
 It is customary to structure the project item packages like the Toolbox itself: ``mvcmodels`` submodule for Qt's
@@ -146,6 +146,8 @@ The table below lists the resources each project item type provides during execu
 +------------------+-------+-------------------------+----------------------------+
 | Importer         |       | n/a                     | n/a                        |
 +------------------+-------+-------------------------+----------------------------+
+| Merger           |       | n/a                     | n/a                        |
++------------------+-------+-------------------------+----------------------------+
 | Tool             | [#]_  | n/a                     | File URLs                  |
 +------------------+-------+-------------------------+----------------------------+
 | View             |       | n/a                     | n/a                        |
@@ -172,6 +174,8 @@ The table below lists the resources that might be used by each item type during 
 | Exporter         |       | Database URL              | n/a                    |
 +------------------+-------+---------------------------+------------------------+
 | Importer         | [#]_  | File URLs                 | Database URL           |
++------------------+-------+---------------------------+------------------------+
+| Merger           |       | Database URL              | Database URL           |
 +------------------+-------+---------------------------+------------------------+
 | Tool             | [#]_  | File URLs, database URLs  | Database URLs          |
 +------------------+-------+---------------------------+------------------------+

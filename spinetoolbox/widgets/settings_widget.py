@@ -136,14 +136,14 @@ class SettingsWidgetBase(QWidget):
         """Gets selections and saves them to persistent memory."""
         return True
 
-    @Slot(bool)
-    def update_ui_and_close(self, checked=False):
+    @Slot()
+    def update_ui_and_close(self):
         """Updates UI to reflect current settings and close."""
         self.update_ui()
         self.close()
 
-    @Slot(bool)
-    def save_and_close(self, checked=False):
+    @Slot()
+    def save_and_close(self):
         """Saves settings and close."""
         if self.save_settings():
             self.close()

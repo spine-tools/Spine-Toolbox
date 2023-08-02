@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="/symbols">
+    <file>spinetoolbox_on_wht.png</file>
     <file>Spine_symbol.png</file>
     <file>app.ico</file>
   </qresource>
