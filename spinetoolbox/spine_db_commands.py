@@ -81,9 +81,24 @@ class AgedUndoCommand(QUndoCommand):
         self.identifier = uuid.uuid4()
 
     def clone(self):
+        """Clones the command.
+
+        Returns:
+            AgedUndoCommand: cloned command
+        """
         clone = self._do_clone()
         clone.identifier = self.identifier
         return clone
+
+    def _do_clone(self):
+        """Clones the command.
+
+        Subclasses should reimplement this to clone their internal state.
+
+        Returns:
+            AgedUndoCommand: cloned command
+        """
+        raise NotImplementedError()
 
     def is_clone(self, other):
         return other.identifier == self.identifier
@@ -133,7 +148,7 @@ class SpineDBMacro(AgedUndoCommand):
             return
         if not self._completed_once:
             self._cmds.append(child)
-        child.redo_complete_callback = lambda *args: self._redo_next()
+        child.redo_complete_callback = self._redo_next
         child.redo()
 
     def undo(self):
@@ -145,7 +160,7 @@ class SpineDBMacro(AgedUndoCommand):
         child = next(self._reverse_cmd_iter, None)
         if child is None:
             return
-        child.undo_complete_callback = lambda *args: self._undo_next()
+        child.undo_complete_callback = self._undo_next
         child.undo()
 
 
@@ -163,25 +178,39 @@ class SpineDBCommand(AgedUndoCommand):
         self.db_mngr = db_mngr
         self.db_map = db_map
         self._done_once = False
-        self.redo_complete_callback = lambda *args: None
-        self.undo_complete_callback = lambda *args: None
+        self.redo_complete_callback = lambda: None
+        self.undo_complete_callback = lambda: None
 
-    def handle_undo_complete(self, data):
+    def handle_undo_complete(self, db_map_data):
         """Calls the undo complete callback with the data from undo().
-        Subclasses need to pass this as the callback to the function that modifies the db in undo()."""
-        self.undo_complete_callback(data)
 
-    def handle_redo_complete(self, data):
+        Subclasses need to pass this as the callback to the function that modifies the db in undo().
+
+        Args:
+            db_map_data (dict): mapping from database map to list of original cache items
+        """
+        self.undo_complete_callback()
+
+    def handle_redo_complete(self, db_map_data):
         """Calls the redo complete callback with the data from redo().
-        Subclasses need to pass this as the callback to the function that modifies the db in redo()."""
-        self.redo_complete_callback(data)
+
+        Subclasses need to pass this as the callback to the function that modifies the db in redo().
+
+        Args:
+            db_map_data (dict): mapping from database map to list of cache items
+        """
+        self.redo_complete_callback()
         if self._done_once:
             return
         self._done_once = True
-        self._handle_first_redo_complete(data)
+        self._handle_first_redo_complete(db_map_data)
 
-    def _handle_first_redo_complete(self, _):
-        """Reimplement in subclasses to do stuff with the data from running redo() the first time."""
+    def _handle_first_redo_complete(self, db_map_data):
+        """Reimplement in subclasses to do stuff with the data from running redo() the first time.
+
+        Args:
+            db_map_data (dict): mapping from database map to list of original cache items
+        """
         raise NotImplementedError()
 
 
@@ -322,7 +351,7 @@ class UpdateItemsCommand(SpineDBCommand):
         )
 
     def _handle_first_redo_complete(self, db_map_data):
-        if not db_map_data.get(self.db_map):
+        if self.db_map not in db_map_data:
             self.setObsolete(True)
             return
         self.redo_db_map_data = db_map_data
