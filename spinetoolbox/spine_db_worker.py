@@ -457,13 +457,35 @@ class SpineDBWorker(QObject):
                 self._fetched_ids.setdefault(actual_item_type, []).extend([x["id"] for x in actual_items])
                 for parent in self._get_parents(actual_item_type):
                     self.fetch_more(parent)
+                data = actual_items
             else:
-                for actual_item in actual_items:
-                    actual_item.cascade_readd()
-            db_map_data = {self._db_map: actual_items}
+                data = []
+                for item in actual_items:
+                    # Item may have been replaced in cache during commit.
+                    item_type = item.item_type
+                    item_in_cache = self._db_mngr.get_item(self._db_map, item_type, item["id"])
+                    if not item_in_cache.readd_callbacks:
+                        # Item may have been unbound on commit.
+                        # We need to rebind it so cascade_readd() notifies fetch parents properly.
+                        self._rebind_recursively(item_in_cache)
+                    item_in_cache.cascade_readd()
+                    data.append(item_in_cache)
+            db_map_data = {self._db_map: data}
             if item_type == actual_item_type and callback is not None:
                 callback(db_map_data)
             self._db_mngr.items_added.emit(actual_item_type, db_map_data)
+
+    def _rebind_recursively(self, item):
+        """Rebinds a cache item and its referrers to fetch parents.
+
+        Args:
+            item (CacheItem): item to rebind
+        """
+        for parent in self._get_parents(item.item_type):
+            if parent.accepts_item(item, self._db_map):
+                self._bind_item(parent, item)
+        for referrer in item.referrers.values():
+            self._rebind_recursively(referrer)
 
     @busy_effect
     def update_items(self, orig_items, item_type, check, cache, callback):
