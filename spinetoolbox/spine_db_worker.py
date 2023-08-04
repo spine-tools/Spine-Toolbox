@@ -405,13 +405,14 @@ class SpineDBWorker(QObject):
             yield item_type, items
 
     @busy_effect
-    def add_items(self, orig_items, item_type, readd, check, cache, callback):
+    def add_items(self, orig_items, item_type, readd, cascade, check, cache, callback):
         """Adds items to db.
 
         Args:
             orig_items (dict): lists of items to add or update
             item_type (str): item type
             readd (bool) : Whether to re-add items that were previously removed
+            cascade (bool): Whether to add items in cascade or just the root items
             check (bool): Whether to check integrity
             cache (dict): Cache
             callback (None or function): something to call with the result
@@ -468,7 +469,10 @@ class SpineDBWorker(QObject):
                         # Item may have been unbound on commit.
                         # We need to rebind it so cascade_readd() notifies fetch parents properly.
                         self._rebind_recursively(item_in_cache)
-                    item_in_cache.cascade_readd()
+                    if cascade:
+                        item_in_cache.cascade_readd()
+                    else:
+                        item_in_cache.readd()
                     data.append(item_in_cache)
             db_map_data = {self._db_map: data}
             if item_type == actual_item_type and callback is not None:

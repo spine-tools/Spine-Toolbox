@@ -999,7 +999,7 @@ class SpineDBManager(QObject):
             if to_add:
                 yield AddItemsCommand(self, db_map, to_add, item_type, check=False)
 
-    def add_items(self, db_map_data, item_type, readd=False, check=True, callback=None):
+    def add_items(self, db_map_data, item_type, readd=False, cascade=True, check=True, callback=None):
         for db_map, data in db_map_data.items():
             try:
                 worker = self._get_worker(db_map)
@@ -1007,7 +1007,7 @@ class SpineDBManager(QObject):
                 # We're closing the kiosk.
                 continue
             cache = self.get_db_map_cache(db_map)
-            worker.add_items(data, item_type, readd, check, cache, callback)
+            worker.add_items(data, item_type, readd, cascade, check, cache, callback)
 
     def update_items(self, db_map_data, item_type, check=True, callback=None):
         for db_map, data in db_map_data.items():

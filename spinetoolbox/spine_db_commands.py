@@ -272,6 +272,7 @@ class AddItemsCommand(SpineDBCommand):
             self.redo_db_map_data,
             self.item_type,
             readd=self._readd,
+            cascade=False,
             check=self._check,
             callback=self.handle_redo_complete,
         )
@@ -285,7 +286,7 @@ class AddItemsCommand(SpineDBCommand):
         if self.db_map not in db_map_data:
             self.setObsolete(True)
             return
-        self.redo_db_map_data = db_map_data
+        self.redo_db_map_data = {db_map: [x.deepcopy() for x in data] for db_map, data in db_map_data.items()}
         self.undo_db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
 
 
