@@ -15,6 +15,8 @@ QUndoCommand subclasses for modifying the db.
 
 import time
 import uuid
+from collections import defaultdict
+
 from PySide6.QtGui import QUndoCommand, QUndoStack
 
 
@@ -372,23 +374,48 @@ class RemoveItemsCommand(SpineDBCommand):
         if not ids:
             self.setObsolete(True)
         self.redo_db_map_ids = {db_map: ids}
-        self.undo_db_map_data = {}
+        self.undo_data = {}
         self.item_type = item_type
         self.setText(f"remove {item_type} items from '{db_map.codename}'")
 
     def _do_clone(self):
         clone = RemoveItemsCommand(self.db_mngr, self.db_map, set(), self.item_type)
         clone.redo_db_map_ids = self.redo_db_map_ids
-        clone.undo_db_map_data = self.undo_db_map_data
+        clone.undo_data = self.undo_data
         return clone
 
     def redo(self):
         super().redo()
-        self.db_mngr.do_remove_items(self.item_type, self.redo_db_map_ids, callback=self.handle_redo_complete)
+        self.db_mngr.do_remove_items(
+            self.item_type,
+            self.redo_db_map_ids,
+            callback=self.handle_redo_complete,
+            committing_callback=self._update_undo_data,
+        )
 
     def undo(self):
         super().undo()
-        self.db_mngr.add_items(self.undo_db_map_data, self.item_type, readd=True, callback=self.handle_undo_complete)
+        operations = list(self.undo_data.items())
+        for item_type, items in operations[:-1]:
+            self.db_mngr.add_items({self.db_map: items}, item_type, readd=True)
+        item_type, items = operations[-1]
+        self.db_mngr.add_items({self.db_map: items}, item_type, readd=True, callback=self.handle_undo_complete)
 
     def _handle_first_redo_complete(self, db_map_data):
-        self.undo_db_map_data = db_map_data
+        undo_data = defaultdict(list)
+        for db_map, data in db_map_data.items():
+            if db_map is not self.db_map:
+                continue
+            for item in data:
+                undo_data[item.item_type].append(item)
+        self.undo_data = undo_data
+
+    def _update_undo_data(self, db_map_data):
+        all_existing_ids = {item_type: {item["id"] for item in items} for item_type, items in self.undo_data.items()}
+        for db_map, data in db_map_data.items():
+            if db_map is not self.db_map:
+                continue
+            for item in data:
+                existing_ids = all_existing_ids.get(item.item_type)
+                if existing_ids is None or item["id"] not in existing_ids:
+                    self.undo_data[item.item_type].append(item)

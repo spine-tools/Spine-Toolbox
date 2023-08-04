@@ -481,9 +481,10 @@ class SpineDBWorker(QObject):
         Args:
             item (CacheItem): item to rebind
         """
-        for parent in self._get_parents(item.item_type):
-            if parent.accepts_item(item, self._db_map):
-                self._bind_item(parent, item)
+        if not item.readd_callbacks:
+            for parent in self._get_parents(item.item_type):
+                if parent.accepts_item(item, self._db_map):
+                    self._bind_item(parent, item)
         for referrer in item.referrers.values():
             self._rebind_recursively(referrer)
 
@@ -535,20 +536,24 @@ class SpineDBWorker(QObject):
             self._db_mngr.items_updated.emit(actual_item_type, db_map_data)
 
     @busy_effect
-    def remove_items(self, item_type, ids, callback):
+    def remove_items(self, item_type, ids, callback, committing_callback):
         """Removes items from database.
 
         Args:
             item_type (str): item type
             ids (Iterable of int): removable item ids
             callback (Callable, optional): function to call after items have been removed
+            committing_callback (Callable, optional): function to call after remove operation has been committed only
         """
         if self._committing:
             with self._db_map.override_committing(self._committing):
                 try:
-                    self._db_map.cascade_remove_items(**{item_type: ids})
+                    removed_items = self._db_map.cascade_remove_items(**{item_type: ids})
                 except SpineDBAPIError as err:
                     self._db_mngr.error_msg.emit({self._db_map: [err]})
+                else:
+                    if committing_callback is not None:
+                        committing_callback({self._db_map: removed_items})
             if callback is not None:
                 callback({})
             return

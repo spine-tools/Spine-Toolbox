@@ -228,7 +228,8 @@ class SpineDBManager(QObject):
             for item in items:
                 table_cache.update_item(item)
 
-    def remove_items_in_cache(self, item_type, db_map_ids):
+    @staticmethod
+    def remove_items_in_cache(item_type, db_map_ids):
         """Removes items in cache.
 
         Args:
@@ -243,7 +244,7 @@ class SpineDBManager(QObject):
             table_cache = db_map.cache.get(item_type)
             if table_cache is None:
                 continue
-            db_map_data[db_map] = [table_cache.remove_item(id_) for id_ in ids]
+            db_map_data[db_map] = sum((table_cache.remove_item(id_) for id_ in ids), [])
         return db_map_data
 
     @busy_effect
@@ -1422,20 +1423,21 @@ class SpineDBManager(QObject):
             yield RemoveItemsCommand(self, db_map, ids_, item_type)
 
     @busy_effect
-    def do_remove_items(self, item_type, db_map_ids, callback=None):
+    def do_remove_items(self, item_type, db_map_ids, callback=None, committing_callback=None):
         """Removes items from database.
 
         Args:
             item_type (str): database item type
             db_map_ids (dict): mapping DatabaseMapping to removable ids
-            callback (Callable): function to call after removal is finished
+            callback (Callable, optional): function to call after removal is finished
+            committing_callback (Callable, optional): function to call after removal has been committed
         """
         for db_map, ids in db_map_ids.items():
             try:
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            worker.remove_items(item_type, ids, callback)
+            worker.remove_items(item_type, ids, callback, committing_callback)
 
     @staticmethod
     def db_map_ids(db_map_data):
