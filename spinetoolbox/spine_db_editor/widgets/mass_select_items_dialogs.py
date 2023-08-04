@@ -135,7 +135,7 @@ class MassExportItemsDialog(MassSelectItemsDialog):
     """A dialog to let users chose items for JSON export."""
 
     _warn_checked_non_data_items = False
-    data_submitted = Signal(dict)
+    data_submitted = Signal(object)
 
     def __init__(self, parent, db_mngr, *db_maps, stored_state=None):
         """
