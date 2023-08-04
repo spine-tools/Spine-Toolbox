@@ -405,13 +405,14 @@ class SpineDBWorker(QObject):
             yield item_type, items
 
     @busy_effect
-    def add_items(self, orig_items, item_type, readd, check, cache, callback):
+    def add_items(self, orig_items, item_type, readd, cascade, check, cache, callback):
         """Adds items to db.
 
         Args:
             orig_items (dict): lists of items to add or update
             item_type (str): item type
             readd (bool) : Whether to re-add items that were previously removed
+            cascade (bool): Whether to add items in cascade or just the root items
             check (bool): Whether to check integrity
             cache (dict): Cache
             callback (None or function): something to call with the result
@@ -457,13 +458,39 @@ class SpineDBWorker(QObject):
                 self._fetched_ids.setdefault(actual_item_type, []).extend([x["id"] for x in actual_items])
                 for parent in self._get_parents(actual_item_type):
                     self.fetch_more(parent)
+                data = actual_items
             else:
-                for actual_item in actual_items:
-                    actual_item.cascade_readd()
-            db_map_data = {self._db_map: actual_items}
+                data = []
+                for item in actual_items:
+                    # Item may have been replaced in cache during commit.
+                    item_type = item.item_type
+                    item_in_cache = self._db_mngr.get_item(self._db_map, item_type, item["id"])
+                    if not item_in_cache.readd_callbacks:
+                        # Item may have been unbound on commit.
+                        # We need to rebind it so cascade_readd() notifies fetch parents properly.
+                        self._rebind_recursively(item_in_cache)
+                    if cascade:
+                        item_in_cache.cascade_readd()
+                    else:
+                        item_in_cache.readd()
+                    data.append(item_in_cache)
+            db_map_data = {self._db_map: data}
             if item_type == actual_item_type and callback is not None:
                 callback(db_map_data)
             self._db_mngr.items_added.emit(actual_item_type, db_map_data)
+
+    def _rebind_recursively(self, item):
+        """Rebinds a cache item and its referrers to fetch parents.
+
+        Args:
+            item (CacheItem): item to rebind
+        """
+        if not item.readd_callbacks:
+            for parent in self._get_parents(item.item_type):
+                if parent.accepts_item(item, self._db_map):
+                    self._bind_item(parent, item)
+        for referrer in item.referrers.values():
+            self._rebind_recursively(referrer)
 
     @busy_effect
     def update_items(self, orig_items, item_type, check, cache, callback):
@@ -513,20 +540,24 @@ class SpineDBWorker(QObject):
             self._db_mngr.items_updated.emit(actual_item_type, db_map_data)
 
     @busy_effect
-    def remove_items(self, item_type, ids, callback):
+    def remove_items(self, item_type, ids, callback, committing_callback):
         """Removes items from database.
 
         Args:
             item_type (str): item type
             ids (Iterable of int): removable item ids
             callback (Callable, optional): function to call after items have been removed
+            committing_callback (Callable, optional): function to call after remove operation has been committed only
         """
         if self._committing:
             with self._db_map.override_committing(self._committing):
                 try:
-                    self._db_map.cascade_remove_items(**{item_type: ids})
+                    removed_items = self._db_map.cascade_remove_items(**{item_type: ids})
                 except SpineDBAPIError as err:
                     self._db_mngr.error_msg.emit({self._db_map: [err]})
+                else:
+                    if committing_callback is not None:
+                        committing_callback({self._db_map: removed_items})
             if callback is not None:
                 callback({})
             return
