@@ -894,6 +894,9 @@
    <property name="text">
     <string>Project</string>
    </property>
+   <property name="toolTip">
+    <string>Execute all items in project.</string>
+   </property>
    <property name="shortcut">
     <string>F5</string>
    </property>
@@ -906,6 +909,9 @@
    <property name="text">
     <string>Selection</string>
    </property>
+   <property name="toolTip">
+    <string>Execute selected items.</string>
+   </property>
    <property name="shortcut">
     <string>F6</string>
    </property>
@@ -917,6 +923,9 @@
    </property>
    <property name="text">
     <string>Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>Stop execution.</string>
    </property>
    <property name="shortcut">
     <string>F7</string>

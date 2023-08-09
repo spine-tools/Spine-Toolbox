@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 10,
+        "version": 11,
         "description": "",
         "specifications": {
             "Tool": [
@@ -42,7 +42,10 @@
                 ]
             }
         ],
-        "jumps": []
+        "jumps": [],
+        "settings": {
+            "enable_execute_all": true
+        }
     },
     "items": {
         "Create file pack": {

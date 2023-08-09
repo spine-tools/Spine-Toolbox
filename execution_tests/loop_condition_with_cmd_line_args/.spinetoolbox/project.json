@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 10,
+        "version": 11,
         "description": "",
         "specifications": {
             "Tool": [
@@ -106,7 +106,10 @@
                     }
                 ]
             }
-        ]
+        ],
+        "settings": {
+            "enable_execute_all": true
+        }
     },
     "items": {
         "Write data": {

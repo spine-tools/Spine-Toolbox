@@ -35,6 +35,7 @@ from spine_engine.utils.helpers import (
 )
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_engine.server.util.zip_handler import ZipHandler
+from .project_settings import ProjectSettings
 from .server.engine_client import EngineClient
 from .metaobject import MetaObject
 from .helpers import (
@@ -107,13 +108,14 @@ class SpineToolboxProject(MetaObject):
     specification_saved = Signal(str, str)
     """Emitted after a specification has been saved."""
 
-    def __init__(self, toolbox, p_dir, plugin_specs, app_settings, logger):
+    def __init__(self, toolbox, p_dir, plugin_specs, app_settings, settings, logger):
         """
         Args:
             toolbox (ToolboxUI): toolbox of this project
             p_dir (str): Project directory
             plugin_specs (Iterable of ProjectItemSpecification): specifications available as plugins
             app_settings (QSettings): Toolbox settings
+            settings (ProjectSettings): project settings
             logger (LoggerInterface): a logger instance
         """
         _, name = os.path.split(p_dir)
@@ -125,6 +127,7 @@ class SpineToolboxProject(MetaObject):
         self._jumps = list()
         self._logger = logger
         self._app_settings = app_settings
+        self._settings = settings
         self._engine_workers = []
         self._execution_in_progress = False
         self.project_dir = None  # Full path to project directory
@@ -147,6 +150,10 @@ class SpineToolboxProject(MetaObject):
     @property
     def all_item_names(self):
         return list(self._project_items)
+
+    @property
+    def settings(self):
+        return self._settings
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -193,6 +200,7 @@ class SpineToolboxProject(MetaObject):
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
             "description": self.description,
+            "settings": self._settings.to_dict(),
             "specifications": serialized_spec_paths,
             "connections": [connection.to_dict() for connection in self._connections],
             "jumps": [jump.to_dict() for jump in self._jumps],
@@ -288,6 +296,7 @@ class SpineToolboxProject(MetaObject):
         self._merge_local_data_to_project_info(local_data_dict, project_info)
         # Parse project info
         self.set_description(project_info["project"]["description"])
+        self._settings = ProjectSettings.from_dict(project_info["project"]["settings"])
         spec_paths_per_type = project_info["project"]["specifications"]
         deserialized_paths = [
             deserialize_path(path, self.project_dir) for paths in spec_paths_per_type.values() for path in paths
