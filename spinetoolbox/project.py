@@ -107,13 +107,13 @@ class SpineToolboxProject(MetaObject):
     specification_saved = Signal(str, str)
     """Emitted after a specification has been saved."""
 
-    def __init__(self, toolbox, p_dir, plugin_specs, settings, logger):
+    def __init__(self, toolbox, p_dir, plugin_specs, app_settings, logger):
         """
         Args:
             toolbox (ToolboxUI): toolbox of this project
             p_dir (str): Project directory
             plugin_specs (Iterable of ProjectItemSpecification): specifications available as plugins
-            settings (QSettings): Toolbox settings
+            app_settings (QSettings): Toolbox settings
             logger (LoggerInterface): a logger instance
         """
         _, name = os.path.split(p_dir)
@@ -124,7 +124,7 @@ class SpineToolboxProject(MetaObject):
         self._connections = list()
         self._jumps = list()
         self._logger = logger
-        self._settings = settings
+        self._app_settings = app_settings
         self._engine_workers = []
         self._execution_in_progress = False
         self.project_dir = None  # Full path to project directory
@@ -296,7 +296,7 @@ class SpineToolboxProject(MetaObject):
         specification_local_data = load_specification_local_data(self.config_dir)
         for path in deserialized_paths:
             spec = load_specification_from_file(
-                path, specification_local_data, spec_factories, self._settings, self._logger
+                path, specification_local_data, spec_factories, self._app_settings, self._logger
             )
             if spec is not None:
                 self.add_specification(spec, save_to_disk=False)
@@ -973,7 +973,7 @@ class SpineToolboxProject(MetaObject):
         if not self.job_id:
             self.project_execution_finished.emit()
             return
-        settings = make_settings_dict_for_engine(self._settings)
+        settings = make_settings_dict_for_engine(self._app_settings)
         darker_fg_color = QColor(FG_COLOR).darker().name()
         darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
@@ -1401,8 +1401,8 @@ class SpineToolboxProject(MetaObject):
             item.set_rank(ranks[item_name])
 
     @property
-    def settings(self):
-        return self._settings
+    def app_settings(self):
+        return self._app_settings
 
     @busy_effect
     def prepare_remote_execution(self):
@@ -1412,7 +1412,7 @@ class SpineToolboxProject(MetaObject):
             str: Job Id if server is ready for remote execution, empty string if something went wrong or "1" if
             local execution is enabled.
         """
-        if not self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
+        if not self._app_settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
             return "1"  # Something that isn't False
         host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
         if not host:
@@ -1462,7 +1462,7 @@ class SpineToolboxProject(MetaObject):
 
     def finalize_remote_execution(self):
         """Sends a request to server to remove the project directory and removes the project ZIP file from client."""
-        if not self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
+        if not self._app_settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
             return
         host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
         try:

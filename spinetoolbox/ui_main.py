@@ -513,7 +513,7 @@ class ToolboxUI(QMainWindow):
                 return
         self.undo_stack.clear()
         self._project = SpineToolboxProject(
-            self, proj_dir, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
+            self, proj_dir, self._plugin_manager.plugin_specs, app_settings=self._qsettings, logger=self
         )
         self.project_item_model.connect_to_project(self._project)
         self.specification_model.connect_to_project(self._project)
@@ -575,7 +575,7 @@ class ToolboxUI(QMainWindow):
         # Create project
         self.undo_stack.clear()
         self._project = SpineToolboxProject(
-            self, project_dir, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
+            self, project_dir, self._plugin_manager.plugin_specs, app_settings=self._qsettings, logger=self
         )
         self.project_item_model.connect_to_project(self._project)
         self.specification_model.connect_to_project(self._project)
