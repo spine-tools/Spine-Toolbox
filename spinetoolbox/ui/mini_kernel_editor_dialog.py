@@ -41,6 +41,7 @@ class Ui_Dialog(object):
         self.splitter = QSplitter(Dialog)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Vertical)
+        self.splitter.setChildrenCollapsible(False)
         self.widget = QWidget(self.splitter)
         self.widget.setObjectName(u"widget")
         self.verticalLayout = QVBoxLayout(self.widget)

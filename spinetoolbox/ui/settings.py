@@ -59,6 +59,7 @@ class Ui_SettingsForm(object):
         self.splitter = QSplitter(SettingsForm)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Horizontal)
+        self.splitter.setChildrenCollapsible(False)
         self.listWidget = QListWidget(self.splitter)
         icon = QIcon()
         icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Normal, QIcon.Off)

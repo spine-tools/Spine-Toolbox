@@ -42,6 +42,7 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
         self.splitter = QSplitter(TimeSeriesVariableResolutionEditor)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Horizontal)
+        self.splitter.setChildrenCollapsible(False)
         self.verticalLayoutWidget = QWidget(self.splitter)
         self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
         self.left_layout = QVBoxLayout(self.verticalLayoutWidget)
