@@ -22,6 +22,8 @@ import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from PySide6.QtWidgets import QApplication
+
+from spinetoolbox.project_settings import ProjectSettings
 from spinetoolbox.project_upgrader import ProjectUpgrader
 from spinetoolbox.resources_icons_rc import qInitResources
 from spinetoolbox.config import LATEST_PROJECT_VERSION
@@ -172,17 +174,17 @@ class TestProjectUpgrader(unittest.TestCase):
                 with open(spec_file_path, "w", encoding="utf-8") as tmp_spec_file:
                     tmp_spec_file.write("hello")
                     # Upgrade to version 3
-                    proj_v3 = pu.upgrade(proj_v2, project_dir)
-                    mock_backup.assert_called_once()
-                    mock_force_save.assert_called_once()
-                    self.assertTrue(pu.is_valid(3, proj_v3))
-                    # Check that items were transferred successfully by checking that item names are found in new
-                    # 'items' dict and that they contain a dict
-                    v2_items = proj_v2["items"]
-                    v3_items = proj_v3["items"]
-                    for name in v2_items.keys():
-                        self.assertTrue(name in v3_items.keys())
-                        self.assertIsInstance(v3_items[name], dict)
+                proj_v3 = pu.upgrade(proj_v2, project_dir)
+                mock_backup.assert_called_once()
+                mock_force_save.assert_called_once()
+                self.assertTrue(pu.is_valid(3, proj_v3))
+                # Check that items were transferred successfully by checking that item names are found in new
+                # 'items' dict and that they contain a dict
+                v2_items = proj_v2["items"]
+                v3_items = proj_v3["items"]
+                for name in v2_items.keys():
+                    self.assertTrue(name in v3_items.keys())
+                    self.assertIsInstance(v3_items[name], dict)
 
     def test_upgrade_v3_to_v4(self):
         pu = ProjectUpgrader(self.toolbox)
@@ -201,18 +203,18 @@ class TestProjectUpgrader(unittest.TestCase):
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
                 with open(spec_file_path, "w", encoding="utf-8") as tmp_spec_file:
                     tmp_spec_file.write("hello")
-                    # Upgrade to version 4
-                    proj_v4 = pu.upgrade(proj_v3, project_dir)
-                    mock_backup.assert_called_once()
-                    mock_force_save.assert_called_once()
-                    self.assertTrue(pu.is_valid(4, proj_v4))
-                    # Check that items were transferred successfully by checking that item names are found in new
-                    # 'items' dict and that they contain a dict
-                    v3_items = proj_v3["items"]
-                    v4_items = proj_v4["items"]
-                    for name in v3_items.keys():
-                        self.assertTrue(name in v4_items.keys())
-                        self.assertIsInstance(v4_items[name], dict)
+                # Upgrade to version 4
+                proj_v4 = pu.upgrade(proj_v3, project_dir)
+                mock_backup.assert_called_once()
+                mock_force_save.assert_called_once()
+                self.assertTrue(pu.is_valid(4, proj_v4))
+                # Check that items were transferred successfully by checking that item names are found in new
+                # 'items' dict and that they contain a dict
+                v3_items = proj_v3["items"]
+                v4_items = proj_v4["items"]
+                for name in v3_items.keys():
+                    self.assertTrue(name in v4_items.keys())
+                    self.assertIsInstance(v4_items[name], dict)
 
     def test_upgrade_v4_to_v5(self):
         pu = ProjectUpgrader(self.toolbox)
@@ -231,27 +233,27 @@ class TestProjectUpgrader(unittest.TestCase):
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
                 with open(spec_file_path, "w", encoding="utf-8") as tmp_spec_file:
                     tmp_spec_file.write("hello")
-                    # Upgrade to version 5
-                    proj_v5 = pu.upgrade(proj_v4, project_dir)
-                    mock_backup.assert_called_once()
-                    mock_force_save.assert_called_once()
-                    self.assertTrue(pu.is_valid(5, proj_v5))
-                    # Check that items were transferred successfully by checking that item names are found in new
-                    # 'items' dict and that they contain a dict. Combiners should be gone in v5
-                    v4_items = proj_v4["items"]
-                    # Make a list of Combiner names
-                    combiners = list()
-                    for name, d in v4_items.items():
-                        if d["type"] == "Combiner":
-                            combiners.append(name)
-                    v5_items = proj_v5["items"]
-                    for name in v4_items.keys():
-                        if name in combiners:
-                            # v5 should not have Combiners anymore
-                            self.assertFalse(name in v5_items.keys())
-                        else:
-                            self.assertTrue(name in v5_items.keys())
-                            self.assertIsInstance(v5_items[name], dict)
+                # Upgrade to version 5
+                proj_v5 = pu.upgrade(proj_v4, project_dir)
+                mock_backup.assert_called_once()
+                mock_force_save.assert_called_once()
+                self.assertTrue(pu.is_valid(5, proj_v5))
+                # Check that items were transferred successfully by checking that item names are found in new
+                # 'items' dict and that they contain a dict. Combiners should be gone in v5
+                v4_items = proj_v4["items"]
+                # Make a list of Combiner names
+                combiners = list()
+                for name, d in v4_items.items():
+                    if d["type"] == "Combiner":
+                        combiners.append(name)
+                v5_items = proj_v5["items"]
+                for name in v4_items.keys():
+                    if name in combiners:
+                        # v5 should not have Combiners anymore
+                        self.assertFalse(name in v5_items.keys())
+                    else:
+                        self.assertTrue(name in v5_items.keys())
+                        self.assertIsInstance(v5_items[name], dict)
 
     def test_upgrade_v9_to_v10(self):
         pu = ProjectUpgrader(self.toolbox)
@@ -270,28 +272,52 @@ class TestProjectUpgrader(unittest.TestCase):
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
                 with open(spec_file_path, "w", encoding="utf-8") as tmp_spec_file:
                     tmp_spec_file.write("hello")
-                    # Upgrade to version 10
-                    proj_v10 = pu.upgrade(proj_v9, project_dir)
-                    mock_backup.assert_called_once()
-                    mock_force_save.assert_called_once()
-                    self.assertTrue(pu.is_valid(10, proj_v10))
-                    v10_items = proj_v10["items"]
-                    # Make a list of Gimlet and GdxExporter names in v9
-                    names = list()
-                    for name, d in proj_v9["items"].items():
-                        if d["type"] in ["Gimlet", "GdxExporter"]:
-                            names.append(name)
-                    self.assertEqual(4, len(names))  # Old should have 3 Gimlets, 1 GdxExporter
-                    # Check that connections have been removed
-                    for conn in proj_v10["project"]["connections"]:
-                        for name in names:
-                            self.assertTrue(name not in conn["from"] and name not in conn["to"])
-                    # Check that gimlet and GdxExporter dicts are gone from items
-                    for item_name in v10_items.keys():
-                        self.assertTrue(item_name not in names)
-                    # Check number of connections
-                    self.assertEqual(8, len(proj_v9["project"]["connections"]))
-                    self.assertEqual(1, len(proj_v10["project"]["connections"]))
+                # Upgrade to version 10
+                proj_v10 = pu.upgrade(proj_v9, project_dir)
+                mock_backup.assert_called_once()
+                mock_force_save.assert_called_once()
+                self.assertTrue(pu.is_valid(10, proj_v10))
+                v10_items = proj_v10["items"]
+                # Make a list of Gimlet and GdxExporter names in v9
+                names = list()
+                for name, d in proj_v9["items"].items():
+                    if d["type"] in ["Gimlet", "GdxExporter"]:
+                        names.append(name)
+                self.assertEqual(4, len(names))  # Old should have 3 Gimlets, 1 GdxExporter
+                # Check that connections have been removed
+                for conn in proj_v10["project"]["connections"]:
+                    for name in names:
+                        self.assertTrue(name not in conn["from"] and name not in conn["to"])
+                # Check that gimlet and GdxExporter dicts are gone from items
+                for item_name in v10_items.keys():
+                    self.assertTrue(item_name not in names)
+                # Check number of connections
+                self.assertEqual(8, len(proj_v9["project"]["connections"]))
+                self.assertEqual(1, len(proj_v10["project"]["connections"]))
+
+    def test_upgrade_v10_to_v11(self):
+        pu = ProjectUpgrader(self.toolbox)
+        proj_v10 = make_v10_project_dict()
+        self.assertTrue(pu.is_valid(10, proj_v10))
+        with TemporaryDirectory() as project_dir:
+            with mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
+            ) as mock_backup, mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
+            ) as mock_force_save, mock.patch(
+                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 11
+            ):
+                os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
+                proj_v11 = pu.upgrade(proj_v10, project_dir)
+                mock_backup.assert_called_once()
+                mock_force_save.assert_called_once()
+                self.assertTrue(pu.is_valid(11, proj_v11))
+                self.assertEqual(proj_v11["project"]["version"], 11)
+                self.assertIn("settings", proj_v11["project"])
+                try:
+                    ProjectSettings.from_dict(proj_v11["project"]["settings"])
+                except:
+                    self.fail("project settings cannot be deserialized")
 
     def test_upgrade_v1_to_latest(self):
         pu = ProjectUpgrader(self.toolbox)
@@ -306,21 +332,22 @@ class TestProjectUpgrader(unittest.TestCase):
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
                 with open(spec_file_path, "w", encoding="utf-8") as tmp_spec_file:
                     tmp_spec_file.write("hello")
-                    # Upgrade to latest version
-                    proj_latest = pu.upgrade(proj_v1, project_dir)
-                    mock_backup.assert_called_once()
-                    mock_force_save.assert_called_once()
-                    self.assertTrue(pu.is_valid(LATEST_PROJECT_VERSION, proj_latest))
-                    # Check that items were transferred successfully by checking that item names are found in new
-                    # 'items' dict and that they contain a dict. Combiners should be gone in v5
-                    v1_items = proj_v1["objects"]
-                    latest_items = proj_latest["items"]
-                    # v1 project items were categorized under a <item_type> dict which were inside an 'objects' dict
-                    for item_category in v1_items.keys():
-                        for name in v1_items[item_category]:
-                            self.assertTrue(name in latest_items.keys())
-                            self.assertIsInstance(latest_items[name], dict)
-                            self.assertTrue(latest_items[name]["type"] == item_category[:-1])
+                # Upgrade to latest version
+                proj_latest = pu.upgrade(proj_v1, project_dir)
+                mock_backup.assert_called_once()
+                mock_force_save.assert_called_once()
+                self.assertTrue(pu.is_valid(LATEST_PROJECT_VERSION, proj_latest))
+                self.assertEqual(proj_latest["project"]["version"], LATEST_PROJECT_VERSION)
+                # Check that items were transferred successfully by checking that item names are found in new
+                # 'items' dict and that they contain a dict. Combiners should be gone in v5
+                v1_items = proj_v1["objects"]
+                latest_items = proj_latest["items"]
+                # v1 project items were categorized under a <item_type> dict which were inside an 'objects' dict
+                for item_category in v1_items.keys():
+                    for name in v1_items[item_category]:
+                        self.assertTrue(name in latest_items.keys())
+                        self.assertIsInstance(latest_items[name], dict)
+                        self.assertTrue(latest_items[name]["type"] == item_category[:-1])
 
     def test_upgrade_with_too_recent_project_version(self):
         """Tests that projects with too recent versions are not opened."""
@@ -356,6 +383,10 @@ def make_v9_project_dict():
 
 def make_v10_project_dict():
     return _get_project_dict(10)
+
+
+def make_v11_project_dict():
+    return _get_project_dict(11)
 
 
 def _get_project_dict(v):

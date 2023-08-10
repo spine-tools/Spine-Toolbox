@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 10,
+        "version": 11,
         "description": "Project for unit tests.",
         "specifications": {
             "Tool": [],
@@ -38,7 +38,10 @@
                     "left"
                 ]
             }
-        ]
+        ],
+        "settings": {
+            "enable_execute_all": true
+        }
     },
     "items": {
         "a": {
