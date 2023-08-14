@@ -228,7 +228,8 @@ class SpineDBManager(QObject):
             for item in items:
                 table_cache.update_item(item)
 
-    def remove_items_in_cache(self, item_type, db_map_ids):
+    @staticmethod
+    def remove_items_in_cache(item_type, db_map_ids):
         """Removes items in cache.
 
         Args:
@@ -243,7 +244,7 @@ class SpineDBManager(QObject):
             table_cache = db_map.cache.get(item_type)
             if table_cache is None:
                 continue
-            db_map_data[db_map] = [table_cache.remove_item(id_) for id_ in ids]
+            db_map_data[db_map] = sum((table_cache.remove_item(id_) for id_ in ids), [])
         return db_map_data
 
     @busy_effect
@@ -955,7 +956,10 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = dict()
         for db_map, data in db_map_data.items():
-            make_cache = lambda *args, db_map=db_map, **kwargs: self.get_db_map_cache(db_map)
+
+            def make_cache(*args, **kwargs):
+                return self.get_db_map_cache(db_map)
+
             try:
                 data_for_import = get_data_for_import(db_map, make_cache=make_cache, **data)
             except (TypeError, ValueError) as err:
@@ -969,6 +973,24 @@ class SpineDBManager(QObject):
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
+    def import_data_commands(self, db_map, data):
+        """Creates undo commands necessary to import given data.
+
+        Args:
+            db_map (DatabaseMapping): target database mapping
+            data (dict): data to import
+
+        Yields:
+            SpineDBCommand: import undo command
+        """
+
+        def make_cache(*args, **kwargs):
+            return self.get_db_map_cache(db_map)
+
+        db_map_error_log = dict()
+        data_for_import = get_data_for_import(db_map, make_cache=make_cache, **data)
+        yield from self._import_data_cmds(db_map, data_for_import, db_map_error_log)
+
     def _import_data_cmds(self, db_map, data_for_import, db_map_error_log):
         for item_type, (to_add, to_update, import_error_log) in data_for_import:
             db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
@@ -977,7 +999,7 @@ class SpineDBManager(QObject):
             if to_add:
                 yield AddItemsCommand(self, db_map, to_add, item_type, check=False)
 
-    def add_items(self, db_map_data, item_type, readd=False, check=True, callback=None):
+    def add_items(self, db_map_data, item_type, readd=False, cascade=True, check=True, callback=None):
         for db_map, data in db_map_data.items():
             try:
                 worker = self._get_worker(db_map)
@@ -985,7 +1007,7 @@ class SpineDBManager(QObject):
                 # We're closing the kiosk.
                 continue
             cache = self.get_db_map_cache(db_map)
-            worker.add_items(data, item_type, readd, check, cache, callback)
+            worker.add_items(data, item_type, readd, cascade, check, cache, callback)
 
     def update_items(self, db_map_data, item_type, check=True, callback=None):
         for db_map, data in db_map_data.items():
@@ -1401,18 +1423,21 @@ class SpineDBManager(QObject):
             yield RemoveItemsCommand(self, db_map, ids_, item_type)
 
     @busy_effect
-    def do_remove_items(self, item_type, db_map_ids, callback=None):
+    def do_remove_items(self, item_type, db_map_ids, callback=None, committing_callback=None):
         """Removes items from database.
 
         Args:
-            db_map_typed_ids (dict): mapping DiffDatabaseMapping to item type (str) to lists of items to remove
+            item_type (str): database item type
+            db_map_ids (dict): mapping DatabaseMapping to removable ids
+            callback (Callable, optional): function to call after removal is finished
+            committing_callback (Callable, optional): function to call after removal has been committed
         """
         for db_map, ids in db_map_ids.items():
             try:
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            worker.remove_items(item_type, ids, callback)
+            worker.remove_items(item_type, ids, callback, committing_callback)
 
     @staticmethod
     def db_map_ids(db_map_data):

@@ -53,7 +53,7 @@ from .manage_items_dialogs import (
     ManageItemsDialog,
     ManageItemsDialogBase,
 )
-from ...spine_db_commands import AgedUndoCommand, AddItemsCommand, RemoveItemsCommand
+from ...spine_db_commands import AddItemsCommand, RemoveItemsCommand, SpineDBMacro
 
 
 class AddReadyRelationshipsDialog(ManageItemsDialogBase):
@@ -785,10 +785,17 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         keys_to_remove = set(self.relationship_ids) - {
             tuple(objects) for objects in self.existing_items_model._main_data
         }
-        to_remove = [self.relationship_ids[key] for key in keys_to_remove]
-        self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
+        commands = []
+        to_remove = {self.relationship_ids[key] for key in keys_to_remove}
+        if to_remove:
+            commands.append(RemoveItemsCommand(self.db_mngr, self.db_map, to_remove, "relationship"))
         to_add = [[self.class_name, object_name_list] for object_name_list in self.new_items_model._main_data]
-        self.db_mngr.import_data({self.db_map: {"relationships": to_add}}, command_text="Add relationships")
+        if to_add:
+            commands += list(self.db_mngr.import_data_commands(self.db_map, {"relationships": to_add}))
+        if commands:
+            macro = SpineDBMacro(iter(commands))
+            macro.setText(f"manage {self.class_name}'s dimensions")
+            self.db_mngr.undo_stack[self.db_map].push(macro)
         super().accept()
 
 
@@ -877,11 +884,13 @@ class ObjectGroupDialogBase(QDialog):
         object_ids = self.db_map_object_ids[self.db_map]
         members = []
         non_members = []
+        initial_member_ids = self.initial_member_ids()
+        initial_entity_id = self.initial_entity_id()
         for obj_name in sorted(object_ids):
             obj_id = object_ids[obj_name]
-            if obj_id in self.initial_member_ids():
+            if obj_id in initial_member_ids:
                 members.append(obj_name)
-            elif obj_id != self.initial_entity_id():
+            elif obj_id != initial_entity_id:
                 non_members.append(obj_name)
         member_items = [QTreeWidgetItem([obj_name]) for obj_name in members]
         non_member_items = [QTreeWidgetItem([obj_name]) for obj_name in non_members]
@@ -1014,15 +1023,17 @@ class ManageMembersDialog(ObjectGroupDialogBase):
         items_to_add = [
             {"entity_id": obj["id"], "entity_class_id": obj["class_id"], "member_id": member_id} for member_id in added
         ]
-        ids_to_remove = [x["id"] for x in self._entity_groups() if x["member_id"] in removed]
+        ids_to_remove = {x["id"] for x in self._entity_groups() if x["member_id"] in removed}
         if not items_to_add and not ids_to_remove:
             super().accept()
             return
-        macro = AgedUndoCommand()
-        macro.setText(f"manage {self.object_item.display_data}'s members")
+        commands = []
         if items_to_add:
-            AddItemsCommand(self.db_mngr, self.db_map, items_to_add, "entity_group", parent=macro)
+            commands.append(AddItemsCommand(self.db_mngr, self.db_map, items_to_add, "entity_group"))
         if ids_to_remove:
-            RemoveItemsCommand(self.db_mngr, self.db_map, ids_to_remove, "entity_group", parent=macro)
-        self.db_mngr.undo_stack[self.db_map].push(macro)
+            commands.append(RemoveItemsCommand(self.db_mngr, self.db_map, ids_to_remove, "entity_group"))
+        if commands:
+            macro = SpineDBMacro(iter(commands))
+            macro.setText(f"manage {self.object_item.display_data}'s members")
+            self.db_mngr.undo_stack[self.db_map].push(macro)
         super().accept()

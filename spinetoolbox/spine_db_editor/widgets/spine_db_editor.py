@@ -470,7 +470,7 @@ class SpineDBEditorBase(QMainWindow):
             self,
             "Import file",
             self._get_base_dir(),
-            "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
+            "All files (*);;  SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -530,7 +530,7 @@ class SpineDBEditorBase(QMainWindow):
             self, self.db_mngr, *self.db_maps, stored_state=self._export_items_dialog_state
         )
         self._export_items_dialog.state_storing_requested.connect(self._store_export_settings)
-        self._export_items_dialog.data_submitted.connect(self.mass_export_items)
+        self._export_items_dialog.data_submitted.connect(self.mass_export_items, Qt.ConnectionType.QueuedConnection)
         self._export_items_dialog.destroyed.connect(self._clean_up_export_items_dialog)
         self._export_items_dialog.show()
 
@@ -571,6 +571,7 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_object_group_ids(db_map_ent_group_ids)
         self.export_data(parcel.data)
 
+    @Slot(object)
     def mass_export_items(self, db_map_item_types):
         def _ids(t, types):
             return Asterisk if t in types else ()
@@ -924,6 +925,10 @@ class SpineDBEditorBase(QMainWindow):
         self.save_window_state()
         super().closeEvent(event)
 
+    @staticmethod
+    def _get_base_dir():
+        return APPLICATION_PATH
+
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
@@ -1192,7 +1197,3 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         for model in self._parameter_models:
             model.stop_invalidating_filter()
         return True
-
-    @staticmethod
-    def _get_base_dir():
-        return APPLICATION_PATH

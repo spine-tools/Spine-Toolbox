@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 
 # NOTE: All required Python package versions are in setup.cfg
-LATEST_PROJECT_VERSION = 10
+LATEST_PROJECT_VERSION = 11
 
 # For the Add/Update SpineOpt wizard
 REQUIRED_SPINE_OPT_VERSION = "0.6.9"

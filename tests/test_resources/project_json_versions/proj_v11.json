@@ -1,0 +1,293 @@
+{
+    "project": {
+        "version": 11,
+        "description": "Import and Export",
+        "settings": {"enable_execute_all": true},
+        "specifications": {
+            "Importer": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": "Importer 1 - units.xlsx.json"
+                }
+            ],
+            "Exporter": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Exporter/pekka.json"
+                },
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Exporter/gdx_export_mapping.json"
+                }
+            ],
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/testeri.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Raw data to Importer 1",
+                "from": [
+                    "Raw data",
+                    "right"
+                ],
+                "to": [
+                    "Importer 1",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Importer 1 to DS1",
+                "from": [
+                    "Importer 1",
+                    "right"
+                ],
+                "to": [
+                    "DS1",
+                    "left"
+                ],
+                "options": {
+                    "purge_before_writing": true,
+                    "purge_settings": null
+                }
+            },
+            {
+                "name": "from DS2 to Merger 1",
+                "from": [
+                    "DS2",
+                    "right"
+                ],
+                "to": [
+                    "Merger 1",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Merger 1 to Output Db",
+                "from": [
+                    "Merger 1",
+                    "right"
+                ],
+                "to": [
+                    "Output Db",
+                    "left"
+                ],
+                "options": {
+                    "purge_before_writing": true,
+                    "purge_settings": {
+                        "object_class": true,
+                        "relationship_class": true,
+                        "parameter_value_list": true,
+                        "list_value": true,
+                        "parameter_definition": true,
+                        "object": true,
+                        "relationship": true,
+                        "entity_group": true,
+                        "parameter_value": true,
+                        "alternative": true,
+                        "scenario": true,
+                        "scenario_alternative": true,
+                        "feature": true,
+                        "tool": true,
+                        "tool_feature": true,
+                        "tool_feature_method": true,
+                        "metadata": true,
+                        "entity_metadata": true,
+                        "parameter_value_metadata": true
+                    }
+                }
+            },
+            {
+                "name": "from GDX file to GDX Exporter",
+                "from": [
+                    "GDX file",
+                    "right"
+                ],
+                "to": [
+                    "GDX Exporter",
+                    "left"
+                ]
+            },
+            {
+                "name": "from DS1 to Exporter 1",
+                "from": [
+                    "DS1",
+                    "right"
+                ],
+                "to": [
+                    "Exporter 1",
+                    "left"
+                ]
+            },
+            {
+                "name": "from DS1 to Merger 1",
+                "from": [
+                    "DS1",
+                    "right"
+                ],
+                "to": [
+                    "Merger 1",
+                    "left"
+                ]
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Importer 1": {
+            "type": "Importer",
+            "description": "",
+            "x": 37.00929801385436,
+            "y": -50.831770740600405,
+            "specification": "Importer 1 - units.xlsx",
+            "cancel_on_error": true,
+            "on_conflict": "replace",
+            "file_selection": [
+                [
+                    "<Raw data>/a.csv",
+                    false
+                ],
+                [
+                    "<Raw data>/c.ini",
+                    false
+                ],
+                [
+                    "<Raw data>/d.txt",
+                    false
+                ],
+                [
+                    "<Raw data>/units.xlsx",
+                    true
+                ],
+                [
+                    "<project>/data.txt",
+                    false
+                ]
+            ]
+        },
+        "DS1": {
+            "type": "Data Store",
+            "description": "",
+            "x": 161.72875313326617,
+            "y": -141.85480886591952,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/ds1/DS1.sqlite"
+                }
+            }
+        },
+        "Raw data": {
+            "type": "Data Connection",
+            "description": "",
+            "x": -92.35946011852081,
+            "y": -139.9349488970861,
+            "file_references": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": "data.txt"
+                }
+            ],
+            "db_references": []
+        },
+        "Exporter 1": {
+            "type": "Exporter",
+            "description": "",
+            "x": 327.28798970484826,
+            "y": -34.157876811488,
+            "output_time_stamps": true,
+            "cancel_on_error": true,
+            "output_labels": [
+                {
+                    "in_label": "db_url@DS1",
+                    "out_label": "output_file"
+                }
+            ],
+            "specification": "SpineOptToTable"
+        },
+        "Tool 1": {
+            "type": "Tool",
+            "description": "",
+            "x": 8.781957645503311,
+            "y": -261.72457943295257,
+            "specification": "testeri",
+            "execute_in_work": true,
+            "cmd_line_args": []
+        },
+        "Merger 1": {
+            "type": "Merger",
+            "description": "",
+            "x": 318.01113350038577,
+            "y": -194.14196047822415,
+            "cancel_on_error": false
+        },
+        "DS2": {
+            "type": "Data Store",
+            "description": "",
+            "x": 164.00244309606893,
+            "y": -266.32829810435675,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/ds2/DS2.sqlite"
+                }
+            }
+        },
+        "Output Db": {
+            "type": "Data Store",
+            "description": "",
+            "x": 448.8029423394426,
+            "y": -215.88120679697633,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/output_db/Output Db.sqlite"
+                }
+            }
+        },
+        "GDX Exporter": {
+            "type": "Exporter",
+            "description": "",
+            "x": 180.76090893795083,
+            "y": 36.76493063144763,
+            "output_time_stamps": false,
+            "cancel_on_error": true,
+            "output_labels": [],
+            "specification": "gdx export mapping"
+        },
+        "GDX file": {
+            "type": "Data Connection",
+            "description": "",
+            "x": -69.44486897051219,
+            "y": 35.74368255835186,
+            "file_references": [
+                {
+                    "type": "path",
+                    "relative": false,
+                    "path": "C:/Users/ttepsa/OneDrive - Teknologian Tutkimuskeskus VTT/Documents/SpineToolboxProjects/Gdx Export Test/.spinetoolbox/items/gdx_exporter/file.gdx"
+                }
+            ],
+            "db_references": []
+        }
+    }
+}

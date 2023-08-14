@@ -13,7 +13,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.3
+## Created by: Qt User Interface Compiler version 6.5.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -599,14 +599,23 @@ class Ui_MainWindow(object):
         self.actionSet_description.setToolTip(QCoreApplication.translate("MainWindow", u"Modify or set project description", None))
 #endif // QT_CONFIG(tooltip)
         self.actionExecute_project.setText(QCoreApplication.translate("MainWindow", u"Project", None))
+#if QT_CONFIG(tooltip)
+        self.actionExecute_project.setToolTip(QCoreApplication.translate("MainWindow", u"Execute all items in project.", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
         self.actionExecute_project.setShortcut(QCoreApplication.translate("MainWindow", u"F5", None))
 #endif // QT_CONFIG(shortcut)
         self.actionExecute_selection.setText(QCoreApplication.translate("MainWindow", u"Selection", None))
+#if QT_CONFIG(tooltip)
+        self.actionExecute_selection.setToolTip(QCoreApplication.translate("MainWindow", u"Execute selected items.", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
         self.actionExecute_selection.setShortcut(QCoreApplication.translate("MainWindow", u"F6", None))
 #endif // QT_CONFIG(shortcut)
         self.actionStop_execution.setText(QCoreApplication.translate("MainWindow", u"Stop", None))
+#if QT_CONFIG(tooltip)
+        self.actionStop_execution.setToolTip(QCoreApplication.translate("MainWindow", u"Stop execution.", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
         self.actionStop_execution.setShortcut(QCoreApplication.translate("MainWindow", u"F7", None))
 #endif // QT_CONFIG(shortcut)

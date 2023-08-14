@@ -353,9 +353,10 @@ class MultiDBTreeItem(TreeItem):
                 new_children.append(new_child)
             if child.display_id in display_ids[:row] + display_ids[row + 1 :] or child.should_be_merged():
                 # Take the child and put it in the list to be merged
-                new_children.append(child)
                 self.remove_children(row, 1)
                 display_ids.pop(row)
+                child.revitalize()
+                new_children.append(child)
         self._deep_refresh_children()
         self._merge_children(new_children)
         top_left = self.model.index(0, 0, self.index())
@@ -448,3 +449,9 @@ class MultiDBTreeItem(TreeItem):
     def tear_down(self):
         super().tear_down()
         self._fetch_parent.set_obsolete(True)
+
+    def revitalize(self):
+        """Reverts tear down operation"""
+        self._fetch_parent.set_obsolete(False)
+        for child in self._children:
+            child.revitalize()

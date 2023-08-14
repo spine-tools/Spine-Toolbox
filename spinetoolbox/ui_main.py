@@ -60,6 +60,7 @@ from .mvcmodels.project_tree_item import CategoryProjectTreeItem, RootProjectTre
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
+from .project_settings import ProjectSettings
 from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
@@ -184,6 +185,7 @@ class ToolboxUI(QMainWindow):
             self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
         )
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
+        self._original_execute_project_action_tooltip = self.ui.actionExecute_project.toolTip()
         self.setStatusBar(None)
         # Additional consoles for item execution
         self._item_consoles = {}  # Mapping of ProjectItem to console
@@ -365,7 +367,14 @@ class ToolboxUI(QMainWindow):
 
     def _update_execute_enabled(self):
         first_index = next(self.project_item_model.leaf_indexes(), None)
-        self.ui.actionExecute_project.setEnabled(first_index is not None and not self.execution_in_progress)
+        enabled_by_project = self._project.settings.enable_execute_all if self._project is not None else False
+        self.ui.actionExecute_project.setEnabled(
+            enabled_by_project and first_index is not None and not self.execution_in_progress
+        )
+        if not enabled_by_project:
+            self.ui.actionExecute_project.setToolTip("Executing entire project disabled by project settings.")
+        else:
+            self.ui.actionExecute_project.setToolTip(self._original_execute_project_action_tooltip)
 
     def _update_execute_selected_enabled(self):
         has_selection = bool(self._selected_item_names)
@@ -513,7 +522,12 @@ class ToolboxUI(QMainWindow):
                 return
         self.undo_stack.clear()
         self._project = SpineToolboxProject(
-            self, proj_dir, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
+            self,
+            proj_dir,
+            self._plugin_manager.plugin_specs,
+            app_settings=self._qsettings,
+            settings=ProjectSettings(),
+            logger=self,
         )
         self.project_item_model.connect_to_project(self._project)
         self.specification_model.connect_to_project(self._project)
@@ -575,7 +589,12 @@ class ToolboxUI(QMainWindow):
         # Create project
         self.undo_stack.clear()
         self._project = SpineToolboxProject(
-            self, project_dir, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
+            self,
+            project_dir,
+            self._plugin_manager.plugin_specs,
+            app_settings=self._qsettings,
+            settings=ProjectSettings(),
+            logger=self,
         )
         self.project_item_model.connect_to_project(self._project)
         self.specification_model.connect_to_project(self._project)

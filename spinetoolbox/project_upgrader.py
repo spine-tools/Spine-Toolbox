@@ -22,6 +22,7 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .helpers import home_dir
+from .project_settings import ProjectSettings
 
 
 class ProjectUpgrader:
@@ -100,6 +101,8 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v8_to_v9(project_dict)
             elif v == 9:
                 project_dict = self.upgrade_v9_to_v10(project_dict)
+            elif v == 10:
+                project_dict = self.upgrade_v10_to_v11(project_dict)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -503,6 +506,24 @@ class ProjectUpgrader:
         return new
 
     @staticmethod
+    def upgrade_v10_to_v11(old):
+        """Upgrades version 10 project dictionary to version 11.
+
+        Changes:
+            1. Add ["project"]["settings"] key
+
+        Args:
+            old (dict): Version 10 project dictionary
+
+        Returns:
+            dict: Version 11 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 11
+        new["project"]["settings"] = ProjectSettings().to_dict()
+        return new
+
+    @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
 
@@ -543,13 +564,23 @@ class ProjectUpgrader:
         return answer  # New project directory
 
     def is_valid(self, v, p):
-        """Checks given project dict if it is valid for given version."""
+        """Checks given project dict if it is valid for given version.
+
+        Args:
+            v (int): project version to validate against
+            p (dict): project dictionary
+
+        Returns:
+            bool: True if project is valid, False otherwise
+        """
         if v == 1:
             return self.is_valid_v1(p)
         if 2 <= v <= 8:
             return self.is_valid_v2_to_v8(p, v)
         if 9 <= v <= 10:
             return self.is_valid_v9_to_v10(p)
+        if v == 11:
+            return self.is_valid_v11(p)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -564,10 +595,10 @@ class ProjectUpgrader:
         Returns:
             bool: True if project is a valid version 1 project, False if it is not
         """
-        if "project" not in p.keys():
+        if "project" not in p:
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
             return False
-        if "objects" not in p.keys():
+        if "objects" not in p:
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'objects' not found.")
             return False
         required_project_keys = ["version", "name", "description", "tool_specifications", "connections"]
@@ -611,10 +642,10 @@ class ProjectUpgrader:
         Returns:
             bool: True if project is a valid version 2 to version 8 project, False if it is not
         """
-        if "project" not in p.keys():
+        if "project" not in p:
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
             return False
-        if "items" not in p.keys():
+        if "items" not in p:
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'items' not found.")
             return False
         required_project_keys = ["version", "name", "description", "specifications", "connections"]
@@ -657,10 +688,10 @@ class ProjectUpgrader:
         Returns:
             bool: True if project is a valid version 9 and 10 project, False otherwise
         """
-        if "project" not in p.keys():
+        if "project" not in p:
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
             return False
-        if "items" not in p.keys():
+        if "items" not in p:
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'items' not found.")
             return False
         required_project_keys = ["version", "description", "specifications", "connections"]
@@ -676,6 +707,29 @@ class ProjectUpgrader:
             if req_key not in project:
                 self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
                 return False
+        return True
+
+    def is_valid_v11(self, p):
+        """Checks that the given project JSON dictionary contains
+        a valid version 11 Spine Toolbox project. Valid meaning, that
+        it contains all required keys and values are of the correct
+        type.
+
+        Args:
+            p (dict): Project information JSON
+
+        Returns:
+            bool: True if project is a valid version 11 project, False otherwise
+        """
+        if "project" not in p:
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
+            return False
+        if "settings" not in p["project"]:
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'items' not found in 'project'.")
+            return False
+        if not isinstance(p["project"]["settings"], dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'settings' must be a dict.")
+            return False
         return True
 
     def backup_project_file(self, project_dir, v):
