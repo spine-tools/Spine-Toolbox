@@ -1,5 +1,4 @@
 ..  Plotting
-    Created: 15.8.2019
 
 Plotting
 ========

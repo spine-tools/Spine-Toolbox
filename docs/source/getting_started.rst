@@ -35,7 +35,7 @@ Welcome to the Spine Toolbox's getting started guide.
 In this guide you will learn two ways of running a `"Hello, World!" program
 <https://en.wikipedia.org/wiki/%22Hello,_World!%22_program>`_ on Spine Toolbox.
 If you need help on how to run **SpineOpt.jl** using Spine Toolbox, see chapter
-:ref:`How to set up SpineOpt.jl`. For small example projects utilizing **SpineOpt.jl**, see `SpineOpt tutorials
+:ref:`How to Set up SpineOpt.jl`. For small example projects utilizing **SpineOpt.jl**, see `SpineOpt tutorials
 <https://spine-tools.github.io/SpineOpt.jl/latest/tutorial/simple_system/>`_.
 
 This chapter introduces the following topics:
@@ -205,7 +205,7 @@ Once the execution is finished, you can see the details about the item execution
    
 |
 
-.. note:: For more information about execution modes in Spine Toolbox, please see :ref:`Setting Up External Tools`
+.. note:: For more information about setting up Consoles in Spine Toolbox, please see :ref:`Setting up Consoles and External Tools`
    for help.
 
 Congratulations, you just executed your first Spine Toolbox project.
@@ -321,7 +321,7 @@ Press |execute| once again. The project will be executed successfully this time:
 That's all for now. I hope you've enjoyed following this guide as much as I enjoyed writing it. See you next time.
 
 Where to next: If you need help on how to set up and run **SpineOpt.jl** using Spine Toolbox, see chapter
-:ref:`How to set up SpineOpt.jl`. After setting up SpineOpt, there are three tutorials over on **SpineOpt.jl**'s
+:ref:`How to Set up SpineOpt.jl`. After setting up SpineOpt, there are three tutorials over on **SpineOpt.jl**'s
 documentation that will help you get started on using SpineOpt in Spine Toolbox:
 `Simple system
 <https://spine-tools.github.io/SpineOpt.jl/latest/tutorial/simple_system/>`_,

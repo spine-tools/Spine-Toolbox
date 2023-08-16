@@ -1,5 +1,4 @@
 ..  Importing and exporting data
-    Created: 15.5.2019
 
 .. |open-folder| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
    :width: 16
@@ -10,7 +9,7 @@
 
 
 ****************************
-Importing and exporting data
+Importing and Exporting Data
 ****************************
 
 This section explains the different ways of importing and exporting data to and from a Spine database.
@@ -386,7 +385,7 @@ GAMS gdx export
 .. note::
    You need to have GAMS installed to use this functionality.
    However, you do not need to own a GAMS license as the demo version works just as well.
-   See :ref:`Setting up External Tools` for more information.
+   See :ref:`Setting up Consoles and External Tools` for more information.
 
 The gdx backend turns the output tables to GAMS sets, parameters and scalars following the rules below:
 

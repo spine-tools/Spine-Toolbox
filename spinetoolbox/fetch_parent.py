@@ -22,7 +22,7 @@ class FetchParent(QObject):
     Attrs:
         fetch_token (int or None)
         will_have_children (bool or None): Whether this parent will have children if fetched.
-            None means we don't know yet. Set to a boolean value whenever we find out.
+        None means we don't know yet. Set to a boolean value whenever we find out.
     """
 
     _changes_pending = Signal()
@@ -31,9 +31,9 @@ class FetchParent(QObject):
         """
         Args:
             owner (object): somebody who owns this FetchParent. If it's a QObject instance, then this FetchParent
-                becomes obsolete whenever the owner is destroyed
+            becomes obsolete whenever the owner is destroyed
             chunk_size (int or None): the number of items this parent should be happy with fetching at a time.
-                If None, then no limit is imposed and the parent should fetch the entire contents of the DB.
+            If None, then no limit is imposed and the parent should fetch the entire contents of the DB.
         """
         super().__init__()
         self._timer = QTimer()
