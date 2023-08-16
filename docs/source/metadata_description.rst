@@ -1,7 +1,7 @@
 .. _Metadata description:
 
 **************************
-Spine metadata description
+Spine Metadata Description
 **************************
 
 This is the metadata description for Spine, edited from `<https://frictionlessdata.io/specs/data-package/>`_.

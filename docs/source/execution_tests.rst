@@ -1,6 +1,6 @@
 .. _Execution tests:
 
-Execution tests
+Execution Tests
 ===============
 
 Toolbox contains *execution tests* that test entire workflows in the headless mode.

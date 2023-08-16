@@ -1,5 +1,4 @@
 .. Settings form documentation
-   Created 14.1.2019
 
 .. |open-folder| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
    :width: 16
@@ -14,7 +13,8 @@ You can open Spine Toolbox settings from the main window menu **File -> Settings
 pressing **Ctrl+,**. Settings are categorized into five tabs;
 *General*, *Tools*, *Db editor*, *Spec. editors* and *Engine*.
 In addition to application settings, each project item has user adjustable
-properties (See :ref:`Project Items`)
+properties (See :ref:`Project Items`). See also :ref:`Setting up Consoles and External Tools`
+for more information on how to set up Consoles and external Tools.
 
 .. contents::
    :local:
@@ -35,7 +35,7 @@ Settings in the **Main** group:
 - **Delete data when project item is removed from project** Check this box to delete project item's data
   when a project item is removed from project. This means that the *project item directory* and its
   contents will be deleted from your hard drive. You can find the project item directories from the
-  ``<proj_dir>/.spinetoolbox/items/`` directory, where ``<proj_dir>`` is your current project directory.
+  `<proj_dir>/.spinetoolbox/items/` directory, where `<proj_dir>` is your current project directory.
 
 - **Open previous project at startup** If checked, application opens the project at startup that was
   open the last time the application was shut down. If left unchecked, application starts without a
@@ -48,7 +48,7 @@ Settings in the **Main** group:
   when the application exits.
 
 - **Work directory** Directory where processing the Tool takes place. Default place (if left empty) is
-  the ``/work`` subdirectory of Spine Toolbox install directory. You can change this directory.
+  the `/work` subdirectory of Spine Toolbox install directory. You can change this directory.
   Make sure to clean up the directory every now and then.
 
 Settings in the **UI** group:
@@ -148,19 +148,19 @@ Choose the settings on how Python Tools are executed.
 
 Settings in the **Conda** group:
 
-- **Miniconda executable** If you want to run Python Tools in an activated Conda environment, you can set the path
-  to your local Conda here.
+- **Miniconda executable** If you want to run Python Tools in a Conda environment, you can set the path
+  to your Conda executable here.
 
-See :ref:`Setting up External Tools` for more information and examples.
+See :ref:`Setting up Consoles and External Tools` for more information and examples.
 
-Database Editor Settings
-------------------------
+Db editor Settings
+------------------
 
 .. image:: img/settings_db_editor.png
    :align: center
 
-This tab contains settings for the Database editor.
-The same settings can be accessed directly from the Database editor itself.
+This tab contains settings for the Spine Database editor. The same settings can be accessed directly
+from the Database editor itself.
 
 - **Commit session before closing** This checkbox controls what happens when you close a
   database editor which has uncommitted changes. When this is unchecked, all changes are discarded without
@@ -194,8 +194,8 @@ The same settings can be accessed directly from the Database editor itself.
   that are open on the same table into a single graph if they contains common object nodes.
   If unchecked, a separate graph will be drawn for each database.
 
-Specification editor settings
------------------------------
+Spec. editor Settings
+---------------------
 
 .. image:: img/settings_specification_editors.png
    :align: center

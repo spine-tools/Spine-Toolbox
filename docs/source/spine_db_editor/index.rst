@@ -1,7 +1,7 @@
 .. _Spine db editor:
 
 
-Welcome to Spine database editor's User Guide!
+Welcome to Spine Database Editor's User Guide!
 ==============================================
 
 Spine database editor is a dedicated component of Spine Toolbox,

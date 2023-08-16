@@ -1,5 +1,4 @@
 ..  Contribution guide
-    Created: 19.6.2018
 
 .. _Qt Style Sheets: http://doc.qt.io/qt-5/stylesheet.html
 .. _PEP-8: https://www.python.org/dev/peps/pep-0008/
@@ -7,9 +6,9 @@
 
 .. _Contribution Guide:
 
-************************************
-Contribution Guide for Spine Toolbox
-************************************
+******************
+Contribution Guide
+******************
 All are welcome to contribute! This guide is based on a set of best practices for open source projects [JF18]_.
 
 Reporting Bugs

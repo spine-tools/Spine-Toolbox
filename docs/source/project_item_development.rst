@@ -1,6 +1,6 @@
 .. _Project item development:
 
-Project item development
+Project Item Development
 ========================
 
 This document discusses the basics of :ref:`project item<Project Items>` development:

@@ -1,5 +1,4 @@
 .. Tool specification editor documentation
-   Created 15.1.2019
 
 .. |folder_open| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-regular.svg
    :width: 16
@@ -15,7 +14,7 @@
 .. _Tool specification editor:
 
 *************************
-Tool specification editor
+Tool Specification Editor
 *************************
 
 This section describes how to make a new Tool specification and how to edit existing Tool specifications.
@@ -89,8 +88,8 @@ The Tool specification file is a text file in JSON format and has an extension *
 You can change the location by pressing [change].
 Also, you need to save your project for the specification to stick.
 
-.. tip:: Only *name*, *type*, and *main program file* fields are required to make a Tool specification. The other
-   fields are optional.
+.. tip:: Only *name*, *type*, and either *main program file* or *command* fields are required to make a Tool
+   specification. The other fields are optional.
 
 Here is a minimal Tool specification for a Julia script *script.jl*
 
