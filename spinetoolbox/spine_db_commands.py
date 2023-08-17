@@ -268,7 +268,7 @@ class AddItemsCommand(SpineDBCommand):
 
     def redo(self):
         super().redo()
-        self.db_mngr.add_items(
+        successful = self.db_mngr.add_items(
             self.redo_db_map_data,
             self.item_type,
             readd=self._readd,
@@ -276,6 +276,8 @@ class AddItemsCommand(SpineDBCommand):
             check=self._check,
             callback=self.handle_redo_complete,
         )
+        if not successful:
+            self.setObsolete(True)
 
     def undo(self):
         super().undo()
@@ -343,9 +345,11 @@ class UpdateItemsCommand(SpineDBCommand):
 
     def redo(self):
         super().redo()
-        self.db_mngr.update_items(
+        successful = self.db_mngr.update_items(
             self.redo_db_map_data, self.item_type, check=self._check, callback=self.handle_redo_complete
         )
+        if not successful:
+            self.setObsolete(True)
 
     def undo(self):
         super().undo()

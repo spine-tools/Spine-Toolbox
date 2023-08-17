@@ -60,7 +60,7 @@ def do_create_new_spine_database(url):
 class SpineDBManager(QObject):
     """Class to manage DBs within a project."""
 
-    error_msg = Signal(dict)
+    error_msg = Signal(object)
     session_refreshed = Signal(set)
     session_committed = Signal(set, object)
     session_rolled_back = Signal(set)
@@ -510,8 +510,19 @@ class SpineDBManager(QObject):
             *db_maps (DiffDatabaseMapping)
             commit_dirty (bool): True to commit dirty database mapping, False to roll back
             commit_msg (str): commit message
+
+        Returns:
+            failed_db_maps (list): All the db maps that failed to commit
         """
+        failed_db_maps = list()
+        if dirty_db_maps:
+            if commit_dirty:
+                failed_db_maps = self.commit_session(commit_msg, *dirty_db_maps)
+            else:
+                self.rollback_session(*dirty_db_maps)
         for db_map in db_maps:
+            if db_map in failed_db_maps:
+                continue
             self.remove_db_map_listener(db_map, listener)
             try:
                 self.undo_stack[db_map].canRedoChanged.disconnect(listener.update_undo_redo_actions)
@@ -519,14 +530,10 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
             except AttributeError:
                 pass
-        if dirty_db_maps:
-            if commit_dirty:
-                self.commit_session(commit_msg, *dirty_db_maps)
-            else:
-                self.rollback_session(*dirty_db_maps)
         for db_map in db_maps:
             if not self.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
+        return failed_db_maps
 
     def is_dirty(self, db_map):
         """Returns True if mapping has pending changes.
@@ -596,13 +603,20 @@ class SpineDBManager(QObject):
             commit_msg (str): commit message for all database maps
             *dirty_db_maps: dirty database maps to commit
             cookie (object, optional): a free form identifier which will be forwarded to ``session_committed`` signal
+
+        Returns:
+            failed_db_maps (list): list of the db maps that failed to commit
         """
+        failed_db_maps = list()
         for db_map in dirty_db_maps:
             try:
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            worker.commit_session(commit_msg, cookie)
+            success = worker.commit_session(commit_msg, cookie)
+            if not success:
+                failed_db_maps.append(db_map)
+        return failed_db_maps
 
     def notify_session_committed(self, cookie, *db_maps):
         """Notifies manager and listeners when a commit has taken place by a third party.
@@ -1000,6 +1014,8 @@ class SpineDBManager(QObject):
                 yield AddItemsCommand(self, db_map, to_add, item_type, check=False)
 
     def add_items(self, db_map_data, item_type, readd=False, cascade=True, check=True, callback=None):
+        """Returns True if the adding of all items succeeded, False otherwise"""
+        successful = []
         for db_map, data in db_map_data.items():
             try:
                 worker = self._get_worker(db_map)
@@ -1007,9 +1023,12 @@ class SpineDBManager(QObject):
                 # We're closing the kiosk.
                 continue
             cache = self.get_db_map_cache(db_map)
-            worker.add_items(data, item_type, readd, cascade, check, cache, callback)
+            successful.append(not worker.add_items(data, item_type, readd, cascade, check, cache, callback))
+        return not any(successful)
 
     def update_items(self, db_map_data, item_type, check=True, callback=None):
+        """Returns True if the updating of all items succeeded, False otherwise"""
+        successful = []
         for db_map, data in db_map_data.items():
             try:
                 worker = self._get_worker(db_map)
@@ -1017,7 +1036,8 @@ class SpineDBManager(QObject):
                 # We're closing the kiosk.
                 continue
             cache = self.get_db_map_cache(db_map)
-            worker.update_items(data, item_type, check, cache, callback)
+            successful.append(not worker.update_items(data, item_type, check, cache, callback))
+        return not any(successful)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.
