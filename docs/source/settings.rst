@@ -1,5 +1,7 @@
 .. Settings form documentation
-   Created 14.1.2019
+
+.. |open-folder| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
+   :width: 16
 
 .. _Settings:
 
@@ -7,16 +9,17 @@
 Settings
 ********
 
-You can open Spine Toolbox settings from the main window menu `File->Settings...`, or by
+You can open Spine Toolbox settings from the main window menu **File -> Settings...**, or by
 pressing **Ctrl+,**. Settings are categorized into five tabs;
 *General*, *Tools*, *Db editor*, *Spec. editors* and *Engine*.
-In addition to application settings, each Project item has user adjustable
-properties (See :ref:`Project Items`)
+In addition to application settings, each project item has user adjustable
+properties (See :ref:`Project Items`). See also :ref:`Setting up Consoles and External Tools`
+for more information on how to set up Consoles and external Tools.
 
 .. contents::
    :local:
 
-General settings
+General Settings
 ----------------
 
 .. image:: img/settings_general.png
@@ -32,7 +35,7 @@ Settings in the **Main** group:
 - **Delete data when project item is removed from project** Check this box to delete project item's data
   when a project item is removed from project. This means that the *project item directory* and its
   contents will be deleted from your hard drive. You can find the project item directories from the
-  ``<proj_dir>/.spinetoolbox/items/`` directory, where ``<proj_dir>`` is your current project directory.
+  `<proj_dir>/.spinetoolbox/items/` directory, where `<proj_dir>` is your current project directory.
 
 - **Open previous project at startup** If checked, application opens the project at startup that was
   open the last time the application was shut down. If left unchecked, application starts without a
@@ -45,7 +48,7 @@ Settings in the **Main** group:
   when the application exits.
 
 - **Work directory** Directory where processing the Tool takes place. Default place (if left empty) is
-  the ``/work`` subdirectory of Spine Toolbox install directory. You can change this directory.
+  the `/work` subdirectory of Spine Toolbox install directory. You can change this directory.
   Make sure to clean up the directory every now and then.
 
 Settings in the **UI** group:
@@ -55,44 +58,109 @@ Settings in the **UI** group:
 - **Color properties widgets** Check this box to make the background of Project item properties
   more colorful.
 
-- **Curved links** Controls the look of the arrows on Design View.
+- **Curved links** Controls the look of the arrows on **Design View**.
 
 - **Drag to draw links** When checked, the mouse button needs to be pressed while
   drawing links between project items. If unchecked, single clicks at link source and destination
   items suffices.
 
 - **Prevent items from overlapping** When checked, other project items can be pushed away when
-  moving an item around the Design view. If left unchecked, items can be piled on top of each other.
+  moving an item around the **Design view**. If left unchecked, items can be piled on top of each other.
 
 - **Rounded items** Check this box to round the corners of otherwise rectangular project items.
 
-- **Show date and time in Event Log messages** If checked, every Event Log message is prepended with
+- **Show date and time in Event Log messages** If checked, every **Event Log** message is prepended with
   a date and time 'tag'.
 
-- **Smooth zoom** Controls the way zooming (by using the mouse wheel) behaves in Design View and in
-  Spine database editor. Controls if the zoom in/out is continuous or discrete. On older computers,
+- **Smooth zoom** Controls the way zooming (by using the mouse wheel) behaves in **Design View** and in
+  **Spine DB Editor**. Controls if the zoom in/out is continuous or discrete. On older computers,
   smooth zoom is not recommended because it may be slower.
 
-- **Background** Has some pattern options for the background of the Design view.
+- **Background** Has some pattern options for the background of the **Design View**.
   Clicking on the square next to 'Color' let's you choose the pattern's color.
 
-- **Link flash speed** This slider controls the speed of the link animation on Design
-  View when execution is ongoing.
+- **Link flash speed** This slider controls the speed of the link animation on **Design
+  View** when execution is ongoing.
 
-Tools settings
+Tools Settings
 --------------
 
-The Tool settings tab contains settings for external tools.
-See :ref:`Setting up External Tools` for more information and examples.
+The Tools tab contains settings for external tools.
 
-Database editor settings
-------------------------
+.. image:: img/settings_tools_default.png
+   :align: center
+
+Settings in the **GAMS** group:
+
+- **GAMS executable** Set the path to GAMS executable you want to use when executing GAMS tools. If you have GAMS in
+  your PATH environment variable, it will be automatically used. You can also choose another GAMS by clicking the
+  |open-folder| button.
+
+Settings in the **Julia** group:
+
+Choose the settings on how Julia Tools are executed.
+
+- **Basic Console** When selected, Julia Tools will be executed in a custom interactive Julia REPL.
+
+- **Julia executable** Set the path to a Julia Executable used in launching the Basic Console. If Julia is in PATH
+  this will be autofilled, but you can also choose another Julia executable.
+
+- **Julia project** Set the Julia project you want to activate in the Basic Console.
+
+- **Jupyter Console** Choosing this option runs Julia Tools in a custom Jupyter QtConsole embedded into Spine Toolbox.
+
+- **Select Julia kernel... drop-dowm menu** Select the kernel you want to launch in Jupyter Console.
+
+- **Make Julia Kernel** clicking this button makes a new kernel based on the selected *Julia executable*, and *Julia
+  project*. The progress of the operation is shown in another dialog. Installing a Julia kernel requires the **IJulia**
+  package which will be installed to the selected *Julia project*. After **IJulia** has been installed, the kernel is
+  installed. This process can take a couple of minutes to finish.
+
+- **Install Julia** Installs the latest Julia on your system using the **jill** package.
+
+- **Add/Update SpineOpt** Installs the latest compatible **SpineOpt** to the selected Julia project. If the selected
+  *Julia project* already has SpineOpt, it is upgraded if there's a new version available.
+
+.. note:: These Julia settings are *global* application settings. All Julia Tools are executed with the settings
+  selected here.
+
+Settings in the **Python** group:
+
+Choose the settings on how Python Tools are executed.
+
+- **Basic Console** When selected, Python Tools will be executed in a custom interactive Python REPL.
+
+- **Python executable** Set the path to a Python Executable used in launching the Basic Console. The default option
+  (if the line edit is blank) is the Python executable that was used in launching Spine Toolbox.
+
+- **Jupyter Console** Choosing this option runs Python Tools in a custom Jupyter QtConsole embedded into Spine
+  Toolbox.
+
+- **Select Python kernel... drop-dowm menu** Select the kernel you want to launch in Jupyter Console.
+
+- **Make Python Kernel** clicking this button makes a new kernel based on the selected *Python executable*. The
+  progress of the operation is shown in another dialog. Installing a Python kernel (actually IPython kernel)
+  requires the **ipykernel** package which will be installed to the selected *Python executables*. After
+  **ipykernel** has been installed, the kernel is installed. This process can take a couple of minutes to finish.
+
+.. note:: These Python settings are just the default settings *for new Python Tool Specs*. You can select a
+  specific Python kernel for each Python Tool Spec separately using the **Tool Specification Editor**.
+
+Settings in the **Conda** group:
+
+- **Miniconda executable** If you want to run Python Tools in a Conda environment, you can set the path
+  to your Conda executable here.
+
+See :ref:`Setting up Consoles and External Tools` for more information and examples.
+
+Db editor Settings
+------------------
 
 .. image:: img/settings_db_editor.png
    :align: center
 
-This tab contains settings for the Database editor.
-The same settings can be accessed directly from the Database editor itself.
+This tab contains settings for the Spine Database editor. The same settings can be accessed directly
+from the Database editor itself.
 
 - **Commit session before closing** This checkbox controls what happens when you close a
   database editor which has uncommitted changes. When this is unchecked, all changes are discarded without
@@ -126,8 +194,8 @@ The same settings can be accessed directly from the Database editor itself.
   that are open on the same table into a single graph if they contains common object nodes.
   If unchecked, a separate graph will be drawn for each database.
 
-Specification editor settings
------------------------------
+Spec. editor Settings
+---------------------
 
 .. image:: img/settings_specification_editors.png
    :align: center

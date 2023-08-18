@@ -1,8 +1,7 @@
 ..  Parameter value editor
-    Created: 15.8.2019
 
 **********************
-Parameter value editor
+Parameter Value Editor
 **********************
 
 Parameter value editor is used to edit object and relationship parameter values

@@ -12,9 +12,9 @@ Welcome to Spine Toolbox's User Guide!
 computation tasks, such as energy system models.
 
 If you are new to Spine Toolbox, :ref:`Getting Started` section is a good place to start. If you want to run
-`SpineOpt.jl <https://github.com/spine-tools/SpineOpt.jl>`_ using Spine Toolbox, :ref:`How to set up SpineOpt.jl`
+`SpineOpt.jl <https://github.com/spine-tools/SpineOpt.jl>`_ using Spine Toolbox, :ref:`How to Set up SpineOpt.jl`
 provides the step-by-step instructions on how to get started. For information on how to set up Python, Julia, and
-Gams for Spine Toolbox, see :ref:`Setting up External Tools`. Please see :ref:`Settings` chapter for information
+Gams for Spine Toolbox, see :ref:`Setting up Consoles and External Tools`. Please see :ref:`Settings` chapter for information
 on user customizable Spine Toolbox settings. If you need help in understanding the terms we use throughout the app
 and this User Guide, please check the :ref:`Terminology` section. If you want to contribute to this project,
 please see the :ref:`Contribution Guide`. The last section contains the complete code reference of Spine Toolbox.
@@ -23,6 +23,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    :maxdepth: 1
    :caption: Contents:
 
+   whats_new
    getting_started
    how_to_run_spineopt
    setting_up
@@ -31,9 +32,8 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    links
    tool_specification_editor
    executing_projects
-   execution_modes
    settings
-   Spine database editor <spine_db_editor/index>
+   Spine Database Editor <spine_db_editor/index>
    plotting
    parameter_value_editor
    metadata_description

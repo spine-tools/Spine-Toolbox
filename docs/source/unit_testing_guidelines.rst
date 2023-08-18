@@ -1,6 +1,6 @@
 .. _Unit testing guidelines:
 
-Unit testing guidelines
+Unit Testing Guidelines
 =======================
 
 Test modules, directories
