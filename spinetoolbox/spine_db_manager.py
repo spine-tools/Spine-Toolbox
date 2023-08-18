@@ -515,19 +515,26 @@ class SpineDBManager(QObject):
             failed_db_maps (list): All the db maps that failed to commit
         """
         failed_db_maps = list()
-        if dirty_db_maps:
-            if commit_dirty:
-                failed_db_maps = self.commit_session(commit_msg, *dirty_db_maps)
-            else:
-                self.rollback_session(*dirty_db_maps)
         for db_map in db_maps:
-            if db_map in failed_db_maps:
-                continue
             self.remove_db_map_listener(db_map, listener)
             try:
                 self.undo_stack[db_map].canRedoChanged.disconnect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].canUndoChanged.disconnect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
+            except AttributeError:
+                pass
+        if dirty_db_maps:
+            if commit_dirty:
+                failed_db_maps += self.commit_session(commit_msg, *dirty_db_maps)
+            else:
+                self.rollback_session(*dirty_db_maps)
+        # If some db maps failed to commit, reinstate their listeners
+        for db_map in failed_db_maps:
+            self.add_db_map_listener(db_map, listener)
+            try:
+                self.undo_stack[db_map].canRedoChanged.connect(listener.update_undo_redo_actions)
+                self.undo_stack[db_map].canUndoChanged.connect(listener.update_undo_redo_actions)
+                self.undo_stack[db_map].cleanChanged.connect(listener.update_commit_enabled)
             except AttributeError:
                 pass
         for db_map in db_maps:
