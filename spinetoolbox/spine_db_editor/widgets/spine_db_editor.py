@@ -986,7 +986,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self._timer_refresh_tab_order.timeout.connect(self._refresh_tab_order, Qt.UniqueConnection)
         self._timer_refresh_tab_order.start(100)
 
-    @Slot()
     def _refresh_tab_order(self):
         if self._torn_down:
             return
