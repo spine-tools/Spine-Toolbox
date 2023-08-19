@@ -6,142 +6,131 @@ Publishing to PyPI
 This document describes the prerequisites and workflow to publish Spine Toolbox
 to `The Python Package Index (PyPI) <https://pypi.org>`_.
 
-First, make sure you have all the developer packages installed by calling
+1. Versioning of Spine Toolbox packages
+---------------------------------------
 
-::
+Spine Toolbox packages use the latest Git tag to dynamically generate
+the version number.  During the build process Git tags of the form
+``X.Y.Z`` are sorted and the latest is used to generate the package
+version.  If the tip of the current branch (``HEAD``) is at a tag, the
+version number is the tag.  However, if there have been commits since
+the latest tag, the next version is guessed and a ``dev??-*``
+component is included (e.g. ``'0.7.0.dev77+gf9538fee.d20230816'``).
+Note that the ``dev*`` component also includes an indication of the
+number of commits since the last tag.
 
-    $ pip install --upgrade -r dev-requirements.txt
+Under this scheme, the release process is simply to create a new Git
+tag, and publish it.  However since the different Spine packages
+depend on each other, you need to update the different version number
+requirements in their respective ``pyproject.toml`` files.  This can
+be done conveniently by using the CLI tools available in the
+`spine-conductor`_ repo.
 
-inside your Python environment.
+2. Creating the Git tags and publishing to PyPI
+-----------------------------------------------
 
-The most convenient order in which Spine packages should be published is
-``spinedb_api``, then ``spine_engine``, ``spine_items``, and last ``spinetoolbox``.
+1. Check out the `spine-conductor`_ repo, and install it, either in a
+   virtual environment or using ``pipx``.
 
-For each of the packages, make sure you are on the ``master`` branch
-and the repositories are up-to-date.
-Also, test that Toolbox works as expected.
+2. You can create a TOML configuration file as mentioned in the README
+   of the repo; say ``release.toml``.  Something like the sample below
+   should work.
 
-Starting from ``spinedb_api``, the following steps should be taken.
+   .. code-block:: toml
+      :caption: release.toml
+      :name: release-toml
 
-1. Update dependencies
-----------------------
+      [tool.conductor]
+      packagename_regex = "spine(toolbox|(db){0,1}[_-][a-z]+)"  # package name on PyPI
 
-This step is skipped for ``spinedb_api`` as it does not depend on other packages.
+      [tool.conductor.dependency_graph]
+      spinetoolbox = ["spine_items", "spine_engine", "spinedb_api"]
+      spine_items  = ["spinetoolbox", "spine_engine", "spinedb_api"]
+      spine_engine = ["spinedb_api"]
+      spinedb_api  = []
 
-Update ``setup.cfg`` or ``setup.py`` files so that they require the latest dependencies.
-For example, if you just published ``spinedb_api`` 0.99.0, ensure that ``spine_engine``'s
-``setup.py`` includes the line
+      [tool.conductor.repos]
+      spinetoolbox = "."
+      spine_items  = "venv/src/spine-items"
+      spine_engine = "venv/src/spine-engine"
+      spinedb_api  = "venv/src/spinedb-api"
 
-::
+      # # default
+      # [tool.conductor.branches]
+      # spinetoolbox = "master"
+      # spine_items  = "master"
+      # spine_engine = "master"
+      # spinedb_api  = "master"
 
-    "spinedb_api>=0.99.0",
+3. Now you can create a release by calling the ``conduct release -c
+   release.toml`` command with the TOML file as config.  This starts a
+   guided session where the `spine-conductor`_ CLI tool deduces the
+   next version numbers from existing Git tags, updates the
+   corresponding ``pyproject.toml`` files in all the repos to reflect
+   the new package versions, and finally prompts you to add any edited
+   files, and create the new Git tag.  A typical session would like
+   this::
 
-Note: ``spine_items`` and ``spinetoolbox`` depend circularly on each other.
-When updating ``spine_items``'s ``setup.cfg``,
-you should update the ``spinetoolbox`` entry as well even though that version will be published later.
+   .. code-block::
+      :caption: A typical release session; note the JSON summary in the end.
+      :name: release-session
 
-Finally, please remember to commit and push your changes before continuing.
+      $ cd /path/to/repo/Spine-Toolbox
+      $ conduct release --bump patch -c release.toml  # or include in pyproject.toml
+      Repository: /path/to/repo/Spine-Toolbox
+      ## master...origin/master
+       M pyproject.toml (1)
+      Select the files to add (comma/space separated list): 1
+      Creating tag: 0.6.19 @ 034fb4b
+      Repository: /path/to/repo/venv/src/spine-items
+      ## master...origin/master
+       M pyproject.toml (1)
+      Select the files to add (comma/space separated list): 1
+      Creating tag: 0.20.1 @ 5848e25
+      Repository: /path/to/repo/venv/src/spine-engine
+      ## master...origin/master
+       M pyproject.toml (1)
+      Select the files to add (comma/space separated list): 1
+      Creating tag: 0.22.1 @ e312db2
+      Repository: /path/to/repo/venv/src/spinedb-api
+      ## master...origin/master
+      Select the files to add (comma/space separated list):
+      Creating tag: 0.29.1 @ d9ed86e
 
-2. Tag the git revision
------------------------
+      Package Tags summary  💾 ➡ 'pkgtags.json':
+      {
+        "Spine-Toolbox": "0.6.19",
+        "spine-items": "0.20.1",
+        "spine-engine": "0.22.1",
+        "Spine-Database-API": "0.29.1"
+      }
 
-Tag the code revision with
+   If the session completes successfully, you will see a session
+   summary with the newest Git tags that were created for each
+   package.
 
-::
+4. Push the newly created tags to GitHub::
 
-    $ git tag --message "Version x.y.z" <version number>
+     for repo in . venv/src/{spinedb-api,spine-{items,engine}}; do
+         pushd $repo;
+         git push origin master --tags;
+         popd
+     done
 
+5. Now you can trigger the workflow to publish the packages to PyPI
+   either by using GitHub CLI, or from the `workflow dispatch menu`_
+   in the `spine-conductor`_ repo.
 
-You can find the current version in ``<package>/version.py`` files
-except for ``spinedb_api`` which stores the version in ``spinedb_api/__init__.py``.
+   .. code-block::
+      :caption: Using GitHub CLI to publish to PyPI
+      :name: publish-to-pypi
 
-Note that you should drop the release level part of the version number,
-e.g. 0.11.0.dev0 becomes 0.11.0 for the purpose of the git tag.
+      cat pkgtags.json | gh workflow run --repo spine-tools/spine-conductor test-n-publish.yml --json
 
-3. Make version final
----------------------
+   If you are using the `workflow dispatch menu`_, make sure you input
+   the exact same package vesions as shown in the summary.
 
-The release level of Spine packages is 'dev' by default
-but we want to upload final versions to PyPI.
-Remove the ``.dev0`` part of the package's version string in ``version.py``
-(``__init__.py`` in case of ``spinedb_api``)
-or replace ``dev`` by ``final`` if you are working with ``spinetoolbox``.
+Done!
 
-Do not commit this change to git.
-The version number will be updated again in the last step.
-
-4. Clean up previous release builds
------------------------------------
-
-Delete the ``build/`` and ``dist/`` directories in the repository root
-if they exist.
-The directories will be autogenerated in the build step.
-
-Another option to clean previous builds is with
-
-::
-
-    $ python setup.py clean --all
-
-
-5.Build
--------
-
-Build a source distribution archive and a wheel package with
-
-::
-
-    $ python setup.py sdist bdist_wheel
-
-This will create distribution files under the ``dist/`` and ``build/`` directories.
-
-Please remember to clean up between subsequent builds per the instructions in the previous step.
-
-
-6. Upload
----------
-
-Before making a real upload, please test using TestPyPI which is a separate 
-instance from the real index server.
-Once a version has been uploaded to PyPI, it cannot be reverted or modified. 
-
-`Register an account <https://test.pypi.org/account/register/>`_ and ask 
-some of the owners of `the Spine Toolbox package <https://test.pypi.org/project/spinetoolbox/>`_ 
-(or other relevant package) to add you as a maintainer.
-
-Upload the distribution using
-
-::
-
-    $ twine upload --repository testpypi dist/*
-
-See `Using TestPyPI <https://packaging.python.org/guides/using-testpypi/>`_ 
-for more information. To avoid entering your username and password every time,
-see `Keyring support in twine documentation <https://twine.readthedocs.io/en/latest/#keyring-support>`_.
-
-If everything went smoothly, you are ready to upload the real index.
-Again, you need to register to PyPI and ask to become a maintainer of the package
-you want to upload to. Upload the distribution using
-
-::
-
-    $ twine upload dist/*
-
-
-7. Bump version number
-----------------------
-
-Now that the package has been released to PyPI,
-it is time to update the version to the next development version.
-Bump the number in ``version.py`` (``__init__.py`` for ``spinedb_api``) to the next appropriate one
-and append ``.dev0`` to the version string (replace ``final`` by ``dev`` for ``spinetoolbox``).
-
-Do not forget to push the changes.
-
-8. Rinse and repeat
--------------------
-
-Switch to the next Spine package and start over from step 1
-unless you just finished with ``spinetoolbox``.
-In that case, congratulations!
-You have just released the Spine project to PyPI.
+.. _spine-conductor: https://github.com/spine-tools/spine-conductor
+.. _workflow dispatch menu: https://github.com/spine-tools/spine-conductor/actions/workflows/test-n-publish.yml
