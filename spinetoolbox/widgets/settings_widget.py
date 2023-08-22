@@ -719,7 +719,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if conda_placeholder_txt:
             self.ui.lineEdit_conda_path.setPlaceholderText(conda_placeholder_txt)
         self.ui.lineEdit_conda_path.setText(conda_path)
-        self.ui.lineEdit_work_dir.setText(work_dir)
+        if os.path.normpath(work_dir) != os.path.normpath(DEFAULT_WORK_DIR):
+            self.ui.lineEdit_work_dir.setText(work_dir)
+        self.ui.lineEdit_work_dir.setPlaceholderText(DEFAULT_WORK_DIR)
         self.orig_work_dir = work_dir
         if save_spec == 0:
             self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.CheckState.Unchecked)
