@@ -69,7 +69,7 @@ be done conveniently by using the CLI tools available in the
    corresponding ``pyproject.toml`` files in all the repos to reflect
    the new package versions, and finally prompts you to add any edited
    files, and create the new Git tag.  A typical session would like
-   this::
+   this:
 
    .. code-block::
       :caption: A typical release session; note the JSON summary in the end.
