@@ -13,6 +13,7 @@
 The SpineDBWorker class
 """
 from functools import wraps
+from sqlalchemy.exc import DBAPIError
 from PySide6.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from .helpers import busy_effect, separate_metadata_and_item_metadata
@@ -169,7 +170,12 @@ class SpineDBWorker(QObject):
             return False
         offset = self._offsets.setdefault(item_type, 0)
         query = self._db_map.query(getattr(self._db_map, sq_name)).limit(_CHUNK_SIZE).offset(offset)
-        chunk = [x._asdict() for x in query]
+        chunk = list()
+        try:
+            chunk = [x._asdict() for x in query]
+        except DBAPIError as e:
+            msg = f"DBAPIError while fetching more '{item_type}' items: {e.orig.args}"
+            self._db_mngr.receive_error_msg({self._db_map: [msg]})
         self._offsets[item_type] += len(chunk)
         if not chunk:
             self._fetched_item_types.add(item_type)
@@ -416,6 +422,9 @@ class SpineDBWorker(QObject):
             check (bool): Whether to check integrity
             cache (dict): Cache
             callback (None or function): something to call with the result
+
+        Returns:
+            bool: True if adding successful, False otherwise
         """
         method_name = {
             "object_class": "add_object_classes",
@@ -477,7 +486,9 @@ class SpineDBWorker(QObject):
             db_map_data = {self._db_map: data}
             if item_type == actual_item_type and callback is not None:
                 callback(db_map_data)
-            self._db_mngr.items_added.emit(actual_item_type, db_map_data)
+            if items:
+                self._db_mngr.items_added.emit(actual_item_type, db_map_data)
+                return True
 
     def _rebind_recursively(self, item):
         """Rebinds a cache item and its referrers to fetch parents.
@@ -502,6 +513,9 @@ class SpineDBWorker(QObject):
             check (bool): Whether or not to check integrity
             cache (dict): Cache
             callback (None or function): something to call with the result
+
+        Returns:
+            bool: True if update successful, False otherwise
         """
         method_name = {
             "object_class": "update_object_classes",
@@ -528,6 +542,7 @@ class SpineDBWorker(QObject):
             items, errors = getattr(self._db_map, method_name)(*orig_items, check=check, return_items=True, cache=cache)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
+            return False
         if self._committing:
             if callback is not None:
                 callback({})
@@ -538,6 +553,7 @@ class SpineDBWorker(QObject):
             if item_type == actual_item_type and callback is not None:
                 callback(db_map_data)
             self._db_mngr.items_updated.emit(actual_item_type, db_map_data)
+        return True
 
     @busy_effect
     def remove_items(self, item_type, ids, callback, committing_callback):
@@ -572,11 +588,15 @@ class SpineDBWorker(QObject):
         Args:
             commit_msg (str): commit message
             cookie (Any): a cookie to include in session_committed signal
+
+        Returns:
+            success (bool): True if commit succeeded, False otherwise
         """
         # Make sure that the worker thread has a reference to undo stacks even if they get deleted
         # in the GUI thread.
         undo_stack = self._db_mngr.undo_stack[self._db_map]
-        self._executor.submit(self._commit_session, commit_msg, undo_stack, cookie).result()
+        success = self._executor.submit(self._commit_session, commit_msg, undo_stack, cookie).result()
+        return success
 
     def _commit_session(self, commit_msg, undo_stack, cookie=None):
         """Commits session for given database maps.
@@ -585,16 +605,25 @@ class SpineDBWorker(QObject):
             commit_msg (str): commit message
             undo_stack (AgedUndoStack): undo stack that outlive the DB manager
             cookie (Any): a cookie to include in session_committed signal
+
+        Return:
+            bool: True if commit succeeded, False otherwise
         """
         self._committing = True
-        undo_stack.commit()
+        try:
+            undo_stack.commit()
+        except SpineDBAPIError as err:
+            self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
+            return False
         self._committing = False
         try:
             self._db_map.commit_session(commit_msg)
             self._db_mngr.session_committed.emit({self._db_map}, cookie)
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
+            return False
         undo_stack.setClean()
+        return True
 
     def rollback_session(self):
         """Initiates rollback session in the worker thread."""

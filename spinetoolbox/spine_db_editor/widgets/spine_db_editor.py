@@ -832,9 +832,13 @@ class SpineDBEditorBase(QMainWindow):
                     return False
         self._purge_change_notifiers()
         self._torn_down = True
-        self.db_mngr.unregister_listener(
+        failed_db_maps = self.db_mngr.unregister_listener(
             self, *self.db_maps, dirty_db_maps=dirty_db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg
         )
+        if failed_db_maps:
+            msg = f"Fail to commit due to locked database"
+            self.db_mngr.receive_error_msg({i: [msg] for i in failed_db_maps})
+            return False
         return True
 
     def _prompt_to_commit_changes(self):
