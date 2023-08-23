@@ -49,7 +49,7 @@ From *Stacked tables*
 
 To remove parameter definitions or values,
 go to the relevant *Stacked table* and select any cell in the row corresponding to the items
-you want to remove
+you want to remove.s
 Then, right-click on the selection and choose the appropriate **Remove** option from the context menu.
 
 From *Pivot table*
@@ -92,7 +92,7 @@ right-click on the selection and choose **Remove** from the context menu.
 From *Alternative tree*
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-To remove an alternative, just select the correspoding items in *Alternative tree*,
+To remove an alternative, just select the corresponding items in *Alternative tree*,
 right-click on the selection and choose **Remove** from the context menu.
 
 
@@ -118,14 +118,14 @@ right-click  on the selection and choose **Remove** from the context menu.
 Removing tools and features
 ===========================
 
-To remove a feature, tool, or method, just select the correspoding items in *Tool/Feature tree*,
+To remove a feature, tool, or method, just select the corresponding items in *Tool/Feature tree*,
 right-click on the selection and choose **Remove** from the context menu.
 
 
 Removing parameter value lists
 ==============================
 
-To remove a parameter value list or any of its values, just select the correspoding items in *Parameter value list*,
+To remove a parameter value list or any of its values, just select the corresponding items in *Parameter value list*,
 right-click on the selection and choose **Remove** from the context menu.
 
 

@@ -15,13 +15,4 @@ Any changes made in the current session will be saved into the database.
 
 To undo *all* changes since the last commit, select **Session -> Rollback** from the hamburger menu.
 
-.. tip:: To undo/redo individual changes, use the **Undo** and **Redo** actions from the **Edit** menu.
-
-.. Advanced
-.. --------
-
-.. Entering parameter values of special type
-.. =========================================
-
-.. Plotting parameter values
-.. =========================
+.. tip:: To undo/redo individual changes, use the **Edit -> Undo** and **Edit -> Redo** actions from the hamburger menu.

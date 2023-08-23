@@ -31,7 +31,7 @@ How to Set up SpineOpt.jl
 #. Next, you need to install **SpineOpt.jl** package for the Julia you just selected for Spine Toolbox. You can do
    this manually by `following the instructions <https://github.com/spine-tools/SpineOpt.jl#installation>`_
    **or** you can install **SpineOpt.jl** by clicking the **Add/Update SpineOpt** button. After clicking the button,
-   an install/upgrade Spineopt wizard appears. Click **Next** twice and finally **Install SpineOpt**.
+   an install/upgrade SpineOpt wizard appears. Click **Next** twice and finally **Install SpineOpt**.
    **Wait until the process has finished** and you are greeted with this screen.
 
    .. image:: img/spineopt_install_wizard_successful.png
@@ -48,7 +48,7 @@ Spine Toolbox and Julia are now correctly set up for running **SpineOpt.jl**. Ne
 `Create a project workflow using SpineOpt.jl <https://spine-tools.github.io/SpineOpt.jl/latest/getting_started/setup_workflow/>`_
 (takes you to SpineOpt documentation). See also `Tutorials
 <https://spine-tools.github.io/SpineOpt.jl/latest/tutorial/simple_system/>`_ in SpineOpt documentation for more advanced
-use cases. For more information on how to select a specific Python or Julia version, see :ref:`Setting up Consoles and External Tools`).
+use cases. For more information on how to select a specific Python or Julia version, see :ref:`Setting up Consoles and External Tools`.
 
 .. note:: The **SpineOpt Plugin Toolbar** contains an exporter specification as well as three predefined Tools that make
    use of SpineOpt.jl. **The SpineOpt Plugin is not a requirement to run SpineOpt.jl**, they are provided just for

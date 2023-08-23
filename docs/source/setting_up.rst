@@ -108,7 +108,7 @@ Make sure to use the ``--user`` argument to make sure that the kernel specs are 
    **Python Kernel Specification Creator**, but simply selects the Python kernel automatically.
 
 .. note::
-   Executing Python Tools using the Jupyter Console supports Python versions from 2.7 all the way to newest one.
+   Executing Python Tools using the Jupyter Console supports Python versions from 2.7 all the way to latest one.
    This means, that if you still have some old Python 2.7 scripts lying around, you can incorporate those into
    a Spine Toolbox project workflow and execute them without modifications.
 

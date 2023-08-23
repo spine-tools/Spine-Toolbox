@@ -137,52 +137,52 @@ The JSON format consists of a single JSON object with the following ``OPTIONAL``
 
 Example::
 
-	{
-	    "object_classes": [
-	        ["connection", "An entity where an energy transfer takes place", 280378317271233],
-	        ["node", "An entity where an energy balance takes place", 280740554077951],
-	        ["unit", "An entity where an energy conversion process takes place", 281470681805429],
-	    ],
-	    "relationship_classes": [
-	        ["connection__node__node", ["connection", "node", "node"] , null],
-	        ["unit__from_node", ["unit", "node"], null],
-	        ["unit__to_node", ["unit", "node"], null],
-	    ],
-	    "parameter_value_lists": [
-	        ["balance_type_list", ["\"balance_type_node\"", "\"balance_type_group\"", "\"balance_type_none\""]],
-	        ["truth_value_list", ["\"value_false\"", "\"value_true\""]],
-	    ],
-	    "object_parameters": [
-	        ["connection", "connection_availability_factor", 1.0, null, null],
-	        ["node", "balance_type", "balance_type_node", "balance_type_list", null],
-	    ],
-	    "relationship_parameters": [
-	        ["connection__node__node", "connection_flow_delay", {"type": "duration", "data": "0h"}, null, null],
-	        ["unit__from_node", "unit_capacity", null, null, null],
-	        ["unit__to_node", "unit_capacity", null, null, null],
-	    ],
-	    "objects": [
-	        ["connection", "Bastusel_to_Grytfors_disch", null],
-	        ["node", "Bastusel_lower", null],
-	        ["node", "Bastusel_upper", null],
-	        ["node", "Grytfors_upper", null],
-	        ["unit", "Bastusel_pwr_plant", null],
-	    ],
-	    "relationships": [
-	        ["connection__node__node", ["Bastusel_to_Grytfors_disch", "Grytfors_upper", "Bastusel_lower"]],
-	        ["unit__from_node", ["Bastusel_pwr_plant", "Bastusel_upper"]],
-	        ["unit__to_node", ["Bastusel_pwr_plant", "Bastusel_lower"]],
-	    ],
-	    "object_parameter_values": [
-	        ["node", "Bastusel_upper", "demand", -0.2579768519],
-	        ["node", "Bastusel_upper", "fix_node_state", {"type": "time_series", "data": {"2018-12-31T23:00:00": 5581.44, "2019-01-07T23:00:00": 5417.28}}],
-	        ["node", "Bastusel_upper", "has_state", "value_true"],
-	    ],
-	    "relationship_parameter_values": [
-	        ["connection__node__node", ["Bastusel_to_Grytfors_disch", "Grytfors_upper", "Bastusel_lower"], "connection_flow_delay", {"type": "duration", "data": "1h"}],
-	        ["unit__from_node", ["Bastusel_pwr_plant", "Bastusel_upper"], "unit_capacity", 127.5],
-	    ]
-	}
+    {
+        "object_classes": [
+            ["connection", "An entity where an energy transfer takes place", 280378317271233],
+            ["node", "An entity where an energy balance takes place", 280740554077951],
+            ["unit", "An entity where an energy conversion process takes place", 281470681805429],
+        ],
+        "relationship_classes": [
+            ["connection__node__node", ["connection", "node", "node"] , null],
+            ["unit__from_node", ["unit", "node"], null],
+            ["unit__to_node", ["unit", "node"], null],
+        ],
+        "parameter_value_lists": [
+            ["balance_type_list", ["\"balance_type_node\"", "\"balance_type_group\"", "\"balance_type_none\""]],
+            ["truth_value_list", ["\"value_false\"", "\"value_true\""]],
+        ],
+        "object_parameters": [
+            ["connection", "connection_availability_factor", 1.0, null, null],
+            ["node", "balance_type", "balance_type_node", "balance_type_list", null],
+        ],
+        "relationship_parameters": [
+            ["connection__node__node", "connection_flow_delay", {"type": "duration", "data": "0h"}, null, null],
+            ["unit__from_node", "unit_capacity", null, null, null],
+            ["unit__to_node", "unit_capacity", null, null, null],
+        ],
+        "objects": [
+            ["connection", "Bastusel_to_Grytfors_disch", null],
+            ["node", "Bastusel_lower", null],
+            ["node", "Bastusel_upper", null],
+            ["node", "Grytfors_upper", null],
+            ["unit", "Bastusel_pwr_plant", null],
+        ],
+        "relationships": [
+            ["connection__node__node", ["Bastusel_to_Grytfors_disch", "Grytfors_upper", "Bastusel_lower"]],
+            ["unit__from_node", ["Bastusel_pwr_plant", "Bastusel_upper"]],
+            ["unit__to_node", ["Bastusel_pwr_plant", "Bastusel_lower"]],
+        ],
+        "object_parameter_values": [
+            ["node", "Bastusel_upper", "demand", -0.2579768519],
+            ["node", "Bastusel_upper", "fix_node_state", {"type": "time_series", "data": {"2018-12-31T23:00:00": 5581.44, "2019-01-07T23:00:00": 5417.28}}],
+            ["node", "Bastusel_upper", "has_state", "value_true"],
+        ],
+        "relationship_parameter_values": [
+            ["connection__node__node", ["Bastusel_to_Grytfors_disch", "Grytfors_upper", "Bastusel_lower"], "connection_flow_delay", {"type": "duration", "data": "1h"}],
+            ["unit__from_node", ["Bastusel_pwr_plant", "Bastusel_upper"], "unit_capacity", 127.5],
+        ]
+    }
 
 Importing
 =========

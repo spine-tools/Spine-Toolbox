@@ -71,7 +71,7 @@ The *Add object group* dialog will pop up:
 .. image:: img/add_object_group_dialog.png
    :align: center
 
-Enter the name of the group, adn select the database where you want the group to be created.
+Enter the name of the group, and select the database where you want the group to be created.
 Select the member objects under *Non members*, and press the button in the middle that has a plus sign.
 Multiple selection works.
 
@@ -274,7 +274,7 @@ and pasted at the appropriate position in *Scenario tree*.
 
 .. note:: Alternatives with higher rank have priority when determining the parameter value for a certain scenario.
    If the parameter value is specified for two alternatives, and both of them happen to coexist in a same scenario,
-   the value from the alternative with the higher rank is picked.
+   the value from the alternative with the higher rank takes precedence.
 
 If it is desirable to base a scenario on an existing one, scenarios can be duplicated
 using the **Duplicate** item in the right-click context menu, or by pressing **Ctrl+D**.

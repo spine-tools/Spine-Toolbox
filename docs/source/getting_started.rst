@@ -61,7 +61,7 @@ In addition to the **Design View** there are a few `dock widgets` that provide a
 
 In addition to the **Design View** and the dock widgets, the main window contains a **Toolbar** split into
 two sections. The **Items** section contains the project items that you can drag-and-drop onto the **Design
-View** and the **Execute** section has buttons related to executing the project.
+View** while the **Execute** section has buttons related to executing the project.
 
 .. tip:: You can drag-and-drop the dock widgets around the screen, customizing the interface at your will.
    Also, you can select which ones are shown/hidden using either the **View -> Dock Widgets** menu,
@@ -127,7 +127,7 @@ The **Tool specification editor** should be looking similar to this now:
   :align: center
 
 Note that the program file (``hello_world.py``) and the Tool specification (hello world) now have unsaved changes.
-This is indicated by the star (*) character next to hello_world.py* and the Tool specification name in the tabbar
+This is indicated by the star (*) character next to hello_world.py* and the Tool specification name in the tab bar
 (hello_world*).
 
 * Save changes to both by either pressing **Ctrl+S** or by mouse clicking on **Save** in the hamburger menu in
@@ -140,13 +140,13 @@ Your main window should look similar to this now.
 .. image:: img/getting_started_first_tool_spec_created.png
   :align: center
 
-Tool specifications are saved in JSON format by default into a dedicated directory under the project directory. If you
-want you can open the newly created ``hello_world.json`` file by clicking on the file path in the Event log message. The
-file will open in an external editor provided that you have selected a default program for files with the .json
+Tool specifications are saved by default in JSON format into a dedicated directory under the project directory. If you
+want, you can open the newly created ``hello_world.json`` file by clicking on the file path in the Event log message.
+The file will open in an external editor provided that you have selected a default program for files with the .json
 extension (e.g in Windows 10 you can do this in **Windows Settings -> Apps -> Default apps**). In general, you don't need
 to worry about *the contents* of the JSON Tool specification files. Editing these is done under the hood by the app.
 
-If you want to save ``hello_world.json`` somewhere else, you can do this by clicking the white [Change] link
+If you want to save ``hello_world.json`` somewhere else, you can do this by clicking the white [change] link
 after the path in the Event Log.
 
 .. tip:: Saving the Tool specification into a file allows you to add and use the same Tool specification in
@@ -179,8 +179,8 @@ the **Design View**. Similarly, the **Add Tool** form will popup but the 'hello 
 selected from the dropdown list.
 
 .. note:: The Tool specification is now saved to disk but the project itself is not. Remember to save the project
-   every once in a while when you are working. You can do this from the main window **File -> Save project** button
-   or by pressing **Ctrl+S** when the main window is active.
+   every once in a while when you are working. You can do this by selecting **File -> Save project**
+   from the main window or by pressing **Ctrl+S** when the main window is active.
 
 Executing a Tool
 ----------------
@@ -249,7 +249,7 @@ Save the specification and close the editor by pressing **Ctrl+S** and then **Al
 
 Back in the main window, note the exclamation mark on the Tool icon in **Design View**, if you hover the mouse over
 this mark, you will see a tooltip telling you in detail what is wrong. If you want you can try and execute the
-Tool anyway by pressing |execute| in the **Toolbar**. *The execution will fail.* because the file ``input.txt`` is not
+Tool anyway by pressing |execute| in the **Toolbar**. *The execution will fail* because the file ``input.txt`` is not
 made available for the Tool:
 
 .. image:: img/getting_started_say_hello_world_failed.png
@@ -261,7 +261,7 @@ Adding a Data Connection Item to the Project
 --------------------------------------------
 
 .. note:: The Data Connection item is used to hold generic data files,
-   so that other items, notably Importer and Tool items, can make use of that data.
+   so that other items, notably Importer and Tool, can make use of that data.
 
 Let's add a Data Connection item to our project, so that we're able to pass the file ``input.txt`` to
 'say hello world'. To add a Data Connection item, drag-and-drop the Data Connection icon (|dc_icon|) from the **Toolbar**

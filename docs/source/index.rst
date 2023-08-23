@@ -13,7 +13,7 @@ computation tasks, such as energy system models.
 
 If you are new to Spine Toolbox, :ref:`Getting Started` section is a good place to start. If you want to run
 `SpineOpt.jl <https://github.com/spine-tools/SpineOpt.jl>`_ using Spine Toolbox, :ref:`How to Set up SpineOpt.jl`
-provides the step-by-step instructions on how to get started. For information on how to set up Python, Julia, and
+provides step-by-step instructions on how to get started. For information on how to set up Python, Julia, or
 Gams for Spine Toolbox, see :ref:`Setting up Consoles and External Tools`. Please see :ref:`Settings` chapter for information
 on user customizable Spine Toolbox settings. If you need help in understanding the terms we use throughout the app
 and this User Guide, please check the :ref:`Terminology` section. If you want to contribute to this project,

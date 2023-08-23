@@ -28,7 +28,7 @@ The application main window contains four dock widgets (**Project**, **Propertie
 and **Help** menus. The **Project** dock widget contains a list of project items in the project. The **Properties**
 dock widget shows the properties of the selected project item. **Event Log** shows messages based on user actions and
 item executions. It shows messages from processes that are spawned by the application, i.e. it shows the stdout and
-stderr streams of GAMS and executable programs. Also things like whether an item's execution was successful or not and
+stderr streams of GAMS and executable programs. Also things like whether an item's execution was successful and
 when the project or an item specification is saved are shown.
 
 **Console** provides Julia and Python consoles that can be interacted with. What kind of console
@@ -43,14 +43,14 @@ and **Help** menus. In the **File** menu you can create a new project, open an e
 open the application Settings among other things. Spine Toolbox is project based, which means that you need to create
 a new project or open an existing one before you can do anything. You can create a new project by selecting
 **File -> New project...** from the menu bar. In the **Edit** menu you can for example copy, paste and duplicate items
-as well as undo and redo actions. In the **Plugins** menu the user can install and manage plugins. **Consoles** menu
+as well as undo and redo actions. In the **Plugins** menu you can install and manage plugins. **Consoles** menu
 provides a way to start detached consoles. In the **Server** menu you can retrieve projects from a server. **Help**
-contains a link to this documentation as well as other various information about Spine Toolbox.
+contains a link to this documentation as well as various tidbits about Spine Toolbox.
 
 The **Items** section of the **Toolbar** contains the available
 :ref:`project item <Project Items>` types.
 The **Execute** section contains icons that control the execution of the items in the **Design view** where you build your project.
-The |play-all| button executes all Directed-Acyclic Graphs (DAG) in the project in a row. The |play-selected| button
+The |play-all| button executes all Directed Acyclic Graphs (DAG) in the project in a row. The |play-selected| button
 executes the selected project items only. The |stop| button terminates the execution (if running).
 
 You can add a new project item to your project by pointing your mouse cursor on any of the draggable items
