@@ -291,7 +291,7 @@ the new version.  The steps are as follows:
 
 4. Create a Git tag on the latest commit::
 
-     git tag HEAD 0.7.0
+     git tag 0.7.0 HEAD
 
 5. Push the tags to GitHub.  On sh-like shells like: bash, zsh, or
    git-bash (Windows):
