@@ -39,12 +39,12 @@ In *Relationship tree*:
    Items in gray don't have any children, thus they cannot be expanded.
    To collapse an expanded item, double-click on it again or press the left arrow while it's active.
 
-.. tip:: To expand or collapse an item and all its descentants in *Object tree* or *Relationship tree*, 
+.. tip:: To expand or collapse an item and all its descendants in *Object tree* or *Relationship tree*,
    right click on the item to display the context menu, and select **Fully expand** or **Fully collapse.**
 
 
 .. tip:: In *Object tree*, the same relationship appears in many places (as many as it has dimensions). 
-   To jump to the next ocurrence of a relationship item, either double-click on the item,
+   To jump to the next occurrence of a relationship item, either double-click on the item,
    or right-click on it to display the context menu, and select **Find next**.
 
 Using *Entity graph*
@@ -97,7 +97,8 @@ Manipulating the graph
 You can move items in the graph by dragging them with your mouse.
 By default, each items moves individually.
 To make relationship items move along with their member objects,
-select **Settings** from the hamburger menu and check the box next to, *Move relationships along with objects in Entity graph*.
+select **Settings** from the hamburger menu and check the box next to
+*Move relationships along with objects in Entity graph*.
 
 To display *Entity graph*'s context menu, just right-click on an empty space in the graph.
 
@@ -108,14 +109,14 @@ To display *Entity graph*'s context menu, just right-click on an empty space in 
   To show the hidden items again, select **Show hidden** from the context menu.
 - To prune the graph, select the items you want to prune and then choose **Prune entities**
   or **Prune classes** from the context menu.
-  To restore specific prunned items, display the context menu,
+  To restore specific pruned items, display the context menu,
   hover **Restore** and select the items you want to restore from the popup menu.
-  To restore all prunned items at once, select **Restore all** from the context menu.
+  To restore all pruned items at once, select **Restore all** from the context menu.
 - To zoom in and out, scroll your mouse wheel over *Entity graph* or use **Zoom** buttons 
   in the context menu.
 - To rotate clockwise or anti-clockwise, press and hold the **Shift** key while scrolling your mouse wheel,
   or use the **Rotate** buttons in the context menu.
-- To adjust the arcs' lenght, use the **Arc length** buttons in the context menu.
+- To adjust the arcs' length, use the **Arc length** buttons in the context menu.
 - To rebuild the graph after moving items around, select **Rebuild graph** from the context menu.
 - To export the current graph as a PDF file, select **Export graph as PDF** from the context menu.
 
@@ -124,7 +125,7 @@ To display *Entity graph*'s context menu, just right-click on an empty space in 
    To perform rubber-band selection, press and hold **Ctrl** while dragging your mouse
    around the items you want to select.
 
-.. note:: Prunned items are remembered across graph builds.
+.. note:: Pruned items are remembered across graph builds.
 
 
 To display an object or relationship item's context menu, just right-click on it.
@@ -148,8 +149,12 @@ To filter *Stacked tables* by any entities and/or classes,
 select the corresponding items in either *Object tree*, *Relationship tree*, or *Entity graph*.
 To remove all these filters, select the root item in either *Object tree* or *Relationship tree*.
 
-To filter parameter definitions and values by certain parameter tags, 
-select those tags in *Parameter tag toolbar*.
+*Stacked tables* can also be filtered by selecting alternatives or scenarios from *Alternative tree*
+and *Scenario tree*. This filter is orthogonal to the entity/class filter and can be used together with it.
+To remove all these filters, select the root items or deselect all items from *Alternative tree* and *Scenario tree*.
+
+All the filters described above can be cleared with the *Clear all filters* item available in the *Stacked tables*
+right-click context menu.
 
 To apply a custom filter on a *Stacked table*, click on any horizontal header.
 A menu will pop up listing the items in the corresponding column:
@@ -214,7 +219,7 @@ Pivoting and freezing
 *********************
 
 To pivot the data, drag a header block across the top-left area of the table.
-You can turn a horizontal header into a vertical header and viceversa,
+You can turn a horizontal header into a vertical header and vice versa,
 as well as rearrange headers vertically or horizontally.
 
 To freeze a dimension, drag the corresponding header block from *Pivot table* into *Frozen table*.

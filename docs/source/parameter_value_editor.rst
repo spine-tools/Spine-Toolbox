@@ -11,7 +11,7 @@ It can also convert between different value types, e.g. from a time series to a 
 The editor can be opened by right clicking on the value field that you want to edit
 in a Spine database editor and selecting **Edit...** from the popup menu.
 In most cases the editor can be opened again by double clicking an existing value.
-With plain values like strings and floats this won't be work since double clicking
+With plain values like strings and floats this will not work since double clicking
 starts the text editor in that field.
 
 Choosing value type
@@ -35,7 +35,7 @@ or set it to true, false or null as needed.
 
 Numbers and strings can also be inserted without going through the value editor by double clicking
 on a value field. If the users input is a number like 3.14, the value type will be interpreted
-as *number or string*. If the input is a string like "ok", the value type will automatically be set as *string*.
+as *number or string*. If the input is a string like "ok", the value type will automatically be set to *string*.
 
 Maps
 ----

@@ -47,9 +47,8 @@ Settings in the **Main** group:
 - **When there are unsaved changes at exit** The combo box chooses what to do with unsaved changes
   when the application exits.
 
-- **Work directory** Directory where processing the Tool takes place. Default place (if left empty) is
-  the `/work` subdirectory of Spine Toolbox install directory. You can change this directory.
-  Make sure to clean up the directory every now and then.
+- **Work directory** Directory where processing Tools takes place. Default place (if left empty) is
+  shown as placeholder text. Make sure to clean up the directory every now and then.
 
 Settings in the **UI** group:
 
@@ -62,7 +61,7 @@ Settings in the **UI** group:
 
 - **Drag to draw links** When checked, the mouse button needs to be pressed while
   drawing links between project items. If unchecked, single clicks at link source and destination
-  items suffices.
+  connector slots suffices.
 
 - **Prevent items from overlapping** When checked, other project items can be pushed away when
   moving an item around the **Design view**. If left unchecked, items can be piled on top of each other.
@@ -77,7 +76,7 @@ Settings in the **UI** group:
   smooth zoom is not recommended because it may be slower.
 
 - **Background** Has some pattern options for the background of the **Design View**.
-  Clicking on the square next to 'Color' let's you choose the pattern's color.
+  Clicking on the square next to 'Color' lets you choose the pattern's color.
 
 - **Link flash speed** This slider controls the speed of the link animation on **Design
   View** when execution is ongoing.
@@ -109,9 +108,9 @@ Choose the settings on how Julia Tools are executed.
 
 - **Jupyter Console** Choosing this option runs Julia Tools in a custom Jupyter QtConsole embedded into Spine Toolbox.
 
-- **Select Julia kernel... drop-dowm menu** Select the kernel you want to launch in Jupyter Console.
+- **Select Julia kernel... drop-down menu** Select the kernel you want to launch in Jupyter Console.
 
-- **Make Julia Kernel** clicking this button makes a new kernel based on the selected *Julia executable*, and *Julia
+- **Make Julia Kernel** Clicking this button makes a new kernel based on the selected *Julia executable*, and *Julia
   project*. The progress of the operation is shown in another dialog. Installing a Julia kernel requires the **IJulia**
   package which will be installed to the selected *Julia project*. After **IJulia** has been installed, the kernel is
   installed. This process can take a couple of minutes to finish.
@@ -119,7 +118,7 @@ Choose the settings on how Julia Tools are executed.
 - **Install Julia** Installs the latest Julia on your system using the **jill** package.
 
 - **Add/Update SpineOpt** Installs the latest compatible **SpineOpt** to the selected Julia project. If the selected
-  *Julia project* already has SpineOpt, it is upgraded if there's a new version available.
+  *Julia project* already has SpineOpt, it is upgraded if there is a new version available.
 
 .. note:: These Julia settings are *global* application settings. All Julia Tools are executed with the settings
   selected here.
@@ -136,7 +135,7 @@ Choose the settings on how Python Tools are executed.
 - **Jupyter Console** Choosing this option runs Python Tools in a custom Jupyter QtConsole embedded into Spine
   Toolbox.
 
-- **Select Python kernel... drop-dowm menu** Select the kernel you want to launch in Jupyter Console.
+- **Select Python kernel... drop-down menu** Select the kernel you want to launch in Jupyter Console.
 
 - **Make Python Kernel** clicking this button makes a new kernel based on the selected *Python executable*. The
   progress of the operation is shown in another dialog. Installing a Python kernel (actually IPython kernel)

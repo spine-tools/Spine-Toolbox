@@ -32,7 +32,7 @@ been plotted on the same graph.
    :align: center
    :width: 70%
 
-If a plot is clicked with the right mouse button, options to cpy or show the plot data
+If a plot is clicked with the right mouse button, options to copy or show the plot data
 are presented. When the data is copied it is saved to the clipboard in csv format with
 tab as the delimiter. If **Show plot data...** is clicked a new window opens that
 contains a table of the data used in the plot.

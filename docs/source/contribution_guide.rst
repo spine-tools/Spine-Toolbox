@@ -88,12 +88,12 @@ Commit messages
 ---------------
 The commit message should tell *what* was changed and *why*. Details on *how* it was done can usually be left out, 
 if the code itself is self-explanatory (remember source comments too!). Separate the subject line from the body with
-a blank line. The subjet line (max. 50 chars) should explain in condensed form what happened using imperative mood, 
+a blank line. The subject line (max. 50 chars) should explain in condensed form what happened using imperative mood,
 i.e. using verbs like 'change', 'fix' or 'add'. Start the subject line with a capital letter. 
 Do not use the issue number on the subject line, as it does not tell much to a person who’s not aware of that 
 particular issue. For more info see Chris Beams’ ‘Seven rules of of a great Git commit message’ [CB14]_.
 
-A good example (insipred by [CB14]_)
+A good example (inspired by [CB14]_)
 
 .. code-block:: text
 
@@ -172,7 +172,7 @@ as intended.
 
 Test-driven development is your friend
 --------------------------------------
-Any bug fix that doesn’t include a test proving the existence of the bug being fixed, may be suspect.
+Any bug fix that does not include a test proving the existence of the bug being fixed, may be suspect.
 Ditto for new features that can’t prove they actually work.
 
 It is recommended to use test-first development as it really helps make features better designed

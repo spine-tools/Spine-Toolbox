@@ -12,7 +12,7 @@ Spine Engine Server
 
 Notes
 -----
-Here's a list of items that you should be aware of when running projects on Spine Engine Server.
+Here is a list of items that you should be aware of when running projects on Spine Engine Server.
 
 - **Projects must be self-contained**. The project directory must contain all input and output
   files, file/db references, Specification files and scripts.
@@ -40,13 +40,17 @@ and *spine-items*. Note that the dependencies of *spine-items* are not needed. H
 instructions for a minimal installation:
 
 1.1 Make a miniconda environment & activate it
+
 1.2. Clone `spine-engine <https://github.com/spine-tools/spine-engine>`_
+
 1.3. cd to *spine-engine* repo root, run::
 
    pip install -e .
 
 1.4. Clone `spine-items <https://github.com/spine-tools/spine-items>`_
+
 1.5. cd to *spine-items* repo root
+
 1.6. Install *spine-items* **without dependencies** by running::
 
    pip install --no-deps -e .
@@ -57,7 +61,9 @@ Full Installation
 Install Spine Toolbox regularly
 
 1.1. Make a miniconda environment & activate
+
 1.2. Clone `Spine Toolbox <https://github.com/spine-tools/Spine-Toolbox>`_
+
 1.3. Follow the `installation instructions in README.md <https://github.com/spine-tools/Spine-Toolbox#installation>`_
 
 Finalize Setting Up and Start Server
@@ -106,7 +112,7 @@ Finalize Setting Up and Start Server
 
       python start_server.py 50001 StoneHouse ./certs
 
-   - where, 50001 is an example server port number, StoneHouse is the security model, and the path is the folder
+   - where 50001 is an example server port number, StoneHouse is the security model, and the path is the folder
      containing the security credentials.
 
 .. Note:: Valid port range is 49152-65535.
