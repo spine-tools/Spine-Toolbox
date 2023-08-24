@@ -18,3 +18,4 @@ work/
 .coverage
 htmlcov/
 src/
+spinetoolbox/_version.py
