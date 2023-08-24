@@ -19,3 +19,4 @@ work/
 htmlcov/
 src/
 spinetoolbox/_version.py
+release.toml
