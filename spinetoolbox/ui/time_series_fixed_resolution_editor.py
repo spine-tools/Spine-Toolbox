@@ -13,7 +13,7 @@
 ################################################################################
 ## Form generated from reading UI file 'time_series_fixed_resolution_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.1
+## Created by: Qt User Interface Compiler version 6.5.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -41,9 +41,9 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         self.verticalLayout = QVBoxLayout(TimeSeriesFixedResolutionEditor)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.splitter = QSplitter(TimeSeriesFixedResolutionEditor)
-        self.splitter.setChildrenCollapsible(False)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Horizontal)
+        self.splitter.setChildrenCollapsible(False)
         self.verticalLayoutWidget = QWidget(self.splitter)
         self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
         self.left_layout = QVBoxLayout(self.verticalLayoutWidget)
