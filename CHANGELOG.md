@@ -3,7 +3,7 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.7.0] - 2021-09-08
+## [0.7.0] - 2023-08-25
 
 ### Added
 - Support for version 11 Spine Toolbox projects.
