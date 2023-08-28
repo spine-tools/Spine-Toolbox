@@ -98,6 +98,7 @@ class EntityItem(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.ArrowCursor)
         self.setToolTip(self._make_tool_tip())
+        self._highlighted = False
 
     def _make_tool_tip(self):
         raise NotImplementedError()
@@ -182,8 +183,10 @@ class EntityItem(QGraphicsRectItem):
 
     def _init_bg(self):
         self._bg = QGraphicsRectItem(self.boundingRect(), self)
-        self._bg.setPen(Qt.NoPen)
         self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
+        pen = self._bg.pen()
+        pen.setColor(Qt.transparent)
+        self._bg.setPen(pen)
 
     def refresh_icon(self):
         """Refreshes the icon."""
@@ -209,6 +212,9 @@ class EntityItem(QGraphicsRectItem):
         path.addRect(self._bg.boundingRect())
         return path
 
+    def set_highlighted(self, highlighted):
+        self._highlighted = highlighted
+
     def paint(self, painter, option, widget=None):
         """Shows or hides the selection halo."""
         if option.state & (QStyle.StateFlag.State_Selected):
@@ -216,6 +222,11 @@ class EntityItem(QGraphicsRectItem):
             option.state &= ~QStyle.StateFlag.State_Selected
         else:
             self._paint_as_deselected()
+        pen = self._bg.pen()
+        pen.setColor(Qt.yellow if self._highlighted else Qt.transparent)
+        width = 10 / self.scale()
+        pen.setWidth(width)
+        self._bg.setPen(pen)
         super().paint(painter, option, widget)
 
     def _paint_as_selected(self):
