@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   If the kernel already exists, it is selected automatically.
 - ``project.json`` now has an experimental option ["project"]["settings"]["enable_execute_all"] which disables the
   Execute Project button when set to ``false``. The option is currently not settable in the UI.
+- New context menu action (Find...) to find items by name in DB editor's entity graph.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools
