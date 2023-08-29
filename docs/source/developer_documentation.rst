@@ -1,4 +1,4 @@
-Developer documentation
+Developer Documentation
 =======================
 
 Here you can find developer specific documentation on Spine Toolbox.

@@ -160,6 +160,9 @@ class TabularViewMixin:
     def init_models(self):
         """Initializes models."""
         super().init_models()
+        self.current_class_id.clear()
+        self.current_class_type = None
+        self.current_class_name = None
         self.clear_pivot_table()
 
     @Slot(QModelIndex, object)
@@ -590,11 +593,11 @@ class TabularViewMixin:
         top_indexes, left_indexes = self.pivot_table_model.top_left_indexes()
         for index in left_indexes:
             proxy_index = self.pivot_table_proxy.mapFromSource(index)
-            widget = self.create_header_widget(proxy_index.data(Qt.ItemDataRole.DisplayRole), "columns")
+            widget = self.create_header_widget(proxy_index.data(Qt.ItemDataRole.DisplayRole.value), "columns")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
         for index in top_indexes:
             proxy_index = self.pivot_table_proxy.mapFromSource(index)
-            widget = self.create_header_widget(proxy_index.data(Qt.ItemDataRole.DisplayRole), "rows")
+            widget = self.create_header_widget(proxy_index.data(Qt.ItemDataRole.DisplayRole.value), "rows")
             self.ui.pivot_table.setIndexWidget(proxy_index, widget)
         QTimer.singleShot(0, self._resize_pivot_header_columns)
 

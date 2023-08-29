@@ -1,5 +1,4 @@
 ..  Plotting
-    Created: 15.8.2019
 
 Plotting
 ========
@@ -12,20 +11,39 @@ To plot a column, select the values from a table and then *Plot* from the **righ
 
 .. image:: img/plotting_popup_menu.png
    :align: center
+   :width: 40%
 
 .. image:: img/plotting_window_single_column.png
    :align: center
+   :width: 70%
 
 Selecting data in multiple columns plots the selection in a single window.
 
 To add a plot to an existing window select the target plot window
-from the *Plot in window* submenu.
+from the *Plot in window* submenu. There are some restrictions for what kinds of plots can
+be shown on the same window. In the example below two different maps have
+been plotted on the same graph.
 
 .. image:: img/plotting_popup_menu_plot_in_window.png
    :align: center
+   :width: 40%
 
 .. image:: img/plotting_window_added_plot.png
    :align: center
+   :width: 70%
+
+If a plot is clicked with the right mouse button, options to copy or show the plot data
+are presented. When the data is copied it is saved to the clipboard in csv format with
+tab as the delimiter. If **Show plot data...** is clicked a new window opens that
+contains a table of the data used in the plot.
+
+.. image:: img/right_click_options.png
+   :align: center
+   :width: 70%
+
+.. image:: img/plot_data.png
+   :align: center
+   :width: 70%
 
 X column in pivot table
 -----------------------

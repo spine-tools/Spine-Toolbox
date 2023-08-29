@@ -509,6 +509,8 @@ def _reconstruct_map(tree):
         values.append(value)
     if len(indexes) > 1:
         first_type = type(indexes[0])
+        if first_type == numpy.float_:
+            first_type = float
         if any(not isinstance(i, first_type) for i in indexes[1:]):
             raise ParameterValueFormatError(f"Index type mismatch.")
     map_ = Map(indexes, values)
@@ -562,7 +564,7 @@ def _apply_index_names(map_value, index_names):
 
 
 def _numpy_string_to_python_strings(rows):
-    """Converts instances of numpy.str_ to regular Python strings.
+    """Converts instances of ``numpy.str_`` to regular Python strings.
 
     Args:
         rows (list of list): table rows

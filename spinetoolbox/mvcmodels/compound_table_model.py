@@ -191,6 +191,7 @@ class CompoundTableModel(MinimalTableModel):
         d = {}  # Maps models to (index, value) tuples
         rows = []
         columns = []
+        successful = True
         for index, value in zip(indexes, data):
             if not index.isValid():
                 continue
@@ -201,14 +202,16 @@ class CompoundTableModel(MinimalTableModel):
             d.setdefault(sub_model, list()).append((sub_index, value))
         for model, index_value_tuples in d.items():
             indexes, values = zip(*index_value_tuples)
-            model.batch_set_data(list(indexes), list(values))
+            if not model.batch_set_data(list(indexes), list(values)):
+                successful = False
+                break
         # Find square envelope of indexes to emit dataChanged
         top = min(rows)
         bottom = max(rows)
         left = min(columns)
         right = max(columns)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
-        return True
+        return successful
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows after the given row under the given parent.

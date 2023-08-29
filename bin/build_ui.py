@@ -23,9 +23,9 @@ def fix_resources_imports(path):
     lines = list()
     with open(path, 'r') as in_file:
         for line in in_file:
-            if line == "from  . import resources_icons_rc\n":
+            if line == "from . import resources_icons_rc\n":
                 lines.append("from spinetoolbox import resources_icons_rc\n")
-            elif line == "from  . import resources_logos_rc\n":
+            elif line == "from . import resources_logos_rc\n":
                 lines.append("from spinetoolbox import resources_logos_rc\n")
             else:
                 lines.append(line)

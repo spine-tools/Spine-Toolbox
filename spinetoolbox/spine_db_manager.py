@@ -419,7 +419,11 @@ class SpineDBManager(QObject):
             *db_maps (DiffDatabaseMapping)
             commit_dirty (bool): True to commit dirty database mapping, False to roll back
             commit_msg (str): commit message
+
+        Returns:
+            failed_db_maps (list): All the db maps that failed to commit
         """
+        failed_db_maps = list()
         for db_map in db_maps:
             self.remove_db_map_listener(db_map, listener)
             try:
@@ -430,12 +434,22 @@ class SpineDBManager(QObject):
                 pass
         if dirty_db_maps:
             if commit_dirty:
-                self.commit_session(commit_msg, *dirty_db_maps)
+                failed_db_maps += self.commit_session(commit_msg, *dirty_db_maps)
             else:
                 self.rollback_session(*dirty_db_maps)
+        # If some db maps failed to commit, reinstate their listeners
+        for db_map in failed_db_maps:
+            self.add_db_map_listener(db_map, listener)
+            try:
+                self.undo_stack[db_map].canRedoChanged.connect(listener.update_undo_redo_actions)
+                self.undo_stack[db_map].canUndoChanged.connect(listener.update_undo_redo_actions)
+                self.undo_stack[db_map].cleanChanged.connect(listener.update_commit_enabled)
+            except AttributeError:
+                pass
         for db_map in db_maps:
             if not self.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
+        return failed_db_maps
 
     def is_dirty(self, db_map):
         """Returns True if mapping has pending changes.
@@ -501,12 +515,16 @@ class SpineDBManager(QObject):
             *dirty_db_maps: dirty database maps to commit
             cookie (object, optional): a free form identifier which will be forwarded to ``SpineDBWorker.commit_session``
         """
+        failed_db_maps = list()
         for db_map in dirty_db_maps:
             try:
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
-            worker.commit_session(commit_msg, cookie)
+            success = worker.commit_session(commit_msg, cookie)
+            if not success:
+                failed_db_maps.append(db_map)
+        return failed_db_maps
 
     def notify_session_committed(self, cookie, *db_maps):
         """Notifies manager and listeners when a commit has taken place by a third party.
@@ -1201,7 +1219,10 @@ class SpineDBManager(QObject):
         """Removes items from database.
 
         Args:
-            db_map_typed_ids (dict): mapping DiffDatabaseMapping to item type (str) to lists of items to remove
+            item_type (str): database item type
+            db_map_ids (dict): mapping DatabaseMapping to removable ids
+            callback (Callable, optional): function to call after removal is finished
+            committing_callback (Callable, optional): function to call after removal has been committed
         """
         try:
             worker = self._get_worker(db_map)

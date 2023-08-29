@@ -395,7 +395,7 @@ class ItemTreeView(ResizableTreeView):
 class AlternativeTreeView(ItemTreeView):
     """Custom QTreeView for the alternative tree in SpineDBEditor."""
 
-    alternative_selection_changed = Signal(dict)
+    alternative_selection_changed = Signal(object)
 
     def __init__(self, parent):
         """
@@ -555,7 +555,7 @@ class AlternativeTreeView(ItemTreeView):
 class ScenarioTreeView(ItemTreeView):
     """Custom QTreeView for the scenario tree in SpineDBEditor."""
 
-    scenario_selection_changed = Signal(dict)
+    scenario_selection_changed = Signal(object)
 
     def __init__(self, parent):
         """

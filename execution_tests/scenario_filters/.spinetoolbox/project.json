@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 10,
+        "version": 11,
         "description": "Test project to test scenario filtering in a Tool project item.",
         "specifications": {
             "Importer": [
@@ -58,7 +58,10 @@
                 }
             }
         ],
-        "jumps": []
+        "jumps": [],
+        "settings": {
+            "enable_execute_all": true
+        }
     },
     "items": {
         "Data store": {

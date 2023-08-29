@@ -96,7 +96,7 @@ Selecting the *Julia model* shows its properties in the **Properties** dock widg
 .. image:: img/execution_julia_tool_selected.png
    :align: center
 
-In the top of the Tool Properties, there is a specification drop-down menu.
+In the top of the Tool Properties, there is **Specification** drop-down menu.
 From this drop-down menu, you can select the Tool specification for this particular Tool item.
 The *Julia Model Specification* tool specification has been selected for *Julia model*.
 Below the drop-down menu, you can choose a precompiled sysimage
@@ -104,7 +104,7 @@ and edit Tool's command line arguments.
 Note that the command line argument editor already 'sees' the ``data.csv`` file provided by `Data Files`.
 The `Execute in` radio buttons control, whether this Tool is first copied to a work directory and executed
 there, or if the execution should happen in the source directory where the main program file is located.
-In Group id, an execution group identifier can be given. below that, there is a checkbox with the choice
+In Group id, an execution group identifier can be given. Below that, there is a checkbox with the choice
 to kill consoles after execution.
 *Results...* button opens the Tool's result archive directory in system's file browser
 (all Tools have their own result directory).

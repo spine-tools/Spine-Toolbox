@@ -53,7 +53,7 @@ class TreeItem:
     def children(self, children):
         bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
         if bad_types:
-            raise TypeError(f"Cand't set children of type {bad_types} for an item of type {type(self)}")
+            raise TypeError(f"Can't set children of type {bad_types} for an item of type {type(self)}")
         for child in children:
             child.parent_item = self
         self._children = children

@@ -35,6 +35,7 @@ from spine_engine.utils.helpers import (
 )
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_engine.server.util.zip_handler import ZipHandler
+from .project_settings import ProjectSettings
 from .server.engine_client import EngineClient
 from .metaobject import MetaObject
 from .helpers import (
@@ -107,13 +108,16 @@ class SpineToolboxProject(MetaObject):
     specification_saved = Signal(str, str)
     """Emitted after a specification has been saved."""
 
-    def __init__(self, toolbox, p_dir, plugin_specs, settings, logger):
+    LOCAL_EXECUTION_JOB_ID = "1"
+
+    def __init__(self, toolbox, p_dir, plugin_specs, app_settings, settings, logger):
         """
         Args:
             toolbox (ToolboxUI): toolbox of this project
             p_dir (str): Project directory
             plugin_specs (Iterable of ProjectItemSpecification): specifications available as plugins
-            settings (QSettings): Toolbox settings
+            app_settings (QSettings): Toolbox settings
+            settings (ProjectSettings): project settings
             logger (LoggerInterface): a logger instance
         """
         _, name = os.path.split(p_dir)
@@ -124,6 +128,7 @@ class SpineToolboxProject(MetaObject):
         self._connections = list()
         self._jumps = list()
         self._logger = logger
+        self._app_settings = app_settings
         self._settings = settings
         self._engine_workers = []
         self._execution_in_progress = False
@@ -147,6 +152,10 @@ class SpineToolboxProject(MetaObject):
     @property
     def all_item_names(self):
         return list(self._project_items)
+
+    @property
+    def settings(self):
+        return self._settings
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -193,6 +202,7 @@ class SpineToolboxProject(MetaObject):
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
             "description": self.description,
+            "settings": self._settings.to_dict(),
             "specifications": serialized_spec_paths,
             "connections": [connection.to_dict() for connection in self._connections],
             "jumps": [jump.to_dict() for jump in self._jumps],
@@ -288,6 +298,7 @@ class SpineToolboxProject(MetaObject):
         self._merge_local_data_to_project_info(local_data_dict, project_info)
         # Parse project info
         self.set_description(project_info["project"]["description"])
+        self._settings = ProjectSettings.from_dict(project_info["project"]["settings"])
         spec_paths_per_type = project_info["project"]["specifications"]
         deserialized_paths = [
             deserialize_path(path, self.project_dir) for paths in spec_paths_per_type.values() for path in paths
@@ -296,7 +307,7 @@ class SpineToolboxProject(MetaObject):
         specification_local_data = load_specification_local_data(self.config_dir)
         for path in deserialized_paths:
             spec = load_specification_from_file(
-                path, specification_local_data, spec_factories, self._settings, self._logger
+                path, specification_local_data, spec_factories, self._app_settings, self._logger
             )
             if spec is not None:
                 self.add_specification(spec, save_to_disk=False)
@@ -969,16 +980,16 @@ class SpineToolboxProject(MetaObject):
         if self._engine_workers:
             self._logger.msg_error.emit("Execution already in progress.")
             return
-        self.job_id = self.prepare_remote_execution()
-        if not self.job_id:
+        job_id = self.prepare_remote_execution()
+        if not job_id:
             self.project_execution_finished.emit()
             return
-        settings = make_settings_dict_for_engine(self._settings)
+        settings = make_settings_dict_for_engine(self._app_settings)
         darker_fg_color = QColor(FG_COLOR).darker().name()
         darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
-            worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
+            worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings, job_id)
             if worker is None:
                 continue
             self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
@@ -994,7 +1005,7 @@ class SpineToolboxProject(MetaObject):
         for worker in self._engine_workers:
             worker.start()
 
-    def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
+    def create_engine_worker(self, dag, execution_permits, dag_identifier, settings, job_id):
         """Creates and returns a SpineEngineWorker to execute given *validated* dag.
 
         Args:
@@ -1002,6 +1013,7 @@ class SpineToolboxProject(MetaObject):
             execution_permits (dict): mapping item names to a boolean indicating whether to execute it or skip it
             dag_identifier (str): A string identifying the dag, for logging
             settings (dict): project and app settings to send to the spine engine.
+            job_id (str): job id
 
         Returns:
             SpineEngineWorker
@@ -1036,7 +1048,7 @@ class SpineToolboxProject(MetaObject):
             "settings": settings,
             "project_dir": self.project_dir.replace(os.sep, "/"),
         }
-        worker = SpineEngineWorker(data, dag, dag_identifier, items, connections, self._logger, self.job_id)
+        worker = SpineEngineWorker(data, dag, dag_identifier, items, connections, self._logger, job_id)
         return worker
 
     def _handle_engine_worker_finished(self, worker):
@@ -1059,7 +1071,7 @@ class SpineToolboxProject(MetaObject):
             for item, direction, state in finished_worker.successful_executions:
                 item.handle_execution_successful(direction, state)
             finished_worker.clean_up()
-        self.finalize_remote_execution()
+        self.finalize_remote_execution(worker.job_id)
         self._engine_workers.clear()
         self.project_execution_finished.emit()
 
@@ -1401,19 +1413,19 @@ class SpineToolboxProject(MetaObject):
             item.set_rank(ranks[item_name])
 
     @property
-    def settings(self):
-        return self._settings
+    def app_settings(self):
+        return self._app_settings
 
     @busy_effect
     def prepare_remote_execution(self):
         """Pings the server and sends the project as a zip-file to server.
 
         Returns:
-            str: Job Id if server is ready for remote execution, empty string if something went wrong or "1" if
-            local execution is enabled.
+            str: Job Id if server is ready for remote execution, empty string if something went wrong
+                or LOCAL_EXECUTION_JOB_ID if local execution is enabled.
         """
-        if not self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
-            return "1"  # Something that isn't False
+        if not self._app_settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
+            return self.LOCAL_EXECUTION_JOB_ID
         host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
         if not host:
             self._logger.msg_error.emit(
@@ -1460,9 +1472,13 @@ class SpineToolboxProject(MetaObject):
         engine_client.close()
         return job_id
 
-    def finalize_remote_execution(self):
-        """Sends a request to server to remove the project directory and removes the project ZIP file from client."""
-        if not self._settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
+    def finalize_remote_execution(self, job_id):
+        """Sends a request to server to remove the project directory and removes the project ZIP file from client.y
+
+        Args:
+            job_id (str): job id
+        """
+        if not self._app_settings.value("engineSettings/remoteExecutionEnabled", defaultValue="false") == "true":
             return
         host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
         try:
@@ -1472,7 +1488,7 @@ class SpineToolboxProject(MetaObject):
                 f"Server is not responding. {e}. " f"Check settings in <b>File->Settings->Engine</b>."
             )
             return
-        engine_client.remove_project_from_server(self.job_id)
+        engine_client.remove_project_from_server(job_id)
         engine_client.close()
         project_zip_file = os.path.abspath(os.path.join(self.project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
         if not os.path.isfile(project_zip_file):

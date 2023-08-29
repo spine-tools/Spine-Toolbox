@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
     QToolButton,
 )
 from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
-from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon
+from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QColor
 from spinedb_api import import_data, export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
@@ -108,13 +108,16 @@ class SpineDBEditorBase(QMainWindow):
         self.redo_action = None
         self.ui.actionUndo.setShortcuts(QKeySequence.Undo)
         self.ui.actionRedo.setShortcuts(QKeySequence.Redo)
-        self.update_commit_enabled()
         self.setContextMenuPolicy(Qt.NoContextMenu)
         self._torn_down = False
         self._purge_items_dialog = None
         self._purge_items_dialog_state = None
         self._export_items_dialog = None
         self._export_items_dialog_state = None
+        # Reload button doesn't want to change color just by setting it disabled, so create two different icons
+        self._enabled_reload_icon = QIcon(CharIconEngine("\uf021"))
+        self._disabled_reload_icon = QIcon(CharIconEngine("\uf021", QColor("Gray")))
+        self.update_commit_enabled()
 
     @property
     def toolbox(self):
@@ -412,6 +415,11 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRollback.setEnabled(dirty)
         self.setWindowModified(dirty)
         self.windowTitleChanged.emit(self.windowTitle())
+        self.url_toolbar.reload_action.setEnabled(not dirty)
+        if dirty:
+            self.url_toolbar.reload_action.setIcon(self._disabled_reload_icon)
+        else:
+            self.url_toolbar.reload_action.setIcon(self._enabled_reload_icon)
 
     def init_models(self):
         """Initializes models."""
@@ -458,7 +466,7 @@ class SpineDBEditorBase(QMainWindow):
             self,
             "Import file",
             self._get_base_dir(),
-            "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
+            "All files (*);;  SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -521,7 +529,7 @@ class SpineDBEditorBase(QMainWindow):
             self, self.db_mngr, *self.db_maps, stored_state=self._export_items_dialog_state
         )
         self._export_items_dialog.state_storing_requested.connect(self._store_export_settings)
-        self._export_items_dialog.data_submitted.connect(self.mass_export_items)
+        self._export_items_dialog.data_submitted.connect(self.mass_export_items, Qt.ConnectionType.QueuedConnection)
         self._export_items_dialog.destroyed.connect(self._clean_up_export_items_dialog)
         self._export_items_dialog.show()
 
@@ -553,6 +561,7 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_entity_group_ids(db_map_ent_group_ids)
         self.export_data(parcel.data)
 
+    @Slot(object)
     def mass_export_items(self, db_map_item_types):
         def _ids(t, types):
             return Asterisk if t in types else ()
@@ -796,9 +805,13 @@ class SpineDBEditorBase(QMainWindow):
                     return False
         self._purge_change_notifiers()
         self._torn_down = True
-        self.db_mngr.unregister_listener(
+        failed_db_maps = self.db_mngr.unregister_listener(
             self, *self.db_maps, dirty_db_maps=dirty_db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg
         )
+        if failed_db_maps:
+            msg = f"Fail to commit due to locked database"
+            self.db_mngr.receive_error_msg({i: [msg] for i in failed_db_maps})
+            return False
         return True
 
     def _prompt_to_commit_changes(self):
@@ -889,6 +902,10 @@ class SpineDBEditorBase(QMainWindow):
         self.save_window_state()
         super().closeEvent(event)
 
+    @staticmethod
+    def _get_base_dir():
+        return APPLICATION_PATH
+
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
@@ -941,7 +958,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._timer_refresh_tab_order.timeout.connect(self._refresh_tab_order, Qt.UniqueConnection)
         self._timer_refresh_tab_order.start(100)
 
-    @Slot()
     def _refresh_tab_order(self):
         if self._torn_down:
             return

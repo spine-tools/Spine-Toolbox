@@ -15,7 +15,7 @@ Classes for custom QGraphicsViews for the Entity graph view.
 
 import sys
 from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
-from PySide6.QtWidgets import QMenu, QGraphicsView
+from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog
 from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize
 from PySide6.QtPrintSupport import QPrinter
 from ...helpers import CharIconEngine
@@ -73,6 +73,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._zoom_action = None
         self._rotate_action = None
         self._arc_length_action = None
+        self._find_action = None
         self._previous_mouse_pos = None
         self._context_menu_pos = None
         self._hide_classes_menu = None
@@ -143,6 +144,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.addSeparator()
         self._add_entities_action = self._menu.addAction("Add entities", self.add_entities_at_position)
         self._menu.addSeparator()
+        self._find_action = self._menu.addAction("Find...", self._find)
+        self._menu.addAction(self._find_action)
+        self._menu.addSeparator()
         self._select_pos_param_action = self._menu.addAction(
             "Select position parameters...", self.select_position_parameters
         )
@@ -192,6 +196,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.addAction(self._rotate_action)
         self._menu.aboutToShow.connect(self._update_actions_visibility)
 
+    def _find(self):
+        expr, ok = QInputDialog.getText(self, "Find in graph...", "Enter strings to find separated by comma.")
+        if not ok:
+            return
+        words = [x.strip() for x in expr.split(",")]
+        for item in self.entity_items:
+            item.set_highlighted(any(w in item.entity_name for w in words))
+
     def increase_arc_length(self):
         for item in self.entity_items:
             item.setPos(1.1 * item.pos())
@@ -218,6 +230,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._rebuild_action.setEnabled(has_graph)
         self._zoom_action.setEnabled(has_graph)
         self._rotate_action.setEnabled(has_graph)
+        self._find_action.setEnabled(has_graph)
         self._export_as_pdf_action.setEnabled(has_graph)
         self._items_per_class = {}
         for item in self.entity_items:

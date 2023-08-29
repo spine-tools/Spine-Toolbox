@@ -13,7 +13,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.3
+## Created by: Qt User Interface Compiler version 6.5.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -59,6 +59,7 @@ class Ui_SettingsForm(object):
         self.splitter = QSplitter(SettingsForm)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Horizontal)
+        self.splitter.setChildrenCollapsible(False)
         self.listWidget = QListWidget(self.splitter)
         icon = QIcon()
         icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -997,7 +998,7 @@ class Ui_SettingsForm(object):
         self.groupBox_general.setTitle(QCoreApplication.translate("SettingsForm", u"Main", None))
         self.label.setText(QCoreApplication.translate("SettingsForm", u"Work directory", None))
 #if QT_CONFIG(tooltip)
-        self.lineEdit_work_dir.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Work directory location. Leave empty to use default (\\work).</p></body></html>", None))
+        self.lineEdit_work_dir.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Work directory location. Leave empty to use default.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_work_dir.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using default directory", None))
 #if QT_CONFIG(tooltip)

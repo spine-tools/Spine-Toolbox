@@ -3,9 +3,10 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [Unreleased]
+## [0.7.0] - 2023-08-25
 
 ### Added
+- Support for version 11 Spine Toolbox projects.
 - Executable Tool Specifications can be used to run any (shell) command. This enhancement
   duplicates the functionality of Gimlet project items and makes them obsolete.
 - There is now an option to select if new scenarios or tools are automatically used
@@ -30,6 +31,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - "Make Julia Kernel" and "Make Python Kernel" buttons in Settings->Tools page. Clicking them creates a new 
   Julia or Python kernel based on selected Julia/Python executable on the same page if the kernel does not exist. 
   If the kernel already exists, it is selected automatically.
+- ``project.json`` now has an experimental option ["project"]["settings"]["enable_execute_all"] which disables the
+  Execute Project button when set to ``false``. The option is currently not settable in the UI.
+- New context menu action (Find...) to find items by name in DB editor's entity graph.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools
@@ -54,6 +58,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   Duplicating a previously duplicated item now has the number `xx` incremented instead of having a new number appended.
 - "Open kernel spec editor" buttons in Settings->Tools page have been changed "Make Julia kernel" and 
   "Make Python Kernel" buttons
+- 
 
 ### Deprecated
 

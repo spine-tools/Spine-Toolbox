@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 10,
+        "version": 11,
         "description": "",
         "specifications": {
             "Exporter": [
@@ -34,7 +34,10 @@
                 }
             }
         ],
-        "jumps": []
+        "jumps": [],
+        "settings": {
+            "enable_execute_all": true
+        }
     },
     "items": {
         "Data": {

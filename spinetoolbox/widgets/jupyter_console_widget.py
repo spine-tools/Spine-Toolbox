@@ -172,9 +172,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
             if answer == QMessageBox.StandardButton.Cancel:
                 super()._execute("", hidden)
                 return
-            self.insert_text_to_console(
-                "\n\nConsole killed (can be restarted from the right-click menu)"
-            )
+            self.insert_text_to_console("\n\nConsole killed (can be restarted from the right-click menu)")
             self.request_shutdown_kernel_manager()
             self.close()
             return

@@ -13,7 +13,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mini_kernel_editor_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.1
+## Created by: Qt User Interface Compiler version 6.5.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -41,6 +41,7 @@ class Ui_Dialog(object):
         self.splitter = QSplitter(Dialog)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Vertical)
+        self.splitter.setChildrenCollapsible(False)
         self.widget = QWidget(self.splitter)
         self.widget.setObjectName(u"widget")
         self.verticalLayout = QVBoxLayout(self.widget)

@@ -56,8 +56,8 @@ window. Project item properties are saved into the project save file (``project.
 found in ``<proj_dir>/.spinetoolbox/`` directory, where ``<proj_dir>`` is your current project
 directory.
 
-In addition, each project item has it's own directory in the ``<proj_dir>/.spinetoolbox/items/``
-directory. You can quickly open the project item directory in a file explorer by clicking on the
+In addition, each project item has its own directory in the ``<proj_dir>/.spinetoolbox/items/``
+directory. You can quickly open the project item directory in a file explorer by clicking the
 |folder-open| button located in the upper right corner of each **Properties** form.
 
 Project Item Descriptions
@@ -69,7 +69,7 @@ Data Connection |data_connection|
 
 A Data connection item provides access to data files.
 The item has two categories of files: **references** connect to
-files anywhere on the file system or on remote databases while
+files anywhere on the file system or on remote (non-Spine) databases while
 **data** files reside in the item's own data directory.
 
 Data Store |data_store|
@@ -124,6 +124,4 @@ A Tool is specified by its :ref:`specification <Tool specification editor>`.
 View |view|
 ===========
 
-A View item is meant for inspecting data from multiple sources using the
-:ref:`Spine db editor <Spine db editor>`. Note that the data is opened in
-read-only mode so modifications are not possible from the View item.
+A View item is meant for plotting preselected parameter values from multiple sources.

@@ -1,24 +1,26 @@
 ..  Parameter value editor
-    Created: 15.8.2019
 
 **********************
-Parameter value editor
+Parameter Value Editor
 **********************
 
 Parameter value editor is used to edit object and relationship parameter values
 such as time series, time patterns or durations.
 It can also convert between different value types, e.g. from a time series to a time pattern.
 
-The editor is available from a **right click** popup menu
-or by **double clicking** a parameter value in one of the Spine database editors.
+The editor can be opened by right clicking on the value field that you want to edit
+in a Spine database editor and selecting **Edit...** from the popup menu.
+In most cases the editor can be opened again by double clicking an existing value.
+With plain values like strings and floats this will not work since double clicking
+starts the text editor in that field.
 
 Choosing value type
 -------------------
 
+The combo box at the top of the editor window allows changing the type of the current value.
+
 .. image:: img/value_editor_parameter_type.png
    :align: center
-
-The combo box at the top of the editor window allows changing the type of the current value.
 
 Plain values
 ------------
@@ -29,6 +31,11 @@ or set it to true, false or null as needed.
 
 .. image:: img/value_editor_plain.png
    :align: center
+   :width: 70%
+
+Numbers and strings can also be inserted without going through the value editor by double clicking
+on a value field. If the users input is a number like 3.14, the value type will be interpreted
+as *number or string*. If the input is a string like "ok", the value type will automatically be set to *string*.
 
 Maps
 ----
@@ -46,11 +53,15 @@ You can append a value to the map by editing the bottom gray row.
 The reddish cells are merely a guide for the eye to indicate that the map has different nesting depths.
 
 A **Right click** popup menu gives options to open a value editor for individual cells,
-to add/insert/remove rows or columns (effectively changing map's dimensions),
-or to trim empty columns from the right hand side.
+plot individual and multiple cells, insert/remove rows or columns (effectively changing
+map's dimensions), trim empty columns from the right hand side and to copy and paste data.
+Copying and pasting data works between cells and external programs and can be also done
+using the usual **Ctrl+C** and **Ctrl+V** keyboard shortcuts.
 
-Copying and pasting data between cells and external programs works using the usual
-**Ctrl-C** and **Ctrl-V** keyboard shortcuts.
+The default name for new columns is *x*. Index names can however be modified. If a column
+holds both indices and data, the column header can also be modified. The last column of a
+map has to always contain values and therefore the header can't be modified from the default
+name *Value*.
 
 **Convert leaves to time series** 'compacts' the map by converting the last dimension into time series.
 This works only if the last dimension's type is datetime.
@@ -59,12 +70,13 @@ Since the indexes are datetimes, the 'inner' dimension can be converted to time 
 
 .. image:: img/value_editor_map_before_conversion.png
    :align: center
+   :width: 70%
 
 After clicking **Convert leaves to time series** the map looks like this:
 
 .. image:: img/value_editor_map_after_conversion.png
    :align: center
-
+   :width: 70%
 
 Time series
 -----------
@@ -73,10 +85,10 @@ There are two types of time series: *variable* and *fixed resolution*.
 Variable resolution means that the time stamps can be arbitrary
 while in fixed resolution series the time steps between consecutive stamps are fixed.
 
-.. image:: img/value_editor_time_series_variable.png
+.. image:: img/value_editor_time_series_fixed.png
    :align: center
 
-.. image:: img/value_editor_time_series_fixed.png
+.. image:: img/value_editor_time_series_variable.png
    :align: center
 
 The editor window is split into two in both cases.
@@ -86,7 +98,7 @@ The plot is not editable and is for visualization purposes only.
 
 In the table rows can be added or removed from a popup menu available by a **right click**.
 Editing the last gray row appends a new value to the series.
-Data can be copied and pasted by **Ctrl-C** and **Ctrl-V**.
+Data can be copied and pasted by **Ctrl+C** and **Ctrl+V**.
 Copying from/to an external spreadsheet program is supported.
 
 The time steps of a fixed resolution series are edited by the *Start time* and *Resolution* fields.
@@ -142,10 +154,11 @@ Datetimes
 ---------
 
 The datetime value should be entered in `ISO8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ format.
-Clicking small arrow on the input field pops up a calendar that can be used to select a date.
+Clicking small arrow on right end of the input field opens up a calendar that can be used to select a date.
 
 .. image:: img/value_editor_datetime.png
    :align: center
+   :width: 70%
 
 Durations
 ---------
@@ -154,3 +167,4 @@ A single value or a comma separated list of time durations can be entered to the
 
 .. image:: img/value_editor_duration.png
    :align: center
+   :width: 70%

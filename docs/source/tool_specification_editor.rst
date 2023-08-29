@@ -1,5 +1,4 @@
 .. Tool specification editor documentation
-   Created 15.1.2019
 
 .. |folder_open| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-regular.svg
    :width: 16
@@ -15,7 +14,7 @@
 .. _Tool specification editor:
 
 *************************
-Tool specification editor
+Tool Specification Editor
 *************************
 
 This section describes how to make a new Tool specification and how to edit existing Tool specifications.
@@ -46,6 +45,12 @@ which accepts command line arguments `a` and `b`.
 Writing `a b` on the command line arguments field in the tool specification editor is the equivalent
 of running the batch file in command prompt with the command ``do_things.bat a b``.
 
+.. tip:: Another way to pass arguments to a Tool is to write them into the *Tool arguments*
+   drop-down list in the **Properties** dock widget. There it is possible to also rearrange existing
+   arguments or to select available resources that are provided by other project items as arguments.
+
+   Unlike the arguments set in Tool Specification Editor, the arguments in **Properties** are *Tool specific*.
+
 *Additional source files* is a list of files that the main program requires in order to run. You can add
 individual files the same way as with the main program file or whole directories at once by pressing the
 |folder_open_solid| button.
@@ -60,7 +65,7 @@ Examples:
 - **output/** -> Creates an empty directory output/ into the work directory
 
 *Optional input files* are files that may be utilized by your program if they are found. Unix-style wildcards
-? and \* are supported.
+``?`` and ``*`` are supported.
 
 Examples:
 
@@ -69,14 +74,14 @@ Examples:
 - **input/data_?.dat** -> All found files matching the pattern *data_?.dat* are copied into input/ directory in
   the work directory.
 
-*Output files* are files that will be archived into a timestamped result directory of the Tool's project directory
-after the Tool specification has finished execution. Unix-style wildcards *?* and *\** are supported.
+*Output files* are files that will be archived into a timestamped result directory inside Tool's data directory
+after the Tool specification has finished execution. Unix-style wildcards ``?`` and ``*`` are supported.
 
 Examples:
 
 - **results.csv** -> File is copied from work directory into results directory
 - **\*.csv** -> All .csv files from work directory are copied into results directory
-- **output/*.gdx** -> All GDX files from the work directory's output/ subdirectory will be copied to into output/
+- **output/*.gdx** -> All GDX files from the work directory's output/ subdirectory will be copied into output/
   subdirectory in the results directory.
 
 When you are happy with your Tool specification, press **Ctrl+S** to save it. You will see a message in the Event log
@@ -85,8 +90,8 @@ The Tool specification file is a text file in JSON format and has an extension *
 You can change the location by pressing [change].
 Also, you need to save your project for the specification to stick.
 
-.. tip:: Only *name*, *type*, and *main program file* fields are required to make a Tool specification. The other
-   fields are optional.
+.. tip:: Only *name*, *type*, and either *main program file* or *command* fields are required to make a Tool
+   specification. The other fields are optional.
 
 Here is a minimal Tool specification for a Julia script *script.jl*
 

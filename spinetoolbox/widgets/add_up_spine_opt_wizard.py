@@ -53,10 +53,11 @@ class AddUpSpineOptWizard(QWizard):
     """A wizard to install & upgrade SpineOpt."""
 
     def __init__(self, parent, julia_exe, julia_project):
-        """Initialize class.
-
+        """
         Args:
             parent (QWidget): the parent widget (SettingsWidget)
+            julia_exe (str): path to Julia executable
+            julia_project (str): path to Julia project
         """
         super().__init__(parent)
         self.process_log = None
@@ -125,13 +126,15 @@ class SelectJuliaPage(QWizardPage):
         self._julia_exe_line_edit.setText(self._julia_exe)
         self._julia_project_line_edit.setText(self._julia_project)
 
-    def _select_julia_exe(self):
+    @Slot(bool)
+    def _select_julia_exe(self, _):
         julia_exe, _ = QFileDialog.getOpenFileName(self, "Select Julia executable", self.field("julia_exe"))
         if not julia_exe:
             return
         self.setField("julia_exe", julia_exe)
 
-    def _select_julia_project(self):
+    @Slot(bool)
+    def _select_julia_project(self, _):
         julia_project = QFileDialog.getExistingDirectory(
             self, "Select Julia project (directory)", self.field("julia_project")
         )
@@ -181,11 +184,10 @@ class CheckPreviousInstallPage(QWizardPage):
         qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
-    @Slot(int)
     def _handle_check_install_finished(self, ret):
         qApp.restoreOverrideCursor()  # pylint: disable=undefined-variable
         self._exec_mngr.execution_finished.disconnect(self._handle_check_install_finished)
-        if self.wizard().currentPage() != self:
+        if self.wizard().currentPage() is not self:
             return
         output_log = self._exec_mngr.process_output
         error_log = self._exec_mngr.process_error
@@ -258,11 +260,10 @@ class AddUpSpineOptPage(QWizardProcessPage):
         qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
-    @Slot(int)
     def _handle_spine_opt_add_up_finished(self, ret):
         qApp.restoreOverrideCursor()  # pylint: disable=undefined-variable
         self._exec_mngr.execution_finished.disconnect(self._handle_spine_opt_add_up_finished)
-        if self.wizard().currentPage() != self:
+        if self.wizard().currentPage() is not self:
             return
         self._exec_mngr = None
         self._successful = ret == 0
@@ -387,8 +388,8 @@ class TroubleshootProblemsPage(QWizardPage):
         layout.addStretch()
         self.registerField("problem1", self._button1)
         self.registerField("problem2", self._button2)
-        self._button1.toggled.connect(self.completeChanged)
-        self._button2.toggled.connect(self.completeChanged)
+        self._button1.toggled.connect(lambda _: self.completeChanged.emit())
+        self._button2.toggled.connect(lambda _: self.completeChanged.emit())
         button_view_log.clicked.connect(self._show_log)
 
     def isComplete(self):
@@ -480,11 +481,10 @@ class ResetRegistryPage(QWizardProcessPage):
         qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
-    @Slot(int)
     def _handle_registry_reset_finished(self, ret):
         qApp.restoreOverrideCursor()  # pylint: disable=undefined-variable
         self._exec_mngr.execution_finished.disconnect(self._handle_registry_reset_finished)
-        if self.wizard().currentPage() != self:
+        if self.wizard().currentPage() is not self:
             return
         self._exec_mngr = None
         self._successful = ret == 0

@@ -8,12 +8,33 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+"""Contains project-specific settings."""
 
-"""
-Setup script for Python's setuptools.
-"""
+import dataclasses
 
-from setuptools import setup
 
-# NOTE: package configuration moved to setup.cfg
-setup()
+@dataclasses.dataclass
+class ProjectSettings:
+    """Spine Toolbox project settings."""
+
+    enable_execute_all: bool = True
+
+    def to_dict(self):
+        """Serializes the settings into a dictionary.
+
+        Returns:
+            dict: serialized settings
+        """
+        return dataclasses.asdict(self)
+
+    @staticmethod
+    def from_dict(settings_dict):
+        """Deserializes settings from dictionary.
+
+        Args:
+            settings_dict (dict): serialized settings
+
+        Returns:
+            ProjectSettings: deserialized settings
+        """
+        return ProjectSettings(**settings_dict)

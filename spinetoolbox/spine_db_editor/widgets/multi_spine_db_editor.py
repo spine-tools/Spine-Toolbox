@@ -103,7 +103,7 @@ class MultiSpineDBEditor(MultiTabWindow):
             return
         menu = QMenu(self)
         for name, url in ds_urls.items():
-            action = menu.addAction(name, lambda: self.add_new_tab({url: name}))
+            action = menu.addAction(name, lambda name=name, url=url: self.add_new_tab({url: name}))
             action.setEnabled(url is not None and is_url_validated[name])
         menu.popup(global_pos)
         menu.aboutToHide.connect(menu.deleteLater)

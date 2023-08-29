@@ -61,7 +61,7 @@ class AlternativeModel(TreeModelBase):
 
         Args:
             mime_data (QMimeData): mime data
-            database_item (DBItem): target database item
+            database_item (alternative_item.DBItem): target database item
         """
         alternative_data = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
         names_to_descriptions = {}

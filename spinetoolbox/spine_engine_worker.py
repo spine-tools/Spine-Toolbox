@@ -128,11 +128,12 @@ class SpineEngineWorker(QObject):
             project_items (dict): mapping from project item name to :class:`ProjectItem`
             connections (dict): mapping from jump name to :class:`LoggingConnection` or :class:`LoggingJump`
             logger (LoggerInterface): a logger
-            job_id: Job Id for remote execution
+            job_id (str): Job id for remote execution
         """
         super().__init__()
         self._engine_data = engine_data
         exec_remotely = engine_data["settings"].get("engineSettings/remoteExecutionEnabled", "false") == "true"
+        self._job_id = job_id
         self._engine_mngr = make_engine_manager(exec_remotely, job_id)
         self.dag = dag
         self.dag_identifier = dag_identifier
@@ -147,6 +148,10 @@ class SpineEngineWorker(QObject):
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.started.connect(self.do_work)
+
+    @property
+    def job_id(self):
+        return self._job_id
 
     @property
     def engine_data(self):

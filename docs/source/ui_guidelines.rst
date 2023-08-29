@@ -1,6 +1,6 @@
 .. _UI guidelines:
 
-UI guidelines
+UI Guidelines
 =============
 
 Keyboard shortcuts

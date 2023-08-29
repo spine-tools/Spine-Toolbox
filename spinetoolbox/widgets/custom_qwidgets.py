@@ -551,7 +551,7 @@ class QWizardProcessPage(QWizardPage):
         def __set__(self, obj, value):
             setattr(obj, self.private_name, value)
             try:
-                value.execution_finished.connect(obj.widget_copy.show)
+                value.execution_finished.connect(lambda _: obj.widget_copy.show())
             except AttributeError:
                 pass
 
@@ -587,7 +587,7 @@ class QWizardProcessPage(QWizardPage):
         self.msg.connect(self._add_msg)
         self.msg_warning.connect(self._add_msg_warning)
         self.msg_error.connect(self._add_msg_error)
-        self.msg_success.connect(self._add_msg_succes)
+        self.msg_success.connect(self._add_msg_success)
         self.msg_proc.connect(self._add_msg)
         self.msg_proc_error.connect(self._add_msg_error)
         self._button_copy.clicked.connect(self._handle_copy_clicked)
@@ -597,16 +597,20 @@ class QWizardProcessPage(QWizardPage):
         self._label_copy.show()
         qApp.clipboard().setText(self._log.toPlainText())  # pylint: disable=undefined-variable
 
+    @Slot(str)
     def _add_msg(self, msg):
         self._log.append(format_log_message("msg", msg, show_datetime=False))
 
+    @Slot(str)
     def _add_msg_warning(self, msg):
         self._log.append(format_log_message("msg_warning", msg, show_datetime=False))
 
+    @Slot(str)
     def _add_msg_error(self, msg):
         self._log.append(format_log_message("msg_error", msg, show_datetime=False))
 
-    def _add_msg_succes(self, msg):
+    @Slot(str)
+    def _add_msg_success(self, msg):
         self._log.append(format_log_message("msg_success", msg, show_datetime=False))
 
     def isComplete(self):
@@ -672,6 +676,7 @@ class HorizontalSpinBox(QToolBar):
         except TypeError:
             pass
 
+    @Slot(str)
     def setValue(self, value, strict=False):
         try:
             value = int(value)

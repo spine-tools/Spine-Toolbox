@@ -474,7 +474,7 @@ class TabBarPlus(QTabBar):
         self._plus_button.setIcon(QIcon(CharIconEngine("\uf067")))
         self._plus_button.clicked.connect(lambda _=False: self.plus_clicked.emit())
         self._move_plus_button()
-        self.setShape(QTabBar.RoundedNorth)
+        self.setShape(QTabBar.Shape.RoundedNorth)
         self.setTabsClosable(True)
         self.setMovable(True)
         self.setElideMode(Qt.ElideLeft)

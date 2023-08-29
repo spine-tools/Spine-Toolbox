@@ -84,7 +84,7 @@ class TestArrayTableView(unittest.TestCase):
         clip = StringIO(QApplication.clipboard().text())
         array = [row for row in csv.reader(clip, delimiter='\t')]
         with system_lc_numeric():
-            self.assertEqual(array, [["1", locale.str(5.5)]])
+            self.assertEqual(array, [["0", locale.str(5.5)]])
         table_view.deleteLater()
 
     def test_paste_non_numeric_to_empty_table(self):

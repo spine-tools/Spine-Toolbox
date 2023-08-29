@@ -130,7 +130,7 @@ class ArrayModel(QAbstractTableModel):
         column = index.column()
         if column == 0:
             if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-                return row + 1
+                return row
             else:
                 return None
         if role == Qt.ItemDataRole.DisplayRole:

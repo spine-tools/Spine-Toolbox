@@ -13,7 +13,7 @@
 Unit tests for ToolboxUI class.
 """
 
-from collections import namedtuple
+from pathlib import Path
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 import unittest
@@ -162,10 +162,8 @@ class TestToolboxUI(unittest.TestCase):
         Data Connection 'b', Tool 'c', and View 'd'. The items are connected
         a->b->c->d.
         """
-        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
-        if not os.path.exists(project_dir):
-            self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
-            return
+        project_dir = os.path.abspath(os.path.join(str(Path(__file__).parent), "test_resources", "Project Directory"))
+        self.assertTrue(os.path.exists(project_dir))
         self.assertIsNone(self.toolbox.project())
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.project.create_dir"
@@ -226,7 +224,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(g.has_edge("c", "d"))
 
     def test_init_project(self):
-        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
+        project_dir = os.path.abspath(os.path.join(str(Path(__file__).parent), "test_resources", "Project Directory"))
+        self.assertTrue(os.path.exists(project_dir))
         self.assertIsNone(self.toolbox.project())
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.project.create_dir"
@@ -658,10 +657,8 @@ class TestToolboxUI(unittest.TestCase):
 
         Note: Test 'project.json' file should not have any
         specifications when this test starts and ends."""
-        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
-        if not os.path.exists(project_dir):
-            self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
-            return
+        project_dir = os.path.abspath(os.path.join(str(Path(__file__).parent), "test_resources", "Project Directory"))
+        self.assertTrue(os.path.exists(project_dir))
         self.assertIsNone(self.toolbox.project())
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
@@ -669,7 +666,10 @@ class TestToolboxUI(unittest.TestCase):
             self.toolbox.open_project(project_dir)
         # Tool spec model must be empty at this point
         self.assertEqual(0, self.toolbox.specification_model.rowCount())
-        tool_spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
+        tool_spec_path = os.path.abspath(
+            os.path.join(str(Path(__file__).parent), "test_resources", "test_tool_spec.json")
+        )
+        self.assertTrue(os.path.exists(tool_spec_path))
         # Add a Tool spec to 'project.json' file
         with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename, mock.patch(
             "spine_items.tool.tool_specifications.ToolSpecification.save"

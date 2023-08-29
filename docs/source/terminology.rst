@@ -82,7 +82,7 @@ Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine T
   from Spine Toolbox's point-of-view.
 - **Use case** Potential way to use Spine Toolbox. Use cases together are used to test the
   functionality and stability of Spine Toolbox and SpineOpt.jl under different potential circumstances.
-- **Vertice** Graph theory term. See *Project item*.
+- **Vertex** Graph theory term. See *Project item*.
 - **View** A project item that can be used for visualizing project data.
 - **Work directory** Tool specifications can be executed in *Source directory* or in *work directory*.
   When a Tool specification is executed in a work directory, Spine Toolbox creates a new *work*
