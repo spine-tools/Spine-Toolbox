@@ -61,7 +61,7 @@ def do_create_new_spine_database(url):
 class SpineDBManager(QObject):
     """Class to manage DBs within a project."""
 
-    error_msg = Signal(dict)
+    error_msg = Signal(object)
     # Data changed signals
     items_added = Signal(str, dict)
     """Emitted whenever items are added to a DB.
