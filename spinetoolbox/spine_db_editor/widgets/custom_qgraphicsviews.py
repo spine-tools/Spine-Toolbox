@@ -15,7 +15,7 @@ Classes for custom QGraphicsViews for the Entity graph view.
 
 import sys
 from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
-from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog
+from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog
 from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize
 from PySide6.QtPrintSupport import QPrinter
 from ...helpers import CharIconEngine
@@ -200,12 +200,16 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.aboutToShow.connect(self._update_actions_visibility)
 
     def _find(self):
-        expr, ok = QInputDialog.getText(self, "Find in graph...", "Enter strings to find separated by comma.")
+        expr, ok = QInputDialog.getText(self, "Find in graph...", "Enter entity names to find separated by comma.")
         if not ok:
             return
-        words = [x.strip() for x in expr.split(",")]
-        for item in self.entity_items:
-            item.set_highlighted(any(w in item.entity_name for w in words))
+        names = [x.strip() for x in expr.split(",")]
+        items = [item for item in self.entity_items if any(n == item.entity_name for n in names)]
+        if not items:
+            return
+        color = QColorDialog.getColor(Qt.yellow, self, "Choose highlight color")
+        for item in items:
+            item.set_highligh_color(color)
 
     def increase_arc_length(self):
         for item in self.entity_items:

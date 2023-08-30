@@ -98,7 +98,7 @@ class EntityItem(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.ArrowCursor)
         self.setToolTip(self._make_tool_tip())
-        self._highlighted = False
+        self._highligh_color = Qt.transparent
 
     def _make_tool_tip(self):
         raise NotImplementedError()
@@ -212,8 +212,8 @@ class EntityItem(QGraphicsRectItem):
         path.addRect(self._bg.boundingRect())
         return path
 
-    def set_highlighted(self, highlighted):
-        self._highlighted = highlighted
+    def set_highligh_color(self, color):
+        self._highligh_color = color
 
     def paint(self, painter, option, widget=None):
         """Shows or hides the selection halo."""
@@ -223,7 +223,7 @@ class EntityItem(QGraphicsRectItem):
         else:
             self._paint_as_deselected()
         pen = self._bg.pen()
-        pen.setColor(Qt.yellow if self._highlighted else Qt.transparent)
+        pen.setColor(self._highligh_color)
         width = 10 / self.scale()
         pen.setWidth(width)
         self._bg.setPen(pen)
