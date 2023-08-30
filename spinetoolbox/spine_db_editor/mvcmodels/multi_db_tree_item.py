@@ -26,6 +26,7 @@ class MultiDBTreeItem(TreeItem):
     item_type = None
     """Item type identifier string. Should be set to a meaningful value by subclasses."""
     visual_key = ["name"]
+    _fetch_index = None
 
     def __init__(self, model=None, db_map_ids=None):
         """Init class.
@@ -45,9 +46,13 @@ class MultiDBTreeItem(TreeItem):
             handle_items_added=self.handle_items_added,
             handle_items_removed=self.handle_items_removed,
             handle_items_updated=self.handle_items_updated,
-            will_have_children_change=self.will_have_children_change,
+            index=self._fetch_index,
+            key_for_index=self._key_for_index,
             owner=self,
         )
+
+    def _key_for_index(self, db_map):
+        return None
 
     @property
     def visible_children(self):
@@ -262,11 +267,6 @@ class MultiDBTreeItem(TreeItem):
     @property
     def _children_sort_key(self):
         return attrgetter("display_id")
-
-    def will_have_children_change(self):
-        """Notifies the view that the model's layout has changed.
-        This triggers a repaint so this item will be painted gray if no children."""
-        self.model.layoutChanged.emit()
 
     @property
     def fetch_item_type(self):

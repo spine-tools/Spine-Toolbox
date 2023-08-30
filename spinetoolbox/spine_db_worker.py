@@ -25,7 +25,6 @@ class SpineDBWorker(QObject):
     """Does all the communication with a certain DB for SpineDBManager, in a non-GUI thread."""
 
     _more_available = Signal(object)
-    _will_have_children_change = Signal(object)
 
     def __init__(self, db_mngr, db_url):
         super().__init__()
@@ -39,9 +38,8 @@ class SpineDBWorker(QObject):
         self._remove_item_callbacks = {}
         self._current_fetch_token = 0
         self.commit_cache = {}
-        self._advance_query_callbacks = {}
+        self._parents_fetching = {}
         self._more_available.connect(self.fetch_more)
-        self._will_have_children_change.connect(self._handle_will_have_children_change)
 
     def _get_parents(self, item_type):
         parents = self._parents_by_type.get(item_type, set())
@@ -81,67 +79,11 @@ class SpineDBWorker(QObject):
         parents = self._parents_by_type.setdefault(parent.fetch_item_type, set())
         if parent not in parents:
             parents.add(parent)
-            self._update_parents_will_have_children(parent.fetch_item_type)
 
     def _fetched_ids(self, item_type, position):
         return list(self._db_map.cache.get(item_type, {}))[position:]
 
-    def _update_parents_will_have_children(self, item_type):
-        """Schedules a restart of the process that checks whether parents associated to given type will have children.
-
-        Args:
-            item_type (str)
-        """
-        self._executor.submit(self._do_update_parents_will_have_children, item_type)
-
     @busy_effect
-    def _do_update_parents_will_have_children(self, item_type):
-        """Updates the ``will_have_children`` property for all parents associated to given type.
-
-        Args:
-            item_type (str)
-        """
-        # 1. Initialize the list of parents to check (those with will_have_children equal to None)
-        # 2. Obtain the next item of given type from cache.
-        # 3. Check if the unchecked parents accept the item. Set will_have_children to True if any of them does
-        #    and remove them from the list to check.
-        # 4. If there are no more items in cache, advance the query and if it brings more items, go back to 2.
-        # 5. If the query is completed, set will_have_children to False for all remaining parents to check and quit.
-        # 6. If at any moment the set of parents associated to given type is mutated, quit so we can start over.
-        parents = self._get_parents(item_type)
-        position = 0
-        while True:
-            parents_to_check = {parent for parent in parents if parent.will_have_children is None}
-            if not parents_to_check:
-                break
-            for id_ in self._fetched_ids(item_type, position):
-                if self._get_parents(item_type) != parents:
-                    # New parents registered - we need to start over
-                    return
-                position += 1
-                item = self._db_mngr.get_item(self._db_map, item_type, id_)
-                for parent in parents_to_check.copy():
-                    if parent.accepts_item(item, self._db_map):
-                        parent.will_have_children = True
-                        parents_to_check.remove(parent)
-                if not parents_to_check:
-                    break
-            if not parents_to_check:
-                break
-            chunk = self._db_map.advance_cache_query(item_type)
-            self._do_call_advance_query_callbacks(item_type, chunk)
-            if position == len(self._db_map.cache.get(item_type, ())):
-                for parent in parents_to_check:
-                    parent.will_have_children = False
-                self._will_have_children_change.emit(parents_to_check)
-                break
-
-    @Slot(object)
-    @staticmethod
-    def _handle_will_have_children_change(parents):
-        for parent in parents:
-            parent.will_have_children_change()
-
     def _iterate_cache(self, parent):
         """Iterates the cache for given parent while updating its ``position`` property.
         Iterated items are added to the parent if it accepts them.
@@ -153,12 +95,28 @@ class SpineDBWorker(QObject):
             bool: Whether the parent can stop fetching from now
         """
         item_type = parent.fetch_item_type
+        index = parent.index
+        parent_pos = parent.position(self._db_map)
+        if index is not None:
+            # Build index from where we left and get items from it
+            index_pos = index.position(self._db_map)
+            for id_ in self._fetched_ids(item_type, index_pos):
+                item = self._db_mngr.get_item(self._db_map, item_type, id_)
+                index.increment_position(self._db_map)
+                if not item:
+                    continue
+                index.process_item(item, self._db_map)
+            parent_key = parent.key_for_index(self._db_map)
+            items = index.get_items(parent_key, self._db_map)[parent_pos:]
+        else:
+            # Get items directly from cache, from where we left
+            items = [
+                self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in self._fetched_ids(item_type, parent_pos)
+            ]
         added_count = 0
-        for id_ in self._fetched_ids(item_type, parent.position(self._db_map)):
+        for item in items:
             parent.increment_position(self._db_map)
-            item = self._db_mngr.get_item(self._db_map, item_type, id_)
             if not item:
-                # Happens in one unit test???
                 continue
             if parent.accepts_item(item, self._db_map):
                 self._bind_item(parent, item)
@@ -228,7 +186,7 @@ class SpineDBWorker(QObject):
         """
         self._reset_fetching_if_required(parent)
         self._register_fetch_parent(parent)
-        return parent.will_have_children is not False and not parent.is_fetched and not parent.is_busy
+        return not parent.is_fetched and not parent.is_busy
 
     @Slot(object)
     def fetch_more(self, parent):
@@ -239,36 +197,48 @@ class SpineDBWorker(QObject):
         """
         self._reset_fetching_if_required(parent)
         self._register_fetch_parent(parent)
-        if self._iterate_cache(parent) or parent.is_fetched:  # NOTE: Order of statements is important
+        if self._iterate_cache(parent):
+            # Something in cache
             return
-        # Nothing in cache, something in DB
         item_type = parent.fetch_item_type
-        if item_type in self._db_map.cache.fetched_item_types:
+        parent.set_fetched(item_type in self._db_map.cache.fetched_item_types)
+        if parent.is_fetched:
+            # Nothing left in the DB
             return
-        callback = lambda: self._handle_query_advanced(parent)
-        if item_type in self._advance_query_callbacks:
-            self._advance_query_callbacks[item_type].add(callback)
+        # Query the DB
+        if item_type in self._parents_fetching:
+            self._parents_fetching[item_type].add(parent)
             return
-        self._advance_query_callbacks[item_type] = {callback}
-        callback = lambda future: self._call_advance_query_callbacks(item_type, future.result())
+        self._parents_fetching[item_type] = {parent}
+        callback = lambda future: self._handle_query_advanced(item_type, future.result())
         self._executor.submit(self._db_map.advance_cache_query, item_type).add_done_callback(callback)
         parent.set_busy(True)
 
-    def _handle_query_advanced(self, parent):
-        if parent.position(self._db_map) < len(self._db_map.cache.get(parent.fetch_item_type, ())):
-            self._more_available.emit(parent)
-        else:
-            parent.set_fetched(True)
-            parent.set_busy(False)
-
-    def _call_advance_query_callbacks(self, item_type, result):
-        self._do_call_advance_query_callbacks(item_type, result)
-
-    def _do_call_advance_query_callbacks(self, item_type, chunk):
+    def _handle_query_advanced(self, item_type, chunk):
         self._populate_commit_cache(item_type, chunk)
         self._db_mngr.update_icons(self._db_map, item_type, chunk)
-        for callback in self._advance_query_callbacks.pop(item_type, ()):
-            callback()
+        for parent in self._parents_fetching.pop(item_type, ()):
+            self._update_parent(parent)
+
+    def _fetch_complete(self, parent):
+        """Whether fetch is complete for given parent."""
+        items = self._db_map.cache.get(parent.fetch_item_type, ())
+        index = parent.index
+        if index is not None:
+            if index.position(self._db_map) < len(items):
+                return False
+            parent_key = parent.key_for_index(self._db_map)
+            index_items = index.get_items(parent_key, self._db_map)
+            return parent.position(self._db_map) >= len(index_items)
+        return parent.position(self._db_map) >= len(items)
+
+    def _update_parent(self, parent):
+        """Check if fetch is complete and react accordingly."""
+        if self._fetch_complete(parent):
+            parent.set_fetched(True)
+            parent.set_busy(False)
+        else:
+            self._more_available.emit(parent)
 
     def fetch_all(self, fetch_item_types=None):
         self._db_map.fetch_all(fetch_item_types)
@@ -369,7 +339,7 @@ class SpineDBWorker(QObject):
         """Refreshes session."""
         self._db_map.refresh_session()
         self._current_fetch_token += 1
-        self._advance_query_callbacks.clear()
+        self._parents_fetching.clear()
         self._db_mngr.receive_session_refreshed({self._db_map})
 
 

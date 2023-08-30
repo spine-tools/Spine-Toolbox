@@ -13,8 +13,7 @@
 The FetchParent and FlexibleFetchParent classes.
 """
 
-from PySide6.QtCore import QTimer, Signal, QObject, Qt
-from PySide6.QtGui import QCursor
+from PySide6.QtCore import QTimer, Signal, QObject
 from .helpers import busy_effect
 
 
@@ -22,15 +21,15 @@ class FetchParent(QObject):
     """
     Attrs:
         fetch_token (int or None)
-        will_have_children (bool or None): Whether this parent will have children if fetched.
         None means we don't know yet. Set to a boolean value whenever we find out.
     """
 
     _changes_pending = Signal()
 
-    def __init__(self, owner=None, chunk_size=1000):
+    def __init__(self, index=None, owner=None, chunk_size=1000):
         """
         Args:
+            index (FetchIndex or None): an index to speedup looking up fetched items
             owner (object): somebody who owns this FetchParent. If it's a QObject instance, then this FetchParent
             becomes obsolete whenever the owner is destroyed
             chunk_size (int or None): the number of items this parent should be happy with fetching at a time.
@@ -46,15 +45,19 @@ class FetchParent(QObject):
         self._busy = False
         self._position = {}
         self.fetch_token = None
-        self.will_have_children = None
         self._timer.setSingleShot(True)
         self._timer.setInterval(0)
         self._timer.timeout.connect(self._apply_pending_changes)
         self._changes_pending.connect(self._timer.start)
+        self._index = index
         self._owner = owner
         if isinstance(self._owner, QObject):
             self._owner.destroyed.connect(lambda obj=None: self.set_obsolete(True))
         self.chunk_size = chunk_size
+
+    @property
+    def index(self):
+        return self._index
 
     def reset(self, fetch_token):
         """Resets fetch parent as if nothing was ever fetched.
@@ -71,9 +74,9 @@ class FetchParent(QObject):
         self._fetched = False
         self._busy = False
         self._position.clear()
+        if self.index is not None:
+            self.index.reset()
         self.fetch_token = fetch_token
-        self.will_have_children = None
-        self.will_have_children_change()
 
     def position(self, db_map):
         return self._position.setdefault(db_map, 0)
@@ -117,6 +120,17 @@ class FetchParent(QObject):
         """
         raise NotImplementedError()
 
+    def key_for_index(self, db_map):
+        """Returns the key for this parent in the index.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            any
+        """
+        return None
+
     # pylint: disable=no-self-use
     def accepts_item(self, item, db_map):
         """Called by the associated SpineDBWorker whenever items are fetched and also added/updated/removed.
@@ -147,9 +161,6 @@ class FetchParent(QObject):
             bool
         """
         return True
-
-    def will_have_children_change(self):
-        """Called when the will_have_children property changes."""
 
     @property
     def is_obsolete(self):
@@ -189,10 +200,6 @@ class FetchParent(QObject):
         Args:
             busy (bool): whether parent is busy fetching
         """
-        if busy:
-            qApp.setOverrideCursor(QCursor(Qt.BusyCursor))
-        else:
-            qApp.restoreOverrideCursor()
         self._busy = busy
 
     def handle_items_added(self, db_map_data):
@@ -227,8 +234,8 @@ class FetchParent(QObject):
 
 
 class ItemTypeFetchParent(FetchParent):
-    def __init__(self, fetch_item_type, owner=None, chunk_size=1000):
-        super().__init__(owner=owner, chunk_size=chunk_size)
+    def __init__(self, fetch_item_type, index=None, owner=None, chunk_size=1000):
+        super().__init__(index=index, owner=owner, chunk_size=chunk_size)
         self._fetch_item_type = fetch_item_type
 
     @property
@@ -261,17 +268,23 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         handle_items_updated=None,
         accepts_item=None,
         shows_item=None,
-        will_have_children_change=None,
+        key_for_index=None,
+        index=None,
         owner=None,
         chunk_size=1000,
     ):
-        super().__init__(fetch_item_type, owner=owner, chunk_size=chunk_size)
-        self._accepts_item = accepts_item
-        self._shows_item = shows_item
+        super().__init__(fetch_item_type, index=index, owner=owner, chunk_size=chunk_size)
         self._handle_items_added = handle_items_added
         self._handle_items_removed = handle_items_removed
         self._handle_items_updated = handle_items_updated
-        self._will_have_children_change = will_have_children_change
+        self._accepts_item = accepts_item
+        self._shows_item = shows_item
+        self._key_for_index = key_for_index
+
+    def key_for_index(self, db_map):
+        if self._key_for_index is None:
+            return None
+        return self._key_for_index(db_map)
 
     def handle_items_added(self, db_map_data):
         if self._handle_items_added is None:
@@ -298,8 +311,24 @@ class FlexibleFetchParent(ItemTypeFetchParent):
             return super().shows_item(item, db_map)
         return self._shows_item(item, db_map)
 
-    def will_have_children_change(self):
-        if self._will_have_children_change is None:
-            super().will_have_children_change()
-        else:
-            self._will_have_children_change()
+
+class FetchIndex(dict):
+    def __init__(self):
+        super().__init__()
+        self._position = {}
+
+    def reset(self):
+        self._position.clear()
+        self.clear()
+
+    def process_item(self, item, db_map):
+        raise NotImplementedError()
+
+    def position(self, db_map):
+        return self._position.setdefault(db_map, 0)
+
+    def increment_position(self, db_map):
+        self._position[db_map] += 1
+
+    def get_items(self, key, db_map):
+        return self.get(db_map, {}).get(key, [])

@@ -29,10 +29,14 @@ class TreeItem:
         self._parent_item = None
         self._fetched = False
         self._set_up_once = False
+        self._has_children_initially = False
+
+    def set_has_children_initially(self, has_children_initially):
+        self._has_children_initially = has_children_initially
 
     def has_children(self):
         """Returns whether this item has or could have children."""
-        if self.can_fetch_more():
+        if self._has_children_initially:
             return True
         return bool(self.child_count())
 
@@ -123,6 +127,9 @@ class TreeItem:
     def _do_set_up(self):
         """Do stuff after the item has been inserted."""
 
+    def _polish_children(self, children):
+        """Polishes children just before inserting them."""
+
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
 
@@ -138,6 +145,7 @@ class TreeItem:
             raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
         if position < 0 or position > self.child_count():
             return False
+        self._polish_children(children)
         parent_index = self.index()
         self.model.beginInsertRows(parent_index, position, position + len(children) - 1)
         for child in children:
@@ -185,6 +193,7 @@ class TreeItem:
         if tear_down:
             for child in children:
                 child.tear_down_recursively()
+        self._has_children_initially = False
         return True
 
     def clear_children(self):

@@ -17,12 +17,35 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QBrush, QIcon
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
-from spinetoolbox.fetch_parent import FlexibleFetchParent
+from spinetoolbox.fetch_parent import FlexibleFetchParent, FetchIndex
 from .multi_db_tree_item import MultiDBTreeItem
+
+
+class EntityClassIndex(FetchIndex):
+    def process_item(self, item, db_map):
+        class_id = item["class_id"]
+        self.setdefault(db_map, {}).setdefault(class_id, []).append(item)
+
+
+class EntityGroupIndex(FetchIndex):
+    def process_item(self, item, db_map):
+        group_id = item["group_id"]
+        self.setdefault(db_map, {}).setdefault(group_id, []).append(item)
+
+
+class EntityIndex(FetchIndex):
+    def process_item(self, item, db_map):
+        element_id_list = item["element_id_list"]
+        for el_id in element_id_list:
+            self.setdefault(db_map, {}).setdefault(el_id, []).append(item)
 
 
 class EntityTreeRootItem(MultiDBTreeItem):
     item_type = "root"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._has_children_initially = True
 
     @property
     def display_id(self):
@@ -47,12 +70,24 @@ class EntityTreeRootItem(MultiDBTreeItem):
         """Returns ObjectClassItem."""
         return EntityClassItem
 
+    def _polish_children(self, children):
+        """See base class."""
+        db_map_entity_class_ids = {
+            db_map: {x["class_id"] for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)}
+            for db_map in self.db_maps
+        }
+        for child in children:
+            child.set_has_children_initially(
+                any(child.db_map_id(db_map) in db_map_entity_class_ids.get(db_map, ()) for db_map in child.db_maps)
+            )
+
 
 class EntityClassItem(MultiDBTreeItem):
     """An entity_class item."""
 
     visual_key = ["name", "dimension_name_list"]
     item_type = "entity_class"
+    _fetch_index = EntityClassIndex()
 
     @property
     def display_icon(self):
@@ -64,7 +99,7 @@ class EntityClassItem(MultiDBTreeItem):
         return EntityItem
 
     def is_hidden(self):
-        return self.model.hide_empty_classes and not self.can_fetch_more() and not self.child_count()
+        return self.model.hide_empty_classes and not self.has_children()
 
     @property
     def _children_sort_key(self):
@@ -88,12 +123,27 @@ class EntityClassItem(MultiDBTreeItem):
                 return QBrush(Qt.gray)
         return super().data(column, role)
 
-    def accepts_item(self, item, db_map):
-        return item["class_id"] == self.db_map_id(db_map)
+    def _key_for_index(self, db_map):
+        return self.db_map_id(db_map)
 
     def set_data(self, column, value, role):
         """See base class."""
         return False
+
+    def _polish_children(self, children):
+        """See base class."""
+        db_map_entity_element_ids = {
+            db_map: {
+                el_id
+                for ent in self.db_mngr.get_items(db_map, "entity", only_visible=False)
+                for el_id in ent["element_id_list"]
+            }
+            for db_map in self.db_maps
+        }
+        for child in children:
+            child.set_has_children_initially(
+                any(child.db_map_id(db_map) in db_map_entity_element_ids.get(db_map, ()) for db_map in child.db_maps)
+            )
 
 
 class EntityItem(MultiDBTreeItem):
@@ -101,6 +151,8 @@ class EntityItem(MultiDBTreeItem):
 
     visual_key = ["class_name", "byname"]
     item_type = "entity"
+    _fetch_index = EntityIndex()
+    _entity_group_index = EntityGroupIndex()
 
     def __init__(self, *args, is_member=False, **kwargs):
         super().__init__(*args, **kwargs)
@@ -108,9 +160,10 @@ class EntityItem(MultiDBTreeItem):
         self.is_member = is_member
         self._entity_group_fetch_parent = FlexibleFetchParent(
             "entity_group",
-            accepts_item=self._accepts_entity_group_item,
             handle_items_added=self._handle_entity_group_items_added,
             handle_items_removed=self._handle_entity_group_items_removed,
+            index=self._entity_group_index,
+            key_for_index=self._key_for_entity_group_index,
             owner=self,
         )
 
@@ -199,11 +252,11 @@ class EntityItem(MultiDBTreeItem):
         self._fetch_more_entity_groups()
         super().fetch_more()
 
-    def accepts_item(self, item, db_map):
-        return self.db_map_id(db_map) in item["element_id_list"]
+    def _key_for_index(self, db_map):
+        return self.db_map_id(db_map)
 
-    def _accepts_entity_group_item(self, item, db_map):
-        return item["group_id"] == self.db_map_id(db_map)
+    def _key_for_entity_group_index(self, db_map):
+        return self.db_map_id(db_map)
 
     def _handle_entity_group_items_added(self, db_map_data):
         db_map_member_ids = {db_map: [x["member_id"] for x in data] for db_map, data in db_map_data.items()}
