@@ -1,0 +1,17 @@
+*.bat   text
+*.iss   text
+*.jl    text
+*.json  text
+*.md    text
+*.py    text
+*.rst   text
+*.svg   text
+*.toml  text
+*.txt   text
+*.ui    text
+*.yaml  text
+*.yml   text
+
+*.jpg   binary
+*.png   binary
+*.qrc   binary
