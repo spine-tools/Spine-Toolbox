@@ -615,10 +615,8 @@ class SpineDBManager(QObject):
         Returns:
             list
         """
-        items = list(db_map.cache.get(item_type, {}).values())
-        if only_visible:
-            return items
-        db_map.cache.fetch_all(item_type)
+        if not only_visible:
+            db_map.cache.fetch_all(item_type)
         return list(db_map.cache.get(item_type, {}).values())
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):

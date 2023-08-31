@@ -312,7 +312,7 @@ class GraphViewMixin:
             (db_map, x)
             for db_map in self.db_maps
             for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)
-            if cond(((db_map, id_) in db_map_entity_ids for id_ in x["element_id_list"]))
+            if x["element_id_list"] and cond((db_map, id_) in db_map_entity_ids for id_ in x["element_id_list"])
         ] + [
             (db_map, self.db_mngr.get_item(db_map, "entity", id_, only_visible=False))
             for db_map, id_ in db_map_entity_ids
@@ -382,16 +382,30 @@ class GraphViewMixin:
             self.entity_inds.append(ent_ind)
             self.element_inds.append(el_ind)
 
-    def _get_parameter_positions(self, parameter_name):
-        if not parameter_name:
-            yield from []
-        for db_map in self.db_maps:
-            for p in self.db_mngr.get_items_by_field(
-                db_map, "parameter_value", "parameter_name", parameter_name, only_visible=False
-            ):
-                pos = from_database(p["value"], p["type"])
-                if isinstance(pos, float):
-                    yield (db_map, p["entity_id"]), pos
+    def _get_fixed_pos(self, db_map_entity_id):
+        db_map, entity_id = db_map_entity_id
+        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
+        alternative = next(iter(self.db_mngr.get_items(db_map, "alternative", only_visible=False)), None)
+        if not entity or not alternative:
+            return None
+        table_cache = db_map.cache.table_cache("parameter_value")
+        pos_x, pos_y = [
+            table_cache.find_item(
+                {
+                    "parameter_definition_name": pname,
+                    "entity_class_name": entity["class_name"],
+                    "entity_byname": entity["byname"],
+                    "alternative_name": alternative["name"],
+                }
+            )
+            for pname in (self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter)
+        ]
+        if not pos_x or not pos_y:
+            return None
+        pos_x, pos_y = [from_database(p["value"], p["type"]) for p in (pos_x, pos_y)]
+        if isinstance(pos_x, float) and isinstance(pos_y, float):
+            return {"x": pos_x, "y": pos_y}
+        return None
 
     def _make_layout_generator(self):
         """Returns a layout generator for the current graph.
@@ -404,15 +418,14 @@ class GraphViewMixin:
             for item in self.ui.graphicsView.items():
                 if isinstance(item, EntityItem):
                     fixed_positions[item.first_db_map, item.first_id] = {"x": item.pos().x(), "y": item.pos().y()}
-        param_pos_x = dict(self._get_parameter_positions(self.ui.graphicsView.pos_x_parameter))
-        param_pos_y = dict(self._get_parameter_positions(self.ui.graphicsView.pos_y_parameter))
-        for db_map_entity_id in param_pos_x.keys() & param_pos_y.keys():
-            fixed_positions[db_map_entity_id] = {"x": param_pos_x[db_map_entity_id], "y": param_pos_y[db_map_entity_id]}
+        for db_map_entity_ids in self.db_map_entity_id_sets:
+            for db_map_entity_id in db_map_entity_ids:
+                fixed_positions[db_map_entity_id] = self._get_fixed_pos(db_map_entity_id)
         heavy_positions = {
             ind: fixed_positions[db_map_entity_id]
             for ind, db_map_entity_ids in enumerate(self.db_map_entity_id_sets)
             for db_map_entity_id in db_map_entity_ids
-            if db_map_entity_id in fixed_positions
+            if fixed_positions[db_map_entity_id]
         }
         return GraphLayoutGeneratorRunnable(
             self._layout_gen_id,
