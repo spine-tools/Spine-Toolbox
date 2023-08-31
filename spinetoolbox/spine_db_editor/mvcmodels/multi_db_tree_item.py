@@ -29,11 +29,10 @@ class MultiDBTreeItem(TreeItem):
     _fetch_index = None
 
     def __init__(self, model=None, db_map_ids=None):
-        """Init class.
-
+        """
         Args:
             model (MinimalTreeModel, optional): item's model
-            db_map_ids (dict, optional): maps instances of DiffDatabaseMapping to the id of the item in that db
+            db_map_ids (dict, optional): maps instances of DatabaseMapping to the id of the item in that db
         """
         super().__init__(model)
         if db_map_ids is None:
@@ -391,15 +390,18 @@ class MultiDBTreeItem(TreeItem):
         self.model.dataChanged.emit(top_left, bottom_right)
 
     def insert_children(self, position, children):
-        """Insert new children at given position. Returns a boolean depending on how it went.
+        """Inserts new children at given position.
 
         Args:
             position (int): insert new items here
-            children (iter): insert items from this iterable
+            children (Iterable of MultiDBTreeItem): insert items from this iterable
+
+        Returns:
+            bool: True if children were inserted successfully, False otherwise
         """
         bad_types = [type(child) for child in children if not isinstance(child, MultiDBTreeItem)]
         if bad_types:
-            raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
+            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
         if not super().insert_children(position, children):
             return False
         self._refresh_child_map()
@@ -423,7 +425,7 @@ class MultiDBTreeItem(TreeItem):
         self._insert_children_sorted(children)
 
     def clear_children(self):
-        """Clear children list."""
+        """Clears children list."""
         super().clear_children()
         self._child_map.clear()
 

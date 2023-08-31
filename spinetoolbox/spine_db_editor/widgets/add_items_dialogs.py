@@ -50,7 +50,7 @@ from .manage_items_dialogs import (
 
 
 class AddReadyEntitiesDialog(ManageItemsDialogBase):
-    """A dialog to let the user add new 'ready' relationships."""
+    """A dialog to let the user add new 'ready' multidimensional entities."""
 
     def __init__(self, parent, entity_class, entities, db_mngr, *db_maps):
         """
@@ -59,7 +59,7 @@ class AddReadyEntitiesDialog(ManageItemsDialogBase):
             entity_class (dict)
             entities (list(list(str))
             db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
         self.entity_class = entity_class
@@ -169,7 +169,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             parent (SpineDBEditor)
             item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
@@ -312,14 +312,14 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
 
 
 class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin, AddItemsDialog):
-    """A dialog to query user's preferences for new relationships."""
+    """A dialog to query user's preferences for new entities."""
 
     def __init__(self, parent, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.model = self.make_model()
@@ -358,7 +358,7 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
 
 
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
-    """A dialog to query user's preferences for new relationships."""
+    """A dialog to query user's preferences for new entities."""
 
     def __init__(self, parent, item, db_mngr, *db_maps, force_default=False):
         """
@@ -366,7 +366,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             parent (SpineDBEditor)
             item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
@@ -494,7 +494,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
 
 
 class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
-    """A dialog to query user's preferences for managing relationships."""
+    """A dialog to query user's preferences for managing entity dimensions."""
 
     def __init__(self, parent, item, db_mngr, *db_maps):
         """
@@ -502,7 +502,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             parent (SpineDBEditor): data store widget
             item (MultiDBTreeItem)
             db_mngr (SpineDBManager): the manager to do the removal
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Manage elements")

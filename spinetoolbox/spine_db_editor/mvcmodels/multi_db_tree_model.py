@@ -25,7 +25,7 @@ class MultiDBTreeModel(MinimalTreeModel):
         Args:
             db_editor (SpineDBEditor)
             db_mngr (SpineDBManager): A manager for the given db_maps
-            db_maps (iter): DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
         """
         super().__init__(db_editor)
         self.db_editor = db_editor

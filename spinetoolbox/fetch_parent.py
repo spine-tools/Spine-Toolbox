@@ -29,11 +29,11 @@ class FetchParent(QObject):
     def __init__(self, index=None, owner=None, chunk_size=1000):
         """
         Args:
-            index (FetchIndex or None): an index to speedup looking up fetched items
-            owner (object): somebody who owns this FetchParent. If it's a QObject instance, then this FetchParent
-            becomes obsolete whenever the owner is destroyed
-            chunk_size (int or None): the number of items this parent should be happy with fetching at a time.
-            If None, then no limit is imposed and the parent should fetch the entire contents of the DB.
+            index (FetchIndex, optional): an index to speedup looking up fetched items
+            owner (object, optional): somebody who owns this FetchParent.
+                If it's a QObject instance, then this FetchParent becomes obsolete whenever the owner is destroyed
+            chunk_size (int, optional): the number of items this parent should be happy with fetching at a time.
+                If None, then no limit is imposed and the parent should fetch the entire contents of the DB.
         """
         super().__init__()
         self._timer = QTimer()
