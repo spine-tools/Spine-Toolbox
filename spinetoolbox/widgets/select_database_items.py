@@ -56,8 +56,7 @@ class SelectDatabaseItems(QWidget):
     checked_state_changed = Signal(int)
     COLUMN_COUNT = 3
     _DATA_ITEMS = (
-        "object",
-        "relationship",
+        "entity",
         "entity_group",
         "parameter_value",
         "entity_metadata",
