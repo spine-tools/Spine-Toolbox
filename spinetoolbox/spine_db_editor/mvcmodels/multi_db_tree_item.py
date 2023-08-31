@@ -405,6 +405,8 @@ class MultiDBTreeItem(TreeItem):
         if not super().insert_children(position, children):
             return False
         self._refresh_child_map()
+        for child in children:
+            child.register_fetch_parent()
         return True
 
     def remove_children(self, position, count, tear_down=True):
@@ -475,6 +477,11 @@ class MultiDBTreeItem(TreeItem):
     def tear_down(self):
         super().tear_down()
         self._fetch_parent.set_obsolete(True)
+
+    def register_fetch_parent(self):
+        """Registers item's fetch parent for all model's databases."""
+        for db_map in self.model.db_maps:
+            self.model.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
 
     def revitalize(self):
         """Reverts tear down operation"""

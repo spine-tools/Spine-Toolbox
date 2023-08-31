@@ -152,11 +152,26 @@ class SpineDBManager(QObject):
         """
         return self._workers[db_map]
 
+    def register_fetch_parent(self, db_map, parent):
+        """Registers a fetch parent.
+
+        Args:
+            db_map (DatabaseMapping): target database mapping
+            parent (FetchParent): fetch parent
+        """
+        if db_map.closed:
+            return
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            return
+        return worker.register_fetch_parent(parent)
+
     def can_fetch_more(self, db_map, parent):
         """Whether or not we can fetch more items of given type from given db.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             parent (FetchParent): The object that requests the fetching and that might want to react to further DB
                 modifications.
 

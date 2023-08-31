@@ -70,15 +70,14 @@ class SpineDBWorker(QObject):
             self._remove_item_callbacks.pop(parent, None)
             parent.reset(self._current_fetch_token)
 
-    def _register_fetch_parent(self, parent):
-        """Registers the given parent and starts checking whether it will have children if fetched.
+    def register_fetch_parent(self, parent):
+        """Registers the given parent.
 
         Args:
-            parent (FetchParent)
+            parent (FetchParent): parent to add
         """
         parents = self._parents_by_type.setdefault(parent.fetch_item_type, set())
-        if parent not in parents:
-            parents.add(parent)
+        parents.add(parent)
 
     def _fetched_ids(self, item_type, position):
         return list(self._db_map.cache.get(item_type, {}))[position:]
@@ -185,7 +184,7 @@ class SpineDBWorker(QObject):
             bool: True if more data is available, False otherwise
         """
         self._reset_fetching_if_required(parent)
-        self._register_fetch_parent(parent)
+        self.register_fetch_parent(parent)
         return not parent.is_fetched and not parent.is_busy
 
     @Slot(object)
@@ -196,7 +195,7 @@ class SpineDBWorker(QObject):
             parent (FetchParent): fetch parent
         """
         self._reset_fetching_if_required(parent)
-        self._register_fetch_parent(parent)
+        self.register_fetch_parent(parent)
         if self._iterate_cache(parent):
             # Something in cache
             return
