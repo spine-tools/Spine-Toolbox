@@ -131,17 +131,12 @@ class MultiDBTreeItem(TreeItem):
     @property
     def first_db_map(self):
         """Returns the first associated db_map."""
-        return list(self._db_map_ids.keys())[0]
-
-    @property
-    def last_db_map(self):
-        """Returns the last associated db_map."""
-        return list(self._db_map_ids.keys())[-1]
+        return next(iter(self._db_map_ids))
 
     @property
     def db_maps(self):
         """Returns a list of all associated db_maps."""
-        return list(self._db_map_ids.keys())
+        return list(self._db_map_ids)
 
     @property
     def db_map_ids(self):
@@ -164,7 +159,7 @@ class MultiDBTreeItem(TreeItem):
         Called after removing and updating children for this item."""
         removed_rows = []
         for row, child in reversed(list(enumerate(self.children))):
-            if not child._db_map_ids:
+            if not child.db_map_ids:
                 removed_rows.append(row)
         for row, count in reversed(rows_to_row_count_tuples(removed_rows)):
             self.remove_children(row, count)
@@ -329,9 +324,9 @@ class MultiDBTreeItem(TreeItem):
                 child.deep_remove_db_map(db_map)
         self._deep_refresh_children()
 
-    def is_valid(self):  # pylint: disable=no-self-use
-        """Checks if the item is still valid after an update operation."""
-        return True
+    def is_valid(self):
+        """See base class."""
+        return bool(self._db_map_ids)
 
     def update_children_by_id(self, db_map_ids, **kwargs):
         """

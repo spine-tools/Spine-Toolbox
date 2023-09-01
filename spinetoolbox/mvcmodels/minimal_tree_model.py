@@ -75,6 +75,14 @@ class TreeItem:
             self._model = parent_item.model
             self._model.destroyed.connect(lambda obj=None: self.tear_down())
 
+    def is_valid(self):
+        """Tests if item is valid.
+
+        Return:
+            bool: True if item is valid, False otherwise
+        """
+        return True
+
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
         try:
@@ -348,6 +356,8 @@ class MinimalTreeModel(QAbstractItemModel):
         if not index.isValid():
             return None
         item = self.item_from_index(index)
+        if not item.is_valid():
+            return None
         return item.data(index.column(), role)
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):

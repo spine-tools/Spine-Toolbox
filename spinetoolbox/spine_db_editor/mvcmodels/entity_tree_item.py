@@ -228,7 +228,12 @@ class EntityItem(MultiDBTreeItem):
         )
 
     def is_valid(self):
-        """Checks that the parent entity (if any) is still an element in this entity."""
+        """See base class.
+
+        Additionally, checks that the parent entity (if any) is still an element in this entity.
+        """
+        if not super().is_valid():
+            return False
         if self.parent_item.item_type == "entity_class":
             return True
         return self.parent_item.display_data in self.element_name_list

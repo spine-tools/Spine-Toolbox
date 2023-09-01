@@ -122,7 +122,7 @@ class ItemMetadataTableModel(MetadataTableModelBase):
         self.beginResetModel()
         self._item_type = item_type
         self._item_ids = dict(db_map_ids)
-        self._db_maps = set(db_map_ids.keys())
+        self._db_maps = set(db_map_ids)
         default_db_map = next(iter(self._db_maps)) if self._db_maps else None
         self._adder_row = self._make_adder_row(default_db_map)
         self._data = []
