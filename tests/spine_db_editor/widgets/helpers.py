@@ -106,17 +106,17 @@ def add_entity_tree_item(item_names, view, menu_action_text, dialog_class):
         add_items_dialog.accept()
 
 
-def add_object_class(view, class_name):
+def add_zero_dimension_entity_class(view, name):
     view._context_item = view.model().root_item
-    add_entity_tree_item({0: class_name}, view, "Add entity classes", AddEntityClassesDialog)
+    add_entity_tree_item({0: name}, view, "Add entity classes", AddEntityClassesDialog)
 
 
-def add_object(view, object_name, object_class_index=0):
+def add_entity(view, name, entity_class_index=0):
     model = view.model()
     root_index = model.index(0, 0)
-    class_index = model.index(object_class_index, 0, root_index)
+    class_index = model.index(entity_class_index, 0, root_index)
     view._context_item = model.item_from_index(class_index)
-    add_entity_tree_item({0: object_name}, view, "Add entities", AddEntitiesDialog)
+    add_entity_tree_item({0: name}, view, "Add entities", AddEntitiesDialog)
 
 
 class TestBase(unittest.TestCase):

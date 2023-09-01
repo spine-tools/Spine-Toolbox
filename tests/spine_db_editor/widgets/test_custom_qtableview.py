@@ -19,7 +19,12 @@ from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from spinedb_api import DatabaseMapping, import_functions
-from tests.spine_db_editor.widgets.helpers import add_object, add_object_class, TestBase, EditorDelegateMocking
+from tests.spine_db_editor.widgets.helpers import (
+    add_entity,
+    add_zero_dimension_entity_class,
+    TestBase,
+    EditorDelegateMocking,
+)
 
 
 class TestParameterTableView(TestBase):
@@ -41,8 +46,8 @@ class TestParameterTableView(TestBase):
 
     def test_remove_rows_from_empty_model(self):
         tree_view = self._db_editor.ui.treeView_entity
-        add_object_class(tree_view, "an_object_class")
-        add_object(tree_view, "an_object")
+        add_zero_dimension_entity_class(tree_view, "an_object_class")
+        add_entity(tree_view, "an_object")
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
@@ -76,9 +81,9 @@ class TestParameterTableView(TestBase):
 
     def test_removing_row_does_not_allow_fetching_more_data(self):
         tree_view = self._db_editor.ui.treeView_entity
-        add_object_class(tree_view, "an_object_class")
-        add_object(tree_view, "object_1")
-        add_object(tree_view, "object_2")
+        add_zero_dimension_entity_class(tree_view, "an_object_class")
+        add_entity(tree_view, "object_1")
+        add_entity(tree_view, "object_2")
         definition_table_view = self._db_editor.ui.tableView_parameter_definition
         definition_model = definition_table_view.model()
         delegate_mock = EditorDelegateMocking()
@@ -116,8 +121,8 @@ class TestParameterTableView(TestBase):
 
     def test_receiving_uncommitted_but_existing_value_does_not_create_duplicate_entry(self):
         tree_view = self._db_editor.ui.treeView_entity
-        add_object_class(tree_view, "an_object_class")
-        add_object(tree_view, "an_object")
+        add_zero_dimension_entity_class(tree_view, "an_object_class")
+        add_entity(tree_view, "an_object")
         definition_table_view = self._db_editor.ui.tableView_parameter_definition
         definition_model = definition_table_view.model()
         delegate_mock = EditorDelegateMocking()
@@ -146,11 +151,11 @@ class TestParameterTableView(TestBase):
     @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=1)
     def test_incremental_fetching_groups_values_by_entity_class(self):
         tree_view = self._db_editor.ui.treeView_entity
-        add_object_class(tree_view, "object_1_class")
-        add_object(tree_view, "an_object_1")
-        add_object(tree_view, "another_object_1")
-        add_object_class(tree_view, "object_2_class")
-        add_object(tree_view, "an_object_2", object_class_index=1)
+        add_zero_dimension_entity_class(tree_view, "object_1_class")
+        add_entity(tree_view, "an_object_1")
+        add_entity(tree_view, "another_object_1")
+        add_zero_dimension_entity_class(tree_view, "object_2_class")
+        add_entity(tree_view, "an_object_2", entity_class_index=1)
         definition_table_view = self._db_editor.ui.tableView_parameter_definition
         definition_model = definition_table_view.model()
         delegate_mock = EditorDelegateMocking()
