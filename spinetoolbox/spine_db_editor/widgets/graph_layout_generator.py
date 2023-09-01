@@ -48,7 +48,6 @@ class GraphLayoutGeneratorRunnable(QRunnable):
         finished = Signal(object)
         layout_available = Signal(object, object, object)
         progressed = Signal(int)
-        msg = Signal(str)
 
     def __init__(
         self,
@@ -74,7 +73,6 @@ class GraphLayoutGeneratorRunnable(QRunnable):
             preview_available=self._preview_available,
             layout_available=self._layout_available,
             layout_progressed=self._layout_progressed,
-            message_available=self._message_available,
         )
         self.vertex_count = vertex_count
         self.max_iters = max_iters
@@ -85,7 +83,6 @@ class GraphLayoutGeneratorRunnable(QRunnable):
         self.finished = self._signals.finished
         self.layout_available = self._signals.layout_available
         self.progressed = self._signals.progressed
-        self.msg = self._signals.msg
 
     @Slot(bool)
     def stop(self, _checked=False):
@@ -100,9 +97,6 @@ class GraphLayoutGeneratorRunnable(QRunnable):
 
     def _layout_progressed(self, iteration):
         self.progressed.emit(iteration)
-
-    def _message_available(self, text):
-        self.msg.emit(text)
 
     def _layout_available(self, x, y):
         self.layout_available.emit(self._id, x, y)

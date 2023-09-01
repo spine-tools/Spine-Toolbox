@@ -1232,10 +1232,9 @@ class SpineDBManager(QObject):
         """Removes items from database.
 
         Args:
+            db_map: DatabaseMapping instance
             item_type (str): database item type
-            db_map_ids (dict): mapping DatabaseMapping to removable ids
-            callback (Callable, optional): function to call after removal is finished
-            committing_callback (Callable, optional): function to call after removal has been committed
+            ids (set): ids to remove
         """
         try:
             worker = self._get_worker(db_map)
@@ -1248,7 +1247,9 @@ class SpineDBManager(QObject):
         """Restores items in database.
 
         Args:
-            db_map_typed_ids (dict): mapping DiffDatabaseMapping to item type (str) to lists of items to restore
+            db_map: DatabaseMapping instance
+            item_type (str): database item type
+            ids (set): ids to restore
         """
         try:
             worker = self._get_worker(db_map)

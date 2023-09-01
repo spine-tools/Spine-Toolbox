@@ -210,8 +210,12 @@ class SpineDBWorker(QObject):
             return
         self._parents_fetching[item_type] = {parent}
         callback = lambda future: self._handle_query_advanced(item_type, future.result())
-        self._executor.submit(self._db_map.advance_cache_query, item_type).add_done_callback(callback)
+        self._executor.submit(self._busy_advance_cache_query, item_type).add_done_callback(callback)
         parent.set_busy(True)
+
+    @busy_effect
+    def _busy_advance_cache_query(self, item_type):
+        return self._db_map.advance_cache_query(item_type)
 
     def _handle_query_advanced(self, item_type, chunk):
         self._populate_commit_cache(item_type, chunk)
@@ -219,7 +223,7 @@ class SpineDBWorker(QObject):
         for parent in self._parents_fetching.pop(item_type, ()):
             self._update_parent(parent)
 
-    def _fetch_complete(self, parent):
+    def _is_fetch_complete(self, parent):
         """Whether fetch is complete for given parent."""
         items = self._db_map.cache.get(parent.fetch_item_type, ())
         index = parent.index
@@ -233,7 +237,7 @@ class SpineDBWorker(QObject):
 
     def _update_parent(self, parent):
         """Check if fetch is complete and react accordingly."""
-        if self._fetch_complete(parent):
+        if self._is_fetch_complete(parent):
             parent.set_fetched(True)
             parent.set_busy(False)
         else:

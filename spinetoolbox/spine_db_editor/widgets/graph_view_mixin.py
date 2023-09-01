@@ -59,11 +59,6 @@ class GraphViewMixin:
         self._extend_graph_timer.setInterval(100)
         self._extend_graph_timer.timeout.connect(self.build_graph)
         self._extending_graph = False
-        self._entity_fetch_parent = None
-
-    def _renew_fetch_parents(self):
-        if self._entity_fetch_parent is not None:
-            self._entity_fetch_parent.set_obsolete(True)
         self._entity_fetch_parent = FlexibleFetchParent(
             "entity",
             handle_items_added=self._graph_handle_entities_added,
@@ -71,9 +66,16 @@ class GraphViewMixin:
             handle_items_updated=self._graph_handle_entities_updated,
             owner=self,
         )
+        self._parameter_value_fetch_parent = FlexibleFetchParent(
+            "parameter_value", handle_items_added=self._graph_handle_parameter_values_added, owner=self
+        )
+
+    def _graph_fetch_more(self):
         for db_map in self.db_maps:
             if self.db_mngr.can_fetch_more(db_map, self._entity_fetch_parent):
                 self.db_mngr.fetch_more(db_map, self._entity_fetch_parent)
+            if self.db_mngr.can_fetch_more(db_map, self._parameter_value_fetch_parent):
+                self.db_mngr.fetch_more(db_map, self._parameter_value_fetch_parent)
 
     @Slot(bool)
     def _stop_extending_graph(self, _=False):
@@ -114,6 +116,9 @@ class GraphViewMixin:
         """
         new_db_map_id_sets = self.add_db_map_ids_to_items(db_map_data)
         if not new_db_map_id_sets:
+            for db_map in self.db_maps:
+                if self.db_mngr.can_fetch_more(db_map, self._entity_fetch_parent):
+                    self.db_mngr.fetch_more(db_map, self._entity_fetch_parent)
             return
         if self._pos_for_added_entities is not None:
             spread = self.VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
@@ -133,6 +138,8 @@ class GraphViewMixin:
             self._end_connect_entities()
         elif self._extending_graph:
             self._extend_graph_timer.start()
+        else:
+            self.rebuild_graph()
 
     def _graph_handle_entities_removed(self, db_map_data):
         """Runs when entities are removed from the db. Rebuilds graph if needed.
@@ -211,6 +218,18 @@ class GraphViewMixin:
             item.setVisible(False)
         self.scene = scene
 
+    def _graph_handle_parameter_values_added(self, db_map_data):
+        pnames = {x["parameter_definition_name"] for db_map in self.db_maps for x in db_map_data.get(db_map, ())}
+        if not (pnames & {self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter}):
+            for db_map in self.db_maps:
+                if self.db_mngr.can_fetch_more(db_map, self._parameter_value_fetch_parent):
+                    self.db_mngr.fetch_more(db_map, self._parameter_value_fetch_parent)
+            return
+        if self._extending_graph:
+            self._extend_graph_timer.start()
+        else:
+            self.rebuild_graph()
+
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
         if not visible:
@@ -222,7 +241,6 @@ class GraphViewMixin:
     @Slot(dict)
     def _handle_entity_tree_selection_changed_in_graph(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
-        self._renew_fetch_parents()
         self.selected_tree_inds = selected
         self.added_db_map_entity_ids.clear()
         self._extending_graph = True
@@ -256,6 +274,7 @@ class GraphViewMixin:
         layout_gen.layout_available.connect(self._complete_graph)
         layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_, None))  # Lambda to avoid issues in Python 3.7
         self._thread_pool.start(layout_gen)
+        self._graph_fetch_more()
 
     def _stop_layout_generators(self):
         for layout_gen in self.layout_gens.values():
