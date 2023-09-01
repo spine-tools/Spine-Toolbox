@@ -10,11 +10,12 @@
 ######################################################################################################################
 
 """
-Unit tests for the TreeViewFormRemoveMixin.
+Unit tests for database item removal functionality in Database editor.
 """
+from .spine_db_editor_test_base import DBEditorTestBase
 
 
-class TestSpineDBEditorRemoveMixin:
+class TestSpineDBEditorRemove(DBEditorTestBase):
     def test_remove_object_classes_from_object_tree_model(self):
         """Test that object classes are removed from the object tree model."""
         self.spine_db_editor.init_models()

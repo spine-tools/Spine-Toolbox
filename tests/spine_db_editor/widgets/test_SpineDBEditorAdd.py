@@ -10,14 +10,15 @@
 ######################################################################################################################
 
 """
-Unit tests for the TreeViewFormAddMixin class.
+Unit tests for adding database items in Database editor.
 """
 from unittest import mock
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.spine_db_editor.mvcmodels.single_models import SingleParameterDefinitionModel
+from .spine_db_editor_test_base import DBEditorTestBase
 
 
-class TestSpineDBEditorAddMixin:
+class TestSpineDBEditorAdd(DBEditorTestBase):
     def test_add_entity_classes_to_object_tree_model(self):
         """Test that object classes are added to the object tree model."""
         root_item = self.spine_db_editor.entity_tree_model.root_item

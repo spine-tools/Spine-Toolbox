@@ -10,13 +10,14 @@
 ######################################################################################################################
 
 """
-Unit tests for the TreeViewFormUpdateMixin.
+Unit tests for database item update functionality in Database editor.
 """
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from .spine_db_editor_test_base import DBEditorTestBase
 
 
-class TestSpineDBEditorUpdateMixin:
+class TestSpineDBEditorUpdate(DBEditorTestBase):
     def test_update_object_classes_in_object_tree_model(self):
         """Test that object classes are updated in the object tree model."""
         self.spine_db_editor.init_models()

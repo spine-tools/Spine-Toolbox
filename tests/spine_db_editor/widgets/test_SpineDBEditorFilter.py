@@ -10,14 +10,15 @@
 ######################################################################################################################
 
 """
-Unit tests for the TreeViewFormFilterMixin class.
+Unit tests for filtering in Database editor.
 """
 
 from PySide6.QtCore import Qt, QItemSelectionModel
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from .spine_db_editor_test_base import DBEditorTestBase
 
 
-class TestSpineDBEditorFilterMixin:
+class TestSpineDBEditorFilter(DBEditorTestBase):
     @property
     def _parameter_models(self):
         return (self.spine_db_editor.parameter_definition_model, self.spine_db_editor.parameter_value_model)
