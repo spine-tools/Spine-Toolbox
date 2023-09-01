@@ -270,7 +270,7 @@ class SpineDBWorker(QObject):
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         self._db_mngr.update_icons(self._db_map, item_type, items)
-        for parent in self._get_parents(item_type):
+        for parent in list(self._get_parents(item_type)):
             self.fetch_more(parent)
         self._db_mngr.items_added.emit(item_type, {self._db_map: items})
         return items
