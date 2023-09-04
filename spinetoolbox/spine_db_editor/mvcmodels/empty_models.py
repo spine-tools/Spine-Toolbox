@@ -204,7 +204,7 @@ class EmptyParameterValueModel(
     def item_type(self):
         return "parameter_value"
 
-    def add_items_to_db(self, db_map_data):
+    def add_items_to_db(self, db_map_data, second_pass=False):
         """See base class."""
         # First add whatever is ready and also try to add entities on the fly
         self.build_lookup_dictionary(db_map_data)
@@ -218,19 +218,23 @@ class EmptyParameterValueModel(
                 if self._check_item(db_map, param_val):
                     db_map_param_val.setdefault(db_map, []).append(param_val)
                 if entity:
-                    db_map_entities.setdefault(db_map, []).append(entity)
+                    already_added = db_map_entities.setdefault(db_map, [])
+                    # If the entity exists already, don't try to add it a second time
+                    if entity not in already_added:
+                        already_added.append(entity)
                 all_errors = errors + more_errors
                 if all_errors:
                     db_map_error_log.setdefault(db_map, []).extend(all_errors)
                 self._autocomplete_row(db_map, param_val)
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
-        if any(db_map_param_val.values()):
-            self.db_mngr.add_parameter_values(db_map_param_val)
         if any(db_map_entities.values()):
             self.db_mngr.add_entities(db_map_entities)
-            # Something might have become ready after adding the entities, so we do one more pass
-            self.add_items_to_db(db_map_data)
+        if any(db_map_param_val.values()) and second_pass:
+            self.db_mngr.add_parameter_values(db_map_param_val)
+        # Something might have become ready after adding the entities, so we do one more pass
+        if not second_pass:
+            self.add_items_to_db(db_map_data, second_pass=True)
 
     def _check_item(self, db_map, item):
         """Checks if a db item is ready to be inserted."""
