@@ -693,14 +693,15 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
         list_name_index = model.index(0, 0, root_index)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
 
-    @unittest.skip("Test currently broken.")
     def test_add_two_parameter_value_list_values(self):
         list_name_index = self._edits.append_value_list(self._db_mngr, "a_value_list")
         view = self._db_editor.ui.treeView_parameter_value_list
+        view.expandAll()
         model = view.model()
+        root_index = model.index(0, 0)
+        self.assertEqual(model.rowCount(root_index), 2)
         value_index1 = model.index(0, 0, list_name_index)
         self._edits.view_editor.write_to_index(view, value_index1, "value_1")
-        QApplication.processEvents()
         self.assertEqual(model.index(0, 0, list_name_index).data(), "value_1")
         self.assertEqual(model.rowCount(list_name_index), 2)
         value_index2 = model.index(1, 0, list_name_index)
