@@ -435,7 +435,10 @@ class RelationshipItem(EntityItem):
         self.update_entity_pos()
 
     def update_entity_pos(self):
-        dim_count = len(self.object_id_list(self.first_db_map))
+        object_id_list = self.object_id_list(self.first_db_map)
+        if object_id_list is None:
+            return
+        dim_count = len(object_id_list)
         if not dim_count:
             return
         el_items = {arc_item.obj_item for arc_item in self.arc_items}
