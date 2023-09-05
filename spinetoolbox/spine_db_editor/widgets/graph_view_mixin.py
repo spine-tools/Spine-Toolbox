@@ -39,7 +39,7 @@ class GraphViewMixin:
     """Provides the graph view for the DS form."""
 
     VERTEX_EXTENT = 64
-    _ARC_WIDTH = 0.15 * VERTEX_EXTENT
+    _ARC_WIDTH = 0.05 * VERTEX_EXTENT
     _ARC_LENGTH_HINT = 1.0 * VERTEX_EXTENT
 
     def __init__(self, *args, **kwargs):
@@ -446,8 +446,10 @@ class GraphViewMixin:
 
     def _get_object_key(self, db_map_object_id):
         db_map, object_id = db_map_object_id
-        object_ = self.db_mngr.get_item(db_map, "object", object_id)
-        key = (object_["class_name"], object_["name"])
+        key = self.get_item_name(db_map, object_id)
+        if not key:
+            object_ = self.db_mngr.get_item(db_map, "object", object_id)
+            key = (object_["class_name"], object_["name"])
         if not self.ui.graphicsView.merge_dbs:
             key += (db_map.codename,)
         return key
@@ -483,6 +485,29 @@ class GraphViewMixin:
             self.src_inds.append(src)
             self.dst_inds.append(dst)
 
+    def get_item_name(self, db_map, object_id):
+        object_ = self.db_mngr.get_item(db_map, "object", object_id, only_visible=False)
+        if not object_:
+            return ""
+        if not self.ui.graphicsView.name_parameter:
+            return object_["name"]
+        alternative = next(iter(self.db_mngr.get_items(db_map, "alternative", only_visible=False)), None)
+        table_cache = db_map.cache.table_cache("parameter_value")
+        name_pv = table_cache.find_item(
+            {
+                "parameter_definition_name": self.ui.graphicsView.name_parameter,
+                "entity_class_name": entity["class_name"],
+                "entity_byname": entity["byname"],
+                "alternative_name": alternative["name"],
+            }
+        )
+        if not name_pv:
+            return ""
+        name = from_database(name_pv["value"], name_pv["type"])
+        if isinstance(name, str):
+            return name
+        return ""
+
     def _get_parameter_positions(self, parameter_name):
         if not parameter_name:
             yield from []
@@ -516,13 +541,18 @@ class GraphViewMixin:
             for db_map_entity_id in db_map_entity_ids
             if db_map_entity_id in fixed_positions
         }
+        spread_factor = int(self.qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100")) / 100
+        neg_weight_exp = int(self.qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
+        max_iters = int(self.qsettings.value("appSettings/layoutAlgoMaxIterations", defaultValue="12"))
         return GraphLayoutGeneratorRunnable(
             self._layout_gen_id,
             len(db_map_entity_ids),
             self.src_inds,
             self.dst_inds,
-            self._ARC_LENGTH_HINT,
+            spread=spread_factor * self._ARC_LENGTH_HINT,
             heavy_positions=heavy_positions,
+            weight_exp=-neg_weight_exp,
+            max_iters=max_iters,
         )
 
     def _make_new_items(self, x, y):

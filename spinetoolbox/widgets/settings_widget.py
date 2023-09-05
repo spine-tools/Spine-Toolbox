@@ -14,7 +14,7 @@ Widget for controlling user settings.
 """
 
 import os
-from PySide6.QtWidgets import QWidget, QFileDialog, QColorDialog, QApplication, QMenu, QMessageBox
+from PySide6.QtWidgets import QWidget, QFileDialog, QColorDialog, QMenu, QMessageBox
 from PySide6.QtCore import Slot, Qt, QSize, QSettings, QPoint, QEvent
 from PySide6.QtGui import QPixmap, QIcon, QStandardItemModel, QStandardItem
 from spine_engine.utils.helpers import (
@@ -162,24 +162,30 @@ class SpineDBEditorSettingsMixin:
         sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
         smooth_zoom = self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false")
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
-        relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
         auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true")
+        snap_entities = self._qsettings.value("appSettings/snapEntities", defaultValue="false")
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true")
         db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
+        max_iters = int(self.qsettings.value("appSettings/layoutAlgoMaxIterations", defaultValue="12"))
+        spread_factor = int(self.qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100"))
+        neg_weight_exp = int(self.qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Unchecked)
         elif commit_at_exit == 1:
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
         else:  # commit_at_exit == "2":
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Checked)
-        self.ui.checkBox_object_tree_sticky_selection.setChecked(sticky_selection == "true")
+        self.ui.checkBox_entity_tree_sticky_selection.setChecked(sticky_selection == "true")
         self.ui.checkBox_smooth_entity_graph_zoom.setChecked(smooth_zoom == "true")
         self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
-        self.ui.checkBox_relationship_items_follow.setChecked(relationship_items_follow == "true")
         self.ui.checkBox_auto_expand_objects.setChecked(auto_expand_objects == "true")
+        self.ui.checkBox_snap_entities.setChecked(snap_entities == "true")
         self.ui.checkBox_merge_dbs.setChecked(merge_dbs == "true")
         if db_editor_show_undo == 2:
             self.ui.checkBox_db_editor_show_undo.setChecked(True)
+        self.ui.spinBox_layout_algo_max_iterations.setValue(max_iters)
+        self.ui.spinBox_layout_algo_spread_factor.setValue(spread_factor)
+        self.ui.spinBox_layout_algo_neg_weight_exp.setValue(neg_weight_exp)
 
     def save_settings(self):
         """Get selections and save them to persistent memory."""
@@ -187,20 +193,24 @@ class SpineDBEditorSettingsMixin:
             return False
         commit_at_exit = str(self.ui.checkBox_commit_at_exit.checkState().value)
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
-        sticky_selection = "true" if self.ui.checkBox_object_tree_sticky_selection.checkState().value else "false"
+        sticky_selection = "true" if self.ui.checkBox_entity_tree_sticky_selection.checkState().value else "false"
         self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
         smooth_zoom = "true" if self.ui.checkBox_smooth_entity_graph_zoom.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothEntityGraphZoom", smooth_zoom)
         smooth_rotation = "true" if self.ui.checkBox_smooth_entity_graph_rotation.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothEntityGraphRotation", smooth_rotation)
-        relationship_items_follow = "true" if self.ui.checkBox_relationship_items_follow.checkState().value else "false"
-        self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
-        auto_expand_objects = "true" if self.ui.checkBox_auto_expand_objects.checkState().value else "false"
-        self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_objects)
+        snap_entities = "true" if self.ui.checkBox_snap_entities.checkState().value else "false"
+        self._qsettings.setValue("appSettings/snapEntities", snap_entities)
         merge_dbs = "true" if self.ui.checkBox_merge_dbs.checkState().value else "false"
         self._qsettings.setValue("appSettings/mergeDBs", merge_dbs)
         db_editor_show_undo = str(self.ui.checkBox_db_editor_show_undo.checkState().value)
         self._qsettings.setValue("appSettings/dbEditorShowUndo", db_editor_show_undo)
+        max_iters = str(self.ui.spinBox_layout_algo_max_iterations.value())
+        self._qsettings.setValue("appSettings/layoutAlgoMaxIterations", max_iters)
+        spread_factor = str(self.ui.spinBox_layout_algo_spread_factor.value())
+        self._qsettings.setValue("appSettings/layoutAlgoSpreadFactor", spread_factor)
+        neg_weight_exp = str(self.ui.spinBox_layout_algo_neg_weight_exp.value())
+        self._qsettings.setValue("appSettings/layoutAlgoNegWeightExp", neg_weight_exp)
         return True
 
     def update_ui(self):

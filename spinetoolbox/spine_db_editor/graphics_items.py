@@ -12,7 +12,7 @@
 """
 Classes for drawing graphics items on graph view's QGraphicsScene.
 """
-from PySide6.QtCore import Qt, Signal, Slot, QLineF
+from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -74,22 +74,20 @@ class EntityItem(QGraphicsRectItem):
         super().__init__()
         self._spine_db_editor = spine_db_editor
         self.db_mngr = spine_db_editor.db_mngr
+        self._given_extent = extent
         self._db_map_ids = db_map_ids
+        self._dx = self._dy = 0
         self._removed_db_map_ids = ()
-        self.arc_items = list()
-        self._extent = extent
-        self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        self.arc_items = []
+        self.set_pos(x, y)
         self.setPen(Qt.NoPen)
         self._svg_item = QGraphicsSvgItem(self)
         self._svg_item.setZValue(100)
         self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
         self._renderer = None
-        self.refresh_icon()
-        self.setPos(x, y)
         self._moved_on_scene = False
         self._bg = None
         self._bg_brush = Qt.NoBrush
-        self._init_bg()
         self.setZValue(0)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
@@ -99,6 +97,7 @@ class EntityItem(QGraphicsRectItem):
         self.setCursor(Qt.ArrowCursor)
         self.setToolTip(self._make_tool_tip())
         self._highligh_color = Qt.transparent
+        self._extent = None
 
     def _make_tool_tip(self):
         raise NotImplementedError()
@@ -177,16 +176,32 @@ class EntityItem(QGraphicsRectItem):
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
 
-    def moveBy(self, dx, dy):
-        super().moveBy(dx, dy)
+    def set_pos(self, x, y):
+        x, y = self._snap(x, y)
+        self.setPos(x, y)
         self.update_arcs_line()
 
-    def _init_bg(self):
-        self._bg = QGraphicsRectItem(self.boundingRect(), self)
-        self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
-        pen = self._bg.pen()
-        pen.setColor(Qt.transparent)
-        self._bg.setPen(pen)
+    def move_by(self, dx, dy):
+        self._dx += dx
+        self._dy += dy
+        dx, dy = self._snap(self._dx, self._dy)
+        if dx == dy == 0:
+            return
+        self.moveBy(dx, dy)
+        self._dx -= dx
+        self._dy -= dy
+        self.update_arcs_line()
+        rel_items = {arc_item.rel_item for arc_item in self.arc_items}
+        for rel_item in rel_items:
+            rel_item.update_entity_pos()
+
+    def _snap(self, x, y):
+        if self._spine_db_editor.qsettings.value("appSettings/snapEntities", defaultValue="false") != "true":
+            return (x, y)
+        grid_size = self._given_extent
+        x = round(x / grid_size) * grid_size
+        y = round(y / grid_size) * grid_size
+        return (x, y)
 
     def refresh_icon(self):
         """Refreshes the icon."""
@@ -263,11 +278,8 @@ class EntityItem(QGraphicsRectItem):
         """
         line = QLineF(center, self.pos())
         line.setAngle(line.angle() + angle)
-        self.setPos(line.p2())
-        self.update_arcs_line()
-
-    def block_move_by(self, dx, dy):
-        self.moveBy(dx, dy)
+        pos = line.p2()
+        self.set_pos(pos.x(), pos.y())
 
     def mouseMoveEvent(self, event):
         """Moves the item and all connected arcs.
@@ -278,11 +290,11 @@ class EntityItem(QGraphicsRectItem):
         if event.buttons() & Qt.LeftButton == 0:
             super().mouseMoveEvent(event)
             return
-        move_by = event.scenePos() - event.lastScenePos()
+        delta = event.scenePos() - event.lastScenePos()
         # Move selected items together
         for item in self.scene().selectedItems():
             if isinstance(item, (EntityItem)):
-                item.block_move_by(move_by.x(), move_by.y())
+                item.move_by(delta.x(), delta.y())
 
     def update_arcs_line(self):
         """Moves arc items."""
@@ -358,6 +370,7 @@ class RelationshipItem(EntityItem):
             db_map_ids (tuple): tuple of (db_map, id) tuples
         """
         super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
+        self._update_all()
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -404,19 +417,34 @@ class RelationshipItem(EntityItem):
             f"""@{self.display_database}</p></html>"""
         )
 
+    def _update_all(self):
+        self._extent = 0.5 * self._given_extent
+        self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        self.refresh_icon()
+        self._init_bg()
+
     def _init_bg(self):
         extent = self._extent
         self._bg = QGraphicsEllipseItem(-0.5 * extent, -0.5 * extent, extent, extent, self)
         self._bg.setPen(Qt.NoPen)
         self._bg_brush = QGuiApplication.palette().button()
 
-    def follow_object_by(self, dx, dy):
-        factor = 1.0 / len(set(arc.obj_item for arc in self.arc_items))
-        self.moveBy(factor * dx, factor * dy)
-
     def add_arc_item(self, arc_item):
         super().add_arc_item(arc_item)
         self._rotate_svg_item()
+        self.update_entity_pos()
+
+    def update_entity_pos(self):
+        dim_count = len(self.object_id_list(self.first_db_map))
+        if not dim_count:
+            return
+        el_items = {arc_item.obj_item for arc_item in self.arc_items}
+        if len(el_items) != dim_count:
+            return
+        new_pos_x = sum(el_item.pos().x() for el_item in el_items) / dim_count
+        new_pos_y = sum(el_item.pos().y() for el_item in el_items) / dim_count
+        self.setPos(new_pos_x, new_pos_y)
+        self.update_arcs_line()
 
     def itemChange(self, change, value):
         """Rotates svg item if the relationship is 2D.
@@ -454,6 +482,7 @@ class ObjectItem(EntityItem):
         self.label_item = ObjectLabelItem(self)
         self.setZValue(0.5)
         self.update_name()
+        self._update_all()
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -475,6 +504,20 @@ class ObjectItem(EntityItem):
         path.addPolygon(self.label_item.mapToItem(self, self.label_item.boundingRect()))
         return path
 
+    def _has_name(self):
+        return bool(self.label_item.toPlainText())
+
+    def _update_all(self):
+        if not self._has_name():
+            self.label_item.hide()
+            self._extent = 0.2 * self._given_extent
+        else:
+            self.label_item.show()
+            self._extent = self._given_extent
+        self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        self.refresh_icon()
+        self._init_bg()
+
     def update_name(self):
         """Refreshes the name."""
         db_map_ids_by_name = dict()
@@ -494,19 +537,13 @@ class ObjectItem(EntityItem):
             return None
         return f"<html><p style='text-align:center;'>{self.entity_name}<br>@{self.display_database}</html>"
 
-    def block_move_by(self, dx, dy):
-        super().block_move_by(dx, dy)
-        rel_items_follow = self._spine_db_editor.qsettings.value(
-            "appSettings/relationshipItemsFollow", defaultValue="true"
-        )
-        if rel_items_follow == "false":
-            return
-        rel_items = {arc_item.rel_item for arc_item in self.arc_items}
-        for rel_item in rel_items:
-            if rel_item.isSelected():
-                # The item will move with the selection, so no need to follow the objects
-                continue
-            rel_item.follow_object_by(dx, dy)
+    def _init_bg(self):
+        bg_rect = QRectF(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        self._bg = QGraphicsRectItem(bg_rect, self)
+        self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
+        pen = self._bg.pen()
+        pen.setColor(Qt.transparent)
+        self._bg.setPen(pen)
 
     def mouseDoubleClickEvent(self, e):
         add_relationships_menu = QMenu(self._spine_db_editor)
@@ -726,6 +763,9 @@ class CrossHairsItem(RelationshipItem):
     def _make_tool_tip(self):
         return "<p>Click on an object to add it to the relationship.</p>"
 
+    def _do_update_name(self):
+        return False
+
     def refresh_icon(self):
         renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer("\uf05b", 0)
         self._set_renderer(renderer)
@@ -750,15 +790,12 @@ class CrossHairsItem(RelationshipItem):
         self._set_renderer(renderer)
         self._current_icon = (unicode, color)
 
-    def mouseMoveEvent(self, event):
-        move_by = event.scenePos() - self.scenePos()
-        self.block_move_by(move_by.x(), move_by.y())
+    def _snap(self, x, y):
+        return (x, y)
 
-    def block_move_by(self, dx, dy):
-        self.moveBy(dx, dy)
-        rel_items = {arc_item.rel_item for arc_item in self.arc_items}
-        for rel_item in rel_items:
-            rel_item.follow_object_by(dx, dy)
+    def mouseMoveEvent(self, event):
+        delta = event.scenePos() - self.scenePos()
+        self.move_by(delta.x(), delta.y())
 
     def contextMenuEvent(self, e):
         e.accept()
@@ -773,6 +810,12 @@ class CrossHairsRelationshipItem(RelationshipItem):
 
     def _make_tool_tip(self):
         return None
+
+    def _do_update_name(self):
+        return False
+
+    def _has_name(self):
+        return True
 
     def refresh_icon(self):
         """Refreshes the icon."""

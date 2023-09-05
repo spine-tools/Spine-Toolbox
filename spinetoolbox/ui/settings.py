@@ -362,9 +362,6 @@ class Ui_SettingsForm(object):
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.label_11 = QLabel(self.groupBox_gams)
         self.label_11.setObjectName(u"label_11")
-        font = QFont()
-        font.setPointSize(10)
-        self.label_11.setFont(font)
 
         self.gridLayout_4.addWidget(self.label_11, 1, 0, 1, 1)
 
@@ -618,59 +615,123 @@ class Ui_SettingsForm(object):
         self.SpineDBEditor.setObjectName(u"SpineDBEditor")
         self.verticalLayout_9 = QVBoxLayout(self.SpineDBEditor)
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
-        self.groupBox_spine_db_editor = QGroupBox(self.SpineDBEditor)
-        self.groupBox_spine_db_editor.setObjectName(u"groupBox_spine_db_editor")
+        self.groupBox_db_editor_general = QGroupBox(self.SpineDBEditor)
+        self.groupBox_db_editor_general.setObjectName(u"groupBox_db_editor_general")
         sizePolicy7 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         sizePolicy7.setHorizontalStretch(0)
         sizePolicy7.setVerticalStretch(0)
-        sizePolicy7.setHeightForWidth(self.groupBox_spine_db_editor.sizePolicy().hasHeightForWidth())
-        self.groupBox_spine_db_editor.setSizePolicy(sizePolicy7)
-        self.verticalLayout_4 = QVBoxLayout(self.groupBox_spine_db_editor)
+        sizePolicy7.setHeightForWidth(self.groupBox_db_editor_general.sizePolicy().hasHeightForWidth())
+        self.groupBox_db_editor_general.setSizePolicy(sizePolicy7)
+        self.verticalLayout_4 = QVBoxLayout(self.groupBox_db_editor_general)
         self.verticalLayout_4.setSpacing(6)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.checkBox_commit_at_exit = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_commit_at_exit = QCheckBox(self.groupBox_db_editor_general)
         self.checkBox_commit_at_exit.setObjectName(u"checkBox_commit_at_exit")
         self.checkBox_commit_at_exit.setTristate(True)
 
         self.verticalLayout_4.addWidget(self.checkBox_commit_at_exit)
 
-        self.checkBox_db_editor_show_undo = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_db_editor_show_undo = QCheckBox(self.groupBox_db_editor_general)
         self.checkBox_db_editor_show_undo.setObjectName(u"checkBox_db_editor_show_undo")
 
         self.verticalLayout_4.addWidget(self.checkBox_db_editor_show_undo)
 
-        self.checkBox_object_tree_sticky_selection = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_object_tree_sticky_selection.setObjectName(u"checkBox_object_tree_sticky_selection")
 
-        self.verticalLayout_4.addWidget(self.checkBox_object_tree_sticky_selection)
+        self.verticalLayout_9.addWidget(self.groupBox_db_editor_general)
 
-        self.checkBox_relationship_items_follow = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_relationship_items_follow.setObjectName(u"checkBox_relationship_items_follow")
+        self.groupBox_entity_tree = QGroupBox(self.SpineDBEditor)
+        self.groupBox_entity_tree.setObjectName(u"groupBox_entity_tree")
+        self.verticalLayout_3 = QVBoxLayout(self.groupBox_entity_tree)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.checkBox_entity_tree_sticky_selection = QCheckBox(self.groupBox_entity_tree)
+        self.checkBox_entity_tree_sticky_selection.setObjectName(u"checkBox_entity_tree_sticky_selection")
 
-        self.verticalLayout_4.addWidget(self.checkBox_relationship_items_follow)
+        self.verticalLayout_3.addWidget(self.checkBox_entity_tree_sticky_selection)
 
-        self.checkBox_smooth_entity_graph_zoom = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_smooth_entity_graph_zoom.setObjectName(u"checkBox_smooth_entity_graph_zoom")
 
-        self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_zoom)
+        self.verticalLayout_9.addWidget(self.groupBox_entity_tree)
 
-        self.checkBox_smooth_entity_graph_rotation = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_smooth_entity_graph_rotation.setObjectName(u"checkBox_smooth_entity_graph_rotation")
-
-        self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_rotation)
-
-        self.checkBox_auto_expand_objects = QCheckBox(self.groupBox_spine_db_editor)
+        self.groupBox_entity_graph = QGroupBox(self.SpineDBEditor)
+        self.groupBox_entity_graph.setObjectName(u"groupBox_entity_graph")
+        self.verticalLayout_10 = QVBoxLayout(self.groupBox_entity_graph)
+        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
+        self.checkBox_auto_expand_objects = QCheckBox(self.groupBox_entity_graph)
         self.checkBox_auto_expand_objects.setObjectName(u"checkBox_auto_expand_objects")
 
-        self.verticalLayout_4.addWidget(self.checkBox_auto_expand_objects)
+        self.verticalLayout_10.addWidget(self.checkBox_auto_expand_objects)
 
-        self.checkBox_merge_dbs = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_merge_dbs = QCheckBox(self.groupBox_entity_graph)
         self.checkBox_merge_dbs.setObjectName(u"checkBox_merge_dbs")
 
-        self.verticalLayout_4.addWidget(self.checkBox_merge_dbs)
+        self.verticalLayout_10.addWidget(self.checkBox_merge_dbs)
+
+        self.checkBox_snap_entities = QCheckBox(self.groupBox_entity_graph)
+        self.checkBox_snap_entities.setObjectName(u"checkBox_snap_entities")
+
+        self.verticalLayout_10.addWidget(self.checkBox_snap_entities)
+
+        self.checkBox_smooth_entity_graph_zoom = QCheckBox(self.groupBox_entity_graph)
+        self.checkBox_smooth_entity_graph_zoom.setObjectName(u"checkBox_smooth_entity_graph_zoom")
+
+        self.verticalLayout_10.addWidget(self.checkBox_smooth_entity_graph_zoom)
+
+        self.checkBox_smooth_entity_graph_rotation = QCheckBox(self.groupBox_entity_graph)
+        self.checkBox_smooth_entity_graph_rotation.setObjectName(u"checkBox_smooth_entity_graph_rotation")
+
+        self.verticalLayout_10.addWidget(self.checkBox_smooth_entity_graph_rotation)
+
+        self.groupBox = QGroupBox(self.groupBox_entity_graph)
+        self.groupBox.setObjectName(u"groupBox")
+        self.gridLayout_6 = QGridLayout(self.groupBox)
+        self.gridLayout_6.setObjectName(u"gridLayout_6")
+        self.spinBox_layout_algo_neg_weight_exp = QSpinBox(self.groupBox)
+        self.spinBox_layout_algo_neg_weight_exp.setObjectName(u"spinBox_layout_algo_neg_weight_exp")
+        self.spinBox_layout_algo_neg_weight_exp.setMinimum(1)
+        self.spinBox_layout_algo_neg_weight_exp.setMaximum(100)
+
+        self.gridLayout_6.addWidget(self.spinBox_layout_algo_neg_weight_exp, 3, 1, 1, 1)
+
+        self.label_6 = QLabel(self.groupBox)
+        self.label_6.setObjectName(u"label_6")
+        sizePolicy8 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy8.setHorizontalStretch(0)
+        sizePolicy8.setVerticalStretch(0)
+        sizePolicy8.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
+        self.label_6.setSizePolicy(sizePolicy8)
+
+        self.gridLayout_6.addWidget(self.label_6, 0, 0, 1, 1)
+
+        self.label_10 = QLabel(self.groupBox)
+        self.label_10.setObjectName(u"label_10")
+
+        self.gridLayout_6.addWidget(self.label_10, 1, 0, 1, 1)
+
+        self.label_16 = QLabel(self.groupBox)
+        self.label_16.setObjectName(u"label_16")
+
+        self.gridLayout_6.addWidget(self.label_16, 3, 0, 1, 1)
+
+        self.spinBox_layout_algo_max_iterations = QSpinBox(self.groupBox)
+        self.spinBox_layout_algo_max_iterations.setObjectName(u"spinBox_layout_algo_max_iterations")
+        self.spinBox_layout_algo_max_iterations.setMinimum(1)
+        self.spinBox_layout_algo_max_iterations.setMaximum(100)
+        self.spinBox_layout_algo_max_iterations.setValue(12)
+
+        self.gridLayout_6.addWidget(self.spinBox_layout_algo_max_iterations, 0, 1, 1, 1)
+
+        self.spinBox_layout_algo_spread_factor = QSpinBox(self.groupBox)
+        self.spinBox_layout_algo_spread_factor.setObjectName(u"spinBox_layout_algo_spread_factor")
+        self.spinBox_layout_algo_spread_factor.setMinimum(1)
+        self.spinBox_layout_algo_spread_factor.setMaximum(100)
+        self.spinBox_layout_algo_spread_factor.setValue(100)
+
+        self.gridLayout_6.addWidget(self.spinBox_layout_algo_spread_factor, 1, 1, 1, 1)
 
 
-        self.verticalLayout_9.addWidget(self.groupBox_spine_db_editor)
+        self.verticalLayout_10.addWidget(self.groupBox)
+
+
+        self.verticalLayout_9.addWidget(self.groupBox_entity_graph)
 
         self.verticalSpacer_9 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -681,23 +742,23 @@ class Ui_SettingsForm(object):
         self.SpecificationEditors.setObjectName(u"SpecificationEditors")
         self.verticalLayout_11 = QVBoxLayout(self.SpecificationEditors)
         self.verticalLayout_11.setObjectName(u"verticalLayout_11")
-        self.groupBox = QGroupBox(self.SpecificationEditors)
-        self.groupBox.setObjectName(u"groupBox")
-        self.verticalLayout_12 = QVBoxLayout(self.groupBox)
+        self.groupBox1 = QGroupBox(self.SpecificationEditors)
+        self.groupBox1.setObjectName(u"groupBox1")
+        self.verticalLayout_12 = QVBoxLayout(self.groupBox1)
         self.verticalLayout_12.setObjectName(u"verticalLayout_12")
-        self.checkBox_save_spec_before_closing = QCheckBox(self.groupBox)
+        self.checkBox_save_spec_before_closing = QCheckBox(self.groupBox1)
         self.checkBox_save_spec_before_closing.setObjectName(u"checkBox_save_spec_before_closing")
         self.checkBox_save_spec_before_closing.setTristate(True)
 
         self.verticalLayout_12.addWidget(self.checkBox_save_spec_before_closing)
 
-        self.checkBox_spec_show_undo = QCheckBox(self.groupBox)
+        self.checkBox_spec_show_undo = QCheckBox(self.groupBox1)
         self.checkBox_spec_show_undo.setObjectName(u"checkBox_spec_show_undo")
 
         self.verticalLayout_12.addWidget(self.checkBox_spec_show_undo)
 
 
-        self.verticalLayout_11.addWidget(self.groupBox)
+        self.verticalLayout_11.addWidget(self.groupBox1)
 
         self.verticalSpacer_3 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -939,13 +1000,7 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.lineEdit_conda_path, self.toolButton_browse_conda)
         QWidget.setTabOrder(self.toolButton_browse_conda, self.checkBox_commit_at_exit)
         QWidget.setTabOrder(self.checkBox_commit_at_exit, self.checkBox_db_editor_show_undo)
-        QWidget.setTabOrder(self.checkBox_db_editor_show_undo, self.checkBox_object_tree_sticky_selection)
-        QWidget.setTabOrder(self.checkBox_object_tree_sticky_selection, self.checkBox_relationship_items_follow)
-        QWidget.setTabOrder(self.checkBox_relationship_items_follow, self.checkBox_smooth_entity_graph_zoom)
-        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_zoom, self.checkBox_smooth_entity_graph_rotation)
-        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_auto_expand_objects)
-        QWidget.setTabOrder(self.checkBox_auto_expand_objects, self.checkBox_merge_dbs)
-        QWidget.setTabOrder(self.checkBox_merge_dbs, self.checkBox_save_spec_before_closing)
+        QWidget.setTabOrder(self.checkBox_db_editor_show_undo, self.checkBox_save_spec_before_closing)
         QWidget.setTabOrder(self.checkBox_save_spec_before_closing, self.checkBox_spec_show_undo)
         QWidget.setTabOrder(self.checkBox_spec_show_undo, self.unlimited_engine_process_radio_button)
         QWidget.setTabOrder(self.unlimited_engine_process_radio_button, self.automatic_engine_process_limit_radio_button)
@@ -967,7 +1022,7 @@ class Ui_SettingsForm(object):
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -1126,28 +1181,32 @@ class Ui_SettingsForm(object):
         self.toolButton_browse_conda.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Conda executable using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.toolButton_browse_conda.setText("")
-        self.groupBox_spine_db_editor.setTitle(QCoreApplication.translate("SettingsForm", u"Spine database editor", None))
+        self.groupBox_db_editor_general.setTitle(QCoreApplication.translate("SettingsForm", u"General", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Don't commit session and don't show message box</p><p>Partially checked: Show message box (default)</p><p>Checked: Commit session and don't show message box</p><p><br/></p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setText(QCoreApplication.translate("SettingsForm", u"Commit session before closing", None))
         self.checkBox_db_editor_show_undo.setText(QCoreApplication.translate("SettingsForm", u"Show undo notifications", None))
+        self.groupBox_entity_tree.setTitle(QCoreApplication.translate("SettingsForm", u"Entity tree", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_object_tree_sticky_selection.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None))
+        self.checkBox_entity_tree_sticky_selection.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.checkBox_object_tree_sticky_selection.setText(QCoreApplication.translate("SettingsForm", u"Sticky selection in Entity trees", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_relationship_items_follow.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_relationship_items_follow.setText(QCoreApplication.translate("SettingsForm", u"Move relationships along with objects in Entity graph", None))
-        self.checkBox_smooth_entity_graph_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph zoom", None))
-        self.checkBox_smooth_entity_graph_rotation.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph rotation", None))
+        self.checkBox_entity_tree_sticky_selection.setText(QCoreApplication.translate("SettingsForm", u"Sticky selection", None))
+        self.groupBox_entity_graph.setTitle(QCoreApplication.translate("SettingsForm", u"Entity graph", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_auto_expand_objects.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.checkBox_auto_expand_objects.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand objects by default in Entity graph", None))
-        self.checkBox_merge_dbs.setText(QCoreApplication.translate("SettingsForm", u"Merge databases by default in Entity graph", None))
-        self.groupBox.setTitle(QCoreApplication.translate("SettingsForm", u"Specification editors", None))
+        self.checkBox_auto_expand_objects.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand objects", None))
+        self.checkBox_merge_dbs.setText(QCoreApplication.translate("SettingsForm", u"Merge databases", None))
+        self.checkBox_snap_entities.setText(QCoreApplication.translate("SettingsForm", u"Snap entities to grid", None))
+        self.checkBox_smooth_entity_graph_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth zoom", None))
+        self.checkBox_smooth_entity_graph_rotation.setText(QCoreApplication.translate("SettingsForm", u"Smooth rotation", None))
+        self.groupBox.setTitle(QCoreApplication.translate("SettingsForm", u"Layout generation algorithm", None))
+        self.label_6.setText(QCoreApplication.translate("SettingsForm", u"Number of iterations", None))
+        self.label_10.setText(QCoreApplication.translate("SettingsForm", u"Distance between nodes (as percentage of node size)", None))
+        self.label_16.setText(QCoreApplication.translate("SettingsForm", u"Importance of closer nodes", None))
+        self.spinBox_layout_algo_max_iterations.setSuffix("")
+        self.groupBox1.setTitle(QCoreApplication.translate("SettingsForm", u"Specification editors", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_save_spec_before_closing.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Don't save specification and don't show message box</p><p>Partially checked: Show message box (default)</p><p>Checked: Save specification and don't show message box</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
