@@ -16,7 +16,6 @@ from operator import attrgetter
 
 from PySide6.QtCore import Qt
 
-from spinedb_api.temp_id import TempIdDict
 from ...helpers import rows_to_row_count_tuples, bisect_chunks
 from ...fetch_parent import FlexibleFetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
@@ -89,7 +88,7 @@ class MultiDBTreeItem(TreeItem):
         for row, child in enumerate(self.visible_children):
             for db_map in child.db_maps:
                 id_ = child.db_map_id(db_map)
-                self._child_map.setdefault(db_map, TempIdDict())[id_] = row
+                self._child_map.setdefault(db_map, {})[id_] = row
         self.model.layoutChanged.emit()
 
     def set_data(self, column, value, role):
