@@ -22,7 +22,7 @@ from ...helpers import CharIconEngine
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
 from ..graphics_items import EntityItem, CrossHairsArcItem, make_figure_graphics_item
-from .select_position_parameters_dialog import SelectPositionParametersDialog
+from .select_graph_parameters_dialog import SelectGraphParametersDialog
 from .graph_layout_generator import make_heat_map
 
 
@@ -42,6 +42,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu = QMenu(self)
         self.pos_x_parameter = "x"
         self.pos_y_parameter = "y"
+        self.name_parameter = ""
         self.selected_items = list()
         self.removed_items = set()
         self.hidden_items = dict()
@@ -61,7 +62,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._disable_max_ent_dim_action = None
         self._max_ent_dim_spin_box = None
         self._add_entities_action = None
-        self._select_pos_param_action = None
+        self._select_graph_params_action = None
         self._save_pos_action = None
         self._clear_pos_action = None
         self._hide_selected_action = None
@@ -147,8 +148,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._find_action = self._menu.addAction("Find...", self._find)
         self._menu.addAction(self._find_action)
         self._menu.addSeparator()
-        self._select_pos_param_action = self._menu.addAction(
-            "Select position parameters...", self.select_position_parameters
+        self._select_graph_params_action = self._menu.addAction(
+            "Select graph parameters...", self.select_graph_parameters
         )
         self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
         self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
@@ -210,13 +211,13 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def increase_arc_length(self):
         for item in self.entity_items:
-            item.setPos(1.1 * item.pos())
-            item.update_arcs_line()
+            new_pos = 1.1 * item.pos()
+            item.set_pos(new_pos.x(), new_pos.y())
 
     def decrease_arc_length(self):
         for item in self.entity_items:
-            item.setPos(item.pos() / 1.1)
-            item.update_arcs_line()
+            new_pos = item.pos() / 1.1
+            item.set_pos(new_pos.x(), new_pos.y())
 
     @Slot()
     def _update_actions_visibility(self):
@@ -426,15 +427,18 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self._spine_db_editor.build_graph()
 
     @Slot(bool)
-    def select_position_parameters(self, checked=False):
-        dialog = SelectPositionParametersDialog(self._spine_db_editor, self.pos_x_parameter, self.pos_y_parameter)
+    def select_graph_parameters(self, checked=False):
+        dialog = SelectGraphParametersDialog(
+            self._spine_db_editor, self.name_parameter, self.pos_x_parameter, self.pos_y_parameter
+        )
         dialog.show()
-        dialog.selection_made.connect(self._set_position_parameters)
+        dialog.selection_made.connect(self._set_graph_parameters)
 
-    @Slot(str, str)
-    def _set_position_parameters(self, parameter_pos_x, parameter_pos_y):
-        self.pos_x_parameter = parameter_pos_x
-        self.pos_y_parameter = parameter_pos_y
+    @Slot(str, str, str)
+    def _set_graph_parameters(self, name_parameter, pos_x_parameter, pos_y_parameter):
+        self.name_parameter = name_parameter
+        self.pos_x_parameter = pos_x_parameter
+        self.pos_y_parameter = pos_y_parameter
 
     @Slot(bool)
     def save_positions(self, checked=False):
@@ -647,7 +651,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         cross_hairs_item = self.cross_hairs_items[0]
         scene_pos = self.mapToScene(pos)
         delta = scene_pos - cross_hairs_item.scenePos()
-        cross_hairs_item.block_move_by(delta.x(), delta.y())
+        cross_hairs_item.move_by(delta.x(), delta.y())
         self._hovered_ent_item = None
         ent_items = [
             item for item in self.items(pos) if isinstance(item, EntityItem) and item is not self.cross_hairs_items[0]

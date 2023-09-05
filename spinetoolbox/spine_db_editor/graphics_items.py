@@ -72,22 +72,20 @@ class EntityItem(QGraphicsRectItem):
         super().__init__()
         self._spine_db_editor = spine_db_editor
         self.db_mngr = spine_db_editor.db_mngr
+        self._given_extent = extent
         self._db_map_ids = db_map_ids
+        self._dx = self._dy = 0
         self._removed_db_map_ids = ()
         self.arc_items = []
-        self._extent = (0.5 if self.has_dimensions else 1) * extent
-        self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        self.set_pos(x, y)
         self.setPen(Qt.NoPen)
         self._svg_item = QGraphicsSvgItem(self)
         self._svg_item.setZValue(100)
         self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
         self._renderer = None
-        self.refresh_icon()
-        self.setPos(x, y)
         self._moved_on_scene = False
         self._bg = None
         self._bg_brush = Qt.NoBrush
-        self._init_bg()
         self.setZValue(0)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
@@ -100,12 +98,13 @@ class EntityItem(QGraphicsRectItem):
         self._db_map_entity_class_lists = {}
         self.label_item = EntityLabelItem(self)
         self.label_item.setVisible(not self.has_dimensions)
-        self.setZValue(0.5)
+        self.setZValue(0.5 if not self.has_dimensions else 0.25)
+        self._extent = None
         self.update_name()
 
     @property
     def has_dimensions(self):
-        return self.element_id_list(self.first_db_map)
+        return bool(self.element_id_list(self.first_db_map))
 
     @property
     def db_map_ids(self):
@@ -195,36 +194,71 @@ class EntityItem(QGraphicsRectItem):
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
 
-    def moveBy(self, dx, dy):
-        super().moveBy(dx, dy)
+    def set_pos(self, x, y):
+        x, y = self._snap(x, y)
+        self.setPos(x, y)
         self.update_arcs_line()
 
-    def _make_tool_tip(self):
-        if not self.first_id:
-            return None
-        return (
-            f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
-            f"""{DB_ITEM_SEPARATOR.join(self.entity_byname)}<br>"""
-            f"""@{self.display_database}</p></html>"""
-        )
+    def move_by(self, dx, dy):
+        self._dx += dx
+        self._dy += dy
+        dx, dy = self._snap(self._dx, self._dy)
+        if dx == dy == 0:
+            return
+        self.moveBy(dx, dy)
+        self._dx -= dx
+        self._dy -= dy
+        self.update_arcs_line()
+        ent_items = {arc_item.ent_item for arc_item in self.arc_items}
+        for ent_item in ent_items:
+            ent_item.update_entity_pos()
 
-    def default_parameter_data(self):
-        """Return data to put as default in a parameter table when this item is selected."""
-        if not self.db_map_ids:
-            return {}
-        return dict(
-            entity_class_name=self.entity_class_name,
-            entity_byname=DB_ITEM_SEPARATOR.join(self.entity_byname),
-            database=self.first_db_map.codename,
-        )
+    def _snap(self, x, y):
+        if self._spine_db_editor.qsettings.value("appSettings/snapEntities", defaultValue="false") != "true":
+            return (x, y)
+        grid_size = self._given_extent
+        x = round(x / grid_size) * grid_size
+        y = round(y / grid_size) * grid_size
+        return (x, y)
+
+    def _has_name(self):
+        return bool(self.label_item.toPlainText())
+
+    def _do_update_name(self):
+        db_map_ids_by_name = {}
+        for db_map, id_ in self.db_map_ids:
+            name = self._spine_db_editor.get_item_name(db_map, id_)
+            db_map_ids_by_name.setdefault(name, []).append((db_map, id_))
+        if len(db_map_ids_by_name) == 1:
+            name = next(iter(db_map_ids_by_name))
+            self.label_item.setPlainText(name)
+            return True
+        current_name = self.label_item.toPlainText()
+        self._db_map_ids = tuple(db_map_ids_by_name.get(current_name, ()))
+        return False
+
+    def _update_all(self):
+        if not self._has_name():
+            self.label_item.hide()
+            self._extent = 0.2 * self._given_extent
+        else:
+            if not self.has_dimensions:
+                self.label_item.show()
+                self._extent = self._given_extent
+            else:
+                self.label_item.hide()
+                self._extent = 0.5 * self._given_extent
+        self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        self.refresh_icon()
+        self._init_bg()
 
     def _init_bg(self):
-        if not self.element_id_list(self.first_db_map):
-            self._bg = QGraphicsRectItem(self.boundingRect(), self)
+        bg_rect = QRectF(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        if not self.has_dimensions:
+            self._bg = QGraphicsRectItem(bg_rect, self)
             self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
         else:
-            extent = self._extent
-            self._bg = QGraphicsEllipseItem(-0.5 * extent, -0.5 * extent, extent, extent, self)
+            self._bg = QGraphicsEllipseItem(bg_rect, self)
             self._bg_brush = QGuiApplication.palette().button()
         pen = self._bg.pen()
         pen.setColor(Qt.transparent)
@@ -244,6 +278,31 @@ class EntityItem(QGraphicsRectItem):
         rect = self._svg_item.boundingRect()
         self._svg_item.setTransformOriginPoint(rect.center())
         self._svg_item.setPos(-rect.center())
+
+    def update_name(self):
+        """Refreshes the name."""
+        result = self._do_update_name()
+        self._update_all()
+        return result
+
+    def _make_tool_tip(self):
+        if not self.first_id:
+            return None
+        return (
+            f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
+            f"""{DB_ITEM_SEPARATOR.join(self.entity_byname)}<br>"""
+            f"""@{self.display_database}</p></html>"""
+        )
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        if not self.db_map_ids:
+            return {}
+        return dict(
+            entity_class_name=self.entity_class_name,
+            entity_byname=DB_ITEM_SEPARATOR.join(self.entity_byname),
+            database=self.first_db_map.codename,
+        )
 
     def shape(self):
         """Returns a shape containing the entire bounding rect, to work better with icon transparency."""
@@ -285,6 +344,19 @@ class EntityItem(QGraphicsRectItem):
         self.arc_items.append(arc_item)
         arc_item.update_line()
         self._rotate_svg_item()
+        self.update_entity_pos()
+
+    def update_entity_pos(self):
+        dim_count = len(self.element_id_list(self.first_db_map))
+        if not dim_count:
+            return
+        el_items = {arc_item.el_item for arc_item in self.arc_items}
+        if len(el_items) != dim_count:
+            return
+        new_pos_x = sum(el_item.pos().x() for el_item in el_items) / dim_count
+        new_pos_y = sum(el_item.pos().y() for el_item in el_items) / dim_count
+        self.setPos(new_pos_x, new_pos_y)
+        self.update_arcs_line()
 
     def apply_zoom(self, factor):
         """Applies zoom.
@@ -304,22 +376,8 @@ class EntityItem(QGraphicsRectItem):
         """
         line = QLineF(center, self.pos())
         line.setAngle(line.angle() + angle)
-        self.setPos(line.p2())
-        self.update_arcs_line()
-
-    def block_move_by(self, dx, dy):
-        self.moveBy(dx, dy)
-        ent_items_follow = self._spine_db_editor.qsettings.value(
-            "appSettings/relationshipItemsFollow", defaultValue="true"
-        )
-        if ent_items_follow == "false":
-            return
-        ent_items = {arc_item.ent_item for arc_item in self.arc_items}
-        for ent_item in ent_items:
-            if ent_item.isSelected():
-                # The item will move with the selection, so no need to follow the objects
-                continue
-            ent_item.follow_element_by(dx, dy)
+        pos = line.p2()
+        self.set_pos(pos.x(), pos.y())
 
     def mouseMoveEvent(self, event):
         """Moves the item and all connected arcs.
@@ -334,7 +392,7 @@ class EntityItem(QGraphicsRectItem):
         # Move selected items together
         for item in self.scene().selectedItems():
             if isinstance(item, (EntityItem)):
-                item.block_move_by(move_by.x(), move_by.y())
+                item.move_by(move_by.x(), move_by.y())
 
     def update_arcs_line(self):
         """Moves arc items."""
@@ -414,10 +472,6 @@ class EntityItem(QGraphicsRectItem):
                 self._removed_db_map_ids = tuple(x for x in self._removed_db_map_ids if x != db_map_id)
         self.setToolTip(self._make_tool_tip())
 
-    def follow_element_by(self, dx, dy):
-        factor = 1.0 / len(set(arc.el_item for arc in self.arc_items))
-        self.moveBy(factor * dx, factor * dy)
-
     def _rotate_svg_item(self):
         if len(self.arc_items) != 2:
             self._svg_item.setRotation(0)
@@ -426,20 +480,6 @@ class EntityItem(QGraphicsRectItem):
         obj1, obj2 = arc1.el_item, arc2.el_item
         line = QLineF(obj1.pos(), obj2.pos())
         self._svg_item.setRotation(-line.angle())
-
-    def update_name(self):
-        """Refreshes the name."""
-        db_map_ids_by_name = {}
-        for db_map, id_ in self.db_map_ids:
-            name = self.db_mngr.get_item(db_map, "entity", id_)["name"]
-            db_map_ids_by_name.setdefault(name, []).append((db_map, id_))
-        if len(db_map_ids_by_name) == 1:
-            name = next(iter(db_map_ids_by_name))
-            self.label_item.setPlainText(name)
-            return True
-        current_name = self.label_item.toPlainText()
-        self._db_map_ids = tuple(db_map_ids_by_name.get(current_name, ()))
-        return False
 
     def mouseDoubleClickEvent(self, e):
         connect_entities_menu = QMenu(self._spine_db_editor)
@@ -638,8 +678,8 @@ class CrossHairsItem(EntityItem):
     def _make_tool_tip(self):
         return "<p>Click on an object to add it to the relationship.</p>"
 
-    def update_name(self):
-        pass
+    def _do_update_name(self):
+        return False
 
     def refresh_icon(self):
         renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer("\uf05b", 0)
@@ -665,15 +705,12 @@ class CrossHairsItem(EntityItem):
         self._set_renderer(renderer)
         self._current_icon = (unicode, color)
 
-    def mouseMoveEvent(self, event):
-        move_by = event.scenePos() - self.scenePos()
-        self.block_move_by(move_by.x(), move_by.y())
+    def _snap(self, x, y):
+        return (x, y)
 
-    def block_move_by(self, dx, dy):
-        self.moveBy(dx, dy)
-        ent_items = {arc_item.ent_item for arc_item in self.arc_items}
-        for ent_item in ent_items:
-            ent_item.follow_element_by(dx, dy)
+    def mouseMoveEvent(self, event):
+        delta = event.scenePos() - self.scenePos()
+        self.move_by(delta.x(), delta.y())
 
     def contextMenuEvent(self, e):
         e.accept()
@@ -689,8 +726,11 @@ class CrossHairsEntityItem(EntityItem):
     def _make_tool_tip(self):
         return None
 
-    def update_name(self):
-        pass
+    def _do_update_name(self):
+        return False
+
+    def _has_name(self):
+        return True
 
     def refresh_icon(self):
         """Refreshes the icon."""

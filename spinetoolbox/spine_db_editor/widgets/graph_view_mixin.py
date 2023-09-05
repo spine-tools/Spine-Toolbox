@@ -30,7 +30,7 @@ class GraphViewMixin:
     """Provides the graph view for the DS form."""
 
     VERTEX_EXTENT = 64
-    _ARC_WIDTH = 0.15 * VERTEX_EXTENT
+    _ARC_WIDTH = 0.05 * VERTEX_EXTENT
     _ARC_LENGTH_HINT = 1.0 * VERTEX_EXTENT
 
     def __init__(self, *args, **kwargs):
@@ -220,15 +220,17 @@ class GraphViewMixin:
 
     def _graph_handle_parameter_values_added(self, db_map_data):
         pnames = {x["parameter_definition_name"] for db_map in self.db_maps for x in db_map_data.get(db_map, ())}
-        if not (pnames & {self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter}):
-            for db_map in self.db_maps:
-                if self.db_mngr.can_fetch_more(db_map, self._parameter_value_fetch_parent):
-                    self.db_mngr.fetch_more(db_map, self._parameter_value_fetch_parent)
-            return
-        if self._extending_graph:
-            self._extend_graph_timer.start()
-        else:
+        graph_pnames = {
+            self.ui.graphicsView.name_parameter,
+            self.ui.graphicsView.pos_x_parameter,
+            self.ui.graphicsView.pos_y_parameter,
+        }
+        if pnames & graph_pnames:
             self.rebuild_graph()
+            return
+        for db_map in self.db_maps:
+            if self.db_mngr.can_fetch_more(db_map, self._parameter_value_fetch_parent):
+                self.db_mngr.fetch_more(db_map, self._parameter_value_fetch_parent)
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
@@ -377,8 +379,10 @@ class GraphViewMixin:
 
     def _get_entity_key(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
-        entity = self.db_mngr.get_item(db_map, "entity", entity_id)
-        key = (entity["class_name"], entity["dimension_name_list"], entity["byname"])
+        key = self.get_item_name(db_map, entity_id)
+        if not key:
+            entity = self.db_mngr.get_item(db_map, "entity", entity_id)
+            key = (entity["class_name"], entity["dimension_name_list"], entity["byname"])
         if not self.ui.graphicsView.merge_dbs:
             key += (db_map.codename,)
         return key
@@ -401,6 +405,29 @@ class GraphViewMixin:
             self.entity_inds.append(ent_ind)
             self.element_inds.append(el_ind)
 
+    def get_item_name(self, db_map, entity_id):
+        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
+        if not entity:
+            return ""
+        if not self.ui.graphicsView.name_parameter:
+            return entity["name"]
+        alternative = next(iter(self.db_mngr.get_items(db_map, "alternative", only_visible=False)), None)
+        table_cache = db_map.cache.table_cache("parameter_value")
+        name_pv = table_cache.find_item(
+            {
+                "parameter_definition_name": self.ui.graphicsView.name_parameter,
+                "entity_class_name": entity["class_name"],
+                "entity_byname": entity["byname"],
+                "alternative_name": alternative["name"],
+            }
+        )
+        if not name_pv:
+            return ""
+        name = from_database(name_pv["value"], name_pv["type"])
+        if isinstance(name, str):
+            return name
+        return ""
+
     def _get_fixed_pos(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
         entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
@@ -408,7 +435,7 @@ class GraphViewMixin:
         if not entity or not alternative:
             return None
         table_cache = db_map.cache.table_cache("parameter_value")
-        pos_x, pos_y = [
+        pos_x_pv, pos_y_pv = [
             table_cache.find_item(
                 {
                     "parameter_definition_name": pname,
@@ -419,9 +446,9 @@ class GraphViewMixin:
             )
             for pname in (self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter)
         ]
-        if not pos_x or not pos_y:
+        if not pos_x_pv or not pos_y_pv:
             return None
-        pos_x, pos_y = [from_database(p["value"], p["type"]) for p in (pos_x, pos_y)]
+        pos_x, pos_y = [from_database(p["value"], p["type"]) for p in (pos_x_pv, pos_y_pv)]
         if isinstance(pos_x, float) and isinstance(pos_y, float):
             return {"x": pos_x, "y": pos_y}
         return None
@@ -446,13 +473,18 @@ class GraphViewMixin:
             for db_map_entity_id in db_map_entity_ids
             if fixed_positions[db_map_entity_id]
         }
+        spread_factor = int(self.qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100")) / 100
+        neg_weight_exp = int(self.qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
+        max_iters = int(self.qsettings.value("appSettings/layoutAlgoMaxIterations", defaultValue="12"))
         return GraphLayoutGeneratorRunnable(
             self._layout_gen_id,
             len(self.db_map_entity_id_sets),
             self.entity_inds,
             self.element_inds,
-            self._ARC_LENGTH_HINT,
+            spread=spread_factor * self._ARC_LENGTH_HINT,
             heavy_positions=heavy_positions,
+            weight_exp=-neg_weight_exp,
+            max_iters=max_iters,
         )
 
     def _make_new_items(self, x, y):
