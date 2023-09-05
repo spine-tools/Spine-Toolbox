@@ -75,6 +75,7 @@ class GraphViewMixin:
         self._extending_graph = False
         self._object_fetch_parent = None
         self._relationship_fetch_parent = None
+        self._name_by_db_map_object_id = {}
 
     def _renew_fetch_parents(self):
         if self._object_fetch_parent is not None:
@@ -425,13 +426,13 @@ class GraphViewMixin:
             db_map_object_id_lists[db_map, relationship["id"]] = db_map_object_id_list
         db_map_object_ids_by_key = {}
         db_map_relationship_ids_by_key = {}
+        self._name_by_db_map_object_id.clear()
         for db_map_object_id in db_map_object_ids:
             key = self._get_object_key(db_map_object_id)
             db_map_object_ids_by_key.setdefault(key, set()).add(db_map_object_id)
         for db_map_relationship_id in db_map_object_id_lists:
             key = self._get_relationship_key(db_map_relationship_id)
             db_map_relationship_ids_by_key.setdefault(key, set()).add(db_map_relationship_id)
-
         new_db_map_object_id_sets = list(db_map_object_ids_by_key.values())
         new_db_map_relationship_id_sets = list(db_map_relationship_ids_by_key.values())
         if (
@@ -491,16 +492,15 @@ class GraphViewMixin:
             return ""
         if not self.ui.graphicsView.name_parameter:
             return object_["name"]
-        alternative = next(iter(self.db_mngr.get_items(db_map, "alternative", only_visible=False)), None)
-        table_cache = db_map.cache.table_cache("parameter_value")
-        name_pv = table_cache.find_item(
-            {
-                "parameter_definition_name": self.ui.graphicsView.name_parameter,
-                "entity_class_name": entity["class_name"],
-                "entity_byname": entity["byname"],
-                "alternative_name": alternative["name"],
+        if not self._name_by_db_map_object_id:
+            self._name_by_db_map_object_id = {
+                (db_map, pv["object_id"]): pv
+                for db_map in self.db_maps
+                for pv in self.db_mngr.get_items_by_field(
+                    db_map, "parameter_value", "parameter_name", self.ui.graphicsView.name_parameter, only_visible=False
+                )
             }
-        )
+        name_pv = self._name_by_db_map_object_id.get((db_map, object_id))
         if not name_pv:
             return ""
         name = from_database(name_pv["value"], name_pv["type"])

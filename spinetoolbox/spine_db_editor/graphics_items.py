@@ -525,7 +525,7 @@ class ObjectItem(EntityItem):
         """Refreshes the name."""
         db_map_ids_by_name = dict()
         for db_map, id_ in self.db_map_ids:
-            name = self.db_mngr.get_item(db_map, self.entity_type, id_)["name"]
+            name = self._spine_db_editor.get_item_name(db_map, id_)
             db_map_ids_by_name.setdefault(name, list()).append((db_map, id_))
         if len(db_map_ids_by_name) == 1:
             name = next(iter(db_map_ids_by_name))
