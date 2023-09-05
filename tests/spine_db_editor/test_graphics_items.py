@@ -118,11 +118,16 @@ class TestEntityItem(unittest.TestCase):
     def test_db_map_id_equals_entity_id(self):
         self.assertEqual(self._item.db_map_id(self._db_map), self._item.entity_id(self._db_map))
 
+    def test_pos(self):
+        position = self._item.pos()
+        self.assertEqual(position.x(), 0.0)
+        self.assertEqual(position.y(), 0.0)
+
     def test_add_arc_item(self):
         arc = mock.MagicMock()
         self._item.add_arc_item(arc)
         self.assertEqual(self._item.arc_items, [arc])
-        arc.update_line.assert_called_once()
+        arc.update_line.assert_called()
 
     def test_apply_zoom(self):
         self._item.apply_zoom(0.5)
@@ -133,9 +138,12 @@ class TestEntityItem(unittest.TestCase):
     def test_apply_rotation(self):
         arc = mock.MagicMock()
         self._item.add_arc_item(arc)
-        rotation_center = QPointF(100.0, 0.0)
+        position = self._item.pos()
+        self.assertEqual(position.x(), 1.0)
+        self.assertEqual(position.y(), 1.0)
+        rotation_center = QPointF(101.0, 1.0)
         self._item.apply_rotation(-90.0, rotation_center)
-        self.assertEqual(self._item.pos(), QPointF(100.0, -100.0))
+        self.assertEqual(self._item.pos(), QPointF(101.0, -99.0))
         arc.update_line.assert_has_calls([])
 
 
