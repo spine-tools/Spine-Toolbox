@@ -224,6 +224,7 @@ class GraphViewMixin:
             self.ui.graphicsView.name_parameter,
             self.ui.graphicsView.pos_x_parameter,
             self.ui.graphicsView.pos_y_parameter,
+            self.ui.graphicsView.color_parameter,
         }
         if pnames & graph_pnames:
             self.rebuild_graph()
@@ -407,50 +408,45 @@ class GraphViewMixin:
             self.entity_inds.append(ent_ind)
             self.element_inds.append(el_ind)
 
-    def get_item_name(self, db_map, entity_id):
-        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
-        if not entity:
-            return ""
-        if not self.ui.graphicsView.name_parameter:
-            return entity["name"]
+    def _get_pv(self, db_map, entity, pname):
+        if not entity or not pname:
+            return None
         alternative = next(iter(self.db_mngr.get_items(db_map, "alternative", only_visible=False)), None)
+        if not alternative:
+            return None
         table_cache = db_map.cache.table_cache("parameter_value")
-        name_pv = table_cache.find_item(
+        pv = table_cache.find_item(
             {
-                "parameter_definition_name": self.ui.graphicsView.name_parameter,
+                "parameter_definition_name": pname,
                 "entity_class_name": entity["class_name"],
                 "entity_byname": entity["byname"],
                 "alternative_name": alternative["name"],
             }
         )
-        if not name_pv:
-            return ""
-        name = from_database(name_pv["value"], name_pv["type"])
+        if not pv:
+            return None
+        return from_database(pv["value"], pv["type"])
+
+    def get_item_name(self, db_map, entity_id):
+        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
+        if not self.ui.graphicsView.name_parameter:
+            return entity["name"]
+        name = self._get_pv(db_map, entity, self.ui.graphicsView.name_parameter)
         if isinstance(name, str):
             return name
         return ""
 
+    def get_item_color(self, db_map, entity_id):
+        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
+        return self._get_pv(db_map, entity, self.ui.graphicsView.color_parameter)
+
     def _get_fixed_pos(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
         entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
-        alternative = next(iter(self.db_mngr.get_items(db_map, "alternative", only_visible=False)), None)
-        if not entity or not alternative:
-            return None
-        table_cache = db_map.cache.table_cache("parameter_value")
-        pos_x_pv, pos_y_pv = [
-            table_cache.find_item(
-                {
-                    "parameter_definition_name": pname,
-                    "entity_class_name": entity["class_name"],
-                    "entity_byname": entity["byname"],
-                    "alternative_name": alternative["name"],
-                }
-            )
+        pos_x, pos_y = [
+            self._get_pv(db_map, entity, pname)
             for pname in (self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter)
         ]
-        if not pos_x_pv or not pos_y_pv:
-            return None
-        pos_x, pos_y = [from_database(p["value"], p["type"]) for p in (pos_x_pv, pos_y_pv)]
         if isinstance(pos_x, float) and isinstance(pos_y, float):
             return {"x": pos_x, "y": pos_y}
         return None

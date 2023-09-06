@@ -46,10 +46,7 @@ def _center_scene(scene):
 
 
 class _SceneSvgRenderer(QSvgRenderer):
-    scene = None
-
-    @classmethod
-    def from_scene(cls, scene):
+    def __init__(self, scene):
         buffer = QBuffer()
         generator = QSvgGenerator()
         generator.setOutputDevice(buffer)
@@ -59,10 +56,9 @@ class _SceneSvgRenderer(QSvgRenderer):
         scene.render(painter, scene_rect, scene_rect)
         painter.end()
         buffer.open(QBuffer.ReadOnly)
-        renderer = cls(buffer.readAll())
+        super().__init__(buffer.readAll())
         buffer.close()
-        renderer.scene = scene
-        return renderer
+        self.scene = scene
 
 
 class SpineDBIconManager:
@@ -95,12 +91,18 @@ class SpineDBIconManager:
         text_item = scene.addText(icon_code, font)
         text_item.setDefaultTextColor(color_code)
         _align_text_in_item(text_item)
-        self.icon_renderers[icon_code, color_code] = _SceneSvgRenderer.from_scene(scene)
+        self.icon_renderers[icon_code, color_code] = _SceneSvgRenderer(scene)
 
     def icon_renderer(self, icon_code, color_code):
         if (icon_code, color_code) not in self.icon_renderers:
             self._create_icon_renderer(icon_code, color_code)
         return self.icon_renderers[icon_code, color_code]
+
+    def color_class_renderer(self, entity_class, color_code):
+        class_name = entity_class["name"]
+        display_icon = self.display_icons.get(class_name, -1)
+        icon_code, _ = interpret_icon_id(display_icon)
+        return self.icon_renderer(chr(icon_code), color_code)
 
     def _create_class_renderer(self, class_name):
         display_icon = self.display_icons.get(class_name, -1)
@@ -128,7 +130,7 @@ class SpineDBIconManager:
             text_item.setPos(x, y)
             x += 0.875 * 0.5 * text_item.boundingRect().width()
         _center_scene(scene)
-        self._multi_class_renderers[dimension_name_list] = _SceneSvgRenderer.from_scene(scene)
+        self._multi_class_renderers[dimension_name_list] = _SceneSvgRenderer(scene)
 
     def class_renderer(self, entity_class):
         name, dimension_name_list = entity_class["name"], entity_class["dimension_name_list"]
@@ -159,7 +161,7 @@ class SpineDBIconManager:
                 y += 0.875 * text_item.boundingRect().height()
             x += 0.875 * text_item.boundingRect().width()
         scene.addRect(scene.itemsBoundingRect())
-        self._group_renderers[class_name] = _SceneSvgRenderer.from_scene(scene)
+        self._group_renderers[class_name] = _SceneSvgRenderer(scene)
 
     def group_renderer(self, entity_class):
         class_name = entity_class["name"]

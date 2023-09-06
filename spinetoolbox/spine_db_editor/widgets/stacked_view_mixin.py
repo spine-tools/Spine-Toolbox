@@ -149,7 +149,7 @@ class StackedViewMixin:
         active_items = {}
         for x in selected_items:
             for db_map in x.db_maps:
-                active_items.setdefault(db_map, []).append(x.db_representation(db_map))
+                active_items.setdefault(db_map, []).extend(x.db_items(db_map))
         self._filter_class_ids = {}
         for db_map, items in active_items.items():
             self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
