@@ -312,6 +312,9 @@ class SpineDBWorker(QObject):
             ids (set): ids of items to restore
         """
         items = self._db_map.restore_items(item_type, *ids)
+        self._db_mngr.update_icons(self._db_map, item_type, items)
+        for parent in list(self._get_parents(item_type)):
+            self.fetch_more(parent)
         self._db_mngr.items_added.emit(item_type, {self._db_map: items})
         return items
 
@@ -333,7 +336,7 @@ class SpineDBWorker(QObject):
         """Rollbacks session."""
         try:
             self._db_map.rollback_session()
-            self._db_mngr.undo_stack[self._db_map].setClean()  # FIXME: What happens if users redo or undo after this??
+            self._db_mngr.undo_stack[self._db_map].setClean()
             self._db_mngr.receive_session_rolled_back({self._db_map})
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})

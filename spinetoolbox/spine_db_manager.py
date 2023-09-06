@@ -302,7 +302,6 @@ class SpineDBManager(QObject):
         if worker is not None:
             worker.close_db_map()  # NOTE: This calls ThreadPoolExecutor.shutdown() which waits for Futures to finish
             worker.clean_up()
-        db_map.cache.clear()
         del self.undo_stack[db_map]
         del self.undo_action[db_map]
         del self.redo_action[db_map]
