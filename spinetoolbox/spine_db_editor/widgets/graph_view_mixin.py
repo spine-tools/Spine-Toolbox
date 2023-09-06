@@ -75,7 +75,8 @@ class GraphViewMixin:
         self._extending_graph = False
         self._object_fetch_parent = None
         self._relationship_fetch_parent = None
-        self._name_by_db_map_object_id = {}
+        self._name_by_db_map_entity_id = {}
+        self._color_by_db_map_entity_id = {}
 
     def _renew_fetch_parents(self):
         if self._object_fetch_parent is not None:
@@ -426,7 +427,8 @@ class GraphViewMixin:
             db_map_object_id_lists[db_map, relationship["id"]] = db_map_object_id_list
         db_map_object_ids_by_key = {}
         db_map_relationship_ids_by_key = {}
-        self._name_by_db_map_object_id.clear()
+        self._name_by_db_map_entity_id.clear()
+        self._color_by_db_map_entity_id.clear()
         for db_map_object_id in db_map_object_ids:
             key = self._get_object_key(db_map_object_id)
             db_map_object_ids_by_key.setdefault(key, set()).add(db_map_object_id)
@@ -447,7 +449,7 @@ class GraphViewMixin:
 
     def _get_object_key(self, db_map_object_id):
         db_map, object_id = db_map_object_id
-        key = self.get_item_name(db_map, object_id)
+        key = self.get_item_name(db_map, "object", object_id)
         if not key:
             object_ = self.db_mngr.get_item(db_map, "object", object_id)
             key = (object_["class_name"], object_["name"])
@@ -457,8 +459,10 @@ class GraphViewMixin:
 
     def _get_relationship_key(self, db_map_relationship_id):
         db_map, relationship_id = db_map_relationship_id
-        relationship = self.db_mngr.get_item(db_map, "relationship", relationship_id)
-        key = (relationship["class_name"], relationship["object_class_name_list"], relationship["object_name_list"])
+        key = self.get_item_name(db_map, "relationship", relationship_id)
+        if not key:
+            relationship = self.db_mngr.get_item(db_map, "relationship", relationship_id)
+            key = (relationship["class_name"], relationship["object_class_name_list"], relationship["object_name_list"])
         if not self.ui.graphicsView.merge_dbs:
             key += (db_map.codename,)
         return key
@@ -486,27 +490,48 @@ class GraphViewMixin:
             self.src_inds.append(src)
             self.dst_inds.append(dst)
 
-    def get_item_name(self, db_map, object_id):
-        object_ = self.db_mngr.get_item(db_map, "object", object_id, only_visible=False)
-        if not object_:
+    def get_item_name(self, db_map, item_type, entity_id):
+        entity = self.db_mngr.get_item(db_map, item_type, entity_id, only_visible=False)
+        if not entity:
             return ""
         if not self.ui.graphicsView.name_parameter:
-            return object_["name"]
-        if not self._name_by_db_map_object_id:
-            self._name_by_db_map_object_id = {
-                (db_map, pv["object_id"]): pv
+            return entity["name"]
+        if not self._name_by_db_map_entity_id:
+            self._name_by_db_map_entity_id = {
+                (db_map, pv["entity_id"]): pv
                 for db_map in self.db_maps
                 for pv in self.db_mngr.get_items_by_field(
                     db_map, "parameter_value", "parameter_name", self.ui.graphicsView.name_parameter, only_visible=False
                 )
             }
-        name_pv = self._name_by_db_map_object_id.get((db_map, object_id))
+        name_pv = self._name_by_db_map_entity_id.get((db_map, entity_id))
         if not name_pv:
             return ""
         name = from_database(name_pv["value"], name_pv["type"])
         if isinstance(name, str):
             return name
         return ""
+
+    def get_item_color(self, db_map, item_type, entity_id):
+        entity = self.db_mngr.get_item(db_map, item_type, entity_id, only_visible=False)
+        if not entity:
+            return None
+        if not self._color_by_db_map_entity_id:
+            self._color_by_db_map_entity_id = {
+                (db_map, pv["entity_id"]): pv
+                for db_map in self.db_maps
+                for pv in self.db_mngr.get_items_by_field(
+                    db_map,
+                    "parameter_value",
+                    "parameter_name",
+                    self.ui.graphicsView.color_parameter,
+                    only_visible=False,
+                )
+            }
+        color_pv = self._color_by_db_map_entity_id.get((db_map, entity_id))
+        if not color_pv:
+            return None
+        return from_database(color_pv["value"], color_pv["type"])
 
     def _get_parameter_positions(self, parameter_name):
         if not parameter_name:

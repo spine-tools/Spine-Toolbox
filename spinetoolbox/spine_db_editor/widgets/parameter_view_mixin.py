@@ -167,7 +167,7 @@ class ParameterViewMixin:
         active_objs = {}
         for x in obj_items:
             for db_map in x.db_maps:
-                active_objs.setdefault(db_map, []).append(x.db_representation(db_map))
+                active_objs.setdefault(db_map, []).extend(x.db_items(db_map))
         cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr.db_map_ids(active_objs))
         active_rels = {}
         for x in rel_items:

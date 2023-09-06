@@ -96,7 +96,7 @@ class EntityItem(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.ArrowCursor)
         self.setToolTip(self._make_tool_tip())
-        self._highligh_color = Qt.transparent
+        self._highlight_color = Qt.transparent
         self._extent = None
 
     def _make_tool_tip(self):
@@ -173,6 +173,11 @@ class EntityItem(QGraphicsRectItem):
         # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
         return self.entity_id(db_map)
 
+    def db_items(self, db_map):
+        for db_map_, id_ in self.db_map_ids:
+            if db_map_ == db_map:
+                yield dict(class_id=self.entity_class_id(db_map), id=id_)
+
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
 
@@ -206,9 +211,17 @@ class EntityItem(QGraphicsRectItem):
     def refresh_icon(self):
         """Refreshes the icon."""
         renderer = self.db_mngr.entity_class_renderer(
-            self.first_db_map, self.entity_class_type, self.first_entity_class_id
+            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color_code=self.color()
         )
         self._set_renderer(renderer)
+
+    def color(self):
+        for db_map, id_ in self.db_map_ids:
+            color = self._spine_db_editor.get_item_color(db_map, self.entity_type, id_)
+            try:
+                return int(1000 * color)
+            except Exception:  # pylint: disable=broad-except
+                pass
 
     def _set_renderer(self, renderer):
         self._renderer = renderer
@@ -227,8 +240,8 @@ class EntityItem(QGraphicsRectItem):
         path.addRect(self._bg.boundingRect())
         return path
 
-    def set_highligh_color(self, color):
-        self._highligh_color = color
+    def set_highlight_color(self, color):
+        self._highlight_color = color
 
     def paint(self, painter, option, widget=None):
         """Shows or hides the selection halo."""
@@ -238,7 +251,7 @@ class EntityItem(QGraphicsRectItem):
         else:
             self._paint_as_deselected()
         pen = self._bg.pen()
-        pen.setColor(self._highligh_color)
+        pen.setColor(self._highlight_color)
         width = 10 / self.scale()
         pen.setWidth(width)
         self._bg.setPen(pen)
@@ -525,7 +538,7 @@ class ObjectItem(EntityItem):
         """Refreshes the name."""
         db_map_ids_by_name = dict()
         for db_map, id_ in self.db_map_ids:
-            name = self._spine_db_editor.get_item_name(db_map, id_)
+            name = self._spine_db_editor.get_item_name(db_map, self.entity_type, id_)
             db_map_ids_by_name.setdefault(name, list()).append((db_map, id_))
         if len(db_map_ids_by_name) == 1:
             name = next(iter(db_map_ids_by_name))

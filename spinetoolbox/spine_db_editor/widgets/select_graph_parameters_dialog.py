@@ -26,19 +26,20 @@ from ...helpers import preferred_row_height
 
 
 class SelectGraphParametersDialog(QDialog):
-    selection_made = Signal(str, str, str)
+    selection_made = Signal(str, str, str, str)
 
-    def __init__(self, parent, name_parameter, pos_x_parameter, pos_y_parameter):
+    def __init__(self, parent, name_parameter, pos_x_parameter, pos_y_parameter, color_parameter):
         super().__init__(parent)
         self.setWindowTitle("Select graph parameters")
         button_box = QDialogButtonBox(self)
         button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         layout = QVBoxLayout(self)
-        self._table_widget = QTableWidget(1, 3, self)
-        self._table_widget.setHorizontalHeaderLabels(["Name", "Position x", "Position y"])
+        self._table_widget = QTableWidget(1, 4, self)
+        self._table_widget.setHorizontalHeaderLabels(["Name", "Position x", "Position y", "Color"])
         self._table_widget.setItem(0, 0, QTableWidgetItem(name_parameter))
         self._table_widget.setItem(0, 1, QTableWidgetItem(pos_x_parameter))
         self._table_widget.setItem(0, 2, QTableWidgetItem(pos_y_parameter))
+        self._table_widget.setItem(0, 3, QTableWidgetItem(color_parameter))
         self._table_widget.horizontalHeader().setStretchLastSection(True)
         self._table_widget.verticalHeader().hide()
         self._table_widget.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
@@ -51,16 +52,7 @@ class SelectGraphParametersDialog(QDialog):
 
     def accept(self):
         super().accept()
-        self.selection_made.emit(self._name_parameter(), self._position_x_parameter(), self._position_y_parameter())
-
-    def _name_parameter(self):
-        return self._table_widget.item(0, 0).text()
-
-    def _position_x_parameter(self):
-        return self._table_widget.item(0, 1).text()
-
-    def _position_y_parameter(self):
-        return self._table_widget.item(0, 2).text()
+        self.selection_made.emit(*[self._table_widget.item(0, i).text() for i in range(4)])
 
 
 class ParameterNameDelegate(QStyledItemDelegate):
