@@ -377,7 +377,6 @@ class MultiDBTreeItem(TreeItem):
                 new_children.append(child)
                 self.remove_children(row, 1, tear_down=False)
                 display_ids.pop(row)
-                child.revitalize()
                 new_children.append(child)
         self.deep_refresh_children()
         self._merge_children(new_children)
@@ -478,9 +477,3 @@ class MultiDBTreeItem(TreeItem):
         """Registers item's fetch parent for all model's databases."""
         for db_map in self.model.db_maps:
             self.model.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
-
-    def revitalize(self):
-        """Reverts tear down operation"""
-        self._fetch_parent.set_obsolete(False)
-        for child in self._children:
-            child.revitalize()
