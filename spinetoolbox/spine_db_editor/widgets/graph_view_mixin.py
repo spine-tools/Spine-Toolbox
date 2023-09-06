@@ -379,10 +379,12 @@ class GraphViewMixin:
 
     def _get_entity_key(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
-        key = self.get_item_name(db_map, entity_id)
-        if not key:
+        name = self.get_item_name(db_map, entity_id)
+        if not name:
             entity = self.db_mngr.get_item(db_map, "entity", entity_id)
             key = (entity["class_name"], entity["dimension_name_list"], entity["byname"])
+        else:
+            key = (name,)
         if not self.ui.graphicsView.merge_dbs:
             key += (db_map.codename,)
         return key
