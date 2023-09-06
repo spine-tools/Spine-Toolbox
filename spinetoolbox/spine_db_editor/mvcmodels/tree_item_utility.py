@@ -87,7 +87,7 @@ class GrayIfLastMixin:
     """Paints the item gray if it's the last."""
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ForegroundRole and self.child_number() == self.parent_item.child_count() - 1:
+        if role == Qt.ForegroundRole and self.child_number() == self.parent_item.row_count() - 1:
             gray_color = QGuiApplication.palette().text().color()
             gray_color.setAlpha(128)
             gray_brush = QBrush(gray_color)

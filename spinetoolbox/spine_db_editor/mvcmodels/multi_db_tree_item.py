@@ -39,7 +39,7 @@ class MultiDBTreeItem(TreeItem):
         if db_map_ids is None:
             db_map_ids = {}
         self._db_map_ids = db_map_ids
-        self._child_map = dict()  # Maps db_map to id to row number
+        self._child_map = {}  # Maps db_map to id to row number
         self._fetch_parent = FlexibleFetchParent(
             self.fetch_item_type,
             accepts_item=self.accepts_item,
@@ -61,7 +61,7 @@ class MultiDBTreeItem(TreeItem):
     def is_hidden(self):
         return False
 
-    def child_count(self):
+    def row_count(self):
         return len(self.visible_children)
 
     def child(self, row):
@@ -81,7 +81,7 @@ class MultiDBTreeItem(TreeItem):
         except AttributeError:
             return super().child_number()
 
-    def _refresh_child_map(self):
+    def refresh_child_map(self):
         """Recomputes the child map."""
         self.model.layoutAboutToBeChanged.emit()
         self._child_map.clear()
@@ -155,7 +155,7 @@ class MultiDBTreeItem(TreeItem):
         """Removes the mapping for given db_map and returns it."""
         return self._db_map_ids.pop(db_map, None)
 
-    def _deep_refresh_children(self):
+    def deep_refresh_children(self):
         """Refreshes children after taking db_maps from them.
         Called after removing and updating children for this item."""
         removed_rows = []
@@ -165,10 +165,10 @@ class MultiDBTreeItem(TreeItem):
         for row, count in reversed(rows_to_row_count_tuples(removed_rows)):
             self.remove_children(row, count)
         for row, child in enumerate(self.children):
-            child._deep_refresh_children()
+            child.deep_refresh_children()
         if self.children:
             top_row = 0
-            bottom_row = self.child_count() - 1
+            bottom_row = self.row_count() - 1
             top_index = self.children[top_row].index().sibling(top_row, 1)
             bottom_index = self.children[bottom_row].index().sibling(bottom_row, 1)
             self.model.dataChanged.emit(top_index, bottom_index)
@@ -249,7 +249,7 @@ class MultiDBTreeItem(TreeItem):
                 existing_children[new_child.display_id] = new_child
                 unmerged.append(new_child)
         if not unmerged:
-            self._refresh_child_map()
+            self.refresh_child_map()
             return
         self._insert_children_sorted(unmerged)
 
@@ -323,7 +323,7 @@ class MultiDBTreeItem(TreeItem):
         for db_map, ids in db_map_ids.items():
             for child in self.find_children_by_id(db_map, *ids, reverse=True):
                 child.deep_remove_db_map(db_map)
-        self._deep_refresh_children()
+        self.deep_refresh_children()
 
     def is_valid(self):
         """See base class."""
@@ -379,10 +379,10 @@ class MultiDBTreeItem(TreeItem):
                 display_ids.pop(row)
                 child.revitalize()
                 new_children.append(child)
-        self._deep_refresh_children()
+        self.deep_refresh_children()
         self._merge_children(new_children)
         top_left = self.model.index(0, 0, self.index())
-        bottom_right = self.model.index(self.child_count() - 1, 0, self.index())
+        bottom_right = self.model.index(self.row_count() - 1, 0, self.index())
         self.model.dataChanged.emit(top_left, bottom_right)
 
     def insert_children(self, position, children):
@@ -400,7 +400,7 @@ class MultiDBTreeItem(TreeItem):
             raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
         if not super().insert_children(position, children):
             return False
-        self._refresh_child_map()
+        self.refresh_child_map()
         for child in children:
             child.register_fetch_parent()
         return True
@@ -408,7 +408,7 @@ class MultiDBTreeItem(TreeItem):
     def remove_children(self, position, count, tear_down=True):
         """Removes count children starting from the given position."""
         if super().remove_children(position, count, tear_down=tear_down):
-            self._refresh_child_map()
+            self.refresh_child_map()
             return True
         return False
 

@@ -100,7 +100,7 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
             self.remove_children(alt_count, removed_count)
         else:
             self.model.dataChanged.emit(
-                self.model.index(0, 0, self.index()), self.model.index(self.child_count() - 1, 0, self.index())
+                self.model.index(0, 0, self.index()), self.model.index(self.row_count() - 1, 0, self.index())
             )
 
     def accepts_item(self, item, db_map):

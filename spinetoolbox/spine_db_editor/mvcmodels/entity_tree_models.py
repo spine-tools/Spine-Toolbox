@@ -66,9 +66,8 @@ class EntityTreeModel(MultiDBTreeModel):
         return self._hide_empty_classes
 
     @hide_empty_classes.setter
-    def hide_empty_classes(self, on):
-        if self._hide_empty_classes is on:
+    def hide_empty_classes(self, hide_empty_classes):
+        if self._hide_empty_classes is hide_empty_classes:
             return
-        self.layoutAboutToBeChanged.emit()
-        self._hide_empty_classes = on
-        self.layoutChanged.emit()
+        self._hide_empty_classes = hide_empty_classes
+        self.root_item.refresh_child_map()

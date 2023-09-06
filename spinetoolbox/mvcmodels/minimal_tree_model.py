@@ -98,6 +98,11 @@ class TreeItem:
         """Returns the number of children."""
         return len(self.children)
 
+    def row_count(self):
+        """Returns the number of rows, which may be different from the number of children.
+        This allows subclasses to hide children."""
+        return self.child_count()
+
     def child_number(self):
         """Returns the rank of this item within its parent or -1 if it's an orphan."""
         if self.parent_item:
@@ -349,7 +354,7 @@ class MinimalTreeModel(QAbstractItemModel):
         if parent.column() > 0:
             return 0
         parent_item = self.item_from_index(parent)
-        return parent_item.child_count()
+        return parent_item.row_count()
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns the data stored under the given role for the index."""
