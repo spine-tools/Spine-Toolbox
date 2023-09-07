@@ -14,7 +14,7 @@ Empty models for parameter definitions and values.
 """
 from PySide6.QtCore import Qt
 from ...mvcmodels.empty_row_model import EmptyRowModel
-from .parameter_mixins import (
+from .single_and_empty_model_mixins import (
     FillInParameterNameMixin,
     MakeEntityOnTheFlyMixin,
     InferEntityClassIdMixin,

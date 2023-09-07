@@ -16,7 +16,7 @@ Single models for parameter definitions and values (as 'for a single entity').
 from PySide6.QtCore import Qt
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ..mvcmodels.parameter_mixins import (
+from ..mvcmodels.single_and_empty_model_mixins import (
     FillInParameterNameMixin,
     FillInValueListIdMixin,
     MakeEntityOnTheFlyMixin,
