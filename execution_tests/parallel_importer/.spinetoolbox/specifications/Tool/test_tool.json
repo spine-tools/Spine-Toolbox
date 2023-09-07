@@ -11,6 +11,5 @@
         "out.csv"
     ],
     "cmdline_args": [],
-    "execute_in_work": true,
     "includes_main_path": "../../.."
 }

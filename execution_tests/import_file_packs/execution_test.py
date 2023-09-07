@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import unittest
-from spinedb_api import DatabaseMapping, from_database
+from spinedb_api import create_new_spine_database, DatabaseMapping, from_database
 
 
 class ModifyConnectionFilterByScript(unittest.TestCase):
@@ -19,8 +19,7 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
         if self._database_path.exists():
             self._database_path.unlink()
         self._url = "sqlite:///" + str(self._database_path)
-        db_map = DatabaseMapping(self._url, create=True)
-        db_map.connection.close()
+        create_new_spine_database(self._url)
 
     def test_execution(self):
         completed = subprocess.run(
@@ -33,14 +32,13 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
             )
         )
         self.assertEqual(completed.returncode, 0)
-        db_map = DatabaseMapping(self._url)
-        values = {}
-        for value_row in db_map.query(db_map.object_parameter_value_sq):
-            self.assertEqual(value_row.object_class_name, "a")
-            self.assertEqual(value_row.parameter_name, "info")
-            self.assertEqual(value_row.alternative_name, "Base")
-            values[value_row.object_name] = from_database(value_row.value, value_row.type)
-        db_map.connection.close()
+        with DatabaseMapping(self._url) as db_map:
+            values = {}
+            for value_row in db_map.query(db_map.entity_parameter_value_sq):
+                self.assertEqual(value_row.entity_class_name, "a")
+                self.assertEqual(value_row.parameter_name, "info")
+                self.assertEqual(value_row.alternative_name, "Base")
+                values[value_row.entity_name] = from_database(value_row.value, value_row.type)
         self.assertEqual(len(values), 4)
         self.assertEqual(values["b"], 23.0)
         self.assertEqual(values["c"], 50.0)
