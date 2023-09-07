@@ -48,6 +48,7 @@ class GraphViewMixin:
         self.db_map_entity_id_sets = []
         self.entity_inds = []
         self.element_inds = []
+        self._possible_colors = {}
         self._connecting_entities = False
         self._pos_for_added_entities = None
         self.added_db_map_entity_ids = set()
@@ -376,6 +377,12 @@ class GraphViewMixin:
             return False
         self.db_map_entity_id_sets = new_db_map_entity_id_sets
         self._update_entity_element_inds(db_map_element_id_lists)
+        possible_colors = {
+            self._get_item_color(db_map, ent_id)
+            for db_map_ent_ids in self.db_map_entity_id_sets
+            for db_map, ent_id in db_map_ent_ids
+        }
+        self._possible_colors = {c: k for k, c in enumerate(possible_colors)}
         return True
 
     def _get_entity_key(self, db_map_entity_id):
@@ -436,9 +443,16 @@ class GraphViewMixin:
             return name
         return ""
 
-    def get_item_color(self, db_map, entity_id):
+    def _get_item_color(self, db_map, entity_id):
         entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
         return self._get_pv(db_map, entity, self.ui.graphicsView.color_parameter)
+
+    def get_item_color(self, db_map, entity_id):
+        if len(self._possible_colors) == 1:
+            return None
+        color = self._get_item_color(db_map, entity_id)
+        k = self._possible_colors.get(color)
+        return k, len(self._possible_colors)
 
     def _get_fixed_pos(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
