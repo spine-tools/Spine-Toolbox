@@ -135,7 +135,7 @@ class EmptyModelBase(EmptyRowModel):
 class ParameterDataMixin:
     @property
     def value_field(self):
-        return {"parameter_value": "value", "parameter_definition": "default_value"}
+        return {"parameter_value": "value", "parameter_definition": "default_value"}[self.item_type]
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == DB_MAP_ROLE:
