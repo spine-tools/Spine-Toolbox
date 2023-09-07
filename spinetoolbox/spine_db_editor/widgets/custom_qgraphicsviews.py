@@ -208,7 +208,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             return
         color = QColorDialog.getColor(Qt.yellow, self, "Choose highlight color")
         for item in items:
-            item.set_highligh_color(color)
+            item.set_highlight_color(color)
 
     def increase_arc_length(self):
         for item in self.entity_items:
