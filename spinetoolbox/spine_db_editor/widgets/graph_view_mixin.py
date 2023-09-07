@@ -62,6 +62,7 @@ class GraphViewMixin:
         self.db_map_relationship_id_sets = list()
         self.src_inds = list()
         self.dst_inds = list()
+        self._possible_colors = {}
         self._adding_relationships = False
         self._pos_for_added_objects = None
         self.added_db_map_relationship_ids = set()
@@ -77,6 +78,7 @@ class GraphViewMixin:
         self._relationship_fetch_parent = None
         self._name_by_db_map_entity_id = {}
         self._color_by_db_map_entity_id = {}
+        self._renew_fetch_parents()
 
     def _renew_fetch_parents(self):
         if self._object_fetch_parent is not None:
@@ -427,8 +429,8 @@ class GraphViewMixin:
             db_map_object_id_lists[db_map, relationship["id"]] = db_map_object_id_list
         db_map_object_ids_by_key = {}
         db_map_relationship_ids_by_key = {}
-        self._name_by_db_map_entity_id.clear()
-        self._color_by_db_map_entity_id.clear()
+        self._name_by_db_map_entity_id = None
+        self._color_by_db_map_entity_id = None
         for db_map_object_id in db_map_object_ids:
             key = self._get_object_key(db_map_object_id)
             db_map_object_ids_by_key.setdefault(key, set()).add(db_map_object_id)
@@ -445,6 +447,15 @@ class GraphViewMixin:
         self.db_map_object_id_sets = new_db_map_object_id_sets
         self.db_map_relationship_id_sets = new_db_map_relationship_id_sets
         self._update_src_dst_inds(db_map_object_id_lists)
+        possible_colors = {
+            self._get_item_color(db_map, item_type, ent_id)
+            for item_type, db_map_ent_id_sets in zip(
+                ("object", "relationship"), (self.db_map_object_id_sets, self.db_map_relationship_id_sets)
+            )
+            for db_map_ent_ids in db_map_ent_id_sets
+            for db_map, ent_id in db_map_ent_ids
+        }
+        self._possible_colors = {c: k for k, c in enumerate(possible_colors)}
         return True
 
     def _get_object_key(self, db_map_object_id):
@@ -496,7 +507,7 @@ class GraphViewMixin:
             return ""
         if not self.ui.graphicsView.name_parameter:
             return entity["name"]
-        if not self._name_by_db_map_entity_id:
+        if self._name_by_db_map_entity_id is None:
             self._name_by_db_map_entity_id = {
                 (db_map, pv["entity_id"]): pv
                 for db_map in self.db_maps
@@ -512,11 +523,11 @@ class GraphViewMixin:
             return name
         return ""
 
-    def get_item_color(self, db_map, item_type, entity_id):
+    def _get_item_color(self, db_map, item_type, entity_id):
         entity = self.db_mngr.get_item(db_map, item_type, entity_id, only_visible=False)
         if not entity:
             return None
-        if not self._color_by_db_map_entity_id:
+        if self._color_by_db_map_entity_id is None:
             self._color_by_db_map_entity_id = {
                 (db_map, pv["entity_id"]): pv
                 for db_map in self.db_maps
@@ -532,6 +543,13 @@ class GraphViewMixin:
         if not color_pv:
             return None
         return from_database(color_pv["value"], color_pv["type"])
+
+    def get_item_color(self, db_map, item_type, entity_id):
+        if len(self._possible_colors) == 1:
+            return None
+        color = self._get_item_color(db_map, item_type, entity_id)
+        k = self._possible_colors.get(color)
+        return k, len(self._possible_colors)
 
     def _get_parameter_positions(self, parameter_name):
         if not parameter_name:

@@ -28,7 +28,7 @@ from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication,
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvas  # pylint: disable=no-name-in-module
 
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, color_from_index
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
 
@@ -218,10 +218,9 @@ class EntityItem(QGraphicsRectItem):
     def color(self):
         for db_map, id_ in self.db_map_ids:
             color = self._spine_db_editor.get_item_color(db_map, self.entity_type, id_)
-            try:
-                return int(1000 * color)
-            except Exception:  # pylint: disable=broad-except
-                pass
+            if color is not None:
+                k, count = color
+                return int(color_from_index(k, count).rgba())
 
     def _set_renderer(self, renderer):
         self._renderer = renderer
