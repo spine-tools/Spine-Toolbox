@@ -52,11 +52,12 @@ from .custom_delegates import (
     EntityBynameDelegate,
     AlternativeNameDelegate,
     ItemMetadataDelegate,
+    BooleanValueDelegate,
 )
 
 
 @Slot(QModelIndex, object)
-def _set_parameter_data(index, new_value):
+def _set_data(index, new_value):
     """Updates (object or relationship) parameter_definition or value with newly edited data."""
     index.model().setData(index, new_value)
 
@@ -90,15 +91,15 @@ class StackedTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
 
         Args:
             column_name (str)
-            delegate_class (ParameterDelegate)
+            delegate_class (TableDelegate)
 
         Returns:
-            ParameterDelegate
+            TableDelegate
         """
         column = self.model().header.index(column_name)
         delegate = delegate_class(self._spine_db_editor, self._spine_db_editor.db_mngr)
         self.setItemDelegateForColumn(column, delegate)
-        delegate.data_committed.connect(_set_parameter_data)
+        delegate.data_committed.connect(_set_data)
         return delegate
 
     def create_delegates(self):
@@ -122,6 +123,17 @@ class StackedTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         remove_rows_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Delete))
         remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
         self.addAction(remove_rows_action)
+
+    def contextMenuEvent(self, event):
+        """Shows context menu.
+
+        Args:
+            event (QContextMenuEvent)
+        """
+        index = self.indexAt(event.pos())
+        if not index.isValid():
+            return
+        self._menu.exec(event.globalPos())
 
     def _selected_rows_per_column(self):
         """Computes selected rows per column.
@@ -165,7 +177,7 @@ class StackedTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
             top = current.top()
             bottom = current.bottom()
             rows += range(top, bottom + 1)
-        # Get parameter data grouped by db_map
+        # Get data grouped by db_map
         db_map_typed_data = {}
         model = self.model()
         empty_model = model.empty_model
@@ -351,6 +363,13 @@ class ParameterValueTableView(ParameterTableView):
 
 class EntityAlternativeTableView(StackedTableView):
     """Visualize entities and their alternatives."""
+
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate("entity_byname", EntityBynameDelegate)
+        delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
+        self._make_delegate("alternative_name", AlternativeNameDelegate)
+        self._make_delegate("active", BooleanValueDelegate)
 
 
 class PivotTableView(ResizingViewMixin, CopyPasteTableView):

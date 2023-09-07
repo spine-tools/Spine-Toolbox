@@ -86,10 +86,6 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         """
         raise NotImplementedError()
 
-    @property
-    def entity_class_id_field(self):
-        return "entity_class_id"
-
     def canFetchMore(self, _parent):
         result = False
         for db_map in self.db_maps:
@@ -290,7 +286,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         """
         d = {}
         for item in items:
-            entity_class_id = item.get(self.entity_class_id_field)
+            entity_class_id = item.get("entity_class_id")
             if not entity_class_id:
                 continue
             d.setdefault(entity_class_id, []).append(item)
@@ -558,11 +554,7 @@ class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterVal
 class CompoundEntityAlternativeModel(FilterEntityAlternativeMixin, CompoundModelBase):
     @property
     def item_type(self):
-        return "entity"  # entity_alternative
-
-    @property
-    def entity_class_id_field(self):
-        return "class_id"
+        return "entity_alternative"
 
     def _make_header(self):
         return [
@@ -570,7 +562,6 @@ class CompoundEntityAlternativeModel(FilterEntityAlternativeMixin, CompoundModel
             "entity_byname",
             "alternative_name",
             "active",
-            "description",
             "database",
         ]
 

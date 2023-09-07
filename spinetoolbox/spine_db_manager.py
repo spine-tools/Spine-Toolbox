@@ -929,6 +929,14 @@ class SpineDBManager(QObject):
         """
         self.add_items("entity_group", db_map_data)
 
+    def add_entity_alternatives(self, db_map_data):
+        """Adds entity alternatives to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        self.add_items("entity_alternative", db_map_data)
+
     def add_parameter_definitions(self, db_map_data):
         """Adds parameter definitions to db.
 
@@ -1040,6 +1048,14 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
         self.update_items("entity", db_map_data)
+
+    def update_entity_alternatives(self, db_map_data):
+        """Updates entity alternatives in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        self.update_items("entity_alternative", db_map_data)
 
     def update_parameter_definitions(self, db_map_data):
         """Updates parameter definitions in db.

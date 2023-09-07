@@ -255,6 +255,7 @@ class SpineDBEditorBase(QMainWindow):
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_parameter_value.toggleViewAction())
         menu.addAction(self.ui.dockWidget_parameter_definition.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_entity_alternative.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_pivot_table.toggleViewAction())
         menu.addAction(self.ui.dockWidget_frozen_table.toggleViewAction())

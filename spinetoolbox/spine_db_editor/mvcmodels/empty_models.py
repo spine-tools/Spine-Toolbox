@@ -14,7 +14,8 @@ Empty models for parameter definitions and values.
 """
 from PySide6.QtCore import Qt
 from ...mvcmodels.empty_row_model import EmptyRowModel
-from .parameter_mixins import (
+from .single_and_empty_model_mixins import (
+    SplitValueAndTypeMixin,
     FillInParameterNameMixin,
     MakeEntityOnTheFlyMixin,
     InferEntityClassIdMixin,
@@ -131,16 +132,19 @@ class EmptyModelBase(EmptyRowModel):
             db_map_data.setdefault(db_map, []).append(item)
         return db_map_data
 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role == DB_MAP_ROLE:
+            database = self.data(index, Qt.ItemDataRole.DisplayRole)
+            return next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
+        return super().data(index, role)
 
-class ParameterDataMixin:
+
+class ParameterMixin:
     @property
     def value_field(self):
         return {"parameter_value": "value", "parameter_definition": "default_value"}
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if role == DB_MAP_ROLE:
-            database = self.data(index, Qt.ItemDataRole.DisplayRole)
-            return next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
         if self.header[index.column()] == self.value_field and role in (
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.ToolTipRole,
@@ -152,8 +156,56 @@ class ParameterDataMixin:
         return super().data(index, role)
 
 
+class EntityMixin:
+    def _do_add_items_to_db(self, db_map_items):
+        raise NotImplementedError()
+
+    def add_items_to_db(self, db_map_data, second_pass=False):
+        """See base class."""
+        # First add whatever is ready and also try to add entities on the fly
+        self.build_lookup_dictionary(db_map_data)
+        db_map_items = {}
+        db_map_entities = {}
+        db_map_error_log = {}
+        for db_map, items in db_map_data.items():
+            for item in items:
+                item_to_add, errors = self._convert_to_db(item, db_map)
+                entity, more_errors = self._make_entity_on_the_fly(item, db_map)
+                if self._check_item(db_map, item_to_add):
+                    db_map_items.setdefault(db_map, []).append(item_to_add)
+                if entity:
+                    already_added = db_map_entities.setdefault(db_map, [])
+                    # If the entity exists already, don't try to add it a second time
+                    if entity not in already_added:
+                        already_added.append(entity)
+                all_errors = errors + more_errors
+                if all_errors:
+                    db_map_error_log.setdefault(db_map, []).extend(all_errors)
+                self._autocomplete_row(db_map, item_to_add)
+        if db_map_error_log:
+            self.db_mngr.error_msg.emit(db_map_error_log)
+        if any(db_map_entities.values()):
+            self.db_mngr.add_entities(db_map_entities)
+        if any(db_map_items.values()) and second_pass:
+            self._do_add_items_to_db(db_map_items)
+        # Something might have become ready after adding the entities, so we do one more pass
+        if not second_pass:
+            self.add_items_to_db(db_map_data, second_pass=True)
+
+    def _make_item(self, row):
+        item = super()._make_item(row)
+        if item["entity_byname"]:
+            item["entity_byname"] = tuple(item["entity_byname"].split(DB_ITEM_SEPARATOR))
+        return item
+
+
 class EmptyParameterDefinitionModel(
-    FillInValueListIdMixin, FillInEntityClassIdMixin, FillInParameterNameMixin, ParameterDataMixin, EmptyModelBase
+    FillInValueListIdMixin,
+    FillInEntityClassIdMixin,
+    FillInParameterNameMixin,
+    SplitValueAndTypeMixin,
+    ParameterMixin,
+    EmptyModelBase,
 ):
     """An empty parameter_definition model."""
 
@@ -168,8 +220,8 @@ class EmptyParameterDefinitionModel(
     def add_items_to_db(self, db_map_data):
         """See base class."""
         self.build_lookup_dictionary(db_map_data)
-        db_map_param_def = dict()
-        db_map_error_log = dict()
+        db_map_param_def = {}
+        db_map_error_log = {}
         for db_map, items in db_map_data.items():
             for item in items:
                 param_def, errors = self._convert_to_db(item, db_map)
@@ -195,7 +247,9 @@ class EmptyParameterValueModel(
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,
-    ParameterDataMixin,
+    SplitValueAndTypeMixin,
+    ParameterMixin,
+    EntityMixin,
     EmptyModelBase,
 ):
     """An empty parameter_value model."""
@@ -203,38 +257,6 @@ class EmptyParameterValueModel(
     @property
     def item_type(self):
         return "parameter_value"
-
-    def add_items_to_db(self, db_map_data, second_pass=False):
-        """See base class."""
-        # First add whatever is ready and also try to add entities on the fly
-        self.build_lookup_dictionary(db_map_data)
-        db_map_param_val = dict()
-        db_map_entities = dict()
-        db_map_error_log = dict()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                param_val, errors = self._convert_to_db(item, db_map)
-                entity, more_errors = self._make_entity_on_the_fly(item, db_map)
-                if self._check_item(db_map, param_val):
-                    db_map_param_val.setdefault(db_map, []).append(param_val)
-                if entity:
-                    already_added = db_map_entities.setdefault(db_map, [])
-                    # If the entity exists already, don't try to add it a second time
-                    if entity not in already_added:
-                        already_added.append(entity)
-                all_errors = errors + more_errors
-                if all_errors:
-                    db_map_error_log.setdefault(db_map, []).extend(all_errors)
-                self._autocomplete_row(db_map, param_val)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)
-        if any(db_map_entities.values()):
-            self.db_mngr.add_entities(db_map_entities)
-        if any(db_map_param_val.values()) and second_pass:
-            self.db_mngr.add_parameter_values(db_map_param_val)
-        # Something might have become ready after adding the entities, so we do one more pass
-        if not second_pass:
-            self.add_items_to_db(db_map_data, second_pass=True)
 
     def _check_item(self, db_map, item):
         """Checks if a db item is ready to be inserted."""
@@ -254,22 +276,27 @@ class EmptyParameterValueModel(
             item.get("alternative_name"),
         )
 
-    def _make_item(self, row):
-        item = super()._make_item(row)
-        if item["entity_byname"]:
-            item["entity_byname"] = tuple(item["entity_byname"].split(DB_ITEM_SEPARATOR))
-        return item
+    def _do_add_items_to_db(self, db_map_items):
+        self.db_mngr.add_parameter_values(db_map_items)
 
 
 class EmptyEntityAlternativeModel(
     MakeEntityOnTheFlyMixin,
     InferEntityClassIdMixin,
     FillInAlternativeIdMixin,
-    FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,
+    EntityMixin,
     EmptyModelBase,
 ):
+    @property
+    def item_type(self):
+        return "entity_alternative"
+
+    def _check_item(self, db_map, item):
+        """Checks if a db item is ready to be inserted."""
+        return all(key in item for key in ("entity_class_id", "entity_id", "alternative_id", "active"))
+
     def _make_unique_id(self, item):
         entity_byname = item.get("entity_byname")
         if entity_byname is None:
@@ -279,3 +306,6 @@ class EmptyEntityAlternativeModel(
             DB_ITEM_SEPARATOR.join(entity_byname),
             item.get("alternative_name"),
         )
+
+    def _do_add_items_to_db(self, db_map_items):
+        self.db_mngr.add_entity_alternatives(db_map_items)
