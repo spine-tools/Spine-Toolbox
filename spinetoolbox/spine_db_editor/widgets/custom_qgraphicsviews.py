@@ -462,12 +462,12 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 )
                 data.setdefault("parameter_values", []).extend(
                     [
-                        (class_name, item.element_name_list or item.entity_name, self.pos_x_parameter, item.pos().x())
+                        (class_name, item.element_name_list or item.entity_name, pname, val)
                         for item in ent_items
-                    ]
-                    + [
-                        (class_name, item.element_name_list or item.entity_name, self.pos_y_parameter, item.pos().y())
-                        for item in ent_items
+                        for pname, val in zip(
+                            (self.pos_x_parameter, self.pos_y_parameter),
+                            self._spine_db_editor.convert_position(item.pos().x(), item.pos().y()),
+                        )
                     ]
                 )
         self.db_mngr.import_data(db_map_data)

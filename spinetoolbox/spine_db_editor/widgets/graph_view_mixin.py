@@ -387,12 +387,8 @@ class GraphViewMixin:
 
     def _get_entity_key(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
-        name = self.get_item_name(db_map, entity_id)
-        if not name:
-            entity = self.db_mngr.get_item(db_map, "entity", entity_id)
-            key = (entity["class_name"], entity["dimension_name_list"], entity["byname"])
-        else:
-            key = (name,)
+        entity = self.db_mngr.get_item(db_map, "entity", entity_id)
+        key = (entity["class_name"], entity["dimension_name_list"], entity["byname"])
         if not self.ui.graphicsView.merge_dbs:
             key += (db_map.codename,)
         return key
@@ -499,6 +495,10 @@ class GraphViewMixin:
             max_iters=max_iters,
         )
 
+    @staticmethod
+    def convert_position(x, y):
+        return (x, -y)
+
     def _make_new_items(self, x, y):
         """Returns new items for the graph.
 
@@ -507,7 +507,7 @@ class GraphViewMixin:
             y (list)
         """
         self.entity_items = [
-            EntityItem(self, x[i], y[i], self.VERTEX_EXTENT, tuple(db_map_entity_ids))
+            EntityItem(self, *self.convert_position(x[i], y[i]), self.VERTEX_EXTENT, tuple(db_map_entity_ids))
             for i, db_map_entity_ids in enumerate(self.db_map_entity_id_sets)
         ]
         self.arc_items = [
