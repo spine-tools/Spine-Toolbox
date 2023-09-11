@@ -62,6 +62,7 @@ class GraphViewMixin:
         self.db_map_relationship_id_sets = list()
         self.src_inds = list()
         self.dst_inds = list()
+        self._possible_colors = {}
         self._adding_relationships = False
         self._pos_for_added_objects = None
         self.added_db_map_relationship_ids = set()
@@ -445,6 +446,12 @@ class GraphViewMixin:
         self.db_map_object_id_sets = new_db_map_object_id_sets
         self.db_map_relationship_id_sets = new_db_map_relationship_id_sets
         self._update_src_dst_inds(db_map_object_id_lists)
+        possible_colors = {
+            self._get_item_color(db_map, ent_id)
+            for db_map_ent_ids in self.db_map_entity_id_sets
+            for db_map, ent_id in db_map_ent_ids
+        }
+        self._possible_colors = {c: k for k, c in enumerate(possible_colors)}
         return True
 
     def _get_object_key(self, db_map_object_id):
