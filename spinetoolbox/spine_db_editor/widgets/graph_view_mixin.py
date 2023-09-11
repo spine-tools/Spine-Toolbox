@@ -592,7 +592,7 @@ class GraphViewMixin:
             relationship_ind = rel_ind_lookup[db_map_rel_id]
             sorted_object_inds = tuple(sorted(object_inds))
             ent_inds_by_sorted_obj_inds.setdefault(sorted_object_inds, []).append(relationship_ind)
-            for object_ind in sorted_object_inds:
+            for object_ind in object_inds:
                 edges[relationship_ind, object_ind] = None
         ent_inds_by_sorted_obj_inds.pop((), None)
         for ent_inds in ent_inds_by_sorted_obj_inds.values():
