@@ -231,7 +231,7 @@ class EntityItem(QGraphicsRectItem):
 
     def _get_name(self):
         for db_map, id_ in self.db_map_ids:
-            name = self._spine_db_editor.get_item_name(db_map, id_)
+            name = self._spine_db_editor.get_item_name(db_map, self.entity_type, id_)
             if isinstance(name, str):
                 return name
 
@@ -491,6 +491,9 @@ class RelationshipItem(EntityItem):
     def has_dimensions(self):
         return True
 
+    def _has_name(self):
+        return False
+
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         if not self.db_map_ids:
@@ -617,7 +620,7 @@ class ObjectItem(EntityItem):
         return path
 
     def _has_name(self):
-        return bool(self.label_item.toPlainText())
+        return True
 
     def _make_tool_tip(self):
         if not self.first_id:
