@@ -35,6 +35,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (FrozenTableV
     ObjectParameterValueTableView, PivotTableView, RelationshipParameterDefinitionTableView, RelationshipParameterValueTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, ObjectTreeView, ParameterValueListTreeView, RelationshipTreeView,
     ScenarioTreeView, ToolFeatureTreeView)
+from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import (LegendWidget, ProgressBarWidget, TimeLineWidget)
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindow(object):
@@ -386,6 +387,21 @@ class Ui_MainWindow(object):
         self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
 
         self.verticalLayout_7.addWidget(self.graphicsView)
+
+        self.time_line_widget = TimeLineWidget(self.dockWidgetContents_8)
+        self.time_line_widget.setObjectName(u"time_line_widget")
+
+        self.verticalLayout_7.addWidget(self.time_line_widget)
+
+        self.legend_widget = LegendWidget(self.dockWidgetContents_8)
+        self.legend_widget.setObjectName(u"legend_widget")
+
+        self.verticalLayout_7.addWidget(self.legend_widget)
+
+        self.progress_bar_widget = ProgressBarWidget(self.dockWidgetContents_8)
+        self.progress_bar_widget.setObjectName(u"progress_bar_widget")
+
+        self.verticalLayout_7.addWidget(self.progress_bar_widget)
 
         self.dockWidget_entity_graph.setWidget(self.dockWidgetContents_8)
         MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_entity_graph)

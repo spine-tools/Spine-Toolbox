@@ -44,6 +44,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.pos_y_parameter = "y"
         self.name_parameter = ""
         self.color_parameter = ""
+        self.arc_width_parameter = ""
         self.selected_items = list()
         self.removed_items = set()
         self.hidden_items = dict()
@@ -439,17 +440,26 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def select_graph_parameters(self, checked=False):
         dialog = SelectGraphParametersDialog(
-            self._spine_db_editor, self.name_parameter, self.pos_x_parameter, self.pos_y_parameter, self.color_parameter
+            self._spine_db_editor,
+            self.name_parameter,
+            self.pos_x_parameter,
+            self.pos_y_parameter,
+            self.color_parameter,
+            self.arc_width_parameter,
         )
         dialog.show()
         dialog.selection_made.connect(self._set_graph_parameters)
 
-    @Slot(str, str, str, str)
-    def _set_graph_parameters(self, name_parameter, pos_x_parameter, pos_y_parameter, color_parameter):
+    @Slot(str, str, str, str, str)
+    def _set_graph_parameters(
+        self, name_parameter, pos_x_parameter, pos_y_parameter, color_parameter, arc_width_parameter
+    ):
         self.name_parameter = name_parameter
         self.pos_x_parameter = pos_x_parameter
         self.pos_y_parameter = pos_y_parameter
         self.color_parameter = color_parameter
+        self.arc_width_parameter = arc_width_parameter
+        self._spine_db_editor.polish_items()
 
     @Slot(bool)
     def save_positions(self, checked=False):

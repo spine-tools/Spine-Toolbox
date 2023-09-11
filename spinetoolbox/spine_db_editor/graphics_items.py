@@ -87,7 +87,7 @@ class EntityItem(QGraphicsRectItem):
         self._renderer = None
         self._moved_on_scene = False
         self._bg = None
-        self._bg_brush = Qt.NoBrush
+        self._bg_brush = None
         self.setZValue(0)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
@@ -208,24 +208,107 @@ class EntityItem(QGraphicsRectItem):
         y = round(y / grid_size) * grid_size
         return (x, y)
 
-    def refresh_icon(self):
-        """Refreshes the icon."""
-        renderer = self.db_mngr.entity_class_renderer(
-            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color_code=self.color()
-        )
-        self._set_renderer(renderer)
+    def has_unique_key(self):
+        """Returns whether or not the item still has a single key in all the databases it represents.
 
-    def color(self):
+        Returns:
+            bool
+        """
+        db_map_ids_by_key = {}
+        for db_map_id in self.db_map_ids:
+            key = self._spine_db_editor.get_entity_key(db_map_id)
+            db_map_ids_by_key.setdefault(key, []).append(db_map_id)
+        if len(db_map_ids_by_key) == 1:
+            return True
+        first_key = next(iter(db_map_ids_by_key))
+        self._db_map_ids = tuple(db_map_ids_by_key[first_key])
+        return False
+
+    def _get_name(self):
+        for db_map, id_ in self.db_map_ids:
+            name = self._spine_db_editor.get_item_name(db_map, id_)
+            if isinstance(name, str):
+                return name
+
+    def _get_color(self):
         for db_map, id_ in self.db_map_ids:
             color = self._spine_db_editor.get_item_color(db_map, self.entity_type, id_)
             if color is not None:
-                k, count = color
+                min_val, val, max_val = color
+                count = max_val - min_val
+                if count == 0:
+                    return int(color_from_index(0, 1, value=0).rgba())
+                k = val - min_val
                 return int(color_from_index(k, count).rgba())
+
+    def _get_arc_width(self):
+        for db_map, id_ in self.db_map_ids:
+            arc_width = self._spine_db_editor.get_arc_width(db_map, id_)
+            if arc_width is not None:
+                min_val, val, max_val = arc_width
+                range_ = max_val - min_val
+                if range_ == 0:
+                    return None
+                # val == min_val => result = 1
+                # val == max_val => result = 5
+                return 1 + 9 * (val - min_val) / range_
+
+    def _has_name(self):
+        return True
+
+    def _set_up(self):
+        if self._has_name():
+            name = self._get_name()
+            if not name:
+                self.label_item.hide()
+                self._extent = 0.2 * self._given_extent
+            else:
+                if not self.has_dimensions:
+                    self.label_item.show()
+                    self.label_item.setPlainText(name)
+                    self._extent = self._given_extent
+                else:
+                    self.label_item.hide()
+                    self._extent = 0.5 * self._given_extent
+        else:
+            self.label_item.hide()
+            self._extent = self._given_extent
+        self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        self._init_bg()
+        self.refresh_icon()
+        self.update_entity_pos()
+
+    def polish(self):
+        self._renderer = self.db_mngr.entity_class_renderer(
+            self.first_db_map, self.first_entity_class_id, color_code=self._get_color()
+        )
+        self._svg_item.setSharedRenderer(self._renderer)
+        self._update_arcs_width()
+
+    def _init_bg(self):
+        bg_rect = QRectF(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        if not self.has_dimensions:
+            self._bg = QGraphicsRectItem(bg_rect, self)
+            self._bg_brush = Qt.NoBrush
+        else:
+            self._bg = QGraphicsEllipseItem(bg_rect, self)
+            self._bg_brush = QGuiApplication.palette().button()
+        pen = self._bg.pen()
+        pen.setColor(Qt.transparent)
+        self._bg.setPen(pen)
+        self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
+
+    def refresh_icon(self):
+        """Refreshes the icon."""
+        renderer = self.db_mngr.entity_class_renderer(
+            self.first_db_map, self.first_entity_class_id, color_code=self._get_color()
+        )
+        self._set_renderer(renderer)
 
     def _set_renderer(self, renderer):
         self._renderer = renderer
-        self._svg_item.setSharedRenderer(renderer)
-        size = renderer.defaultSize()
+        self._svg_item.setSharedRenderer(self._renderer)
+        size = self._renderer.defaultSize()
         scale = self._extent / max(size.width(), size.height())
         self._svg_item.setScale(scale)
         rect = self._svg_item.boundingRect()
@@ -251,7 +334,7 @@ class EntityItem(QGraphicsRectItem):
             self._paint_as_deselected()
         pen = self._bg.pen()
         pen.setColor(self._highlight_color)
-        width = 10 / self.scale()
+        width = max(1, 10 / self.scale())
         pen.setWidth(width)
         self._bg.setPen(pen)
         super().paint(painter, option, widget)
@@ -269,7 +352,18 @@ class EntityItem(QGraphicsRectItem):
             arc_item (ArcItem)
         """
         self.arc_items.append(arc_item)
-        arc_item.update_line()
+        self._rotate_svg_item()
+        self.update_entity_pos()
+
+    def update_entity_pos(self):
+        el_items = {arc_item.el_item for arc_item in self.arc_items}
+        dim_count = len(el_items)
+        if not dim_count:
+            return
+        new_pos_x = sum(el_item.pos().x() for el_item in el_items) / dim_count
+        new_pos_y = sum(el_item.pos().y() for el_item in el_items) / dim_count
+        self.setPos(new_pos_x, new_pos_y)
+        self.update_arcs_line()
 
     def apply_zoom(self, factor):
         """Applies zoom.
@@ -312,6 +406,13 @@ class EntityItem(QGraphicsRectItem):
         """Moves arc items."""
         for item in self.arc_items:
             item.update_line()
+        self._update_arcs_width()
+
+    def _update_arcs_width(self):
+        arc_width = self._get_arc_width()
+        if arc_width is not None:
+            for item in self.arc_items:
+                item.apply_value_factor(arc_width)
 
     def itemChange(self, change, value):
         """
@@ -698,10 +799,13 @@ class ArcItem(QGraphicsPathItem):
         super().__init__()
         self.rel_item = rel_item
         self.obj_item = obj_item
-        self._width = float(width)
+        self._original_width = float(width)
+        self._scaled_width = self._original_width
         self._pen = self._make_pen()
         self.setPen(self._pen)
         self.setZValue(-2)
+        self._scaling_factor = 1
+        self._value_factor = 1
         rel_item.add_arc_item(self)
         obj_item.add_arc_item(self)
         self.setCursor(Qt.ArrowCursor)
@@ -709,7 +813,7 @@ class ArcItem(QGraphicsPathItem):
 
     def _make_pen(self):
         pen = QPen()
-        pen.setWidth(self._width)
+        pen.setWidthF(self._scaled_width)
         color = QGuiApplication.palette().color(QPalette.Normal, QPalette.WindowText)
         color.setAlphaF(0.8)
         pen.setColor(color)
@@ -738,6 +842,10 @@ class ArcItem(QGraphicsPathItem):
             path.quadTo(ctrl_point, self.obj_item.pos())
         self.setPath(path)
 
+    def apply_value_factor(self, factor):
+        self._value_factor = max(1, factor)
+        self._update_width()
+
     def mousePressEvent(self, event):
         """Accepts the event so it's not propagated."""
         event.accept()
@@ -751,10 +859,12 @@ class ArcItem(QGraphicsPathItem):
         Args:
             factor (float): The zoom factor.
         """
-        if factor < 1:
-            factor = 1
-        scaled_width = self._width / factor
-        self._pen.setWidthF(scaled_width)
+        self._scaling_factor = max(factor, 1)
+        self._update_width()
+
+    def _update_width(self):
+        width = self._original_width * self._value_factor / self._scaling_factor
+        self._pen.setWidthF(width)
         self.setPen(self._pen)
 
 
@@ -778,7 +888,7 @@ class CrossHairsItem(RelationshipItem):
     def _make_tool_tip(self):
         return "<p>Click on an object to add it to the relationship.</p>"
 
-    def _do_update_name(self):
+    def _has_name(self):
         return False
 
     def refresh_icon(self):
@@ -826,11 +936,8 @@ class CrossHairsRelationshipItem(RelationshipItem):
     def _make_tool_tip(self):
         return None
 
-    def _do_update_name(self):
-        return False
-
     def _has_name(self):
-        return True
+        return False
 
     def refresh_icon(self):
         """Refreshes the icon."""

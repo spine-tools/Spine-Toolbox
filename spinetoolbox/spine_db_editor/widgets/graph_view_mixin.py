@@ -19,8 +19,9 @@ from time import monotonic
 from PySide6.QtCore import Slot, QTimer, QThreadPool
 from PySide6.QtWidgets import QHBoxLayout
 from spinedb_api import from_database
+from spinedb_api.parameter_value import IndexedValue, TimeSeries
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ...helpers import get_save_file_name_in_last_dir
+from ...helpers import get_save_file_name_in_last_dir, busy_effect
 from ...fetch_parent import FlexibleFetchParent
 from ..graphics_items import (
     EntityItem,
@@ -35,6 +36,39 @@ from .graph_layout_generator import GraphLayoutGeneratorRunnable, ProgressBarWid
 from .add_items_dialogs import AddObjectsDialog, AddReadyRelationshipsDialog
 
 
+def _min_value(pv):
+    if isinstance(pv, IndexedValue):
+        return min(pv.values)
+    return pv
+
+
+def _max_value(pv):
+    if isinstance(pv, IndexedValue):
+        return max(pv.values)
+    return pv
+
+
+def _get_value(pv, index):
+    if isinstance(pv, IndexedValue):
+        try:
+            return pv.get_nearest(index)
+        except Exception:
+            return None
+    return pv
+
+
+def _min_max(pvs):
+    pvs = [pv for pv in pvs if pv is not None]
+    if not pvs:
+        return None, None
+    return min(_min_value(pv) for pv in pvs), max(_max_value(pv) for pv in pvs)
+
+
+@busy_effect
+def _min_max_indexes(pvs):
+    return min(pv.indexes[0] for pv in pvs), max(pv.indexes[-1] for pv in pvs)
+
+
 class GraphViewMixin:
     """Provides the graph view for the DS form."""
 
@@ -45,11 +79,12 @@ class GraphViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.ui.graphicsView.connect_spine_db_editor(self)
-        self._progress_bar_widget = ProgressBarWidget()
-        self._progress_bar_widget.hide()
-        self._progress_bar_widget.stop_button.clicked.connect(self._stop_extending_graph)
-        layout = QHBoxLayout(self.ui.graphicsView)
-        layout.addWidget(self._progress_bar_widget)
+        self.ui.progress_bar_widget.hide()
+        self.ui.progress_bar_widget.stop_button.clicked.connect(self._stop_extending_graph)
+        self.ui.time_line_widget.hide()
+        self.ui.time_line_widget.index_changed.connect(self._update_time_line_index)
+        self.ui.legend_widget.hide()
+        self._time_line_index = None
         self._persistent = False
         self._owes_graph = False
         self.scene = CustomGraphicsScene(self)
@@ -62,6 +97,8 @@ class GraphViewMixin:
         self.db_map_relationship_id_sets = list()
         self.src_inds = list()
         self.dst_inds = list()
+        self._pvs_by_pname = {}
+        self._val_ranges_by_pname = {}
         self._possible_colors = {}
         self._adding_relationships = False
         self._pos_for_added_objects = None
@@ -101,6 +138,11 @@ class GraphViewMixin:
             accepts_item=self._accepts_relationship_item,
             owner=self,
         )
+
+    @Slot(int)
+    def _update_time_line_index(self, index):
+        self._time_line_index = index
+        self._do_polish_items()
 
     @Slot(bool)
     def _stop_extending_graph(self, _=False):
@@ -187,10 +229,12 @@ class GraphViewMixin:
         Args:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
+        updated_ids = {(db_map, x["id"]) for db_map, objs in db_map_data.items() for x in objs}
         for item in self.ui.graphicsView.items():
-            if isinstance(item, ObjectItem) and not item.update_name():
-                self.build_graph(persistent=True)
-                break
+            if isinstance(item, ObjectItem) and set(item.db_map_ids).intersection(updated_ids)
+                if not item.has_unique_key():
+                    self.build_graph(persistent=True)
+                    break
 
     def _handle_objects_removed(self, db_map_data):
         """Runs when objects are removed from the db. Rebuilds graph if needed.
@@ -276,6 +320,61 @@ class GraphViewMixin:
         for item in removed_items:
             item.setVisible(False)
         self.scene = scene
+
+    def _graph_handle_parameter_values_added(self, db_map_data):
+        pnames = {x["parameter_definition_name"] for db_map in self.db_maps for x in db_map_data.get(db_map, ())}
+        position_pnames = {self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter}
+        property_pnames = {
+            self.ui.graphicsView.name_parameter,
+            self.ui.graphicsView.color_parameter,
+            self.ui.graphicsView.arc_width_parameter,
+        }
+        if pnames & position_pnames:
+            self.rebuild_graph()
+            return
+        if pnames & property_pnames:
+            self.polish_items()
+        for db_map in self.db_maps:
+            if self.db_mngr.can_fetch_more(db_map, self._parameter_value_fetch_parent):
+                self.db_mngr.fetch_more(db_map, self._parameter_value_fetch_parent)
+
+    def polish_items(self):
+        self._update_property_pvs()
+        self._do_polish_items()
+
+    def _update_property_pvs(self):
+        self._pvs_by_pname = {
+            pname: {
+                (db_map, ent_id): self._get_pv(db_map, ent_id, pname)
+                for db_map_ent_ids in self.db_map_entity_id_sets
+                for db_map, ent_id in db_map_ent_ids
+            }
+            for pname in (self.ui.graphicsView.color_parameter, self.ui.graphicsView.arc_width_parameter)
+            if pname
+        }
+        self._val_ranges_by_pname = {pname: _min_max(pvs.values()) for pname, pvs in self._pvs_by_pname.items()}
+        if self._val_ranges_by_pname:
+            legend = [
+                (legend_type, pname, self._val_ranges_by_pname.get(pname))
+                for (legend_type, pname) in (
+                    ("color", self.ui.graphicsView.color_parameter),
+                    ("arc_width", self.ui.graphicsView.arc_width_parameter),
+                )
+            ]
+            self.ui.legend_widget.show()
+            self.ui.legend_widget.set_legend(legend)
+        else:
+            self.ui.legend_widget.hide()
+        ts_pvs = [pv for pname, pvs in self._pvs_by_pname.items() for pv in pvs.values() if isinstance(pv, TimeSeries)]
+        if ts_pvs:
+            min_, max_ = _min_max_indexes(ts_pvs)
+            self.ui.time_line_widget.set_index_range(min_, max_)
+        else:
+            self.ui.time_line_widget.hide()
+
+    def _do_polish_items(self):
+        for item in self.ui.graphicsView.entity_items:
+            item.polish()
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
@@ -447,15 +546,7 @@ class GraphViewMixin:
         self.db_map_object_id_sets = new_db_map_object_id_sets
         self.db_map_relationship_id_sets = new_db_map_relationship_id_sets
         self._update_src_dst_inds(db_map_object_id_lists)
-        possible_colors = {
-            self._get_item_color(db_map, item_type, ent_id)
-            for item_type, db_map_ent_id_sets in zip(
-                ("object", "relationship"), (self.db_map_object_id_sets, self.db_map_relationship_id_sets)
-            )
-            for db_map_ent_ids in db_map_ent_id_sets
-            for db_map, ent_id in db_map_ent_ids
-        }
-        self._possible_colors = {c: k for k, c in enumerate(possible_colors)}
+        self._update_property_pvs()
         return True
 
     def _get_object_key(self, db_map_object_id):
@@ -546,6 +637,34 @@ class GraphViewMixin:
         color = self._get_item_color(db_map, item_type, entity_id)
         k = self._possible_colors.get(color)
         return k, len(self._possible_colors)
+
+    def get_item_color(self, db_map, entity_id):
+        return self._get_item_property(db_map, entity_id, self.ui.graphicsView.color_parameter)
+
+    def get_arc_width(self, db_map, entity_id):
+        return self._get_item_property(db_map, entity_id, self.ui.graphicsView.arc_width_parameter)
+
+    def _get_item_property(self, db_map, entity_id, pname):
+        """Returns a tuple of (min_value, value, max_value) for given entity and property.
+        Returns (0, 0, 0) if the property is not defined for the entity.
+        Returns None if the property is not defined for *any* entity.
+
+        Returns:
+            tuple or None
+        """
+        pvs = self._pvs_by_pname.get(pname, {})
+        if not pvs:
+            return None
+        pv = pvs.get((db_map, entity_id))
+        if pv is None:
+            return (0, 0, 0)
+        val = _get_value(pv, self._time_line_index)
+        if val is None:
+            return (0, 0, 0)
+        # NOTE: By construction, self._val_ranges_by_pname has the same keys as self._pvs_by_pname
+        val_range = self._val_ranges_by_pname[pname]
+        min_val, max_val = val_range
+        return min_val, val, max_val
 
     def _get_parameter_positions(self, parameter_name):
         if not parameter_name:

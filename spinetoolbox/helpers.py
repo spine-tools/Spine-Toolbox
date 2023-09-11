@@ -1011,11 +1011,11 @@ def make_icon_toolbar_ss(color):
     return f"QToolBar{{spacing: 0px; background: {icon_background}; padding: 3px; border-style: solid;}}"
 
 
-def color_from_index(i, count, base_hue=0.0, saturation=1.0):
+def color_from_index(i, count, base_hue=0.0, saturation=1.0, value=1.0):
     golden_ratio = 0.618033988749895
     h = golden_ratio * (360 / count) * i
     h = ((base_hue + h) % 360) / 360
-    return QColor.fromHsvF(h, saturation, 1.0, 1.0)
+    return QColor.fromHsvF(h, saturation, value, 1.0)
 
 
 def unique_name(prefix, existing):

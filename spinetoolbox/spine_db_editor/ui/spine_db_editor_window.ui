@@ -599,6 +599,15 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="TimeLineWidget" name="time_line_widget" native="true"/>
+     </item>
+     <item>
+      <widget class="LegendWidget" name="legend_widget" native="true"/>
+     </item>
+     <item>
+      <widget class="ProgressBarWidget" name="progress_bar_widget" native="true"/>
+     </item>
     </layout>
    </widget>
   </widget>
@@ -1265,6 +1274,18 @@
    <class>ScenarioTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>TimeLineWidget</class>
+   <extends>QWidget</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>LegendWidget</class>
+   <extends>QWidget</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources>
