@@ -489,7 +489,7 @@ class GraphViewMixin:
             ent_ind = ent_ind_lookup[db_map_entity_id]
             sorted_el_inds = tuple(sorted(el_inds))
             ent_inds_by_sorted_el_inds.setdefault(sorted_el_inds, []).append(ent_ind)
-            for el_ind in sorted_el_inds:
+            for el_ind in el_inds:
                 edges[ent_ind, el_ind] = None
         ent_inds_by_sorted_el_inds.pop((), None)
         for ent_inds in ent_inds_by_sorted_el_inds.values():
