@@ -18,12 +18,46 @@ import itertools
 from time import monotonic
 from PySide6.QtCore import Slot, QTimer, QThreadPool
 from spinedb_api import from_database
+from spinedb_api.parameter_value import IndexedValue, TimeSeries
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ...helpers import get_save_file_name_in_last_dir
+from ...helpers import get_save_file_name_in_last_dir, busy_effect
 from ...fetch_parent import FlexibleFetchParent
 from ..graphics_items import EntityItem, ArcItem, CrossHairsItem, CrossHairsEntityItem, CrossHairsArcItem
 from .graph_layout_generator import GraphLayoutGenerator, GraphLayoutGeneratorRunnable
 from .add_items_dialogs import AddEntitiesDialog, AddReadyEntitiesDialog
+
+
+def _min_value(pv):
+    if isinstance(pv, IndexedValue):
+        return min(pv.values)
+    return pv
+
+
+def _max_value(pv):
+    if isinstance(pv, IndexedValue):
+        return max(pv.values)
+    return pv
+
+
+def _get_value(pv, index):
+    if isinstance(pv, IndexedValue):
+        try:
+            return pv.get_nearest(index)
+        except Exception:
+            return None
+    return pv
+
+
+def _min_max(pvs):
+    pvs = [pv for pv in pvs if pv is not None]
+    if not pvs:
+        return None, None
+    return min(_min_value(pv) for pv in pvs), max(_max_value(pv) for pv in pvs)
+
+
+@busy_effect
+def _min_max_indexes(pvs):
+    return min(pv.indexes[0] for pv in pvs), max(pv.indexes[-1] for pv in pvs)
 
 
 class GraphViewMixin:
@@ -42,13 +76,18 @@ class GraphViewMixin:
         self.ui.graphicsView.connect_spine_db_editor(self)
         self.ui.progress_bar_widget.hide()
         self.ui.progress_bar_widget.stop_button.clicked.connect(self._stop_extending_graph)
+        self.ui.time_line_widget.hide()
+        self.ui.time_line_widget.index_changed.connect(self._update_time_line_index)
+        self.ui.legend_widget.hide()
+        self._time_line_index = None
         self.entity_items = []
         self.arc_items = []
         self.selected_tree_inds = {}
         self.db_map_entity_id_sets = []
         self.entity_inds = []
         self.element_inds = []
-        self._possible_colors = {}
+        self._pvs_by_pname = {}
+        self._val_ranges_by_pname = {}
         self._connecting_entities = False
         self._pos_for_added_entities = None
         self.added_db_map_entity_ids = set()
@@ -70,6 +109,11 @@ class GraphViewMixin:
         self._parameter_value_fetch_parent = FlexibleFetchParent(
             "parameter_value", handle_items_added=self._graph_handle_parameter_values_added, owner=self
         )
+
+    @Slot(int)
+    def _update_time_line_index(self, index):
+        self._time_line_index = index
+        self._do_polish_items()
 
     def _graph_fetch_more(self):
         for db_map in self.db_maps:
@@ -159,7 +203,7 @@ class GraphViewMixin:
         updated_ids = {(db_map, x["id"]) for db_map, ents in db_map_data.items() for x in ents}
         for item in self.ui.graphicsView.items():
             if isinstance(item, EntityItem) and set(item.db_map_ids).intersection(updated_ids):
-                if not item.update_name():
+                if not item.has_unique_key():
                     self.build_graph(persistent=True)
                     break
 
@@ -178,7 +222,7 @@ class GraphViewMixin:
         for db_map, entities in db_map_data.items():
             for entity in entities:
                 db_map_id = (db_map, entity["id"])
-                key = self._get_entity_key(db_map_id)
+                key = self.get_entity_key(db_map_id)
                 added_db_map_ids_by_key.setdefault(key, set()).add(db_map_id)
         restored_items = set()
         for item in self.ui.graphicsView.items():
@@ -186,7 +230,7 @@ class GraphViewMixin:
                 continue
             for db_map_id in item.original_db_map_ids:
                 try:
-                    key = self._get_entity_key(db_map_id)
+                    key = self.get_entity_key(db_map_id)
                 except KeyError:
                     continue
                 db_map_ids = added_db_map_ids_by_key.pop(key, None)
@@ -221,18 +265,58 @@ class GraphViewMixin:
 
     def _graph_handle_parameter_values_added(self, db_map_data):
         pnames = {x["parameter_definition_name"] for db_map in self.db_maps for x in db_map_data.get(db_map, ())}
-        graph_pnames = {
+        position_pnames = {self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter}
+        property_pnames = {
             self.ui.graphicsView.name_parameter,
-            self.ui.graphicsView.pos_x_parameter,
-            self.ui.graphicsView.pos_y_parameter,
             self.ui.graphicsView.color_parameter,
+            self.ui.graphicsView.arc_width_parameter,
         }
-        if pnames & graph_pnames:
+        if pnames & position_pnames:
             self.rebuild_graph()
             return
+        if pnames & property_pnames:
+            self.polish_items()
         for db_map in self.db_maps:
             if self.db_mngr.can_fetch_more(db_map, self._parameter_value_fetch_parent):
                 self.db_mngr.fetch_more(db_map, self._parameter_value_fetch_parent)
+
+    def polish_items(self):
+        self._update_property_pvs()
+        self._do_polish_items()
+
+    def _update_property_pvs(self):
+        self._pvs_by_pname = {
+            pname: {
+                (db_map, ent_id): self._get_pv(db_map, ent_id, pname)
+                for db_map_ent_ids in self.db_map_entity_id_sets
+                for db_map, ent_id in db_map_ent_ids
+            }
+            for pname in (self.ui.graphicsView.color_parameter, self.ui.graphicsView.arc_width_parameter)
+            if pname
+        }
+        self._val_ranges_by_pname = {pname: _min_max(pvs.values()) for pname, pvs in self._pvs_by_pname.items()}
+        if self._val_ranges_by_pname:
+            legend = [
+                (legend_type, pname, self._val_ranges_by_pname.get(pname))
+                for (legend_type, pname) in (
+                    ("color", self.ui.graphicsView.color_parameter),
+                    ("arc_width", self.ui.graphicsView.arc_width_parameter),
+                )
+            ]
+            self.ui.legend_widget.show()
+            self.ui.legend_widget.set_legend(legend)
+        else:
+            self.ui.legend_widget.hide()
+        ts_pvs = [pv for pname, pvs in self._pvs_by_pname.items() for pv in pvs.values() if isinstance(pv, TimeSeries)]
+        if ts_pvs:
+            min_, max_ = _min_max_indexes(ts_pvs)
+            self.ui.time_line_widget.set_index_range(min_, max_)
+        else:
+            self.ui.time_line_widget.hide()
+
+    def _do_polish_items(self):
+        for item in self.ui.graphicsView.entity_items:
+            item.polish()
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
@@ -370,22 +454,17 @@ class GraphViewMixin:
             db_map_element_id_lists[db_map, entity["id"]] = db_map_element_id_list
         db_map_entity_ids_by_key = {}
         for db_map_entity_id in db_map_entity_ids:
-            key = self._get_entity_key(db_map_entity_id)
+            key = self.get_entity_key(db_map_entity_id)
             db_map_entity_ids_by_key.setdefault(key, set()).add(db_map_entity_id)
         new_db_map_entity_id_sets = list(db_map_entity_ids_by_key.values())
         if new_db_map_entity_id_sets == self.db_map_entity_id_sets:
             return False
         self.db_map_entity_id_sets = new_db_map_entity_id_sets
         self._update_entity_element_inds(db_map_element_id_lists)
-        possible_colors = {
-            self._get_item_color(db_map, ent_id)
-            for db_map_ent_ids in self.db_map_entity_id_sets
-            for db_map, ent_id in db_map_ent_ids
-        }
-        self._possible_colors = {c: k for k, c in enumerate(possible_colors)}
+        self._update_property_pvs()
         return True
 
-    def _get_entity_key(self, db_map_entity_id):
+    def get_entity_key(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
         entity = self.db_mngr.get_item(db_map, "entity", entity_id)
         key = (entity["class_name"], entity["dimension_name_list"], entity["byname"])
@@ -411,8 +490,11 @@ class GraphViewMixin:
             self.entity_inds.append(ent_ind)
             self.element_inds.append(el_ind)
 
-    def _get_pv(self, db_map, entity, pname):
-        if not entity or not pname:
+    def _get_pv(self, db_map, entity_id, pname):
+        if not pname:
+            return None
+        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
+        if not entity:
             return None
         alternative = next(iter(self.db_mngr.get_items(db_map, "alternative", only_visible=False)), None)
         if not alternative:
@@ -431,30 +513,42 @@ class GraphViewMixin:
         return from_database(pv["value"], pv["type"])
 
     def get_item_name(self, db_map, entity_id):
-        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
         if not self.ui.graphicsView.name_parameter:
+            entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
             return entity["name"]
-        name = self._get_pv(db_map, entity, self.ui.graphicsView.name_parameter)
-        if isinstance(name, str):
-            return name
-        return ""
-
-    def _get_item_color(self, db_map, entity_id):
-        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
-        return self._get_pv(db_map, entity, self.ui.graphicsView.color_parameter)
+        return self._get_pv(db_map, entity_id, self.ui.graphicsView.name_parameter)
 
     def get_item_color(self, db_map, entity_id):
-        if len(self._possible_colors) == 1:
-            return None
-        color = self._get_item_color(db_map, entity_id)
-        k = self._possible_colors.get(color)
-        return k, len(self._possible_colors)
+        return self._get_item_property(db_map, entity_id, self.ui.graphicsView.color_parameter)
 
-    def _get_fixed_pos(self, db_map_entity_id):
-        db_map, entity_id = db_map_entity_id
-        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
+    def get_arc_width(self, db_map, entity_id):
+        return self._get_item_property(db_map, entity_id, self.ui.graphicsView.arc_width_parameter)
+
+    def _get_item_property(self, db_map, entity_id, pname):
+        """Returns a tuple of (min_value, value, max_value) for given entity and property.
+        Returns (0, 0, 0) if the property is not defined for the entity.
+        Returns None if the property is not defined for *any* entity.
+
+        Returns:
+            tuple or None
+        """
+        pvs = self._pvs_by_pname.get(pname, {})
+        if not pvs:
+            return None
+        pv = pvs.get((db_map, entity_id))
+        if pv is None:
+            return (0, 0, 0)
+        val = _get_value(pv, self._time_line_index)
+        if val is None:
+            return (0, 0, 0)
+        # NOTE: By construction, self._val_ranges_by_pname has the same keys as self._pvs_by_pname
+        val_range = self._val_ranges_by_pname[pname]
+        min_val, max_val = val_range
+        return min_val, val, max_val
+
+    def _get_fixed_pos(self, db_map, entity_id):
         pos_x, pos_y = [
-            self._get_pv(db_map, entity, pname)
+            self._get_pv(db_map, entity_id, pname)
             for pname in (self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter)
         ]
         if isinstance(pos_x, float) and isinstance(pos_y, float):
@@ -474,7 +568,7 @@ class GraphViewMixin:
                     fixed_positions[item.first_db_map, item.first_id] = {"x": item.pos().x(), "y": item.pos().y()}
         for db_map_entity_ids in self.db_map_entity_id_sets:
             for db_map_entity_id in db_map_entity_ids:
-                fixed_positions[db_map_entity_id] = self._get_fixed_pos(db_map_entity_id)
+                fixed_positions[db_map_entity_id] = self._get_fixed_pos(*db_map_entity_id)
         heavy_positions = {
             ind: fixed_positions[db_map_entity_id]
             for ind, db_map_entity_ids in enumerate(self.db_map_entity_id_sets)
