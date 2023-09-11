@@ -86,6 +86,7 @@ class GraphViewMixin:
         self.db_map_entity_id_sets = []
         self.entity_inds = []
         self.element_inds = []
+        self.entity_offsets = {}
         self._pvs_by_pname = {}
         self._val_ranges_by_pname = {}
         self._connecting_entities = False
@@ -475,17 +476,30 @@ class GraphViewMixin:
     def _update_entity_element_inds(self, db_map_element_id_lists):
         self.entity_inds = []
         self.element_inds = []
+        self.entity_offsets = {}
         ent_ind_lookup = {
             db_map_ent_id: k
             for k, db_map_ent_ids in enumerate(self.db_map_entity_id_sets)
             for db_map_ent_id in db_map_ent_ids
         }
+        ent_inds_by_sorted_el_inds = {}
         edges = {}
         for db_map_entity_id, db_map_element_id_list in db_map_element_id_lists.items():
             el_inds = [ent_ind_lookup[db_map_el_id] for db_map_el_id in db_map_element_id_list]
             ent_ind = ent_ind_lookup[db_map_entity_id]
-            for el_ind in el_inds:
+            sorted_el_inds = tuple(sorted(el_inds))
+            ent_inds_by_sorted_el_inds.setdefault(sorted_el_inds, []).append(ent_ind)
+            for el_ind in sorted_el_inds:
                 edges[ent_ind, el_ind] = None
+        ent_inds_by_sorted_el_inds.pop((), None)
+        for ent_inds in ent_inds_by_sorted_el_inds.values():
+            count = len(ent_inds)
+            if count == 1:
+                continue
+            offsets = list(range(len(ent_inds)))  # [0, 1, 3, ...]
+            center = sum(offsets) / len(offsets)
+            for ent_ind, offset in zip(ent_inds, offsets):
+                self.entity_offsets[ent_ind] = (offset - center) / len(offsets)
         for ent_ind, el_ind in edges:  # pylint: disable=dict-iter-missing-items
             self.entity_inds.append(ent_ind)
             self.element_inds.append(el_ind)
@@ -601,7 +615,13 @@ class GraphViewMixin:
             y (list)
         """
         self.entity_items = [
-            EntityItem(self, *self.convert_position(x[i], y[i]), self.VERTEX_EXTENT, tuple(db_map_entity_ids))
+            EntityItem(
+                self,
+                *self.convert_position(x[i], y[i]),
+                self.VERTEX_EXTENT,
+                tuple(db_map_entity_ids),
+                offset=self.entity_offsets.get(i)
+            )
             for i, db_map_entity_ids in enumerate(self.db_map_entity_id_sets)
         ]
         self.arc_items = [
