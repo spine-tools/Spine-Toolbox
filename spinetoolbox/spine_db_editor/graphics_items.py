@@ -98,11 +98,16 @@ class EntityItem(QGraphicsRectItem):
         self.setToolTip(self._make_tool_tip())
         self._highlight_color = Qt.transparent
         self._extent = None
+        self.label_item = EntityLabelItem(self)
 
     def _make_tool_tip(self):
         raise NotImplementedError()
 
     def default_parameter_data(self):
+        raise NotImplementedError()
+
+    @property
+    def has_dimensions(self):
         raise NotImplementedError()
 
     @property
@@ -243,7 +248,7 @@ class EntityItem(QGraphicsRectItem):
 
     def _get_arc_width(self):
         for db_map, id_ in self.db_map_ids:
-            arc_width = self._spine_db_editor.get_arc_width(db_map, id_)
+            arc_width = self._spine_db_editor.get_arc_width(db_map, self.entity_type, id_)
             if arc_width is not None:
                 min_val, val, max_val = arc_width
                 range_ = max_val - min_val
@@ -252,9 +257,6 @@ class EntityItem(QGraphicsRectItem):
                 # val == min_val => result = 1
                 # val == max_val => result = 5
                 return 1 + 9 * (val - min_val) / range_
-
-    def _has_name(self):
-        return True
 
     def _set_up(self):
         if self._has_name():
@@ -280,7 +282,7 @@ class EntityItem(QGraphicsRectItem):
 
     def polish(self):
         self._renderer = self.db_mngr.entity_class_renderer(
-            self.first_db_map, self.first_entity_class_id, color_code=self._get_color()
+            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color_code=self._get_color()
         )
         self._svg_item.setSharedRenderer(self._renderer)
         self._update_arcs_width()
@@ -301,7 +303,7 @@ class EntityItem(QGraphicsRectItem):
     def refresh_icon(self):
         """Refreshes the icon."""
         renderer = self.db_mngr.entity_class_renderer(
-            self.first_db_map, self.first_entity_class_id, color_code=self._get_color()
+            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color_code=self._get_color()
         )
         self._set_renderer(renderer)
 
@@ -483,7 +485,11 @@ class RelationshipItem(EntityItem):
             db_map_ids (tuple): tuple of (db_map, id) tuples
         """
         super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
-        self._update_all()
+        self._set_up()
+
+    @property
+    def has_dimensions(self):
+        return True
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -529,18 +535,6 @@ class RelationshipItem(EntityItem):
             f"""{DB_ITEM_SEPARATOR.join(self.object_name_list)}<br>"""
             f"""@{self.display_database}</p></html>"""
         )
-
-    def _update_all(self):
-        self._extent = 0.5 * self._given_extent
-        self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
-        self.refresh_icon()
-        self._init_bg()
-
-    def _init_bg(self):
-        extent = self._extent
-        self._bg = QGraphicsEllipseItem(-0.5 * extent, -0.5 * extent, extent, extent, self)
-        self._bg.setPen(Qt.NoPen)
-        self._bg_brush = QGuiApplication.palette().button()
 
     def add_arc_item(self, arc_item):
         super().add_arc_item(arc_item)
@@ -595,10 +589,12 @@ class ObjectItem(EntityItem):
         """
         super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
         self._db_map_relationship_class_lists = {}
-        self.label_item = ObjectLabelItem(self)
         self.setZValue(0.5)
-        self.update_name()
-        self._update_all()
+        self._set_up()
+
+    @property
+    def has_dimensions(self):
+        return False
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -623,43 +619,10 @@ class ObjectItem(EntityItem):
     def _has_name(self):
         return bool(self.label_item.toPlainText())
 
-    def _update_all(self):
-        if not self._has_name():
-            self.label_item.hide()
-            self._extent = 0.2 * self._given_extent
-        else:
-            self.label_item.show()
-            self._extent = self._given_extent
-        self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
-        self.refresh_icon()
-        self._init_bg()
-
-    def update_name(self):
-        """Refreshes the name."""
-        db_map_ids_by_name = dict()
-        for db_map, id_ in self.db_map_ids:
-            name = self._spine_db_editor.get_item_name(db_map, self.entity_type, id_)
-            db_map_ids_by_name.setdefault(name, list()).append((db_map, id_))
-        if len(db_map_ids_by_name) == 1:
-            name = next(iter(db_map_ids_by_name))
-            self.label_item.setPlainText(name)
-            return True
-        current_name = self.label_item.toPlainText()
-        self._db_map_ids = tuple(db_map_ids_by_name.get(current_name, ()))
-        return False
-
     def _make_tool_tip(self):
         if not self.first_id:
             return None
         return f"<html><p style='text-align:center;'>{self.entity_name}<br>@{self.display_database}</html>"
-
-    def _init_bg(self):
-        bg_rect = QRectF(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
-        self._bg = QGraphicsRectItem(bg_rect, self)
-        self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
-        pen = self._bg.pen()
-        pen.setColor(Qt.transparent)
-        self._bg.setPen(pen)
 
     def mouseDoubleClickEvent(self, e):
         add_relationships_menu = QMenu(self._spine_db_editor)
@@ -968,8 +931,8 @@ class CrossHairsArcItem(ArcItem):
         return pen
 
 
-class ObjectLabelItem(QGraphicsTextItem):
-    """Provides a label for ObjectItem's."""
+class EntityLabelItem(QGraphicsTextItem):
+    """Provides a label for EntityItem's."""
 
     entity_name_edited = Signal(str)
 
