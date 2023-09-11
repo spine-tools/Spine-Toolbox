@@ -460,20 +460,16 @@ class GraphViewMixin:
 
     def _get_object_key(self, db_map_object_id):
         db_map, object_id = db_map_object_id
-        key = self.get_item_name(db_map, "object", object_id)
-        if not key:
-            object_ = self.db_mngr.get_item(db_map, "object", object_id)
-            key = (object_["class_name"], object_["name"])
+        object_ = self.db_mngr.get_item(db_map, "object", object_id)
+        key = (object_["class_name"], object_["name"])
         if not self.ui.graphicsView.merge_dbs:
             key += (db_map.codename,)
         return key
 
     def _get_relationship_key(self, db_map_relationship_id):
         db_map, relationship_id = db_map_relationship_id
-        key = self.get_item_name(db_map, "relationship", relationship_id)
-        if not key:
-            relationship = self.db_mngr.get_item(db_map, "relationship", relationship_id)
-            key = (relationship["class_name"], relationship["object_class_name_list"], relationship["object_name_list"])
+        relationship = self.db_mngr.get_item(db_map, "relationship", relationship_id)
+        key = (relationship["class_name"], relationship["object_class_name_list"], relationship["object_name_list"])
         if not self.ui.graphicsView.merge_dbs:
             key += (db_map.codename,)
         return key
@@ -598,6 +594,10 @@ class GraphViewMixin:
             max_iters=max_iters,
         )
 
+    @staticmethod
+    def convert_position(x, y):
+        return (x, -y)
+
     def _make_new_items(self, x, y):
         """Returns new items for the graph.
 
@@ -606,7 +606,7 @@ class GraphViewMixin:
             y (list)
         """
         self.object_items = [
-            ObjectItem(self, x[i], y[i], self.VERTEX_EXTENT, tuple(db_map_object_ids))
+            ObjectItem(self, *self.convert_position(x[i], y[i]), self.VERTEX_EXTENT, tuple(db_map_object_ids))
             for i, db_map_object_ids in enumerate(self.db_map_object_id_sets)
         ]
         offset = len(self.object_items)

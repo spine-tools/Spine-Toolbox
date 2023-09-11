@@ -475,8 +475,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
                     [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
                 )
                 data.setdefault("object_parameter_values", []).extend(
-                    [(class_name, item.entity_name, self.pos_x_parameter, item.pos().x()) for item in obj_items]
-                    + [(class_name, item.entity_name, self.pos_y_parameter, item.pos().y()) for item in obj_items]
+                    [
+                        (class_name, item.entity_name, pname, value)
+                        for item in obj_items
+                        for pname, value in zip(
+                            (self.pos_x_parameter, self.pos_y_parameter),
+                            self._spine_db_editor.convert_position(item.pos().x(), item.pos().y()),
+                        )
+                    ]
                 )
         for db_map, class_rel_items in db_map_class_rel_items.items():
             data = db_map_data.setdefault(db_map, {})
@@ -485,8 +491,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
                     [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
                 )
                 data.setdefault("relationship_parameter_values", []).extend(
-                    [(class_name, item.object_name_list, self.pos_x_parameter, item.pos().x()) for item in rel_items]
-                    + [(class_name, item.object_name_list, self.pos_y_parameter, item.pos().y()) for item in rel_items]
+                    [
+                        (class_name, item.object_name_list, pname, value)
+                        for item in rel_items
+                        for pname, value in zip(
+                            (self.pos_x_parameter, self.pos_y_parameter),
+                            self._spine_db_editor.convert_position(item.pos().x(), item.pos().y()),
+                        )
+                    ]
                 )
         self.db_mngr.import_data(db_map_data)
 
