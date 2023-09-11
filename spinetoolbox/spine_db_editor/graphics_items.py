@@ -12,7 +12,7 @@
 """
 Classes for drawing graphics items on graph view's QGraphicsScene.
 """
-from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF
+from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -62,7 +62,7 @@ def make_figure_graphics_item(scene, z=0, static=True):
 class EntityItem(QGraphicsRectItem):
     """Base class for ObjectItem and RelationshipItem."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_ids):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_ids, offset=None):
         """
         Args:
             spine_db_editor (SpineDBEditor): 'owner'
@@ -76,6 +76,7 @@ class EntityItem(QGraphicsRectItem):
         self.db_mngr = spine_db_editor.db_mngr
         self._given_extent = extent
         self._db_map_ids = db_map_ids
+        self._offset = offset
         self._dx = self._dy = 0
         self._removed_db_map_ids = ()
         self.arc_items = []
@@ -367,12 +368,19 @@ class EntityItem(QGraphicsRectItem):
         self._svg_item.setRotation(-line.angle())
 
     def update_entity_pos(self):
-        el_items = {arc_item.obj_item for arc_item in self.arc_items}
+        el_items = [arc_item.obj_item for arc_item in self.arc_items]
         dim_count = len(el_items)
         if not dim_count:
             return
         new_pos_x = sum(el_item.pos().x() for el_item in el_items) / dim_count
         new_pos_y = sum(el_item.pos().y() for el_item in el_items) / dim_count
+        if self._offset:
+            el_item = el_items[0]
+            line = QLineF(QPointF(new_pos_x, new_pos_y), el_item.pos()).normalVector()
+            if self._offset < 0:
+                line.setAngle(line.angle() + 180)
+            line.setLength(abs(self._offset) * self._extent)
+            new_pos_x, new_pos_y = line.x2(), line.y2()
         self.setPos(new_pos_x, new_pos_y)
         self.update_arcs_line()
 

@@ -97,6 +97,7 @@ class GraphViewMixin:
         self.db_map_relationship_id_sets = list()
         self.src_inds = list()
         self.dst_inds = list()
+        self.entity_offsets = {}
         self._pvs_by_pname = {}
         self._pv_cache = {}
         self._val_ranges_by_pname = {}
@@ -573,6 +574,7 @@ class GraphViewMixin:
     def _update_src_dst_inds(self, db_map_object_id_lists):
         self.src_inds = list()
         self.dst_inds = list()
+        self.entity_offsets = {}
         obj_ind_lookup = {
             db_map_obj_id: k
             for k, db_map_obj_ids in enumerate(self.db_map_object_id_sets)
@@ -583,12 +585,24 @@ class GraphViewMixin:
             for k, db_map_rel_ids in enumerate(self.db_map_relationship_id_sets)
             for db_map_rel_id in db_map_rel_ids
         }
+        ent_inds_by_sorted_obj_inds = {}
         edges = dict()
         for db_map_rel_id, db_map_object_id_list in db_map_object_id_lists.items():
             object_inds = [obj_ind_lookup[db_map_obj_id] for db_map_obj_id in db_map_object_id_list]
             relationship_ind = rel_ind_lookup[db_map_rel_id]
-            for object_ind in object_inds:
+            sorted_object_inds = tuple(sorted(object_inds))
+            ent_inds_by_sorted_obj_inds.setdefault(sorted_object_inds, []).append(relationship_ind)
+            for object_ind in sorted_object_inds:
                 edges[relationship_ind, object_ind] = None
+        ent_inds_by_sorted_obj_inds.pop((), None)
+        for ent_inds in ent_inds_by_sorted_obj_inds.values():
+            count = len(ent_inds)
+            if count == 1:
+                continue
+            offsets = list(range(len(ent_inds)))  # [0, 1, 3, ...]
+            center = sum(offsets) / len(offsets)
+            for ent_ind, offset in zip(ent_inds, offsets):
+                self.entity_offsets[ent_ind] = (offset - center) / len(offsets)
         for src, dst in edges:  # pylint: disable=dict-iter-missing-items
             self.src_inds.append(src)
             self.dst_inds.append(dst)
@@ -738,15 +752,20 @@ class GraphViewMixin:
             ObjectItem(self, *self.convert_position(x[i], y[i]), self.VERTEX_EXTENT, tuple(db_map_object_ids))
             for i, db_map_object_ids in enumerate(self.db_map_object_id_sets)
         ]
-        offset = len(self.object_items)
+        obj_item_count = len(self.object_items)
         self.relationship_items = [
             RelationshipItem(
-                self, x[offset + i], y[offset + i], 0.5 * self.VERTEX_EXTENT, tuple(db_map_relationship_id)
+                self,
+                x[obj_item_count + i],
+                y[obj_item_count + i],
+                0.5 * self.VERTEX_EXTENT,
+                tuple(db_map_relationship_id),
+                offset=self.entity_offsets.get(i),
             )
             for i, db_map_relationship_id in enumerate(self.db_map_relationship_id_sets)
         ]
         self.arc_items = [
-            ArcItem(self.relationship_items[rel_ind - offset], self.object_items[obj_ind], self._ARC_WIDTH)
+            ArcItem(self.relationship_items[rel_ind - obj_item_count], self.object_items[obj_ind], self._ARC_WIDTH)
             for rel_ind, obj_ind in zip(self.src_inds, self.dst_inds)
         ]
         return any(self.object_items)
