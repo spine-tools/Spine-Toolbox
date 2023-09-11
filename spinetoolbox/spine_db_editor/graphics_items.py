@@ -357,8 +357,17 @@ class EntityItem(QGraphicsRectItem):
         self._rotate_svg_item()
         self.update_entity_pos()
 
+    def _rotate_svg_item(self):
+        if len(self.arc_items) != 2:
+            self._svg_item.setRotation(0)
+            return
+        arc1, arc2 = self.arc_items  # pylint: disable=unbalanced-tuple-unpacking
+        obj1, obj2 = arc1.obj_item, arc2.obj_item
+        line = QLineF(obj1.pos(), obj2.pos())
+        self._svg_item.setRotation(-line.angle())
+
     def update_entity_pos(self):
-        el_items = {arc_item.el_item for arc_item in self.arc_items}
+        el_items = {arc_item.obj_item for arc_item in self.arc_items}
         dim_count = len(el_items)
         if not dim_count:
             return
@@ -539,26 +548,6 @@ class RelationshipItem(EntityItem):
             f"""@{self.display_database}</p></html>"""
         )
 
-    def add_arc_item(self, arc_item):
-        super().add_arc_item(arc_item)
-        self._rotate_svg_item()
-        self.update_entity_pos()
-
-    def update_entity_pos(self):
-        object_id_list = self.object_id_list(self.first_db_map)
-        if object_id_list is None:
-            return
-        dim_count = len(object_id_list)
-        if not dim_count:
-            return
-        el_items = {arc_item.obj_item for arc_item in self.arc_items}
-        if len(el_items) != dim_count:
-            return
-        new_pos_x = sum(el_item.pos().x() for el_item in el_items) / dim_count
-        new_pos_y = sum(el_item.pos().y() for el_item in el_items) / dim_count
-        self.setPos(new_pos_x, new_pos_y)
-        self.update_arcs_line()
-
     def itemChange(self, change, value):
         """Rotates svg item if the relationship is 2D.
         This makes it possible to define e.g. an arow icon for relationships that express direction.
@@ -566,15 +555,6 @@ class RelationshipItem(EntityItem):
         if change == QGraphicsItem.ItemScenePositionHasChanged:
             self._rotate_svg_item()
         return super().itemChange(change, value)
-
-    def _rotate_svg_item(self):
-        if len(self.arc_items) != 2:
-            self._svg_item.setRotation(0)
-            return
-        arc1, arc2 = self.arc_items  # pylint: disable=unbalanced-tuple-unpacking
-        obj1, obj2 = arc1.obj_item, arc2.obj_item
-        line = QLineF(obj1.pos(), obj2.pos())
-        self._svg_item.setRotation(-line.angle())
 
 
 class ObjectItem(EntityItem):
