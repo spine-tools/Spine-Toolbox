@@ -760,7 +760,7 @@ class GraphViewMixin:
                 y[obj_item_count + i],
                 0.5 * self.VERTEX_EXTENT,
                 tuple(db_map_relationship_id),
-                offset=self.entity_offsets.get(i),
+                offset=self.entity_offsets.get(obj_item_count + i),
             )
             for i, db_map_relationship_id in enumerate(self.db_map_relationship_id_sets)
         ]

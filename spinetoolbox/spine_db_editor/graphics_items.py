@@ -491,7 +491,7 @@ class EntityItem(QGraphicsRectItem):
 class RelationshipItem(EntityItem):
     """Represents a relationship in the Entity graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_ids):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_ids, offset=None):
         """Initializes the item.
 
         Args:
@@ -501,7 +501,7 @@ class RelationshipItem(EntityItem):
             extent (int): preferred extent
             db_map_ids (tuple): tuple of (db_map, id) tuples
         """
-        super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
+        super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids, offset=offset)
         self._set_up()
 
     @property
