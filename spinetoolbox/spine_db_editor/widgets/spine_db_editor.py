@@ -458,19 +458,20 @@ class SpineDBEditorBase(QMainWindow):
             self,
             "Import file",
             self._get_base_dir(),
-            "All files (*);;  SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
+            "All files (*);;SQLite files (*.sqlite);;JSON files (*.json);;Excel files (*.xlsx)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
             return
-        if selected_filter.startswith("JSON"):
+        extension = os.path.splitext(file_path)[1].lower()
+        if extension == ".json":
             self.import_from_json(file_path)
-        elif selected_filter.startswith("SQLite"):
+        elif extension == ".sqlite":
             self.import_from_sqlite(file_path)
-        elif selected_filter.startswith("Excel"):
+        elif extension == "xlsx":
             self.import_from_excel(file_path)
         else:
-            raise ValueError()
+            self.msg_error.emit(f"Unrecognized file type {extension} - must be a .json, .sqlite, or .xlsx file")
 
     def import_from_json(self, file_path):
         with open(file_path) as f:
