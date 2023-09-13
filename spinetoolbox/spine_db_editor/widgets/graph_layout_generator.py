@@ -13,32 +13,8 @@
 Contains the GraphLayoutGeneratorRunnable class.
 """
 
-import numpy as np
 from PySide6.QtCore import Signal, Slot, QObject, QRunnable
 from spinedb_api.graph_layout_generator import GraphLayoutGenerator
-from spinetoolbox.helpers import busy_effect
-
-
-@busy_effect
-def make_heat_map(x, y, values):
-    values = np.array(values)
-    min_x, min_y, max_x, max_y = min(x), min(y), max(x), max(y)
-    tick_count = round(len(values) ** 2)
-    xticks = np.linspace(min_x, max_x, tick_count)
-    yticks = np.linspace(min_y, max_y, tick_count)
-    xv, yv = np.meshgrid(xticks, yticks)
-    try:
-        import scipy.interpolate  # pylint: disable=import-outside-toplevel
-
-        points = np.column_stack((x, y))
-        heat_map = scipy.interpolate.griddata(points, values, (xv, yv), method="cubic")
-    except ImportError:
-        import matplotlib.tri as tri  # pylint: disable=import-outside-toplevel
-
-        triang = tri.Triangulation(x, y)
-        interpolator = tri.CubicTriInterpolator(triang, values)
-        heat_map = interpolator(xv, yv)
-    return heat_map, xv, yv, min_x, min_y, max_x, max_y
 
 
 class GraphLayoutGeneratorRunnable(QRunnable):

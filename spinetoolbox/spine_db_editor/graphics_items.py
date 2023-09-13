@@ -12,7 +12,8 @@
 """
 Classes for drawing graphics items on graph view's QGraphicsScene.
 """
-from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF
+from enum import Enum, auto
+from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF, QObject
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -24,39 +25,11 @@ from PySide6.QtWidgets import (
     QApplication,
     QMenu,
 )
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvas  # pylint: disable=no-name-in-module
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, color_from_index
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
-
-
-def make_figure_graphics_item(scene, z=0, static=True):
-    """Creates a FigureCanvas and adds it to the given scene.
-    Used for creating heatmaps and associated colorbars.
-
-    Args:
-        scene (QGraphicsScene)
-        z (int, optional): z value. Defaults to 0.
-        static (bool, optional): if True (the default) the figure canvas is not movable
-
-    Returns:
-        QGraphicsProxyWidget: the graphics item that represents the canvas
-        Figure: the figure in the canvas
-    """
-    figure = Figure(tight_layout={"pad": 0})
-    axes = figure.gca(xmargin=0, ymargin=0, frame_on=None)
-    axes.get_xaxis().set_visible(False)
-    axes.get_yaxis().set_visible(False)
-    canvas = FigureCanvas(figure)
-    if static:
-        proxy_widget = scene.addWidget(canvas)
-        proxy_widget.setAcceptedMouseButtons(Qt.NoButton)
-    else:
-        proxy_widget = scene.addWidget(canvas, Qt.Window)
-    proxy_widget.setZValue(z)
-    return proxy_widget, figure
 
 
 class EntityItem(QGraphicsRectItem):
@@ -259,8 +232,6 @@ class EntityItem(QGraphicsRectItem):
                 range_ = max_val - min_val
                 if range_ == 0:
                     return None
-                # val == min_val => result = 1
-                # val == max_val => result = 5
                 return 1 + 9 * (val - min_val) / range_
 
     def _has_name(self):
@@ -863,3 +834,146 @@ class EntityLabelItem(QGraphicsTextItem):
         y = rectf.height() + 4
         self.setPos(x, y)
         self.bg.setRect(self.boundingRect())
+
+
+class BgItem(QGraphicsRectItem):
+    class Anchor(Enum):
+        TL = auto()
+        TR = auto()
+        BL = auto()
+        BR = auto()
+
+    _getter_setter = {
+        Anchor.TL: ("topLeft", "setTopLeft"),
+        Anchor.TR: ("topRight", "setTopRight"),
+        Anchor.BL: ("bottomLeft", "setBottomLeft"),
+        Anchor.BR: ("bottomRight", "setBottomRight"),
+    }
+
+    _cursors = {
+        Anchor.TL: Qt.SizeFDiagCursor,
+        Anchor.TR: Qt.SizeBDiagCursor,
+        Anchor.BL: Qt.SizeBDiagCursor,
+        Anchor.BR: Qt.SizeFDiagCursor,
+    }
+
+    def __init__(self, file_path, parent=None):
+        super().__init__(parent)
+        self._renderer = QSvgRenderer()
+        self._svg_item = _ResizableQGraphicsSvgItem(self, parent=self)
+        _loading_ok = self._renderer.load(file_path)
+        self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
+        self._svg_item.setSharedRenderer(self._renderer)
+        self._scaling_factor = None
+        size = self._renderer.defaultSize()
+        self.setRect(0, 0, size.width(), size.height())
+        self.setZValue(-1000)
+        self.setPen(Qt.NoPen)
+        self.setAcceptHoverEvents(True)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self._resizers = {anchor: _Resizer(parent=self) for anchor in self.Anchor}
+        for anchor, resizer in self._resizers.items():
+            resizer.resized.connect(lambda delta, strong, anchor=anchor: self._resize(anchor, delta, strong))
+            resizer.setCursor(self._cursors[anchor])
+            resizer.hide()
+
+    def hoverEnterEvent(self, ev):
+        super().hoverEnterEvent(ev)
+        for resizer in self._resizers.values():
+            resizer.show()
+
+    def hoverLeaveEvent(self, ev):
+        super().hoverLeaveEvent(ev)
+        for resizer in self._resizers.values():
+            resizer.hide()
+
+    def apply_zoom(self, factor):
+        self._scaling_factor = factor
+        self._place_resizers()
+
+    def _place_resizers(self):
+        for anchor, resizer in self._resizers.items():
+            getter, _ = self._getter_setter[anchor]
+            resizer.setPos(
+                getattr(self.rect(), getter)() - resizer.rect().center() / self.scale() / self._scaling_factor
+            )
+
+    def _resize(self, anchor, delta, strong):
+        delta /= self.scale() * self._scaling_factor
+        rect = self.rect()
+        getter, setter = self._getter_setter[anchor]
+        get_point = getattr(rect, getter)
+        set_point = getattr(rect, setter)
+        set_point(get_point() + delta)
+        self._do_resize(rect, strong)
+
+    def _do_resize(self, rect, strong):
+        if strong:
+            self._svg_item.resize(rect.width(), rect.height())
+            self._svg_item.setPos(rect.topLeft())
+            self.setPen(Qt.NoPen)
+        else:
+            self.setPen(QPen(Qt.DashLine))
+        self.setRect(rect)
+        self.prepareGeometryChange()
+        self.update()
+        self._place_resizers()
+
+    def fit_rect(self, rect):
+        h_scale = rect.width() / self.rect().width()
+        v_scale = rect.height() / self.rect().height()
+        self.setPos(rect.topLeft())
+        self.setScale(min(h_scale, v_scale))
+
+
+class _ResizableQGraphicsSvgItem(QGraphicsSvgItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._width = 0
+        self._height = 0
+        self.setFlag(QGraphicsItem.ItemStacksBehindParent, True)
+
+    def resize(self, width, height):
+        self._width = width
+        self._height = height
+        self.prepareGeometryChange()
+        self.update()
+
+    def setSharedRenderer(self, renderer):
+        super().setSharedRenderer(renderer)
+        self._width = renderer.defaultSize().width()
+        self._height = renderer.defaultSize().height()
+
+    def boundingRect(self):
+        return QRectF(0, 0, self._width, self._height)
+
+    def paint(self, painter, options, widget):
+        self.renderer().render(painter, self.boundingRect())
+
+
+class _Resizer(QGraphicsRectItem):
+    class SignalsProvider(QObject):
+        resized = Signal(QPointF, bool)
+
+    def __init__(self, rect=QRectF(0, 0, 12, 12), parent=None):
+        super().__init__(rect, parent)
+        self._original_rect = self.rect()
+        self._press_pos = None
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+        self._signal_provider = self.SignalsProvider()
+        self.resized = self._signal_provider.resized
+
+    def mousePressEvent(self, ev):
+        super().mousePressEvent(ev)
+        self._press_pos = ev.pos()
+
+    def mouseMoveEvent(self, ev):
+        super().mouseMoveEvent(ev)
+        delta = ev.pos() - self._press_pos
+        self._signal_provider.resized.emit(delta, False)
+
+    def mouseReleaseEvent(self, ev):
+        super().mouseReleaseEvent(ev)
+        delta = ev.pos() - self._press_pos
+        self._signal_provider.resized.emit(delta, True)

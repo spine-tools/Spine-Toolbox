@@ -20,7 +20,7 @@ from PySide6.QtCore import Slot, QTimer, QThreadPool
 from spinedb_api import from_database
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ...helpers import get_save_file_name_in_last_dir, busy_effect
+from ...helpers import get_save_file_name_in_last_dir, get_open_file_name_in_last_dir, busy_effect
 from ...fetch_parent import FlexibleFetchParent
 from ..graphics_items import EntityItem, ArcItem, CrossHairsItem, CrossHairsEntityItem, CrossHairsArcItem
 from .graph_layout_generator import GraphLayoutGenerator, GraphLayoutGeneratorRunnable
@@ -382,8 +382,7 @@ class GraphViewMixin:
         self.ui.graphicsView.removed_items.clear()
         self.ui.graphicsView.selected_items.clear()
         self.ui.graphicsView.hidden_items.clear()
-        self.ui.graphicsView.heat_map_items.clear()
-        self.scene.clear()
+        self.ui.graphicsView.clear_scene()
         if self._make_new_items(x, y):
             self._add_new_items()  # pylint: disable=no-value-for-parameter
         if not self._persistent:
@@ -688,10 +687,18 @@ class GraphViewMixin:
         dialog = AddEntitiesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def get_pdf_file_path(self):
+    def get_save_file_path(self, group, caption, filters):
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_save_file_name_in_last_dir(
-            self.qsettings, "exportGraphAsPDF", self, "Export as PDF...", self._get_base_dir(), "PDF files (*.pdf)"
+            self.qsettings, group, self, caption, self._get_base_dir(), filters
+        )
+        self.qsettings.endGroup()
+        return file_path
+
+    def get_open_file_path(self, group, caption, filters):
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_open_file_name_in_last_dir(
+            self.qsettings, group, self, caption, self._get_base_dir(), filters
         )
         self.qsettings.endGroup()
         return file_path
