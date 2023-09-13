@@ -74,7 +74,7 @@ class EntityItem(QGraphicsRectItem):
         self.label_item.setVisible(not self.has_dimensions)
         self.setZValue(0.5 if not self.has_dimensions else 0.25)
         self._extent = None
-        self._set_up()
+        self.set_up()
 
     @property
     def has_dimensions(self):
@@ -237,7 +237,7 @@ class EntityItem(QGraphicsRectItem):
     def _has_name(self):
         return True
 
-    def _set_up(self):
+    def set_up(self):
         if self._has_name():
             name = self._get_name()
             if not name:
@@ -259,7 +259,7 @@ class EntityItem(QGraphicsRectItem):
         self.refresh_icon()
         self.update_entity_pos()
 
-    def polish(self):
+    def update_props(self):
         self._renderer = self.db_mngr.entity_class_renderer(
             self.first_db_map, self.first_entity_class_id, color_code=self._get_color()
         )
