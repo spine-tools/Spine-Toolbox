@@ -61,11 +61,12 @@ def _min_max_indexes(pvs):
 
 
 class GraphViewMixin:
-    """Provides the graph view for the DS form."""
+    """Provides the graph view for the DB editor."""
 
-    VERTEX_EXTENT = 64
-    _ARC_WIDTH = 0.05 * VERTEX_EXTENT
-    _ARC_LENGTH_HINT = 1.0 * VERTEX_EXTENT
+    NOT_SPECIFIED = object()
+    _VERTEX_EXTENT = 64
+    _ARC_WIDTH = 0.05 * _VERTEX_EXTENT
+    _ARC_LENGTH_HINT = 1.0 * _VERTEX_EXTENT
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -168,13 +169,13 @@ class GraphViewMixin:
                     self.db_mngr.fetch_more(db_map, self._entity_fetch_parent)
             return
         if self._pos_for_added_entities is not None:
-            spread = self.VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
+            spread = self._VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
             gen = GraphLayoutGenerator(len(new_db_map_id_sets), spread=spread)
             layout_x, layout_y = gen.compute_layout()
             x = self._pos_for_added_entities.x()
             y = self._pos_for_added_entities.y()
             for dx, dy, db_map_ids in zip(layout_x, layout_y, new_db_map_id_sets):
-                entity_item = EntityItem(self, x + dx, y + dy, self.VERTEX_EXTENT, tuple(db_map_ids))
+                entity_item = EntityItem(self, x + dx, y + dy, self._VERTEX_EXTENT, tuple(db_map_ids))
                 self.scene.addItem(entity_item)
                 entity_item.apply_zoom(self.ui.graphicsView.zoom_factor)
             self._pos_for_added_entities = None
@@ -537,7 +538,7 @@ class GraphViewMixin:
 
     def _get_item_property(self, db_map, entity_id, pname):
         """Returns a tuple of (min_value, value, max_value) for given entity and property.
-        Returns (0, 0, 0) if the property is not defined for the entity.
+        Returns self.NOT_SPECIFIED if the property is not defined for the entity.
         Returns None if the property is not defined for *any* entity.
 
         Returns:
@@ -548,10 +549,10 @@ class GraphViewMixin:
             return None
         pv = pvs.get((db_map, entity_id))
         if pv is None:
-            return (0, 0, 0)
+            return self.NOT_SPECIFIED
         val = _get_value(pv, self._time_line_index)
         if val is None:
-            return (0, 0, 0)
+            return self.NOT_SPECIFIED
         # NOTE: By construction, self._val_ranges_by_pname has the same keys as self._pvs_by_pname
         val_range = self._val_ranges_by_pname[pname]
         min_val, max_val = val_range
@@ -615,7 +616,7 @@ class GraphViewMixin:
             EntityItem(
                 self,
                 *self.convert_position(x[i], y[i]),
-                self.VERTEX_EXTENT,
+                self._VERTEX_EXTENT,
                 tuple(db_map_entity_ids),
                 offset=self.entity_offsets.get(i)
             )
@@ -645,10 +646,10 @@ class GraphViewMixin:
         entity_class["db_map"] = db_map
         db_map_ids = ((db_map, None),)
         ch_item = CrossHairsItem(
-            self, ent_item.pos().x(), ent_item.pos().y(), 0.8 * self.VERTEX_EXTENT, db_map_ids=db_map_ids
+            self, ent_item.pos().x(), ent_item.pos().y(), 0.8 * self._VERTEX_EXTENT, db_map_ids=db_map_ids
         )
         ch_ent_item = CrossHairsEntityItem(
-            self, ent_item.pos().x(), ent_item.pos().y(), 0.5 * self.VERTEX_EXTENT, db_map_ids=db_map_ids
+            self, ent_item.pos().x(), ent_item.pos().y(), 0.5 * self._VERTEX_EXTENT, db_map_ids=db_map_ids
         )
         ch_arc_item1 = CrossHairsArcItem(ch_ent_item, ent_item, self._ARC_WIDTH)
         ch_arc_item2 = CrossHairsArcItem(ch_ent_item, ch_item, self._ARC_WIDTH)

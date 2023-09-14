@@ -15,7 +15,7 @@ Classes for custom QGraphicsViews for the Entity graph view.
 
 import os
 import sys
-from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF, QPoint
+from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
 from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog
 from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize
 from PySide6.QtPrintSupport import QPrinter
@@ -554,11 +554,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
         painter = QPainter(printer)
         self.scene().render(painter, QRectF(), source)
         if self._spine_db_editor.ui.legend_widget.isVisible():
-            pixmap = self._spine_db_editor.ui.legend_widget.grab().scaledToWidth(
-                0.75 * size.width(), Qt.SmoothTransformation
+            legend_width, legend_height = 0.5 * size.width(), 0.5 * margin * size.height()
+            legend_rect = QRectF(
+                0.5 * (size.width() - legend_width),
+                size.height() - 0.5 * margin * size.height() - 0.5 * legend_height,
+                legend_width,
+                legend_height,
             )
-            point = QPoint((size.width() - pixmap.size().width()) / 2, size.height() - 1.25 * pixmap.size().height())
-            painter.drawPixmap(point, pixmap)
+            self._spine_db_editor.ui.legend_widget.paint(painter, legend_rect)
         painter.end()
         self._zoom(current_zoom_factor)
         self._spine_db_editor.file_exported.emit(file_path)

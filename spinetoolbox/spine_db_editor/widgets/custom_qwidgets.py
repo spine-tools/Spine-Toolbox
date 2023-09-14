@@ -25,10 +25,10 @@ from PySide6.QtWidgets import (
     QSlider,
     QVBoxLayout,
     QHBoxLayout,
-    QGridLayout,
+    QSizePolicy,
 )
 from PySide6.QtGui import QPainter, QColor, QIcon, QBrush, QPainterPath, QPalette
-from PySide6.QtCore import Signal, Slot, QVariantAnimation, QPointF, Qt, QTimeLine
+from PySide6.QtCore import Signal, Slot, QVariantAnimation, QPointF, Qt, QTimeLine, QRectF
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url, CharIconEngine, color_from_index
 
@@ -244,48 +244,89 @@ class TimeLineWidget(QWidget):
 
 
 class LegendWidget(QWidget):
+    _BASE_HEIGHT = 30
+    _SPACING = 6
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._layout = QGridLayout(self)
-        self._layout.setContentsMargins(2, 2, 2, 2)
-        self._layout.setSpacing(2)
-        self._layout.setColumnStretch(2, 2)
+        self._legend = []
+        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
 
     def set_legend(self, legend):
-        while self._layout.count():
-            self._layout.takeAt(0).widget().deleteLater()
-        for i, (legend_type, pname, val_range) in enumerate(legend):
+        self._legend.clear()
+        for legend_type, pname, val_range in legend:
             if not val_range:
                 continue
             min_val, max_val = val_range
             if min_val == max_val:
                 continue
-            legend_widget_factory = {"color": _ColorWidget, "arc_width": _WidthWidget}.get(legend_type)
-            if legend_widget_factory is None:
+            paint_bar = {"color": self._paint_color_bar, "arc_width": self._paint_volume_bar}.get(legend_type)
+            if paint_bar is None:
                 continue
-            self._layout.addWidget(QLabel(pname + ": "), i, 0)
-            self._layout.addWidget(QLabel(str(min_val)), i, 1, Qt.AlignRight)
-            self._layout.addWidget(legend_widget_factory(), i, 2)
-            self._layout.addWidget(QLabel(str(max_val)), i, 3)
+            self._legend.append((pname + ": ", str(min_val), paint_bar, str(max_val)))
+        self.setMaximumHeight(len(self._legend) * self._BASE_HEIGHT)
+        self.adjustSize()
 
+    @staticmethod
+    def _paint_color_bar(painter, cell):
+        steps = 360
+        slice_ = QRectF(cell)
+        width = cell.width()
+        left = cell.left()
+        slice_.setWidth(width / steps)
+        for k in range(steps):
+            slice_.moveLeft(left + (k / steps) * width)
+            color = color_from_index(k, steps)
+            painter.fillRect(slice_, QBrush(color))
 
-class _ColorWidget(QWidget):
-    def paintEvent(self, ev):
-        painter = QPainter(self)
-        rect = self.rect()
-        width = rect.width()
-        for k in range(360):
-            rect.setLeft((k / 360) * width)
-            color = color_from_index(k, 360)
-            painter.fillRect(rect, QBrush(color))
-
-
-class _WidthWidget(QWidget):
-    def paintEvent(self, ev):
-        painter = QPainter(self)
-        rect = self.rect()
+    @staticmethod
+    def _paint_volume_bar(painter, cell):
         path = QPainterPath()
-        path.moveTo(rect.bottomLeft())
-        path.lineTo(rect.topRight())
-        path.lineTo(rect.bottomRight())
-        painter.fillPath(path, self.palette().color(QPalette.Normal, QPalette.WindowText))
+        path.moveTo(cell.bottomLeft())
+        path.lineTo(cell.topRight())
+        path.lineTo(cell.bottomRight())
+        painter.fillPath(path, qApp.palette().color(QPalette.Normal, QPalette.WindowText))
+
+    def paintEvent(self, ev):
+        if not self._legend:
+            return
+        painter = QPainter(self)
+        rect = self.rect()
+        self.paint(painter, rect)
+
+    def paint(self, painter, rect):
+        painter.save()
+        font = painter.font()
+        font.setPointSizeF(0.375 * rect.height())
+        painter.setFont(font)
+        text_flags = Qt.AlignVCenter
+        # Get column widths
+        pname_cws, min_val_cws, max_val_cws = [], [], []
+        for pname, min_val, _paint_legend, max_val in self._legend:
+            for cws, text in zip((pname_cws, min_val_cws, max_val_cws), (pname, min_val, max_val)):
+                cws.append(painter.boundingRect(rect, text_flags, text).width())
+        pname_cw = max(pname_cws)
+        min_val_cw = max(min_val_cws)
+        max_val_cw = max(max_val_cws)
+        bar_cw = rect.width() - (pname_cw + min_val_cw + max_val_cw) - 5 * self._SPACING
+        row_h = rect.height() / len(self._legend)
+        # Paint
+        for i, (pname, min_val, paint_bar, max_val) in enumerate(self._legend):
+            cell = QRectF(0, rect.y() + self._SPACING + i * row_h, 0, row_h - 2 * self._SPACING)
+            left = rect.x() + self._SPACING
+            cell.setLeft(left)
+            cell.setWidth(pname_cw)
+            painter.drawText(cell, text_flags, pname)
+            left += pname_cw + self._SPACING
+            cell.setLeft(left)
+            cell.setWidth(min_val_cw)
+            painter.drawText(cell, text_flags, min_val)
+            left += min_val_cw + self._SPACING
+            cell.setLeft(left)
+            cell.setWidth(bar_cw)
+            paint_bar(painter, cell)
+            left += bar_cw + self._SPACING
+            cell.setLeft(left)
+            cell.setWidth(max_val_cw)
+            painter.drawText(cell, text_flags, max_val)
+        painter.restore()

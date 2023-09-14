@@ -564,7 +564,7 @@ class SpineDBManager(QObject):
                 continue
             worker.rollback_session()
 
-    def entity_class_renderer(self, db_map, entity_class_id, for_group=False, color_code=None):
+    def entity_class_renderer(self, db_map, entity_class_id, for_group=False, color=None):
         """Returns an icon renderer for a given entity class.
 
         Args:
@@ -580,7 +580,8 @@ class SpineDBManager(QObject):
             return None
         if for_group:
             return self.get_icon_mngr(db_map).group_renderer(entity_class)
-        if color_code is not None:
+        if color is not None:
+            color_code = int(color.rgba())
             return self.get_icon_mngr(db_map).color_class_renderer(entity_class, color_code)
         return self.get_icon_mngr(db_map).class_renderer(entity_class)
 
