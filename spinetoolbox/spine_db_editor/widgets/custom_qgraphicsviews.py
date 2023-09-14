@@ -13,17 +13,18 @@
 Classes for custom QGraphicsViews for the Entity graph view.
 """
 
+import os
 import sys
 from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
 from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog
 from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize
 from PySide6.QtPrintSupport import QPrinter
+from PySide6.QtSvg import QSvgGenerator
 from ...helpers import CharIconEngine
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
-from ..graphics_items import EntityItem, CrossHairsArcItem, make_figure_graphics_item
+from ..graphics_items import EntityItem, CrossHairsArcItem, BgItem
 from .select_graph_parameters_dialog import SelectGraphParametersDialog
-from .graph_layout_generator import make_heat_map
 
 
 class EntityQGraphicsView(CustomQGraphicsView):
@@ -44,12 +45,12 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.pos_y_parameter = "y"
         self.name_parameter = ""
         self.color_parameter = ""
-        self.selected_items = list()
+        self.arc_width_parameter = ""
+        self._bg_item = None
+        self.selected_items = []
         self.removed_items = set()
-        self.hidden_items = dict()
-        self.pruned_db_map_entity_ids = dict()
-        self.heat_map_items = list()
-        self._point_value_tuples_per_parameter_name = dict()  # Used in the heat map menu
+        self.hidden_items = {}
+        self.pruned_db_map_entity_ids = {}
         self._hovered_ent_item = None
         self.entity_class = None
         self.cross_hairs_items = []
@@ -71,18 +72,18 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._prune_selected_action = None
         self._restore_all_pruned_action = None
         self._rebuild_action = None
-        self._export_as_pdf_action = None
+        self._export_as_image_action = None
         self._zoom_action = None
         self._rotate_action = None
         self._arc_length_action = None
         self._find_action = None
+        self._add_bg_image_action = None
         self._previous_mouse_pos = None
         self._context_menu_pos = None
         self._hide_classes_menu = None
         self._show_hidden_menu = None
         self._prune_classes_menu = None
         self._restore_pruned_menu = None
-        self._parameter_heat_map_menu = None
         self._items_per_class = {}
 
     @property
@@ -144,7 +145,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._disable_max_ent_dim_action.setChecked(self.disable_max_relationship_dimension)
         self._menu.addAction(self._max_ent_dim_action)
         self._menu.addSeparator()
-        self._add_entities_action = self._menu.addAction("Add entities", self.add_entities_at_position)
+        self._add_entities_action = self._menu.addAction("Add entities...", self.add_entities_at_position)
         self._menu.addSeparator()
         self._find_action = self._menu.addAction("Find...", self._find)
         self._menu.addAction(self._find_action)
@@ -169,12 +170,10 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._restore_pruned_menu.triggered.connect(self.restore_pruned_items)
         self._restore_all_pruned_action = self._menu.addAction("Restore all", self.restore_all_pruned_items)
         self._menu.addSeparator()
-        # FIXME: The heat map doesn't seem to be working nicely
-        # self._parameter_heat_map_menu = self._menu.addMenu("Add heat map")
-        # self._parameter_heat_map_menu.triggered.connect(self.add_heat_map)
+        self._add_bg_image_action = self._menu.addAction("Select background image...", self._add_bg_image)
         self._menu.addSeparator()
         self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
-        self._export_as_pdf_action = self._menu.addAction("Export as PDF", self.export_as_pdf)
+        self._export_as_image_action = self._menu.addAction("Export as vector image...", self.export_as_image)
         self._menu.addSeparator()
         self._zoom_action = ToolBarWidgetAction("Zoom", self._menu, compact=True)
         self._zoom_action.tool_bar.addAction("-", self.zoom_out).setToolTip("Zoom out")
@@ -237,7 +236,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._zoom_action.setEnabled(has_graph)
         self._rotate_action.setEnabled(has_graph)
         self._find_action.setEnabled(has_graph)
-        self._export_as_pdf_action.setEnabled(has_graph)
+        self._export_as_image_action.setEnabled(has_graph)
         self._items_per_class = {}
         for item in self.entity_items:
             key = f"{item.entity_class_name}"
@@ -250,10 +249,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self._hide_classes_menu.addAction(key)
         for key in sorted(self._items_per_class.keys() - self.pruned_db_map_entity_ids.keys()):
             self._prune_classes_menu.addAction(key)
-        # FIXME: The heat map doesn't seem to be working nicely
-        # self._parameter_heat_map_menu.setEnabled(has_graph)
-        # if has_graph:
-        #    self._populate_add_heat_map_menu()
 
     def make_items_menu(self):
         menu = QMenu(self)
@@ -430,17 +425,26 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def select_graph_parameters(self, checked=False):
         dialog = SelectGraphParametersDialog(
-            self._spine_db_editor, self.name_parameter, self.pos_x_parameter, self.pos_y_parameter, self.color_parameter
+            self._spine_db_editor,
+            self.name_parameter,
+            self.pos_x_parameter,
+            self.pos_y_parameter,
+            self.color_parameter,
+            self.arc_width_parameter,
         )
         dialog.show()
         dialog.selection_made.connect(self._set_graph_parameters)
 
-    @Slot(str, str, str, str)
-    def _set_graph_parameters(self, name_parameter, pos_x_parameter, pos_y_parameter, color_parameter):
+    @Slot(str, str, str, str, str)
+    def _set_graph_parameters(
+        self, name_parameter, pos_x_parameter, pos_y_parameter, color_parameter, arc_width_parameter
+    ):
         self.name_parameter = name_parameter
         self.pos_x_parameter = pos_x_parameter
         self.pos_y_parameter = pos_y_parameter
         self.color_parameter = color_parameter
+        self.arc_width_parameter = arc_width_parameter
+        self._spine_db_editor.polish_items()
 
     @Slot(bool)
     def save_positions(self, checked=False):
@@ -462,12 +466,12 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 )
                 data.setdefault("parameter_values", []).extend(
                     [
-                        (class_name, item.element_name_list or item.entity_name, self.pos_x_parameter, item.pos().x())
+                        (class_name, item.element_name_list or item.entity_name, pname, val)
                         for item in ent_items
-                    ]
-                    + [
-                        (class_name, item.element_name_list or item.entity_name, self.pos_y_parameter, item.pos().y())
-                        for item in ent_items
+                        for pname, val in zip(
+                            (self.pos_x_parameter, self.pos_y_parameter),
+                            self._spine_db_editor.convert_position(item.pos().x(), item.pos().y()),
+                        )
                     ]
                 )
         self.db_mngr.import_data(db_map_data)
@@ -495,82 +499,72 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._spine_db_editor.build_graph()
 
     @Slot(bool)
-    def export_as_pdf(self, _=False):
-        file_path = self._spine_db_editor.get_pdf_file_path()
+    def _add_bg_image(self, _checked=False):
+        file_path = self._spine_db_editor.get_open_file_path(
+            "addBgImage", "Select background image...", "SVG files (*.svg)"
+        )
         if not file_path:
             return
-        source = self._get_viewport_scene_rect()
+        if self._bg_item is not None:
+            self.scene().removeItem(self._bg_item)
+        self._bg_item = BgItem(file_path)
+        self.scene().addItem(self._bg_item)
+        rect = self._get_viewport_scene_rect()
+        self._bg_item.fit_rect(rect)
+        self._bg_item.apply_zoom(self.zoom_factor)
+
+    def clear_scene(self):
+        for item in self.scene().items():
+            if item.topLevelItem() is not item:
+                continue
+            if item is not self._bg_item:
+                self.scene().removeItem(item)
+
+    @Slot(bool)
+    def export_as_image(self, _=False):
+        file_path = self._spine_db_editor.get_save_file_path(
+            "exportGraphAsImage", "Export as vector image...", "SVG files (*.svg);;PDF files (*.pdf)"
+        )
+        if not file_path:
+            return
+        # source = self._get_viewport_scene_rect()
+        source = self.scene().itemsBoundingRect()
+        margin = 0.05
+        dx, dy = margin * source.width(), margin * source.height()
+        source.adjust(-dx, -dy, dx, dy)
         current_zoom_factor = self.zoom_factor
         self._zoom(1.0 / current_zoom_factor)
         self.scene().clearSelection()
-        printer = QPrinter()
-        printer.setPageSize(QPageSize(source.size(), QPageSize.Unit.Point))
-        printer.setOutputFileName(file_path)
+        file_ext = os.path.splitext(file_path)[-1]
+        if not file_ext:
+            file_ext = ".svg"
+            file_path += file_ext
+        if file_ext == ".svg":
+            printer = QSvgGenerator()
+            size = source.size().toSize()
+            printer.setSize(size)
+            printer.setViewBox(source.translated(-source.topLeft()))
+            printer.setFileName(file_path)
+        elif file_ext == ".pdf":
+            printer = QPrinter()
+            page_size = QPageSize(source.size(), QPageSize.Unit.Point)
+            size = page_size.sizePixels(printer.resolution())
+            printer.setPageSize(page_size)
+            printer.setOutputFileName(file_path)
         painter = QPainter(printer)
         self.scene().render(painter, QRectF(), source)
+        if self._spine_db_editor.ui.legend_widget.isVisible():
+            legend_width, legend_height = 0.5 * size.width(), 0.5 * margin * size.height()
+            legend_rect = QRectF(
+                0.5 * (size.width() - legend_width),
+                size.height() - 0.5 * margin * size.height() - 0.5 * legend_height,
+                legend_width,
+                legend_height,
+            )
+            self._spine_db_editor.ui.legend_widget.paint(painter, legend_rect)
         painter.end()
         self._zoom(current_zoom_factor)
         self._spine_db_editor.file_exported.emit(file_path)
-
-    def _populate_add_heat_map_menu(self):
-        """Populates the menu 'Add heat map' with parameters for currently shown items in the graph."""
-        db_map_class_ids = {}
-        for item in self.entity_items:
-            db_map_class_ids.setdefault(item.db_map, set()).add(item.entity_class_id)
-        db_map_parameters = self.db_mngr.find_cascading_parameter_data(db_map_class_ids, "parameter_definition")
-        db_map_class_parameters = {}
-        parameter_value_ids = {}
-        for db_map, parameters in db_map_parameters.items():
-            for p in parameters:
-                db_map_class_parameters.setdefault((db_map, p["entity_class_id"]), []).append(p)
-            parameter_value_ids = {
-                (db_map, pv["parameter_id"], pv["entity_id"]): pv["id"]
-                for pv in self.db_mngr.find_cascading_parameter_values_by_definition(
-                    {db_map: {x["id"] for x in parameters}}
-                )[db_map]
-            }
-        self._point_value_tuples_per_parameter_name.clear()
-        for item in self.entity_items:
-            for parameter in db_map_class_parameters.get((item.db_map, item.entity_class_id), ()):
-                pv_id = parameter_value_ids.get((item.db_map, parameter["id"], item.entity_id))
-                try:
-                    value = float(self.db_mngr.get_value(item.db_map, "parameter_value", pv_id))
-                    pos = item.pos()
-                    self._point_value_tuples_per_parameter_name.setdefault(parameter["parameter_name"], []).append(
-                        (pos.x(), -pos.y(), value)
-                    )
-                except (TypeError, ValueError):
-                    pass
-        self._parameter_heat_map_menu.clear()
-        for name, point_value_tuples in self._point_value_tuples_per_parameter_name.items():
-            if len(point_value_tuples) > 1:
-                self._parameter_heat_map_menu.addAction(name)
-        self._parameter_heat_map_menu.setDisabled(self._parameter_heat_map_menu.isEmpty())
-
-    @Slot(QAction)
-    def add_heat_map(self, action):
-        """Adds heat map for the parameter in the action text."""
-        self._clean_up_heat_map_items()
-        point_value_tuples = self._point_value_tuples_per_parameter_name[action.text()]
-        x, y, values = zip(*point_value_tuples)
-        heat_map, xv, yv, min_x, min_y, max_x, max_y = make_heat_map(x, y, values)
-        heat_map_item, hm_figure = make_figure_graphics_item(self.scene(), z=-3, static=True)
-        colorbar_item, cb_figure = make_figure_graphics_item(self.scene(), z=3, static=False)
-        colormesh = hm_figure.gca().pcolormesh(xv, yv, heat_map)
-        cb_figure.colorbar(colormesh, fraction=1)
-        cb_figure.gca().set_visible(False)
-        width = max_x - min_x
-        height = max_y - min_y
-        heat_map_item.widget().setGeometry(min_x, min_y, width, height)
-        extent = self._spine_db_editor.VERTEX_EXTENT
-        colorbar_item.widget().setGeometry(max_x + extent, min_y, 2 * extent, height)
-        self.heat_map_items += [heat_map_item, colorbar_item]
-
-    def _clean_up_heat_map_items(self):
-        for item in self.heat_map_items:
-            item.hide()
-            self.scene().removeItem(item)
-        self.heat_map_items.clear()
 
     def set_cross_hairs_items(self, entity_class, cross_hairs_items):
         """Sets 'cross_hairs' items for connecting entities.

@@ -564,7 +564,7 @@ class SpineDBManager(QObject):
                 continue
             worker.rollback_session()
 
-    def entity_class_renderer(self, db_map, entity_class_id, for_group=False, color_code=None):
+    def entity_class_renderer(self, db_map, entity_class_id, for_group=False, color=None):
         """Returns an icon renderer for a given entity class.
 
         Args:
@@ -580,7 +580,8 @@ class SpineDBManager(QObject):
             return None
         if for_group:
             return self.get_icon_mngr(db_map).group_renderer(entity_class)
-        if color_code is not None:
+        if color is not None:
+            color_code = int(color.rgba())
             return self.get_icon_mngr(db_map).color_class_renderer(entity_class, color_code)
         return self.get_icon_mngr(db_map).class_renderer(entity_class)
 
@@ -929,6 +930,14 @@ class SpineDBManager(QObject):
         """
         self.add_items("entity_group", db_map_data)
 
+    def add_entity_alternatives(self, db_map_data):
+        """Adds entity alternatives to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        self.add_items("entity_alternative", db_map_data)
+
     def add_parameter_definitions(self, db_map_data):
         """Adds parameter definitions to db.
 
@@ -1040,6 +1049,14 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
         self.update_items("entity", db_map_data)
+
+    def update_entity_alternatives(self, db_map_data):
+        """Updates entity alternatives in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        self.update_items("entity_alternative", db_map_data)
 
     def update_parameter_definitions(self, db_map_data):
         """Updates parameter definitions in db.

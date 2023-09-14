@@ -751,7 +751,6 @@ class TabularViewMixin:
         )
         self.make_pivot_headers()
 
-    @Slot(QModelIndex, QModelIndex)
     def _change_selected_frozen_row(self, current, previous):
         """Sets the frozen value from selection in frozen table."""
         if not current.isValid():

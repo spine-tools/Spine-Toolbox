@@ -1210,7 +1210,7 @@ class Ui_SettingsForm(object):
         self.groupBox.setTitle(QCoreApplication.translate("SettingsForm", u"Layout generation algorithm", None))
         self.label_6.setText(QCoreApplication.translate("SettingsForm", u"Number of iterations", None))
         self.label_10.setText(QCoreApplication.translate("SettingsForm", u"Distance between nodes (as percentage of node size)", None))
-        self.label_16.setText(QCoreApplication.translate("SettingsForm", u"Importance of closer nodes", None))
+        self.label_16.setText(QCoreApplication.translate("SettingsForm", u"Decay rate of attraction with distance", None))
         self.spinBox_layout_algo_max_iterations.setSuffix("")
         self.groupBox1.setTitle(QCoreApplication.translate("SettingsForm", u"Specification editors", None))
 #if QT_CONFIG(tooltip)

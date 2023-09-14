@@ -19,6 +19,7 @@ from spinedb_api.db_cache_impl import EntityItem
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.single_and_empty_model_mixins import (
+    SplitValueAndTypeMixin,
     FillInParameterNameMixin,
     FillInValueListIdMixin,
     MakeEntityOnTheFlyMixin,
@@ -323,7 +324,7 @@ class FilterEntityAlternativeMixin:
         return alternative_id is None or alternative_id in self._filter_alternative_ids
 
 
-class ParameterDataMixin:
+class ParameterMixin:
     """Provides the data method for parameter values and definitions."""
 
     @property
@@ -345,7 +346,7 @@ class ParameterDataMixin:
             "value": ("id", "parameter_value"),
             "default_value": ("id", "parameter_definition"),
             "database": ("database", None),
-            "alternative_id": ("alternative_id", "alternative"),
+            "alternative_name": ("alternative_id", "alternative"),
         }
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
@@ -367,8 +368,45 @@ class ParameterDataMixin:
         return super().data(index, role)
 
 
+class EntityMixin:
+    def update_items_in_db(self, items):
+        """Update items in db.
+
+        Args:
+            items (list): dictionary-items
+        """
+        for item in items:
+            item["entity_class_name"] = self.entity_class_name
+        self.build_lookup_dictionary({self.db_map: items})
+        entities = []
+        items_to_upd = []
+        error_log = []
+        for item in items:
+            entity, errors = self._make_entity_on_the_fly(item, self.db_map)
+            if entity:
+                entities.append(entity)
+            if errors:
+                error_log.extend(errors)
+        if entities:
+            self.db_mngr.add_entities({self.db_map: entities})
+        self.build_lookup_dictionary({self.db_map: items})
+        for item in items:
+            item_to_upd, errors = self._convert_to_db(item, self.db_map)
+            if tuple(item_to_upd.keys()) != ("id",):
+                items_to_upd.append(item_to_upd)
+            if errors:
+                error_log += errors
+        if items_to_upd:
+            self._do_update_items_in_db({self.db_map: items_to_upd})
+        if error_log:
+            self.db_mngr.error_msg.emit({self.db_map: error_log})
+
+    def _do_update_items_in_db(self, db_map_data):
+        raise NotImplementedError()
+
+
 class SingleParameterDefinitionModel(
-    FillInParameterNameMixin, FillInValueListIdMixin, ParameterDataMixin, SingleModelBase
+    FillInParameterNameMixin, FillInValueListIdMixin, SplitValueAndTypeMixin, ParameterMixin, SingleModelBase
 ):
     """A parameter_definition model for a single entity_class."""
 
@@ -411,7 +449,9 @@ class SingleParameterValueModel(
     ImposeEntityClassIdMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
-    ParameterDataMixin,
+    SplitValueAndTypeMixin,
+    ParameterMixin,
+    EntityMixin,
     FilterEntityAlternativeMixin,
     SingleModelBase,
 ):
@@ -425,37 +465,8 @@ class SingleParameterValueModel(
         item = self.db_item_from_id(element)
         return tuple(item[k] for k in ("entity_byname", "parameter_name", "alternative_name"))
 
-    def update_items_in_db(self, items):
-        """Update items in db.
-
-        Args:
-            items (list): dictionary-items
-        """
-        for item in items:
-            item["entity_class_name"] = self.entity_class_name
-        self.build_lookup_dictionary({self.db_map: items})
-        entities = []
-        param_vals = []
-        error_log = []
-        for item in items:
-            entity, errors = self._make_entity_on_the_fly(item, self.db_map)
-            if entity:
-                entities.append(entity)
-            if errors:
-                error_log.extend(errors)
-        if entities:
-            self.db_mngr.add_entities({self.db_map: entities})
-        self.build_lookup_dictionary({self.db_map: items})
-        for item in items:
-            param_val, errors = self._convert_to_db(item, self.db_map)
-            if tuple(param_val.keys()) != ("id",):
-                param_vals.append(param_val)
-            if errors:
-                error_log += errors
-        if param_vals:
-            self.db_mngr.update_parameter_values({self.db_map: param_vals})
-        if error_log:
-            self.db_mngr.error_msg.emit({self.db_map: error_log})
+    def _do_update_items_in_db(self, db_map_data):
+        self.db_mngr.update_parameter_values(db_map_data)
 
 
 class SingleEntityAlternativeModel(
@@ -463,6 +474,7 @@ class SingleEntityAlternativeModel(
     FillInAlternativeIdMixin,
     ImposeEntityClassIdMixin,
     FillInEntityIdsMixin,
+    EntityMixin,
     FilterEntityAlternativeMixin,
     SingleModelBase,
 ):
@@ -470,23 +482,20 @@ class SingleEntityAlternativeModel(
 
     @property
     def item_type(self):
-        return "entity"
+        return "entity_alternative"
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return (item["name"], item.get("alternative_name", ""), item.get("active", True))
+        return tuple(item[k] for k in ("entity_byname", "alternative_name"))
 
     @property
     def _references(self):
         return {
-            "class_name": ("class_id", "entity_class"),
+            "entity_class_name": ("entity_class_id", "entity_class"),
+            "entity_byname": ("entity_id", "entity"),
+            "alternative_name": ("alternative_id", "alternative"),
             "database": ("database", None),
-            "alternative_id": ("alternative_id", "alternative"),
         }
 
-    @property
-    def _field_map(self):
-        return {"entity_class_name": "class_name", "entity_byname": "byname", "entity_id": "id"}
-
-    def update_items_in_db(self, items):
-        raise NotImplementedError()
+    def _do_update_items_in_db(self, db_map_data):
+        self.db_mngr.update_entity_alternatives(db_map_data)

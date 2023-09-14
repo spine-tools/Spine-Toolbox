@@ -14,7 +14,6 @@ Miscelaneous mixins for parameter models
 """
 
 from spinedb_api.parameter_value import split_value_and_type
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 
 
 class ConvertToDBMixin:
@@ -35,6 +34,12 @@ class ConvertToDBMixin:
             dict: the db item
             list: error log
         """
+        return item, []
+
+
+class SplitValueAndTypeMixin(ConvertToDBMixin):
+    def _convert_to_db(self, item, db_map):
+        item, err = super()._convert_to_db(item, db_map)
         item = item.copy()
         value_field, type_field = {
             "parameter_value": ("value", "type"),
@@ -44,7 +49,7 @@ class ConvertToDBMixin:
             value, value_type = split_value_and_type(item[value_field])
             item[value_field] = value
             item[type_field] = value_type
-        return item, []
+        return item, err
 
 
 class FillInAlternativeIdMixin(ConvertToDBMixin):

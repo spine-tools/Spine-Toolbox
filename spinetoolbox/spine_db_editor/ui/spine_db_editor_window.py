@@ -13,7 +13,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.3
+## Created by: Qt User Interface Compiler version 6.5.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -34,7 +34,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGr
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EntityAlternativeTableView, FrozenTableView, ItemMetadataTableView, MetadataTableView,
     ParameterDefinitionTableView, ParameterValueTableView, PivotTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, EntityTreeView, ParameterValueListTreeView, ScenarioTreeView)
-from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import ProgressBarWidget
+from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import (LegendWidget, ProgressBarWidget, TimeLineWidget)
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindow(object):
@@ -299,6 +299,16 @@ class Ui_MainWindow(object):
         self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
 
         self.verticalLayout_7.addWidget(self.graphicsView)
+
+        self.time_line_widget = TimeLineWidget(self.dockWidgetContents_8)
+        self.time_line_widget.setObjectName(u"time_line_widget")
+
+        self.verticalLayout_7.addWidget(self.time_line_widget)
+
+        self.legend_widget = LegendWidget(self.dockWidgetContents_8)
+        self.legend_widget.setObjectName(u"legend_widget")
+
+        self.verticalLayout_7.addWidget(self.legend_widget)
 
         self.progress_bar_widget = ProgressBarWidget(self.dockWidgetContents_8)
         self.progress_bar_widget.setObjectName(u"progress_bar_widget")

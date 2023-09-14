@@ -221,8 +221,8 @@ class ParameterValueElementDelegate(QStyledItemDelegate):
         return None
 
 
-class ParameterDelegate(QStyledItemDelegate):
-    """Base class for all custom parameter delegates.
+class TableDelegate(QStyledItemDelegate):
+    """Base class for all custom stacked table delegates.
 
     Attributes:
         db_mngr (SpineDBManager): database manager
@@ -266,7 +266,7 @@ class ParameterDelegate(QStyledItemDelegate):
         return db_map
 
 
-class DatabaseNameDelegate(ParameterDelegate):
+class DatabaseNameDelegate(TableDelegate):
     """A delegate for the database name."""
 
     def createEditor(self, parent, option, index):
@@ -277,7 +277,7 @@ class DatabaseNameDelegate(ParameterDelegate):
         return editor
 
 
-class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
+class ParameterValueOrDefaultValueDelegate(TableDelegate):
     """A delegate for either the value or the default value."""
 
     parameter_value_editor_requested = Signal(QModelIndex)
@@ -387,7 +387,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             return next(iter(value_list_ids))
 
 
-class ValueListDelegate(ParameterDelegate):
+class ValueListDelegate(TableDelegate):
     """A delegate for the parameter value list."""
 
     def createEditor(self, parent, option, index):
@@ -402,7 +402,7 @@ class ValueListDelegate(ParameterDelegate):
         return editor
 
 
-class EntityClassNameDelegate(ParameterDelegate):
+class EntityClassNameDelegate(TableDelegate):
     """A delegate for the object_class name."""
 
     def createEditor(self, parent, option, index):
@@ -417,7 +417,7 @@ class EntityClassNameDelegate(ParameterDelegate):
         return editor
 
 
-class ParameterNameDelegate(ParameterDelegate):
+class ParameterNameDelegate(TableDelegate):
     """A delegate for the object parameter name."""
 
     def createEditor(self, parent, option, index):
@@ -439,7 +439,7 @@ class ParameterNameDelegate(ParameterDelegate):
         return editor
 
 
-class EntityBynameDelegate(ParameterDelegate):
+class EntityBynameDelegate(TableDelegate):
     """A delegate for the entity byname."""
 
     element_name_list_editor_requested = Signal(QModelIndex, int, object)
@@ -467,7 +467,7 @@ class EntityBynameDelegate(ParameterDelegate):
         return editor
 
 
-class AlternativeNameDelegate(ParameterDelegate):
+class AlternativeNameDelegate(TableDelegate):
     """A delegate for the alternative name."""
 
     def createEditor(self, parent, option, index):
@@ -478,6 +478,23 @@ class AlternativeNameDelegate(ParameterDelegate):
         editor = SearchBarEditor(self.parent(), parent)
         name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "alternative", only_visible=False)]
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
+        return editor
+
+
+class BooleanValueDelegate(TableDelegate):
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        value = {"True": True, "False": False}[editor.data()]
+        self.data_committed.emit(index, value)
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
+        if not db_map:
+            return None
+        editor = SearchBarEditor(self.parent(), parent)
+        editor.set_data(str(index.data(Qt.ItemDataRole.EditRole)), ["True", "False"])
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
@@ -746,14 +763,6 @@ class ManageEntityClassesDelegate(ManageItemsDelegate):
 
 class ManageEntitiesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}EntitiesDialog."""
-
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        data = editor.data()
-        header = model.horizontal_header_labels()
-        if header[index.column()] == 'active':
-            data = {"true": True, "false": False}.get(data, True)
-        self.data_committed.emit(index, data)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
