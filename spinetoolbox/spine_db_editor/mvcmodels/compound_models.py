@@ -432,10 +432,11 @@ class FilterEntityAlternativeMixin:
         self._filter_class_ids_selected = {}
 
     def set_filter_class_ids(self, class_ids):
-        self._filter_class_ids = class_ids
-        for model in self.single_models:
-            if model.set_filter_class_ids(class_ids):
-                self._invalidate_filter()
+        if class_ids != self._filter_class_ids:
+            self._filter_class_ids = class_ids
+            for model in self.single_models:
+                model.set_filter_class_ids(class_ids)
+            self._invalidate_filter()
 
     def set_filter_entity_ids(self, entity_ids):
         self._filter_entity_ids = entity_ids
