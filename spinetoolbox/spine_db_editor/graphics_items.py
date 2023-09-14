@@ -885,11 +885,11 @@ class BgItem(QGraphicsRectItem):
     def __init__(self, file_path, parent=None):
         super().__init__(parent)
         self._renderer = QSvgRenderer()
-        self._svg_item = _ResizableQGraphicsSvgItem(self, parent=self)
+        self._svg_item = _ResizableQGraphicsSvgItem(self)
         _loading_ok = self._renderer.load(file_path)
         self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
         self._svg_item.setSharedRenderer(self._renderer)
-        self._scaling_factor = None
+        self._scaling_factor = 1
         size = self._renderer.defaultSize()
         self.setRect(0, 0, size.width(), size.height())
         self.setZValue(-1000)
@@ -945,10 +945,28 @@ class BgItem(QGraphicsRectItem):
         self._place_resizers()
 
     def fit_rect(self, rect):
-        h_scale = rect.width() / self.rect().width()
-        v_scale = rect.height() / self.rect().height()
-        self.setPos(rect.topLeft())
-        self.setScale(min(h_scale, v_scale))
+        self._do_resize(rect, True)
+
+    def fit_coordinates(self, bg1, bg2, scen1, scen2):
+        size = self._renderer.defaultSize()
+        x1, y1 = bg1
+        x2, y2 = bg2
+        scene_x1, scene_y1 = scen1
+        scene_x2, scene_y2 = scen2
+        y1 += size.height()
+        y2 += size.height()
+        x_min, x_max = self._get_p_min_max(size.width(), x1, x2, scene_x1, scene_x2)
+        y_min, y_max = self._get_p_min_max(size.height(), y1, y2, scene_y1, scene_y2)
+        rect = QRectF(x_min, y_min, x_max - x_min, y_max - y_min)
+        self._do_resize(rect, True)
+
+    @staticmethod
+    def _get_p_min_max(current_p_max, p1, p2, scene_p1, scene_p2):
+        a = (p1 - p2) / (scene_p1 - scene_p2)
+        b = p1 - a * scene_p1
+        p_min = (0 - b) / a
+        p_max = (current_p_max - b) / a
+        return p_min, p_max
 
 
 class _ResizableQGraphicsSvgItem(QGraphicsSvgItem):

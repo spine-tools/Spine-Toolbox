@@ -85,7 +85,7 @@ class SpineDBManager(QObject):
         dict: mapping DiffDatabaseMapping to list of updated dict-items.
     """
 
-    def __init__(self, settings, parent):
+    def __init__(self, settings, parent, synchronous=False):
         """Initializes the instance.
 
         Args:
@@ -103,6 +103,7 @@ class SpineDBManager(QObject):
         self._icon_mngr = {}
         self._connect_signals()
         self._cmd_id = 0
+        self._synchronous = synchronous
 
     def _connect_signals(self):
         self.error_msg.connect(self.receive_error_msg)
@@ -376,7 +377,7 @@ class SpineDBManager(QObject):
             if codename is not None:
                 db_map.codename = codename
             return db_map
-        worker = SpineDBWorker(self, url)
+        worker = SpineDBWorker(self, url, synchronous=self._synchronous)
         try:
             db_map = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
         except Exception as error:

@@ -14,7 +14,7 @@ The SpineDBWorker class
 """
 from PySide6.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
-from .qthread_pool_executor import QtBasedThreadPoolExecutor
+from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 from .helpers import busy_effect
 
 
@@ -26,12 +26,12 @@ class SpineDBWorker(QObject):
 
     _more_available = Signal(object)
 
-    def __init__(self, db_mngr, db_url):
+    def __init__(self, db_mngr, db_url, synchronous=False):
         super().__init__()
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._executor = QtBasedThreadPoolExecutor(max_workers=1)
+        self._executor = (SynchronousExecutor if synchronous else QtBasedThreadPoolExecutor)()
         self._parents_by_type = {}
         self._restore_item_callbacks = {}
         self._update_item_callbacks = {}

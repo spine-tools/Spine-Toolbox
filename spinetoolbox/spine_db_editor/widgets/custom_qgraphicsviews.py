@@ -77,7 +77,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._rotate_action = None
         self._arc_length_action = None
         self._find_action = None
-        self._add_bg_image_action = None
+        self._select_bg_image_action = None
         self._previous_mouse_pos = None
         self._context_menu_pos = None
         self._hide_classes_menu = None
@@ -170,7 +170,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._restore_pruned_menu.triggered.connect(self.restore_pruned_items)
         self._restore_all_pruned_action = self._menu.addAction("Restore all", self.restore_all_pruned_items)
         self._menu.addSeparator()
-        self._add_bg_image_action = self._menu.addAction("Select background image...", self._add_bg_image)
+        self._select_bg_image_action = self._menu.addAction("Select background image...", self._select_bg_image)
         self._menu.addSeparator()
         self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
         self._export_as_image_action = self._menu.addAction("Export as vector image...", self.export_as_image)
@@ -499,19 +499,26 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._spine_db_editor.build_graph()
 
     @Slot(bool)
-    def _add_bg_image(self, _checked=False):
+    def _select_bg_image(self, _checked=False):
         file_path = self._spine_db_editor.get_open_file_path(
             "addBgImage", "Select background image...", "SVG files (*.svg)"
         )
         if not file_path:
             return
+        self.set_bg_image(file_path)
+        rect = self._get_viewport_scene_rect()
+        self._bg_item.fit_rect(rect)
+        self._bg_item.apply_zoom(self.zoom_factor)
+
+    def set_bg_image(self, file_path, transform=None):
         if self._bg_item is not None:
             self.scene().removeItem(self._bg_item)
         self._bg_item = BgItem(file_path)
         self.scene().addItem(self._bg_item)
-        rect = self._get_viewport_scene_rect()
-        self._bg_item.fit_rect(rect)
-        self._bg_item.apply_zoom(self.zoom_factor)
+
+    def fit_bg(self, bg1, bg2, scen1, scen2):
+        bg1, bg2, scen1, scen2 = [self._spine_db_editor.convert_position(*p) for p in (bg1, bg2, scen1, scen2)]
+        self._bg_item.fit_coordinates(bg1, bg2, scen1, scen2)
 
     def clear_scene(self):
         for item in self.scene().items():
