@@ -1260,14 +1260,14 @@ class ToolboxUI(QMainWindow):
             index (QModelIndex): Index of the item (from double-click or context menu signal)
             item (ProjectItem, optional)
         """
-        if not index.isValid() or not item:
+        if not index.isValid():
             return
         specification = self.specification_model.specification(index.row())
         # Open spec in Tool specification edit widget
-        if item.item_type() == "Importer":
+        if item and item.item_type() == "Importer":
             item.edit_specification()
-        else:
-            self.show_specification_form(specification.item_type, specification, item)
+            return
+        self.show_specification_form(specification.item_type, specification, item)
 
     @Slot(QModelIndex)
     def remove_specification(self, index):
