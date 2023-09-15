@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QMenu,
 )
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction
+from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction, QColor
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, color_from_index
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
@@ -209,26 +209,34 @@ class EntityItem(QGraphicsRectItem):
             if isinstance(name, str):
                 return name
 
+    def _get_prop(self, getter):
+        values = {getter(db_map, self.entity_type, id_) for db_map, id_ in self.db_map_ids}
+        values.discard(None)
+        if not values:
+            return None
+        values.discard(self._spine_db_editor.NOT_SPECIFIED)
+        if not values:
+            return self._spine_db_editor.NOT_SPECIFIED
+        return next(iter(values))
+
     def _get_color(self):
-        for db_map, id_ in self.db_map_ids:
-            color = self._spine_db_editor.get_item_color(db_map, self.entity_type, id_)
-            if color is not None:
-                min_val, val, max_val = color
-                count = max_val - min_val
-                if count == 0:
-                    return int(color_from_index(0, 1, value=0).rgba())
-                k = val - min_val
-                return int(color_from_index(k, count).rgba())
+        color = self._get_prop(self._spine_db_editor.get_item_color)
+        if color in (None, self._spine_db_editor.NOT_SPECIFIED):
+            return color
+        min_val, val, max_val = color
+        count = max(1, max_val - min_val)
+        k = val - min_val
+        return color_from_index(k, count)
 
     def _get_arc_width(self):
-        for db_map, id_ in self.db_map_ids:
-            arc_width = self._spine_db_editor.get_arc_width(db_map, self.entity_type, id_)
-            if arc_width is not None:
-                min_val, val, max_val = arc_width
-                range_ = max_val - min_val
-                if range_ == 0:
-                    return None
-                return 1 + 9 * (val - min_val) / range_
+        arc_width = self._get_prop(self._spine_db_editor.get_arc_width)
+        if arc_width in (None, self._spine_db_editor.NOT_SPECIFIED):
+            return arc_width
+        min_val, val, max_val = arc_width
+        range_ = max_val - min_val
+        if range_ == 0:
+            return None
+        return (val - min_val) / range_
 
     def set_up(self):
         if self._has_name():
@@ -248,19 +256,23 @@ class EntityItem(QGraphicsRectItem):
             self.label_item.hide()
             self._extent = self._given_extent
         self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
-        self._init_bg()
+        self._update_bg()
         self.refresh_icon()
         self.update_entity_pos()
 
     def update_props(self):
-        self._renderer = self.db_mngr.entity_class_renderer(
-            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color_code=self._get_color()
-        )
-        self._svg_item.setSharedRenderer(self._renderer)
-        self._update_arcs_width()
+        color = self._get_color()
+        arc_width = self._get_arc_width()
+        self._update_renderer(color, resize=False)
+        self._update_arcs(color, arc_width)
 
-    def _init_bg(self):
+    def _update_bg(self):
         bg_rect = QRectF(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        if self._bg is not None:
+            self._bg.setRect(bg_rect)
+            self._bg.prepareGeometryChange()
+            self._bg.update()
+            return
         if not self.has_dimensions:
             self._bg = QGraphicsRectItem(bg_rect, self)
             self._bg_brush = Qt.NoBrush
@@ -274,14 +286,19 @@ class EntityItem(QGraphicsRectItem):
 
     def refresh_icon(self):
         """Refreshes the icon."""
-        renderer = self.db_mngr.entity_class_renderer(
-            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color_code=self._get_color()
-        )
-        self._set_renderer(renderer)
+        color = self._get_color()
+        self._update_renderer(color)
 
-    def _set_renderer(self, renderer):
-        self._renderer = renderer
+    def _update_renderer(self, color, resize=True):
+        if color is self._spine_db_editor.NOT_SPECIFIED:
+            color = color_from_index(0, 1, value=0)
+        self._renderer = self.db_mngr.entity_class_renderer(self.first_db_map, self.entity_class_type, self.first_entity_class_id, color=color)
+        self._install_renderer()
+
+    def _install_renderer(self, resize=True):
         self._svg_item.setSharedRenderer(self._renderer)
+        if not resize:
+            return
         size = self._renderer.defaultSize()
         scale = self._extent / max(size.width(), size.height())
         self._svg_item.setScale(scale)
@@ -396,13 +413,18 @@ class EntityItem(QGraphicsRectItem):
         """Moves arc items."""
         for item in self.arc_items:
             item.update_line()
-        self._update_arcs_width()
-
-    def _update_arcs_width(self):
+        color = self._get_color()
         arc_width = self._get_arc_width()
-        if arc_width is not None:
+        self._update_arcs(color, arc_width)
+
+    def _update_arcs(self, color, arc_width):
+        if color not in (None, self._spine_db_editor.NOT_SPECIFIED):
             for item in self.arc_items:
-                item.apply_value_factor(arc_width)
+                item.update_color(color)
+        if arc_width not in (None, self._spine_db_editor.NOT_SPECIFIED):
+            factor = 1 + 9 * arc_width
+            for item in self.arc_items:
+                item.apply_value(factor)
 
     def itemChange(self, change, value):
         """
@@ -725,7 +747,6 @@ class ArcItem(QGraphicsPathItem):
         self.rel_item = rel_item
         self.obj_item = obj_item
         self._original_width = float(width)
-        self._scaled_width = self._original_width
         self._pen = self._make_pen()
         self.setPen(self._pen)
         self.setZValue(-2)
@@ -738,7 +759,7 @@ class ArcItem(QGraphicsPathItem):
 
     def _make_pen(self):
         pen = QPen()
-        pen.setWidthF(self._scaled_width)
+        pen.setWidthF(self._original_width)
         color = QGuiApplication.palette().color(QPalette.Normal, QPalette.WindowText)
         color.setAlphaF(0.8)
         pen.setColor(color)
@@ -767,7 +788,11 @@ class ArcItem(QGraphicsPathItem):
             path.quadTo(ctrl_point, self.obj_item.pos())
         self.setPath(path)
 
-    def apply_value_factor(self, factor):
+    def update_color(self, color):
+        self._pen.setColor(color)
+        self.setPen(self._pen)
+
+    def apply_value(self, factor):
         self._value_factor = max(1, factor)
         self._update_width()
 
@@ -817,8 +842,8 @@ class CrossHairsItem(RelationshipItem):
         return False
 
     def refresh_icon(self):
-        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer("\uf05b", 0)
-        self._set_renderer(renderer)
+        self._renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer("\uf05b", 0)
+        self._install_renderer()
 
     def set_plus_icon(self):
         self.set_icon("\uf067", Qt.blue)
@@ -836,8 +861,8 @@ class CrossHairsItem(RelationshipItem):
         """Refreshes the icon."""
         if (unicode, color) == self._current_icon:
             return
-        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer(unicode, color)
-        self._set_renderer(renderer)
+        self._renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer(unicode, color)
+        self._install_renderer()
         self._current_icon = (unicode, color)
 
     def _snap(self, x, y):
@@ -870,10 +895,10 @@ class CrossHairsRelationshipItem(RelationshipItem):
         object_class_name_list = tuple(
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         )
-        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).relationship_class_renderer(
+        self._renderer = self.db_mngr.get_icon_mngr(self.first_db_map).relationship_class_renderer(
             None, object_class_name_list
         )
-        self._set_renderer(renderer)
+        self._install_renderer()
 
     def contextMenuEvent(self, e):
         e.accept()
