@@ -13,87 +13,8 @@
 Contains the GraphLayoutGeneratorRunnable class.
 """
 
-import numpy as np
-from PySide6.QtCore import Signal, Slot, QObject, Qt, QRunnable
-from PySide6.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout, QHBoxLayout
-from PySide6.QtGui import QPainter, QColor
+from PySide6.QtCore import Signal, Slot, QObject, QRunnable
 from spinedb_api.graph_layout_generator import GraphLayoutGenerator
-from spinetoolbox.helpers import busy_effect
-
-
-@busy_effect
-def make_heat_map(x, y, values):
-    values = np.array(values)
-    min_x, min_y, max_x, max_y = min(x), min(y), max(x), max(y)
-    tick_count = round(len(values) ** 2)
-    xticks = np.linspace(min_x, max_x, tick_count)
-    yticks = np.linspace(min_y, max_y, tick_count)
-    xv, yv = np.meshgrid(xticks, yticks)
-    try:
-        import scipy.interpolate  # pylint: disable=import-outside-toplevel
-
-        points = np.column_stack((x, y))
-        heat_map = scipy.interpolate.griddata(points, values, (xv, yv), method="cubic")
-    except ImportError:
-        import matplotlib.tri as tri  # pylint: disable=import-outside-toplevel
-
-        triang = tri.Triangulation(x, y)
-        interpolator = tri.CubicTriInterpolator(triang, values)
-        heat_map = interpolator(xv, yv)
-    return heat_map, xv, yv, min_x, min_y, max_x, max_y
-
-
-class ProgressBarWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        inner_widget = QWidget(self)
-        layout = QHBoxLayout(self)
-        layout.addStretch()
-        layout.addWidget(inner_widget)
-        layout.addStretch()
-        self._label = QLabel()
-        self._label.setStyleSheet("QLabel{color:white; font-weight: bold; font-size:18px;}")
-        self._label.setAlignment(Qt.AlignHCenter)
-        self._progress_bar = QProgressBar()
-        button_box = QDialogButtonBox()
-        button_box.setCenterButtons(True)
-        self._previews_button = button_box.addButton("Show previews", QDialogButtonBox.ButtonRole.NoRole)
-        self._previews_button.setCheckable(True)
-        self._previews_button.toggled.connect(
-            lambda checked: self._previews_button.setText(f"{'Hide' if checked else 'Show'} previews")
-        )
-        self.stop_button = button_box.addButton("Stop", QDialogButtonBox.ButtonRole.NoRole)
-        inner_layout = QVBoxLayout(inner_widget)
-        inner_layout.addStretch()
-        inner_layout.addWidget(self._label)
-        inner_layout.addWidget(self._progress_bar)
-        inner_layout.addWidget(button_box)
-        inner_layout.addStretch()
-        self._layout_gen = None
-
-    def set_layout_generator(self, layout_generator):
-        if self._layout_gen is not None:
-            self._layout_gen.finished.disconnect(self.hide)
-            self._layout_gen.progressed.disconnect(self._progress_bar.setValue)
-            self._layout_gen.msg.disconnect(self._progress_bar.setFormat)
-            self._previews_button.toggled.disconnect(self._layout_gen.set_show_previews)
-            self.stop_button.clicked.disconnect(self._layout_gen.stop)
-        self._layout_gen = layout_generator
-        self._label.setText(f"Processing {self._layout_gen.vertex_count} elements")
-        self._progress_bar.setRange(0, self._layout_gen.max_iters - 1)
-        self._previews_button.toggled.connect(self._layout_gen.set_show_previews)
-        self.stop_button.clicked.connect(self._layout_gen.stop)
-        self._layout_gen.finished.connect(self.hide)
-        self._layout_gen.progressed.connect(self._progress_bar.setValue)
-        self._layout_gen.progressed.connect(self.show)
-        self._layout_gen.msg.connect(self._progress_bar.setFormat)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.fillRect(event.rect(), QColor(0, 0, 0, 96))
-        painter.end()
-        super().paintEvent(event)
 
 
 class GraphLayoutGeneratorRunnable(QRunnable):

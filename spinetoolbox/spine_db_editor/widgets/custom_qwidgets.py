@@ -172,7 +172,6 @@ class ProgressBarWidget(QWidget):
 class TimeLineWidget(QWidget):
     index_changed = Signal(object)
     _STEP_COUNT = 10000
-    _TL_DURATION = 10000
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -198,6 +197,7 @@ class TimeLineWidget(QWidget):
         self._max_index = None
         self._index_incr = None
         self._index = None
+        self._duration_per_step = None
         self._playback_tl = QTimeLine()
         self._slider.valueChanged.connect(self._handle_value_changed)
         self._slider.sliderMoved.connect(self._playback_tl.stop)
@@ -218,9 +218,9 @@ class TimeLineWidget(QWidget):
             self._playback_tl.resume()
             return
         current_value = self._slider.value()
-        first_frame = current_value if current_value != self._slider.maximum() else self._slider.minimum()
-        self._playback_tl.setFrameRange(first_frame, self._STEP_COUNT - 1)
-        self._playback_tl.setDuration(((self._STEP_COUNT - first_frame - 1) / self._STEP_COUNT) * self._TL_DURATION)
+        current_value = current_value if current_value != self._slider.maximum() else self._slider.minimum()
+        self._playback_tl.setFrameRange(current_value, self._STEP_COUNT - 1)
+        self._playback_tl.setDuration((self._STEP_COUNT - current_value) * self._duration_per_step)
         self._playback_tl.start()
 
     @Slot(int)
@@ -231,7 +231,13 @@ class TimeLineWidget(QWidget):
     def set_index_range(self, min_index, max_index):
         self._min_index = min_index
         self._max_index = max_index
-        self._index_incr = (max_index - min_index) / self._STEP_COUNT
+        index_range = max_index - min_index
+        delta = index_range.item()
+        days = delta.days + delta.seconds / (24 * 3600)
+        years = days / 365
+        total_duration = years * 10000  # 1 year to take 10 seconds
+        self._duration_per_step = total_duration / self._STEP_COUNT
+        self._index_incr = index_range / self._STEP_COUNT
         self._index = self._min_index
         self.index_changed.emit(self._index)
         self.show()
