@@ -947,10 +947,10 @@ class BgItem(QGraphicsRectItem):
     def fit_rect(self, rect):
         self._do_resize(rect, True)
 
-    def fit_coordinates(self, bg1, bg2, scen1, scen2):
+    def fit_coordinates(self, p1, p2, scen1, scen2):
         size = self._renderer.defaultSize()
-        x1, y1 = bg1
-        x2, y2 = bg2
+        x1, y1 = p1
+        x2, y2 = p2
         scene_x1, scene_y1 = scen1
         scene_x2, scene_y2 = scen2
         y1 += size.height()

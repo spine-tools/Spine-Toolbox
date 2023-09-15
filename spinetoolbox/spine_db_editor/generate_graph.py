@@ -29,7 +29,7 @@ def generate_graph(
     color_parameter="",
     arc_width_parameter="",
     bg_img_path=None,
-    bg_img_coordinate_map=None,
+    bg_img_entity_coordinates=None,
 ):
     """Launches Spine Db Editor and generates a graph."""
     if not pyside6_version_check():
@@ -53,9 +53,8 @@ def generate_graph(
     graph_view.arc_width_parameter = arc_width_parameter
     if bg_img_path:
         graph_view.set_bg_image(bg_img_path)
-    if bg_img_coordinate_map:
-        (bg1, graph1), (bg2, graph2), *_ignored = bg_img_coordinate_map.items()
-        graph_view.fit_bg(bg1, bg2, graph1, graph2)
+    if bg_img_entity_coordinates:
+        graph_view.set_bg_entity_coordinates(bg_img_entity_coordinates)
     tree_view = editor.ui.treeView_entity
     model = tree_view.model()
     selection_model = tree_view.selectionModel()

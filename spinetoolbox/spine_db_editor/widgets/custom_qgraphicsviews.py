@@ -47,6 +47,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.color_parameter = ""
         self.arc_width_parameter = ""
         self._bg_item = None
+        self._bg_entity_coordinates = None
         self.selected_items = []
         self.removed_items = set()
         self.hidden_items = {}
@@ -516,9 +517,19 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._bg_item = BgItem(file_path)
         self.scene().addItem(self._bg_item)
 
-    def fit_bg(self, bg1, bg2, scen1, scen2):
-        bg1, bg2, scen1, scen2 = [self._spine_db_editor.convert_position(*p) for p in (bg1, bg2, scen1, scen2)]
-        self._bg_item.fit_coordinates(bg1, bg2, scen1, scen2)
+    def set_bg_entity_coordinates(self, entity_coordinates):
+        self._bg_entity_coordinates = {
+            ent: self._spine_db_editor.convert_position(*p) for ent, p in entity_coordinates.items()
+        }
+        self.fit_bg_coordinates()
+
+    def fit_bg_coordinates(self):
+        (ent1, p1), (ent2, p2), *_ignored = self._bg_entity_coordinates.items()
+        pos_by_name = {item.display_data: item.pos() for item in self.entity_items}
+        scen1, scen2 = pos_by_name.get(ent1), pos_by_name.get(ent2)
+        if None in (scen1, scen2):
+            return
+        self._bg_item.fit_coordinates(p1, p2, (scen1.x(), scen1.y()), (scen2.x(), scen2.y()))
 
     def clear_scene(self):
         for item in self.scene().items():
