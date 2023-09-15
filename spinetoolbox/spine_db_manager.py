@@ -90,7 +90,7 @@ class SpineDBManager(QObject):
     waiting_for_fetcher = Signal()
     fetcher_waiting_over = Signal()
 
-    def __init__(self, settings, parent):
+    def __init__(self, settings, parent, synchronous=False):
         """Initializes the instance.
 
         Args:
@@ -108,6 +108,7 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self._icon_mngr = {}
         self._connect_signals()
+        self._synchronous = synchronous
 
     def _connect_signals(self):
         self.session_refreshed.connect(self.receive_session_refreshed)
@@ -452,7 +453,7 @@ class SpineDBManager(QObject):
             if codename is not None:
                 db_map.codename = codename
             return db_map
-        worker = SpineDBWorker(self, url)
+        worker = SpineDBWorker(self, url, synchronous=self._synchronous)
         try:
             db_map = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
         except Exception as error:

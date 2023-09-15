@@ -17,7 +17,7 @@ from sqlalchemy.exc import DBAPIError
 from PySide6.QtCore import QObject, Signal, Slot, QMutex, QMutexLocker
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from .helpers import busy_effect, separate_metadata_and_item_metadata
-from .qthread_pool_executor import QtBasedThreadPoolExecutor
+from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 
 
 _CHUNK_SIZE = 1000
@@ -51,7 +51,7 @@ class SpineDBWorker(QObject):
     _more_available = Signal(object)
     _will_have_children_change = Signal(list)
 
-    def __init__(self, db_mngr, db_url):
+    def __init__(self, db_mngr, db_url, synchronous=False):
         super().__init__()
         self._parents_by_type = {}
         self._add_item_callbacks = {}
@@ -66,7 +66,10 @@ class SpineDBWorker(QObject):
         self._fetched_ids = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
-        self._executor = QtBasedThreadPoolExecutor(max_workers=1)
+        if synchronous:
+            self._executor = SynchronousExecutor()
+        else:
+            self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._advance_query_callbacks = {}
         self._mutex = QMutex()
         self._more_available.connect(self.fetch_more)

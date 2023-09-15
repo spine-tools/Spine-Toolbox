@@ -296,10 +296,11 @@ class LegendWidget(QWidget):
 
     def paint(self, painter, rect):
         painter.save()
+        row_h = rect.height() / len(self._legend)
         font = painter.font()
-        font.setPointSizeF(0.375 * rect.height())
+        font.setPointSizeF(0.375 * row_h)
         painter.setFont(font)
-        text_flags = Qt.AlignVCenter
+        text_flags = Qt.AlignBottom
         # Get column widths
         pname_cws, min_val_cws, max_val_cws = [], [], []
         for pname, min_val, _paint_legend, max_val in self._legend:
@@ -309,7 +310,6 @@ class LegendWidget(QWidget):
         min_val_cw = max(min_val_cws)
         max_val_cw = max(max_val_cws)
         bar_cw = rect.width() - (pname_cw + min_val_cw + max_val_cw) - 5 * self._SPACING
-        row_h = rect.height() / len(self._legend)
         # Paint
         for i, (pname, min_val, paint_bar, max_val) in enumerate(self._legend):
             cell = QRectF(0, rect.y() + self._SPACING + i * row_h, 0, row_h - 2 * self._SPACING)
@@ -320,7 +320,7 @@ class LegendWidget(QWidget):
             left += pname_cw + self._SPACING
             cell.setLeft(left)
             cell.setWidth(min_val_cw)
-            painter.drawText(cell, text_flags, min_val)
+            painter.drawText(cell, text_flags | Qt.AlignRight, min_val)
             left += min_val_cw + self._SPACING
             cell.setLeft(left)
             cell.setWidth(bar_cw)
