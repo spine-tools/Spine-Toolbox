@@ -230,9 +230,6 @@ class EntityItem(QGraphicsRectItem):
                     return None
                 return 1 + 9 * (val - min_val) / range_
 
-    def _has_name(self):
-        return True
-
     def set_up(self):
         if self._has_name():
             name = self._get_name()
