@@ -40,7 +40,7 @@ def generate_graph(
         logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
     locale.setlocale(locale.LC_NUMERIC, 'C')
     settings = QSettings("SpineProject", "Spine Toolbox")
-    db_mngr = SpineDBManager(settings, None, synchronous=True)
+    db_mngr = SpineDBManager(settings, None, synchronous=False)
     multi_editor = MultiSpineDBEditor(db_mngr)
     multi_editor.add_new_tab({url: None})
     editor = multi_editor.tab_widget.widget(0)
@@ -56,12 +56,15 @@ def generate_graph(
     if bg_img_coordinate_map:
         (bg1, graph1), (bg2, graph2), *_ignored = bg_img_coordinate_map.items()
         graph_view.fit_bg(bg1, bg2, graph1, graph2)
-    tree_view = editor.ui.treeView_entity
-    model = tree_view.model()
-    selection_model = tree_view.selectionModel()
-    for item in model.visit_all():
-        if hasattr(item, "item_type") and item.item_type == "entity_class" and item.display_data in entity_classes:
-            index = model.index_from_item(item)
-            selection_model.select(index, QItemSelectionModel.Select)
+    for item_type, tree_view in (
+        ("object_class", editor.ui.treeView_object),
+        ("relationship_class", editor.ui.treeView_relationship),
+    ):
+        model = tree_view.model()
+        selection_model = tree_view.selectionModel()
+        for item in model.visit_all():
+            if hasattr(item, "item_type") and item.item_type == item_type and item.display_data in entity_classes:
+                index = model.index_from_item(item)
+                selection_model.select(index, QItemSelectionModel.Select)
     return_code = app.exec()
     return return_code
