@@ -451,6 +451,7 @@ class GraphViewMixin:
             self.ui.graphicsView.reset_zoom()
         else:
             self.ui.graphicsView.apply_zoom()
+        self.ui.graphicsView.fit_bg_coordinates()
 
     def _get_selected_entity_ids(self):
         """Returns a set of ids corresponding to selected entities in the trees.
