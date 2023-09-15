@@ -292,7 +292,9 @@ class EntityItem(QGraphicsRectItem):
     def _update_renderer(self, color, resize=True):
         if color is self._spine_db_editor.NOT_SPECIFIED:
             color = color_from_index(0, 1, value=0)
-        self._renderer = self.db_mngr.entity_class_renderer(self.first_db_map, self.entity_class_type, self.first_entity_class_id, color=color)
+        self._renderer = self.db_mngr.entity_class_renderer(
+            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color=color
+        )
         self._install_renderer()
 
     def _install_renderer(self, resize=True):
@@ -495,7 +497,7 @@ class RelationshipItem(EntityItem):
             db_map_ids (tuple): tuple of (db_map, id) tuples
         """
         super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids, offset=offset)
-        self._set_up()
+        self.set_up()
 
     @property
     def has_dimensions(self):
@@ -574,7 +576,7 @@ class ObjectItem(EntityItem):
         super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
         self._db_map_relationship_class_lists = {}
         self.setZValue(0.5)
-        self._set_up()
+        self.set_up()
 
     @property
     def has_dimensions(self):

@@ -201,7 +201,7 @@ class GraphViewMixin:
             x = self._pos_for_added_objects.x()
             y = self._pos_for_added_objects.y()
             for dx, dy, db_map_ids in zip(layout_x, layout_y, new_db_map_id_sets):
-                object_item = ObjectItem(self, x + dx, y + dy, self.VERTEX_EXTENT, tuple(db_map_ids))
+                object_item = ObjectItem(self, x + dx, y + dy, self._VERTEX_EXTENT, tuple(db_map_ids))
                 self.scene.addItem(object_item)
                 object_item.apply_zoom(self.ui.graphicsView.zoom_factor)
             self._pos_for_added_objects = None
@@ -747,7 +747,7 @@ class GraphViewMixin:
             y (list)
         """
         self.object_items = [
-            ObjectItem(self, *self.convert_position(x[i], y[i]), self.VERTEX_EXTENT, tuple(db_map_object_ids))
+            ObjectItem(self, *self.convert_position(x[i], y[i]), self._VERTEX_EXTENT, tuple(db_map_object_ids))
             for i, db_map_object_ids in enumerate(self.db_map_object_id_sets)
         ]
         obj_item_count = len(self.object_items)
@@ -756,7 +756,7 @@ class GraphViewMixin:
                 self,
                 x[obj_item_count + i],
                 y[obj_item_count + i],
-                0.5 * self.VERTEX_EXTENT,
+                0.5 * self._VERTEX_EXTENT,
                 tuple(db_map_relationship_id),
                 offset=self.entity_offsets.get(obj_item_count + i),
             )
