@@ -17,7 +17,6 @@ import sys
 import itertools
 from time import monotonic
 from PySide6.QtCore import Slot, QTimer, QThreadPool
-from PySide6.QtWidgets import QHBoxLayout
 from spinedb_api import from_database
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
@@ -32,7 +31,7 @@ from ..graphics_items import (
     CrossHairsRelationshipItem,
     CrossHairsArcItem,
 )
-from .graph_layout_generator import GraphLayoutGeneratorRunnable, ProgressBarWidget
+from .graph_layout_generator import GraphLayoutGeneratorRunnable
 from .add_items_dialogs import AddObjectsDialog, AddReadyRelationshipsDialog
 
 
