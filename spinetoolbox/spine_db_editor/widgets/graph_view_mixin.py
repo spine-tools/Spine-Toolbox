@@ -142,7 +142,8 @@ class GraphViewMixin:
     @Slot(int)
     def _update_time_line_index(self, index):
         self._time_line_index = index
-        self._do_polish_items()
+        for item in self.ui.graphicsView.entity_items:
+            item.update_props()
 
     @Slot(bool)
     def _stop_extending_graph(self, _=False):
@@ -341,7 +342,8 @@ class GraphViewMixin:
 
     def polish_items(self):
         self._update_property_pvs()
-        self._do_polish_items()
+        for item in self.ui.graphicsView.entity_items:
+            item.set_up()
 
     def _update_property_pvs(self):
         self._pvs_by_pname = {
@@ -375,10 +377,6 @@ class GraphViewMixin:
             self.ui.time_line_widget.set_index_range(min_, max_)
         else:
             self.ui.time_line_widget.hide()
-
-    def _do_polish_items(self):
-        for item in self.ui.graphicsView.entity_items:
-            item.polish()
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):

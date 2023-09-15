@@ -230,7 +230,10 @@ class EntityItem(QGraphicsRectItem):
                     return None
                 return 1 + 9 * (val - min_val) / range_
 
-    def _set_up(self):
+    def _has_name(self):
+        return True
+
+    def set_up(self):
         if self._has_name():
             name = self._get_name()
             if not name:
@@ -252,7 +255,7 @@ class EntityItem(QGraphicsRectItem):
         self.refresh_icon()
         self.update_entity_pos()
 
-    def polish(self):
+    def update_props(self):
         self._renderer = self.db_mngr.entity_class_renderer(
             self.first_db_map, self.entity_class_type, self.first_entity_class_id, color_code=self._get_color()
         )

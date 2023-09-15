@@ -15,7 +15,7 @@ Classes for custom QGraphicsViews for the Entity graph view.
 
 import os
 import sys
-from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
+from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF, QPoint
 from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog
 from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize
 from PySide6.QtPrintSupport import QPrinter
