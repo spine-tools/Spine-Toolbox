@@ -1621,7 +1621,7 @@ class SpineDBManager(QObject):
             error_msg = {None: [f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"]}
             caller.msg_error.emit(error_msg)
         else:
-            caller.sqlite_file_exported.emit(file_path)
+            caller.file_exported.emit(file_path, 1.0, True)
         finally:
             db_map.connection.close()
 
@@ -1630,7 +1630,7 @@ class SpineDBManager(QObject):
         json_data = json.dumps(data_for_export, indent=4)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        caller.file_exported.emit(file_path)
+        caller.file_exported.emit(file_path, 1.0, False)
 
     def export_to_excel(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
         """Exports given data into Excel file."""
@@ -1652,7 +1652,7 @@ class SpineDBManager(QObject):
             error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
             caller.msg_error.emit(error_msg)
         else:
-            caller.file_exported.emit(file_path)
+            caller.file_exported.emit(file_path, 1.0, False)
         finally:
             db_map.connection.close()
 
