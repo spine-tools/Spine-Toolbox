@@ -320,7 +320,11 @@ class SpineToolboxProject(MetaObject):
         connection_dicts = project_info["project"]["connections"]
         connections = list(map(self.connection_from_dict, connection_dicts))
         for connection in connections:
-            self.add_connection(connection, silent=True)
+            self.add_connection(connection, silent=True, notify_resource_changes=False)
+        for connection in connections:
+            destination = self._project_items[connection.destination]
+            source = self._project_items[connection.source]
+            self._notify_rsrc_changes(destination, source)
         for connection in connections:
             connection.link.update_icons()
         self._logger.msg.emit("Restoring jumps...")
@@ -715,7 +719,7 @@ class SpineToolboxProject(MetaObject):
         """
         return [c for c in self._connections if item_name in (c.source, c.destination)]
 
-    def add_connection(self, *args, silent=False):
+    def add_connection(self, *args, silent=False, notify_resource_changes=True):
         """Adds a connection to the project.
 
         A single argument is expected to be the ``Logging connection`` instance.
@@ -724,6 +728,7 @@ class SpineToolboxProject(MetaObject):
         Args:
             *args: connection to add
             silent (bool): If False, prints 'Link establ...' msg to Event Log
+            notify_resource_changes (bool): If True, updates resources of successor and predecessor items
 
         Returns:
             bool: True if connection was added successfully, False otherwise
@@ -743,13 +748,23 @@ class SpineToolboxProject(MetaObject):
         if not self._is_dag_valid(dag):
             return True  # Connection was added successfully even though DAG is not valid.
         destination = self._project_items[connection.destination]
-        self.notify_resource_changes_to_predecessors(destination)
         source = self._project_items[connection.source]
-        self.notify_resource_changes_to_successors(source)
+        if notify_resource_changes:
+            self._notify_rsrc_changes(destination, source)
         if not silent:
             destination.notify_destination(source)
         self._update_ranks(dag)
         return True
+
+    def _notify_rsrc_changes(self, destination, source):
+        """Notifies connection destination and connection source item that resources may have changed.
+
+        Args:
+            destination (ProjectItem): Destination item
+            source (ProjectItem): Source item
+        """
+        self.notify_resource_changes_to_predecessors(destination)
+        self.notify_resource_changes_to_successors(source)
 
     def remove_connection(self, connection):
         """Removes a connection from the project.
