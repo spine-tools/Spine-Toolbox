@@ -130,7 +130,11 @@ class StackedViewMixin:
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
+        self._filter_cls_ids_selected = {}
         self._reset_filters()
+        trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
+        for tree in trees:
+            tree.selectionModel().clearSelection()
 
     def _reset_filters(self):
         """Resets filters."""
@@ -176,6 +180,7 @@ class StackedViewMixin:
         self._filter_cls_ids_selected = self._db_map_ids(ent_cls_inds_selected) if mixed_selection else dict()
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
             self._filter_alternative_ids.clear()
+            self._clear_all_other_selections(self.ui.treeView_entity)
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
 
