@@ -28,56 +28,93 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 from PySide6.QtGui import QPainter, QColor, QIcon, QBrush, QPainterPath, QPalette
-from PySide6.QtCore import Signal, Slot, QVariantAnimation, QPointF, Qt, QTimeLine, QRectF
+from PySide6.QtCore import Signal, Slot, QVariantAnimation, QPointF, Qt, QTimeLine, QRectF, QTimer, QEasingCurve
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url, CharIconEngine, color_from_index
 
 
-class OpenFileButton(QToolButton):
+class OpenFileButton(QWidget):
     """A button to open files or show them in the folder."""
 
-    def __init__(self, file_path, db_editor):
+    def __init__(self, file_path, progress, db_editor):
         super().__init__()
-        self.db_editor = db_editor
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         self.file_path = file_path
+        self.progress = None
+        self.db_editor = db_editor
         self.dir_name, self.file_name = os.path.split(file_path)
-        self.setText(self.file_name)
-        self.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        self.setStyleSheet(
-            """
-            QToolButton {
-                padding-left: 12px; padding-right: 32px; padding-top: 6px; padding-bottom: 6px;
-                background-color: #ffffff;
-                border: 1px solid #cccccc;
-                border-style: outset;
-                border-radius: 6px;
-            }
-            QToolButton:hover {
-                background-color: #dddddd;
-            }
-            QToolButton:pressed {
-                background-color: #bbbbbb;
-                border-style: inset;
-            }
-            QToolButton::menu-button {
-                border: 1px solid #cccccc;
-                border-style: outset;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-                width: 20px;
-            }
-            QToolButton::menu-button:pressed {
-                border-style: inset;
-            }
-            """
-        )
+        self._progress_bar = QProgressBar()
+        self._button = QToolButton()
+        layout.addWidget(self._progress_bar)
+        layout.addStretch()
+        layout.addWidget(self._button)
+        padding = 4 * " "
+        menu_button_size = self.fontMetrics().horizontalAdvance(padding)
+        self._progress_bar.setFormat(self.file_name + padding)
+        self._progress_bar.setRange(1, 10)
+        self._progress_bar.setValue(1)
+        self._button.hide()
+        self._button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self._button.setText(self.file_name)
+        self._button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         menu = QMenu(db_editor)
-        self.setMenu(menu)
+        self._button.setMenu(menu)
         open_file_action = menu.addAction("Open")
         open_containing_folder_action = menu.addAction("Open containing folder")
         open_file_action.triggered.connect(self.open_file)
         open_containing_folder_action.triggered.connect(self.open_containing_folder)
-        self.clicked.connect(open_file_action.triggered)
+        self._button.clicked.connect(open_file_action.triggered)
+        self.setStyleSheet(
+            f"""
+            QToolButton {{
+                padding-left: 16px; padding-right: {16 + menu_button_size}px; padding-top: 6px; padding-bottom: 6px;
+                background-color: #fff;
+                border: 1px solid #ccc;
+                border-style: outset;
+            }}
+            QToolButton:hover {{
+                background-color: #eee;
+            }}
+            QToolButton:pressed {{
+                background-color: #ddd;
+                border-style: inset;
+            }}
+            QToolButton::menu-button {{
+                border: 1px solid #ccc;
+                border-style: outset;
+                width: {menu_button_size}px;
+            }}
+            QToolButton::menu-button:pressed {{
+                border-style: inset;
+            }}
+            QProgressBar {{
+                text-align: center;
+                background-color: #fff;
+                border: 1px solid #ccc;
+                border-style: inset;
+            }}
+            """
+        )
+        self._button.adjustSize()
+        size = self._button.size()
+        self.setFixedSize(size)
+        self._progress_bar.setFixedSize(size)
+        self.set_progress(progress)
+
+    def set_progress(self, progress):
+        self.progress = self._progress_bar.minimum() + progress * (
+            self._progress_bar.maximum() - self._progress_bar.minimum()
+        )
+        self._progress_bar.setValue(self.progress)
+        if self.progress == self._progress_bar.maximum():
+
+            def _show_button():
+                self._progress_bar.hide()
+                self._button.show()
+
+            QTimer.singleShot(100, _show_button)
 
     @Slot(bool)
     def open_file(self, checked=False):
@@ -91,8 +128,8 @@ class OpenFileButton(QToolButton):
 class OpenSQLiteFileButton(OpenFileButton):
     """A button to open sqlite files, show them in the folder, or add them to the project."""
 
-    def __init__(self, file_path, db_editor):
-        super().__init__(file_path, db_editor)
+    def __init__(self, file_path, progress, db_editor):
+        super().__init__(file_path, progress, db_editor)
         self.url = URL("sqlite", database=self.file_path)
 
     @Slot(bool)
@@ -197,8 +234,9 @@ class TimeLineWidget(QWidget):
         self._max_index = None
         self._index_incr = None
         self._index = None
-        self._duration_per_step = None
+        self._ms_per_step = None
         self._playback_tl = QTimeLine()
+        self._playback_tl.setEasingCurve(QEasingCurve(QEasingCurve.Linear))
         self._slider.valueChanged.connect(self._handle_value_changed)
         self._slider.sliderMoved.connect(self._playback_tl.stop)
         self._playback_tl.frameChanged.connect(self._slider.setValue)
@@ -220,7 +258,7 @@ class TimeLineWidget(QWidget):
         current_value = self._slider.value()
         current_value = current_value if current_value != self._slider.maximum() else self._slider.minimum()
         self._playback_tl.setFrameRange(current_value, self._STEP_COUNT - 1)
-        self._playback_tl.setDuration((self._STEP_COUNT - current_value) * self._duration_per_step)
+        self._playback_tl.setDuration((self._STEP_COUNT - current_value) * self._ms_per_step)
         self._playback_tl.start()
 
     @Slot(int)
@@ -231,16 +269,30 @@ class TimeLineWidget(QWidget):
     def set_index_range(self, min_index, max_index):
         self._min_index = min_index
         self._max_index = max_index
-        index_range = max_index - min_index
+        index_range = self._max_index - self._min_index
         delta = index_range.item()
         days = delta.days + delta.seconds / (24 * 3600)
         years = days / 365
         total_duration = years * 10000  # 1 year to take 10 seconds
-        self._duration_per_step = total_duration / self._STEP_COUNT
+        self._ms_per_step = total_duration / self._STEP_COUNT
         self._index_incr = index_range / self._STEP_COUNT
         self._index = self._min_index
         self.index_changed.emit(self._index)
         self.show()
+
+    def indexes(self, fps):
+        indexes = []
+        total_seconds = self._ms_per_step * self._STEP_COUNT / 1000  # in s
+        frame_count = total_seconds * fps
+        index_range = self._max_index - self._min_index
+        incr = index_range / frame_count
+        index = self._min_index
+        while True:
+            indexes.append(index)
+            index += incr
+            if index > self._max_index:
+                break
+        return indexes
 
 
 class LegendWidget(QWidget):

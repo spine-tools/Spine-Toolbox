@@ -15,12 +15,14 @@ Classes for custom QGraphicsViews for the Entity graph view.
 
 import os
 import sys
+import tempfile
+from contextlib import contextmanager
 from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
 from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog
-from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize
+from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
-from ...helpers import CharIconEngine
+from ...helpers import CharIconEngine, busy_effect
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
 from ..graphics_items import EntityItem, CrossHairsArcItem, BgItem
@@ -46,6 +48,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.name_parameter = ""
         self.color_parameter = ""
         self.arc_width_parameter = ""
+        self._margin = 0.05
         self._bg_item = None
         self._bg_entity_coordinates = None
         self.selected_items = []
@@ -74,6 +77,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._restore_all_pruned_action = None
         self._rebuild_action = None
         self._export_as_image_action = None
+        self._export_as_video_action = None
         self._zoom_action = None
         self._rotate_action = None
         self._arc_length_action = None
@@ -174,7 +178,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._select_bg_image_action = self._menu.addAction("Select background image...", self._select_bg_image)
         self._menu.addSeparator()
         self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
-        self._export_as_image_action = self._menu.addAction("Export as vector image...", self.export_as_image)
+        self._export_as_image_action = self._menu.addAction("Export as image...", self.export_as_image)
+        self._export_as_video_action = self._menu.addAction("Export as video...", self.export_as_video)
         self._menu.addSeparator()
         self._zoom_action = ToolBarWidgetAction("Zoom", self._menu, compact=True)
         self._zoom_action.tool_bar.addAction("-", self.zoom_out).setToolTip("Zoom out")
@@ -238,6 +243,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._rotate_action.setEnabled(has_graph)
         self._find_action.setEnabled(has_graph)
         self._export_as_image_action.setEnabled(has_graph)
+        self._export_as_video_action.setEnabled(has_graph and self._spine_db_editor.ui.time_line_widget.isVisible())
         self._items_per_class = {}
         for item in self.entity_items:
             key = f"{item.entity_class_name}"
@@ -538,22 +544,35 @@ class EntityQGraphicsView(CustomQGraphicsView):
             if item is not self._bg_item:
                 self.scene().removeItem(item)
 
+    @contextmanager
+    def _no_zoom(self):
+        current_zoom_factor = self.zoom_factor
+        self._zoom(1.0 / current_zoom_factor)
+        try:
+            yield
+        finally:
+            self._zoom(current_zoom_factor)
+
     @Slot(bool)
     def export_as_image(self, _=False):
         file_path = self._spine_db_editor.get_save_file_path(
-            "exportGraphAsImage", "Export as vector image...", "SVG files (*.svg);;PDF files (*.pdf)"
+            "exportGraphAsImage", "Export as image...", "SVG files (*.svg);;PDF files (*.pdf)"
         )
         if not file_path:
             return
-        # source = self._get_viewport_scene_rect()
+        with self._no_zoom():
+            self._do_export_as_image(file_path)
+        self._spine_db_editor.file_exported.emit(file_path, 1.0, False)
+
+    def _get_print_source(self):
         source = self.scene().itemsBoundingRect()
-        margin = 0.05
-        dx, dy = margin * source.width(), margin * source.height()
+        dx, dy = self._margin * source.width(), self._margin * source.height()
         source.adjust(-dx, -dy, dx, dy)
-        current_zoom_factor = self.zoom_factor
-        self._zoom(1.0 / current_zoom_factor)
-        self.scene().clearSelection()
-        file_ext = os.path.splitext(file_path)[-1]
+        return source
+
+    def _do_export_as_image(self, file_path):
+        source = self._get_print_source()
+        file_ext = os.path.splitext(file_path)[-1].lower()
         if not file_ext:
             file_ext = ".svg"
             file_path += file_ext
@@ -569,20 +588,94 @@ class EntityQGraphicsView(CustomQGraphicsView):
             size = page_size.sizePixels(printer.resolution())
             printer.setPageSize(page_size)
             printer.setOutputFileName(file_path)
+        else:
+            size = source.size().toSize()
+            printer = QPixmap(size)
+            printer.fill(Qt.white)
+        self._print_scene(printer, source, size)
+        if isinstance(printer, QPixmap):
+            printer.save(file_path)
+
+    def _print_scene(self, printer, source, size, index=None):
         painter = QPainter(printer)
+        self.scene().clearSelection()
         self.scene().render(painter, QRectF(), source)
         if self._spine_db_editor.ui.legend_widget.isVisible():
-            legend_width, legend_height = 0.5 * size.width(), 0.5 * margin * size.height()
+            legend_width, legend_height = 0.5 * size.width(), 0.5 * self._margin * size.height()
             legend_rect = QRectF(
                 0.5 * (size.width() - legend_width),
-                size.height() - 0.5 * margin * size.height() - 0.5 * legend_height,
+                size.height() - 0.5 * self._margin * size.height() - 0.5 * legend_height,
                 legend_width,
                 legend_height,
             )
             self._spine_db_editor.ui.legend_widget.paint(painter, legend_rect)
+        if index is not None:
+            height = 0.5 * self._margin * size.height()
+            font = painter.font()
+            font.setPointSizeF(0.375 * height)
+            painter.setFont(font)
+            text = str(index)
+            rect = painter.boundingRect(source, text)
+            painter.drawText(size.width() - rect.width(), rect.height(), str(index))
         painter.end()
-        self._zoom(current_zoom_factor)
-        self._spine_db_editor.file_exported.emit(file_path)
+
+    @busy_effect
+    def _pixmaps(self, fps):
+        pixmaps = []
+        with self._no_zoom():
+            source = self._get_print_source()
+            size = source.size().toSize()
+            for index in self._spine_db_editor.ui.time_line_widget.indexes(fps):
+                pixmap = QPixmap(size)
+                pixmap.fill(Qt.white)
+                self._spine_db_editor._update_time_line_index(index)  # FIXME
+                self._print_scene(pixmap, source, size, index=index)
+                pixmaps.append(pixmap.scaledToWidth(1600))
+        return pixmaps
+
+    @Slot(bool)
+    def export_as_video(self):
+        try:
+            import cv2
+        except ModuleNotFoundError:
+            self._spine_db_editor.msg_error.emit(
+                "Export as video requires <a href='https://pypi.org/project/opencv-python/'>opencv-python</a>"
+            )
+            return
+        file_path = self._spine_db_editor.get_save_file_path(
+            "exportGraphAsVideo", "Export as video...", "All files (*);;MP4 files (*.mp4);;AVI files (*.avi)"
+        )
+        if not file_path:
+            return
+        file_ext = os.path.splitext(file_path)[-1].lower()
+        if not file_ext:
+            file_ext = ".mp4"
+            file_path += file_ext
+        fps = 1.0
+        pixmaps = self._pixmaps(fps)
+        if not pixmaps:
+            return
+
+        def pixmap_to_frame(pixmap, file_path):
+            ok = pixmap.save(file_path)
+            assert ok
+            return cv2.imread(file_path, -1)
+
+        pixmap_iter = enumerate(pixmaps)
+        with tempfile.NamedTemporaryFile() as f:
+            buffer_path = f.name + ".png"
+            k, pixmap = next(pixmap_iter)
+            frame = pixmap_to_frame(pixmap, buffer_path)
+            height, width, _layers = frame.shape
+            video = cv2.VideoWriter(file_path, cv2.VideoWriter_fourcc(*"XVID"), fps, (width, height))
+            self._spine_db_editor.file_exported.emit(file_path, k / len(pixmaps), False)
+            for k, pixmap in pixmap_iter:
+                frame = pixmap_to_frame(pixmap, buffer_path)
+                video.write(frame)
+                self._spine_db_editor.file_exported.emit(file_path, k / len(pixmaps), False)
+        cv2.destroyAllWindows()
+        video.release()
+        self._spine_db_editor.file_exported.emit(file_path, 1.0, False)
 
     def set_cross_hairs_items(self, entity_class, cross_hairs_items):
         """Sets 'cross_hairs' items for connecting entities.
