@@ -153,9 +153,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._select_graph_params_action = None
         self._save_pos_action = None
         self._clear_pos_action = None
-        self._hide_selected_action = None
         self._show_all_hidden_action = None
-        self._prune_selected_action = None
         self._restore_all_pruned_action = None
         self._rebuild_action = None
         self._export_as_image_action = None
@@ -190,8 +188,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for name, value in props.items():
             self.set_property(name, value)
 
-    def set_pruned_entity_ids(self, db_map, ids):
-        self.pruned_db_map_entity_ids = {"pruned from saved view": {(db_map, id_) for id_ in ids}}
+    def set_pruned_db_map_entity_ids(self, key, pruned_db_map_entity_ids):
+        self.pruned_db_map_entity_ids = {key: pruned_db_map_entity_ids}
 
     def get_pruned_entity_ids(self, db_map):
         return [
@@ -241,14 +239,12 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.addSeparator()
         self._find_action = self._menu.addAction("Search...", self._find)
         self._menu.addSeparator()
-        self._hide_selected_action = self._menu.addAction("Hide selected", self.hide_selected_items)
         self._hide_classes_menu = self._menu.addMenu("Hide classes")
         self._hide_classes_menu.triggered.connect(self._hide_class)
         self._show_hidden_menu = self._menu.addMenu("Show")
         self._show_hidden_menu.triggered.connect(self.show_hidden_items)
         self._show_all_hidden_action = self._menu.addAction("Show all", self.show_all_hidden_items)
         self._menu.addSeparator()
-        self._prune_selected_action = self._menu.addAction("Prune selected", self.prune_selected_items)
         self._prune_classes_menu = self._menu.addMenu("Prune classes")
         self._prune_classes_menu.triggered.connect(self._prune_class)
         self._restore_pruned_menu = self._menu.addMenu("Restore")
@@ -284,8 +280,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         )
         self._select_bg_image_action = self._menu.addAction("Select background image...", self._select_bg_image)
         self._menu.addSeparator()
-        self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
-        self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
+        self._save_pos_action = self._menu.addAction("Save positions", self._save_all_positions)
+        self._clear_pos_action = self._menu.addAction("Clear saved positions", self._clear_all_positions)
         self._menu.addSeparator()
         self._save_state_action = self._menu.addAction("Save state...", self._save_state)
         self._load_state_menu = self._menu.addMenu("Load state")
@@ -350,21 +346,22 @@ class EntityQGraphicsView(CustomQGraphicsView):
             key = f"{item.entity_class_name}"
             self._items_per_class.setdefault(key, list()).append(item)
         self._db_map_graph_data_by_name = self._spine_db_editor.get_db_map_graph_data_by_name()
-        self._save_pos_action.setEnabled(bool(self.selected_items))
-        self._clear_pos_action.setEnabled(bool(self.selected_items))
-        self._hide_selected_action.setEnabled(bool(self.selected_items))
-        self._show_hidden_menu.setEnabled(any(self.hidden_items.values()))
         self._show_all_hidden_action.setEnabled(bool(self.hidden_items))
-        self._prune_selected_action.setEnabled(bool(self.selected_items))
-        self._restore_pruned_menu.setEnabled(any(self.pruned_db_map_entity_ids.values()))
         self._restore_all_pruned_action.setEnabled(any(self.pruned_db_map_entity_ids.values()))
-        self._prune_selected_action.setText(f"Prune {self._get_selected_entity_names()}")
         self._rebuild_action.setEnabled(has_graph)
         self._zoom_action.setEnabled(has_graph)
         self._rotate_action.setEnabled(has_graph)
         self._find_action.setEnabled(has_graph)
         self._export_as_image_action.setEnabled(has_graph)
         self._export_as_video_action.setEnabled(has_graph and self._spine_db_editor.ui.time_line_widget.isVisible())
+        self._show_hidden_menu.clear()
+        self._show_hidden_menu.setEnabled(any(self.hidden_items.values()))
+        for key in sorted(self.hidden_items):
+            self._show_hidden_menu.addAction(key)
+        self._restore_pruned_menu.clear()
+        self._restore_pruned_menu.setEnabled(any(self.pruned_db_map_entity_ids.values()))
+        for key in sorted(self.pruned_db_map_entity_ids):
+            self._restore_pruned_menu.addAction(key)
         self._hide_classes_menu.clear()
         self._hide_classes_menu.setEnabled(bool(self._items_per_class))
         for key in sorted(self._items_per_class.keys() - self.hidden_items.keys()):
@@ -384,15 +381,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def make_items_menu(self):
         menu = QMenu(self)
-        menu.addAction(self._save_pos_action)
-        menu.addAction(self._clear_pos_action)
+        menu.addAction("Save positions", self._save_selected_positions).setEnabled(bool(self.selected_items))
+        menu.addAction("Clear saved positions", self._clear_selected_positions).setEnabled(bool(self.selected_items))
         menu.addSeparator()
-        menu.addAction(self._hide_selected_action)
-        menu.addAction(self._prune_selected_action)
+        menu.addAction("Hide", self.hide_selected_items).setEnabled(bool(self.selected_items))
+        menu.addAction("Prune", self.prune_selected_items).setEnabled(bool(self.selected_items))
         menu.addSeparator()
-        menu.addAction("Edit", self.edit_selected)
-        menu.addAction("Remove", self.remove_selected)
-        menu.aboutToShow.connect(self._update_actions_visibility)
+        menu.addAction("Edit", self.edit_selected).setEnabled(bool(self.selected_items))
+        menu.addAction("Remove", self.remove_selected).setEnabled(bool(self.selected_items))
         return menu
 
     @Slot(bool)
@@ -431,7 +427,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Hides selected items."""
         key = self._get_selected_entity_names()
         self.hidden_items[key] = self.selected_items
-        self._show_hidden_menu.addAction(key)
         for item in self.selected_items:
             item.setVisible(False)
 
@@ -441,7 +436,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         key = action.text()
         items = self._items_per_class[key]
         self.hidden_items[key] = items
-        self._show_hidden_menu.addAction(key)
         for item in items:
             item.setVisible(False)
 
@@ -450,7 +444,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Shows all hidden items."""
         if not self.scene():
             return
-        self._show_hidden_menu.clear()
         while self.hidden_items:
             _, items = self.hidden_items.popitem()
             for item in items:
@@ -462,8 +455,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         key = action.text()
         items = self.hidden_items.pop(key, None)
         if items is not None:
-            action = next(iter(a for a in self._show_hidden_menu.actions() if a.text() == key))
-            self._show_hidden_menu.removeAction(action)
             for item in items:
                 item.setVisible(True)
 
@@ -472,7 +463,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Prunes selected items."""
         key = self._get_selected_entity_names()
         self.pruned_db_map_entity_ids[key] = {db_map_id for x in self.selected_items for db_map_id in x.db_map_ids}
-        self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
 
     @Slot(QAction)
@@ -488,14 +478,12 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 db_map, item_type, "class_id", item.entity_class_id(db_map), only_visible=False
             )
         }
-        self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
 
     @Slot(bool)
     def restore_all_pruned_items(self, checked=False):
         """Reinstates all pruned items."""
         self.pruned_db_map_entity_ids.clear()
-        self._restore_pruned_menu.clear()
         self._spine_db_editor.build_graph()
 
     @Slot(QAction)
@@ -503,8 +491,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Reinstates some pruned items."""
         key = action.text()
         if self.pruned_db_map_entity_ids.pop(key, None) is not None:
-            action = next(iter(a for a in self._restore_pruned_menu.actions() if a.text() == key))
-            self._restore_pruned_menu.removeAction(action)
             self._spine_db_editor.build_graph()
 
     @Slot(bool)
@@ -532,13 +518,20 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._spine_db_editor.polish_items()
 
     @Slot(bool)
-    def save_positions(self, checked=False):
+    def _save_selected_positions(self, checked=False):
+        self._save_positions(self.selected_items)
+
+    @Slot(bool)
+    def _save_all_positions(self, checked=False):
+        self._save_positions(self.entity_items)
+
+    def _save_positions(self, items):
         if not self.pos_x_parameter or not self.pos_y_parameter:
-            msg = "You haven't selected the position parameters. Please go to Graph -> Select position parameters"
+            msg = "You haven't selected the position parameters"
             self._spine_db_editor.msg.emit(msg)
             return
-        obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
-        rel_items = [item for item in self.selected_items if isinstance(item, RelationshipItem)]
+        obj_items = [item for item in items if isinstance(item, ObjectItem)]
+        rel_items = [item for item in items if isinstance(item, RelationshipItem)]
         db_map_class_obj_items = {}
         db_map_class_rel_items = {}
         for item in obj_items:
@@ -583,11 +576,18 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.db_mngr.import_data(db_map_data)
 
     @Slot(bool)
-    def clear_saved_positions(self, checked=False):
-        if not self.selected_items:
+    def _clear_selected_positions(self, checked=False):
+        self._clear_positions(self.selected_items)
+
+    @Slot(bool)
+    def _clear_all_positions(self, checked=False):
+        self._clear_positions(self.entity_items)
+
+    def _clear_positions(self, items):
+        if not items:
             return
         db_map_ids = {}
-        for item in self.selected_items:
+        for item in items:
             db_map_ids.setdefault(item.db_map, set()).add(item.entity_id)
         db_map_typed_data = {}
         for db_map, ids in db_map_ids.items():
