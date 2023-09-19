@@ -18,15 +18,15 @@ import sys
 import tempfile
 from contextlib import contextmanager
 import numpy as np
-from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
-from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog, QMessageBox, QLineEdit
+from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF, QRunnable, QThreadPool
+from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog, QMessageBox, QLineEdit, QGraphicsScene
 from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
-from ...helpers import CharIconEngine, busy_effect
+from ...helpers import CharIconEngine
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
-from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, CrossHairsArcItem, BgItem
+from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, CrossHairsArcItem, BgItem, ArcItem
 from .custom_qwidgets import ExportAsVideoDialog
 from .select_graph_parameters_dialog import SelectGraphParametersDialog
 
@@ -177,6 +177,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._remove_state_menu = None
         self._items_per_class = {}
         self._db_map_graph_data_by_name = {}
+        self._thread_pool = QThreadPool()
 
     @property
     def _qsettings(self):
@@ -676,12 +677,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self._do_export_as_image(file_path)
         self._spine_db_editor.file_exported.emit(file_path, 1.0, False)
 
-    def _get_print_source(self):
-        source = self.scene().itemsBoundingRect()
-        dx, dy = self._margin * source.width(), self._margin * source.height()
-        source.adjust(-dx, -dy, dx, dy)
-        return source
-
     def _do_export_as_image(self, file_path):
         source = self._get_print_source()
         file_ext = os.path.splitext(file_path)[-1].lower()
@@ -708,10 +703,19 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if isinstance(printer, QPixmap):
             printer.save(file_path)
 
-    def _print_scene(self, printer, source, size, index=None):
+    def _get_print_source(self, scene=None):
+        if scene is None:
+            scene = self.scene()
+        source = scene.itemsBoundingRect()
+        dx, dy = self._margin * source.width(), self._margin * source.height()
+        source.adjust(-dx, -dy, dx, dy)
+        return source
+
+    def _print_scene(self, printer, source, size, index=None, scene=None):
+        if scene is None:
+            scene = self.scene()
         painter = QPainter(printer)
-        self.scene().clearSelection()
-        self.scene().render(painter, QRectF(), source)
+        scene.render(painter, QRectF(), source)
         if self._spine_db_editor.ui.legend_widget.isVisible():
             legend_width, legend_height = 0.5 * size.width(), 0.5 * self._margin * size.height()
             legend_rect = QRectF(
@@ -731,37 +735,43 @@ class EntityQGraphicsView(CustomQGraphicsView):
             painter.drawText(size.width() - rect.width(), rect.height(), str(index))
         painter.end()
 
-    @busy_effect
-    def _pixmaps(self, start, stop, frame_count):
+    def _clone_scene(self):
+        scene = QGraphicsScene()
+        entity_items = {item.db_map_ids: item.clone() for item in self.entity_items}
+        arc_items = [item.clone(entity_items) for item in self.items() if isinstance(item, ArcItem)]
+        for item in entity_items.values():
+            scene.addItem(item)
+        for item in arc_items:
+            scene.addItem(item)
+        if self._bg_item:
+            scene.addItem(self._bg_item.clone())
+        return scene, list(entity_items.values())
+
+    def _frames(self, start, stop, frame_count, buffer_path, cv2):
         if start == stop:
-            return []
-        pixmaps = []
-        with self._no_zoom():
-            source = self._get_print_source()
-            size = source.size().toSize()
-            incr = (stop - start) / frame_count
-            index = start
-            while True:
-                pixmap = QPixmap(size)
-                pixmap.fill(Qt.white)
-                self._spine_db_editor._update_time_line_index(index)  # FIXME
-                self._print_scene(pixmap, source, size, index=index)
-                pixmaps.append(pixmap.scaledToWidth(1600))
-                index += incr
-                if index > stop:
-                    break
-        return pixmaps
+            return ()
+        scene, entity_items = self._clone_scene()
+        source = self._get_print_source(scene=scene)
+        size = source.size().toSize()
+        incr = (stop - start) / frame_count
+        index = start
+        pixmap = QPixmap(size)
+        while True:
+            pixmap.fill(Qt.white)
+            for item in entity_items:
+                item.update_props(index)
+            self._print_scene(pixmap, source, size, index=index, scene=scene)
+            ok = pixmap.scaledToWidth(1600).save(buffer_path)
+            assert ok
+            yield cv2.imread(buffer_path, -1)
+            index += incr
+            if index > stop:
+                break
 
     @Slot(bool)
     def export_as_video(self):
         try:
             import cv2
-
-            def pixmap_to_frame(pixmap, file_path):
-                ok = pixmap.save(file_path)
-                assert ok
-                return cv2.imread(file_path, -1)
-
         except ModuleNotFoundError:
             self._spine_db_editor.msg_error.emit(
                 "Export as video requires <a href='https://pypi.org/project/opencv-python/'>opencv-python</a>"
@@ -783,22 +793,24 @@ class EntityQGraphicsView(CustomQGraphicsView):
         start, stop, frame_count, fps = dialog.selections()
         start = np.datetime64(start)
         stop = np.datetime64(stop)
-        pixmaps = self._pixmaps(start, stop, frame_count)
-        if not pixmaps:
-            return
-        pixmap_iter = enumerate(pixmaps)
+        runnable = QRunnable.create(lambda: self._do_export_as_video(file_path, start, stop, frame_count, fps, cv2))
+        self._thread_pool.start(runnable)
+
+    def _do_export_as_video(self, file_path, start, stop, frame_count, fps, cv2):
         with tempfile.NamedTemporaryFile() as f:
             buffer_path = f.name + ".png"
-            k, pixmap = next(pixmap_iter)
-            frame = pixmap_to_frame(pixmap, buffer_path)
+            frame_iter = enumerate(self._frames(start, stop, frame_count, buffer_path, cv2))
+            try:
+                k, frame = next(frame_iter)
+            except StopIteration:
+                return
             height, width, _layers = frame.shape
             video = cv2.VideoWriter(file_path, cv2.VideoWriter_fourcc(*"XVID"), fps, (width, height))
             video.write(frame)
-            self._spine_db_editor.file_exported.emit(file_path, k / len(pixmaps), False)
-            for k, pixmap in pixmap_iter:
-                frame = pixmap_to_frame(pixmap, buffer_path)
+            self._spine_db_editor.file_exported.emit(file_path, k / frame_count, False)
+            for k, frame in frame_iter:
                 video.write(frame)
-                self._spine_db_editor.file_exported.emit(file_path, k / len(pixmaps), False)
+                self._spine_db_editor.file_exported.emit(file_path, k / frame_count, False)
         cv2.destroyAllWindows()
         video.release()
         self._spine_db_editor.file_exported.emit(file_path, 1.0, False)

@@ -74,6 +74,16 @@ class EntityItem(QGraphicsRectItem):
         self._extent = None
         self.label_item = EntityLabelItem(self)
 
+    def clone(self):
+        return type(self)(
+            self._spine_db_editor,
+            self.pos().x(),
+            self.pos().y(),
+            self._given_extent,
+            self._db_map_ids,
+            offset=self._offset,
+        )
+
     def _make_tool_tip(self):
         raise NotImplementedError()
 
@@ -209,8 +219,8 @@ class EntityItem(QGraphicsRectItem):
             if isinstance(name, str):
                 return name
 
-    def _get_prop(self, getter):
-        values = {getter(db_map, self.entity_type, id_) for db_map, id_ in self.db_map_ids}
+    def _get_prop(self, getter, index):
+        values = {getter(db_map, self.entity_type, id_, index) for db_map, id_ in self.db_map_ids}
         values.discard(None)
         if not values:
             return None
@@ -219,8 +229,8 @@ class EntityItem(QGraphicsRectItem):
             return self._spine_db_editor.NOT_SPECIFIED
         return next(iter(values))
 
-    def _get_color(self):
-        color = self._get_prop(self._spine_db_editor.get_item_color)
+    def _get_color(self, index=None):
+        color = self._get_prop(self._spine_db_editor.get_item_color, index)
         if color in (None, self._spine_db_editor.NOT_SPECIFIED):
             return color
         min_val, val, max_val = color
@@ -228,8 +238,8 @@ class EntityItem(QGraphicsRectItem):
         k = val - min_val
         return color_from_index(k, count)
 
-    def _get_arc_width(self):
-        arc_width = self._get_prop(self._spine_db_editor.get_arc_width)
+    def _get_arc_width(self, index=None):
+        arc_width = self._get_prop(self._spine_db_editor.get_arc_width, index)
         if arc_width in (None, self._spine_db_editor.NOT_SPECIFIED):
             return arc_width
         min_val, val, max_val = arc_width
@@ -260,9 +270,9 @@ class EntityItem(QGraphicsRectItem):
         self.refresh_icon()
         self.update_entity_pos()
 
-    def update_props(self):
-        color = self._get_color()
-        arc_width = self._get_arc_width()
+    def update_props(self, index):
+        color = self._get_color(index)
+        arc_width = self._get_arc_width(index)
         self._update_renderer(color, resize=False)
         self._update_arcs(color, arc_width)
 
@@ -563,7 +573,7 @@ class RelationshipItem(EntityItem):
 class ObjectItem(EntityItem):
     """Represents an object in the Entity graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_ids):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_ids, offset=None):
         """Initializes the item.
 
         Args:
@@ -573,7 +583,7 @@ class ObjectItem(EntityItem):
             extent (int): preferred extent
             db_map_ids (tuple): tuple of (db_map, id) tuples
         """
-        super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
+        super().__init__(spine_db_editor, x, y, extent, db_map_ids, offset=offset)
         self._db_map_relationship_class_lists = {}
         self.setZValue(0.5)
         self.set_up()
@@ -758,6 +768,11 @@ class ArcItem(QGraphicsPathItem):
         obj_item.add_arc_item(self)
         self.setCursor(Qt.ArrowCursor)
         self.update_line()
+
+    def clone(self, entity_items):
+        rel_item = entity_items[self.rel_item.db_map_ids]
+        obj_item = entity_items[self.obj_item.db_map_ids]
+        return type(self)(rel_item, obj_item, self._original_width)
 
     def _make_pen(self):
         pen = QPen()
@@ -1004,6 +1019,11 @@ class BgItem(QGraphicsRectItem):
             resizer.resized.connect(lambda delta, strong, anchor=anchor: self._resize(anchor, delta, strong))
             resizer.setCursor(self._cursors[anchor])
             resizer.hide()
+
+    def clone(self):
+        other = type(self)(self.svg)
+        other.fit_rect(self.scene_rect())
+        return other
 
     def hoverEnterEvent(self, ev):
         super().hoverEnterEvent(ev)
