@@ -382,7 +382,10 @@ class GraphViewMixin:
         for db_map, gd in db_map_graph_data.items():
             for item_type, ids in gd["selected_item_type_ids"].items():
                 self._selected_item_type_db_map_ids.setdefault(item_type, {})[db_map] = ids
-            self.ui.graphicsView.set_pruned_entity_ids(db_map, gd["pruned_entity_ids"])
+        pruned_db_map_entity_ids = {
+            (db_map, id_) for db_map, gd in db_map_graph_data.items() for id_ in gd["pruned_entity_ids"]
+        }
+        self.ui.graphicsView.set_pruned_db_map_entity_ids("Pruned in loaded state", pruned_db_map_entity_ids)
         graph_data = db_map_graph_data[self.first_db_map]
         self.ui.graphicsView.pos_x_parameter = graph_data["pos_x_parameter"]
         self.ui.graphicsView.pos_y_parameter = graph_data["pos_y_parameter"]
