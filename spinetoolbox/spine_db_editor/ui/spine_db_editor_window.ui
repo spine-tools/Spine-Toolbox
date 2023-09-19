@@ -1060,6 +1060,12 @@
    <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>ProgressBarWidget</class>
+   <extends>QWidget</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <resources>
   <include location="../../ui/resources/resources_icons.qrc"/>
