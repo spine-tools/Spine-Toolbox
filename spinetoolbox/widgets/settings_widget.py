@@ -155,6 +155,11 @@ class SpineDBEditorSettingsMixin:
         super().connect_signals()
         self.ui.checkBox_auto_expand_objects.clicked.connect(self.set_auto_expand_objects)
         self.ui.checkBox_merge_dbs.clicked.connect(self.set_merge_dbs)
+        self.ui.checkBox_snap_entities.clicked.connect(self.set_snap_entities)
+        self.ui.spinBox_max_ent_dim_count.valueChanged.connect(self.set_max_entity_dimension_count)
+        self.ui.spinBox_layout_algo_max_iterations.valueChanged.connect(self.set_build_iters)
+        self.ui.spinBox_layout_algo_spread_factor.valueChanged.connect(self.set_spread_factor)
+        self.ui.spinBox_layout_algo_neg_weight_exp.valueChanged.connect(self.set_neg_weight_exp)
 
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
@@ -166,7 +171,8 @@ class SpineDBEditorSettingsMixin:
         snap_entities = self._qsettings.value("appSettings/snapEntities", defaultValue="false")
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true")
         db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
-        max_iters = int(self.qsettings.value("appSettings/layoutAlgoMaxIterations", defaultValue="12"))
+        max_ent_dim_count = int(self.qsettings.value("appSettings/maxEntityDimensionCount", defaultValue="5"))
+        build_iters = int(self.qsettings.value("appSettings/layoutAlgoBuildIterations", defaultValue="12"))
         spread_factor = int(self.qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100"))
         neg_weight_exp = int(self.qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
@@ -183,7 +189,8 @@ class SpineDBEditorSettingsMixin:
         self.ui.checkBox_merge_dbs.setChecked(merge_dbs == "true")
         if db_editor_show_undo == 2:
             self.ui.checkBox_db_editor_show_undo.setChecked(True)
-        self.ui.spinBox_layout_algo_max_iterations.setValue(max_iters)
+        self.ui.spinBox_max_ent_dim_count.setValue(max_ent_dim_count)
+        self.ui.spinBox_layout_algo_max_iterations.setValue(build_iters)
         self.ui.spinBox_layout_algo_spread_factor.setValue(spread_factor)
         self.ui.spinBox_layout_algo_neg_weight_exp.setValue(neg_weight_exp)
 
@@ -205,8 +212,10 @@ class SpineDBEditorSettingsMixin:
         self._qsettings.setValue("appSettings/mergeDBs", merge_dbs)
         db_editor_show_undo = str(self.ui.checkBox_db_editor_show_undo.checkState().value)
         self._qsettings.setValue("appSettings/dbEditorShowUndo", db_editor_show_undo)
-        max_iters = str(self.ui.spinBox_layout_algo_max_iterations.value())
-        self._qsettings.setValue("appSettings/layoutAlgoMaxIterations", max_iters)
+        max_ent_dim_count = str(self.ui.spinBox_layout_algo_max_iterations.value())
+        self._qsettings.setValue("appSettings/maxEntityDimensionCount", max_ent_dim_count)
+        build_iters = str(self.ui.spinBox_layout_algo_max_iterations.value())
+        self._qsettings.setValue("appSettings/layoutAlgoBuildIterations", build_iters)
         spread_factor = str(self.ui.spinBox_layout_algo_spread_factor.value())
         self._qsettings.setValue("appSettings/layoutAlgoSpreadFactor", spread_factor)
         neg_weight_exp = str(self.ui.spinBox_layout_algo_neg_weight_exp.value())
@@ -222,13 +231,35 @@ class SpineDBEditorSettingsMixin:
 
     @Slot(bool)
     def set_auto_expand_objects(self, checked=False):
-        for db_editor in self.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
+        self._set_graph_property("auto_expand_objects", checked)
 
     @Slot(bool)
     def set_merge_dbs(self, checked=False):
+        self._set_graph_property("merge_dbs", checked)
+
+    @Slot(bool)
+    def set_snap_entities(self, checked=False):
+        self._set_graph_property("snap_entities", checked)
+
+    @Slot(int)
+    def set_max_entity_dimension_count(self, value=None):
+        self._set_graph_property("max_entity_dimension_count", value)
+
+    @Slot(int)
+    def set_build_iters(self, value=None):
+        self._set_graph_property("build_iters", value)
+
+    @Slot(int)
+    def set_spread_factor(self, value=None):
+        self._set_graph_property("spread_factor", value)
+
+    @Slot(int)
+    def set_neg_weight_exp(self, value=None):
+        self._set_graph_property("neg_weight_exp", value)
+
+    def _set_graph_property(self, name, value):
         for db_editor in self.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_merge_dbs(checked)
+            db_editor.ui.graphicsView.set_property(name, value)
 
 
 class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):

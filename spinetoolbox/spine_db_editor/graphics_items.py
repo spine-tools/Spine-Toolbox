@@ -13,7 +13,7 @@
 Classes for drawing graphics items on graph view's QGraphicsScene.
 """
 from enum import Enum, auto
-from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF, QObject
+from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF, QObject, QByteArray
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QMenu,
 )
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction, QColor
+from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, color_from_index
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
@@ -984,11 +984,12 @@ class BgItem(QGraphicsRectItem):
         Anchor.BR: Qt.SizeFDiagCursor,
     }
 
-    def __init__(self, file_path, parent=None):
+    def __init__(self, svg, parent=None):
         super().__init__(parent)
         self._renderer = QSvgRenderer()
         self._svg_item = _ResizableQGraphicsSvgItem(self)
-        _loading_ok = self._renderer.load(file_path)
+        self.svg = svg
+        _loading_ok = self._renderer.load(QByteArray(self.svg))
         self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
         self._svg_item.setSharedRenderer(self._renderer)
         self._scaling_factor = 1
@@ -1047,9 +1048,12 @@ class BgItem(QGraphicsRectItem):
         self._place_resizers()
 
     def fit_rect(self, rect):
+        if not isinstance(rect, QRectF):
+            rect = QRectF(*rect)
         self._do_resize(rect, True)
 
     def fit_coordinates(self, p1, p2, scen1, scen2):
+        # NOTE: not in use at the moment
         size = self._renderer.defaultSize()
         x1, y1 = p1
         x2, y2 = p2

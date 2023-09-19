@@ -244,6 +244,7 @@
        </property>
        <property name="font">
         <font>
+         <weight>50</weight>
          <bold>false</bold>
         </font>
        </property>
@@ -433,7 +434,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_object_tree">
    <property name="features">
-    <set>QDockWidget::DockWidgetClosable|QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
+    <set>QDockWidget::AllDockWidgetFeatures</set>
    </property>
    <property name="allowedAreas">
     <set>Qt::AllDockWidgetAreas</set>
@@ -1283,6 +1284,12 @@
   </customwidget>
   <customwidget>
    <class>LegendWidget</class>
+   <extends>QWidget</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>ProgressBarWidget</class>
    <extends>QWidget</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
    <container>1</container>

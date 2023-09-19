@@ -29,6 +29,83 @@ from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, CrossHair
 from .select_graph_parameters_dialog import SelectGraphParametersDialog
 
 
+class _GraphProperty:
+    def __init__(self, name, settings_name):
+        self._name = name
+        self._settings_name = "appSettings/" + settings_name
+        self._spine_db_editor = None
+        self._value = None
+
+    @property
+    def value(self):
+        return self._value
+
+    def connect_spine_db_editor(self, spine_db_editor):
+        self._spine_db_editor = spine_db_editor
+
+
+class _GraphBoolProperty(_GraphProperty):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._action = None
+
+    @Slot(bool)
+    def _set_value(self, _checked=False, save_setting=True):
+        checked = self._action.isChecked()
+        if checked == self._value:
+            return
+        self._value = checked
+        if save_setting:
+            self._spine_db_editor.qsettings.setValue(self._settings_name, "true" if checked else "false")
+            self._spine_db_editor.build_graph()
+
+    def set_value(self, checked):
+        self._action.setChecked(checked)
+        self._set_value(save_setting=False)
+
+    def update(self, menu):
+        self._value = self._spine_db_editor.qsettings.value(self._settings_name, defaultValue="true") == "true"
+        self._action = menu.addAction(self._name)
+        self._action.setCheckable(True)
+        self._action.setChecked(self._value)
+        self._action.triggered.connect(self._set_value)
+
+
+class _GraphIntProperty(_GraphProperty):
+    def __init__(self, min_value, max_value, default_value, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._min_value, self._max_value, self._default_value = min_value, max_value, default_value
+        self._spin_box = None
+
+    @Slot(int)
+    def _set_value(self, _value=None, save_setting=True):
+        value = self._spin_box.value()
+        if value == self._value:
+            return
+        self._value = value
+        if save_setting:
+            self._spine_db_editor.qsettings.setValue(self._settings_name, str(value))
+            self._spine_db_editor.build_graph()
+
+    def set_value(self, value):
+        self._spin_box.setValue(value)
+        self._set_value(save_setting=False)
+
+    def update(self, menu):
+        self._value = int(
+            self._spine_db_editor.qsettings.value(self._settings_name, defaultValue=str(self._default_value))
+        )
+        action = ToolBarWidgetAction(self._name, menu, compact=True)
+        self._spin_box = HorizontalSpinBox(menu)
+        self._spin_box.setMinimum(self._min_value)
+        if self._max_value is not None:
+            self._spin_box.setMaximum(self._max_value)
+        self._spin_box.setValue(self._value)
+        self._spin_box.valueChanged.connect(self._set_value)
+        action.tool_bar.addWidget(self._spin_box)
+        menu.addAction(action)
+
+
 class EntityQGraphicsView(CustomQGraphicsView):
     """QGraphicsView for the Entity Graph View."""
 
@@ -50,24 +127,28 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.arc_width_parameter = ""
         self._margin = 0.05
         self._bg_item = None
-        self._bg_entity_coordinates = None
         self.selected_items = []
         self.removed_items = set()
         self.hidden_items = {}
         self.pruned_db_map_entity_ids = {}
-        self._point_value_tuples_per_parameter_name = {}  # Used in the heat map menu
         self._hovered_obj_item = None
         self.relationship_class = None
         self.cross_hairs_items = []
-        self.auto_expand_objects = None
-        self.merge_dbs = None
-        self.max_relationship_dimension = None
-        self.disable_max_relationship_dimension = None
-        self._auto_expand_objects_action = None
-        self._merge_dbs_action = None
-        self._max_rel_dim_action = None
-        self._disable_max_rel_dim_action = None
-        self._max_rel_dim_spin_box = None
+        self._properties = {
+            "auto_expand_objects": _GraphBoolProperty("Auto-expand objects", "autoExpandObjects"),
+            "merge_dbs": _GraphBoolProperty("Merge databases", "mergeDBs"),
+            "snap_entities": _GraphBoolProperty("Snap entities to grid", "snapEntities"),
+            "max_entity_dimension_count": _GraphIntProperty(
+                2, None, 5, "Max. entity dimension count", "maxEntityDimensionCount"
+            ),
+            "build_iters": _GraphIntProperty(3, None, 12, "Number of build iterations", "layoutAlgoBuildIterations"),
+            "spread_factor": _GraphIntProperty(
+                1, 100, 100, "Minimum distance between nodes (%)", "layoutAlgoSpreadFactor"
+            ),
+            "neg_weight_exp": _GraphIntProperty(
+                1, 100, 2, "Decay rate of attraction with distance", "layoutAlgoNegWeightExp"
+            ),
+        }
         self._add_objects_action = None
         self._select_graph_params_action = None
         self._save_pos_action = None
@@ -84,13 +165,44 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._arc_length_action = None
         self._find_action = None
         self._select_bg_image_action = None
+        self._save_state_action = None
         self._previous_mouse_pos = None
         self._context_menu_pos = None
         self._hide_classes_menu = None
         self._show_hidden_menu = None
         self._prune_classes_menu = None
         self._restore_pruned_menu = None
+        self._load_state_menu = None
+        self._remove_state_menu = None
         self._items_per_class = {}
+        self._db_map_graph_data_by_name = {}
+
+    def get_property(self, name):
+        return self._properties[name].value
+
+    def set_property(self, name, value):
+        return self._properties[name].set_value(value)
+
+    def get_all_properties(self):
+        return {name: prop.value for name, prop in self._properties.items()}
+
+    def set_many_properties(self, props):
+        for name, value in props.items():
+            self.set_property(name, value)
+
+    def set_pruned_entity_ids(self, db_map, ids):
+        self.pruned_db_map_entity_ids = {"pruned from saved view": {(db_map, id_) for id_ in ids}}
+
+    def get_pruned_entity_ids(self, db_map):
+        return [
+            id_
+            for db_map_ids in self.pruned_db_map_entity_ids.values()
+            for db_map_, id_ in db_map_ids
+            if db_map_ is db_map
+        ]
+
+    def get_pruned_db_map_entity_ids(self):
+        return [db_map_id for db_map_ids in self.pruned_db_map_entity_ids.values() for db_map_id in db_map_ids]
 
     @property
     def _qsettings(self):
@@ -120,50 +232,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
+        for prop in self._properties.values():
+            prop.connect_spine_db_editor(spine_db_editor)
         self.populate_context_menu()
 
     def populate_context_menu(self):
-        self.auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
-        self.merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
-        self.max_relationship_dimension = int(
-            self._qsettings.value("appSettings/maxRelationshipDimension", defaultValue="2")
-        )
-        self.disable_max_relationship_dimension = (
-            self._qsettings.value("appSettings/disableMaxRelationshipDimension", defaultValue="true") == "true"
-        )
-        self._auto_expand_objects_action = self._menu.addAction("Auto-expand objects")
-        self._auto_expand_objects_action.setCheckable(True)
-        self._auto_expand_objects_action.setChecked(self.auto_expand_objects)
-        self._auto_expand_objects_action.triggered.connect(self._set_auto_expand_objects)
-        self._merge_dbs_action = self._menu.addAction("Merge databases")
-        self._merge_dbs_action.setCheckable(True)
-        self._merge_dbs_action.setChecked(self.merge_dbs)
-        self._merge_dbs_action.triggered.connect(self._set_merge_dbs)
-        self._max_rel_dim_action = ToolBarWidgetAction("Max relationship dimension", self._menu, compact=True)
-        self._max_rel_dim_spin_box = HorizontalSpinBox(self)
-        self._max_rel_dim_spin_box.setMinimum(2)
-        self._max_rel_dim_spin_box.setValue(self.max_relationship_dimension)
-        self._max_rel_dim_spin_box.valueChanged.connect(self._set_max_relationship_dimension)
-        self._max_rel_dim_action.tool_bar.addWidget(self._max_rel_dim_spin_box)
-        self._max_rel_dim_action.tool_bar.addSeparator()
-        self._disable_max_rel_dim_action = self._max_rel_dim_action.tool_bar.addAction("\u221E")
-        self._disable_max_rel_dim_action.setCheckable(True)
-        self._disable_max_rel_dim_action.toggled.connect(self._set_disable_max_relationship_dimension)
-        self._disable_max_rel_dim_action.toggled.connect(self._max_rel_dim_spin_box.setDisabled)
-        self._disable_max_rel_dim_action.setToolTip("No limit")
-        self._disable_max_rel_dim_action.setChecked(self.disable_max_relationship_dimension)
-        self._menu.addAction(self._max_rel_dim_action)
-        self._menu.addSeparator()
         self._add_objects_action = self._menu.addAction("Add objects...", self.add_objects_at_position)
         self._menu.addSeparator()
-        self._find_action = self._menu.addAction("Find...", self._find)
-        self._menu.addAction(self._find_action)
-        self._menu.addSeparator()
-        self._select_graph_params_action = self._menu.addAction(
-            "Select graph parameters...", self.select_graph_parameters
-        )
-        self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
-        self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
+        self._find_action = self._menu.addAction("Search...", self._find)
         self._menu.addSeparator()
         self._hide_selected_action = self._menu.addAction("Hide selected", self.hide_selected_items)
         self._hide_classes_menu = self._menu.addMenu("Hide classes")
@@ -178,12 +254,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._restore_pruned_menu = self._menu.addMenu("Restore")
         self._restore_pruned_menu.triggered.connect(self.restore_pruned_items)
         self._restore_all_pruned_action = self._menu.addAction("Restore all", self.restore_all_pruned_items)
-        self._menu.addSeparator()
-        self._select_bg_image_action = self._menu.addAction("Select background image...", self._select_bg_image)
-        self._menu.addSeparator()
-        self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
-        self._export_as_image_action = self._menu.addAction("Export as image...", self.export_as_image)
-        self._export_as_video_action = self._menu.addAction("Export as video...", self.export_as_video)
         self._menu.addSeparator()
         self._zoom_action = ToolBarWidgetAction("Zoom", self._menu, compact=True)
         self._zoom_action.tool_bar.addAction("-", self.zoom_out).setToolTip("Zoom out")
@@ -205,7 +275,49 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.addAction(self._zoom_action)
         self._menu.addAction(self._arc_length_action)
         self._menu.addAction(self._rotate_action)
+        self._menu.addSeparator()
+        for prop in self._properties.values():
+            prop.update(self._menu)
+        self._menu.addSeparator()
+        self._select_graph_params_action = self._menu.addAction(
+            "Select graph parameters...", self.select_graph_parameters
+        )
+        self._select_bg_image_action = self._menu.addAction("Select background image...", self._select_bg_image)
+        self._menu.addSeparator()
+        self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
+        self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
+        self._menu.addSeparator()
+        self._save_state_action = self._menu.addAction("Save state...", self._save_state)
+        self._load_state_menu = self._menu.addMenu("Load state")
+        self._load_state_menu.triggered.connect(self._load_state)
+        self._remove_state_menu = self._menu.addMenu("Remove state")
+        self._remove_state_menu.triggered.connect(self._remove_state)
+        self._menu.addSeparator()
+        self._export_as_image_action = self._menu.addAction("Export as image...", self.export_as_image)
+        self._export_as_video_action = self._menu.addAction("Export as video...", self.export_as_video)
+        self._menu.addSeparator()
+        self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
         self._menu.aboutToShow.connect(self._update_actions_visibility)
+
+    def _save_state(self):
+        name, ok = QInputDialog.getText(self, "Save state...", "Enter a name for the state.")
+        if not ok:
+            return
+        if name in self._db_map_graph_data_by_name:
+            self._spine_db_editor.msg_error.emit(f"State {name} already exists")
+            return
+        self._spine_db_editor.save_graph_data(name)
+
+    @Slot(QAction)
+    def _load_state(self, action):
+        name = action.text()
+        db_map_graph_data = self._db_map_graph_data_by_name.get(name)
+        self._spine_db_editor.load_graph_data(db_map_graph_data)
+
+    @Slot(QAction)
+    def _remove_state(self, action):
+        name = action.text()
+        self._spine_db_editor.remove_graph_data(name)
 
     def _find(self):
         expr, ok = QInputDialog.getText(self, "Find in graph...", "Enter entity names to find separated by comma.")
@@ -233,6 +345,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def _update_actions_visibility(self):
         """Enables or disables actions according to current selection in the graph."""
         has_graph = bool(self.items())
+        self._items_per_class = {}
+        for item in self.entity_items:
+            key = f"{item.entity_class_name}"
+            self._items_per_class.setdefault(key, list()).append(item)
+        self._db_map_graph_data_by_name = self._spine_db_editor.get_db_map_graph_data_by_name()
         self._save_pos_action.setEnabled(bool(self.selected_items))
         self._clear_pos_action.setEnabled(bool(self.selected_items))
         self._hide_selected_action.setEnabled(bool(self.selected_items))
@@ -248,18 +365,22 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._find_action.setEnabled(has_graph)
         self._export_as_image_action.setEnabled(has_graph)
         self._export_as_video_action.setEnabled(has_graph and self._spine_db_editor.ui.time_line_widget.isVisible())
-        self._items_per_class = {}
-        for item in self.entity_items:
-            key = f"{item.entity_class_name}"
-            self._items_per_class.setdefault(key, list()).append(item)
         self._hide_classes_menu.clear()
         self._hide_classes_menu.setEnabled(bool(self._items_per_class))
-        self._prune_classes_menu.clear()
-        self._prune_classes_menu.setEnabled(bool(self._items_per_class))
         for key in sorted(self._items_per_class.keys() - self.hidden_items.keys()):
             self._hide_classes_menu.addAction(key)
+        self._prune_classes_menu.clear()
+        self._prune_classes_menu.setEnabled(bool(self._items_per_class))
         for key in sorted(self._items_per_class.keys() - self.pruned_db_map_entity_ids.keys()):
             self._prune_classes_menu.addAction(key)
+        self._save_state_action.setEnabled(has_graph)
+        self._load_state_menu.clear()
+        self._load_state_menu.setEnabled(bool(self._db_map_graph_data_by_name))
+        self._remove_state_menu.clear()
+        self._remove_state_menu.setEnabled(bool(self._db_map_graph_data_by_name))
+        for key in sorted(self._db_map_graph_data_by_name.keys()):
+            self._load_state_menu.addAction(key)
+            self._remove_state_menu.addAction(key)
 
     def make_items_menu(self):
         menu = QMenu(self)
@@ -273,58 +394,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         menu.addAction("Remove", self.remove_selected)
         menu.aboutToShow.connect(self._update_actions_visibility)
         return menu
-
-    @Slot(bool)
-    def _set_auto_expand_objects(self, _checked=False, save_setting=True):
-        checked = self._auto_expand_objects_action.isChecked()
-        if checked == self.auto_expand_objects:
-            return
-        if save_setting:
-            self._qsettings.setValue("appSettings/autoExpandObjects", "true" if checked else "false")
-        self.auto_expand_objects = checked
-        self._spine_db_editor.build_graph()
-
-    def set_auto_expand_objects(self, checked):
-        self._auto_expand_objects_action.setChecked(checked)
-        self._set_auto_expand_objects(save_setting=False)
-
-    @Slot(bool)
-    def _set_merge_dbs(self, _checked=False, save_setting=True):
-        checked = self._merge_dbs_action.isChecked()
-        if checked == self.merge_dbs:
-            return
-        if save_setting:
-            self._qsettings.setValue("appSettings/mergeDBs", "true" if checked else "false")
-        self.merge_dbs = checked
-        self._spine_db_editor.build_graph()
-
-    def set_merge_dbs(self, checked):
-        self._merge_dbs_action.setChecked(checked)
-        self._set_merge_dbs(save_setting=False)
-
-    @Slot(bool)
-    def _set_disable_max_relationship_dimension(self, _checked=False, save_setting=True):
-        checked = self._disable_max_rel_dim_action.isChecked()
-        if checked == self.disable_max_relationship_dimension:
-            return
-        if save_setting:
-            self._qsettings.setValue("appSettings/disableMaxRelationshipDimension", "true" if checked else "false")
-        self.disable_max_relationship_dimension = checked
-        self._spine_db_editor.build_graph()
-
-    def set_disable_max_relationship_dimension(self, checked):
-        self._disable_max_rel_dim_action.setChecked(checked)
-        self._set_disable_max_relationship_dimension(save_setting=False)
-
-    @Slot(int)
-    def _set_max_relationship_dimension(self, _value=None, save_setting=True):
-        value = self._max_rel_dim_spin_box.value()
-        if value == self.max_relationship_dimension:
-            return
-        if save_setting:
-            self._qsettings.setValue("appSettings/maxRelationshipDimension", str(value))
-        self.max_relationship_dimension = value
-        self._spine_db_editor.build_graph()
 
     @Slot(bool)
     def add_objects_at_position(self, checked=False):
@@ -401,9 +470,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def prune_selected_items(self, checked=False):
         """Prunes selected items."""
-        entity_ids = {db_map_id for x in self.selected_items for db_map_id in x.db_map_ids}
         key = self._get_selected_entity_names()
-        self.pruned_db_map_entity_ids[key] = entity_ids
+        self.pruned_db_map_entity_ids[key] = {db_map_id for x in self.selected_items for db_map_id in x.db_map_ids}
         self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
 
@@ -543,30 +611,30 @@ class EntityQGraphicsView(CustomQGraphicsView):
         )
         if not file_path:
             return
-        self.set_bg_image(file_path)
+        with open(file_path, "r") as fh:
+            svg = fh.read().rstrip()
+        self.set_bg_svg(svg)
         rect = self._get_viewport_scene_rect()
         self._bg_item.fit_rect(rect)
         self._bg_item.apply_zoom(self.zoom_factor)
 
-    def set_bg_image(self, file_path, transform=None):
+    def set_bg_svg(self, svg):
         if self._bg_item is not None:
             self.scene().removeItem(self._bg_item)
-        self._bg_item = BgItem(file_path)
+        self._bg_item = BgItem(svg)
         self.scene().addItem(self._bg_item)
 
-    def set_bg_entity_coordinates(self, entity_coordinates):
-        self._bg_entity_coordinates = {
-            ent: self._spine_db_editor.convert_position(*p) for ent, p in entity_coordinates.items()
-        }
-        self.fit_bg_coordinates()
+    def get_bg_svg(self):
+        return self._bg_item.svg if self._bg_item else ""
 
-    def fit_bg_coordinates(self):
-        (ent1, p1), (ent2, p2), *_ignored = self._bg_entity_coordinates.items()
-        pos_by_name = {item.display_data: item.pos() for item in self.entity_items}
-        scen1, scen2 = pos_by_name.get(ent1), pos_by_name.get(ent2)
-        if None in (scen1, scen2):
-            return
-        self._bg_item.fit_coordinates(p1, p2, (scen1.x(), scen1.y()), (scen2.x(), scen2.y()))
+    def set_bg_rect(self, rect):
+        if self._bg_item is not None and rect:
+            self._bg_item.fit_rect(rect)
+
+    def get_bg_rect(self):
+        if self._bg_item is not None:
+            rect = self._bg_item.rect()
+            return rect.x(), rect.y(), rect.width(), rect.height()
 
     def clear_scene(self):
         for item in self.scene().items():

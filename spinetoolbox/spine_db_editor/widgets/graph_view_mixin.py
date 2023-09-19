@@ -15,6 +15,7 @@ Contains the GraphViewMixin class.
 
 import sys
 import itertools
+import json
 from time import monotonic
 from PySide6.QtCore import Slot, QTimer, QThreadPool
 from spinedb_api import from_database
@@ -93,7 +94,7 @@ class GraphViewMixin:
         self.object_items = list()
         self.relationship_items = list()
         self.arc_items = list()
-        self.selected_tree_inds = {}
+        self._selected_item_type_db_map_ids = {}
         self.db_map_object_id_sets = list()
         self.db_map_relationship_id_sets = list()
         self.src_inds = list()
@@ -115,8 +116,6 @@ class GraphViewMixin:
         self._extending_graph = False
         self._object_fetch_parent = None
         self._relationship_fetch_parent = None
-        self._name_by_db_map_entity_id = {}
-        self._color_by_db_map_entity_id = {}
         self._renew_fetch_parents()
 
     def _renew_fetch_parents(self):
@@ -392,7 +391,7 @@ class GraphViewMixin:
     def _handle_tree_selection_changed(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
         self._renew_fetch_parents()
-        self.selected_tree_inds = selected
+        self._selected_item_type_db_map_ids = self._get_selected_item_type_db_map_ids(selected)
         self.added_db_map_relationship_ids.clear()
         self._extending_graph = True
         self.build_graph()
@@ -403,8 +402,71 @@ class GraphViewMixin:
         self.db_map_relationship_id_sets.clear()
         self.build_graph()
 
+    def save_graph_data(self, name):
+        db_map_data = {}
+        for db_map in self.db_maps:
+            graph_data = {
+                "type": "graph_data",
+                "selected_item_type_ids": {
+                    item_type: db_map_ids.get(db_map, [])
+                    for item_type, db_map_ids in self._selected_item_type_db_map_ids.items()
+                },
+                "pruned_entity_ids": self.ui.graphicsView.get_pruned_entity_ids(db_map),
+                "pos_x_parameter": self.ui.graphicsView.pos_x_parameter,
+                "pos_y_parameter": self.ui.graphicsView.pos_y_parameter,
+                "name_parameter": self.ui.graphicsView.name_parameter,
+                "color_parameter": self.ui.graphicsView.color_parameter,
+                "arc_width_parameter": self.ui.graphicsView.arc_width_parameter,
+                "bg_svg": self.ui.graphicsView.get_bg_svg(),
+                "bg_rect": self.ui.graphicsView.get_bg_rect(),
+                "properties": self.ui.graphicsView.get_all_properties(),
+            }
+            db_map_data[db_map] = [{"name": name, "value": json.dumps(graph_data)}]
+        self.db_mngr.add_metadata(db_map_data)
+        # TODO: also add entity_metadata so it sticks
+
+    def get_db_map_graph_data_by_name(self):
+        db_map_graph_data_by_name = {}
+        for db_map in self.db_maps:
+            for metadata_item in self.db_mngr.get_items(db_map, "metadata"):
+                try:
+                    graph_data = json.loads(metadata_item["value"])
+                except json.decoder.JSONDecodeError:
+                    continue
+                if isinstance(graph_data, dict) and graph_data.get("type") == "graph_data":
+                    db_map_graph_data_by_name.setdefault(metadata_item["name"], {})[db_map] = graph_data
+        return db_map_graph_data_by_name
+
+    def load_graph_data(self, db_map_graph_data):
+        if not db_map_graph_data:
+            self.msg_error.emit("Invalid graph data")
+        self._selected_item_type_db_map_ids = {}
+        for db_map, gd in db_map_graph_data.items():
+            for item_type, ids in gd["selected_item_type_ids"].items():
+                self._selected_item_type_db_map_ids.setdefault(item_type, {})[db_map] = ids
+            self.ui.graphicsView.set_pruned_entity_ids(db_map, gd["pruned_entity_ids"])
+        graph_data = db_map_graph_data[self.first_db_map]
+        self.ui.graphicsView.pos_x_parameter = graph_data["pos_x_parameter"]
+        self.ui.graphicsView.pos_y_parameter = graph_data["pos_y_parameter"]
+        self.ui.graphicsView.name_parameter = graph_data["name_parameter"]
+        self.ui.graphicsView.color_parameter = graph_data["color_parameter"]
+        self.ui.graphicsView.arc_width_parameter = graph_data["arc_width_parameter"]
+        self.ui.graphicsView.set_bg_svg(graph_data["bg_svg"])
+        self.ui.graphicsView.set_bg_rect(graph_data["bg_rect"])
+        self.ui.graphicsView.set_many_properties(graph_data["properties"])
+        self.build_graph()
+
+    def remove_graph_data(self, name):
+        db_map_typed_ids = {}
+        for db_map in self.db_maps:
+            metadata_item = next((x for x in self.db_mngr.get_items(db_map, "metadata") if x["name"] == name), None)
+            if metadata_item is None:
+                continue
+            db_map_typed_ids[db_map] = {"metadata": {metadata_item["id"]}}
+        self.db_mngr.remove_items(db_map_typed_ids)
+
     def build_graph(self, persistent=False):
-        """Builds the graph.
+        """Builds graph from selection in the entity tree.
 
         Args:
             persistent (bool, optional): If True, elements in the current graph (if any) retain their position
@@ -451,9 +513,25 @@ class GraphViewMixin:
             self.ui.graphicsView.reset_zoom()
         else:
             self.ui.graphicsView.apply_zoom()
-        self.ui.graphicsView.fit_bg_coordinates()
 
-    def _get_selected_entity_ids(self):
+    @staticmethod
+    def _get_selected_item_type_db_map_ids(selected_tree_inds):
+        """Returns a dict mapping item type to db_map to selected ids-
+
+        Returns:
+            dict
+        """
+        if "root" in selected_tree_inds:
+            return {"root": None}
+        item_type_db_map_ids = {}
+        for item_type, indexes in selected_tree_inds.items():
+            for index in indexes:
+                item = index.model().item_from_index(index)
+                for db_map, id_ in item.db_map_ids.items():
+                    item_type_db_map_ids.setdefault(item_type, {}).setdefault(db_map, []).append(id_)
+        return item_type_db_map_ids
+
+    def _get_selected_db_map_entity_ids(self):
         """Returns a set of ids corresponding to selected entities in the trees.
 
         Returns:
@@ -464,39 +542,29 @@ class GraphViewMixin:
             for db_map in self.db_maps:
                 if self.db_mngr.can_fetch_more(db_map, fetch_parent):
                     self.db_mngr.fetch_more(db_map, fetch_parent)
-        if "root" in self.selected_tree_inds:
+        if "root" in self._selected_item_type_db_map_ids:
             return (
                 set((db_map, x["id"]) for db_map in self.db_maps for x in self.db_mngr.get_items(db_map, "object")),
                 set(),
             )
         selected_object_ids = set()
         selected_relationship_ids = set()
-        for index in self.selected_tree_inds.get("object", {}):
-            item = index.model().item_from_index(index)
-            selected_object_ids |= set(item.db_map_ids.items())
-        for index in self.selected_tree_inds.get("relationship", {}):
-            item = index.model().item_from_index(index)
-            selected_relationship_ids |= set(item.db_map_ids.items())
-        for index in self.selected_tree_inds.get("object_class", {}):
-            item = index.model().item_from_index(index)
+        for db_map, ids in self._selected_item_type_db_map_ids.get("object", {}).items():
+            selected_object_ids |= {(db_map, id_) for id_ in ids}
+        for db_map, ids in self._selected_item_type_db_map_ids.get("relationship", {}).items():
+            selected_relationship_ids |= {(db_map, id_) for id_ in ids}
+        for db_map, ids in self._selected_item_type_db_map_ids.get("object_class", {}).items():
             selected_object_ids |= set(
-                (db_map, x["id"])
-                for db_map, id_ in item.db_map_ids.items()
-                for x in self.db_mngr.get_items(db_map, "object")
-                if x["class_id"] == id_
+                (db_map, x["id"]) for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] in ids
             )
-        for index in self.selected_tree_inds.get("relationship_class", {}):
-            item = index.model().item_from_index(index)
+        for db_map, ids in self._selected_item_type_db_map_ids.get("relationship_class", {}).items():
             selected_relationship_ids |= set(
-                (db_map, x["id"])
-                for db_map, id_ in item.db_map_ids.items()
-                for x in self.db_mngr.get_items(db_map, "relationship")
-                if x["class_id"] == id_
+                (db_map, x["id"]) for x in self.db_mngr.get_items(db_map, "relationship") if x["class_id"] in ids
             )
         return selected_object_ids, selected_relationship_ids
 
     def _get_db_map_relationships_for_graph(self, db_map_object_ids, db_map_relationship_ids):
-        cond = any if self.ui.graphicsView.auto_expand_objects else all
+        cond = any if self.ui.graphicsView.get_property("auto_expand_objects") else all
         return [
             (db_map, x)
             for db_map in self.db_maps
@@ -506,34 +574,26 @@ class GraphViewMixin:
 
     def _update_graph_data(self):
         """Updates data for graph according to selection in trees."""
-        db_map_object_ids, db_map_relationship_ids = self._get_selected_entity_ids()
+        db_map_object_ids, db_map_relationship_ids = self._get_selected_db_map_entity_ids()
         db_map_relationship_ids.update(self.added_db_map_relationship_ids)
-        pruned_db_map_entity_ids = {
-            id_ for ids in self.ui.graphicsView.pruned_db_map_entity_ids.values() for id_ in ids
-        }
+        pruned_db_map_entity_ids = set(self.ui.graphicsView.get_pruned_db_map_entity_ids())
         db_map_object_ids -= pruned_db_map_entity_ids
         db_map_relationship_ids -= pruned_db_map_entity_ids
         db_map_relationships = self._get_db_map_relationships_for_graph(db_map_object_ids, db_map_relationship_ids)
         db_map_object_id_lists = dict()
-        max_rel_dim = (
-            self.ui.graphicsView.max_relationship_dimension
-            if not self.ui.graphicsView.disable_max_relationship_dimension
-            else sys.maxsize
-        )
+        max_rel_dim_count = self.ui.graphicsView.get_property("max_entity_dimension_count")
         for db_map, relationship in db_map_relationships:
             if (db_map, relationship["id"]) in pruned_db_map_entity_ids:
                 continue
             db_map_object_id_list = [
                 (db_map, id_) for id_ in relationship["object_id_list"] if (db_map, id_) not in pruned_db_map_entity_ids
             ]
-            if len(db_map_object_id_list) < 2 or len(db_map_object_id_list) > max_rel_dim:
+            if len(db_map_object_id_list) < 2 or len(db_map_object_id_list) > max_rel_dim_count:
                 continue
             db_map_object_ids.update(db_map_object_id_list)
             db_map_object_id_lists[db_map, relationship["id"]] = db_map_object_id_list
         db_map_object_ids_by_key = {}
         db_map_relationship_ids_by_key = {}
-        self._name_by_db_map_entity_id = None
-        self._color_by_db_map_entity_id = None
         for db_map_object_id in db_map_object_ids:
             key = self._get_object_key(db_map_object_id)
             db_map_object_ids_by_key.setdefault(key, set()).add(db_map_object_id)
@@ -558,7 +618,7 @@ class GraphViewMixin:
         db_map, object_id = db_map_object_id
         object_ = self.db_mngr.get_item(db_map, "object", object_id)
         key = (object_["class_name"], object_["name"])
-        if not self.ui.graphicsView.merge_dbs:
+        if not self.ui.graphicsView.get_property("merge_dbs"):
             key += (db_map.codename,)
         return key
 
@@ -566,7 +626,7 @@ class GraphViewMixin:
         db_map, relationship_id = db_map_relationship_id
         relationship = self.db_mngr.get_item(db_map, "relationship", relationship_id)
         key = (relationship["class_name"], relationship["object_class_name_list"], relationship["object_name_list"])
-        if not self.ui.graphicsView.merge_dbs:
+        if not self.ui.graphicsView.get_property("merge_dbs"):
             key += (db_map.codename,)
         return key
 
@@ -722,9 +782,9 @@ class GraphViewMixin:
             for db_map_entity_id in db_map_entity_ids
             if fixed_positions.get(db_map_entity_id)
         }
-        spread_factor = int(self.qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100")) / 100
-        neg_weight_exp = int(self.qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
-        max_iters = int(self.qsettings.value("appSettings/layoutAlgoMaxIterations", defaultValue="12"))
+        spread_factor = self.ui.graphicsView.get_property("spread_factor") / 100
+        build_iters = self.ui.graphicsView.get_property("build_iters")
+        neg_weight_exp = self.ui.graphicsView.get_property("neg_weight_exp")
         return GraphLayoutGeneratorRunnable(
             self._layout_gen_id,
             len(db_map_entity_id_sets),
@@ -733,7 +793,7 @@ class GraphViewMixin:
             spread=spread_factor * self._ARC_LENGTH_HINT,
             heavy_positions=heavy_positions,
             weight_exp=-neg_weight_exp,
-            max_iters=max_iters,
+            max_iters=build_iters,
         )
 
     @staticmethod

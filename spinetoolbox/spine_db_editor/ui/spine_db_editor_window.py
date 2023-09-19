@@ -322,7 +322,6 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_relationship_parameter_definition)
         self.dockWidget_object_tree = QDockWidget(MainWindow)
         self.dockWidget_object_tree.setObjectName(u"dockWidget_object_tree")
-        self.dockWidget_object_tree.setFeatures(QDockWidget.DockWidgetClosable|QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
         self.dockWidget_object_tree.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.dockWidgetContents_6 = QWidget()
         self.dockWidgetContents_6.setObjectName(u"dockWidgetContents_6")

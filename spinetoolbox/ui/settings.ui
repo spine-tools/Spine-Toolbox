@@ -1113,8 +1113,71 @@
           <property name="title">
            <string>Entity graph</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_10">
-           <item>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <item row="4" column="0">
+            <widget class="QCheckBox" name="checkBox_smooth_entity_graph_rotation">
+             <property name="text">
+              <string>Smooth rotation</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="checkBox_smooth_entity_graph_zoom">
+             <property name="text">
+              <string>Smooth zoom</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QSpinBox" name="spinBox_layout_algo_max_iterations">
+             <property name="suffix">
+              <string/>
+             </property>
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>100</number>
+             </property>
+             <property name="value">
+              <number>12</number>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QLabel" name="label_10">
+             <property name="text">
+              <string>Minimum distance between nodes (%)</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="1">
+            <widget class="QSpinBox" name="spinBox_layout_algo_spread_factor">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>100</number>
+             </property>
+             <property name="value">
+              <number>100</number>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QLabel" name="label_6">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <horstretch>2</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>Number of build iterations</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
             <widget class="QCheckBox" name="checkBox_auto_expand_objects">
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Checked&lt;/span&gt;: Whenever an object is included in the Entity graph, the graph automatically includes &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; its relationships.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Unchecked&lt;/span&gt;: Whenever &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;p&gt;Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1124,107 +1187,52 @@
              </property>
             </widget>
            </item>
-           <item>
-            <widget class="QCheckBox" name="checkBox_merge_dbs">
+           <item row="8" column="0">
+            <widget class="QLabel" name="label_16">
              <property name="text">
-              <string>Merge databases</string>
+              <string>Decay rate of attraction with distance</string>
              </property>
             </widget>
            </item>
-           <item>
+           <item row="2" column="0">
             <widget class="QCheckBox" name="checkBox_snap_entities">
              <property name="text">
               <string>Snap entities to grid</string>
              </property>
             </widget>
            </item>
-           <item>
-            <widget class="QCheckBox" name="checkBox_smooth_entity_graph_zoom">
+           <item row="1" column="0">
+            <widget class="QCheckBox" name="checkBox_merge_dbs">
              <property name="text">
-              <string>Smooth zoom</string>
+              <string>Merge databases</string>
              </property>
             </widget>
            </item>
-           <item>
-            <widget class="QCheckBox" name="checkBox_smooth_entity_graph_rotation">
-             <property name="text">
-              <string>Smooth rotation</string>
+           <item row="8" column="1">
+            <widget class="QSpinBox" name="spinBox_layout_algo_neg_weight_exp">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>100</number>
              </property>
             </widget>
            </item>
-           <item>
-            <widget class="QGroupBox" name="groupBox">
-             <property name="title">
-              <string>Layout generation algorithm</string>
+           <item row="5" column="0">
+            <widget class="QLabel" name="label_3">
+             <property name="text">
+              <string>Max. entity dimension count</string>
              </property>
-             <layout class="QGridLayout" name="gridLayout_6">
-              <item row="3" column="1">
-               <widget class="QSpinBox" name="spinBox_layout_algo_neg_weight_exp">
-                <property name="minimum">
-                 <number>1</number>
-                </property>
-                <property name="maximum">
-                 <number>100</number>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_6">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Number of iterations</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_10">
-                <property name="text">
-                 <string>Distance between nodes (as percentage of node size)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_16">
-                <property name="text">
-                 <string>Decay rate of attraction with distance</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QSpinBox" name="spinBox_layout_algo_max_iterations">
-                <property name="suffix">
-                 <string/>
-                </property>
-                <property name="minimum">
-                 <number>1</number>
-                </property>
-                <property name="maximum">
-                 <number>100</number>
-                </property>
-                <property name="value">
-                 <number>12</number>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QSpinBox" name="spinBox_layout_algo_spread_factor">
-                <property name="minimum">
-                 <number>1</number>
-                </property>
-                <property name="maximum">
-                 <number>100</number>
-                </property>
-                <property name="value">
-                 <number>100</number>
-                </property>
-               </widget>
-              </item>
-             </layout>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QSpinBox" name="spinBox_max_ent_dim_count">
+             <property name="minimum">
+              <number>2</number>
+             </property>
+             <property name="value">
+              <number>5</number>
+             </property>
             </widget>
            </item>
           </layout>
@@ -1707,7 +1715,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="persistent_processes_button_group"/>
   <buttongroup name="engine_processes_button_group"/>
+  <buttongroup name="persistent_processes_button_group"/>
  </buttongroups>
 </ui>
