@@ -25,10 +25,25 @@ from PySide6.QtWidgets import (
     QSlider,
     QVBoxLayout,
     QHBoxLayout,
+    QFormLayout,
     QSizePolicy,
+    QDialog,
+    QDateTimeEdit,
+    QSpinBox,
 )
 from PySide6.QtGui import QPainter, QColor, QIcon, QBrush, QPainterPath, QPalette
-from PySide6.QtCore import Signal, Slot, QVariantAnimation, QPointF, Qt, QTimeLine, QRectF, QTimer, QEasingCurve
+from PySide6.QtCore import (
+    Signal,
+    Slot,
+    QVariantAnimation,
+    QPointF,
+    Qt,
+    QTimeLine,
+    QRectF,
+    QTimer,
+    QEasingCurve,
+    QDateTime,
+)
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url, CharIconEngine, color_from_index
 
@@ -104,11 +119,12 @@ class OpenFileButton(QWidget):
         self.set_progress(progress)
 
     def set_progress(self, progress):
-        self.progress = self._progress_bar.minimum() + progress * (
+        self.progress = progress
+        progress_bar_value = self._progress_bar.minimum() + self.progress * (
             self._progress_bar.maximum() - self._progress_bar.minimum()
         )
-        self._progress_bar.setValue(self.progress)
-        if self.progress == self._progress_bar.maximum():
+        self._progress_bar.setValue(progress_bar_value)
+        if progress_bar_value == self._progress_bar.maximum():
 
             def _show_button():
                 self._progress_bar.hide()
@@ -280,19 +296,8 @@ class TimeLineWidget(QWidget):
         self.index_changed.emit(self._index)
         self.show()
 
-    def indexes(self, fps):
-        indexes = []
-        total_seconds = self._ms_per_step * self._STEP_COUNT / 1000  # in s
-        frame_count = total_seconds * fps
-        index_range = self._max_index - self._min_index
-        incr = index_range / frame_count
-        index = self._min_index
-        while True:
-            indexes.append(index)
-            index += incr
-            if index > self._max_index:
-                break
-        return indexes
+    def get_index_range(self):
+        return (self._min_index, self._max_index)
 
 
 class LegendWidget(QWidget):
@@ -382,3 +387,50 @@ class LegendWidget(QWidget):
             cell.setWidth(max_val_cw)
             painter.drawText(cell, text_flags, max_val)
         painter.restore()
+
+
+class ExportAsVideoDialog(QDialog):
+    def __init__(self, start, stop, parent=None):
+        super().__init__(parent=parent)
+        self.setWindowTitle("Export as video")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self._start_edit = QDateTimeEdit()
+        self._stop_edit = QDateTimeEdit()
+        for dt_edit in (self._start_edit, self._stop_edit):
+            dt_edit.setMinimumDateTime(QDateTime.fromString(start, Qt.ISODate))
+            dt_edit.setMaximumDateTime(QDateTime.fromString(stop, Qt.ISODate))
+            dt_edit.setCalendarPopup(True)
+        self._start_edit.dateTimeChanged.connect(self._handle_start_dt_changed)
+        self._stop_edit.dateTimeChanged.connect(self._handle_stop_dt_changed)
+        self._frame_count_spin_box = QSpinBox()
+        self._frame_count_spin_box.setRange(1, 16777215)
+        self._fps_spin_box = QSpinBox()
+        self._fps_spin_box.setRange(1, 20)
+        form.addRow("Start:", self._start_edit)
+        form.addRow("Stop:", self._stop_edit)
+        form.addRow("Number of frames:", self._frame_count_spin_box)
+        form.addRow("Frames per second:", self._fps_spin_box)
+        self._button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self._button_box.accepted.connect(self.accept)
+        self._button_box.rejected.connect(self.reject)
+        layout.addLayout(form)
+        layout.addWidget(self._button_box)
+
+    @Slot(QDateTime)
+    def _handle_start_dt_changed(self, start_dt):
+        if start_dt > self._stop_edit.dateTime():
+            self._stop_edit.setDateTime(start_dt)
+
+    @Slot(QDateTime)
+    def _handle_stop_dt_changed(self, stop_dt):
+        if stop_dt < self._start_edit.dateTime():
+            self._start_edit.setDateTime(stop_dt)
+
+    def selections(self):
+        return (
+            self._start_edit.dateTime().toString(Qt.ISODate),
+            self._stop_edit.dateTime().toString(Qt.ISODate),
+            self._frame_count_spin_box.value(),
+            self._fps_spin_box.value(),
+        )

@@ -17,6 +17,7 @@ import os
 import sys
 import tempfile
 from contextlib import contextmanager
+import numpy as np
 from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
 from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog, QMessageBox, QLineEdit
 from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap
@@ -26,6 +27,7 @@ from ...helpers import CharIconEngine, busy_effect
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
 from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, CrossHairsArcItem, BgItem
+from .custom_qwidgets import ExportAsVideoDialog
 from .select_graph_parameters_dialog import SelectGraphParametersDialog
 
 
@@ -296,57 +298,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
         self._menu.aboutToShow.connect(self._update_actions_visibility)
 
-    def _save_state(self):
-        name, ok = QInputDialog.getText(
-            self, "Save state...", "Enter a name for the state.", QLineEdit.Normal, self._current_state_name
-        )
-        if not ok:
-            return
-        db_map_graph_data = self._db_map_graph_data_by_name.get(name)
-        if db_map_graph_data is not None:
-            button = QMessageBox.question(
-                self._spine_db_editor,
-                self._spine_db_editor.windowTitle(),
-                f"State {name} already exists. Do you want to overwrite it?",
-            )
-            if button == QMessageBox.StandardButton.Yes:
-                self._spine_db_editor.overwrite_graph_data(db_map_graph_data)
-            return
-        self._spine_db_editor.save_graph_data(name)
-
-    @Slot(QAction)
-    def _load_state(self, action):
-        self._current_state_name = name = action.text()
-        db_map_graph_data = self._db_map_graph_data_by_name.get(name)
-        self._spine_db_editor.load_graph_data(db_map_graph_data)
-
-    @Slot(QAction)
-    def _remove_state(self, action):
-        name = action.text()
-        self._spine_db_editor.remove_graph_data(name)
-
-    def _find(self):
-        expr, ok = QInputDialog.getText(self, "Find in graph...", "Enter entity names to find separated by comma.")
-        if not ok:
-            return
-        names = [x.strip() for x in expr.split(",")]
-        items = [item for item in self.entity_items if any(n == item.entity_name for n in names)]
-        if not items:
-            return
-        color = QColorDialog.getColor(Qt.yellow, self, "Choose highlight color")
-        for item in items:
-            item.set_highlight_color(color)
-
-    def increase_arc_length(self):
-        for item in self.entity_items:
-            new_pos = 1.1 * item.pos()
-            item.set_pos(new_pos.x(), new_pos.y())
-
-    def decrease_arc_length(self):
-        for item in self.entity_items:
-            new_pos = item.pos() / 1.1
-            item.set_pos(new_pos.x(), new_pos.y())
-
     @Slot()
     def _update_actions_visibility(self):
         """Enables or disables actions according to current selection in the graph."""
@@ -400,6 +351,57 @@ class EntityQGraphicsView(CustomQGraphicsView):
         menu.addAction("Edit", self.edit_selected).setEnabled(bool(self.selected_items))
         menu.addAction("Remove", self.remove_selected).setEnabled(bool(self.selected_items))
         return menu
+
+    def _save_state(self):
+        name, ok = QInputDialog.getText(
+            self, "Save state...", "Enter a name for the state.", QLineEdit.Normal, self._current_state_name
+        )
+        if not ok:
+            return
+        db_map_graph_data = self._db_map_graph_data_by_name.get(name)
+        if db_map_graph_data is not None:
+            button = QMessageBox.question(
+                self._spine_db_editor,
+                self._spine_db_editor.windowTitle(),
+                f"State {name} already exists. Do you want to overwrite it?",
+            )
+            if button == QMessageBox.StandardButton.Yes:
+                self._spine_db_editor.overwrite_graph_data(db_map_graph_data)
+            return
+        self._spine_db_editor.save_graph_data(name)
+
+    @Slot(QAction)
+    def _load_state(self, action):
+        self._current_state_name = name = action.text()
+        db_map_graph_data = self._db_map_graph_data_by_name.get(name)
+        self._spine_db_editor.load_graph_data(db_map_graph_data)
+
+    @Slot(QAction)
+    def _remove_state(self, action):
+        name = action.text()
+        self._spine_db_editor.remove_graph_data(name)
+
+    def _find(self):
+        expr, ok = QInputDialog.getText(self, "Find in graph...", "Enter entity names to find separated by comma.")
+        if not ok:
+            return
+        names = [x.strip() for x in expr.split(",")]
+        items = [item for item in self.entity_items if any(n == item.entity_name for n in names)]
+        if not items:
+            return
+        color = QColorDialog.getColor(Qt.yellow, self, "Choose highlight color")
+        for item in items:
+            item.set_highlight_color(color)
+
+    def increase_arc_length(self):
+        for item in self.entity_items:
+            new_pos = 1.1 * item.pos()
+            item.set_pos(new_pos.x(), new_pos.y())
+
+    def decrease_arc_length(self):
+        for item in self.entity_items:
+            new_pos = item.pos() / 1.1
+            item.set_pos(new_pos.x(), new_pos.y())
 
     @Slot(bool)
     def add_objects_at_position(self, checked=False):
@@ -730,23 +732,36 @@ class EntityQGraphicsView(CustomQGraphicsView):
         painter.end()
 
     @busy_effect
-    def _pixmaps(self, fps):
+    def _pixmaps(self, start, stop, frame_count):
+        if start == stop:
+            return []
         pixmaps = []
         with self._no_zoom():
             source = self._get_print_source()
             size = source.size().toSize()
-            for index in self._spine_db_editor.ui.time_line_widget.indexes(fps):
+            incr = (stop - start) / frame_count
+            index = start
+            while True:
                 pixmap = QPixmap(size)
                 pixmap.fill(Qt.white)
                 self._spine_db_editor._update_time_line_index(index)  # FIXME
                 self._print_scene(pixmap, source, size, index=index)
                 pixmaps.append(pixmap.scaledToWidth(1600))
+                index += incr
+                if index > stop:
+                    break
         return pixmaps
 
     @Slot(bool)
     def export_as_video(self):
         try:
             import cv2
+
+            def pixmap_to_frame(pixmap, file_path):
+                ok = pixmap.save(file_path)
+                assert ok
+                return cv2.imread(file_path, -1)
+
         except ModuleNotFoundError:
             self._spine_db_editor.msg_error.emit(
                 "Export as video requires <a href='https://pypi.org/project/opencv-python/'>opencv-python</a>"
@@ -757,20 +772,20 @@ class EntityQGraphicsView(CustomQGraphicsView):
         )
         if not file_path:
             return
+        start, stop = self._spine_db_editor.ui.time_line_widget.get_index_range()
+        dialog = ExportAsVideoDialog(str(start), str(stop), parent=self)
+        if dialog.exec_() == ExportAsVideoDialog.Rejected:
+            return
         file_ext = os.path.splitext(file_path)[-1].lower()
         if not file_ext:
             file_ext = ".mp4"
             file_path += file_ext
-        fps = 1.0
-        pixmaps = self._pixmaps(fps)
+        start, stop, frame_count, fps = dialog.selections()
+        start = np.datetime64(start)
+        stop = np.datetime64(stop)
+        pixmaps = self._pixmaps(start, stop, frame_count)
         if not pixmaps:
             return
-
-        def pixmap_to_frame(pixmap, file_path):
-            ok = pixmap.save(file_path)
-            assert ok
-            return cv2.imread(file_path, -1)
-
         pixmap_iter = enumerate(pixmaps)
         with tempfile.NamedTemporaryFile() as f:
             buffer_path = f.name + ".png"
@@ -778,6 +793,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             frame = pixmap_to_frame(pixmap, buffer_path)
             height, width, _layers = frame.shape
             video = cv2.VideoWriter(file_path, cv2.VideoWriter_fourcc(*"XVID"), fps, (width, height))
+            video.write(frame)
             self._spine_db_editor.file_exported.emit(file_path, k / len(pixmaps), False)
             for k, pixmap in pixmap_iter:
                 frame = pixmap_to_frame(pixmap, buffer_path)
