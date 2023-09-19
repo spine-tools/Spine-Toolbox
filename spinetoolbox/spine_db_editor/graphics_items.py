@@ -1055,28 +1055,6 @@ class BgItem(QGraphicsRectItem):
     def scene_rect(self):
         return self.mapToScene(self.rect()).boundingRect()
 
-    def fit_coordinates(self, p1, p2, scen1, scen2):
-        # NOTE: not in use at the moment
-        size = self._renderer.defaultSize()
-        x1, y1 = p1
-        x2, y2 = p2
-        scene_x1, scene_y1 = scen1
-        scene_x2, scene_y2 = scen2
-        y1 += size.height()
-        y2 += size.height()
-        x_min, x_max = self._get_p_min_max(size.width(), x1, x2, scene_x1, scene_x2)
-        y_min, y_max = self._get_p_min_max(size.height(), y1, y2, scene_y1, scene_y2)
-        rect = QRectF(x_min, y_min, x_max - x_min, y_max - y_min)
-        self._do_resize(rect, True)
-
-    @staticmethod
-    def _get_p_min_max(current_p_max, p1, p2, scene_p1, scene_p2):
-        a = (p1 - p2) / (scene_p1 - scene_p2)
-        b = p1 - a * scene_p1
-        p_min = (0 - b) / a
-        p_max = (current_p_max - b) / a
-        return p_min, p_max
-
 
 class _ResizableQGraphicsSvgItem(QGraphicsSvgItem):
     def __init__(self, *args, **kwargs):
