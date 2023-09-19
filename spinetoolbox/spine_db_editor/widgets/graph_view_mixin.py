@@ -13,7 +13,6 @@
 Contains the GraphViewMixin class.
 """
 
-import sys
 import itertools
 import json
 from time import monotonic
@@ -81,7 +80,6 @@ class GraphViewMixin:
         self.ui.time_line_widget.hide()
         self.ui.time_line_widget.index_changed.connect(self._update_time_line_index)
         self.ui.legend_widget.hide()
-        self._time_line_index = None
         self.entity_items = []
         self.arc_items = []
         self._selected_item_type_db_map_ids = {}
@@ -115,9 +113,8 @@ class GraphViewMixin:
 
     @Slot(int)
     def _update_time_line_index(self, index):
-        self._time_line_index = index
         for item in self.ui.graphicsView.entity_items:
-            item.update_props()
+            item.update_props(index)
 
     def _graph_fetch_more(self):
         for db_map in self.db_maps:
@@ -616,13 +613,13 @@ class GraphViewMixin:
             return entity["name"]
         return self._get_pv(db_map, entity_id, self.ui.graphicsView.name_parameter)
 
-    def get_item_color(self, db_map, entity_id):
-        return self._get_item_property(db_map, entity_id, self.ui.graphicsView.color_parameter)
+    def get_item_color(self, db_map, entity_id, time_line_index):
+        return self._get_item_property(db_map, entity_id, self.ui.graphicsView.color_parameter, time_line_index)
 
-    def get_arc_width(self, db_map, entity_id):
-        return self._get_item_property(db_map, entity_id, self.ui.graphicsView.arc_width_parameter)
+    def get_arc_width(self, db_map, entity_id, time_line_index):
+        return self._get_item_property(db_map, entity_id, self.ui.graphicsView.arc_width_parameter, time_line_index)
 
-    def _get_item_property(self, db_map, entity_id, pname):
+    def _get_item_property(self, db_map, entity_id, pname, time_line_index):
         """Returns a tuple of (min_value, value, max_value) for given entity and property.
         Returns self.NOT_SPECIFIED if the property is not defined for the entity.
         Returns None if the property is not defined for *any* entity.
@@ -636,7 +633,7 @@ class GraphViewMixin:
         pv = pvs.get((db_map, entity_id))
         if pv is None:
             return self.NOT_SPECIFIED
-        val = _get_value(pv, self._time_line_index)
+        val = _get_value(pv, time_line_index)
         if val is None:
             return self.NOT_SPECIFIED
         # NOTE: By construction, self._val_ranges_by_pname has the same keys as self._pvs_by_pname

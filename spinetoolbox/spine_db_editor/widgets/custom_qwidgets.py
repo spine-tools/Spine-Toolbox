@@ -392,15 +392,18 @@ class LegendWidget(QWidget):
 class ExportAsVideoDialog(QDialog):
     def __init__(self, start, stop, parent=None):
         super().__init__(parent=parent)
+        start, stop = (QDateTime.fromString(dt, Qt.ISODate) for dt in (start, stop))
         self.setWindowTitle("Export as video")
         layout = QVBoxLayout(self)
         form = QFormLayout()
         self._start_edit = QDateTimeEdit()
         self._stop_edit = QDateTimeEdit()
         for dt_edit in (self._start_edit, self._stop_edit):
-            dt_edit.setMinimumDateTime(QDateTime.fromString(start, Qt.ISODate))
-            dt_edit.setMaximumDateTime(QDateTime.fromString(stop, Qt.ISODate))
+            dt_edit.setMinimumDateTime(start)
+            dt_edit.setMaximumDateTime(stop)
             dt_edit.setCalendarPopup(True)
+        self._start_edit.setDateTime(start)
+        self._stop_edit.setDateTime(stop)
         self._start_edit.dateTimeChanged.connect(self._handle_start_dt_changed)
         self._stop_edit.dateTimeChanged.connect(self._handle_stop_dt_changed)
         self._frame_count_spin_box = QSpinBox()
