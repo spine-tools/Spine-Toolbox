@@ -18,7 +18,7 @@ import sys
 import tempfile
 from contextlib import contextmanager
 from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
-from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog
+from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog, QMessageBox, QLineEdit
 from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
@@ -125,6 +125,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.name_parameter = ""
         self.color_parameter = ""
         self.arc_width_parameter = ""
+        self._current_state_name = ""
         self._margin = 0.05
         self._bg_item = None
         self.selected_items = []
@@ -175,6 +176,18 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._items_per_class = {}
         self._db_map_graph_data_by_name = {}
 
+    @property
+    def _qsettings(self):
+        return self._spine_db_editor.qsettings
+
+    @property
+    def db_mngr(self):
+        return self._spine_db_editor.db_mngr
+
+    @property
+    def entity_items(self):
+        return [x for x in self.scene().items() if isinstance(x, EntityItem) and x not in self.removed_items]
+
     def get_property(self, name):
         return self._properties[name].value
 
@@ -201,18 +214,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def get_pruned_db_map_entity_ids(self):
         return [db_map_id for db_map_ids in self.pruned_db_map_entity_ids.values() for db_map_id in db_map_ids]
-
-    @property
-    def _qsettings(self):
-        return self._spine_db_editor.qsettings
-
-    @property
-    def db_mngr(self):
-        return self._spine_db_editor.db_mngr
-
-    @property
-    def entity_items(self):
-        return [x for x in self.scene().items() if isinstance(x, EntityItem) and x not in self.removed_items]
 
     @Slot()
     def handle_scene_selection_changed(self):
@@ -293,17 +294,26 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.aboutToShow.connect(self._update_actions_visibility)
 
     def _save_state(self):
-        name, ok = QInputDialog.getText(self, "Save state...", "Enter a name for the state.")
+        name, ok = QInputDialog.getText(
+            self, "Save state...", "Enter a name for the state.", QLineEdit.Normal, self._current_state_name
+        )
         if not ok:
             return
-        if name in self._db_map_graph_data_by_name:
-            self._spine_db_editor.msg_error.emit(f"State {name} already exists")
+        db_map_graph_data = self._db_map_graph_data_by_name.get(name)
+        if db_map_graph_data is not None:
+            button = QMessageBox.question(
+                self._spine_db_editor,
+                self._spine_db_editor.windowTitle(),
+                f"State {name} already exists. Do you want to overwrite it?",
+            )
+            if button == QMessageBox.StandardButton.Yes:
+                self._spine_db_editor.overwrite_graph_data(db_map_graph_data)
             return
         self._spine_db_editor.save_graph_data(name)
 
     @Slot(QAction)
     def _load_state(self, action):
-        name = action.text()
+        self._current_state_name = name = action.text()
         db_map_graph_data = self._db_map_graph_data_by_name.get(name)
         self._spine_db_editor.load_graph_data(db_map_graph_data)
 
@@ -558,7 +568,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
             return
         db_map_ids = {}
         for item in items:
-            db_map_ids.setdefault(item.db_map, set()).add(item.entity_id)
+            for db_map, entity_id in item.db_map_ids:
+                db_map_ids.setdefault(db_map, set()).add(entity_id)
         db_map_typed_data = {}
         for db_map, ids in db_map_ids.items():
             db_map_typed_data[db_map] = {
@@ -603,7 +614,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def get_bg_rect(self):
         if self._bg_item is not None:
-            rect = self._bg_item.rect()
+            rect = self._bg_item.scene_rect()
             return rect.x(), rect.y(), rect.width(), rect.height()
 
     def clear_scene(self):

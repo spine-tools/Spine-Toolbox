@@ -921,7 +921,7 @@ class BgItem(QGraphicsRectItem):
         for anchor, resizer in self._resizers.items():
             getter, _ = self._getter_setter[anchor]
             resizer.setPos(
-                getattr(self.rect(), getter)() - resizer.rect().center() / self.scale() / self._scaling_factor
+                getattr(self.rect(), getter)() - getattr(resizer.rect(), getter)() / self.scale() / self._scaling_factor
             )
 
     def _resize(self, anchor, delta, strong):
@@ -949,6 +949,9 @@ class BgItem(QGraphicsRectItem):
         if not isinstance(rect, QRectF):
             rect = QRectF(*rect)
         self._do_resize(rect, True)
+
+    def scene_rect(self):
+        return self.mapToScene(self.rect()).boundingRect()
 
     def fit_coordinates(self, p1, p2, scen1, scen2):
         # NOTE: not in use at the moment
@@ -1002,7 +1005,7 @@ class _Resizer(QGraphicsRectItem):
     class SignalsProvider(QObject):
         resized = Signal(QPointF, bool)
 
-    def __init__(self, rect=QRectF(0, 0, 12, 12), parent=None):
+    def __init__(self, rect=QRectF(0, 0, 20, 20), parent=None):
         super().__init__(rect, parent)
         self._original_rect = self.rect()
         self._press_pos = None
