@@ -402,8 +402,8 @@ class GraphViewMixin:
         self.db_map_relationship_id_sets.clear()
         self.build_graph()
 
-    def save_graph_data(self, name):
-        db_map_data = {}
+    def _get_db_map_graph_data(self):
+        db_map_graph_data = {}
         for db_map in self.db_maps:
             graph_data = {
                 "type": "graph_data",
@@ -421,9 +421,21 @@ class GraphViewMixin:
                 "bg_rect": self.ui.graphicsView.get_bg_rect(),
                 "properties": self.ui.graphicsView.get_all_properties(),
             }
-            db_map_data[db_map] = [{"name": name, "value": json.dumps(graph_data)}]
+            db_map_graph_data[db_map] = json.dumps(graph_data)
+        return db_map_graph_data
+
+    def save_graph_data(self, name):
+        db_map_graph_data = self._get_db_map_graph_data()
+        db_map_data = {db_map: [{"name": name, "value": gd}] for db_map, gd in db_map_graph_data.items()}
         self.db_mngr.add_metadata(db_map_data)
         # TODO: also add entity_metadata so it sticks
+
+    def overwrite_graph_data(self, db_map_graph_data):
+        db_map_graph_data_ = self._get_db_map_graph_data()
+        db_map_data = {
+            db_map: [{"id": db_map_graph_data[db_map]["id"], "value": gd}] for db_map, gd in db_map_graph_data_.items()
+        }
+        self.db_mngr.update_metadata(db_map_data)
 
     def get_db_map_graph_data_by_name(self):
         db_map_graph_data_by_name = {}
@@ -434,6 +446,7 @@ class GraphViewMixin:
                 except json.decoder.JSONDecodeError:
                     continue
                 if isinstance(graph_data, dict) and graph_data.get("type") == "graph_data":
+                    graph_data["id"] = metadata_item["id"]
                     db_map_graph_data_by_name.setdefault(metadata_item["name"], {})[db_map] = graph_data
         return db_map_graph_data_by_name
 
