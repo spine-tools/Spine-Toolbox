@@ -126,6 +126,9 @@ class EntityClassItem(MultiDBTreeItem):
     def _key_for_index(self, db_map):
         return self.db_map_id(db_map)
 
+    def accepts_item(self, item, db_map):
+        return item["class_id"] == self.db_map_id(db_map)
+
     def set_data(self, column, value, role):
         """See base class."""
         return False
@@ -160,6 +163,7 @@ class EntityItem(MultiDBTreeItem):
         self.is_member = is_member
         self._entity_group_fetch_parent = FlexibleFetchParent(
             "entity_group",
+            accepts_item=self._accepts_entity_group_item,
             handle_items_added=self._handle_entity_group_items_added,
             handle_items_removed=self._handle_entity_group_items_removed,
             index=self._entity_group_index,
@@ -262,6 +266,12 @@ class EntityItem(MultiDBTreeItem):
 
     def _key_for_entity_group_index(self, db_map):
         return self.db_map_id(db_map)
+
+    def accepts_item(self, item, db_map):
+        return self.db_map_id(db_map) in item["element_id_list"]
+
+    def _accepts_entity_group_item(self, item, db_map):
+        return item["group_id"] == self.db_map_id(db_map)
 
     def _handle_entity_group_items_added(self, db_map_data):
         db_map_member_ids = {db_map: [x["member_id"] for x in data] for db_map, data in db_map_data.items()}
