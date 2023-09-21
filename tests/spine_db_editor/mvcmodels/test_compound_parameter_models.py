@@ -123,7 +123,7 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
-        self._db_mngr.fetch_all(self._db_map)
+        self._db_map.fetch_all()
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
@@ -142,7 +142,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
-        self._db_mngr.fetch_all(self._db_map)
+        self._db_map.fetch_all()
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
             self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
 
@@ -212,7 +212,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
-        self._db_mngr.fetch_all(self._db_map)
+        self._db_map.fetch_all()
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
             self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
 

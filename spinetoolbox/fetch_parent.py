@@ -13,7 +13,7 @@
 The FetchParent and FlexibleFetchParent classes.
 """
 
-from PySide6.QtCore import QTimer, Signal, QObject
+from PySide6.QtCore import QTimer, Signal, QObject, Qt
 from .helpers import busy_effect
 
 
@@ -52,6 +52,9 @@ class FetchParent(QObject):
         if isinstance(self._owner, QObject):
             self._owner.destroyed.connect(lambda obj=None: self.set_obsolete(True))
         self.chunk_size = chunk_size
+
+    def apply_changes_immediately(self):
+        self._changes_pending.connect(self._apply_pending_changes, Qt.UniqueConnection)
 
     @property
     def index(self):
@@ -120,7 +123,7 @@ class FetchParent(QObject):
         return self._remove_item_callbacks[db_map]
 
     def _is_valid(self, version):
-        return version in (None, self._version) and not self.is_obsolete
+        return (version is None or version == self._version) and not self.is_obsolete
 
     def add_item(self, item, db_map, version=None):
         if not self._is_valid(version):
