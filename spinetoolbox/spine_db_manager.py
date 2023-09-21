@@ -153,6 +153,15 @@ class SpineDBManager(QObject):
         """
         return self._workers[db_map]
 
+    def bind_fetch_parent_item(self, db_map, parent, item):
+        if db_map.closed:
+            return
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            return
+        worker.bind_item(parent, item)
+
     def register_fetch_parent(self, db_map, parent):
         """Registers a fetch parent.
 
@@ -166,7 +175,7 @@ class SpineDBManager(QObject):
             worker = self._get_worker(db_map)
         except KeyError:
             return
-        return worker.register_fetch_parent(parent)
+        worker.register_fetch_parent(parent)
 
     def can_fetch_more(self, db_map, parent):
         """Whether or not we can fetch more items of given type from given db.

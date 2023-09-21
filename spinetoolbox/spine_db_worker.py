@@ -114,7 +114,7 @@ class SpineDBWorker(QObject):
             if not item:
                 continue
             if index is not None or parent.accepts_item(item, self._db_map):
-                self._bind_item(parent, item)
+                self.bind_item(parent, item)
                 if item.is_valid():
                     parent.add_item(item, self._db_map)
                     if parent.shows_item(item, self._db_map):
@@ -125,7 +125,7 @@ class SpineDBWorker(QObject):
             return False
         return added_count > 0
 
-    def _bind_item(self, parent, item):
+    def bind_item(self, parent, item):
         # NOTE: If `item` is in the process of calling callbacks in another thread,
         # the ones added below won't be called.
         # So, it is important to call this function before parent.add_item(item)

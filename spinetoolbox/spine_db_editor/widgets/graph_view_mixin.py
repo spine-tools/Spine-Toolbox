@@ -70,38 +70,38 @@ class GraphViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._persistent = False
         self._owes_graph = False
         self.scene = CustomGraphicsScene(self)
         self.ui.graphicsView.setScene(self.scene)
         self.ui.graphicsView.connect_spine_db_editor(self)
         self.ui.progress_bar_widget.hide()
-        self.ui.progress_bar_widget.stop_button.clicked.connect(self._stop_extending_graph)
         self.ui.time_line_widget.hide()
         self.ui.time_line_widget.index_changed.connect(self._update_time_line_index)
         self.ui.legend_widget.hide()
         self.entity_items = []
         self.arc_items = []
         self._selected_item_type_db_map_ids = {}
+        self.pruned_db_map_entity_ids = {}
+        self.expanded_db_map_entity_ids = set()
+        self.collapsed_db_map_entity_ids = set()
         self.db_map_entity_id_sets = []
         self.entity_inds = []
         self.element_inds = []
-        self.entity_offsets = {}
+        self._entity_offsets = {}
         self._pvs_by_pname = {}
         self._val_ranges_by_pname = {}
-        self._connecting_entities = False
-        self._pos_for_added_entities = None
-        self.added_db_map_entity_ids = set()
+        self._persisted_positions = {}
         self._thread_pool = QThreadPool()
         self.layout_gens = {}
         self._layout_gen_id = None
         self._extend_graph_timer = QTimer(self)
         self._extend_graph_timer.setSingleShot(True)
         self._extend_graph_timer.setInterval(100)
-        self._extend_graph_timer.timeout.connect(self.build_graph)
+        self._extend_graph_timer.timeout.connect(self._do_build_graph)
         self._extending_graph = False
         self._entity_fetch_parent = FlexibleFetchParent(
             "entity",
+            accepts_item=self._accepts_entity_item,
             handle_items_added=self._graph_handle_entities_added,
             handle_items_removed=self._graph_handle_entities_removed,
             handle_items_updated=self._graph_handle_entities_updated,
@@ -110,22 +110,32 @@ class GraphViewMixin:
         self._parameter_value_fetch_parent = FlexibleFetchParent(
             "parameter_value", handle_items_added=self._graph_handle_parameter_values_added, owner=self
         )
+        self._graph_fetch_more_later()
 
     @Slot(int)
     def _update_time_line_index(self, index):
         for item in self.ui.graphicsView.entity_items:
             item.update_props(index)
 
-    def _graph_fetch_more(self):
-        for db_map in self.db_maps:
-            if self.db_mngr.can_fetch_more(db_map, self._entity_fetch_parent):
-                self.db_mngr.fetch_more(db_map, self._entity_fetch_parent)
-            if self.db_mngr.can_fetch_more(db_map, self._parameter_value_fetch_parent):
-                self.db_mngr.fetch_more(db_map, self._parameter_value_fetch_parent)
+    def _graph_fetch_more_later(self, entity=True, parameter_value=True):
+        QTimer.singleShot(0, lambda: self._graph_fetch_more(entity=entity, parameter_value=parameter_value))
 
-    @Slot(bool)
-    def _stop_extending_graph(self, _=False):
-        self._extending_graph = False
+    def _graph_fetch_more(self, entity=True, parameter_value=True):
+        parents = []
+        if entity:
+            parents.append(self._entity_fetch_parent)
+        if parameter_value:
+            parents.append(self._parameter_value_fetch_parent)
+        for parent in parents:
+            for db_map in self.db_maps:
+                if self.db_mngr.can_fetch_more(db_map, parent):
+                    self.db_mngr.fetch_more(db_map, parent)
+
+    def _graph_fetch_more_parameter_value(self):
+        QTimer.singleShot(0, lambda: self._graph_fetch_more_parents(self._parameter_value_fetch_parent))
+
+    def _graph_fetch_more_entity(self):
+        QTimer.singleShot(0, lambda: self._graph_fetch_more_parents(self._parameter_value_fetch_parent))
 
     def init_models(self):
         self.scene.clear()
@@ -153,6 +163,31 @@ class GraphViewMixin:
             if isinstance(item, EntityItem) and (item.first_db_map, item.entity_class_id) in updated_ids:
                 item.refresh_icon()
 
+    def _all_pruned_db_map_entity_ids(self):
+        return {db_map_id for db_map_ids in self.pruned_db_map_entity_ids.values() for db_map_id in db_map_ids}
+
+    def _accepts_entity_item(self, item, db_map):
+        if (db_map, item["id"]) in self.expanded_db_map_entity_ids:
+            return True
+        if (db_map, item["id"]) in self.collapsed_db_map_entity_ids:
+            return False
+        if (db_map, item["id"]) in self._all_pruned_db_map_entity_ids():
+            return False
+        if "root" in self._selected_item_type_db_map_ids:
+            return True
+        selected_entity_ids = self._selected_item_type_db_map_ids.get("entity", {}).get(db_map, ())
+        if item["id"] in selected_entity_ids:
+            return True
+        selected_class_ids = self._selected_item_type_db_map_ids.get("entity_class", {}).get(db_map, ())
+        if item["class_id"] in selected_class_ids:
+            return True
+        cond = any if self.ui.graphicsView.get_property("auto_expand_entities") else all
+        if item["element_id_list"] and cond(id_ in selected_entity_ids for id_ in item["element_id_list"]):
+            return True
+        if item["dimension_id_list"] and cond(id_ in selected_class_ids for id_ in item["dimension_id_list"]):
+            return True
+        return False
+
     def _graph_handle_entities_added(self, db_map_data):
         """Runs when entities are added to the db.
         Adds the new entities to the graph if needed.
@@ -162,30 +197,12 @@ class GraphViewMixin:
         """
         new_db_map_id_sets = self.add_db_map_ids_to_items(db_map_data)
         if not new_db_map_id_sets:
-            for db_map in self.db_maps:
-                if self.db_mngr.can_fetch_more(db_map, self._entity_fetch_parent):
-                    self.db_mngr.fetch_more(db_map, self._entity_fetch_parent)
+            self._graph_fetch_more_later(entity=True, parameter_value=False)
             return
-        if self._pos_for_added_entities is not None:
-            spread = self._VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
-            gen = GraphLayoutGenerator(len(new_db_map_id_sets), spread=spread)
-            layout_x, layout_y = gen.compute_layout()
-            x = self._pos_for_added_entities.x()
-            y = self._pos_for_added_entities.y()
-            for dx, dy, db_map_ids in zip(layout_x, layout_y, new_db_map_id_sets):
-                entity_item = EntityItem(self, x + dx, y + dy, self._VERTEX_EXTENT, tuple(db_map_ids))
-                self.scene.addItem(entity_item)
-                entity_item.apply_zoom(self.ui.graphicsView.zoom_factor)
-            self._pos_for_added_entities = None
-        elif self._connecting_entities:
-            for db_map_ids in new_db_map_id_sets:
-                self.added_db_map_entity_ids.update(db_map_ids)
-            self.build_graph(persistent=True)
-            self._end_connect_entities()
-        elif self._extending_graph:
+        if self._extending_graph:
             self._extend_graph_timer.start()
-        else:
-            self.rebuild_graph()
+            return
+        self._do_build_graph()
 
     def _graph_handle_entities_removed(self, db_map_data):
         """Runs when entities are removed from the db. Rebuilds graph if needed.
@@ -193,7 +210,11 @@ class GraphViewMixin:
         Args:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
-        self.hide_removed_entities(db_map_data)
+        removed_db_map_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
+        for item in self.ui.graphicsView.entity_items:
+            item.remove_db_map_ids(removed_db_map_ids)
+            if not item.db_map_ids:
+                item.setVisible(False)
 
     def _graph_handle_entities_updated(self, db_map_data):
         """Runs when entities are updated in the db.
@@ -208,6 +229,15 @@ class GraphViewMixin:
                     self.build_graph(persistent=True)
                     break
 
+    def _db_map_ids_by_key(self, db_map_data):
+        added_db_map_ids_by_key = {}
+        for db_map, entities in db_map_data.items():
+            for entity in entities:
+                db_map_id = (db_map, entity["id"])
+                key = self.get_entity_key(db_map_id)
+                added_db_map_ids_by_key.setdefault(key, set()).add(db_map_id)
+        return added_db_map_ids_by_key
+
     def add_db_map_ids_to_items(self, db_map_data):
         """Goes through entity items and adds the corresponding db_map ids.
         This could mean either restoring removed (db_map, id) tuples previously removed,
@@ -219,12 +249,7 @@ class GraphViewMixin:
         Returns:
             list: tuples (db_map, id) that didn't match any item in the view.
         """
-        added_db_map_ids_by_key = {}
-        for db_map, entities in db_map_data.items():
-            for entity in entities:
-                db_map_id = (db_map, entity["id"])
-                key = self.get_entity_key(db_map_id)
-                added_db_map_ids_by_key.setdefault(key, set()).add(db_map_id)
+        added_db_map_ids_by_key = self._db_map_ids_by_key(db_map_data)
         restored_items = set()
         for item in self.ui.graphicsView.items():
             if not isinstance(item, EntityItem):
@@ -239,30 +264,8 @@ class GraphViewMixin:
                     item.add_db_map_ids(db_map_ids)
                     restored_items.add(item)
         for item in restored_items:
-            self.ui.graphicsView.removed_items.discard(item)
             item.setVisible(True)
         return list(added_db_map_ids_by_key.values())
-
-    def hide_removed_entities(self, db_map_data):
-        """Hides removed entities while saving them into a set.
-        This allows entities to be restored in case the user undoes the operation."""
-        removed_db_map_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
-        self.added_db_map_entity_ids -= removed_db_map_ids
-        removed_items = set()
-        for item in self.ui.graphicsView.items():
-            if not isinstance(item, EntityItem):
-                continue
-            item.remove_db_map_ids(removed_db_map_ids)
-            if not item.db_map_ids:
-                removed_items.add(item)
-        if not removed_items:
-            return
-        self.ui.graphicsView.removed_items |= removed_items
-        scene = self.scene
-        self.scene = None
-        for item in removed_items:
-            item.setVisible(False)
-        self.scene = scene
 
     def _graph_handle_parameter_values_added(self, db_map_data):
         pnames = {x["parameter_definition_name"] for db_map in self.db_maps for x in db_map_data.get(db_map, ())}
@@ -273,13 +276,14 @@ class GraphViewMixin:
             self.ui.graphicsView.arc_width_parameter,
         }
         if pnames & position_pnames:
-            self.rebuild_graph()
+            if self._extending_graph:
+                self._extend_graph_timer.start()
+                return
+            self._do_build_graph()
             return
         if pnames & property_pnames:
             self.polish_items()
-        for db_map in self.db_maps:
-            if self.db_mngr.can_fetch_more(db_map, self._parameter_value_fetch_parent):
-                self.db_mngr.fetch_more(db_map, self._parameter_value_fetch_parent)
+        self._graph_fetch_more_later(entity=False, parameter_value=True)
 
     def polish_items(self):
         self._update_property_pvs()
@@ -327,15 +331,32 @@ class GraphViewMixin:
     @Slot(dict)
     def _handle_entity_tree_selection_changed_in_graph(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
-        self._selected_item_type_db_map_ids = self._get_selected_item_type_db_map_ids(selected)
-        self.added_db_map_entity_ids.clear()
-        self._extending_graph = True
+        self._update_selected_item_type_db_map_ids(selected)
         self.build_graph()
 
-    @Slot(bool)
-    def rebuild_graph(self, _checked=False):
-        self.db_map_entity_id_sets.clear()
+    def expand_graph(self, db_map_entity_ids):
+        self.expanded_db_map_entity_ids.update(db_map_entity_ids)
+        self.collapsed_db_map_entity_ids.difference_update(db_map_entity_ids)
+        self.build_graph(persistent=True)
+
+    def collapse_graph(self, db_map_entity_ids):
+        self.expanded_db_map_entity_ids.difference_update(db_map_entity_ids)
+        self.collapsed_db_map_entity_ids.update(db_map_entity_ids)
+        self.build_graph(persistent=True)
+
+    def prune_graph(self, key, db_map_entity_ids):
+        self.pruned_db_map_entity_ids[key] = db_map_entity_ids
         self.build_graph()
+
+    def restore_graph(self, key=None):
+        if not self.pruned_db_map_entity_ids:
+            return
+        if key is None:
+            self.pruned_db_map_entity_ids.clear()
+            self.build_graph()
+            return
+        if self.pruned_db_map_entity_ids.pop(key, None) is not None:
+            self.build_graph()
 
     def _get_db_map_graph_data(self):
         db_map_graph_data = {}
@@ -343,10 +364,27 @@ class GraphViewMixin:
             graph_data = {
                 "type": "graph_data",
                 "selected_item_type_ids": {
-                    item_type: db_map_ids.get(db_map, [])
+                    item_type: list(db_map_ids.get(db_map, []))
                     for item_type, db_map_ids in self._selected_item_type_db_map_ids.items()
                 },
-                "pruned_entity_ids": self.ui.graphicsView.get_pruned_entity_ids(db_map),
+                "pruned_entity_ids": [
+                    id_
+                    for db_map_ids in self.pruned_db_map_entity_ids.values()
+                    for db_map_, id_ in db_map_ids
+                    if db_map_ is db_map
+                ],
+                "expanded_entity_ids": [
+                    id_
+                    for db_map_ids in self.expanded_db_map_entity_ids
+                    for db_map_, id_ in db_map_ids
+                    if db_map_ is db_map
+                ],
+                "collapsed_entity_ids": [
+                    id_
+                    for db_map_ids in self.collapsed_db_map_entity_ids
+                    for db_map_, id_ in db_map_ids
+                    if db_map_ is db_map
+                ],
                 "pos_x_parameter": self.ui.graphicsView.pos_x_parameter,
                 "pos_y_parameter": self.ui.graphicsView.pos_y_parameter,
                 "name_parameter": self.ui.graphicsView.name_parameter,
@@ -392,10 +430,17 @@ class GraphViewMixin:
         for db_map, gd in db_map_graph_data.items():
             for item_type, ids in gd["selected_item_type_ids"].items():
                 self._selected_item_type_db_map_ids.setdefault(item_type, {})[db_map] = ids
-        pruned_db_map_entity_ids = {
-            (db_map, id_) for db_map, gd in db_map_graph_data.items() for id_ in gd["pruned_entity_ids"]
+        self.pruned_db_map_entity_ids = {
+            "Pruned in loaded state": {
+                (db_map, id_) for db_map, gd in db_map_graph_data.items() for id_ in gd["pruned_entity_ids"]
+            }
         }
-        self.ui.graphicsView.set_pruned_db_map_entity_ids("Pruned in loaded state", pruned_db_map_entity_ids)
+        self.expanded_db_map_entity_ids = {
+            (db_map, id_) for db_map, gd in db_map_graph_data.items() for id_ in gd["expanded_entity_ids"]
+        }
+        self.collapsed_db_map_entity_ids = {
+            (db_map, id_) for db_map, gd in db_map_graph_data.items() for id_ in gd["collapsed_entity_ids"]
+        }
         graph_data = db_map_graph_data[self.first_db_map]
         self.ui.graphicsView.pos_x_parameter = graph_data["pos_x_parameter"]
         self.ui.graphicsView.pos_y_parameter = graph_data["pos_y_parameter"]
@@ -416,21 +461,37 @@ class GraphViewMixin:
             db_map_typed_ids[db_map] = {"metadata": {metadata_item["id"]}}
         self.db_mngr.remove_items(db_map_typed_ids)
 
+    @Slot(bool)
+    def rebuild_graph(self, _checked=False):
+        self.db_map_entity_id_sets.clear()
+        self.expanded_db_map_entity_ids.clear()
+        self.collapsed_db_map_entity_ids.clear()
+        self.build_graph()
+
     def build_graph(self, persistent=False):
-        """Builds graph from selection in the entity tree.
+        """Builds graph from current selection of items.
 
         Args:
             persistent (bool, optional): If True, elements in the current graph (if any) retain their position
                 in the new one.
         """
+        self._persisted_positions.clear()
+        if persistent:
+            for item in self.entity_items:
+                x, y = self.convert_position(item.pos().x(), item.pos().y())
+                self._persisted_positions[item.first_db_map, item.first_id] = {"x": x, "y": y}
         if not self.ui.dockWidget_entity_graph.isVisible():
             self._owes_graph = True
             return
-        if not self._update_graph_data():
-            return
         self._owes_graph = False
+        self._entity_fetch_parent.reset(None)
+        self._parameter_value_fetch_parent.reset(None)
+        self._graph_fetch_more_later()
+
+    def _do_build_graph(self):
+        self._extending_graph = True
+        self._update_graph_data()
         self.ui.graphicsView.clear_cross_hairs_items()  # Needed
-        self._persistent = persistent
         self._stop_layout_generators()
         self._layout_gen_id = monotonic()
         self.layout_gens[self._layout_gen_id] = layout_gen = self._make_layout_generator()
@@ -439,7 +500,7 @@ class GraphViewMixin:
         layout_gen.layout_available.connect(self._complete_graph)
         layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_, None))  # Lambda to avoid issues in Python 3.7
         self._thread_pool.start(layout_gen)
-        self._graph_fetch_more()
+        self._graph_fetch_more_later()
 
     def _stop_layout_generators(self):
         for layout_gen in self.layout_gens.values():
@@ -455,75 +516,47 @@ class GraphViewMixin:
         # Ignore layouts from obsolete generators
         if layout_gen_id != self._layout_gen_id:
             return
-        self.ui.graphicsView.removed_items.clear()
+        self._extending_graph = True
         self.ui.graphicsView.selected_items.clear()
         self.ui.graphicsView.hidden_items.clear()
         self.ui.graphicsView.clear_scene()
         if self._make_new_items(x, y):
-            self._add_new_items()  # pylint: disable=no-value-for-parameter
-        if not self._persistent:
+            self._add_new_items()
+        if not self._persisted_positions:
             self.ui.graphicsView.reset_zoom()
         else:
             self.ui.graphicsView.apply_zoom()
 
-    @staticmethod
-    def _get_selected_item_type_db_map_ids(selected_tree_inds):
-        """Returns a dict mapping item type to db_map to selected ids-
-
-        Returns:
-            dict
-        """
+    def _update_selected_item_type_db_map_ids(self, selected_tree_inds):
+        """Upsates the dict mapping item type to db_map to selected ids."""
         if "root" in selected_tree_inds:
-            return {"root": None}
-        item_type_db_map_ids = {}
+            self._selected_item_type_db_map_ids = {"root": None}
+            return
+        self._selected_item_type_db_map_ids = {}
         for item_type, indexes in selected_tree_inds.items():
             for index in indexes:
                 item = index.model().item_from_index(index)
                 for db_map, id_ in item.db_map_ids.items():
-                    item_type_db_map_ids.setdefault(item_type, {}).setdefault(db_map, []).append(id_)
-        return item_type_db_map_ids
+                    self._selected_item_type_db_map_ids.setdefault(item_type, {}).setdefault(db_map, set()).add(id_)
 
-    def _get_selected_db_map_entity_ids(self):
-        """Returns a set of ids corresponding to selected entities in the trees.
-
-        Returns:
-            set: selected object ids
-            set: selected relationship ids
-        """
-        if "root" in self._selected_item_type_db_map_ids:
-            return set((db_map, x["id"]) for db_map in self.db_maps for x in self.db_mngr.get_items(db_map, "entity"))
-        db_map_entity_ids = set()
-        for db_map, ids in self._selected_item_type_db_map_ids.get("entity", {}).items():
-            db_map_entity_ids |= {(db_map, id_) for id_ in ids}
-        for db_map, ids in self._selected_item_type_db_map_ids.get("entity_class", {}).items():
-            db_map_entity_ids |= set(
-                (db_map, x["id"]) for x in self.db_mngr.get_items(db_map, "entity") if x["class_id"] in ids
-            )
-        return db_map_entity_ids
-
-    def _get_db_map_entities_for_graph(self, db_map_entity_ids):
-        cond = any if self.ui.graphicsView.get_property("auto_expand_entities") else all
+    def _get_db_map_entities_for_graph(self):
         return [
             (db_map, x)
             for db_map in self.db_maps
-            for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)
-            if x["element_id_list"] and cond((db_map, id_) in db_map_entity_ids for id_ in x["element_id_list"])
-        ] + [
-            (db_map, self.db_mngr.get_item(db_map, "entity", id_, only_visible=False))
-            for db_map, id_ in db_map_entity_ids
+            for x in self.db_mngr.get_items(db_map, "entity")
+            if self._entity_fetch_parent.accepts_item(x, db_map)
         ]
 
     def _update_graph_data(self):
         """Updates data for graph according to selection in trees."""
-        pruned_db_map_entity_ids = set(self.ui.graphicsView.get_pruned_db_map_entity_ids())
-        db_map_entity_ids = self._get_selected_db_map_entity_ids()
-        db_map_entity_ids |= self.added_db_map_entity_ids
-        db_map_entity_ids -= pruned_db_map_entity_ids
-        db_map_entities = self._get_db_map_entities_for_graph(db_map_entity_ids)
+        db_map_entities = self._get_db_map_entities_for_graph()
+        pruned_db_map_entity_ids = self._all_pruned_db_map_entity_ids()
         max_ent_dim_count = self.ui.graphicsView.get_property("max_entity_dimension_count")
+        db_map_entity_ids = set()
         db_map_element_id_lists = {}
         for db_map, entity in db_map_entities:
-            if (db_map, entity["id"]) in pruned_db_map_entity_ids:
+            if not entity["element_id_list"]:
+                db_map_entity_ids.add((db_map, entity["id"]))
                 continue
             db_map_element_id_list = [
                 (db_map, id_) for id_ in entity["element_id_list"] if (db_map, id_) not in pruned_db_map_entity_ids
@@ -532,19 +565,22 @@ class GraphViewMixin:
             if el_count != 0 and (el_count < 2 or el_count > max_ent_dim_count):
                 continue
             db_map_entity_ids.add((db_map, entity["id"]))
-            db_map_entity_ids.update(db_map_element_id_list)
             db_map_element_id_lists[db_map, entity["id"]] = db_map_element_id_list
+        # Bind elements
+        for db_map_element_id_list in db_map_element_id_lists.values():
+            for db_map, entity_id in db_map_element_id_list:
+                if (db_map, entity_id) not in db_map_entity_ids:
+                    db_map_entity_ids.add((db_map, entity_id))
+                    item = self.db_mngr.get_item(db_map, "entity", entity_id)
+                    self.db_mngr.bind_fetch_parent_item(db_map, self._entity_fetch_parent, item)
         db_map_entity_ids_by_key = {}
         for db_map_entity_id in db_map_entity_ids:
             key = self.get_entity_key(db_map_entity_id)
             db_map_entity_ids_by_key.setdefault(key, set()).add(db_map_entity_id)
-        new_db_map_entity_id_sets = list(db_map_entity_ids_by_key.values())
-        if new_db_map_entity_id_sets == self.db_map_entity_id_sets:
-            return False
-        self.db_map_entity_id_sets = new_db_map_entity_id_sets
+        self.db_map_entity_id_sets = list(db_map_entity_ids_by_key.values())
         self._update_entity_element_inds(db_map_element_id_lists)
         self._update_property_pvs()
-        return True
+        self._entity_offsets = {}
 
     def get_entity_key(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
@@ -557,30 +593,17 @@ class GraphViewMixin:
     def _update_entity_element_inds(self, db_map_element_id_lists):
         self.entity_inds = []
         self.element_inds = []
-        self.entity_offsets = {}
         ent_ind_lookup = {
             db_map_ent_id: k
             for k, db_map_ent_ids in enumerate(self.db_map_entity_id_sets)
             for db_map_ent_id in db_map_ent_ids
         }
-        ent_inds_by_sorted_el_inds = {}
         edges = {}
         for db_map_entity_id, db_map_element_id_list in db_map_element_id_lists.items():
             el_inds = [ent_ind_lookup[db_map_el_id] for db_map_el_id in db_map_element_id_list]
             ent_ind = ent_ind_lookup[db_map_entity_id]
-            sorted_el_inds = tuple(sorted(el_inds))
-            ent_inds_by_sorted_el_inds.setdefault(sorted_el_inds, []).append(ent_ind)
             for el_ind in el_inds:
                 edges[ent_ind, el_ind] = None
-        ent_inds_by_sorted_el_inds.pop((), None)
-        for ent_inds in ent_inds_by_sorted_el_inds.values():
-            count = len(ent_inds)
-            if count == 1:
-                continue
-            offsets = list(range(len(ent_inds)))  # [0, 1, 3, ...]
-            center = sum(offsets) / len(offsets)
-            for ent_ind, offset in zip(ent_inds, offsets):
-                self.entity_offsets[ent_ind] = (offset - center) / len(offsets)
         for ent_ind, el_ind in edges:  # pylint: disable=dict-iter-missing-items
             self.entity_inds.append(ent_ind)
             self.element_inds.append(el_ind)
@@ -648,7 +671,7 @@ class GraphViewMixin:
         ]
         if isinstance(pos_x, float) and isinstance(pos_y, float):
             return {"x": pos_x, "y": pos_y}
-        return None
+        return self._persisted_positions.get((db_map, entity_id))
 
     def _make_layout_generator(self):
         """Returns a layout generator for the current graph.
@@ -656,19 +679,11 @@ class GraphViewMixin:
         Returns:
             GraphLayoutGeneratorRunnable
         """
-        fixed_positions = {}
-        if self._persistent:
-            for item in self.ui.graphicsView.items():
-                if isinstance(item, EntityItem):
-                    fixed_positions[item.first_db_map, item.first_id] = {"x": item.pos().x(), "y": item.pos().y()}
-        for db_map_entity_ids in self.db_map_entity_id_sets:
-            for db_map_entity_id in db_map_entity_ids:
-                fixed_positions[db_map_entity_id] = self._get_fixed_pos(*db_map_entity_id)
         heavy_positions = {
-            ind: fixed_positions[db_map_entity_id]
+            ind: pos
             for ind, db_map_entity_ids in enumerate(self.db_map_entity_id_sets)
             for db_map_entity_id in db_map_entity_ids
-            if fixed_positions[db_map_entity_id]
+            if (pos := self._get_fixed_pos(*db_map_entity_id))
         }
         spread_factor = self.ui.graphicsView.get_property("spread_factor") / 100
         build_iters = self.ui.graphicsView.get_property("build_iters")
@@ -688,6 +703,18 @@ class GraphViewMixin:
     def convert_position(x, y):
         return (x, -y)
 
+    def _get_entity_offset(self, db_map_entity_ids):
+        db_map, entity_id = next(iter(db_map_entity_ids))
+        entity = self.db_mngr.get_item(db_map, "entity", entity_id)
+        element_id_list = entity.get("element_id_list")
+        if not element_id_list:
+            return None
+        key = (db_map, element_id_list)
+        offsets = self._entity_offsets.setdefault(key, [])
+        offset = _Offset(offsets)
+        offsets.append(offset)
+        return offset
+
     def _make_new_items(self, x, y):
         """Returns new items for the graph.
 
@@ -701,7 +728,7 @@ class GraphViewMixin:
                 *self.convert_position(x[i], y[i]),
                 self._VERTEX_EXTENT,
                 tuple(db_map_entity_ids),
-                offset=self.entity_offsets.get(i)
+                offset=self._get_entity_offset(db_map_entity_ids),
             )
             for i, db_map_entity_ids in enumerate(self.db_map_entity_id_sets)
         ]
@@ -753,21 +780,57 @@ class GraphViewMixin:
             if [item.entity_class_id(db_map) for item in item_permutation] == dimension_id_list:
                 entity = tuple(item.entity_name for item in item_permutation)
                 entities.add(entity)
-        dialog = AddReadyEntitiesDialog(self, entity_class, list(entities), self.db_mngr, db_map)
-        dialog.accepted.connect(self._begin_connect_entities)
+        dialog = AddReadyEntitiesDialog(self, entity_class, list(entities), self.db_mngr, db_map, commit_data=False)
+        dialog.accepted.connect(lambda: self._do_finalize_connecting_entities(dialog, entity_items))
         dialog.show()
 
-    def _begin_connect_entities(self):
-        self._connecting_entities = True
-
-    def _end_connect_entities(self):
-        self._connecting_entities = False
+    def _do_finalize_connecting_entities(self, dialog, element_items):
+        added_db_map_data = self._add_entities_from_dialog(dialog)
+        new_db_map_id_sets = list(self._db_map_ids_by_key(added_db_map_data).values())
+        for db_map_ids in new_db_map_id_sets:
+            entity_item = EntityItem(
+                self, 0, 0, self._VERTEX_EXTENT, tuple(db_map_ids), offset=self._get_entity_offset(db_map_ids)
+            )
+            self.scene.addItem(entity_item)
+            entity_item.apply_zoom(self.ui.graphicsView.zoom_factor)
+            for el_item in element_items:
+                arc_item = ArcItem(entity_item, el_item, self._ARC_WIDTH)
+                self.scene.addItem(arc_item)
+                arc_item.apply_zoom(self.ui.graphicsView.zoom_factor)
+        for el_item in element_items:
+            for arc_item in el_item.arc_items:
+                arc_item.ent_item.update_entity_pos()
 
     def add_entities_at_position(self, pos):
-        self._pos_for_added_entities = pos
         parent_item = self.entity_tree_model.root_item
-        dialog = AddEntitiesDialog(self, parent_item, self.db_mngr, *self.db_maps)
+        dialog = AddEntitiesDialog(self, parent_item, self.db_mngr, *self.db_maps, commit_data=False)
+        dialog.accepted.connect(lambda: self._do_add_entites_at_pos(dialog, pos.x(), pos.y()))
         dialog.show()
+
+    def _do_add_entites_at_pos(self, dialog, x, y):
+        added_db_map_data = self._add_entities_from_dialog(dialog)
+        new_db_map_id_sets = list(self._db_map_ids_by_key(added_db_map_data).values())
+        spread = self._VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
+        gen = GraphLayoutGenerator(len(new_db_map_id_sets), spread=spread)
+        layout_x, layout_y = gen.compute_layout()
+        for dx, dy, db_map_ids in zip(layout_x, layout_y, new_db_map_id_sets):
+            entity_item = EntityItem(self, x + dx, y + dy, self._VERTEX_EXTENT, tuple(db_map_ids))
+            self.scene.addItem(entity_item)
+            entity_item.apply_zoom(self.ui.graphicsView.zoom_factor)
+
+    def _add_entities_from_dialog(self, dialog):
+        db_map_data = dialog.get_db_map_data()
+        self._entity_fetch_parent.set_busy(True)
+        self.db_mngr.add_entities(db_map_data)
+        self._entity_fetch_parent.set_busy(False)
+        added_db_map_data = {
+            db_map: [db_map.cache.table_cache("entity").find_item(item) for item in items]
+            for db_map, items in db_map_data.items()
+        }
+        for db_map, items in added_db_map_data.items():
+            for item in items:
+                self.db_mngr.bind_fetch_parent_item(db_map, self._entity_fetch_parent, item)
+        return added_db_map_data
 
     def get_save_file_path(self, group, caption, filters):
         self.qsettings.beginGroup(self.settings_group)
@@ -795,3 +858,14 @@ class GraphViewMixin:
         if self.scene is not None:
             self.scene.deleteLater()
         super().closeEvent(event)
+
+
+class _Offset:
+    def __init__(self, all_offsets):
+        self._value = len(all_offsets)
+        self._all_offsets = all_offsets
+
+    def value(self):
+        offsets = list(range(len(self._all_offsets)))  # [0, 1, 2, ...]
+        center = sum(offsets) / len(offsets)
+        return (self._value - center) / len(offsets)

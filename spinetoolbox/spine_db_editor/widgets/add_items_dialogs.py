@@ -52,7 +52,7 @@ from .manage_items_dialogs import (
 class AddReadyEntitiesDialog(ManageItemsDialogBase):
     """A dialog to let the user add new 'ready' multidimensional entities."""
 
-    def __init__(self, parent, entity_class, entities, db_mngr, *db_maps):
+    def __init__(self, parent, entity_class, entities, db_mngr, *db_maps, commit_data=True):
         """
         Args:
             parent (SpineDBEditor)
@@ -62,6 +62,7 @@ class AddReadyEntitiesDialog(ManageItemsDialogBase):
             *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
+        self._commit_data = commit_data
         self.entity_class = entity_class
         self.entities = entities
         self.db_maps = db_maps
@@ -111,16 +112,27 @@ class AddReadyEntitiesDialog(ManageItemsDialogBase):
         if current.isValid():
             self.table_view.selectionModel().clearCurrentIndex()
 
+    @Slot()
     def accept(self):
+        """Collect info from dialog and try to add items."""
+        if not self._commit_data:
+            super().accept()
+            return
+        db_map_data = self.get_db_map_data()
+        if not db_map_data:
+            self.parent().msg_error.emit("Nothing to add")
+            return
+        self.db_mngr.add_entities(db_map_data)
         super().accept()
+
+    def get_db_map_data(self):
         data = []
         for row in range(self.table_view.rowCount()):
             if self.table_view.item(row, 0).checkState() != Qt.CheckState.Checked:
                 continue
             entities = self.entities[row]
-            data.append([self.entity_class["name"], entities])
-        db_map_data = {db_map: {"entities": data} for db_map in self.db_maps}
-        self.db_mngr.import_data(db_map_data, command_text="Add entities")
+            data.append({"class_name": self.entity_class["name"], "element_name_list": entities})
+        return {db_map: data for db_map in self.db_maps}
 
 
 class AddItemsDialog(ManageItemsDialog):
@@ -360,7 +372,7 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
     """A dialog to query user's preferences for new entities."""
 
-    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False):
+    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False, commit_data=True):
         """
         Args:
             parent (SpineDBEditor)
@@ -370,6 +382,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
+        self._commit_data = commit_data
         self.entity_names_by_class_name = {}
         if item.item_type == "entity":
             if not item.element_name_list:
@@ -442,9 +455,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                     entity_name += "__".join(el_names)
                 self.model.setData(self.model.index(row, dimension_count), entity_name)
 
-    @Slot()
-    def accept(self):
-        """Collect info from dialog and try to add items."""
+    def get_db_map_data(self):
         db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("entity name")
         db_column = self.model.horizontal_header_labels().index("databases")
@@ -486,6 +497,17 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                 item = pre_item.copy()
                 item.update({'element_id_list': element_id_list, 'class_id': class_id})
                 db_map_data.setdefault(db_map, []).append(item)
+        return db_map_data
+
+    @Slot()
+    def accept(self):
+        """Collect info from dialog and try to add items."""
+        if not self._commit_data:
+            super().accept()
+            return
+        db_map_data = self.get_db_map_data()
+        if db_map_data is None:
+            return
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
             return
