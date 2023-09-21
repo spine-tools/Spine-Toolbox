@@ -61,8 +61,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         """
         if not super()._connect_tab_signals(tab):
             return False
-        tab.file_exported.connect(self.insert_file_open_button)
-        tab.sqlite_file_exported.connect(self.insert_sqlite_file_open_button)
+        tab.file_exported.connect(self.insert_open_file_button)
         tab.ui.actionUser_guide.triggered.connect(self.show_user_guide)
         tab.ui.actionSettings.triggered.connect(self.settings_form.show)
         tab.ui.actionClose.triggered.connect(self.handle_close_request_from_tab)
@@ -80,8 +79,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         if not super()._disconnect_tab_signals(index):
             return False
         tab = self.tab_widget.widget(index)
-        tab.file_exported.disconnect(self.insert_file_open_button)
-        tab.sqlite_file_exported.disconnect(self.insert_sqlite_file_open_button)
+        tab.file_exported.disconnect(self.insert_open_file_button)
         tab.ui.actionUser_guide.triggered.disconnect(self.show_user_guide)
         tab.ui.actionSettings.triggered.disconnect(self.settings_form.show)
         tab.ui.actionClose.triggered.disconnect(self.handle_close_request_from_tab)
@@ -145,14 +143,20 @@ class MultiSpineDBEditor(MultiTabWindow):
         label.setPixmap(pixmap)
         label.show()
 
-    @Slot(str)
-    def insert_sqlite_file_open_button(self, file_path):
-        button = OpenSQLiteFileButton(file_path, self)
-        self._insert_statusbar_button(button)
-
-    @Slot(str)
-    def insert_file_open_button(self, file_path):
-        button = OpenFileButton(file_path, self)
+    @Slot(str, float, bool)
+    def insert_open_file_button(self, file_path, progress, is_sqlite):
+        button = next(
+            (
+                x
+                for x in self.statusBar().findChildren(OpenFileButton)
+                if os.path.samefile(x.file_path, file_path) and x.progress != 1.0
+            ),
+            None,
+        )
+        if button is not None:
+            button.set_progress(progress)
+            return
+        button = (OpenSQLiteFileButton if is_sqlite else OpenFileButton)(file_path, progress, self)
         self._insert_statusbar_button(button)
 
     def _open_sqlite_url(self, url, codename):

@@ -15,16 +15,97 @@ Classes for custom QGraphicsViews for the Entity graph view.
 
 import os
 import sys
-from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
-from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog
-from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize
+import tempfile
+from contextlib import contextmanager
+import numpy as np
+from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF, QRunnable, QThreadPool
+from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog, QMessageBox, QLineEdit, QGraphicsScene
+from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
 from ...helpers import CharIconEngine
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
-from ..graphics_items import EntityItem, CrossHairsArcItem, BgItem
+from ..graphics_items import EntityItem, CrossHairsArcItem, BgItem, ArcItem
+from .custom_qwidgets import ExportAsVideoDialog
 from .select_graph_parameters_dialog import SelectGraphParametersDialog
+
+
+class _GraphProperty:
+    def __init__(self, name, settings_name):
+        self._name = name
+        self._settings_name = "appSettings/" + settings_name
+        self._spine_db_editor = None
+        self._value = None
+
+    @property
+    def value(self):
+        return self._value
+
+    def connect_spine_db_editor(self, spine_db_editor):
+        self._spine_db_editor = spine_db_editor
+
+
+class _GraphBoolProperty(_GraphProperty):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._action = None
+
+    @Slot(bool)
+    def _set_value(self, _checked=False, save_setting=True):
+        checked = self._action.isChecked()
+        if checked == self._value:
+            return
+        self._value = checked
+        if save_setting:
+            self._spine_db_editor.qsettings.setValue(self._settings_name, "true" if checked else "false")
+            self._spine_db_editor.build_graph()
+
+    def set_value(self, checked):
+        self._action.setChecked(checked)
+        self._set_value(save_setting=False)
+
+    def update(self, menu):
+        self._value = self._spine_db_editor.qsettings.value(self._settings_name, defaultValue="true") == "true"
+        self._action = menu.addAction(self._name)
+        self._action.setCheckable(True)
+        self._action.setChecked(self._value)
+        self._action.triggered.connect(self._set_value)
+
+
+class _GraphIntProperty(_GraphProperty):
+    def __init__(self, min_value, max_value, default_value, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._min_value, self._max_value, self._default_value = min_value, max_value, default_value
+        self._spin_box = None
+
+    @Slot(int)
+    def _set_value(self, _value=None, save_setting=True):
+        value = self._spin_box.value()
+        if value == self._value:
+            return
+        self._value = value
+        if save_setting:
+            self._spine_db_editor.qsettings.setValue(self._settings_name, str(value))
+            self._spine_db_editor.build_graph()
+
+    def set_value(self, value):
+        self._spin_box.setValue(value)
+        self._set_value(save_setting=False)
+
+    def update(self, menu):
+        self._value = int(
+            self._spine_db_editor.qsettings.value(self._settings_name, defaultValue=str(self._default_value))
+        )
+        action = ToolBarWidgetAction(self._name, menu, compact=True)
+        self._spin_box = HorizontalSpinBox(menu)
+        self._spin_box.setMinimum(self._min_value)
+        if self._max_value is not None:
+            self._spin_box.setMaximum(self._max_value)
+        self._spin_box.setValue(self._value)
+        self._spin_box.valueChanged.connect(self._set_value)
+        action.tool_bar.addWidget(self._spin_box)
+        menu.addAction(action)
 
 
 class EntityQGraphicsView(CustomQGraphicsView):
@@ -46,6 +127,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.name_parameter = ""
         self.color_parameter = ""
         self.arc_width_parameter = ""
+        self._current_state_name = ""
+        self._margin = 0.05
         self._bg_item = None
         self.selected_items = []
         self.removed_items = set()
@@ -54,37 +137,47 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._hovered_ent_item = None
         self.entity_class = None
         self.cross_hairs_items = []
-        self.auto_expand_entities = None
-        self.merge_dbs = None
-        self.max_entity_dimension = None
-        self.disable_max_relationship_dimension = None
-        self._auto_expand_entities_action = None
-        self._merge_dbs_action = None
-        self._max_ent_dim_action = None
-        self._disable_max_ent_dim_action = None
-        self._max_ent_dim_spin_box = None
+        self._properties = {
+            "auto_expand_entities": _GraphBoolProperty("Auto-expand entities", "autoExpandEntities"),
+            "merge_dbs": _GraphBoolProperty("Merge databases", "mergeDBs"),
+            "snap_entities": _GraphBoolProperty("Snap entities to grid", "snapEntities"),
+            "max_entity_dimension_count": _GraphIntProperty(
+                2, None, 5, "Max. entity dimension count", "maxEntityDimensionCount"
+            ),
+            "build_iters": _GraphIntProperty(3, None, 12, "Number of build iterations", "layoutAlgoBuildIterations"),
+            "spread_factor": _GraphIntProperty(
+                1, 100, 100, "Minimum distance between nodes (%)", "layoutAlgoSpreadFactor"
+            ),
+            "neg_weight_exp": _GraphIntProperty(
+                1, 100, 2, "Decay rate of attraction with distance", "layoutAlgoNegWeightExp"
+            ),
+        }
         self._add_entities_action = None
         self._select_graph_params_action = None
         self._save_pos_action = None
         self._clear_pos_action = None
-        self._hide_selected_action = None
         self._show_all_hidden_action = None
-        self._prune_selected_action = None
         self._restore_all_pruned_action = None
         self._rebuild_action = None
         self._export_as_image_action = None
+        self._export_as_video_action = None
         self._zoom_action = None
         self._rotate_action = None
         self._arc_length_action = None
         self._find_action = None
-        self._add_bg_image_action = None
+        self._select_bg_image_action = None
+        self._save_state_action = None
         self._previous_mouse_pos = None
         self._context_menu_pos = None
         self._hide_classes_menu = None
         self._show_hidden_menu = None
         self._prune_classes_menu = None
         self._restore_pruned_menu = None
+        self._load_state_menu = None
+        self._remove_state_menu = None
         self._items_per_class = {}
+        self._db_map_graph_data_by_name = {}
+        self._thread_pool = QThreadPool()
 
     @property
     def _qsettings(self):
@@ -97,6 +190,33 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @property
     def entity_items(self):
         return [x for x in self.scene().items() if isinstance(x, EntityItem) and x not in self.removed_items]
+
+    def get_property(self, name):
+        return self._properties[name].value
+
+    def set_property(self, name, value):
+        return self._properties[name].set_value(value)
+
+    def get_all_properties(self):
+        return {name: prop.value for name, prop in self._properties.items()}
+
+    def set_many_properties(self, props):
+        for name, value in props.items():
+            self.set_property(name, value)
+
+    def set_pruned_db_map_entity_ids(self, key, pruned_db_map_entity_ids):
+        self.pruned_db_map_entity_ids = {key: pruned_db_map_entity_ids}
+
+    def get_pruned_entity_ids(self, db_map):
+        return [
+            id_
+            for db_map_ids in self.pruned_db_map_entity_ids.values()
+            for db_map_, id_ in db_map_ids
+            if db_map_ is db_map
+        ]
+
+    def get_pruned_db_map_entity_ids(self):
+        return [db_map_id for db_map_ids in self.pruned_db_map_entity_ids.values() for db_map_id in db_map_ids]
 
     @Slot()
     def handle_scene_selection_changed(self):
@@ -111,69 +231,26 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
+        for prop in self._properties.values():
+            prop.connect_spine_db_editor(spine_db_editor)
         self.populate_context_menu()
 
     def populate_context_menu(self):
-        self.auto_expand_entities = (
-            self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
-        )
-        self.merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
-        self.max_entity_dimension = int(self._qsettings.value("appSettings/maxRelationshipDimension", defaultValue="2"))
-        self.disable_max_relationship_dimension = (
-            self._qsettings.value("appSettings/disableMaxRelationshipDimension", defaultValue="true") == "true"
-        )
-        self._auto_expand_entities_action = self._menu.addAction("Auto-expand entities")
-        self._auto_expand_entities_action.setCheckable(True)
-        self._auto_expand_entities_action.setChecked(self.auto_expand_entities)
-        self._auto_expand_entities_action.triggered.connect(self._set_auto_expand_entities)
-        self._merge_dbs_action = self._menu.addAction("Merge databases")
-        self._merge_dbs_action.setCheckable(True)
-        self._merge_dbs_action.setChecked(self.merge_dbs)
-        self._merge_dbs_action.triggered.connect(self._set_merge_dbs)
-        self._max_ent_dim_action = ToolBarWidgetAction("Max entity dimension", self._menu, compact=True)
-        self._max_ent_dim_spin_box = HorizontalSpinBox(self)
-        self._max_ent_dim_spin_box.setMinimum(2)
-        self._max_ent_dim_spin_box.setValue(self.max_entity_dimension)
-        self._max_ent_dim_spin_box.valueChanged.connect(self._set_max_relationship_dimension)
-        self._max_ent_dim_action.tool_bar.addWidget(self._max_ent_dim_spin_box)
-        self._max_ent_dim_action.tool_bar.addSeparator()
-        self._disable_max_ent_dim_action = self._max_ent_dim_action.tool_bar.addAction("\u221E")
-        self._disable_max_ent_dim_action.setCheckable(True)
-        self._disable_max_ent_dim_action.toggled.connect(self._set_disable_max_relationship_dimension)
-        self._disable_max_ent_dim_action.toggled.connect(self._max_ent_dim_spin_box.setDisabled)
-        self._disable_max_ent_dim_action.setToolTip("No limit")
-        self._disable_max_ent_dim_action.setChecked(self.disable_max_relationship_dimension)
-        self._menu.addAction(self._max_ent_dim_action)
-        self._menu.addSeparator()
         self._add_entities_action = self._menu.addAction("Add entities...", self.add_entities_at_position)
         self._menu.addSeparator()
-        self._find_action = self._menu.addAction("Find...", self._find)
-        self._menu.addAction(self._find_action)
+        self._find_action = self._menu.addAction("Search...", self._find)
         self._menu.addSeparator()
-        self._select_graph_params_action = self._menu.addAction(
-            "Select graph parameters...", self.select_graph_parameters
-        )
-        self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
-        self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
-        self._menu.addSeparator()
-        self._hide_selected_action = self._menu.addAction("Hide selected", self.hide_selected_items)
         self._hide_classes_menu = self._menu.addMenu("Hide classes")
         self._hide_classes_menu.triggered.connect(self._hide_class)
         self._show_hidden_menu = self._menu.addMenu("Show")
         self._show_hidden_menu.triggered.connect(self.show_hidden_items)
         self._show_all_hidden_action = self._menu.addAction("Show all", self.show_all_hidden_items)
         self._menu.addSeparator()
-        self._prune_selected_action = self._menu.addAction("Prune selected", self.prune_selected_items)
         self._prune_classes_menu = self._menu.addMenu("Prune classes")
         self._prune_classes_menu.triggered.connect(self._prune_class)
         self._restore_pruned_menu = self._menu.addMenu("Restore")
         self._restore_pruned_menu.triggered.connect(self.restore_pruned_items)
         self._restore_all_pruned_action = self._menu.addAction("Restore all", self.restore_all_pruned_items)
-        self._menu.addSeparator()
-        self._add_bg_image_action = self._menu.addAction("Select background image...", self._add_bg_image)
-        self._menu.addSeparator()
-        self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
-        self._export_as_image_action = self._menu.addAction("Export as vector image...", self.export_as_image)
         self._menu.addSeparator()
         self._zoom_action = ToolBarWidgetAction("Zoom", self._menu, compact=True)
         self._zoom_action.tool_bar.addAction("-", self.zoom_out).setToolTip("Zoom out")
@@ -195,7 +272,112 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.addAction(self._zoom_action)
         self._menu.addAction(self._arc_length_action)
         self._menu.addAction(self._rotate_action)
+        self._menu.addSeparator()
+        for prop in self._properties.values():
+            prop.update(self._menu)
+        self._menu.addSeparator()
+        self._select_graph_params_action = self._menu.addAction(
+            "Select graph parameters...", self.select_graph_parameters
+        )
+        self._select_bg_image_action = self._menu.addAction("Select background image...", self._select_bg_image)
+        self._menu.addSeparator()
+        self._save_pos_action = self._menu.addAction("Save positions", self._save_all_positions)
+        self._clear_pos_action = self._menu.addAction("Clear saved positions", self._clear_all_positions)
+        self._menu.addSeparator()
+        self._save_state_action = self._menu.addAction("Save state...", self._save_state)
+        self._load_state_menu = self._menu.addMenu("Load state")
+        self._load_state_menu.triggered.connect(self._load_state)
+        self._remove_state_menu = self._menu.addMenu("Remove state")
+        self._remove_state_menu.triggered.connect(self._remove_state)
+        self._menu.addSeparator()
+        self._export_as_image_action = self._menu.addAction("Export as image...", self.export_as_image)
+        self._export_as_video_action = self._menu.addAction("Export as video...", self.export_as_video)
+        self._menu.addSeparator()
+        self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
         self._menu.aboutToShow.connect(self._update_actions_visibility)
+
+    @Slot()
+    def _update_actions_visibility(self):
+        """Enables or disables actions according to current selection in the graph."""
+        has_graph = bool(self.items())
+        self._items_per_class = {}
+        for item in self.entity_items:
+            key = f"{item.entity_class_name}"
+            self._items_per_class.setdefault(key, list()).append(item)
+        self._db_map_graph_data_by_name = self._spine_db_editor.get_db_map_graph_data_by_name()
+        self._show_all_hidden_action.setEnabled(bool(self.hidden_items))
+        self._restore_all_pruned_action.setEnabled(any(self.pruned_db_map_entity_ids.values()))
+        self._rebuild_action.setEnabled(has_graph)
+        self._zoom_action.setEnabled(has_graph)
+        self._rotate_action.setEnabled(has_graph)
+        self._find_action.setEnabled(has_graph)
+        self._export_as_image_action.setEnabled(has_graph)
+        self._export_as_video_action.setEnabled(has_graph and self._spine_db_editor.ui.time_line_widget.isVisible())
+        self._show_hidden_menu.clear()
+        self._show_hidden_menu.setEnabled(any(self.hidden_items.values()))
+        for key in sorted(self.hidden_items):
+            self._show_hidden_menu.addAction(key)
+        self._restore_pruned_menu.clear()
+        self._restore_pruned_menu.setEnabled(any(self.pruned_db_map_entity_ids.values()))
+        for key in sorted(self.pruned_db_map_entity_ids):
+            self._restore_pruned_menu.addAction(key)
+        self._hide_classes_menu.clear()
+        self._hide_classes_menu.setEnabled(bool(self._items_per_class))
+        for key in sorted(self._items_per_class.keys() - self.hidden_items.keys()):
+            self._hide_classes_menu.addAction(key)
+        self._prune_classes_menu.clear()
+        self._prune_classes_menu.setEnabled(bool(self._items_per_class))
+        for key in sorted(self._items_per_class.keys() - self.pruned_db_map_entity_ids.keys()):
+            self._prune_classes_menu.addAction(key)
+        self._save_state_action.setEnabled(has_graph)
+        self._load_state_menu.clear()
+        self._load_state_menu.setEnabled(bool(self._db_map_graph_data_by_name))
+        self._remove_state_menu.clear()
+        self._remove_state_menu.setEnabled(bool(self._db_map_graph_data_by_name))
+        for key in sorted(self._db_map_graph_data_by_name.keys()):
+            self._load_state_menu.addAction(key)
+            self._remove_state_menu.addAction(key)
+
+    def make_items_menu(self):
+        menu = QMenu(self)
+        menu.addAction("Save positions", self._save_selected_positions).setEnabled(bool(self.selected_items))
+        menu.addAction("Clear saved positions", self._clear_selected_positions).setEnabled(bool(self.selected_items))
+        menu.addSeparator()
+        menu.addAction("Hide", self.hide_selected_items).setEnabled(bool(self.selected_items))
+        menu.addAction("Prune", self.prune_selected_items).setEnabled(bool(self.selected_items))
+        menu.addSeparator()
+        menu.addAction("Edit", self.edit_selected).setEnabled(bool(self.selected_items))
+        menu.addAction("Remove", self.remove_selected).setEnabled(bool(self.selected_items))
+        return menu
+
+    def _save_state(self):
+        name, ok = QInputDialog.getText(
+            self, "Save state...", "Enter a name for the state.", QLineEdit.Normal, self._current_state_name
+        )
+        if not ok:
+            return
+        db_map_graph_data = self._db_map_graph_data_by_name.get(name)
+        if db_map_graph_data is not None:
+            button = QMessageBox.question(
+                self._spine_db_editor,
+                self._spine_db_editor.windowTitle(),
+                f"State {name} already exists. Do you want to overwrite it?",
+            )
+            if button == QMessageBox.StandardButton.Yes:
+                self._spine_db_editor.overwrite_graph_data(db_map_graph_data)
+            return
+        self._spine_db_editor.save_graph_data(name)
+
+    @Slot(QAction)
+    def _load_state(self, action):
+        self._current_state_name = name = action.text()
+        db_map_graph_data = self._db_map_graph_data_by_name.get(name)
+        self._spine_db_editor.load_graph_data(db_map_graph_data)
+
+    @Slot(QAction)
+    def _remove_state(self, action):
+        name = action.text()
+        self._spine_db_editor.remove_graph_data(name)
 
     def _find(self):
         expr, ok = QInputDialog.getText(self, "Find in graph...", "Enter entity names to find separated by comma.")
@@ -218,102 +400,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for item in self.entity_items:
             new_pos = item.pos() / 1.1
             item.set_pos(new_pos.x(), new_pos.y())
-
-    @Slot()
-    def _update_actions_visibility(self):
-        """Enables or disables actions according to current selection in the graph."""
-        has_graph = bool(self.items())
-        self._save_pos_action.setEnabled(bool(self.selected_items))
-        self._clear_pos_action.setEnabled(bool(self.selected_items))
-        self._hide_selected_action.setEnabled(bool(self.selected_items))
-        self._show_hidden_menu.setEnabled(any(self.hidden_items.values()))
-        self._show_all_hidden_action.setEnabled(bool(self.hidden_items))
-        self._prune_selected_action.setEnabled(bool(self.selected_items))
-        self._restore_pruned_menu.setEnabled(any(self.pruned_db_map_entity_ids.values()))
-        self._restore_all_pruned_action.setEnabled(any(self.pruned_db_map_entity_ids.values()))
-        self._prune_selected_action.setText(f"Prune {self._get_selected_entity_names()}")
-        self._rebuild_action.setEnabled(has_graph)
-        self._zoom_action.setEnabled(has_graph)
-        self._rotate_action.setEnabled(has_graph)
-        self._find_action.setEnabled(has_graph)
-        self._export_as_image_action.setEnabled(has_graph)
-        self._items_per_class = {}
-        for item in self.entity_items:
-            key = f"{item.entity_class_name}"
-            self._items_per_class.setdefault(key, list()).append(item)
-        self._hide_classes_menu.clear()
-        self._hide_classes_menu.setEnabled(bool(self._items_per_class))
-        self._prune_classes_menu.clear()
-        self._prune_classes_menu.setEnabled(bool(self._items_per_class))
-        for key in sorted(self._items_per_class.keys() - self.hidden_items.keys()):
-            self._hide_classes_menu.addAction(key)
-        for key in sorted(self._items_per_class.keys() - self.pruned_db_map_entity_ids.keys()):
-            self._prune_classes_menu.addAction(key)
-
-    def make_items_menu(self):
-        menu = QMenu(self)
-        menu.addAction(self._save_pos_action)
-        menu.addAction(self._clear_pos_action)
-        menu.addSeparator()
-        menu.addAction(self._hide_selected_action)
-        menu.addAction(self._prune_selected_action)
-        menu.addSeparator()
-        menu.addAction("Edit", self.edit_selected)
-        menu.addAction("Remove", self.remove_selected)
-        menu.aboutToShow.connect(self._update_actions_visibility)
-        return menu
-
-    @Slot(bool)
-    def _set_auto_expand_entities(self, _checked=False, save_setting=True):
-        checked = self._auto_expand_entities_action.isChecked()
-        if checked == self.auto_expand_entities:
-            return
-        if save_setting:
-            self._qsettings.setValue("appSettings/autoExpandObjects", "true" if checked else "false")
-        self.auto_expand_entities = checked
-        self._spine_db_editor.build_graph()
-
-    def set_auto_expand_entities(self, checked):
-        self._auto_expand_entities_action.setChecked(checked)
-        self._set_auto_expand_entities(save_setting=False)
-
-    @Slot(bool)
-    def _set_merge_dbs(self, _checked=False, save_setting=True):
-        checked = self._merge_dbs_action.isChecked()
-        if checked == self.merge_dbs:
-            return
-        if save_setting:
-            self._qsettings.setValue("appSettings/mergeDBs", "true" if checked else "false")
-        self.merge_dbs = checked
-        self._spine_db_editor.build_graph()
-
-    def set_merge_dbs(self, checked):
-        self._merge_dbs_action.setChecked(checked)
-        self._set_merge_dbs(save_setting=False)
-
-    @Slot(bool)
-    def _set_disable_max_relationship_dimension(self, _checked=False, save_setting=True):
-        checked = self._disable_max_ent_dim_action.isChecked()
-        if checked == self.disable_max_relationship_dimension:
-            return
-        if save_setting:
-            self._qsettings.setValue("appSettings/disableMaxRelationshipDimension", "true" if checked else "false")
-        self.disable_max_relationship_dimension = checked
-        self._spine_db_editor.build_graph()
-
-    def set_disable_max_relationship_dimension(self, checked):
-        self._disable_max_ent_dim_action.setChecked(checked)
-        self._set_disable_max_relationship_dimension(save_setting=False)
-
-    @Slot(int)
-    def _set_max_relationship_dimension(self, _value=None, save_setting=True):
-        value = self._max_ent_dim_spin_box.value()
-        if value == self.max_entity_dimension:
-            return
-        if save_setting:
-            self._qsettings.setValue("appSettings/maxRelationshipDimension", str(value))
-        self.max_entity_dimension = value
-        self._spine_db_editor.build_graph()
 
     @Slot(bool)
     def add_entities_at_position(self, checked=False):
@@ -346,7 +432,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Hides selected items."""
         key = self._get_selected_entity_names()
         self.hidden_items[key] = self.selected_items
-        self._show_hidden_menu.addAction(key)
         for item in self.selected_items:
             item.setVisible(False)
 
@@ -356,7 +441,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         key = action.text()
         items = self._items_per_class[key]
         self.hidden_items[key] = items
-        self._show_hidden_menu.addAction(key)
         for item in items:
             item.setVisible(False)
 
@@ -365,7 +449,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Shows all hidden items."""
         if not self.scene():
             return
-        self._show_hidden_menu.clear()
         while self.hidden_items:
             _, items = self.hidden_items.popitem()
             for item in items:
@@ -377,18 +460,14 @@ class EntityQGraphicsView(CustomQGraphicsView):
         key = action.text()
         items = self.hidden_items.pop(key, None)
         if items is not None:
-            action = next(iter(a for a in self._show_hidden_menu.actions() if a.text() == key))
-            self._show_hidden_menu.removeAction(action)
             for item in items:
                 item.setVisible(True)
 
     @Slot(bool)
     def prune_selected_items(self, checked=False):
         """Prunes selected items."""
-        entity_ids = {db_map_id for x in self.selected_items for db_map_id in x.db_map_ids}
         key = self._get_selected_entity_names()
-        self.pruned_db_map_entity_ids[key] = entity_ids
-        self._restore_pruned_menu.addAction(key)
+        self.pruned_db_map_entity_ids[key] = {db_map_id for x in self.selected_items for db_map_id in x.db_map_ids}
         self._spine_db_editor.build_graph()
 
     @Slot(QAction)
@@ -403,14 +482,12 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 db_map, "entity", "class_id", item.entity_class_id(db_map), only_visible=False
             )
         }
-        self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
 
     @Slot(bool)
     def restore_all_pruned_items(self, checked=False):
         """Reinstates all pruned items."""
         self.pruned_db_map_entity_ids.clear()
-        self._restore_pruned_menu.clear()
         self._spine_db_editor.build_graph()
 
     @Slot(QAction)
@@ -418,8 +495,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Reinstates some pruned items."""
         key = action.text()
         if self.pruned_db_map_entity_ids.pop(key, None) is not None:
-            action = next(iter(a for a in self._restore_pruned_menu.actions() if a.text() == key))
-            self._restore_pruned_menu.removeAction(action)
             self._spine_db_editor.build_graph()
 
     @Slot(bool)
@@ -447,12 +522,19 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._spine_db_editor.polish_items()
 
     @Slot(bool)
-    def save_positions(self, checked=False):
+    def _save_selected_positions(self, checked=False):
+        self._save_positions(self.selected_items)
+
+    @Slot(bool)
+    def _save_all_positions(self, checked=False):
+        self._save_positions(self.entity_items)
+
+    def _save_positions(self, items):
         if not self.pos_x_parameter or not self.pos_y_parameter:
-            msg = "You haven't selected the position parameters. Please go to Graph -> Select position parameters"
+            msg = "You haven't selected the position parameters"
             self._spine_db_editor.msg.emit(msg)
             return
-        ent_items = [item for item in self.selected_items if isinstance(item, EntityItem)]
+        ent_items = [item for item in items if isinstance(item, EntityItem)]
         db_map_class_ent_items = {}
         for item in ent_items:
             for db_map in item.db_maps:
@@ -477,12 +559,20 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.db_mngr.import_data(db_map_data)
 
     @Slot(bool)
-    def clear_saved_positions(self, checked=False):
-        if not self.selected_items:
+    def _clear_selected_positions(self, checked=False):
+        self._clear_positions(self.selected_items)
+
+    @Slot(bool)
+    def _clear_all_positions(self, checked=False):
+        self._clear_positions(self.entity_items)
+
+    def _clear_positions(self, items):
+        if not items:
             return
         db_map_ids = {}
-        for item in self.selected_items:
-            db_map_ids.setdefault(item.db_map, set()).add(item.entity_id)
+        for item in items:
+            for db_map, entity_id in item.db_map_ids:
+                db_map_ids.setdefault(db_map, set()).add(entity_id)
         db_map_typed_data = {}
         for db_map, ids in db_map_ids.items():
             db_map_typed_data[db_map] = {
@@ -499,19 +589,36 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._spine_db_editor.build_graph()
 
     @Slot(bool)
-    def _add_bg_image(self, _checked=False):
+    def _select_bg_image(self, _checked=False):
         file_path = self._spine_db_editor.get_open_file_path(
             "addBgImage", "Select background image...", "SVG files (*.svg)"
         )
         if not file_path:
             return
-        if self._bg_item is not None:
-            self.scene().removeItem(self._bg_item)
-        self._bg_item = BgItem(file_path)
-        self.scene().addItem(self._bg_item)
+        with open(file_path, "r") as fh:
+            svg = fh.read().rstrip()
+        self.set_bg_svg(svg)
         rect = self._get_viewport_scene_rect()
         self._bg_item.fit_rect(rect)
         self._bg_item.apply_zoom(self.zoom_factor)
+
+    def set_bg_svg(self, svg):
+        if self._bg_item is not None:
+            self.scene().removeItem(self._bg_item)
+        self._bg_item = BgItem(svg)
+        self.scene().addItem(self._bg_item)
+
+    def get_bg_svg(self):
+        return self._bg_item.svg if self._bg_item else ""
+
+    def set_bg_rect(self, rect):
+        if self._bg_item is not None and rect:
+            self._bg_item.fit_rect(rect)
+
+    def get_bg_rect(self):
+        if self._bg_item is not None:
+            rect = self._bg_item.scene_rect()
+            return rect.x(), rect.y(), rect.width(), rect.height()
 
     def clear_scene(self):
         for item in self.scene().items():
@@ -520,22 +627,29 @@ class EntityQGraphicsView(CustomQGraphicsView):
             if item is not self._bg_item:
                 self.scene().removeItem(item)
 
+    @contextmanager
+    def _no_zoom(self):
+        current_zoom_factor = self.zoom_factor
+        self._zoom(1.0 / current_zoom_factor)
+        try:
+            yield
+        finally:
+            self._zoom(current_zoom_factor)
+
     @Slot(bool)
     def export_as_image(self, _=False):
         file_path = self._spine_db_editor.get_save_file_path(
-            "exportGraphAsImage", "Export as vector image...", "SVG files (*.svg);;PDF files (*.pdf)"
+            "exportGraphAsImage", "Export as image...", "SVG files (*.svg);;PDF files (*.pdf)"
         )
         if not file_path:
             return
-        # source = self._get_viewport_scene_rect()
-        source = self.scene().itemsBoundingRect()
-        margin = 0.05
-        dx, dy = margin * source.width(), margin * source.height()
-        source.adjust(-dx, -dy, dx, dy)
-        current_zoom_factor = self.zoom_factor
-        self._zoom(1.0 / current_zoom_factor)
-        self.scene().clearSelection()
-        file_ext = os.path.splitext(file_path)[-1]
+        with self._no_zoom():
+            self._do_export_as_image(file_path)
+        self._spine_db_editor.file_exported.emit(file_path, 1.0, False)
+
+    def _do_export_as_image(self, file_path):
+        source = self._get_print_source()
+        file_ext = os.path.splitext(file_path)[-1].lower()
         if not file_ext:
             file_ext = ".svg"
             file_path += file_ext
@@ -551,20 +665,125 @@ class EntityQGraphicsView(CustomQGraphicsView):
             size = page_size.sizePixels(printer.resolution())
             printer.setPageSize(page_size)
             printer.setOutputFileName(file_path)
+        else:
+            size = source.size().toSize()
+            printer = QPixmap(size)
+            printer.fill(Qt.white)
+        self._print_scene(printer, source, size)
+        if isinstance(printer, QPixmap):
+            printer.save(file_path)
+
+    def _get_print_source(self, scene=None):
+        if scene is None:
+            scene = self.scene()
+        source = scene.itemsBoundingRect()
+        dx, dy = self._margin * source.width(), self._margin * source.height()
+        source.adjust(-dx, -dy, dx, dy)
+        return source
+
+    def _print_scene(self, printer, source, size, index=None, scene=None):
+        if scene is None:
+            scene = self.scene()
         painter = QPainter(printer)
-        self.scene().render(painter, QRectF(), source)
+        scene.render(painter, QRectF(), source)
         if self._spine_db_editor.ui.legend_widget.isVisible():
-            legend_width, legend_height = 0.5 * size.width(), 0.5 * margin * size.height()
+            legend_width, legend_height = 0.5 * size.width(), 0.5 * self._margin * size.height()
             legend_rect = QRectF(
                 0.5 * (size.width() - legend_width),
-                size.height() - 0.5 * margin * size.height() - 0.5 * legend_height,
+                size.height() - 0.5 * self._margin * size.height() - 0.5 * legend_height,
                 legend_width,
                 legend_height,
             )
             self._spine_db_editor.ui.legend_widget.paint(painter, legend_rect)
+        if index is not None:
+            height = 0.5 * self._margin * size.height()
+            font = painter.font()
+            font.setPointSizeF(0.375 * height)
+            painter.setFont(font)
+            text = str(index)
+            rect = painter.boundingRect(source, text)
+            painter.drawText(size.width() - rect.width(), rect.height(), str(index))
         painter.end()
-        self._zoom(current_zoom_factor)
-        self._spine_db_editor.file_exported.emit(file_path)
+
+    def _clone_scene(self):
+        scene = QGraphicsScene()
+        entity_items = {item.db_map_ids: item.clone() for item in self.entity_items}
+        arc_items = [item.clone(entity_items) for item in self.items() if isinstance(item, ArcItem)]
+        for item in entity_items.values():
+            scene.addItem(item)
+        for item in arc_items:
+            scene.addItem(item)
+        if self._bg_item:
+            scene.addItem(self._bg_item.clone())
+        return scene, list(entity_items.values())
+
+    def _frames(self, start, stop, frame_count, buffer_path, cv2):
+        if start == stop:
+            return ()
+        scene, entity_items = self._clone_scene()
+        source = self._get_print_source(scene=scene)
+        size = source.size().toSize()
+        incr = (stop - start) / frame_count
+        index = start
+        pixmap = QPixmap(size)
+        while True:
+            pixmap.fill(Qt.white)
+            for item in entity_items:
+                item.update_props(index)
+            self._print_scene(pixmap, source, size, index=index, scene=scene)
+            ok = pixmap.scaledToWidth(1600).save(buffer_path)
+            assert ok
+            yield cv2.imread(buffer_path, -1)
+            index += incr
+            if index > stop:
+                break
+
+    @Slot(bool)
+    def export_as_video(self):
+        try:
+            import cv2
+        except ModuleNotFoundError:
+            self._spine_db_editor.msg_error.emit(
+                "Export as video requires <a href='https://pypi.org/project/opencv-python/'>opencv-python</a>"
+            )
+            return
+        file_path = self._spine_db_editor.get_save_file_path(
+            "exportGraphAsVideo", "Export as video...", "All files (*);;MP4 files (*.mp4);;AVI files (*.avi)"
+        )
+        if not file_path:
+            return
+        start, stop = self._spine_db_editor.ui.time_line_widget.get_index_range()
+        dialog = ExportAsVideoDialog(str(start), str(stop), parent=self)
+        if dialog.exec_() == ExportAsVideoDialog.Rejected:
+            return
+        file_ext = os.path.splitext(file_path)[-1].lower()
+        if not file_ext:
+            file_ext = ".mp4"
+            file_path += file_ext
+        start, stop, frame_count, fps = dialog.selections()
+        start = np.datetime64(start)
+        stop = np.datetime64(stop)
+        runnable = QRunnable.create(lambda: self._do_export_as_video(file_path, start, stop, frame_count, fps, cv2))
+        self._thread_pool.start(runnable)
+
+    def _do_export_as_video(self, file_path, start, stop, frame_count, fps, cv2):
+        with tempfile.NamedTemporaryFile() as f:
+            buffer_path = f.name + ".png"
+            frame_iter = enumerate(self._frames(start, stop, frame_count, buffer_path, cv2))
+            try:
+                k, frame = next(frame_iter)
+            except StopIteration:
+                return
+            height, width, _layers = frame.shape
+            video = cv2.VideoWriter(file_path, cv2.VideoWriter_fourcc(*"XVID"), fps, (width, height))
+            video.write(frame)
+            self._spine_db_editor.file_exported.emit(file_path, k / frame_count, False)
+            for k, frame in frame_iter:
+                video.write(frame)
+                self._spine_db_editor.file_exported.emit(file_path, k / frame_count, False)
+        cv2.destroyAllWindows()
+        video.release()
+        self._spine_db_editor.file_exported.emit(file_path, 1.0, False)
 
     def set_cross_hairs_items(self, entity_class, cross_hairs_items):
         """Sets 'cross_hairs' items for connecting entities.

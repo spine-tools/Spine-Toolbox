@@ -25,59 +25,112 @@ from PySide6.QtWidgets import (
     QSlider,
     QVBoxLayout,
     QHBoxLayout,
+    QFormLayout,
     QSizePolicy,
+    QDialog,
+    QDateTimeEdit,
+    QSpinBox,
 )
 from PySide6.QtGui import QPainter, QColor, QIcon, QBrush, QPainterPath, QPalette
-from PySide6.QtCore import Signal, Slot, QVariantAnimation, QPointF, Qt, QTimeLine, QRectF
+from PySide6.QtCore import (
+    Signal,
+    Slot,
+    QVariantAnimation,
+    QPointF,
+    Qt,
+    QTimeLine,
+    QRectF,
+    QTimer,
+    QEasingCurve,
+    QDateTime,
+)
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url, CharIconEngine, color_from_index
 
 
-class OpenFileButton(QToolButton):
+class OpenFileButton(QWidget):
     """A button to open files or show them in the folder."""
 
-    def __init__(self, file_path, db_editor):
+    def __init__(self, file_path, progress, db_editor):
         super().__init__()
-        self.db_editor = db_editor
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         self.file_path = file_path
+        self.progress = None
+        self.db_editor = db_editor
         self.dir_name, self.file_name = os.path.split(file_path)
-        self.setText(self.file_name)
-        self.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        self.setStyleSheet(
-            """
-            QToolButton {
-                padding-left: 12px; padding-right: 32px; padding-top: 6px; padding-bottom: 6px;
-                background-color: #ffffff;
-                border: 1px solid #cccccc;
-                border-style: outset;
-                border-radius: 6px;
-            }
-            QToolButton:hover {
-                background-color: #dddddd;
-            }
-            QToolButton:pressed {
-                background-color: #bbbbbb;
-                border-style: inset;
-            }
-            QToolButton::menu-button {
-                border: 1px solid #cccccc;
-                border-style: outset;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-                width: 20px;
-            }
-            QToolButton::menu-button:pressed {
-                border-style: inset;
-            }
-            """
-        )
+        self._progress_bar = QProgressBar()
+        self._button = QToolButton()
+        layout.addWidget(self._progress_bar)
+        layout.addStretch()
+        layout.addWidget(self._button)
+        padding = 4 * " "
+        menu_button_size = self.fontMetrics().horizontalAdvance(padding)
+        self._progress_bar.setFormat(self.file_name + padding)
+        self._progress_bar.setRange(1, 10)
+        self._progress_bar.setValue(1)
+        self._button.hide()
+        self._button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self._button.setText(self.file_name)
+        self._button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         menu = QMenu(db_editor)
-        self.setMenu(menu)
+        self._button.setMenu(menu)
         open_file_action = menu.addAction("Open")
         open_containing_folder_action = menu.addAction("Open containing folder")
         open_file_action.triggered.connect(self.open_file)
         open_containing_folder_action.triggered.connect(self.open_containing_folder)
-        self.clicked.connect(open_file_action.triggered)
+        self._button.clicked.connect(open_file_action.triggered)
+        self.setStyleSheet(
+            f"""
+            QToolButton {{
+                padding-left: 16px; padding-right: {16 + menu_button_size}px; padding-top: 6px; padding-bottom: 6px;
+                background-color: #fff;
+                border: 1px solid #ccc;
+                border-style: outset;
+            }}
+            QToolButton:hover {{
+                background-color: #eee;
+            }}
+            QToolButton:pressed {{
+                background-color: #ddd;
+                border-style: inset;
+            }}
+            QToolButton::menu-button {{
+                border: 1px solid #ccc;
+                border-style: outset;
+                width: {menu_button_size}px;
+            }}
+            QToolButton::menu-button:pressed {{
+                border-style: inset;
+            }}
+            QProgressBar {{
+                text-align: center;
+                background-color: #fff;
+                border: 1px solid #ccc;
+                border-style: inset;
+            }}
+            """
+        )
+        self._button.adjustSize()
+        size = self._button.size()
+        self.setFixedSize(size)
+        self._progress_bar.setFixedSize(size)
+        self.set_progress(progress)
+
+    def set_progress(self, progress):
+        self.progress = progress
+        progress_bar_value = self._progress_bar.minimum() + self.progress * (
+            self._progress_bar.maximum() - self._progress_bar.minimum()
+        )
+        self._progress_bar.setValue(progress_bar_value)
+        if progress_bar_value == self._progress_bar.maximum():
+
+            def _show_button():
+                self._progress_bar.hide()
+                self._button.show()
+
+            QTimer.singleShot(100, _show_button)
 
     @Slot(bool)
     def open_file(self, checked=False):
@@ -91,8 +144,8 @@ class OpenFileButton(QToolButton):
 class OpenSQLiteFileButton(OpenFileButton):
     """A button to open sqlite files, show them in the folder, or add them to the project."""
 
-    def __init__(self, file_path, db_editor):
-        super().__init__(file_path, db_editor)
+    def __init__(self, file_path, progress, db_editor):
+        super().__init__(file_path, progress, db_editor)
         self.url = URL("sqlite", database=self.file_path)
 
     @Slot(bool)
@@ -197,8 +250,9 @@ class TimeLineWidget(QWidget):
         self._max_index = None
         self._index_incr = None
         self._index = None
-        self._duration_per_step = None
+        self._ms_per_step = None
         self._playback_tl = QTimeLine()
+        self._playback_tl.setEasingCurve(QEasingCurve(QEasingCurve.Linear))
         self._slider.valueChanged.connect(self._handle_value_changed)
         self._slider.sliderMoved.connect(self._playback_tl.stop)
         self._playback_tl.frameChanged.connect(self._slider.setValue)
@@ -220,7 +274,7 @@ class TimeLineWidget(QWidget):
         current_value = self._slider.value()
         current_value = current_value if current_value != self._slider.maximum() else self._slider.minimum()
         self._playback_tl.setFrameRange(current_value, self._STEP_COUNT - 1)
-        self._playback_tl.setDuration((self._STEP_COUNT - current_value) * self._duration_per_step)
+        self._playback_tl.setDuration((self._STEP_COUNT - current_value) * self._ms_per_step)
         self._playback_tl.start()
 
     @Slot(int)
@@ -231,16 +285,19 @@ class TimeLineWidget(QWidget):
     def set_index_range(self, min_index, max_index):
         self._min_index = min_index
         self._max_index = max_index
-        index_range = max_index - min_index
+        index_range = self._max_index - self._min_index
         delta = index_range.item()
         days = delta.days + delta.seconds / (24 * 3600)
         years = days / 365
         total_duration = years * 10000  # 1 year to take 10 seconds
-        self._duration_per_step = total_duration / self._STEP_COUNT
+        self._ms_per_step = total_duration / self._STEP_COUNT
         self._index_incr = index_range / self._STEP_COUNT
         self._index = self._min_index
         self.index_changed.emit(self._index)
         self.show()
+
+    def get_index_range(self):
+        return (self._min_index, self._max_index)
 
 
 class LegendWidget(QWidget):
@@ -296,10 +353,11 @@ class LegendWidget(QWidget):
 
     def paint(self, painter, rect):
         painter.save()
+        row_h = rect.height() / len(self._legend)
         font = painter.font()
-        font.setPointSizeF(0.375 * rect.height())
+        font.setPointSizeF(0.375 * row_h)
         painter.setFont(font)
-        text_flags = Qt.AlignVCenter
+        text_flags = Qt.AlignBottom
         # Get column widths
         pname_cws, min_val_cws, max_val_cws = [], [], []
         for pname, min_val, _paint_legend, max_val in self._legend:
@@ -309,7 +367,6 @@ class LegendWidget(QWidget):
         min_val_cw = max(min_val_cws)
         max_val_cw = max(max_val_cws)
         bar_cw = rect.width() - (pname_cw + min_val_cw + max_val_cw) - 5 * self._SPACING
-        row_h = rect.height() / len(self._legend)
         # Paint
         for i, (pname, min_val, paint_bar, max_val) in enumerate(self._legend):
             cell = QRectF(0, rect.y() + self._SPACING + i * row_h, 0, row_h - 2 * self._SPACING)
@@ -320,7 +377,7 @@ class LegendWidget(QWidget):
             left += pname_cw + self._SPACING
             cell.setLeft(left)
             cell.setWidth(min_val_cw)
-            painter.drawText(cell, text_flags, min_val)
+            painter.drawText(cell, text_flags | Qt.AlignRight, min_val)
             left += min_val_cw + self._SPACING
             cell.setLeft(left)
             cell.setWidth(bar_cw)
@@ -330,3 +387,53 @@ class LegendWidget(QWidget):
             cell.setWidth(max_val_cw)
             painter.drawText(cell, text_flags, max_val)
         painter.restore()
+
+
+class ExportAsVideoDialog(QDialog):
+    def __init__(self, start, stop, parent=None):
+        super().__init__(parent=parent)
+        start, stop = (QDateTime.fromString(dt, Qt.ISODate) for dt in (start, stop))
+        self.setWindowTitle("Export as video")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self._start_edit = QDateTimeEdit()
+        self._stop_edit = QDateTimeEdit()
+        for dt_edit in (self._start_edit, self._stop_edit):
+            dt_edit.setMinimumDateTime(start)
+            dt_edit.setMaximumDateTime(stop)
+            dt_edit.setCalendarPopup(True)
+        self._start_edit.setDateTime(start)
+        self._stop_edit.setDateTime(stop)
+        self._start_edit.dateTimeChanged.connect(self._handle_start_dt_changed)
+        self._stop_edit.dateTimeChanged.connect(self._handle_stop_dt_changed)
+        self._frame_count_spin_box = QSpinBox()
+        self._frame_count_spin_box.setRange(1, 16777215)
+        self._fps_spin_box = QSpinBox()
+        self._fps_spin_box.setRange(1, 20)
+        form.addRow("Start:", self._start_edit)
+        form.addRow("Stop:", self._stop_edit)
+        form.addRow("Number of frames:", self._frame_count_spin_box)
+        form.addRow("Frames per second:", self._fps_spin_box)
+        self._button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self._button_box.accepted.connect(self.accept)
+        self._button_box.rejected.connect(self.reject)
+        layout.addLayout(form)
+        layout.addWidget(self._button_box)
+
+    @Slot(QDateTime)
+    def _handle_start_dt_changed(self, start_dt):
+        if start_dt > self._stop_edit.dateTime():
+            self._stop_edit.setDateTime(start_dt)
+
+    @Slot(QDateTime)
+    def _handle_stop_dt_changed(self, stop_dt):
+        if stop_dt < self._start_edit.dateTime():
+            self._start_edit.setDateTime(stop_dt)
+
+    def selections(self):
+        return (
+            self._start_edit.dateTime().toString(Qt.ISODate),
+            self._stop_edit.dateTime().toString(Qt.ISODate),
+            self._frame_count_spin_box.value(),
+            self._fps_spin_box.value(),
+        )

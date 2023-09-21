@@ -66,8 +66,8 @@ class SpineDBEditorBase(QMainWindow):
 
     msg = Signal(str)
     msg_error = Signal(str)
-    file_exported = Signal(str)
-    sqlite_file_exported = Signal(str)
+    file_exported = Signal(str, float, bool)
+    """filepath, progress between 0 and 1, True if sqlite file"""
 
     def __init__(self, db_mngr):
         """

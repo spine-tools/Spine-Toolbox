@@ -147,7 +147,10 @@ class UpdateItemsCommand(SpineDBCommand):
 
     def redo(self):
         super().redo()
-        self.redo_data = self.db_mngr.do_update_items(self.db_map, self.item_type, self.redo_data, check=self._check)
+        self.redo_data = [
+            x._asdict()
+            for x in self.db_mngr.do_update_items(self.db_map, self.item_type, self.redo_data, check=self._check)
+        ]
         if not self.redo_data:
             self.setObsolete(True)
             return

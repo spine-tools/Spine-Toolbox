@@ -14,7 +14,7 @@ The SpineDBWorker class
 """
 from PySide6.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
-from .qthread_pool_executor import QtBasedThreadPoolExecutor
+from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 from .helpers import busy_effect
 
 
@@ -26,12 +26,12 @@ class SpineDBWorker(QObject):
 
     _more_available = Signal(object)
 
-    def __init__(self, db_mngr, db_url):
+    def __init__(self, db_mngr, db_url, synchronous=False):
         super().__init__()
         self._db_mngr = db_mngr
         self._db_url = db_url
         self._db_map = None
-        self._executor = QtBasedThreadPoolExecutor(max_workers=1)
+        self._executor = (SynchronousExecutor if synchronous else QtBasedThreadPoolExecutor)()
         self._parents_by_type = {}
         self._restore_item_callbacks = {}
         self._update_item_callbacks = {}
@@ -79,9 +79,6 @@ class SpineDBWorker(QObject):
         parents = self._parents_by_type.setdefault(parent.fetch_item_type, set())
         parents.add(parent)
 
-    def _fetched_ids(self, item_type, position):
-        return list(self._db_map.cache.get(item_type, {}))[position:]
-
     @busy_effect
     def _iterate_cache(self, parent):
         """Iterates the cache for given parent while updating its ``position`` property.
@@ -96,10 +93,11 @@ class SpineDBWorker(QObject):
         item_type = parent.fetch_item_type
         index = parent.index
         parent_pos = parent.position(self._db_map)
+        ids = list(self._db_map.cache.get(item_type, {}))
         if index is not None:
             # Build index from where we left and get items from it
             index_pos = index.position(self._db_map)
-            for id_ in self._fetched_ids(item_type, index_pos):
+            for id_ in ids[index_pos:]:
                 item = self._db_mngr.get_item(self._db_map, item_type, id_)
                 index.increment_position(self._db_map)
                 if not item:
@@ -109,15 +107,13 @@ class SpineDBWorker(QObject):
             items = index.get_items(parent_key, self._db_map)[parent_pos:]
         else:
             # Get items directly from cache, from where we left
-            items = [
-                self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in self._fetched_ids(item_type, parent_pos)
-            ]
+            items = [self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids[parent_pos:]]
         added_count = 0
         for item in items:
             parent.increment_position(self._db_map)
             if not item:
                 continue
-            if parent.accepts_item(item, self._db_map):
+            if index is not None or parent.accepts_item(item, self._db_map):
                 self._bind_item(parent, item)
                 if item.is_valid():
                     parent.add_item(item, self._db_map)
@@ -270,8 +266,7 @@ class SpineDBWorker(QObject):
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         self._db_mngr.update_icons(self._db_map, item_type, items)
-        for parent in list(self._get_parents(item_type)):
-            self.fetch_more(parent)
+        self._wake_up_parents(item_type, items)
         self._db_mngr.items_added.emit(item_type, {self._db_map: items})
         return items
 
@@ -313,10 +308,16 @@ class SpineDBWorker(QObject):
         """
         items = self._db_map.restore_items(item_type, *ids)
         self._db_mngr.update_icons(self._db_map, item_type, items)
-        for parent in list(self._get_parents(item_type)):
-            self.fetch_more(parent)
+        self._wake_up_parents(item_type, items)
         self._db_mngr.items_added.emit(item_type, {self._db_map: items})
         return items
+
+    def _wake_up_parents(self, item_type, items):
+        for parent in list(self._get_parents(item_type)):
+            for item in items:
+                if parent.accepts_item(item, self._db_map):
+                    self.fetch_more(parent)
+                    break
 
     def commit_session(self, commit_msg, cookie=None):
         """Commits session.

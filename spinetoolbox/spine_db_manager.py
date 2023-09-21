@@ -85,7 +85,7 @@ class SpineDBManager(QObject):
         dict: mapping DiffDatabaseMapping to list of updated dict-items.
     """
 
-    def __init__(self, settings, parent):
+    def __init__(self, settings, parent, synchronous=False):
         """Initializes the instance.
 
         Args:
@@ -103,6 +103,7 @@ class SpineDBManager(QObject):
         self._icon_mngr = {}
         self._connect_signals()
         self._cmd_id = 0
+        self._synchronous = synchronous
 
     def _connect_signals(self):
         self.error_msg.connect(self.receive_error_msg)
@@ -376,7 +377,7 @@ class SpineDBManager(QObject):
             if codename is not None:
                 db_map.codename = codename
             return db_map
-        worker = SpineDBWorker(self, url)
+        worker = SpineDBWorker(self, url, synchronous=self._synchronous)
         try:
             db_map = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
         except Exception as error:
@@ -1420,7 +1421,7 @@ class SpineDBManager(QObject):
             error_msg = {None: [f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"]}
             caller.msg_error.emit(error_msg)
         else:
-            caller.sqlite_file_exported.emit(file_path)
+            caller.file_exported.emit(file_path, 1.0, True)
         finally:
             db_map.close()
 
@@ -1429,7 +1430,7 @@ class SpineDBManager(QObject):
         json_data = json.dumps(data_for_export, indent=4)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        caller.file_exported.emit(file_path)
+        caller.file_exported.emit(file_path, 1.0, False)
 
     def export_to_excel(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
         """Exports given data into Excel file."""
@@ -1451,7 +1452,7 @@ class SpineDBManager(QObject):
             error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
             caller.msg_error.emit(error_msg)
         else:
-            caller.file_exported.emit(file_path)
+            caller.file_exported.emit(file_path, 1.0, False)
         finally:
             db_map.close()
 

@@ -13,7 +13,7 @@
 Classes for drawing graphics items on graph view's QGraphicsScene.
 """
 from enum import Enum, auto
-from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF, QObject
+from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF, QObject, QByteArray
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QMenu,
 )
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction, QColor
+from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, color_from_index
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
@@ -75,6 +75,16 @@ class EntityItem(QGraphicsRectItem):
         self.setZValue(0.5 if not self.has_dimensions else 0.25)
         self._extent = None
         self.set_up()
+
+    def clone(self):
+        return type(self)(
+            self._spine_db_editor,
+            self.pos().x(),
+            self.pos().y(),
+            self._given_extent,
+            self._db_map_ids,
+            offset=self._offset,
+        )
 
     @property
     def has_dimensions(self):
@@ -213,8 +223,8 @@ class EntityItem(QGraphicsRectItem):
             if isinstance(name, str):
                 return name
 
-    def _get_prop(self, getter):
-        values = {getter(db_map, id_) for db_map, id_ in self.db_map_ids}
+    def _get_prop(self, getter, index):
+        values = {getter(db_map, id_, index) for db_map, id_ in self.db_map_ids}
         values.discard(None)
         if not values:
             return None
@@ -223,8 +233,8 @@ class EntityItem(QGraphicsRectItem):
             return self._spine_db_editor.NOT_SPECIFIED
         return next(iter(values))
 
-    def _get_color(self):
-        color = self._get_prop(self._spine_db_editor.get_item_color)
+    def _get_color(self, index=None):
+        color = self._get_prop(self._spine_db_editor.get_item_color, index)
         if color in (None, self._spine_db_editor.NOT_SPECIFIED):
             return color
         min_val, val, max_val = color
@@ -232,8 +242,8 @@ class EntityItem(QGraphicsRectItem):
         k = val - min_val
         return color_from_index(k, count)
 
-    def _get_arc_width(self):
-        arc_width = self._get_prop(self._spine_db_editor.get_arc_width)
+    def _get_arc_width(self, index=None):
+        arc_width = self._get_prop(self._spine_db_editor.get_arc_width, index)
         if arc_width in (None, self._spine_db_editor.NOT_SPECIFIED):
             return arc_width
         min_val, val, max_val = arc_width
@@ -267,9 +277,9 @@ class EntityItem(QGraphicsRectItem):
         self.refresh_icon()
         self.update_entity_pos()
 
-    def update_props(self):
-        color = self._get_color()
-        arc_width = self._get_arc_width()
+    def update_props(self, index):
+        color = self._get_color(index)
+        arc_width = self._get_arc_width(index)
         self._update_renderer(color, resize=False)
         self._update_arcs(color, arc_width)
 
@@ -654,6 +664,11 @@ class ArcItem(QGraphicsPathItem):
         self.setCursor(Qt.ArrowCursor)
         self.update_line()
 
+    def clone(self, entity_items):
+        ent_item = entity_items[self.ent_item.db_map_ids]
+        el_item = entity_items[self.el_item.db_map_ids]
+        return type(self)(ent_item, el_item, self._original_width)
+
     def _make_pen(self):
         pen = QPen()
         pen.setWidthF(self._original_width)
@@ -882,14 +897,15 @@ class BgItem(QGraphicsRectItem):
         Anchor.BR: Qt.SizeFDiagCursor,
     }
 
-    def __init__(self, file_path, parent=None):
+    def __init__(self, svg, parent=None):
         super().__init__(parent)
         self._renderer = QSvgRenderer()
-        self._svg_item = _ResizableQGraphicsSvgItem(self, parent=self)
-        _loading_ok = self._renderer.load(file_path)
+        self._svg_item = _ResizableQGraphicsSvgItem(self)
+        self.svg = svg
+        _loading_ok = self._renderer.load(QByteArray(self.svg))
         self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
         self._svg_item.setSharedRenderer(self._renderer)
-        self._scaling_factor = None
+        self._scaling_factor = 1
         size = self._renderer.defaultSize()
         self.setRect(0, 0, size.width(), size.height())
         self.setZValue(-1000)
@@ -901,6 +917,11 @@ class BgItem(QGraphicsRectItem):
             resizer.resized.connect(lambda delta, strong, anchor=anchor: self._resize(anchor, delta, strong))
             resizer.setCursor(self._cursors[anchor])
             resizer.hide()
+
+    def clone(self):
+        other = type(self)(self.svg)
+        other.fit_rect(self.scene_rect())
+        return other
 
     def hoverEnterEvent(self, ev):
         super().hoverEnterEvent(ev)
@@ -920,7 +941,7 @@ class BgItem(QGraphicsRectItem):
         for anchor, resizer in self._resizers.items():
             getter, _ = self._getter_setter[anchor]
             resizer.setPos(
-                getattr(self.rect(), getter)() - resizer.rect().center() / self.scale() / self._scaling_factor
+                getattr(self.rect(), getter)() - getattr(resizer.rect(), getter)() / self.scale() / self._scaling_factor
             )
 
     def _resize(self, anchor, delta, strong):
@@ -945,10 +966,12 @@ class BgItem(QGraphicsRectItem):
         self._place_resizers()
 
     def fit_rect(self, rect):
-        h_scale = rect.width() / self.rect().width()
-        v_scale = rect.height() / self.rect().height()
-        self.setPos(rect.topLeft())
-        self.setScale(min(h_scale, v_scale))
+        if not isinstance(rect, QRectF):
+            rect = QRectF(*rect)
+        self._do_resize(rect, True)
+
+    def scene_rect(self):
+        return self.mapToScene(self.rect()).boundingRect()
 
 
 class _ResizableQGraphicsSvgItem(QGraphicsSvgItem):
@@ -980,7 +1003,7 @@ class _Resizer(QGraphicsRectItem):
     class SignalsProvider(QObject):
         resized = Signal(QPointF, bool)
 
-    def __init__(self, rect=QRectF(0, 0, 12, 12), parent=None):
+    def __init__(self, rect=QRectF(0, 0, 20, 20), parent=None):
         super().__init__(rect, parent)
         self._original_rect = self.rect()
         self._press_pos = None

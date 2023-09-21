@@ -676,6 +676,12 @@ class HorizontalSpinBox(QToolBar):
         except TypeError:
             pass
 
+    def setMaximum(self, maximum):
+        try:
+            self._validator.setTop(maximum)
+        except TypeError:
+            pass
+
     @Slot(str)
     def setValue(self, value, strict=False):
         try:
