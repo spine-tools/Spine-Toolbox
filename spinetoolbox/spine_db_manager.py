@@ -601,8 +601,11 @@ class SpineDBManager(QObject):
         return SpineDBIconManager.icon_from_renderer(renderer) if renderer is not None else None
 
     @staticmethod
-    @busy_effect
-    def get_item(db_map, item_type, id_, only_visible=True):
+    def _fetch_all(db_map, item_type):
+        if item_type not in db_map.cache.fetched_item_types:
+            busy_effect(db_map.cache.fetch_all)(item_type)
+
+    def get_item(self, db_map, item_type, id_, only_visible=True):
         """Returns the item of the given type in the given db map that has the given id,
         or an empty dict if not found.
 
@@ -618,15 +621,13 @@ class SpineDBManager(QObject):
         item = db_map.cache.get(item_type, {}).get(id_, {})
         if only_visible and item:
             return item
-        db_map.cache.fetch_all(item_type)
+        self._fetch_all(db_map, item_type)
         return db_map.cache.get(item_type, {}).get(id_, {})
 
     def get_field(self, db_map, item_type, id_, field, only_visible=True):
         return self.get_item(db_map, item_type, id_, only_visible=only_visible).get(field)
 
-    @staticmethod
-    @busy_effect
-    def get_items(db_map, item_type, only_visible=True):
+    def get_items(self, db_map, item_type, only_visible=True):
         """Returns a list of the items of the given type in the given db map.
 
         Args:
@@ -638,7 +639,7 @@ class SpineDBManager(QObject):
             list
         """
         if not only_visible:
-            db_map.cache.fetch_all(item_type)
+            self._fetch_all(db_map, item_type)
         return list(db_map.cache.get(item_type, {}).values())
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
