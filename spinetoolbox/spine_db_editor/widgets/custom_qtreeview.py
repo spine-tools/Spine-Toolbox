@@ -92,9 +92,6 @@ class EntityTreeView(ResizableTreeView):
         self._add_entity_group_action = self._menu.addAction(
             self._cube_plus_icon, "Add entity group", self.add_entity_group
         )
-        self._duplicate_entity_action = self._menu.addAction(
-            self._cube_plus_icon, "Duplicate entity", self.duplicate_entity
-        )
         self._manage_elements_action = self._menu.addAction(
             self._cubes_pen_icon, "Manage elements", self.manage_elements
         )
@@ -112,6 +109,9 @@ class EntityTreeView(ResizableTreeView):
         self._menu.addSeparator()
         self._edit_action = self._menu.addAction(self._cube_pen_icon, "Edit...", self.edit_selected)
         self._remove_action = self._menu.addAction(self._cube_minus_icon, "Remove...", self.remove_selected)
+        self._duplicate_entity_action = self._menu.addAction(
+            self._cube_plus_icon, "Duplicate entity", self.duplicate_entity
+        )
         self._menu.addSeparator()
         self._export_action = self._menu.addAction(
             QIcon(":/icons/menu_icons/database-export.svg"), "Export", self.export_selected

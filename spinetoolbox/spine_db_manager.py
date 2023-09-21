@@ -600,7 +600,9 @@ class SpineDBManager(QObject):
         renderer = self.entity_class_renderer(db_map, entity_class_id, for_group=for_group)
         return SpineDBIconManager.icon_from_renderer(renderer) if renderer is not None else None
 
-    def get_item(self, db_map, item_type, id_, only_visible=True):
+    @staticmethod
+    @busy_effect
+    def get_item(db_map, item_type, id_, only_visible=True):
         """Returns the item of the given type in the given db map that has the given id,
         or an empty dict if not found.
 
@@ -622,7 +624,9 @@ class SpineDBManager(QObject):
     def get_field(self, db_map, item_type, id_, field, only_visible=True):
         return self.get_item(db_map, item_type, id_, only_visible=only_visible).get(field)
 
-    def get_items(self, db_map, item_type, only_visible=True):
+    @staticmethod
+    @busy_effect
+    def get_items(db_map, item_type, only_visible=True):
         """Returns a list of the items of the given type in the given db map.
 
         Args:
