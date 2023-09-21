@@ -376,9 +376,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                 entity_name = item.display_data
                 entity_class_name = item.parent_item.display_data
                 self.entity_names_by_class_name = {entity_class_name: entity_name}
-                entity_class_key = None
-            else:
-                entity_class_key = item.entity_class_key
+            entity_class_key = item.entity_class_key
         elif item.item_type == "entity_class":
             entity_class_key = item.display_id
         else:  # item_type == "root"
@@ -388,9 +386,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         self.setWindowTitle("Add entities")
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
         self.ent_cls_combo_box.setEnabled(not force_default)
-        self.entity_class_keys = [
-            key for entity_classes in self.db_map_ent_cls_lookup.values() for key in entity_classes
-        ]
+        self.entity_class_keys = self.keys_of_entity_classes_relevant_to_item(item)
         self.ent_cls_combo_box.addItems(["{0} {1}".format(*key) for key in self.entity_class_keys])
         try:
             current_index = self.entity_class_keys.index(entity_class_key)
@@ -491,6 +487,36 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             return
         self.db_mngr.add_entities(db_map_data)
         super().accept()
+
+    def keys_of_entity_classes_relevant_to_item(self, item):
+        """Returns a list of entity class keys that contain all
+        the entity classes the selected item is composed of.
+
+        Args:
+            item (MultiDBTreeItem): Selected item
+        Returns:
+            entity_class_keys (list): List of relevant entity class keys
+        """
+        if item.item_type == "entity_class":
+            selected = set(item.display_id[1]) if item.display_id[1] else {item.display_id[0]}
+        elif item.item_type == "entity":
+            selected = set(item.entity_class_key[1]) if item.entity_class_key[1] else {item.entity_class_key[0]}
+        else:  # Root selected, return all entity class keys
+            return [key for entity_classes in self.db_map_ent_cls_lookup.values() for key in entity_classes]
+        cls_dim = len(selected)
+        entity_class_keys = list()
+        for entity_classes in self.db_map_ent_cls_lookup.values():
+            for key, value in entity_classes.items():
+                accept = False
+                candidate = set(value.get("dimension_name_list")) if value.get("dimension_name_list") else {key[0]}
+                # Check whether to accept the candidate entity class
+                if bool(selected & candidate) and cls_dim == 0:
+                    accept = True  # Candidate class contains the selected 0-dimensional entity
+                elif len(selected & candidate) == cls_dim and cls_dim != 0:
+                    accept = True  # Candidate class contains the selected N-dimensional entity in its entirety
+                if accept:
+                    entity_class_keys.append(key)
+        return entity_class_keys
 
 
 class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
