@@ -166,7 +166,7 @@ class SpineDBManager(QObject):
             worker = self._get_worker(db_map)
         except KeyError:
             return
-        return worker.register_fetch_parent(parent)
+        worker.register_fetch_parent(parent)
 
     def can_fetch_more(self, db_map, parent):
         """Whether or not we can fetch more items of given type from given db.

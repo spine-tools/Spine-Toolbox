@@ -33,7 +33,7 @@ from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
 
 class EntityItem(QGraphicsRectItem):
-    def __init__(self, spine_db_editor, x, y, extent, db_map_ids, offset=0):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_ids, offset=None):
         """
         Args:
             spine_db_editor (SpineDBEditor): 'owner'
@@ -390,12 +390,13 @@ class EntityItem(QGraphicsRectItem):
             return
         new_pos_x = sum(el_item.pos().x() for el_item in el_items) / dim_count
         new_pos_y = sum(el_item.pos().y() for el_item in el_items) / dim_count
-        if self._offset:
+        offset = self._offset.value() if self._offset is not None else None
+        if offset:
             el_item = el_items[0]
             line = QLineF(QPointF(new_pos_x, new_pos_y), el_item.pos()).normalVector()
-            if self._offset < 0:
+            if offset < 0:
                 line.setAngle(line.angle() + 180)
-            line.setLength(abs(self._offset) * self._extent)
+            line.setLength(abs(offset) * self._extent)
             new_pos_x, new_pos_y = line.x2(), line.y2()
         self.setPos(new_pos_x, new_pos_y)
         self.update_arcs_line()
@@ -488,7 +489,7 @@ class EntityItem(QGraphicsRectItem):
         collapse_menu.triggered.connect(self._collapse)
         connect_entities_menu = QMenu("Connect entities", menu)
         connect_entities_menu.triggered.connect(self._start_connecting_entities)
-        self._refresh_entity_class_lists()
+        self._refresh_db_map_entity_class_lists()
         self._populate_expand_collapse_menu(expand_menu)
         self._populate_expand_collapse_menu(collapse_menu)
         self._populate_connect_entities_menu(connect_entities_menu)
@@ -540,14 +541,14 @@ class EntityItem(QGraphicsRectItem):
         title = TitleWidgetAction("Connect entities", self._spine_db_editor)
         connect_entities_menu.addAction(title)
         connect_entities_menu.triggered.connect(self._start_connecting_entities)
-        self._refresh_entity_class_lists()
+        self._refresh_db_map_entity_class_lists()
         self._populate_connect_entities_menu(connect_entities_menu)
         connect_entities_menu.popup(e.screenPos())
 
     def _duplicate(self):
         self._spine_db_editor.duplicate_entity(self)
 
-    def _refresh_entity_class_lists(self):
+    def _refresh_db_map_entity_class_lists(self):
         self._db_map_entity_class_lists.clear()
         db_map_entity_ids = {db_map: {id_} for db_map, id_ in self.db_map_ids}
         entity_ids_per_class = {}
@@ -575,12 +576,10 @@ class EntityItem(QGraphicsRectItem):
         menu.setEnabled(True)
         menu.addAction("All")
         menu.addSeparator()
-        for name, db_map_ent_cls_lst in sorted(self._db_map_entity_class_lists.items()):
-            db_map, ent_cls = next(iter(db_map_ent_cls_lst))
+        for name, db_map_ent_clss in sorted(self._db_map_entity_class_lists.items()):
+            db_map, ent_cls = next(iter(db_map_ent_clss))
             icon = self.db_mngr.entity_class_icon(db_map, ent_cls["id"])
-            menu.addAction(icon, name).setEnabled(
-                any(rel_cls["entity_ids"] for (db_map, rel_cls) in db_map_ent_cls_lst)
-            )
+            menu.addAction(icon, name).setEnabled(any(rel_cls["entity_ids"] for (db_map, rel_cls) in db_map_ent_clss))
 
     def _populate_connect_entities_menu(self, menu):
         """
@@ -596,8 +595,8 @@ class EntityItem(QGraphicsRectItem):
             for db_map in item.db_maps:
                 entity_class_ids_in_graph.setdefault(db_map, set()).add(item.entity_class_id(db_map))
         action_name_icon_enabled = []
-        for name, db_map_ent_cls_lst in self._db_map_entity_class_lists.items():
-            for db_map, ent_cls in db_map_ent_cls_lst:
+        for name, db_map_ent_clss in self._db_map_entity_class_lists.items():
+            for db_map, ent_cls in db_map_ent_clss:
                 icon = self.db_mngr.entity_class_icon(db_map, ent_cls["id"])
                 action_name = name + "@" + db_map.codename
                 enabled = set(ent_cls["dimension_id_list"]) <= entity_class_ids_in_graph.get(db_map, set())
@@ -607,27 +606,27 @@ class EntityItem(QGraphicsRectItem):
         menu.setEnabled(bool(self._db_map_entity_class_lists))
 
     def _get_db_map_entity_ids_to_expand_or_collapse(self, action):
+        if action.text() == "All":
+            return {
+                (db_map, id_)
+                for db_map_ent_clss in self._db_map_entity_class_lists.values()
+                for db_map, ent_cls in db_map_ent_clss
+                for id_ in ent_cls["entity_ids"]
+            }
         db_map_ent_clss = self._db_map_entity_class_lists.get(action.text())
         if db_map_ent_clss is not None:
             return {(db_map, id_) for db_map, ent_cls in db_map_ent_clss for id_ in ent_cls["entity_ids"]}
-        return {
-            (db_map, id_)
-            for class_list in self._db_map_entity_class_lists.values()
-            for db_map, ent_cls in class_list
-            for id_ in ent_cls["entity_ids"]
-        }
+        return ()
 
     @Slot(QAction)
     def _expand(self, action):
         db_map_entity_ids = self._get_db_map_entity_ids_to_expand_or_collapse(action)
-        self._spine_db_editor.added_db_map_entity_ids.update(db_map_entity_ids)
-        self._spine_db_editor.build_graph(persistent=True)
+        self._spine_db_editor.expand_graph(db_map_entity_ids)
 
     @Slot(QAction)
     def _collapse(self, action):
         db_map_entity_ids = self._get_db_map_entity_ids_to_expand_or_collapse(action)
-        self._spine_db_editor.added_db_map_entity_ids.difference_update(db_map_entity_ids)
-        self._spine_db_editor.build_graph(persistent=True)
+        self._spine_db_editor.collapse_graph(db_map_entity_ids)
 
     @Slot(QAction)
     def _start_connecting_entities(self, action):
@@ -683,21 +682,8 @@ class ArcItem(QGraphicsPathItem):
         """Does nothing. This item is not moved the regular way, but follows the EntityItems it connects."""
 
     def update_line(self):
-        overlapping_arcs = [arc for arc in self.ent_item.arc_items if arc.el_item == self.el_item]
-        count = len(overlapping_arcs)
         path = QPainterPath(self.ent_item.pos())
-        if count == 1:
-            path.lineTo(self.el_item.pos())
-        else:
-            rank = overlapping_arcs.index(self)
-            line = QLineF(self.ent_item.pos(), self.el_item.pos())
-            line.setP1(line.center())
-            line = line.normalVector()
-            line.setLength(self._width * count)
-            line.setP1(2 * line.p1() - line.p2())
-            t = rank / (count - 1)
-            ctrl_point = line.pointAt(t)
-            path.quadTo(ctrl_point, self.el_item.pos())
+        path.lineTo(self.el_item.pos())
         self.setPath(path)
 
     def update_color(self, color):
