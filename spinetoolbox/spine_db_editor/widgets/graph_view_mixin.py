@@ -484,8 +484,8 @@ class GraphViewMixin:
             self._owes_graph = True
             return
         self._owes_graph = False
-        self._entity_fetch_parent.reset(None)
-        self._parameter_value_fetch_parent.reset(None)
+        self._entity_fetch_parent.reset()
+        self._parameter_value_fetch_parent.reset()
         self._graph_fetch_more_later()
 
     def _do_build_graph(self):
@@ -572,7 +572,7 @@ class GraphViewMixin:
                 if (db_map, entity_id) not in db_map_entity_ids:
                     db_map_entity_ids.add((db_map, entity_id))
                     item = self.db_mngr.get_item(db_map, "entity", entity_id)
-                    self.db_mngr.bind_fetch_parent_item(db_map, self._entity_fetch_parent, item)
+                    self._entity_fetch_parent.bind_item(item, db_map)
         db_map_entity_ids_by_key = {}
         for db_map_entity_id in db_map_entity_ids:
             key = self.get_entity_key(db_map_entity_id)
@@ -829,7 +829,7 @@ class GraphViewMixin:
         }
         for db_map, items in added_db_map_data.items():
             for item in items:
-                self.db_mngr.bind_fetch_parent_item(db_map, self._entity_fetch_parent, item)
+                self._entity_fetch_parent.bind_item(item, db_map)
         return added_db_map_data
 
     def get_save_file_path(self, group, caption, filters):

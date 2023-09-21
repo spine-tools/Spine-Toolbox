@@ -33,10 +33,6 @@ class SpineDBWorker(QObject):
         self._db_map = None
         self._executor = (SynchronousExecutor if synchronous else QtBasedThreadPoolExecutor)()
         self._parents_by_type = {}
-        self._restore_item_callbacks = {}
-        self._update_item_callbacks = {}
-        self._remove_item_callbacks = {}
-        self._current_fetch_token = 0
         self.commit_cache = {}
         self._parents_fetching = {}
         self._more_available.connect(self.fetch_more)
@@ -55,20 +51,6 @@ class SpineDBWorker(QObject):
     def get_db_map(self, *args, **kwargs):
         self._db_map = DatabaseMapping(self._db_url, *args, sqlite_timeout=2, chunk_size=_CHUNK_SIZE, **kwargs)
         return self._db_map
-
-    def _reset_fetching_if_required(self, parent):
-        """Sets fetch parent's token or resets the parent if fetch tokens don't match.
-
-        Args:
-            parent (FetchParent): fetch parent
-        """
-        if parent.fetch_token is None:
-            parent.fetch_token = self._current_fetch_token
-        elif parent.fetch_token != self._current_fetch_token:
-            self._restore_item_callbacks.pop(parent, None)
-            self._update_item_callbacks.pop(parent, None)
-            self._remove_item_callbacks.pop(parent, None)
-            parent.reset(self._current_fetch_token)
 
     def register_fetch_parent(self, parent):
         """Registers the given parent.
@@ -114,7 +96,7 @@ class SpineDBWorker(QObject):
             if not item:
                 continue
             if index is not None or parent.accepts_item(item, self._db_map):
-                self.bind_item(parent, item)
+                parent.bind_item(item, self._db_map)
                 if item.is_valid():
                     parent.add_item(item, self._db_map)
                     if parent.shows_item(item, self._db_map):
@@ -124,50 +106,6 @@ class SpineDBWorker(QObject):
         if parent.chunk_size is None:
             return False
         return added_count > 0
-
-    def bind_item(self, parent, item):
-        # NOTE: If `item` is in the process of calling callbacks in another thread,
-        # the ones added below won't be called.
-        # So, it is important to call this function before parent.add_item(item)
-        item.restore_callbacks.add(self._make_restore_item_callback(parent))
-        item.update_callbacks.add(self._make_update_item_callback(parent))
-        item.remove_callbacks.add(self._make_remove_item_callback(parent))
-
-    def _add_item(self, parent, item):
-        if parent.is_obsolete:
-            self._restore_item_callbacks.pop(parent, None)
-            return False
-        parent.add_item(item, self._db_map)
-        return True
-
-    def _update_item(self, parent, item):
-        if parent.is_obsolete:
-            self._update_item_callbacks.pop(parent, None)
-            return False
-        parent.update_item(item, self._db_map)
-        return True
-
-    def _remove_item(self, parent, item):
-        if parent.is_obsolete:
-            self._remove_item_callbacks.pop(parent, None)
-            return False
-        parent.remove_item(item, self._db_map)
-        return True
-
-    def _make_restore_item_callback(self, parent):
-        if parent not in self._restore_item_callbacks:
-            self._restore_item_callbacks[parent] = _ItemCallback(self._add_item, parent)
-        return self._restore_item_callbacks[parent]
-
-    def _make_update_item_callback(self, parent):
-        if parent not in self._update_item_callbacks:
-            self._update_item_callbacks[parent] = _ItemCallback(self._update_item, parent)
-        return self._update_item_callbacks[parent]
-
-    def _make_remove_item_callback(self, parent):
-        if parent not in self._remove_item_callbacks:
-            self._remove_item_callbacks[parent] = _ItemCallback(self._remove_item, parent)
-        return self._remove_item_callbacks[parent]
 
     def can_fetch_more(self, parent):
         """Returns whether more data can be fetched for parent.
@@ -179,7 +117,6 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if more data is available, False otherwise
         """
-        self._reset_fetching_if_required(parent)
         self.register_fetch_parent(parent)
         return not parent.is_fetched and not parent.is_busy
 
@@ -190,7 +127,6 @@ class SpineDBWorker(QObject):
         Args:
             parent (FetchParent): fetch parent
         """
-        self._reset_fetching_if_required(parent)
         self.register_fetch_parent(parent)
         if self._iterate_cache(parent):
             # Something in cache
@@ -344,19 +280,9 @@ class SpineDBWorker(QObject):
 
     def refresh_session(self):
         """Refreshes session."""
+        for parents in self._parents_by_type.values():
+            for parent in parents:
+                parent.reset()
         self._db_map.refresh_session()
-        self._current_fetch_token += 1
         self._parents_fetching.clear()
         self._db_mngr.receive_session_refreshed({self._db_map})
-
-
-class _ItemCallback:
-    def __init__(self, fn, parent):
-        self._fn = fn
-        self._parent = parent
-
-    def __call__(self, item):
-        return self._fn(self._parent, item)
-
-    def __str__(self):
-        return str(self._fn) + " with " + str(self._parent)
