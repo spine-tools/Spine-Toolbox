@@ -160,7 +160,7 @@ class EntityItem(MultiDBTreeItem):
     def __init__(self, *args, is_member=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._is_group = False
-        self.is_member = is_member
+        self._is_member = is_member
         self._entity_group_fetch_parent = FlexibleFetchParent(
             "entity_group",
             accepts_item=self._accepts_entity_group_item,
@@ -202,7 +202,7 @@ class EntityItem(MultiDBTreeItem):
     @property
     def display_data(self):
         byname = self.db_map_data_field(self.first_db_map, "byname", default="")
-        if self.is_member:
+        if self._is_member:
             return "member: " + DB_ITEM_SEPARATOR.join(byname)
         if self.parent_item.item_type == "entity":
             class_name = self.db_map_data_field(self.first_db_map, "class_name", default="")
@@ -239,6 +239,8 @@ class EntityItem(MultiDBTreeItem):
         if not super().is_valid():
             return False
         if self.parent_item.item_type == "entity_class":
+            return True
+        if self._is_member:
             return True
         return self.parent_item.display_data in self.element_name_list
 
@@ -278,7 +280,7 @@ class EntityItem(MultiDBTreeItem):
         self.append_children_by_id(db_map_member_ids, is_member=True)
         if not self._is_group:
             self._is_group = True
-            self.parent_item.reinsert_children([self.child_number()])
+            self.parent_item.reposition_child(self.child_number())
 
     def _handle_entity_group_items_removed(self, db_map_data):
         db_map_ids = {db_map: [x["member_id"] for x in data] for db_map, data in db_map_data.items()}
@@ -288,7 +290,7 @@ class EntityItem(MultiDBTreeItem):
                 if self.db_mngr.get_items_by_field(db_map, "entity_group", "group_id", self.db_map_id(db_map)):
                     return
             self._is_group = False
-            self.parent_item.reinsert_children([self.child_number()])
+            self.parent_item.reposition_child(self.child_number())
 
     def tear_down(self):
         super().tear_down()

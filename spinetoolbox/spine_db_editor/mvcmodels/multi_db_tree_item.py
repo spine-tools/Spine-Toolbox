@@ -411,15 +411,12 @@ class MultiDBTreeItem(TreeItem):
             return True
         return False
 
-    def reinsert_children(self, rows):
-        children = []
-        for row in sorted(rows, reverse=True):
-            child = self.child(row)
-            if not child:
-                continue
-            children.append(child)
-            self.remove_children(row, 1, tear_down=False)
-        self._insert_children_sorted(children)
+    def reposition_child(self, row):
+        child = self.child(row)
+        if not child:
+            return
+        self.remove_children(row, 1, tear_down=False)
+        self._insert_children_sorted([child])
 
     def clear_children(self):
         """Clears children list."""
