@@ -273,7 +273,7 @@ class SpineDBWorker(QObject):
         """Rollbacks session."""
         try:
             self._db_map.rollback_session()
-            self._db_mngr.undo_stack[self._db_map].setClean()
+            self._db_mngr.undo_stack[self._db_map].clear()
             self._db_mngr.receive_session_rolled_back({self._db_map})
         except SpineDBAPIError as err:
             self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
