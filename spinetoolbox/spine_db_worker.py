@@ -129,7 +129,7 @@ class SpineDBWorker(QObject):
         """
         self.register_fetch_parent(parent)
         if self._iterate_cache(parent):
-            # Something in cache
+            # Something fetched from cache
             return
         item_type = parent.fetch_item_type
         parent.set_fetched(item_type in self._db_map.cache.fetched_item_types)
@@ -155,25 +155,23 @@ class SpineDBWorker(QObject):
         for parent in self._parents_fetching.pop(item_type, ()):
             self._update_parent(parent)
 
-    def _is_fetch_complete(self, parent):
-        """Whether fetch is complete for given parent."""
+    def _is_there_more_available_from_cache(self, parent):
         items = self._db_map.cache.get(parent.fetch_item_type, ())
         index = parent.index
         if index is not None:
             if index.position(self._db_map) < len(items):
-                return False
+                return True
             parent_key = parent.key_for_index(self._db_map)
             index_items = index.get_items(parent_key, self._db_map)
-            return parent.position(self._db_map) >= len(index_items)
-        return parent.position(self._db_map) >= len(items)
+            return parent.position(self._db_map) < len(index_items)
+        return parent.position(self._db_map) < len(items)
 
     def _update_parent(self, parent):
         """Check if fetch is complete and react accordingly."""
-        if self._is_fetch_complete(parent):
-            parent.set_fetched(True)
-            parent.set_busy(False)
-        else:
+        if self._is_there_more_available_from_cache(parent):
             self._more_available.emit(parent)
+        else:
+            parent.set_busy(False)
 
     def fetch_all(self, fetch_item_types=None):
         self._db_map.fetch_all(fetch_item_types)
