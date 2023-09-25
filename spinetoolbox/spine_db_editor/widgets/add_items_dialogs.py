@@ -613,7 +613,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
     @Slot(str)
     def reset_entity_class_combo_box(self, database, relationship_class_key=None):
         self.db_map = self.keyed_db_maps[database]
-        self.entity_class_keys = list(self.db_map_ent_cls_lookup[self.db_map])
+        self.entity_class_keys = [i for i in self.db_map_ent_cls_lookup[self.db_map] if i[1]]
         self.ent_cls_combo_box.addItems([f"{name}" for name, _ in self.entity_class_keys])
         try:
             current_index = self.entity_class_keys.index(relationship_class_key)
