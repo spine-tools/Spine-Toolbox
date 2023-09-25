@@ -28,10 +28,10 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
         return "alternative"
 
     def empty_child(self):
-        return AlternativeItem()
+        return AlternativeItem(self._model)
 
     def _make_child(self, id_):
-        return AlternativeItem(id_)
+        return AlternativeItem(self._model, id_)
 
 
 class AlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):

@@ -21,7 +21,7 @@ from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
-from ...mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager, fetch_model
 
 
 class TestMetadataTableModel(unittest.TestCase):
@@ -38,8 +38,7 @@ class TestMetadataTableModel(unittest.TestCase):
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
         QApplication.processEvents()
         self._model = MetadataTableModel(self._db_mngr, [self._db_map], None)
-        if self._model.canFetchMore(QModelIndex()):
-            self._model.fetchMore(QModelIndex())
+        fetch_model(self._model)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -103,8 +102,7 @@ class TestMetadataTableModel(unittest.TestCase):
             try:
                 db_map_2 = self._db_mngr.get_db_map(url, logger, codename="2nd database", create=True)
                 self._model.set_db_maps([self._db_map, db_map_2])
-                if self._model.canFetchMore(None):
-                    self._model.fetchMore(None)
+                fetch_model(self._model)
                 index = self._model.index(1, Column.DB_MAP)
                 self.assertTrue(self._model.setData(index, "2nd database"))
                 index = self._model.index(1, Column.NAME)

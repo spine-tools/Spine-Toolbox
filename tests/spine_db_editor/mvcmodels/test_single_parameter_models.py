@@ -19,7 +19,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.single_models import (
     SingleParameterDefinitionModel,
     SingleParameterValueModel,
 )
-from tests.mock_helpers import q_object, TestSpineDBManager
+from tests.mock_helpers import q_object, TestSpineDBManager, fetch_model
 
 OBJECT_PARAMETER_VALUE_HEADER = [
     "entity_class_name",
@@ -100,8 +100,7 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
         with q_object(
             SingleParameterValueModel(OBJECT_PARAMETER_VALUE_HEADER, self._db_mngr, self._db_map, 1, True, False)
         ) as model:
-            if model.canFetchMore(None):
-                model.fetchMore(None)
+            fetch_model(model)
             model.add_rows([1])
             self.assertEqual(model.index(0, 0).data(DB_MAP_ROLE), self._db_map)
 

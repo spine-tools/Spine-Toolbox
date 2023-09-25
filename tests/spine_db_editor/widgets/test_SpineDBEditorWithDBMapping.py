@@ -20,7 +20,7 @@ import logging
 import sys
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from ...mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBEditorWithDBMapping(unittest.TestCase):

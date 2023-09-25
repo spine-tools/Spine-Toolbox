@@ -18,7 +18,6 @@ from unittest import mock
 from PySide6.QtCore import QModelIndex
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.fetch_parent import FlexibleFetchParent
 from spinetoolbox.ui_main import ToolboxUI
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -321,3 +320,9 @@ def model_data_to_dict(model, parent=QModelIndex()):
             row_data.append({index.data(): child_data} if child_data else index.data())
         rows.append(row_data)
     return rows
+
+
+def fetch_model(model):
+    while model.canFetchMore(QModelIndex()):
+        model.fetchMore(QModelIndex())
+        qApp.processEvents()

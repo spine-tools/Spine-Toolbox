@@ -48,6 +48,10 @@ class EntityTreeRootItem(MultiDBTreeItem):
         self._has_children_initially = True
 
     @property
+    def visible_children(self):
+        return [x for x in self.children if not x.is_hidden()]
+
+    @property
     def display_id(self):
         """See super class."""
         return "root"
@@ -135,6 +139,8 @@ class EntityClassItem(MultiDBTreeItem):
 
     def _polish_children(self, children):
         """See base class."""
+        if any(self.db_map_data_field(db_map, "dimension_id_list") for db_map in self.db_maps):
+            return
         db_map_entity_element_ids = {
             db_map: {
                 el_id

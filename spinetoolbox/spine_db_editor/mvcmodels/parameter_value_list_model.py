@@ -21,13 +21,8 @@ from .parameter_value_list_item import DBItem
 class ParameterValueListModel(TreeModelBase):
     """A model to display parameter_value_list data in a tree view."""
 
-    @staticmethod
-    def _make_db_item(db_map):
-        return DBItem(db_map)
-
-    @staticmethod
-    def _top_children():
-        return []
+    def _make_db_item(self, db_map):
+        return DBItem(self, db_map)
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 1."""

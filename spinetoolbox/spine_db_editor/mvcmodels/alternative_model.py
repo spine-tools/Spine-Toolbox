@@ -21,13 +21,8 @@ from . import mime_types
 class AlternativeModel(TreeModelBase):
     """A model to display alternatives in a tree view."""
 
-    @staticmethod
-    def _make_db_item(db_map):
-        return DBItem(db_map)
-
-    @staticmethod
-    def _top_children():
-        return []
+    def _make_db_item(self, db_map):
+        return DBItem(self, db_map)
 
     def mimeData(self, indexes):
         """Stores selected indexes into MIME data.

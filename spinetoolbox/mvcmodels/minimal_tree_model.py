@@ -18,10 +18,10 @@ from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
 class TreeItem:
     """A tree item that can fetch its children."""
 
-    def __init__(self, model=None):
+    def __init__(self, model):
         """
         Args:
-            model (MinimalTreeModel, optional): The model where the item belongs.
+            model (MinimalTreeModel): The model where the item belongs.
         """
         super().__init__()
         self._children = []
@@ -30,6 +30,7 @@ class TreeItem:
         self._fetched = False
         self._set_up_once = False
         self._has_children_initially = False
+        self._created_children = {}
 
     def set_has_children_initially(self, has_children_initially):
         self._has_children_initially = has_children_initially
@@ -43,11 +44,6 @@ class TreeItem:
     @property
     def model(self):
         return self._model
-
-    @property
-    def child_item_class(self):
-        """Returns the type of child items. Reimplement in subclasses to return something more meaningful."""
-        return TreeItem
 
     @property
     def children(self):
@@ -71,9 +67,6 @@ class TreeItem:
         if not isinstance(parent_item, TreeItem) and parent_item is not None:
             raise ValueError("Parent must be instance of TreeItem or None")
         self._parent_item = parent_item
-        if parent_item is not None:
-            self._model = parent_item.model
-            self._model.destroyed.connect(lambda obj=None: self.tear_down())
 
     def is_valid(self):
         """Tests if item is valid.
@@ -177,11 +170,11 @@ class TreeItem:
         """Do stuff after the item has been removed."""
 
     def tear_down_recursively(self):
-        for child in self.children:
+        for child in self._created_children.values():
             child.tear_down_recursively()
         self.tear_down()
 
-    def remove_children(self, position, count, tear_down=True):
+    def remove_children(self, position, count):
         """Removes count children starting from the given position.
 
         Args:
@@ -197,21 +190,11 @@ class TreeItem:
             return False
         if last >= self.child_count():
             last = self.child_count() - 1
-        children = self.children[first : last + 1]
         self.model.beginRemoveRows(self.index(), first, last)
-        for child in children:
-            child.parent_item = None
         del self.children[first : last + 1]
         self.model.endRemoveRows()
-        if tear_down:
-            for child in children:
-                child.tear_down_recursively()
         self._has_children_initially = False
         return True
-
-    def clear_children(self):
-        """Clear children list."""
-        self.children.clear()
 
     # pylint: disable=no-self-use
     def flags(self, column):

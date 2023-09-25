@@ -35,7 +35,7 @@ from spinedb_api import (
 )
 from spinetoolbox.spine_db_editor.mvcmodels.item_metadata_table_model import ItemMetadataTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
-from ...mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager, fetch_model
 
 
 class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
@@ -88,8 +88,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         QApplication.processEvents()
         self._db_map.fetch_all()
         self._model = ItemMetadataTableModel(self._db_mngr, [self._db_map], None)
-        if self._model.canFetchMore(None):
-            self._model.fetchMore(None)
+        fetch_model(self._model)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()

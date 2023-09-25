@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QModelIndex, QItemSelectionModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from .spine_db_editor_test_base import DBEditorTestBase
-from ...mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBEditor(DBEditorTestBase):

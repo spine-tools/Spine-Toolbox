@@ -214,5 +214,6 @@ class DBEditorTestBase(unittest.TestCase):
 
     def fetch_object_tree_model(self):
         for item in self.spine_db_editor.entity_tree_model.visit_all():
-            if item.can_fetch_more():
+            while item.can_fetch_more():
                 item.fetch_more()
+                qApp.processEvents()
