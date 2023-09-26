@@ -280,7 +280,9 @@ class EntityTreeView(ResizableTreeView):
             item.item_type == "entity" and not item.is_group and not item.element_name_list
         )
         self._manage_members_action.setEnabled(item.item_type == "entity" and item.is_group)
-        self._manage_elements_action.setEnabled(item.item_type in ("root", "entity_class"))
+        self._manage_elements_action.setEnabled(
+            item.item_type == "root" or (item.item_type == "entity_class" and bool(item.display_id[1]))
+        )
         read_only = item.item_type in ("root", "members")
         self._export_action.setEnabled(not read_only)
         self._edit_action.setEnabled(not read_only)
