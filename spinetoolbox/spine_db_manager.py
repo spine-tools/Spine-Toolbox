@@ -530,16 +530,53 @@ class SpineDBManager(QObject):
             *dirty_db_maps: dirty database maps to commit
             cookie (object, optional): a free form identifier which will be forwarded to ``SpineDBWorker.commit_session``
         """
-        failed_db_maps = list()
+        failed_db_maps = []
         for db_map in dirty_db_maps:
-            try:
-                worker = self._get_worker(db_map)
-            except KeyError:
-                continue
-            success = worker.commit_session(commit_msg, cookie)
+            success = self._do_commit_session(db_map, commit_msg, cookie)
             if not success:
                 failed_db_maps.append(db_map)
+                continue
         return failed_db_maps
+
+    def _do_commit_session(self, db_map, commit_msg, cookie=None):
+        """Commits session for given db.
+
+        Args:
+            db_map (DatabaseMapping): db map
+            commit_msg (str): commit message
+            cookie (Any): a cookie to include in receive_session_committed call
+
+        Returns:
+            bool
+        """
+        try:
+            info, refits = db_map.commit_session(commit_msg)
+            self.undo_stack[db_map].setClean()
+            if info:
+                info = "".join(f"- {x}\n" for x in info)
+                if (
+                    QMessageBox.question(
+                        self.parent(),
+                        "Your data has been refitted",
+                        f"Some of the data committed to the DB at '{db_map.db_url}' "
+                        "used an old format and needed to be refitted. "
+                        f"The following transformations were applied:\n\n{info}\n"
+                        "Do you want to view these changes in your current session too?\n\n"
+                        "WARNING: If you choose 'Yes', you won't be able to undo/redo your previous edits.",
+                    )
+                    == QMessageBox.StandardButton.Yes
+                ):
+                    identifier = self.get_command_identifier()
+                    for tablename, (items_to_add, items_to_update, ids_to_remove) in refits:
+                        self.remove_items({db_map: {tablename: ids_to_remove}}, identifier=identifier)
+                        self.update_items(tablename, {db_map: items_to_update}, identifier=identifier)
+                        self.add_items(tablename, {db_map: items_to_add}, identifier=identifier)
+                    self.undo_stack[db_map].clear()
+            self.receive_session_committed({db_map}, cookie)
+            return True
+        except SpineDBAPIError as err:
+            self.error_msg.emit({db_map: [err.msg]})
+            return False
 
     def notify_session_committed(self, cookie, *db_maps):
         """Notifies manager and listeners when a commit has taken place by a third party.
@@ -552,18 +589,26 @@ class SpineDBManager(QObject):
         self.receive_session_committed(set(db_maps), cookie)
 
     def rollback_session(self, *dirty_db_maps):
-        """
-        Rolls back the current session.
+        """Rolls back the current session.
 
         Args:
             *dirty_db_maps: dirty database maps to commit
         """
         for db_map in dirty_db_maps:
-            try:
-                worker = self._get_worker(db_map)
-            except KeyError:
-                continue
-            worker.rollback_session()
+            self._do_rollback_session(db_map)
+
+    def _do_rollback_session(self, db_map):
+        """Rolls back session for given db.
+
+        Args:
+            db_map (DatabaseMapping): db map
+        """
+        try:
+            db_map.rollback_session()
+            self.undo_stack[db_map].clear()
+            self.receive_session_rolled_back({db_map})
+        except SpineDBAPIError as err:
+            self.error_msg.emit({db_map: [err.msg]})
 
     def entity_class_renderer(self, db_map, entity_class_id, for_group=False, color=None):
         """Returns an icon renderer for a given entity class.

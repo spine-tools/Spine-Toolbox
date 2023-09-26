@@ -699,9 +699,13 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         """Collect info from dialog and try to add items."""
         keys_to_remove = set(self.entity_ids) - {tuple(elements) for elements in self.existing_items_model._main_data}
         to_remove = [self.entity_ids[key] for key in keys_to_remove]
-        self.db_mngr.remove_items({self.db_map: {"entity": to_remove}})
-        to_add = [[self.class_name, element_name_list] for element_name_list in self.new_items_model._main_data]
-        self.db_mngr.import_data({self.db_map: {"entities": to_add}}, command_text="Add entities")
+        to_add = [
+            {"class_name": self.class_name, "element_name_list": tuple(element_name_list)}
+            for element_name_list in self.new_items_model._main_data
+        ]
+        identifier = self.db_mngr.get_command_identifier()
+        self.db_mngr.remove_items({self.db_map: {"entity": to_remove}}, identifier=identifier)
+        self.db_mngr.add_items("entity", {self.db_map: to_add}, identifier=identifier)
         super().accept()
 
 

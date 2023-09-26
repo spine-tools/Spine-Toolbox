@@ -244,29 +244,6 @@ class SpineDBWorker(QObject):
         self._db_mngr.items_added.emit(item_type, {self._db_map: items})
         return items
 
-    def commit_session(self, commit_msg, cookie=None):
-        """Commits session.
-
-        Args:
-            commit_msg (str): commit message
-            cookie (Any): a cookie to include in receive_session_committed call
-        """
-        try:
-            self._db_map.commit_session(commit_msg)
-            self._db_mngr.undo_stack[self._db_map].setClean()
-            self._db_mngr.receive_session_committed({self._db_map}, cookie)
-        except SpineDBAPIError as err:
-            self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
-
-    def rollback_session(self):
-        """Rollbacks session."""
-        try:
-            self._db_map.rollback_session()
-            self._db_mngr.undo_stack[self._db_map].clear()
-            self._db_mngr.receive_session_rolled_back({self._db_map})
-        except SpineDBAPIError as err:
-            self._db_mngr.error_msg.emit({self._db_map: [err.msg]})
-
     def refresh_session(self):
         """Refreshes session."""
         for parents in self._parents_by_type.values():

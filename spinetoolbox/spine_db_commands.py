@@ -44,15 +44,17 @@ class AgedUndoCommand(QUndoCommand):
         self.merged = False
 
     def id(self):
+        """override"""
         return self._id
 
     def ours(self):
-        return [self] + self._buddies
+        yield self
+        yield from self._buddies
 
     def mergeWith(self, command):
         if not isinstance(command, AgedUndoCommand):
             return False
-        self._buddies += command.ours()
+        self._buddies += [x for x in command.ours() if not x.isObsolete()]
         command.merged = True
         return True
 
