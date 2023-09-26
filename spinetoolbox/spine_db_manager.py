@@ -550,7 +550,7 @@ class SpineDBManager(QObject):
             bool
         """
         try:
-            info, refits = db_map.commit_session(commit_msg)
+            transformations, info = db_map.commit_session(commit_msg)
             self.undo_stack[db_map].setClean()
             if info:
                 info = "".join(f"- {x}\n" for x in info)
@@ -567,7 +567,7 @@ class SpineDBManager(QObject):
                     == QMessageBox.StandardButton.Yes
                 ):
                     identifier = self.get_command_identifier()
-                    for tablename, (items_to_add, items_to_update, ids_to_remove) in refits:
+                    for tablename, (items_to_add, items_to_update, ids_to_remove) in transformations:
                         self.remove_items({db_map: {tablename: ids_to_remove}}, identifier=identifier)
                         self.update_items(tablename, {db_map: items_to_update}, identifier=identifier)
                         self.add_items(tablename, {db_map: items_to_add}, identifier=identifier)
