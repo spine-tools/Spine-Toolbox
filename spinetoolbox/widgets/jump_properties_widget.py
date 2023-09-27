@@ -57,25 +57,28 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
     def _load_condition_into_ui(self, condition):
         self._track_changes = False
         self._ui.pushButton_save_script.setEnabled(False)
-        self._ui.condition_script_edit.setEnabled(condition["type"] == "python-script")
+        self._ui.condition_script_edit.set_enabled_with_greyed(condition["type"] == "python-script")
         self._ui.comboBox_tool_spec.setEnabled(condition["type"] == "tool-specification")
         self._ui.toolButton_edit_tool_spec.setEnabled(condition["type"] == "tool-specification")
-        if not condition["type"] == "python-script":
-            self._ui.condition_script_edit.clear()
+        self._ui.condition_script_edit.setPlainText(condition["script"])
+        self._ui.comboBox_tool_spec.setCurrentText(condition["specification"])
         if condition["type"] == "python-script":
             self._ui.radioButton_py_script.setChecked(True)
-            if not condition["script"] or condition["script"] != self._ui.condition_script_edit.toPlainText():
-                self._ui.condition_script_edit.setPlainText(condition["script"])
         elif condition["type"] == "tool-specification":
             self._ui.radioButton_tool_spec.setChecked(True)
-            self._ui.comboBox_tool_spec.setCurrentText(condition["specification"])
         self._track_changes = True
 
     def _make_condition_from_ui(self):
+        condition = {
+            "script": self._ui.condition_script_edit.toPlainText(),
+            "specification": self._ui.comboBox_tool_spec.currentText(),
+        }
         if self._ui.radioButton_py_script.isChecked():
-            return {"type": "python-script", "script": self._ui.condition_script_edit.toPlainText()}
+            condition["type"] = "python-script"
+            return condition
         if self._ui.radioButton_tool_spec.isChecked():
-            return {"type": "tool-specification", "specification": self._ui.comboBox_tool_spec.currentText()}
+            condition["type"] = "tool-specification"
+            return condition
         return {}
 
     def _change_condition(self):

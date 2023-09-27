@@ -35,9 +35,9 @@ class CodeTextEdit(QPlainTextEdit):
         self._right_margin = 16
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         self.setFont(font)
-        foreground_color = self._style.styles[Token]
+        self.foreground_color = self._style.styles[Token]
         self.setStyleSheet(
-            f"QPlainTextEdit {{background-color: {self._style.background_color}; color: {foreground_color};}}"
+            f"QPlainTextEdit {{background-color: {self._style.background_color}; color: {self.foreground_color};}}"
         )
         self.blockCountChanged.connect(self._update_line_number_area_width)
         self.updateRequest.connect(self._update_line_number_area)
@@ -108,6 +108,14 @@ class CodeTextEdit(QPlainTextEdit):
         bottom = max(old_bottom, new_bottom)
         self._line_number_area.update(0, top, self._line_number_area.width(), bottom - top)
         self._cursor_block = new_cursor_block
+
+    def set_enabled_with_greyed(self, enabled):
+        super().setEnabled(enabled)
+        if enabled:
+            x = f"QPlainTextEdit {{background-color: {self._style.background_color}; color: {self.foreground_color};}}"
+        else:
+            x = f"QPlainTextEdit {{background-color: #737373; color: {self.foreground_color};}}"
+        self.setStyleSheet(x)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
