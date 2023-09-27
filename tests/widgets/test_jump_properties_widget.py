@@ -80,7 +80,7 @@ class TestJumpPropertiesWidget(unittest.TestCase):
                 "bottom",
                 "dc 1",
                 "bottom",
-                {"type": "python-script", "script": "exit(23)"},
+                {"type": "python-script", "script": "exit(23)", "specification": ""},
                 toolbox=self._toolbox,
             )
         )
