@@ -110,6 +110,10 @@ Choose the settings on how Julia Tools are executed.
 
 - **Select Julia kernel... drop-down menu** Select the kernel you want to launch in Jupyter Console.
 
+.. note:: The Julia settings above are **the default settings for new Julia Tool Specs**. You can select a
+  specific Julia executable & project or Julia kernel for each Tool Spec separately using the
+  **Tool Specification Editor**.
+
 - **Make Julia Kernel** Clicking this button makes a new kernel based on the selected *Julia executable*, and *Julia
   project*. The progress of the operation is shown in another dialog. Installing a Julia kernel requires the **IJulia**
   package which will be installed to the selected *Julia project*. After **IJulia** has been installed, the kernel is
@@ -119,9 +123,6 @@ Choose the settings on how Julia Tools are executed.
 
 - **Add/Update SpineOpt** Installs the latest compatible **SpineOpt** to the selected Julia project. If the selected
   *Julia project* already has SpineOpt, it is upgraded if there is a new version available.
-
-.. note:: These Julia settings are *global* application settings. All Julia Tools are executed with the settings
-  selected here.
 
 Settings in the **Python** group:
 
@@ -137,13 +138,14 @@ Choose the settings on how Python Tools are executed.
 
 - **Select Python kernel... drop-down menu** Select the kernel you want to launch in Jupyter Console.
 
+.. note:: The Python settings above are **the default settings for new Python Tool Specs**. You can select a
+  specific Python executable or Python kernel for each Python Tool Spec separately using the
+  **Tool Specification Editor**.
+
 - **Make Python Kernel** clicking this button makes a new kernel based on the selected *Python executable*. The
   progress of the operation is shown in another dialog. Installing a Python kernel (actually IPython kernel)
   requires the **ipykernel** package which will be installed to the selected *Python executables*. After
   **ipykernel** has been installed, the kernel is installed. This process can take a couple of minutes to finish.
-
-.. note:: These Python settings are just the default settings *for new Python Tool Specs*. You can select a
-  specific Python kernel for each Python Tool Spec separately using the **Tool Specification Editor**.
 
 Settings in the **Conda** group:
 
