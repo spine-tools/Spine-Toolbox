@@ -13,16 +13,11 @@
 The FetchParent and FlexibleFetchParent classes.
 """
 
-from PySide6.QtCore import QTimer, Signal, QObject
+from PySide6.QtCore import QTimer, Signal, QObject, Qt
 from .helpers import busy_effect
 
 
 class FetchParent(QObject):
-    """
-    Attrs:
-        fetch_token (int or None)
-        None means we don't know yet. Set to a boolean value whenever we find out.
-    """
 
     _changes_pending = Signal()
 
@@ -36,7 +31,10 @@ class FetchParent(QObject):
                 If None, then no limit is imposed and the parent should fetch the entire contents of the DB.
         """
         super().__init__()
-        self._timer = QTimer()
+        self._version = 0
+        self._restore_item_callbacks = {}
+        self._update_item_callbacks = {}
+        self._remove_item_callbacks = {}
         self._items_to_add = {}
         self._items_to_update = {}
         self._items_to_remove = {}
@@ -44,7 +42,7 @@ class FetchParent(QObject):
         self._fetched = False
         self._busy = False
         self._position = {}
-        self.fetch_token = None
+        self._timer = QTimer()
         self._timer.setSingleShot(True)
         self._timer.setInterval(0)
         self._timer.timeout.connect(self._apply_pending_changes)
@@ -55,18 +53,21 @@ class FetchParent(QObject):
             self._owner.destroyed.connect(lambda obj=None: self.set_obsolete(True))
         self.chunk_size = chunk_size
 
+    def apply_changes_immediately(self):
+        self._changes_pending.connect(self._apply_pending_changes, Qt.UniqueConnection)
+
     @property
     def index(self):
         return self._index
 
-    def reset(self, fetch_token):
-        """Resets fetch parent as if nothing was ever fetched.
-
-        Args:
-            fetch_token (object): current fetch token
-        """
+    def reset(self):
+        """Resets fetch parent as if nothing was ever fetched."""
         if self.is_obsolete:
             return
+        self._version += 1
+        self._restore_item_callbacks.clear()
+        self._update_item_callbacks.clear()
+        self._remove_item_callbacks.clear()
         self._timer.stop()
         self._items_to_add.clear()
         self._items_to_update.clear()
@@ -76,7 +77,6 @@ class FetchParent(QObject):
         self._position.clear()
         if self.index is not None:
             self.index.reset()
-        self.fetch_token = fetch_token
 
     def position(self, db_map):
         return self._position.setdefault(db_map, 0)
@@ -99,17 +99,52 @@ class FetchParent(QObject):
             self.handle_items_removed({db_map: data})
         QTimer.singleShot(0, lambda: self.set_busy(False))
 
-    def add_item(self, item, db_map):
+    def bind_item(self, item, db_map):
+        # NOTE: If `item` is in the process of calling callbacks in another thread,
+        # the ones added below won't be called.
+        # So, it is important to call this function before self.add_item()
+        item.restore_callbacks.add(self._make_restore_item_callback(db_map))
+        item.update_callbacks.add(self._make_update_item_callback(db_map))
+        item.remove_callbacks.add(self._make_remove_item_callback(db_map))
+
+    def _make_restore_item_callback(self, db_map):
+        if db_map not in self._restore_item_callbacks:
+            self._restore_item_callbacks[db_map] = _ItemCallback(self.add_item, db_map, self._version)
+        return self._restore_item_callbacks[db_map]
+
+    def _make_update_item_callback(self, db_map):
+        if db_map not in self._update_item_callbacks:
+            self._update_item_callbacks[db_map] = _ItemCallback(self.update_item, db_map, self._version)
+        return self._update_item_callbacks[db_map]
+
+    def _make_remove_item_callback(self, db_map):
+        if db_map not in self._remove_item_callbacks:
+            self._remove_item_callbacks[db_map] = _ItemCallback(self.remove_item, db_map, self._version)
+        return self._remove_item_callbacks[db_map]
+
+    def _is_valid(self, version):
+        return (version is None or version == self._version) and not self.is_obsolete
+
+    def add_item(self, item, db_map, version=None):
+        if not self._is_valid(version):
+            return False
         self._items_to_add.setdefault(db_map, []).append(item)
         self._changes_pending.emit()
+        return True
 
-    def update_item(self, item, db_map):
+    def update_item(self, item, db_map, version=None):
+        if not self._is_valid(version):
+            return False
         self._items_to_update.setdefault(db_map, []).append(item)
         self._changes_pending.emit()
+        return True
 
-    def remove_item(self, item, db_map):
+    def remove_item(self, item, db_map, version=None):
+        if not self._is_valid(version):
+            return False
         self._items_to_remove.setdefault(db_map, []).append(item)
         self._changes_pending.emit()
+        return True
 
     @property
     def fetch_item_type(self):
@@ -332,3 +367,15 @@ class FetchIndex(dict):
 
     def get_items(self, key, db_map):
         return self.get(db_map, {}).get(key, [])
+
+
+class _ItemCallback:
+    def __init__(self, fn, *args):
+        self._fn = fn
+        self._args = args
+
+    def __call__(self, item):
+        return self._fn(item, *self._args)
+
+    def __str__(self):
+        return str(self._fn) + " with " + str(self._args)

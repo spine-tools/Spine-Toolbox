@@ -187,8 +187,9 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
 
 def _fetch_all_recursively(model):
     for item in model.visit_all():
-        if item.can_fetch_more():
+        while item.can_fetch_more():
             item.fetch_more()
+            qApp.processEvents()
 
 
 if __name__ == '__main__':

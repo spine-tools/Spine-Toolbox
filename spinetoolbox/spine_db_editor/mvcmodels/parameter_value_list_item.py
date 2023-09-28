@@ -41,20 +41,16 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
         return "parameter_value_list"
 
     def empty_child(self):
-        return ListItem()
+        return ListItem(self._model)
 
     def _make_child(self, id_):
-        return ListItem(id_)
+        return ListItem(self._model, id_)
 
 
 class ListItem(
     GrayIfLastMixin, EditableMixin, EmptyChildMixin, SortChildrenMixin, BoldTextMixin, FetchMoreMixin, LeafItem
 ):
     """A list item."""
-
-    def __init__(self, identifier=None, name=None):
-        super().__init__(identifier=identifier)
-        self._name = name
 
     @property
     def item_type(self):
@@ -65,19 +61,19 @@ class ListItem(
         return "list_value"
 
     def _make_item_data(self):
-        return {"name": "Type new list name here..." if self._name is None else self._name}
+        return {"name": "Type new list name here..."}
 
     def _do_set_up(self):
-        if not self.id and not self._name:
+        if not self.id:
             return
         super()._do_set_up()
 
     # pylint: disable=no-self-use
     def empty_child(self):
-        return ValueItem()
+        return ValueItem(self._model)
 
     def _make_child(self, id_):
-        return ValueItem(id_)
+        return ValueItem(self._model, id_)
 
     def accepts_item(self, item, db_map):
         return item["parameter_value_list_id"] == self.id

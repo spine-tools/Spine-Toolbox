@@ -799,6 +799,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         value_index = model.index(0, 0, list_name_index)
         view.selectionModel().setCurrentIndex(value_index, QItemSelectionModel.ClearAndSelect)
         view.remove_selected()
+        qApp.processEvents()
         root_index = model.index(0, 0)
         self.assertEqual(model.rowCount(root_index), 2)
         list_name_index = model.index(0, 0, root_index)

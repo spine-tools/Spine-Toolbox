@@ -170,6 +170,12 @@ class FetchMoreMixin:
     def _make_child(self, id_):
         raise NotImplementedError()
 
+    def _do_make_child(self, id_):
+        child = self._created_children.get(id_)
+        if child is None:
+            child = self._created_children[id_] = self._make_child(id_)
+        return child
+
     def accepts_item(self, item, db_map):
         return True
 
@@ -188,8 +194,8 @@ class FetchMoreMixin:
                 continue
             ids = ids_committed if item.get("commit_id") is not None else ids_uncommitted
             ids.append(item["id"])
-        children_committed = [self._make_child(id_) for id_ in ids_committed]
-        children_uncommitted = [self._make_child(id_) for id_ in ids_uncommitted]
+        children_committed = [self._do_make_child(id_) for id_ in ids_committed]
+        children_uncommitted = [self._do_make_child(id_) for id_ in ids_uncommitted]
         self.insert_children_sorted(children_committed)
         self.insert_children(len(self.non_empty_children), children_uncommitted)
 
@@ -219,14 +225,14 @@ class FetchMoreMixin:
 class StandardDBItem(SortChildrenMixin, StandardTreeItem):
     """An item representing a db."""
 
-    def __init__(self, db_map):
+    def __init__(self, model, db_map):
         """Init class.
 
-        Args
-            db_mngr (SpineDBManager)
-            db_map (DiffDatabaseMapping)
+        Args:
+            model (MinimalTreeModel)
+            db_map (DatabaseMapping)
         """
-        super().__init__()
+        super().__init__(model)
         self.db_map = db_map
 
     @property
@@ -243,30 +249,14 @@ class StandardDBItem(SortChildrenMixin, StandardTreeItem):
             return self.db_map.codename
 
 
-class RootItem(SortChildrenMixin, BoldTextMixin, FetchMoreMixin, StandardTreeItem):
-    """A root item."""
-
-    @property
-    def item_type(self):
-        raise NotImplementedError
-
-    @property
-    def db_map(self):
-        return self.parent_item.db_map
-
-
-class EmptyChildRootItem(EmptyChildMixin, RootItem):
-    def empty_child(self):
-        raise NotImplementedError
-
-
 class LeafItem(StandardTreeItem):
-    def __init__(self, identifier=None):
+    def __init__(self, model, identifier=None):
         """
         Args:
+            model (MinimalTreeModel)
             identifier (int, optional): item's database id
         """
-        super().__init__()
+        super().__init__(model)
         self._id = identifier
 
     def _make_item_data(self):

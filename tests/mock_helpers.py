@@ -18,7 +18,6 @@ from unittest import mock
 from PySide6.QtCore import QModelIndex
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.fetch_parent import FlexibleFetchParent
 from spinetoolbox.ui_main import ToolboxUI
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -286,43 +285,12 @@ class MockInstantQProcess(mock.Mock):
 
 
 class TestSpineDBManager(SpineDBManager):
-    # FIXME: Needed?
-    def fetch_all(self, db_map):
-        worker = self._get_worker(db_map)
-        for item_type in db_map.ITEM_TYPES:
-            parent = FlexibleFetchParent(item_type)
-            if worker.can_fetch_more(parent):
-                worker.fetch_more(parent)
-            qApp.processEvents()
-
-    def get_db_map(self, *args, **kwargs):
-        with mock.patch("spinetoolbox.spine_db_worker.QtBasedThreadPoolExecutor") as mock_executor:
-            mock_executor.return_value = _MockExecutor()
-            return super().get_db_map(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, synchronous=True)
 
     def can_fetch_more(self, db_map, parent):
-        parent.add_item = lambda item, db_map: parent.handle_items_added({db_map: [item]})
-        parent.update_item = lambda item, db_map: parent.handle_items_updated({db_map: [item]})
-        parent.remove_item = lambda item, db_map: parent.handle_items_removed({db_map: [item]})
+        parent.apply_changes_immediately()
         return super().can_fetch_more(db_map, parent)
-
-
-class _MockExecutor:
-    class _MockFuture:
-        def __init__(self, result):
-            self._result = result
-
-        def result(self):
-            return self._result
-
-        def add_done_callback(self, callback):
-            callback(self)
-
-    def submit(self, fn, *args, **kwargs):
-        return self._MockFuture(result=fn(*args, **kwargs))
-
-    def shutdown(self):
-        pass
 
 
 @contextmanager
@@ -352,3 +320,9 @@ def model_data_to_dict(model, parent=QModelIndex()):
             row_data.append({index.data(): child_data} if child_data else index.data())
         rows.append(row_data)
     return rows
+
+
+def fetch_model(model):
+    while model.canFetchMore(QModelIndex()):
+        model.fetchMore(QModelIndex())
+        qApp.processEvents()

@@ -22,13 +22,8 @@ from . import mime_types
 class ScenarioModel(TreeModelBase):
     """A model to display scenarios in a tree view."""
 
-    @staticmethod
-    def _make_db_item(db_map):
-        return ScenarioDBItem(db_map)
-
-    @staticmethod
-    def _top_children():
-        return []
+    def _make_db_item(self, db_map):
+        return ScenarioDBItem(self, db_map)
 
     def supportedDropActions(self):
         return Qt.DropAction.CopyAction | Qt.DropAction.MoveAction

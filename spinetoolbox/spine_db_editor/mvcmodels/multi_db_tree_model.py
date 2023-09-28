@@ -54,6 +54,7 @@ class MultiDBTreeModel(MinimalTreeModel):
         """Builds tree."""
         self.beginResetModel()
         self._invisible_root_item = TreeItem(self)
+        self.destroyed.connect(lambda obj=None: self._invisible_root_item.tear_down_recursively())
         self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
         self._invisible_root_item.append_children([self._root_item])
         self.endResetModel()

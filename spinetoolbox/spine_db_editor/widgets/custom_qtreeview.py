@@ -92,9 +92,6 @@ class EntityTreeView(ResizableTreeView):
         self._add_entity_group_action = self._menu.addAction(
             self._cube_plus_icon, "Add entity group", self.add_entity_group
         )
-        self._duplicate_entity_action = self._menu.addAction(
-            self._cube_plus_icon, "Duplicate entity", self.duplicate_entity
-        )
         self._manage_elements_action = self._menu.addAction(
             self._cubes_pen_icon, "Manage elements", self.manage_elements
         )
@@ -112,6 +109,9 @@ class EntityTreeView(ResizableTreeView):
         self._menu.addSeparator()
         self._edit_action = self._menu.addAction(self._cube_pen_icon, "Edit...", self.edit_selected)
         self._remove_action = self._menu.addAction(self._cube_minus_icon, "Remove...", self.remove_selected)
+        self._duplicate_entity_action = self._menu.addAction(
+            self._cube_plus_icon, "Duplicate entity", self.duplicate_entity
+        )
         self._menu.addSeparator()
         self._export_action = self._menu.addAction(
             QIcon(":/icons/menu_icons/database-export.svg"), "Export", self.export_selected
@@ -280,7 +280,9 @@ class EntityTreeView(ResizableTreeView):
             item.item_type == "entity" and not item.is_group and not item.element_name_list
         )
         self._manage_members_action.setEnabled(item.item_type == "entity" and item.is_group)
-        self._manage_elements_action.setEnabled(item.item_type in ("root", "entity_class"))
+        self._manage_elements_action.setEnabled(
+            item.item_type == "root" or (item.item_type == "entity_class" and bool(item.display_id[1]))
+        )
         read_only = item.item_type in ("root", "members")
         self._export_action.setEnabled(not read_only)
         self._edit_action.setEnabled(not read_only)

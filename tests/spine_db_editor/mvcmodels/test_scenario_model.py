@@ -34,8 +34,9 @@ class _TestBase(unittest.TestCase):
     @staticmethod
     def _fetch_recursively(model):
         for item in model.visit_all():
-            if item.can_fetch_more():
+            while item.can_fetch_more():
                 item.fetch_more()
+                qApp.processEvents()
 
 
 class TestScenarioModel(_TestBase):

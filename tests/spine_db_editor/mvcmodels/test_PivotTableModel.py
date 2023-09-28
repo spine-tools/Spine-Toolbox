@@ -15,9 +15,10 @@ Unit tests for :class:`ParameterValuePivotTableModel` module.
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QModelIndex
 from spinedb_api import Map
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from ...mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager, fetch_model
 
 
 class TestParameterValuePivotTableModel(unittest.TestCase):
@@ -46,8 +47,7 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         }
         self._db_mngr.import_data({db_map: data})
         object_class_index = self._editor.entity_tree_model.index(0, 0)
-        if self._editor.entity_tree_model.canFetchMore(object_class_index):
-            self._editor.entity_tree_model.fetchMore(object_class_index)
+        fetch_model(self._editor.entity_tree_model)
         index = self._editor.entity_tree_model.index(0, 0, object_class_index)
         self._editor._update_class_attributes(index)
         with patch.object(self._editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
@@ -131,8 +131,7 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
         }
         self._db_mngr.import_data({db_map: data})
         object_class_index = self._editor.entity_tree_model.index(0, 0)
-        if self._editor.entity_tree_model.canFetchMore(object_class_index):
-            self._editor.entity_tree_model.fetchMore(object_class_index)
+        fetch_model(self._editor.entity_tree_model)
         index = self._editor.entity_tree_model.index(0, 0, object_class_index)
         for action in self._editor.pivot_action_group.actions():
             if action.text() == self._editor._INDEX_EXPANSION:

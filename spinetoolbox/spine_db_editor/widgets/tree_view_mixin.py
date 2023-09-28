@@ -120,6 +120,8 @@ class TreeViewMixin:
         dialog.show()
 
     def show_manage_elements_form(self, parent_item):
+        if not parent_item.display_id[1]:  # Don't show for 0-dimensional entity classes
+            return
         dialog = ManageElementsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 

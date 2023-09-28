@@ -37,10 +37,10 @@ class ScenarioDBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
         return "scenario"
 
     def empty_child(self):
-        return ScenarioItem()
+        return ScenarioItem(self._model)
 
     def _make_child(self, id_):
-        return ScenarioItem(id_)
+        return ScenarioItem(self._model, id_)
 
 
 class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMixin, BoldTextMixin, LeafItem):
@@ -93,7 +93,7 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
         curr_alt_count = len(self.non_empty_children)
         if alt_count > curr_alt_count:
             added_count = alt_count - curr_alt_count
-            children = [ScenarioAlternativeItem() for _ in range(added_count)]
+            children = [ScenarioAlternativeItem(self._model) for _ in range(added_count)]
             self.insert_children(curr_alt_count, children)
         elif curr_alt_count > alt_count:
             removed_count = curr_alt_count - alt_count
@@ -117,7 +117,7 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
 
     def empty_child(self):
         """See base class."""
-        return ScenarioAlternativeItem()
+        return ScenarioAlternativeItem(self._model)
 
     def _make_child(self, id_):
         """Not needed - we don't quite add children here, but rather update them in update_alternative_id_list."""

@@ -20,7 +20,7 @@ from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, AddEntitiesDialog
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.widgets.custom_editors import SearchBarEditor
-from ...mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager
 
 
 class EditorDelegateMocking:

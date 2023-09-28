@@ -29,7 +29,7 @@ class MultiDBTreeItem(TreeItem):
     visual_key = ["name"]
     _fetch_index = None
 
-    def __init__(self, model=None, db_map_ids=None):
+    def __init__(self, model, db_map_ids=None):
         """
         Args:
             model (MinimalTreeModel, optional): item's model
@@ -51,15 +51,9 @@ class MultiDBTreeItem(TreeItem):
             owner=self,
         )
 
-    def _key_for_index(self, db_map):
-        return None
-
     @property
     def visible_children(self):
-        return [x for x in self.children if not x.is_hidden()]
-
-    def is_hidden(self):
-        return False
+        return self.children
 
     def row_count(self):
         return len(self.visible_children)
@@ -100,8 +94,8 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def child_item_class(self):
-        """Returns the type of child items. Reimplement in subclasses to return something more meaningful."""
-        return MultiDBTreeItem
+        """Returns the type of child items."""
+        raise NotImplementedError()
 
     @property
     def display_id(self):
@@ -189,7 +183,7 @@ class MultiDBTreeItem(TreeItem):
         id_ = self.take_db_map(db_map)
         if id_ is None:
             return None
-        other = type(self)(model=self.model, db_map_ids={db_map: id_})
+        other = self.parent_item.make_or_restore_child({db_map: id_})
         other_children = []
         for child in self.children:
             other_child = child.deep_take_db_map(db_map)
@@ -230,11 +224,42 @@ class MultiDBTreeItem(TreeItem):
         Returns:
             list of MultiDBTreeItem: new children
         """
-        return [self.child_item_class(self.model, {db_map: id_}, **kwargs) for id_ in children_ids]
+        return [self.make_or_restore_child(db_map, id_, **kwargs) for id_ in children_ids]
+
+    def make_or_restore_child(self, db_map, id_, **kwargs):
+        """Makes or restores a child if one was ever made using given db_map and id.
+        The purpose of restoring is to keep using the same FetchParent,
+        which is useful in case the user undoes a series of removal operations
+        that would add items in cascade to the tree.
+
+        Args:
+            db_map (DatabaseMapping)
+            id (int)
+
+        Returns:
+            MultiDBTreemItem
+        """
+        db_map_ids = {db_map: id_}
+        key = (db_map, id_)
+        child = self._created_children.get(key)
+        if child is not None:
+            child.restore(db_map_ids, **kwargs)
+            return child
+        child = self._created_children[key] = self._make_child(db_map_ids, **kwargs)
+        return child
+
+    def restore(self, db_map_ids, **kwargs):
+        self._db_map_ids.update(db_map_ids)
+
+    def _make_child(self, db_map_ids, **kwargs):
+        return self.child_item_class(self.model, db_map_ids, **kwargs)
 
     def _merge_children(self, new_children):
         """Merges new children into this item. Ensures that each child has a valid display id afterwards."""
         if not new_children:
+            return
+        if len(self._db_map_ids) == 1:
+            self._insert_children_sorted(new_children)
             return
         existing_children = {child.display_id: child for child in self.children}
         unmerged = []
@@ -285,6 +310,9 @@ class MultiDBTreeItem(TreeItem):
     def fetch_more_if_possible(self):
         if self.can_fetch_more():
             self.fetch_more()
+
+    def _key_for_index(self, db_map):
+        return None
 
     def accepts_item(self, item, db_map):
         return True
@@ -375,7 +403,7 @@ class MultiDBTreeItem(TreeItem):
             if child.display_id in display_ids[:row] + display_ids[row + 1 :]:
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
-                self.remove_children(row, 1, tear_down=False)
+                self.remove_children(row, 1)
                 display_ids.pop(row)
                 new_children.append(child)
         self.deep_refresh_children()
@@ -404,27 +432,19 @@ class MultiDBTreeItem(TreeItem):
             child.register_fetch_parent()
         return True
 
-    def remove_children(self, position, count, tear_down=True):
+    def remove_children(self, position, count):
         """Removes count children starting from the given position."""
-        if super().remove_children(position, count, tear_down=tear_down):
+        if super().remove_children(position, count):
             self.refresh_child_map()
             return True
         return False
 
-    def reinsert_children(self, rows):
-        children = []
-        for row in sorted(rows, reverse=True):
-            child = self.child(row)
-            if not child:
-                continue
-            children.append(child)
-            self.remove_children(row, 1, tear_down=False)
-        self._insert_children_sorted(children)
-
-    def clear_children(self):
-        """Clears children list."""
-        super().clear_children()
-        self._child_map.clear()
+    def reposition_child(self, row):
+        child = self.child(row)
+        if not child:
+            return
+        self.remove_children(row, 1)
+        self._insert_children_sorted([child])
 
     def find_row(self, db_map, id_):
         return self._child_map.get(db_map, {}).get(id_, -1)

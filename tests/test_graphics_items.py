@@ -182,7 +182,7 @@ class TestLink(unittest.TestCase):
         )
         self._link.connection.refresh_resource_filter_model()
         filter_model = self._link.connection.resource_filter_model
-        self.assertEqual(filter_model.rowCount(), 2)
+        self.assertEqual(filter_model.rowCount(), 1)
         self.assertEqual(filter_model.columnCount(), 1)
         index = filter_model.index(0, 0)
         self.assertEqual(index.data(), "my_database")

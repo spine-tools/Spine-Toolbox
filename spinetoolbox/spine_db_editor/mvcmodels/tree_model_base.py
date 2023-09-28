@@ -48,18 +48,13 @@ class TreeModelBase(MinimalTreeModel):
         """Builds tree."""
         self.beginResetModel()
         self._invisible_root_item = StandardTreeItem(self)
+        self.destroyed.connect(lambda obj=None: self._invisible_root_item.tear_down_recursively())
         self.endResetModel()
         for db_map in self.db_maps:
             db_item = self._make_db_item(db_map)
             self._invisible_root_item.append_children([db_item])
-            db_item.append_children(self._top_children())
 
-    @staticmethod
-    def _make_db_item(db_map):
-        raise NotImplementedError()
-
-    @staticmethod
-    def _top_children():
+    def _make_db_item(self, db_map):
         raise NotImplementedError()
 
     @staticmethod

@@ -130,7 +130,7 @@ class ItemMetadataTableModel(MetadataTableModelBase):
 
     def _reset_fetch_parents(self):
         for parent in self._fetch_parents():
-            parent.reset(None)
+            parent.reset()
         if self.canFetchMore(None):
             self.fetchMore(None)
 

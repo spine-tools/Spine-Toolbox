@@ -20,7 +20,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundParameterValueModel,
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from ...mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager, fetch_model
 
 
 class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
@@ -65,8 +65,7 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
     def test_data_for_single_parameter_definition(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
-        if model.canFetchMore(None):
-            model.fetchMore(None)
+        fetch_model(model)
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
         self.assertEqual(model.rowCount(), 2)
@@ -118,12 +117,11 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
     def test_data_for_single_parameter_definition(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
-        if model.canFetchMore(None):
-            model.fetchMore(None)
+        fetch_model(model)
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
-        self._db_mngr.fetch_all(self._db_map)
+        self._db_map.fetch_all()
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
@@ -142,7 +140,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
-        self._db_mngr.fetch_all(self._db_map)
+        self._db_map.fetch_all()
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
             self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
 
@@ -174,8 +172,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
     def test_data_for_single_parameter(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
-        if model.canFetchMore(None):
-            model.fetchMore(None)
+        fetch_model(model)
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
         self._db_mngr.add_entities({self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
@@ -212,7 +209,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
-        self._db_mngr.fetch_all(self._db_map)
+        self._db_map.fetch_all()
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
             self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
 
@@ -244,8 +241,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
     def test_data_for_single_parameter(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
-        if model.canFetchMore(None):
-            model.fetchMore(None)
+        fetch_model(model)
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
         self._db_mngr.add_entities({self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
