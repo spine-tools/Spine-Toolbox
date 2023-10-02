@@ -340,11 +340,9 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
         value_list_id = self._get_value_list_id(index, db_map)
         if value_list_id:
             display_value_list = self.db_mngr.get_parameter_value_list(
-                db_map, value_list_id, Qt.ItemDataRole.DisplayRole, only_visible=False
+                db_map, value_list_id, Qt.ItemDataRole.DisplayRole
             )
-            db_value_list = self.db_mngr.get_parameter_value_list(
-                db_map, value_list_id, Qt.ItemDataRole.EditRole, only_visible=False
-            )
+            db_value_list = self.db_mngr.get_parameter_value_list(db_map, value_list_id, Qt.ItemDataRole.EditRole)
             self._db_value_list_lookup = dict(zip(display_value_list, db_value_list))
             editor = SearchBarEditor(self.parent(), parent)
             editor.set_data(index.data(), self._db_value_list_lookup)
@@ -360,9 +358,7 @@ class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
         """See base class"""
         h = index.model().header.index
         value_list_name = index.sibling(index.row(), h("value_list_name")).data()
-        value_lists = self.db_mngr.get_items_by_field(
-            db_map, "parameter_value_list", "name", value_list_name, only_visible=False
-        )
+        value_lists = self.db_mngr.get_items_by_field(db_map, "parameter_value_list", "name", value_list_name)
         if len(value_lists) == 1:
             return value_lists[0]["id"]
 
@@ -374,14 +370,11 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         """See base class."""
         h = index.model().header.index
         parameter_name = index.sibling(index.row(), h("parameter_name")).data()
-        parameters = self.db_mngr.get_items_by_field(
-            db_map, "parameter_definition", "parameter_name", parameter_name, only_visible=False
-        )
+        parameters = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", parameter_name)
         entity_class_id = index.model().get_entity_class_id(index, db_map)
         parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
         value_list_ids = {
-            self.db_mngr.get_item(db_map, "parameter_definition", id_, only_visible=False).get("value_list_id")
-            for id_ in parameter_ids
+            self.db_mngr.get_item(db_map, "parameter_definition", id_).get("value_list_id") for id_ in parameter_ids
         }
         if len(value_list_ids) == 1:
             return next(iter(value_list_ids))
@@ -396,7 +389,7 @@ class ValueListDelegate(TableDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "parameter_value_list", only_visible=False)]
+        name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "parameter_value_list")]
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
@@ -411,7 +404,7 @@ class EntityClassNameDelegate(TableDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        object_classes = self.db_mngr.get_items(db_map, "entity_class", only_visible=False)
+        object_classes = self.db_mngr.get_items(db_map, "entity_class")
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), [x["name"] for x in object_classes])
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
@@ -429,10 +422,10 @@ class ParameterNameDelegate(TableDelegate):
         entity_class_id = index.model().get_entity_class_id(index, db_map)
         if entity_class_id is not None:
             parameter_definitions = self.db_mngr.get_items_by_field(
-                db_map, "parameter_definition", "entity_class_id", entity_class_id, only_visible=False
+                db_map, "parameter_definition", "entity_class_id", entity_class_id
             )
         else:
-            parameter_definitions = self.db_mngr.get_items(db_map, "parameter_definition", only_visible=False)
+            parameter_definitions = self.db_mngr.get_items(db_map, "parameter_definition")
         name_list = list({x["parameter_name"]: None for x in parameter_definitions})
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
@@ -451,15 +444,13 @@ class EntityBynameDelegate(TableDelegate):
             return None
         entity_class_id = index.model().get_entity_class_id(index, db_map)
         if entity_class_id is not None:
-            entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
+            entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
             if entity_class["dimension_id_list"]:
                 self.element_name_list_editor_requested.emit(index, entity_class_id, db_map)
                 return
-            entities = self.db_mngr.get_items_by_field(
-                db_map, "entity", "class_id", entity_class_id, only_visible=False
-            )
+            entities = self.db_mngr.get_items_by_field(db_map, "entity", "class_id", entity_class_id)
         else:
-            entities = self.db_mngr.get_items(db_map, "entity", only_visible=False)
+            entities = self.db_mngr.get_items(db_map, "entity")
         editor = SearchBarEditor(self.parent(), parent)
         name_list = list({x["name"]: None for x in entities})
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
@@ -476,7 +467,7 @@ class AlternativeNameDelegate(TableDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "alternative", only_visible=False)]
+        name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "alternative")]
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
@@ -578,7 +569,7 @@ class ScenarioDelegate(QStyledItemDelegate):
         excluded_ids = set(item.parent_item.alternative_id_list)
         self._alternative_ids = {
             x["name"]: x["id"]
-            for x in item.db_mngr.get_items(item.db_map, "alternative", only_visible=False)
+            for x in item.db_mngr.get_items(item.db_map, "alternative")
             if x["id"] not in excluded_ids
         }
         return list(self._alternative_ids)

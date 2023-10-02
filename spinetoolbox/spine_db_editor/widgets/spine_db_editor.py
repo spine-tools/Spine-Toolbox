@@ -612,7 +612,7 @@ class SpineDBEditorBase(QMainWindow):
         orig_name = self.db_mngr.get_item(db_map, "scenario", scen_id)["name"]
         parcel = SpineDBParcel(self.db_mngr)
         parcel.full_push_scenario_ids({db_map: {scen_id}})
-        existing_names = {i.name for i in self.db_mngr.get_items(db_map, "scenario", only_visible=False)}
+        existing_names = {i.name for i in self.db_mngr.get_items(db_map, "scenario")}
         dup_name = unique_name(orig_name, existing_names)
         self.db_mngr.duplicate_scenario(parcel.data, dup_name, db_map)
 

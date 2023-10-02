@@ -463,9 +463,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 (db_map, x["id"])
                 for item in self._items_per_class[key]
                 for db_map in item.db_maps
-                for x in self.db_mngr.get_items_by_field(
-                    db_map, "entity", "class_id", item.entity_class_id(db_map), only_visible=False
-                )
+                for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", item.entity_class_id(db_map))
             },
         )
 
@@ -563,7 +561,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
                     pv["id"]
                     for parameter_name in (self.pos_x_parameter, self.pos_y_parameter)
                     for pv in self.db_mngr.get_items_by_field(
-                        db_map, "parameter_value", "parameter_name", parameter_name, only_visible=False
+                        db_map, "parameter_value", "parameter_name", parameter_name
                     )
                     if pv["entity_id"] in ids
                 )

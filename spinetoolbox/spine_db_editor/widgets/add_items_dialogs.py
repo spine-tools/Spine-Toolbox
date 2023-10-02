@@ -649,9 +649,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             ent_cls = entity_classes.get((self.class_name, self.dimension_name_list), None)
             if ent_cls is None:
                 continue
-            for entity in self.db_mngr.get_items_by_field(
-                db_map, "entity", "class_id", ent_cls["id"], only_visible=False
-            ):
+            for entity in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", ent_cls["id"]):
                 key = entity["element_name_list"]
                 self.entity_ids[key] = entity["id"]
         existing_items = sorted(map(list, self.entity_ids))
@@ -668,7 +666,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             header_item = QTreeWidgetItem([name])
             header_item.setTextAlignment(0, Qt.AlignHCenter)
             tree_widget.setHeaderItem(header_item)
-            elements = self.db_mngr.get_items_by_field(self.db_map, "entity", "class_name", name, only_visible=False)
+            elements = self.db_mngr.get_items_by_field(self.db_map, "entity", "class_name", name)
             items = [QTreeWidgetItem([el["name"]]) for el in elements]
             tree_widget.addTopLevelItems(items)
             tree_widget.resizeColumnToContents(0)
@@ -775,7 +773,7 @@ class EntityGroupDialogBase(QDialog):
             db_map: {
                 x["name"]: x["id"]
                 for x in self.db_mngr.get_items_by_field(
-                    self.db_map, "entity", "class_id", self.entity_class_item.db_map_id(db_map), only_visible=False
+                    self.db_map, "entity", "class_id", self.entity_class_item.db_map_id(db_map)
                 )
             }
             for db_map in db_maps
@@ -907,9 +905,7 @@ class ManageMembersDialog(EntityGroupDialogBase):
         self.connect_signals()
 
     def _entity_groups(self):
-        return self.db_mngr.get_items_by_field(
-            self.db_map, "entity_group", "group_id", self.initial_entity_id(), only_visible=False
-        )
+        return self.db_mngr.get_items_by_field(self.db_map, "entity_group", "group_id", self.initial_entity_id())
 
     def initial_member_ids(self):
         return {x["member_id"] for x in self._entity_groups()}

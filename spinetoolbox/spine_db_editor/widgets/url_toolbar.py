@@ -196,7 +196,7 @@ class _FilterWidget(QTreeWidget):
         self.setIndentation(0)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHeaderLabel(filter_type)
-        items = db_mngr.get_items(db_map, item_type, only_visible=False)
+        items = db_mngr.get_items(db_map, item_type)
         top_level_items = [QTreeWidgetItem([x["name"]]) for x in items]
         self.addTopLevelItems(top_level_items)
         self.resizeColumnToContents(0)

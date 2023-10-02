@@ -123,17 +123,13 @@ class GetEntityClassesMixin:
 
     def make_db_map_ent_cls_lookup(self):
         return {
-            db_map: {
-                (x["name"], x["dimension_name_list"]): x
-                for x in self.db_mngr.get_items(db_map, "entity_class", only_visible=False)
-            }
+            db_map: {(x["name"], x["dimension_name_list"]): x for x in self.db_mngr.get_items(db_map, "entity_class")}
             for db_map in self.db_maps
         }
 
     def make_db_map_ent_cls_lookup_by_name(self):
         return {
-            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "entity_class", only_visible=False)}
-            for db_map in self.db_maps
+            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "entity_class")} for db_map in self.db_maps
         }
 
     def entity_class_name_list(self, row):
@@ -161,15 +157,13 @@ class GetEntitiesMixin:
 
     def make_db_map_ent_lookup(self):
         return {
-            db_map: {
-                (x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)
-            }
+            db_map: {(x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "entity")}
             for db_map in self.db_maps
         }
 
     def make_db_map_alt_id_lookup(self):
         return {
-            db_map: {x["name"]: x["id"] for x in self.db_mngr.get_items(db_map, "alternative", only_visible=False)}
+            db_map: {x["name"]: x["id"] for x in self.db_mngr.get_items(db_map, "alternative")}
             for db_map in self.db_maps
         }
 
