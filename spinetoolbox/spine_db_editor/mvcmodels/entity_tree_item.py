@@ -77,8 +77,7 @@ class EntityTreeRootItem(MultiDBTreeItem):
     def _polish_children(self, children):
         """See base class."""
         db_map_entity_class_ids = {
-            db_map: {x["class_id"] for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)}
-            for db_map in self.db_maps
+            db_map: {x["class_id"] for x in self.db_mngr.get_items(db_map, "entity")} for db_map in self.db_maps
         }
         for child in children:
             child.set_has_children_initially(
@@ -142,11 +141,7 @@ class EntityClassItem(MultiDBTreeItem):
         if any(self.db_map_data_field(db_map, "dimension_id_list") for db_map in self.db_maps):
             return
         db_map_entity_element_ids = {
-            db_map: {
-                el_id
-                for ent in self.db_mngr.get_items(db_map, "entity", only_visible=False)
-                for el_id in ent["element_id_list"]
-            }
+            db_map: {el_id for ent in self.db_mngr.get_items(db_map, "entity") for el_id in ent["element_id_list"]}
             for db_map in self.db_maps
         }
         for child in children:

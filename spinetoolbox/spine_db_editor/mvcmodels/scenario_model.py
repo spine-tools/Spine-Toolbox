@@ -166,38 +166,36 @@ class ScenarioModel(TreeModelBase):
         scenarios_to_add = []
         alternatives_to_add = []
         alternative_names_by_scenario = {}
-        existing_scenarios = {i.name for i in self.db_mngr.get_items(db_item.db_map, "scenario", only_visible=False)}
-        existing_alternatives = {
-            i.name for i in self.db_mngr.get_items(db_item.db_map, "alternative", only_visible=False)
-        }
+        existing_scenarios = {i["name"] for i in self.db_mngr.get_items(db_item.db_map, "scenario")}
+        existing_alternatives = {i["name"] for i in self.db_mngr.get_items(db_item.db_map, "alternative")}
         for db_map_key, scenario_ids in json.loads(mime_data.data(mime_types.SCENARIO_DATA).data()).items():
             db_map = self.db_mngr.db_map_from_key(db_map_key)
             if db_map is db_item.db_map:
                 continue
             for id_ in scenario_ids:
-                scenario_data = self.db_mngr.get_item(db_map, "scenario", id_, only_visible=False)
-                if scenario_data.name in existing_scenarios:
+                scenario_data = self.db_mngr.get_item(db_map, "scenario", id_)
+                if scenario_data["name"] in existing_scenarios:
                     continue
-                alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, id_, only_visible=False)
+                alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, id_)
                 for alternative_id in alternative_id_list:
-                    alternative_db_item = self.db_mngr.get_item(
-                        db_map, "alternative", alternative_id, only_visible=False
+                    alternative_db_item = self.db_mngr.get_item(db_map, "alternative", alternative_id)
+                    alternative_names_by_scenario.setdefault(scenario_data["name"], []).append(
+                        alternative_db_item["name"]
                     )
-                    alternative_names_by_scenario.setdefault(scenario_data.name, []).append(alternative_db_item.name)
-                    if alternative_db_item.name in existing_alternatives:
+                    if alternative_db_item["name"] in existing_alternatives:
                         continue
                     alternatives_to_add.append(
-                        {"name": alternative_db_item.name, "description": alternative_db_item.description}
+                        {"name": alternative_db_item["name"], "description": alternative_db_item["description"]}
                     )
-                scenarios_to_add.append({"name": scenario_data.name, "description": scenario_data.description})
+                scenarios_to_add.append({"name": scenario_data["name"], "description": scenario_data["description"]})
         if scenarios_to_add:
             if alternatives_to_add:
                 self.db_mngr.add_alternatives({db_item.db_map: alternatives_to_add})
             self.db_mngr.add_scenarios({db_item.db_map: scenarios_to_add})
-            alternatives = self.db_mngr.get_items(db_item.db_map, "alternative", only_visible=False)
-            alternative_id_by_name = {i.name: i.id for i in alternatives}
+            alternatives = self.db_mngr.get_items(db_item.db_map, "alternative")
+            alternative_id_by_name = {i["name"]: i["id"] for i in alternatives}
             scenarios = self.db_mngr.get_items(db_item.db_map, "scenario")
-            scenario_id_by_name = {i.name: i.id for i in scenarios}
+            scenario_id_by_name = {i["name"]: i["id"] for i in scenarios}
             scenario_alternative_id_lists = []
             for scenario_name, alternative_name_list in alternative_names_by_scenario.items():
                 alternative_id_list = [alternative_id_by_name[name] for name in alternative_name_list]
@@ -213,15 +211,13 @@ class ScenarioModel(TreeModelBase):
             scenario_item (ScenarioItem): scenario item to duplicate
         """
         db_map = scenario_item.db_map
-        existing_names = {i.name for i in self.db_mngr.get_items(db_map, "scenario", only_visible=False)}
-        name = unique_name(scenario_item.item_data.name, existing_names)
-        self.db_mngr.add_scenarios({db_map: [{"name": name, "description": scenario_item.item_data.description}]})
-        alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(
-            db_map, scenario_item.id, only_visible=False
-        )
-        for item in self.db_mngr.get_items(db_map, "scenario", only_visible=False):
-            if item.name == name:
+        existing_names = {i["name"] for i in self.db_mngr.get_items(db_map, "scenario")}
+        name = unique_name(scenario_item.item_data["name"], existing_names)
+        self.db_mngr.add_scenarios({db_map: [{"name": name, "description": scenario_item.item_data["description"]}]})
+        alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scenario_item.id)
+        for item in self.db_mngr.get_items(db_map, "scenario"):
+            if item["name"] == name:
                 self.db_mngr.set_scenario_alternatives(
-                    {db_map: [{"id": item.id, "alternative_id_list": alternative_id_list}]}
+                    {db_map: [{"id": item["id"], "alternative_id_list": alternative_id_list}]}
                 )
                 break

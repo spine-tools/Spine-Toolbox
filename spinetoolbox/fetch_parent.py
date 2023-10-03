@@ -103,9 +103,9 @@ class FetchParent(QObject):
         # NOTE: If `item` is in the process of calling callbacks in another thread,
         # the ones added below won't be called.
         # So, it is important to call this function before self.add_item()
-        item.restore_callbacks.add(self._make_restore_item_callback(db_map))
-        item.update_callbacks.add(self._make_update_item_callback(db_map))
-        item.remove_callbacks.add(self._make_remove_item_callback(db_map))
+        item.add_restore_callback(self._make_restore_item_callback(db_map))
+        item.add_update_callback(self._make_update_item_callback(db_map))
+        item.add_remove_callback(self._make_remove_item_callback(db_map))
 
     def _make_restore_item_callback(self, db_map):
         if db_map not in self._restore_item_callbacks:

@@ -91,7 +91,7 @@ class ParameterNameDelegate(QStyledItemDelegate):
             {
                 x["parameter_name"]
                 for db_map in self.db_maps
-                for x in self.db_mngr.get_items(db_map, "parameter_definition", only_visible=False)
+                for x in self.db_mngr.get_items(db_map, "parameter_definition")
             },
         )
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))

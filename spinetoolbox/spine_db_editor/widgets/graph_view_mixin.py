@@ -611,10 +611,10 @@ class GraphViewMixin:
     def _get_pv(self, db_map, entity_id, pname):
         if not pname:
             return None
-        entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
+        entity = self.db_mngr.get_item(db_map, "entity", entity_id)
         if not entity:
             return None
-        alternative = next(iter(self.db_mngr.get_items(db_map, "alternative", only_visible=False)), None)
+        alternative = next(iter(self.db_mngr.get_items(db_map, "alternative")), None)
         if not alternative:
             return None
         table_cache = db_map.cache.table_cache("parameter_value")
@@ -632,7 +632,7 @@ class GraphViewMixin:
 
     def get_item_name(self, db_map, entity_id):
         if not self.ui.graphicsView.name_parameter:
-            entity = self.db_mngr.get_item(db_map, "entity", entity_id, only_visible=False)
+            entity = self.db_mngr.get_item(db_map, "entity", entity_id)
             return entity["name"]
         return self._get_pv(db_map, entity_id, self.ui.graphicsView.name_parameter)
 
