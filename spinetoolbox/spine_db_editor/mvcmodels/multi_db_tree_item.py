@@ -205,9 +205,9 @@ class MultiDBTreeItem(TreeItem):
         return self._db_map_ids.get(db_map)
 
     def db_map_data(self, db_map):
-        """Returns data for this item in given db_map or None if not present."""
+        """Returns data for this item in given db_map or an empty dict if not present."""
         id_ = self.db_map_id(db_map)
-        return self.db_mngr.get_item(db_map, self.item_type, id_)
+        return self.db_mngr.get_item(db_map, self.item_type, id_) or {}
 
     def db_map_data_field(self, db_map, field, default=None):
         """Returns field from data for this item in given db_map or None if not found."""

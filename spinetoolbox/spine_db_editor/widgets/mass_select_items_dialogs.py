@@ -27,7 +27,7 @@ class _SelectDatabases(QWidget):
     def __init__(self, db_maps, checked_states, parent):
         """
         Args:
-            db_maps (tuple of DatabaseMappingBase): database maps
+            db_maps (tuple of DatabaseMapping): database maps
             checked_states (dict, optional): mapping from item name to check state boolean
             parent (QWidget): parent widget
         """

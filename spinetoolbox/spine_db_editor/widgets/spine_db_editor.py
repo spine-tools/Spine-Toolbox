@@ -539,12 +539,12 @@ class SpineDBEditorBase(QMainWindow):
     @Slot(bool)
     def export_session(self, checked=False):
         """Exports changes made in the current session."""
-        db_map_ent_cls_ids = {db_map: db_map.cache.dirty_ids("entity_class") for db_map in self.db_maps}
-        db_map_ent_ids = {db_map: db_map.cache.dirty_ids("entity") for db_map in self.db_maps}
-        db_map_par_val_lst_ids = {db_map: db_map.cache.dirty_ids("parameter_value_list") for db_map in self.db_maps}
-        db_map_par_def_ids = {db_map: db_map.cache.dirty_ids("parameter_definition") for db_map in self.db_maps}
-        db_map_par_val_ids = {db_map: db_map.cache.dirty_ids("parameter_value") for db_map in self.db_maps}
-        db_map_ent_group_ids = {db_map: db_map.cache.dirty_ids("entity_group") for db_map in self.db_maps}
+        db_map_ent_cls_ids = {db_map: db_map.dirty_ids("entity_class") for db_map in self.db_maps}
+        db_map_ent_ids = {db_map: db_map.dirty_ids("entity") for db_map in self.db_maps}
+        db_map_par_val_lst_ids = {db_map: db_map.dirty_ids("parameter_value_list") for db_map in self.db_maps}
+        db_map_par_def_ids = {db_map: db_map.dirty_ids("parameter_definition") for db_map in self.db_maps}
+        db_map_par_val_ids = {db_map: db_map.dirty_ids("parameter_value") for db_map in self.db_maps}
+        db_map_ent_group_ids = {db_map: db_map.dirty_ids("entity_group") for db_map in self.db_maps}
         parcel = SpineDBParcel(self.db_mngr)
         parcel.push_entity_class_ids(db_map_ent_cls_ids)
         parcel.push_entity_ids(db_map_ent_ids)

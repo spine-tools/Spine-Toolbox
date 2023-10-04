@@ -682,7 +682,7 @@ def plot_db_mngr_items(items, db_maps, plot_widget=None):
 
     Args:
         items (list of dict): parameter value items
-        db_maps (list of DatabaseMappingBase): database mappings corresponding to items
+        db_maps (list of DatabaseMapping): database mappings corresponding to items
         plot_widget (PlotWidget, optional): widget to add plots to
     """
     if not items:

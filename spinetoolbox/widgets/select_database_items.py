@@ -14,7 +14,7 @@ A widget and utilities to select database items.
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QCheckBox, QWidget
 
-from spinedb_api.db_mapping_base import DatabaseMappingBase
+from spinedb_api.db_mapping import DatabaseMapping
 
 
 def add_check_boxes(check_boxes, checked_states, select_all_button, deselect_all_button, state_changed_slot, layout):
@@ -78,9 +78,9 @@ class SelectDatabaseItems(QWidget):
         self._ui.select_data_items_button.clicked.connect(self._select_data_items)
         self._ui.select_scenario_items_button.clicked.connect(self._select_scenario_items)
         checked_states = (
-            checked_states if checked_states is not None else {item: False for item in DatabaseMappingBase.ITEM_TYPES}
+            checked_states if checked_states is not None else {item: False for item in DatabaseMapping.ITEM_TYPES}
         )
-        self._item_check_boxes = {item_type: QCheckBox(item_type, self) for item_type in DatabaseMappingBase.ITEM_TYPES}
+        self._item_check_boxes = {item_type: QCheckBox(item_type, self) for item_type in DatabaseMapping.ITEM_TYPES}
         add_check_boxes(
             self._item_check_boxes,
             checked_states,
