@@ -324,7 +324,7 @@ class FrozenTableModel(QAbstractTableModel):
         """Resolves item name.
 
         Args:
-            value (tuple or DatabaseMappingBase): cell value
+            value (tuple or DatabaseMapping): cell value
             header (str): column header
 
         Returns:

@@ -617,14 +617,12 @@ class GraphViewMixin:
         alternative = next(iter(self.db_mngr.get_items(db_map, "alternative")), None)
         if not alternative:
             return None
-        table_cache = db_map.cache.table_cache("parameter_value")
-        pv = table_cache.find_item(
-            {
-                "parameter_definition_name": pname,
-                "entity_class_name": entity["class_name"],
-                "entity_byname": entity["byname"],
-                "alternative_name": alternative["name"],
-            }
+        pv = db_map.get_item(
+            "parameter_value",
+            parameter_definition_name=pname,
+            entity_class_name=entity["class_name"],
+            entity_byname=entity["byname"],
+            alternative_name=alternative["name"],
         )
         if not pv:
             return None
@@ -824,8 +822,7 @@ class GraphViewMixin:
         self.db_mngr.add_entities(db_map_data)
         self._entity_fetch_parent.set_busy(False)
         added_db_map_data = {
-            db_map: [db_map.cache.table_cache("entity").find_item(item) for item in items]
-            for db_map, items in db_map_data.items()
+            db_map: [db_map.get_item("entity", **item) for item in items] for db_map, items in db_map_data.items()
         }
         for db_map, items in added_db_map_data.items():
             for item in items:

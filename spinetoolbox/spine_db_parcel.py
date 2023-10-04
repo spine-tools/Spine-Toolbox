@@ -214,7 +214,7 @@ class SpineDBParcel:
         """Updates ids for given database item.
 
         Args:
-            db_map_ids (dict): mapping from :class:`DatabaseMappingBase` to ids or ``Asterisk``
+            db_map_ids (dict): mapping from :class:`DatabaseMapping` to ids or ``Asterisk``
             key (str): the key
         """
         for db_map, ids in db_map_ids.items():
@@ -230,7 +230,7 @@ class SpineDBParcel:
         Adds new id sets for given ``db_map`` or returns existing ones.
 
         Args:
-            db_map (DatabaseMappingBase): a database map
+            db_map (DatabaseMapping): a database map
 
         Returns:
             dict: mapping from item name to set of ids
