@@ -76,7 +76,7 @@ class SpineDBWorker(QObject):
         item_type = parent.fetch_item_type
         index = parent.index
         parent_pos = parent.position(self._db_map)
-        items = self._db_map.get_items(item_type, fetch=False, valid_only=False)
+        items = self._db_map.get_items(item_type, fetch=False, skip_removed=False)
         if index is not None:
             # Build index from where we left and get items from it
             index_pos = index.position(self._db_map)
