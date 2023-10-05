@@ -42,9 +42,9 @@ class SpineDBParcel:
     def _get_field_values(self, db_map, item_type, field, ids):
         """Returns a list of field values for items of given type, having given ids."""
         if ids is Asterisk:
-            fields = {x.get(field) for x in self.db_mngr.get_items(db_map, item_type, only_visible=False)}
+            fields = {x.get(field) for x in self.db_mngr.get_items(db_map, item_type)}
         else:
-            fields = {self.db_mngr.get_field(db_map, item_type, id_, field, only_visible=False) for id_ in ids}
+            fields = {self.db_mngr.get_field(db_map, item_type, id_, field) for id_ in ids}
         fields.discard(None)
         return fields
 
@@ -165,7 +165,7 @@ class SpineDBParcel:
         This essentially full_pushes the entity classes, their parameter definitions, and their member entity classes.
         """
         param_def_ids = self.db_mngr.db_map_ids(
-            self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter_definition", only_visible=False)
+            self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter_definition")
         )
         self.push_parameter_definition_ids(param_def_ids)
         db_map_ids = {db_map: ids - param_def_ids.get(db_map, set()) for db_map, ids in db_map_ids.items()}
@@ -178,12 +178,8 @@ class SpineDBParcel:
         """
         if not any(db_map_ids.values()):
             return
-        self.full_push_entity_ids(
-            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_entities(db_map_ids, only_visible=False))
-        )
-        param_val_ids = self.db_mngr.db_map_ids(
-            self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids, only_visible=False)
-        )
+        self.full_push_entity_ids(self.db_mngr.db_map_ids(self.db_mngr.find_cascading_entities(db_map_ids)))
+        param_val_ids = self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids))
         self.push_parameter_value_ids(param_val_ids)
         db_map_ids = {db_map: ids - param_val_ids.get(db_map, set()) for db_map, ids in db_map_ids.items()}
         self.push_entity_ids(db_map_ids)
@@ -192,7 +188,7 @@ class SpineDBParcel:
     def full_push_scenario_ids(self, db_map_ids):
         self.push_scenario_ids(db_map_ids)
         scenario_alternative_ids = self.db_mngr.db_map_ids(
-            self.db_mngr.find_cascading_scenario_alternatives_by_scenario(db_map_ids, only_visible=False)
+            self.db_mngr.find_cascading_scenario_alternatives_by_scenario(db_map_ids)
         )
         self.push_scenario_alternative_ids(scenario_alternative_ids)
 
@@ -205,13 +201,9 @@ class SpineDBParcel:
             return
         for db_map, ids in db_map_ids.items():
             self._setdefault(db_map)["entity_ids"].update(ids)
-        self.inner_push_entity_ids(
-            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_entities(db_map_ids, only_visible=False))
-        )
+        self.inner_push_entity_ids(self.db_mngr.db_map_ids(self.db_mngr.find_cascading_entities(db_map_ids)))
         self.inner_push_parameter_value_ids(
-            self.db_mngr.db_map_ids(
-                self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids, only_visible=False)
-            )
+            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids))
         )
 
     def inner_push_parameter_value_ids(self, db_map_ids):
@@ -222,7 +214,7 @@ class SpineDBParcel:
         """Updates ids for given database item.
 
         Args:
-            db_map_ids (dict): mapping from :class:`DatabaseMappingBase` to ids or ``Asterisk``
+            db_map_ids (dict): mapping from :class:`DatabaseMapping` to ids or ``Asterisk``
             key (str): the key
         """
         for db_map, ids in db_map_ids.items():
@@ -238,7 +230,7 @@ class SpineDBParcel:
         Adds new id sets for given ``db_map`` or returns existing ones.
 
         Args:
-            db_map (DatabaseMappingBase): a database map
+            db_map (DatabaseMapping): a database map
 
         Returns:
             dict: mapping from item name to set of ids

@@ -161,9 +161,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             db_map = self._get_db_map(url, ignore_version_error=True)
             if db_map is None:
                 continue
-            available_scenarios = {
-                x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario", only_visible=True)
-            }
+            available_scenarios = {x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario")}
             scenario_filters = self._filter_settings.known_filters.get(resource.label, {}).get(SCENARIO_FILTER_TYPE, {})
             if any(enabled for s, enabled in scenario_filters.items() if s in available_scenarios):
                 return True
@@ -231,7 +229,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         db_map = self._get_db_map(url)
         if db_map is None:
             return []
-        return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario", only_visible=True))
+        return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario"))
 
     def may_have_filters(self):
         """Returns whether this connection may have filters.
@@ -369,9 +367,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         if db_map is None:
             return None
         db_item_type = {SCENARIO_FILTER_TYPE: "scenario"}[filter_type]
-        available_filters = (
-            x["name"] for x in self._toolbox.db_mngr.get_items(db_map, db_item_type, only_visible=True)
-        )
+        available_filters = (x["name"] for x in self._toolbox.db_mngr.get_items(db_map, db_item_type))
         specific_filter_settings = self._filter_settings.known_filters.get(resource.label, {}).get(filter_type, {})
         checked_specific_filter_settings = {}
         for name in sorted(available_filters):

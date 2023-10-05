@@ -82,16 +82,13 @@ class StackedViewMixin:
             entity_class_id (int)
             db_map (DiffDatabaseMapping)
         """
-        entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
+        entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
         dimension_id_list = entity_class.get("dimension_id_list")
         dimension_names = []
         element_name_lists = []
         for id_ in dimension_id_list:
-            dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_, only_visible=False).get("name")
-            element_names_list = [
-                x["name"]
-                for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", id_, only_visible=False)
-            ]
+            dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_).get("name")
+            element_names_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", id_)]
             dimension_names.append(dimension_name)
             element_name_lists.append(element_names_list)
         element_name_list = index.data(Qt.ItemDataRole.EditRole)

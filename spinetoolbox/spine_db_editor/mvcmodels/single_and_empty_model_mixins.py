@@ -77,7 +77,7 @@ class FillInAlternativeIdMixin(ConvertToDBMixin):
         self._db_map_alt_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "alternative", "name", name, only_visible=False)
+                item = self.db_mngr.get_item_by_field(db_map, "alternative", "name", name)
                 if item:
                     self._db_map_alt_lookup.setdefault(db_map, {})[name] = item
 
@@ -147,7 +147,7 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         self._db_map_value_list_lookup.clear()
         for db_map, names in db_map_value_list_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "parameter_value_list", "name", name, only_visible=False)
+                item = self.db_mngr.get_item_by_field(db_map, "parameter_value_list", "name", name)
                 if item:
                     self._db_map_value_list_lookup.setdefault(db_map, {})[name] = item
 
@@ -214,7 +214,7 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
         self._db_map_ent_cls_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "entity_class", "name", name, only_visible=False)
+                item = self.db_mngr.get_item_by_field(db_map, "entity_class", "name", name)
                 if item:
                     self._db_map_ent_cls_lookup.setdefault(db_map, {})[name] = item
 
@@ -277,11 +277,7 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         self._db_map_ent_lookup.clear()
         for db_map, entity_bynames in db_map_entity_bynames.items():
             for entity_byname in entity_bynames:
-                items = [
-                    x
-                    for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)
-                    if x["byname"] == entity_byname
-                ]
+                items = [x for x in self.db_mngr.get_items(db_map, "entity") if x["byname"] == entity_byname]
                 if items:
                     self._db_map_ent_lookup.setdefault(db_map, {})[entity_byname] = items
 
@@ -346,9 +342,7 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
         self._db_map_param_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                items = self.db_mngr.get_items_by_field(
-                    db_map, "parameter_definition", "parameter_name", name, only_visible=False
-                )
+                items = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", name)
                 if items:
                     self._db_map_param_lookup.setdefault(db_map, {})[name] = items
 
@@ -516,19 +510,17 @@ class MakeEntityOnTheFlyMixin:
         self._db_map_el_lookup.clear()
         for db_map, names in db_map_element_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "entity", "name", name, only_visible=False)
+                item = self.db_mngr.get_item_by_field(db_map, "entity", "name", name)
                 if item:
                     self._db_map_el_lookup.setdefault(db_map, {})[name] = item
         self._db_map_ent_cls_lookup.clear()
         for db_map, names in db_map_ent_cls_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "entity_class", "name", name, only_visible=False)
+                item = self.db_mngr.get_item_by_field(db_map, "entity_class", "name", name)
                 if item:
                     self._db_map_ent_cls_lookup.setdefault(db_map, {})[name] = item
         self._db_map_existing_ents = {
-            db_map: {
-                self._make_unique_entity_id(x) for x in self.db_mngr.get_items(db_map, "entity", only_visible=False)
-            }
+            db_map: {self._make_unique_entity_id(x) for x in self.db_mngr.get_items(db_map, "entity")}
             for db_map in self._db_map_el_lookup.keys() | self._db_map_ent_cls_lookup.keys()
         }
 

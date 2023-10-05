@@ -51,7 +51,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         """
         Args:
             db_mngr (SpineDBManager): database manager
-            db_maps (Iterable of DatabaseMappingBase): database maps
+            db_maps (Iterable of DatabaseMapping): database maps
             db_editor (SpineDBEditor): DB editor
         """
         super().__init__(db_editor)

@@ -62,11 +62,9 @@ class AlternativeModel(TreeModelBase):
         names_to_descriptions = {}
         for db_key in alternative_data:
             db_map = self.db_mngr.db_map_from_key(db_key)
-            items = self.db_mngr.get_items(db_map, "alternative", only_visible=False)
-            names_to_descriptions.update({i.name: i.description for i in items})
-        existing_names = {
-            item.name for item in self.db_mngr.get_items(database_item.db_map, "alternative", only_visible=False)
-        }
+            items = self.db_mngr.get_items(db_map, "alternative")
+            names_to_descriptions.update({i["name"]: i["description"] for i in items})
+        existing_names = {item["name"] for item in self.db_mngr.get_items(database_item.db_map, "alternative")}
         alternative_db_items = []
         for name, description in names_to_descriptions.items():
             if name in existing_names:

@@ -105,7 +105,7 @@ class EmptyModelBase(EmptyRowModel):
     def _autocomplete_row(self, db_map, item):
         entity_class_id = item.get("entity_class_id")
         if entity_class_id:
-            entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id, only_visible=False)
+            entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
             self._main_data[item["row"]][self.header.index("entity_class_name")] = entity_class["name"]
 
     def _make_item(self, row):

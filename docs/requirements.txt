@@ -1,7 +1,8 @@
-sphinx >= 1.7.5
-sphinx_rtd_theme >= 0.4.0
-recommonmark >=0.5.0
-sphinx-autoapi >=1.1.0
-docutils < 0.17
-jinja2 < 3.0  # Dagster 0.12.8 requires Jinja2<3.0
 markupsafe < 2.1  # Jinja2<3.0 tries to import soft_unicode, which has been removed in markupsafe 2.1
+jinja2 < 3.0  # Dagster 0.12.8 requires Jinja2<3.0
+docutils < 0.17
+sphinx < 5.2
+sphinx_rtd_theme
+recommonmark
+astroid < 3.0  # sphinx-autoapi installs the latest astroid. We are not compatible with astroid v3.0
+sphinx-autoapi < 2.1  # 2.1 removed support for sphinx < 5.2.0

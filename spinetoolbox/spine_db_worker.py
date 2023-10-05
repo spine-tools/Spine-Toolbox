@@ -14,7 +14,7 @@ The SpineDBWorker class
 """
 from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtCore import QTimer
-from spinedb_api import DatabaseMapping, SpineDBAPIError
+from spinedb_api import DatabaseMapping
 from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 from .helpers import busy_effect
 
@@ -50,7 +50,7 @@ class SpineDBWorker(QObject):
         self.deleteLater()
 
     def get_db_map(self, *args, **kwargs):
-        self._db_map = DatabaseMapping(self._db_url, *args, sqlite_timeout=2, chunk_size=_CHUNK_SIZE, **kwargs)
+        self._db_map = DatabaseMapping(self._db_url, *args, sqlite_timeout=2, **kwargs)
         return self._db_map
 
     def register_fetch_parent(self, parent):
@@ -76,12 +76,11 @@ class SpineDBWorker(QObject):
         item_type = parent.fetch_item_type
         index = parent.index
         parent_pos = parent.position(self._db_map)
-        ids = list(self._db_map.cache.get(item_type, {}))
+        items = self._db_map.get_items(item_type, fetch=False, skip_removed=False)
         if index is not None:
             # Build index from where we left and get items from it
             index_pos = index.position(self._db_map)
-            for id_ in ids[index_pos:]:
-                item = self._db_mngr.get_item(self._db_map, item_type, id_)
+            for item in items[index_pos:]:
                 index.increment_position(self._db_map)
                 if not item:
                     continue
@@ -90,7 +89,7 @@ class SpineDBWorker(QObject):
             items = index.get_items(parent_key, self._db_map)[parent_pos:]
         else:
             # Get items directly from cache, from where we left
-            items = [self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids[parent_pos:]]
+            items = items[parent_pos:]
         added_count = 0
         for item in items:
             parent.increment_position(self._db_map)
@@ -137,7 +136,7 @@ class SpineDBWorker(QObject):
             # Something fetched from cache
             return
         item_type = parent.fetch_item_type
-        if item_type in self._db_map.cache.fetched_item_types:
+        if not self._db_map.can_fetch_more(item_type):
             # Nothing left in the DB
             parent.set_fetched(True)
             return
@@ -147,7 +146,7 @@ class SpineDBWorker(QObject):
             return
         self._parents_fetching[item_type] = {parent}
         callback = lambda future: self._handle_query_advanced(item_type, future.result())
-        self._executor.submit(self._busy_advance_cache_query, item_type).add_done_callback(callback)
+        self._executor.submit(self._busy_db_map_fetch_more, item_type).add_done_callback(callback)
 
     @Slot(object)
     def _fetch_more_later(self, parents):
@@ -155,8 +154,8 @@ class SpineDBWorker(QObject):
             QTimer.singleShot(0, lambda parent=parent: self._do_fetch_more(parent))
 
     @busy_effect
-    def _busy_advance_cache_query(self, item_type):
-        return self._db_map.advance_cache_query(item_type)
+    def _busy_db_map_fetch_more(self, item_type):
+        return self._db_map.fetch_more(item_type, limit=_CHUNK_SIZE)
 
     def _handle_query_advanced(self, item_type, chunk):
         self._populate_commit_cache(item_type, chunk)
@@ -173,8 +172,8 @@ class SpineDBWorker(QObject):
             if commit_id is not None:
                 self.commit_cache.setdefault(commit_id, {}).setdefault(item_type, []).append(item["id"])
 
-    def fetch_all(self, fetch_item_types=None):
-        self._db_map.fetch_all(fetch_item_types)
+    def fetch_all(self):
+        self._db_map.fetch_all()
 
     def close_db_map(self):
         self._db_map.close()
@@ -216,7 +215,7 @@ class SpineDBWorker(QObject):
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         self._db_mngr.update_icons(self._db_map, item_type, items)
-        self._db_mngr.items_updated.emit(item_type, {self._db_map: [dict(x) for x in items]})
+        self._db_mngr.items_updated.emit(item_type, {self._db_map: items})
         return items
 
     @busy_effect

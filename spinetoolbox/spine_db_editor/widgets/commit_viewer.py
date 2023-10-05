@@ -50,7 +50,7 @@ class _DBCommitViewer(QWidget):
         layout.addWidget(self.splitter)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        for commit in reversed(self._db_mngr.get_items(db_map, "commit", only_visible=False)):
+        for commit in reversed(self._db_mngr.get_items(db_map, "commit")):
             tree_item = QTreeWidgetItem(self._commit_list)
             tree_item.setData(0, Qt.ItemDataRole.UserRole + 1, commit["id"])
             self._commit_list.addTopLevelItem(tree_item)
@@ -76,7 +76,7 @@ class _DBCommitViewer(QWidget):
             bottom_level_item = QTreeWidgetItem(top_level_item)
             bottom_level_item.setFlags(bottom_level_item.flags() & ~Qt.ItemIsSelectable)
             index = self._affected_items.indexFromItem(bottom_level_item)
-            items = [self._db_mngr.get_item(self._db_map, item_type, id_, only_visible=False) for id_ in ids]
+            items = [self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids]
             widget = _AffectedItemsFromOneTable(items, parent=self._affected_items)
             self._affected_items.setIndexWidget(index, widget)
             top_level_item.setExpanded(True)
