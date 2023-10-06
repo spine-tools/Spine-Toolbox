@@ -656,7 +656,7 @@ class SpineDBManager(QObject):
             id_ (int)
 
         Returns:
-            CacheItem: cached item
+            PublicItem: the item
         """
         return db_map.get_item(item_type, id=id_)
 

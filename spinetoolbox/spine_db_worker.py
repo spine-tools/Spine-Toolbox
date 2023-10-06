@@ -63,8 +63,8 @@ class SpineDBWorker(QObject):
         parents.add(parent)
 
     @busy_effect
-    def _iterate_cache(self, parent):
-        """Iterates the cache for given parent while updating its ``position`` property.
+    def _iterate_mapping(self, parent):
+        """Iterates the in-memory mapping for given parent while updating its ``position`` property.
         Iterated items are added to the parent if it accepts them.
 
         Args:
@@ -88,7 +88,7 @@ class SpineDBWorker(QObject):
             parent_key = parent.key_for_index(self._db_map)
             items = index.get_items(parent_key, self._db_map)[parent_pos:]
         else:
-            # Get items directly from cache, from where we left
+            # Get items directly from mapping, from where we left
             items = items[parent_pos:]
         added_count = 0
         for item in items:
@@ -132,8 +132,8 @@ class SpineDBWorker(QObject):
             self._do_fetch_more(parent)
 
     def _do_fetch_more(self, parent):
-        if self._iterate_cache(parent):
-            # Something fetched from cache
+        if self._iterate_mapping(parent):
+            # Something fetched from mapping
             return
         item_type = parent.fetch_item_type
         if not self._db_map.can_fetch_more(item_type):
