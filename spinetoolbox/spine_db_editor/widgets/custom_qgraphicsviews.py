@@ -706,7 +706,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def _get_print_source(self, scene=None):
         if scene is None:
             scene = self.scene()
-        source = scene.itemsBoundingRect()
+        source = scene.itemsBoundingRect().intersected(self._get_viewport_scene_rect())
         dx, dy = self._margin * source.width(), self._margin * source.height()
         source.adjust(-dx, -dy, dx, dy)
         return source
@@ -728,7 +728,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if index is not None:
             height = 0.5 * self._margin * size.height()
             font = painter.font()
-            font.setPointSizeF(0.375 * height)
+            font.setPointSizeF(height)
             painter.setFont(font)
             text = str(index)
             rect = painter.boundingRect(source, text)
