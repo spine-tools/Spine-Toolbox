@@ -125,11 +125,17 @@ class MultiTabWindow(QMainWindow):
         Args:
             *args: parameters forwarded to :func:`MutliTabWindow._make_new_tab`
             **kwargs: parameters forwarded to :func:`MultiTabwindow._make_new_tab`
+
+        Returns:
+            bool: True if successful, False otherwise
         """
         if not self._accepting_new_tabs:
-            return
+            return False
         tab = self._make_new_tab(*args, **kwargs)
+        if not tab:
+            return False
         self._add_connect_tab(tab, self.new_tab_title)
+        return True
 
     def insert_new_tab(self, index, *args, **kwargs):
         """Creates a new tab and inserts it at the given index.

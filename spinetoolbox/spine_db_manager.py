@@ -1592,7 +1592,8 @@ class SpineDBManager(QObject):
         multi_db_editor = next(self.get_all_multi_spine_db_editors(), None)
         if multi_db_editor is None:
             multi_db_editor = MultiSpineDBEditor(self, db_url_codenames)
-            multi_db_editor.show()
+            if multi_db_editor.tab_load_success:  # don't open an editor if tabs were not loaded successfully
+                multi_db_editor.show()
             return
         existing = self._get_existing_spine_db_editor(db_url_codenames)
         if existing is None:
