@@ -656,7 +656,7 @@ class SpineDBManager(QObject):
             id_ (int)
 
         Returns:
-            CacheItem: cached item
+            PublicItem: the item
         """
         return db_map.get_item(item_type, id=id_)
 
@@ -1209,7 +1209,7 @@ class SpineDBManager(QObject):
         db_map_error_log = {}
         for db_map, data in db_map_data.items():
             identifier = self.get_command_identifier()
-            items_to_add, ids_to_remove, errors = db_map.get_data_to_set_scenario_alternatives(*data)
+            items_to_add, ids_to_remove, errors = self.get_data_to_set_scenario_alternatives(db_map, data)
             if ids_to_remove:
                 self.remove_items({db_map: {"scenario_alternative": ids_to_remove}}, identifier=identifier)
             if items_to_add:
@@ -1218,6 +1218,54 @@ class SpineDBManager(QObject):
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in errors])
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
+
+    @staticmethod
+    def get_data_to_set_scenario_alternatives(db_map, scenarios):
+        """Returns data to add and remove, in order to set wide scenario alternatives.
+
+        Args:
+            db_map (DatabaseMapping): the db_map
+            scenarios: One or more wide scenario :class:`dict` objects to set.
+                Each item must include the following keys:
+
+                - "id": integer scenario id
+                - "alternative_id_list": list of alternative ids for that scenario
+
+        Returns
+            list: scenario_alternative :class:`dict` objects to add.
+            set: integer scenario_alternative ids to remove
+        """
+
+        def _is_equal(to_add, to_rm):
+            return all(to_rm[k] == v for k, v in to_add.items())
+
+        scen_alts_to_add = []
+        scen_alt_ids_to_remove = {}
+        errors = []
+        for scen in scenarios:
+            current_scen = db_map.get_item("scenario", id=scen["id"])
+            if current_scen is None:
+                error = f"no scenario matching {scen} to set alternatives for"
+                errors.append(error)
+                continue
+            for k, alternative_id in enumerate(scen.get("alternative_id_list", ())):
+                item_to_add = {"scenario_id": current_scen["id"], "alternative_id": alternative_id, "rank": k + 1}
+                scen_alts_to_add.append(item_to_add)
+            for k, alternative_name in enumerate(scen.get("alternative_name_list", ())):
+                item_to_add = {"scenario_id": current_scen["id"], "alternative_name": alternative_name, "rank": k + 1}
+                scen_alts_to_add.append(item_to_add)
+            for alternative_name in current_scen["alternative_name_list"]:
+                current_scen_alt = db_map.get_item(
+                    "scenario_alternative", scenario_name=current_scen["name"], alternative_name=alternative_name
+                )
+                scen_alt_ids_to_remove[current_scen_alt["id"]] = current_scen_alt
+        # Remove items that are both to add and to remove
+        for id_, to_rm in list(scen_alt_ids_to_remove.items()):
+            i = next((i for i, to_add in enumerate(scen_alts_to_add) if _is_equal(to_add, to_rm)), None)
+            if i is not None:
+                del scen_alts_to_add[i]
+                del scen_alt_ids_to_remove[id_]
+        return scen_alts_to_add, set(scen_alt_ids_to_remove), errors
 
     def purge_items(self, db_map_item_types, **kwargs):
         """Purges selected items from given database.
