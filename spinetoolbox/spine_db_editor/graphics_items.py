@@ -250,7 +250,7 @@ class EntityItem(QGraphicsRectItem):
         range_ = max_val - min_val
         if range_ == 0:
             return None
-        return (val - min_val) / range_
+        return (abs(val) - min_val) / range_, -1 if val < 0 else 1
 
     def _has_name(self):
         return True
@@ -450,9 +450,14 @@ class EntityItem(QGraphicsRectItem):
             for item in self.arc_items:
                 item.update_color(color)
         if arc_width not in (None, self._spine_db_editor.NOT_SPECIFIED):
-            factor = 1 + 9 * arc_width
+            width, sign = arc_width
+            factor = 1 + 9 * width
+            switched = False
             for item in self.arc_items:
-                item.apply_value(factor)
+                item.apply_value(factor, sign)
+                if not switched:
+                    switched = True
+                    sign = -sign
 
     def itemChange(self, change, value):
         """
@@ -657,7 +662,11 @@ class ArcItem(QGraphicsPathItem):
         self.setPen(self._pen)
         self.setZValue(-2)
         self._scaling_factor = 1
-        self._value_factor = 1
+        self._gradient = QGraphicsPathItem(self)
+        self._gradient.setPen(Qt.NoPen)
+        self._gradient_position = 0.5
+        self._gradient_width = 1
+        self._gradient_sign = 1
         ent_item.add_arc_item(self)
         el_item.add_arc_item(self)
         self.setCursor(Qt.ArrowCursor)
@@ -685,14 +694,16 @@ class ArcItem(QGraphicsPathItem):
         path = QPainterPath(self.ent_item.pos())
         path.lineTo(self.el_item.pos())
         self.setPath(path)
+        self._do_move_gradient()
 
     def update_color(self, color):
         self._pen.setColor(color)
         self.setPen(self._pen)
+        self._gradient.setBrush(color)
 
-    def apply_value(self, factor):
-        self._value_factor = max(1, factor)
+    def apply_value(self, factor, sign):
         self._update_width()
+        self._move_gradient(factor, sign)
 
     def mousePressEvent(self, event):
         """Accepts the event so it's not propagated."""
@@ -711,9 +722,33 @@ class ArcItem(QGraphicsPathItem):
         self._update_width()
 
     def _update_width(self):
-        width = self._original_width * self._value_factor / self._scaling_factor
+        width = self._original_width / self._scaling_factor
         self._pen.setWidthF(width)
         self.setPen(self._pen)
+
+    def _move_gradient(self, factor, sign):
+        self._gradient_sign = sign
+        self._gradient_width = max(1, factor)
+        self._gradient_position += 0.1 * self._gradient_sign / self._scaling_factor
+        if self._gradient_position > 1:
+            self._gradient_position -= 1
+        elif self._gradient_position < 0:
+            self._gradient_position += 1
+        self._do_move_gradient()
+
+    def _do_move_gradient(self):
+        width = self._original_width * self._gradient_width / self._scaling_factor
+        init_pos = self.ent_item.pos() + (self.el_item.pos() - self.ent_item.pos()) * self._gradient_position
+        final_pos = self.el_item.pos() if self._gradient_sign > 0 else self.ent_item.pos()
+        line = QLineF(init_pos, final_pos)
+        line.setLength(width)
+        line.translate(-line.dx() / 2, -line.dy() / 2)
+        normal = line.normalVector()
+        normal.translate(-normal.dx() / 2, -normal.dy() / 2)
+        path = QPainterPath(line.p2())
+        path.lineTo(normal.p1())
+        path.lineTo(normal.p2())
+        self._gradient.setPath(path)
 
 
 class CrossHairsItem(EntityItem):

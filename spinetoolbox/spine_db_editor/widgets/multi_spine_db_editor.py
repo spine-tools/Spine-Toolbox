@@ -44,8 +44,10 @@ class MultiSpineDBEditor(MultiTabWindow):
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStatusBar(_CustomStatusBar(self))
         self.statusBar().hide()
+        self.tab_load_success = True
         if db_url_codenames is not None:
-            self.add_new_tab(db_url_codenames)
+            if not self.add_new_tab(db_url_codenames):
+                self.tab_load_success = False
 
     def _make_other(self):
         return MultiSpineDBEditor(self.db_mngr)
@@ -86,8 +88,10 @@ class MultiSpineDBEditor(MultiTabWindow):
         return True
 
     def _make_new_tab(self, db_url_codenames=None):  # pylint: disable=arguments-differ
+        """Makes a new tab, if successful return the tab, returns None otherwise"""
         tab = SpineDBEditor(self.db_mngr)
-        tab.load_db_urls(db_url_codenames, create=True)
+        if not tab.load_db_urls(db_url_codenames, create=True):
+            return
         return tab
 
     def show_plus_button_context_menu(self, global_pos):
