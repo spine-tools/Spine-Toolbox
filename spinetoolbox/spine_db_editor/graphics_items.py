@@ -738,8 +738,8 @@ class ArcItem(QGraphicsPathItem):
 
     def _do_move_gradient(self):
         width = self._original_width * self._gradient_width / self._scaling_factor
-        init_pos = self.rel_item.pos() + (self.obj_item.pos() - self.rel_item.pos()) * self._gradient_position
-        final_pos = self.obj_item.pos() if self._gradient_sign > 0 else self.rel_item.pos()
+        init_pos = self.ent_item.pos() + (self.el_item.pos() - self.ent_item.pos()) * self._gradient_position
+        final_pos = self.el_item.pos() if self._gradient_sign > 0 else self.ent_item.pos()
         line = QLineF(init_pos, final_pos)
         line.setLength(width)
         line.translate(-line.dx() / 2, -line.dy() / 2)
