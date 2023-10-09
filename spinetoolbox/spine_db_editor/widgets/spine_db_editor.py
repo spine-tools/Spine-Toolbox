@@ -154,9 +154,9 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionVacuum.setEnabled(False)
         self.url_toolbar.reload_action.setEnabled(False)
         if not db_url_codenames:
-            return
+            return False
         if not self.tear_down():
-            return
+            return False
         if self.db_maps:
             self.save_window_state()
         self.db_maps = []
@@ -167,7 +167,7 @@ class SpineDBEditorBase(QMainWindow):
             if db_map is not None:
                 self.db_maps.append(db_map)
         if not self.db_maps:
-            return
+            return False
         self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.ui.actionImport.setEnabled(True)
         self.ui.actionExport.setEnabled(True)
@@ -186,6 +186,7 @@ class SpineDBEditorBase(QMainWindow):
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
         self.restore_ui()
+        return True
 
     def init_add_undo_redo_actions(self):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]

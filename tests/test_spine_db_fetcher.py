@@ -45,7 +45,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._db_mngr.clean_up()
 
     def test_fetch_empty_database(self):
-        for item_type in DatabaseMapping.ITEM_TYPES:
+        for item_type in DatabaseMapping.item_types():
             fetcher = TestItemTypeFetchParent(item_type)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
