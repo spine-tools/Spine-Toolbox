@@ -328,6 +328,7 @@ class GraphViewMixin:
             self.ui.graphicsView.name_parameter,
             self.ui.graphicsView.color_parameter,
             self.ui.graphicsView.arc_width_parameter,
+            self.ui.graphicsView.vertex_radius_parameter,
         }
         if pnames & position_pnames:
             self.rebuild_graph()
@@ -353,7 +354,11 @@ class GraphViewMixin:
                 for db_map_ent_ids in db_map_ent_id_sets
                 for db_map, ent_id in db_map_ent_ids
             }
-            for pname in (self.ui.graphicsView.color_parameter, self.ui.graphicsView.arc_width_parameter)
+            for pname in (
+                self.ui.graphicsView.color_parameter,
+                self.ui.graphicsView.arc_width_parameter,
+                self.ui.graphicsView.vertex_radius_parameter,
+            )
             if pname
         }
         self._val_ranges_by_pname = {pname: _min_max(pvs.values()) for pname, pvs in self._pvs_by_pname.items()}
@@ -362,7 +367,8 @@ class GraphViewMixin:
                 (legend_type, pname, self._val_ranges_by_pname.get(pname))
                 for (legend_type, pname) in (
                     ("color", self.ui.graphicsView.color_parameter),
-                    ("arc_width", self.ui.graphicsView.arc_width_parameter),
+                    ("width", self.ui.graphicsView.arc_width_parameter),
+                    ("width", self.ui.graphicsView.vertex_radius_parameter),
                 )
             ]
             self.ui.legend_widget.show()
@@ -414,6 +420,7 @@ class GraphViewMixin:
                 "name_parameter": self.ui.graphicsView.name_parameter,
                 "color_parameter": self.ui.graphicsView.color_parameter,
                 "arc_width_parameter": self.ui.graphicsView.arc_width_parameter,
+                "vertex_radius_parameter": self.ui.graphicsView.vertex_radius_parameter,
                 "bg_svg": self.ui.graphicsView.get_bg_svg(),
                 "bg_rect": self.ui.graphicsView.get_bg_rect(),
                 "properties": self.ui.graphicsView.get_all_properties(),
@@ -464,6 +471,7 @@ class GraphViewMixin:
         self.ui.graphicsView.name_parameter = graph_data["name_parameter"]
         self.ui.graphicsView.color_parameter = graph_data["color_parameter"]
         self.ui.graphicsView.arc_width_parameter = graph_data["arc_width_parameter"]
+        self.ui.graphicsView.vertex_radius_parameter = graph_data.get("vertex_radius_parameter", "")
         self.ui.graphicsView.set_bg_svg(graph_data["bg_svg"])
         self.ui.graphicsView.set_bg_rect(graph_data["bg_rect"])
         self.ui.graphicsView.set_many_properties(graph_data["properties"])
@@ -706,6 +714,7 @@ class GraphViewMixin:
             self.ui.graphicsView.pos_y_parameter,
             self.ui.graphicsView.color_parameter,
             self.ui.graphicsView.arc_width_parameter,
+            self.ui.graphicsView.vertex_radius_parameter,
         )
         self._pv_cache.clear()
         for db_map in self.db_maps:
@@ -731,6 +740,11 @@ class GraphViewMixin:
     def get_arc_width(self, db_map, item_type, entity_id, time_line_index):
         return self._get_item_property(
             db_map, item_type, entity_id, self.ui.graphicsView.arc_width_parameter, time_line_index
+        )
+
+    def get_vertex_radius(self, db_map, item_type, entity_id, time_line_index):
+        return self._get_item_property(
+            db_map, item_type, entity_id, self.ui.graphicsView.vertex_radius_parameter, time_line_index
         )
 
     def _get_item_property(self, db_map, item_type, entity_id, pname, time_line_index):
