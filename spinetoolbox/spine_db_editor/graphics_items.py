@@ -467,7 +467,7 @@ class EntityItem(QGraphicsRectItem):
                 item.update_color(color)
         if arc_width not in (None, self._spine_db_editor.NOT_SPECIFIED):
             width, sign = arc_width
-            factor = (0.5 + 0.5 * width) * self._extent
+            factor = 0.75 * (0.5 + 0.5 * width) * self._extent
             switched = False
             for item in self.arc_items:
                 item.apply_value(factor, sign)
@@ -480,7 +480,7 @@ class EntityItem(QGraphicsRectItem):
             color = color_from_index(0, 1, value=0)
         else:
             color = QColor(color)
-        circle_extent = (0.5 + 0.5 * vertex_radius) * self._extent if vertex_radius is not None else 0
+        circle_extent = 2 * (0.5 + 0.5 * vertex_radius) * self._extent if vertex_radius is not None else 0
         self._circle_item.setRect(-circle_extent / 2, -circle_extent / 2, circle_extent, circle_extent)
         color.setAlphaF(0.5)
         self._circle_item.setBrush(color)
