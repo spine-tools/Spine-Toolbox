@@ -59,12 +59,12 @@ class ProjectUpgrader:
         if v < LATEST_PROJECT_VERSION:
             # Back up project.json file before upgrading
             if not self.backup_project_file(project_dir, v):
-                self._toolbox.msg_error.emit("Upgrading project failed")
+                self._toolbox.msg_error.emit(f"Upgrading project <b>{project_dir}</b> failed")
                 return False
             upgraded_dict = self.upgrade_to_latest(v, project_dict, project_dir)
             # Force save project dict to project.json
             if not self.force_save(upgraded_dict, project_dir):
-                self._toolbox.msg_error.emit("Upgrading project failed")
+                self._toolbox.msg_error.emit(f"Upgrading project <b>{project_dir}</b> failed")
                 return False
             return upgraded_dict
         return project_dict
