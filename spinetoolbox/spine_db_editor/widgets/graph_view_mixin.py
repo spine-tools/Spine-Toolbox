@@ -649,9 +649,7 @@ class GraphViewMixin:
         return self._get_item_property(db_map, entity_id, self.ui.graphicsView.arc_width_parameter, time_line_index)
 
     def get_vertex_radius(self, db_map, entity_id, time_line_index):
-        return self._get_item_property(
-            db_map, entity_id, self.ui.graphicsView.vertex_radius_parameter, time_line_index
-        )
+        return self._get_item_property(db_map, entity_id, self.ui.graphicsView.vertex_radius_parameter, time_line_index)
 
     def _get_item_property(self, db_map, entity_id, pname, time_line_index):
         """Returns a tuple of (min_value, value, max_value) for given entity and property.
