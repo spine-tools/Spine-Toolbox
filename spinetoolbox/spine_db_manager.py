@@ -1521,25 +1521,24 @@ class SpineDBManager(QObject):
         """Exports given data into Excel file."""
         # NOTE: We import data into an in-memory Spine db and then export that to excel.
         url = URL("sqlite", database="")
-        db_map = DatabaseMapping(url, create=True)
-        import_data(db_map, **data_for_export)
-        file_name = os.path.split(file_path)[1]
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        try:
-            export_spine_database_to_xlsx(db_map, file_path)
-        except PermissionError:
-            error_msg = {
-                None: [f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."]
-            }
-            caller.msg_error.emit(error_msg)
-        except OSError:
-            error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
-            caller.msg_error.emit(error_msg)
-        else:
-            caller.file_exported.emit(file_path, 1.0, False)
-        finally:
-            db_map.close()
+        with DatabaseMapping(url, create=True) as db_map:
+            import_data(db_map, **data_for_export)
+            db_map.commit_session("Added data for exporting.")
+            file_name = os.path.split(file_path)[1]
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            try:
+                export_spine_database_to_xlsx(db_map, file_path)
+            except PermissionError:
+                error_msg = {
+                    None: [f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."]
+                }
+                caller.msg_error.emit(error_msg)
+            except OSError:
+                error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
+                caller.msg_error.emit(error_msg)
+            else:
+                caller.file_exported.emit(file_path, 1.0, False)
 
     def get_items_for_commit(self, db_map, commit_id):
         try:

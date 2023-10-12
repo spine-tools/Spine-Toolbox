@@ -127,8 +127,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.name_parameter = ""
         self.color_parameter = ""
         self.arc_width_parameter = ""
+        self.vertex_radius_parameter = ""
         self._current_state_name = ""
-        self._margin = 0.05
+        self._margin = 0.025
         self._bg_item = None
         self.selected_items = []
         self.hidden_items = {}
@@ -480,26 +481,27 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     @Slot(bool)
     def select_graph_parameters(self, checked=False):
-        dialog = SelectGraphParametersDialog(
-            self._spine_db_editor,
-            self.name_parameter,
-            self.pos_x_parameter,
-            self.pos_y_parameter,
-            self.color_parameter,
-            self.arc_width_parameter,
-        )
+        parameters = {
+            "Name": self.name_parameter,
+            "Position x": self.pos_x_parameter,
+            "Position y": self.pos_y_parameter,
+            "Color": self.color_parameter,
+            "Arc width": self.arc_width_parameter,
+            "Vertex radius": self.vertex_radius_parameter,
+        }
+        dialog = SelectGraphParametersDialog(self._spine_db_editor, parameters)
         dialog.show()
         dialog.selection_made.connect(self._set_graph_parameters)
 
-    @Slot(str, str, str, str, str)
-    def _set_graph_parameters(
-        self, name_parameter, pos_x_parameter, pos_y_parameter, color_parameter, arc_width_parameter
-    ):
-        self.name_parameter = name_parameter
-        self.pos_x_parameter = pos_x_parameter
-        self.pos_y_parameter = pos_y_parameter
-        self.color_parameter = color_parameter
-        self.arc_width_parameter = arc_width_parameter
+    @Slot(list)
+    def _set_graph_parameters(self, parameters):
+        parameters = iter(parameters)
+        self.name_parameter = next(parameters)
+        self.pos_x_parameter = next(parameters)
+        self.pos_y_parameter = next(parameters)
+        self.color_parameter = next(parameters)
+        self.arc_width_parameter = next(parameters)
+        self.vertex_radius_parameter = next(parameters)
         self._spine_db_editor.polish_items()
 
     @Slot(bool)
@@ -658,8 +660,13 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if scene is None:
             scene = self.scene()
         source = scene.itemsBoundingRect().intersected(self._get_viewport_scene_rect())
-        dx, dy = self._margin * source.width(), self._margin * source.height()
-        source.adjust(-dx, -dy, dx, dy)
+        margin = self._margin * max(source.width(), source.height())
+        bottom_margin_row_count = (
+            self._spine_db_editor.ui.legend_widget.row_count()
+            if self._spine_db_editor.ui.legend_widget.isVisible()
+            else 1
+        )
+        source.adjust(-margin, -margin, margin, bottom_margin_row_count * margin)
         return source
 
     def _print_scene(self, printer, source, size, index=None, scene=None):
@@ -667,23 +674,26 @@ class EntityQGraphicsView(CustomQGraphicsView):
             scene = self.scene()
         painter = QPainter(printer)
         scene.render(painter, QRectF(), source)
+        margin = self._margin * max(size.width(), size.height())
         if self._spine_db_editor.ui.legend_widget.isVisible():
-            legend_width, legend_height = 0.5 * size.width(), 0.5 * self._margin * size.height()
+            self._spine_db_editor.ui.legend_widget.row_count()
+            legend_width = 0.5 * size.width()
+            legend_height = self._spine_db_editor.ui.legend_widget.row_count() * margin
             legend_rect = QRectF(
-                0.5 * (size.width() - legend_width),
-                size.height() - 0.5 * self._margin * size.height() - 0.5 * legend_height,
-                legend_width,
-                legend_height,
+                0.5 * (size.width() - legend_width), size.height() - legend_height, legend_width, legend_height
             )
+            painter.fillRect(legend_rect, Qt.white)
             self._spine_db_editor.ui.legend_widget.paint(painter, legend_rect)
         if index is not None:
-            height = 0.5 * self._margin * size.height()
+            height = 0.375 * margin
             font = painter.font()
             font.setPointSizeF(height)
             painter.setFont(font)
             text = str(index)
             rect = painter.boundingRect(source, text)
-            painter.drawText(size.width() - rect.width(), rect.height(), str(index))
+            left = 0.5 * (size.width() - rect.width())
+            painter.fillRect(left, 0, rect.width(), rect.height(), Qt.white)
+            painter.drawText(left, rect.height(), str(index))
         painter.end()
 
     def _clone_scene(self):
@@ -698,24 +708,26 @@ class EntityQGraphicsView(CustomQGraphicsView):
             scene.addItem(self._bg_item.clone())
         return scene, list(entity_items.values())
 
-    def _frames(self, start, stop, frame_count, buffer_path, cv2):
+    def _frames(self, start, stop, step_len, buffer_path, cv2):
         if start == stop:
             return ()
         scene, entity_items = self._clone_scene()
         source = self._get_print_source(scene=scene)
         size = source.size().toSize()
-        incr = (stop - start) / frame_count
         index = start
+        mpeg4_max_extent = 2048
         pixmap = QPixmap(size)
         while True:
             pixmap.fill(Qt.white)
             for item in entity_items:
                 item.update_props(index)
             self._print_scene(pixmap, source, size, index=index, scene=scene)
-            ok = pixmap.scaledToWidth(1600).save(buffer_path)
+            ok = pixmap.scaled(mpeg4_max_extent, mpeg4_max_extent, Qt.KeepAspectRatio, Qt.SmoothTransformation).save(
+                buffer_path
+            )
             assert ok
             yield cv2.imread(buffer_path, -1)
-            index += incr
+            index += step_len
             if index > stop:
                 break
 
@@ -741,16 +753,18 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if not file_ext:
             file_ext = ".mp4"
             file_path += file_ext
-        start, stop, frame_count, fps = dialog.selections()
+        start, stop, step_len, fps = dialog.selections()
         start = np.datetime64(start)
         stop = np.datetime64(stop)
-        runnable = QRunnable.create(lambda: self._do_export_as_video(file_path, start, stop, frame_count, fps, cv2))
+        step_len = np.timedelta64(step_len, 'h')
+        runnable = QRunnable.create(lambda: self._do_export_as_video(file_path, start, stop, step_len, fps, cv2))
         self._thread_pool.start(runnable)
 
-    def _do_export_as_video(self, file_path, start, stop, frame_count, fps, cv2):
+    def _do_export_as_video(self, file_path, start, stop, step_len, fps, cv2):
+        frame_count = (stop - start) // step_len
         with tempfile.NamedTemporaryFile() as f:
             buffer_path = f.name + ".png"
-            frame_iter = enumerate(self._frames(start, stop, frame_count, buffer_path, cv2))
+            frame_iter = enumerate(self._frames(start, stop, step_len, buffer_path, cv2))
             try:
                 k, frame = next(frame_iter)
             except StopIteration:

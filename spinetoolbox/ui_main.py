@@ -520,6 +520,7 @@ class ToolboxUI(QMainWindow):
         if self._project is not None:
             if not self.close_project():
                 return
+        self.ui.textBrowser_eventlog.clear()
         self.undo_stack.clear()
         self._project = SpineToolboxProject(
             self,
@@ -572,7 +573,12 @@ class ToolboxUI(QMainWindow):
                 load_dir = QFileDialog.getExistingDirectory(self, caption="Open Spine Toolbox Project", dir=start_dir)
                 if not load_dir:
                     return False  # Cancelled
-        return self.restore_project(load_dir)
+        success = self.restore_project(load_dir)
+        if not success:
+            # If opening project failed, don't clear the event log so that the error message is visible
+            self.close_project(ask_confirmation=False, clear_event_log=False)
+            return False
+        return True
 
     def restore_project(self, project_dir, ask_confirmation=True):
         """Initializes UI, Creates project, models, connections, etc., when opening a project.
@@ -730,11 +736,12 @@ class ToolboxUI(QMainWindow):
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
 
-    def close_project(self, ask_confirmation=True):
+    def close_project(self, ask_confirmation=True, clear_event_log=True):
         """Closes the current project.
 
         Args:
             ask_confirmation (bool): if False, no confirmation whatsoever is asked from user
+            clear_event_log (bool): if True, the event log is cleared after closing the project
 
         Returns:
             bool: True when no project open or when it's closed successfully, False otherwise.
@@ -755,7 +762,8 @@ class ToolboxUI(QMainWindow):
         self._disable_project_actions()
         self.undo_stack.setClean()
         self.update_window_title()
-        self.ui.textBrowser_eventlog.clear()
+        if clear_event_log:
+            self.ui.textBrowser_eventlog.clear()
         return True
 
     @Slot(bool)
