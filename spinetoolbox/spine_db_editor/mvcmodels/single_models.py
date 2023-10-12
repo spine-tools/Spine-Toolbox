@@ -14,8 +14,6 @@ Single models for parameter definitions and values (as 'for a single entity').
 """
 
 from PySide6.QtCore import Qt
-
-from spinedb_api.db_cache_impl import EntityItem
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.single_and_empty_model_mixins import (
@@ -271,7 +269,7 @@ class FilterEntityAlternativeMixin:
         # Set the classes that are explicitly selected by the user.
         self._selected_classes = classes
         all_entity_ids = set()
-        for key, value in self.db_map.cache.get("entity", None).items():
+        for key, value in self.db_map.get("entity", None).items():
             if value.get("class_id", None) in self._filter_class_ids:
                 if value.get("class_id", None) not in self._selected_classes:
                     if bool(set(value.get("element_id_list", None)) & self._filter_entity_ids):
