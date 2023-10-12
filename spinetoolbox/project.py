@@ -294,6 +294,7 @@ class SpineToolboxProject(MetaObject):
         if not ProjectUpgrader(self._toolbox).is_valid(LATEST_PROJECT_VERSION, project_info):
             self._logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
             return False
+        self._toolbox.ui.textBrowser_eventlog.clear()
         local_data_dict = load_local_project_data(self.config_dir, self._logger)
         self._merge_local_data_to_project_info(local_data_dict, project_info)
         # Parse project info
