@@ -45,6 +45,7 @@ from PySide6.QtCore import (
     QDateTime,
 )
 from sqlalchemy.engine.url import URL
+import numpy as np
 from ...helpers import open_url, CharIconEngine, color_from_index
 
 
@@ -224,7 +225,6 @@ class ProgressBarWidget(QWidget):
 
 class TimeLineWidget(QWidget):
     index_changed = Signal(object)
-    _STEP_COUNT = 10000
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -236,20 +236,25 @@ class TimeLineWidget(QWidget):
         self._label = QLabel()
         self._play_pause_button = QToolButton()
         self._play_pause_button.setIcon(QIcon(CharIconEngine("\uf04b")))
+        self._step_len_spin_box = QSpinBox()
+        self._step_len_spin_box.setRange(1, 16777215)
+        self._step_len_spin_box.setValue(1)
         controls = QWidget()
         ctrls_layout = QHBoxLayout(controls)
         ctrls_layout.setContentsMargins(2, 2, 2, 2)
         ctrls_layout.setSpacing(2)
         ctrls_layout.addWidget(self._play_pause_button)
         ctrls_layout.addStretch()
+        ctrls_layout.addWidget(QLabel("Step (hours): "))
+        ctrls_layout.addWidget(self._step_len_spin_box)
+        ctrls_layout.addSpacing(6)
         ctrls_layout.addWidget(self._label)
         layout.addWidget(self._slider)
         layout.addWidget(controls)
-        self._slider.setRange(0, self._STEP_COUNT - 1)
         self._min_index = None
         self._max_index = None
-        self._index_incr = None
         self._index = None
+        self._step_len = np.timedelta64(1, 'h')
         self._ms_per_step = None
         self._playback_tl = QTimeLine()
         self._playback_tl.setEasingCurve(QEasingCurve(QEasingCurve.Linear))
@@ -259,6 +264,12 @@ class TimeLineWidget(QWidget):
         self._playback_tl.stateChanged.connect(self._refresh_button_icon)
         self.index_changed.connect(lambda index: self._label.setText(str(index) + "/" + str(self._max_index)))
         self._play_pause_button.clicked.connect(self._play_pause)
+        self._step_len_spin_box.valueChanged.connect(self._update_step_len)
+
+    @Slot(int)
+    def _update_step_len(self, value):
+        self._step_len = np.timedelta64(value, 'h')
+        self._update_playback()
 
     def _refresh_button_icon(self):
         icon_code = "\uf04c" if self._playback_tl.state() is QTimeLine.Running else "\uf04b"
@@ -271,30 +282,32 @@ class TimeLineWidget(QWidget):
         if self._playback_tl.state() is QTimeLine.Paused:
             self._playback_tl.resume()
             return
-        current_value = self._slider.value()
-        current_value = current_value if current_value != self._slider.maximum() else self._slider.minimum()
-        self._playback_tl.setFrameRange(current_value, self._STEP_COUNT - 1)
-        self._playback_tl.setDuration((self._STEP_COUNT - current_value) * self._ms_per_step)
+        self._update_playback()
         self._playback_tl.start()
+
+    def _update_playback(self):
+        current_value = self._slider.value()
+        # Rewind if needed
+        if current_value >= self._slider.maximum():
+            self._slider.setValue(self._slider.minimum())
+            current_value = self._slider.value()
+        step_count = (self._max_index - self._min_index) // self._step_len
+        self._playback_tl.setDuration(step_count * 1000 / 6)  # 6 steps per second
 
     @Slot(int)
     def _handle_value_changed(self, value):
-        self._index = self._min_index + value * self._index_incr
+        self._index = self._min_index + value * np.timedelta64(1, 'h')
         self.index_changed.emit(self._index)
 
     def set_index_range(self, min_index, max_index):
         self._min_index = min_index
         self._max_index = max_index
-        index_range = self._max_index - self._min_index
-        delta = index_range.item()
-        days = delta.days + delta.seconds / (24 * 3600)
-        years = days / 365
-        total_duration = years * 10000  # 1 year to take 10 seconds
-        self._ms_per_step = total_duration / self._STEP_COUNT
-        self._index_incr = index_range / self._STEP_COUNT
         self._index = self._min_index
         self.index_changed.emit(self._index)
         self.show()
+        step_count = (self._max_index - self._min_index) // np.timedelta64(1, 'h')
+        self._playback_tl.setFrameRange(0, step_count - 1)
+        self._slider.setRange(0, step_count - 1)
 
     def get_index_range(self):
         return (self._min_index, self._max_index)
@@ -309,6 +322,9 @@ class LegendWidget(QWidget):
         self._legend = []
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
 
+    def row_count(self):
+        return len(self._legend)
+
     def set_legend(self, legend):
         self._legend.clear()
         for legend_type, pname, val_range in legend:
@@ -317,10 +333,10 @@ class LegendWidget(QWidget):
             min_val, max_val = val_range
             if min_val == max_val:
                 continue
-            paint_bar = {"color": self._paint_color_bar, "arc_width": self._paint_volume_bar}.get(legend_type)
+            paint_bar = {"color": self._paint_color_bar, "width": self._paint_volume_bar}.get(legend_type)
             if paint_bar is None:
                 continue
-            self._legend.append((pname + ": ", str(min_val), paint_bar, str(max_val)))
+            self._legend.append((pname + ": ", str(round(min_val, 2)), paint_bar, str(round(max_val, 2))))
         self.setMaximumHeight(len(self._legend) * self._BASE_HEIGHT)
         self.adjustSize()
 
@@ -353,7 +369,7 @@ class LegendWidget(QWidget):
 
     def paint(self, painter, rect):
         painter.save()
-        row_h = rect.height() / len(self._legend)
+        row_h = rect.height() / self.row_count()
         font = painter.font()
         font.setPointSizeF(0.375 * row_h)
         painter.setFont(font)
@@ -406,13 +422,14 @@ class ExportAsVideoDialog(QDialog):
         self._stop_edit.setDateTime(stop)
         self._start_edit.dateTimeChanged.connect(self._handle_start_dt_changed)
         self._stop_edit.dateTimeChanged.connect(self._handle_stop_dt_changed)
-        self._frame_count_spin_box = QSpinBox()
-        self._frame_count_spin_box.setRange(1, 16777215)
+        self._step_len_spin_box = QSpinBox()
+        self._step_len_spin_box.setRange(1, 16777215)
         self._fps_spin_box = QSpinBox()
         self._fps_spin_box.setRange(1, 20)
+        self._fps_spin_box.setValue(6)
         form.addRow("Start:", self._start_edit)
         form.addRow("Stop:", self._stop_edit)
-        form.addRow("Number of frames:", self._frame_count_spin_box)
+        form.addRow("Step (hours):", self._step_len_spin_box)
         form.addRow("Frames per second:", self._fps_spin_box)
         self._button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self._button_box.accepted.connect(self.accept)
@@ -434,6 +451,6 @@ class ExportAsVideoDialog(QDialog):
         return (
             self._start_edit.dateTime().toString(Qt.ISODate),
             self._stop_edit.dateTime().toString(Qt.ISODate),
-            self._frame_count_spin_box.value(),
+            self._step_len_spin_box.value(),
             self._fps_spin_box.value(),
         )

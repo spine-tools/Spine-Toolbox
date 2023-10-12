@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QMenu,
 )
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction
+from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction, QColor
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, color_from_index
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
@@ -51,6 +51,8 @@ class EntityItem(QGraphicsRectItem):
         self._dx = self._dy = 0
         self._removed_db_map_ids = ()
         self.arc_items = []
+        self._circle_item = QGraphicsEllipseItem(self)
+        self._circle_item.setPen(Qt.NoPen)
         self.set_pos(x, y)
         self.setPen(Qt.NoPen)
         self._svg_item = QGraphicsSvgItem(self)
@@ -250,7 +252,19 @@ class EntityItem(QGraphicsRectItem):
         range_ = max_val - min_val
         if range_ == 0:
             return None
-        return (abs(val) - min_val) / range_, -1 if val < 0 else 1
+        if val > 0:
+            return val / max_val, 1
+        return val / min_val, -1
+
+    def _get_vertex_radius(self, index=None):
+        vertex_radius = self._get_prop(self._spine_db_editor.get_vertex_radius, index)
+        if vertex_radius in (None, self._spine_db_editor.NOT_SPECIFIED):
+            return None
+        min_val, val, max_val = vertex_radius
+        range_ = max_val - min_val
+        if range_ == 0:
+            return 0
+        return (val - min_val) / range_
 
     def _has_name(self):
         return True
@@ -280,8 +294,10 @@ class EntityItem(QGraphicsRectItem):
     def update_props(self, index):
         color = self._get_color(index)
         arc_width = self._get_arc_width(index)
-        self._update_renderer(color, resize=False)
+        vertex_radius = self._get_vertex_radius(index)
+        self._update_renderer(color, resize=True)
         self._update_arcs(color, arc_width)
+        self._update_circle(color, vertex_radius)
 
     def _update_bg(self):
         bg_rect = QRectF(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
@@ -384,7 +400,12 @@ class EntityItem(QGraphicsRectItem):
         self.update_entity_pos()
 
     def update_entity_pos(self):
-        el_items = [arc_item.el_item for arc_item in self.arc_items]
+        for arc_item in self.arc_items:
+            arc_item.ent_item.do_update_entity_pos()
+        self.do_update_entity_pos()
+
+    def do_update_entity_pos(self):
+        el_items = [arc_item.el_item for arc_item in self.arc_items if arc_item.el_item is not self]
         dim_count = len(el_items)
         if not dim_count:
             return
@@ -431,11 +452,11 @@ class EntityItem(QGraphicsRectItem):
         if event.buttons() & Qt.LeftButton == 0:
             super().mouseMoveEvent(event)
             return
-        move_by = event.scenePos() - event.lastScenePos()
+        delta = event.scenePos() - event.lastScenePos()
         # Move selected items together
         for item in self.scene().selectedItems():
             if isinstance(item, (EntityItem)):
-                item.move_by(move_by.x(), move_by.y())
+                item.move_by(delta.x(), delta.y())
 
     def update_arcs_line(self):
         """Moves arc items."""
@@ -451,13 +472,23 @@ class EntityItem(QGraphicsRectItem):
                 item.update_color(color)
         if arc_width not in (None, self._spine_db_editor.NOT_SPECIFIED):
             width, sign = arc_width
-            factor = 1 + 9 * width
+            factor = 0.75 * (0.5 + 0.5 * width) * self._extent
             switched = False
             for item in self.arc_items:
                 item.apply_value(factor, sign)
                 if not switched:
                     switched = True
                     sign = -sign
+
+    def _update_circle(self, color, vertex_radius):
+        if color is self._spine_db_editor.NOT_SPECIFIED:
+            color = color_from_index(0, 1, value=0)
+        else:
+            color = QColor(color)
+        circle_extent = 2 * (0.5 + 0.5 * vertex_radius) * self._extent if vertex_radius is not None else 0
+        self._circle_item.setRect(-circle_extent / 2, -circle_extent / 2, circle_extent, circle_extent)
+        color.setAlphaF(0.5)
+        self._circle_item.setBrush(color)
 
     def itemChange(self, change, value):
         """
@@ -533,10 +564,11 @@ class EntityItem(QGraphicsRectItem):
         self.setToolTip(self._make_tool_tip())
 
     def _rotate_svg_item(self):
-        if len(self.arc_items) != 2:
+        arc_items_as_ent = [x for x in self.arc_items if x.ent_item is self]
+        if len(arc_items_as_ent) != 2:
             self._svg_item.setRotation(0)
             return
-        arc1, arc2 = self.arc_items  # pylint: disable=unbalanced-tuple-unpacking
+        arc1, arc2 = arc_items_as_ent  # pylint: disable=unbalanced-tuple-unpacking
         obj1, obj2 = arc1.el_item, arc2.el_item
         line = QLineF(obj1.pos(), obj2.pos())
         self._svg_item.setRotation(-line.angle())
@@ -699,6 +731,8 @@ class ArcItem(QGraphicsPathItem):
     def update_color(self, color):
         self._pen.setColor(color)
         self.setPen(self._pen)
+        color = QColor(color)
+        color.setAlphaF(0.5)
         self._gradient.setBrush(color)
 
     def apply_value(self, factor, sign):
@@ -738,11 +772,13 @@ class ArcItem(QGraphicsPathItem):
 
     def _do_move_gradient(self):
         width = self._original_width * self._gradient_width / self._scaling_factor
-        init_pos = self.rel_item.pos() + (self.obj_item.pos() - self.rel_item.pos()) * self._gradient_position
-        final_pos = self.obj_item.pos() if self._gradient_sign > 0 else self.rel_item.pos()
+        init_pos, final_pos = self.ent_item.pos(), self.el_item.pos()
         line = QLineF(init_pos, final_pos)
+        line.translate(self._gradient_position * line.dx(), self._gradient_position * line.dy())
         line.setLength(width)
         line.translate(-line.dx() / 2, -line.dy() / 2)
+        if self._gradient_sign < 0:
+            line.setPoints(line.p2(), line.p1())
         normal = line.normalVector()
         normal.translate(-normal.dx() / 2, -normal.dy() / 2)
         path = QPainterPath(line.p2())

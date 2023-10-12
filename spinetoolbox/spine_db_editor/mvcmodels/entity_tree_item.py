@@ -138,8 +138,6 @@ class EntityClassItem(MultiDBTreeItem):
 
     def _polish_children(self, children):
         """See base class."""
-        if any(self.db_map_data_field(db_map, "dimension_id_list") for db_map in self.db_maps):
-            return
         db_map_entity_element_ids = {
             db_map: {el_id for ent in self.db_mngr.get_items(db_map, "entity") for el_id in ent["element_id_list"]}
             for db_map in self.db_maps
@@ -191,8 +189,12 @@ class EntityItem(MultiDBTreeItem):
         )
 
     @property
+    def name(self):
+        return self.db_map_data_field(self.first_db_map, "name", default="")
+
+    @property
     def element_name_list(self):
-        return self.db_map_data_field(self.first_db_map, "element_name_list", default="")
+        return self.db_map_data_field(self.first_db_map, "element_name_list", default=())
 
     @property
     def entity_class_key(self):
@@ -202,14 +204,11 @@ class EntityItem(MultiDBTreeItem):
 
     @property
     def display_data(self):
-        byname = self.db_map_data_field(self.first_db_map, "byname", default="")
+        byname = self.db_map_data_field(self.first_db_map, "byname", default=())
+        names = DB_ITEM_SEPARATOR.join(byname).replace(self.parent_item.display_data, "\u2022")
         if self._is_member:
-            return "member: " + DB_ITEM_SEPARATOR.join(byname)
-        if self.parent_item.item_type == "entity":
-            class_name = self.db_map_data_field(self.first_db_map, "class_name", default="")
-            byname = [x if x != self.parent_item.display_data else "\u2022" for x in byname]
-            return class_name + "[ " + DB_ITEM_SEPARATOR.join(byname) + " ]"
-        return DB_ITEM_SEPARATOR.join(byname)
+            return "member: " + names
+        return names
 
     @property
     def edit_data(self):
@@ -243,7 +242,7 @@ class EntityItem(MultiDBTreeItem):
             return True
         if self._is_member:
             return True
-        return self.parent_item.display_data in self.element_name_list
+        return self.parent_item.name in self.element_name_list
 
     def _can_fetch_more_entity_groups(self):
         result = False

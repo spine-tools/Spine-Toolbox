@@ -8,7 +8,7 @@ on:
       - "**.py"
       - ".github/workflows/*.yml"
       - "requirements.txt"
-      - "setup.cfg"
+      - "pyproject.toml"
       - "execution_tests/**"
 
 jobs:
