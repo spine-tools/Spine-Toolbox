@@ -400,7 +400,12 @@ class EntityItem(QGraphicsRectItem):
         self.update_entity_pos()
 
     def update_entity_pos(self):
-        el_items = [arc_item.el_item for arc_item in self.arc_items]
+        for arc_item in self.arc_items:
+            arc_item.ent_item.do_update_entity_pos()
+        self.do_update_entity_pos()
+
+    def do_update_entity_pos(self):
+        el_items = [arc_item.el_item for arc_item in self.arc_items if arc_item.el_item is not self]
         dim_count = len(el_items)
         if not dim_count:
             return
@@ -447,11 +452,11 @@ class EntityItem(QGraphicsRectItem):
         if event.buttons() & Qt.LeftButton == 0:
             super().mouseMoveEvent(event)
             return
-        move_by = event.scenePos() - event.lastScenePos()
+        delta = event.scenePos() - event.lastScenePos()
         # Move selected items together
         for item in self.scene().selectedItems():
             if isinstance(item, (EntityItem)):
-                item.move_by(move_by.x(), move_by.y())
+                item.move_by(delta.x(), delta.y())
 
     def update_arcs_line(self):
         """Moves arc items."""
@@ -559,10 +564,11 @@ class EntityItem(QGraphicsRectItem):
         self.setToolTip(self._make_tool_tip())
 
     def _rotate_svg_item(self):
-        if len(self.arc_items) != 2:
+        arc_items_as_ent = [x for x in self.arc_items if x.ent_item is self]
+        if len(arc_items_as_ent) != 2:
             self._svg_item.setRotation(0)
             return
-        arc1, arc2 = self.arc_items  # pylint: disable=unbalanced-tuple-unpacking
+        arc1, arc2 = arc_items_as_ent  # pylint: disable=unbalanced-tuple-unpacking
         obj1, obj2 = arc1.el_item, arc2.el_item
         line = QLineF(obj1.pos(), obj2.pos())
         self._svg_item.setRotation(-line.angle())

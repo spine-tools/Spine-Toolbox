@@ -63,11 +63,11 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
         nemo_item = fish_item.child(0)
-        relationships = [x.display_data for x in nemo_item.children]
+        relationships = [x.display_id for x in nemo_item.children]
         self.assertEqual(nemo_item.child_count(), 3)
-        self.assertTrue("dog__fish" in relationships[0] and "pluto" in relationships[0])
-        self.assertTrue("fish__dog" in relationships[1] and "pluto" in relationships[1])
-        self.assertTrue("fish__dog" in relationships[2] and "scooby" in relationships[2])
+        self.assertTrue("dog__fish" in relationships[0] and "pluto" in relationships[0][1])
+        self.assertTrue("fish__dog" in relationships[1] and "pluto" in relationships[1][1])
+        self.assertTrue("fish__dog" in relationships[2] and "scooby" in relationships[2][1])
         self.db_mngr.remove_items({self.mock_db_map: {"entity": {self.nemo_pluto_rel["id"]}}})
         self.assertEqual(nemo_item.child_count(), 2)
 
