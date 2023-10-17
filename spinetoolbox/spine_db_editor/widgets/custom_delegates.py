@@ -27,7 +27,7 @@ from ...widgets.custom_editors import (
 )
 from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
-from ...helpers import object_icon
+from ...helpers import object_icon, DB_ITEM_SEPARATOR
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 
 
@@ -452,8 +452,8 @@ class EntityBynameDelegate(TableDelegate):
         else:
             entities = self.db_mngr.get_items(db_map, "entity")
         editor = SearchBarEditor(self.parent(), parent)
-        name_list = list({x["name"]: None for x in entities})
-        editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
+        byname_list = list({DB_ITEM_SEPARATOR.join(x["byname"]): None for x in entities})
+        editor.set_data(index.data(Qt.ItemDataRole.EditRole), byname_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 

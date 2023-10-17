@@ -86,21 +86,28 @@ class StackedViewMixin:
             db_map (DiffDatabaseMapping)
         """
         entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
-        dimension_id_list = entity_class.get("dimension_id_list")
+        dimension_id_list = entity_class.get("dimension_id_list", ())
         dimension_names = []
-        element_name_lists = []
+        byname_lists = []
         for id_ in dimension_id_list:
             dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_).get("name")
-            element_names_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", id_)]
+            byname_list = [
+                DB_ITEM_SEPARATOR.join(x["byname"])
+                for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", id_)
+            ]
             dimension_names.append(dimension_name)
-            element_name_lists.append(element_names_list)
-        element_name_list = index.data(Qt.ItemDataRole.EditRole)
-        try:
-            current_element_names = element_name_list.split(DB_ITEM_SEPARATOR)
-        except AttributeError:
-            # Gibberish
-            current_element_names = []
-        editor = ElementNameListEditor(self, index, dimension_names, element_name_lists, current_element_names)
+            byname_lists.append(byname_list)
+        entity_byname = tuple(index.data(Qt.ItemDataRole.EditRole).split(DB_ITEM_SEPARATOR))
+        entity = db_map.get_item("entity", class_name=entity_class["name"], byname=entity_byname)
+        current_bynames = (
+            [
+                DB_ITEM_SEPARATOR.join((db_map.get_item("entity", id=id_) or {}).get("byname", ()))
+                for id_ in entity["element_id_list"]
+            ]
+            if entity
+            else []
+        )
+        editor = ElementNameListEditor(self, index, dimension_names, byname_lists, current_bynames)
         editor.show()
 
     def _set_default_parameter_data(self, index=None):
