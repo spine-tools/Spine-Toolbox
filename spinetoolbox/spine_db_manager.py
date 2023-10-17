@@ -1363,7 +1363,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def db_map_ids(db_map_data):
-        return {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        return {db_map: {x["id"] for x in data if x} for db_map, data in db_map_data.items()}
 
     @staticmethod
     def db_map_class_ids(db_map_data):
