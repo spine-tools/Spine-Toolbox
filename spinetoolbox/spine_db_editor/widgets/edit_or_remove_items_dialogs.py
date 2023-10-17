@@ -126,7 +126,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         self.connect_signals()
         self.class_name, self.dimension_name_list = class_key
         self.model.set_horizontal_header_labels(
-            [x + ' name' for x in self.dimension_name_list] + ['entity name', 'databases']
+            [x + ' byname' for x in self.dimension_name_list] + ['entity name', 'databases']
         )
         self.orig_data = list()
         model_data = list()
@@ -134,7 +134,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         for item in selected:
             self.db_maps.update(item.db_maps)
             data = item.db_map_data(item.first_db_map)
-            row_data = [*item.element_name_list, data["name"]]
+            row_data = [*item.element_byname_list, data["name"]]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)

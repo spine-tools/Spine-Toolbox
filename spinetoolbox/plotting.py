@@ -24,14 +24,16 @@ from typing import Dict, List, Optional, Union
 from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt
 
 from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
-from spinedb_api import Array, IndexedValue, TimeSeries, DateTime
+from spinedb_api import IndexedValue, DateTime
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_canvas import LegendPosition
 from .widgets.plot_widget import PlotWidget
 
+
+# FIXME: Does it work after entity changes???
 
 LEGEND_PLACEMENT_THRESHOLD = 8
 

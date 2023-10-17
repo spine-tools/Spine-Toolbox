@@ -19,7 +19,7 @@ from PySide6.QtCore import Slot, Qt, QModelIndex
 from PySide6.QtGui import QAction
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
-from ...helpers import busy_effect, preferred_row_height
+from ...helpers import busy_effect, preferred_row_height, DB_ITEM_SEPARATOR
 
 
 class ManageItemsDialogBase(QDialog):
@@ -157,7 +157,10 @@ class GetEntitiesMixin:
 
     def make_db_map_ent_lookup(self):
         return {
-            db_map: {(x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "entity")}
+            db_map: {
+                (x["class_id"], DB_ITEM_SEPARATOR.join(x["byname"])): x
+                for x in self.db_mngr.get_items(db_map, "entity")
+            }
             for db_map in self.db_maps
         }
 

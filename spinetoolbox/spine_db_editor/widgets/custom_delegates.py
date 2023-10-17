@@ -426,7 +426,7 @@ class ParameterNameDelegate(TableDelegate):
             )
         else:
             parameter_definitions = self.db_mngr.get_items(db_map, "parameter_definition")
-        name_list = list({x["parameter_name"]: None for x in parameter_definitions})
+        name_list = list({x["name"]: None for x in parameter_definitions})
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor

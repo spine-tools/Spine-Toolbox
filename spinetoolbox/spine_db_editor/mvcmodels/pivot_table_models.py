@@ -147,7 +147,7 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         """See base class."""
-        return self._get_header_data_from_db("parameter_definition", header_id, "parameter_name", role)
+        return self._get_header_data_from_db("parameter_definition", header_id, "name", role)
 
     def update_data(self, db_map_data):
         """See base class."""
@@ -560,7 +560,7 @@ class PivotTableModelBase(QAbstractTableModel):
         header_ids = self._header_ids(0, pivot_column)
         _, parameter_id = header_ids[-3]
         db_map = header_ids[-1]
-        parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id).get("parameter_name", "")
+        parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id).get("name", "")
         return parameter_name
 
     def headerRowCount(self):
@@ -1061,7 +1061,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         _, alternative_id = header_ids[-2]
         db_map = header_ids[-1]
         entity_names = [self.db_mngr.get_item(db_map, "entity", id_)["name"] for id_ in entity_ids]
-        parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id).get("parameter_name", "")
+        parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id).get("name", "")
         alternative_name = self.db_mngr.get_item(db_map, "alternative", alternative_id).get("name", "")
         return entity_names, parameter_name, alternative_name, db_map.codename
 

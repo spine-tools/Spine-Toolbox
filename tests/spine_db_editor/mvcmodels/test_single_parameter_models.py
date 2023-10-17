@@ -19,11 +19,15 @@ from spinetoolbox.spine_db_editor.mvcmodels.single_models import (
     SingleParameterDefinitionModel,
     SingleParameterValueModel,
 )
+from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
+    CompoundParameterDefinitionModel,
+    CompoundParameterValueModel,
+)
 from tests.mock_helpers import q_object, TestSpineDBManager, fetch_model
 
-OBJECT_PARAMETER_VALUE_HEADER = [
+ENTITY_PARAMETER_VALUE_HEADER = [
     "entity_class_name",
-    "object_name",
+    "entity_byname",
     "parameter_name",
     "alternative_name",
     "value",
@@ -31,23 +35,38 @@ OBJECT_PARAMETER_VALUE_HEADER = [
 ]
 
 
+class TestSingleParameterDefinitionModel(SingleParameterDefinitionModel):
+    def __init__(self, db_mngr, db_map, entity_class_id, committed):
+        super().__init__(CompoundParameterDefinitionModel(None, db_mngr), db_map, entity_class_id, committed)
+
+
+class TestSingleParameterValueModel(SingleParameterValueModel):
+    def __init__(self, db_mngr, db_map, entity_class_id, committed):
+        super().__init__(CompoundParameterValueModel(None, db_mngr), db_map, entity_class_id, committed)
+
+
 class TestEmptySingleParameterDefinitionModel(unittest.TestCase):
+    HEADER = [
+        "entity_class_name",
+        "parameter_name",
+        "list_value_name",
+        "default_value",
+        "description",
+        "database",
+    ]
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
 
     def test_rowCount_is_zero(self):
-        with q_object(
-            SingleParameterDefinitionModel(OBJECT_PARAMETER_VALUE_HEADER, None, None, None, False, False)
-        ) as model:
+        with q_object(TestSingleParameterDefinitionModel(None, None, 1, False)) as model:
             self.assertEqual(model.rowCount(), 0)
 
     def test_columnCount_is_header_length(self):
-        with q_object(
-            SingleParameterDefinitionModel(OBJECT_PARAMETER_VALUE_HEADER, None, None, None, False, False)
-        ) as model:
-            self.assertEqual(model.columnCount(), len(OBJECT_PARAMETER_VALUE_HEADER))
+        with q_object(TestSingleParameterDefinitionModel(None, None, 1, False)) as model:
+            self.assertEqual(model.columnCount(), len(self.HEADER))
 
 
 class TestSingleObjectParameterValueModel(unittest.TestCase):
@@ -97,9 +116,7 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
                 ]
             }
         )
-        with q_object(
-            SingleParameterValueModel(OBJECT_PARAMETER_VALUE_HEADER, self._db_mngr, self._db_map, 1, True, False)
-        ) as model:
+        with q_object(TestSingleParameterValueModel(self._db_mngr, self._db_map, 1, True)) as model:
             fetch_model(model)
             model.add_rows([1])
             self.assertEqual(model.index(0, 0).data(DB_MAP_ROLE), self._db_map)

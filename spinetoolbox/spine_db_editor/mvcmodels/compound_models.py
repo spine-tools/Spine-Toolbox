@@ -58,6 +58,10 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         raise NotImplementedError()
 
     @property
+    def field_map(self):
+        return {}
+
+    @property
     def item_type(self):
         """Returns the DB item type, e.g., 'parameter_value'.
 
@@ -146,7 +150,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Returns:
             EmptyParameterModel
         """
-        return self._empty_model_type(self, self.header, self.db_mngr)
+        return self._empty_model_type(self)
 
     def filter_accepts_model(self, model):
         """Returns a boolean indicating whether the given model passes the filter for compound model.
@@ -275,7 +279,8 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         """
         return [m for m in self.single_models if m.db_map == db_map]
 
-    def _items_per_class(self, items):
+    @staticmethod
+    def _items_per_class(items):
         """Returns a dict mapping entity_class ids to a set of items.
 
         Args:
@@ -325,7 +330,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         return len(self.single_models)
 
     def _create_single_model(self, db_map, entity_class_id, committed):
-        model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id, committed)
+        model = self._single_model_type(self, db_map, entity_class_id, committed)
         self._connect_single_model(model)
         for field in self._auto_filter:
             self._set_single_auto_filter(model, field)
@@ -396,7 +401,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
 
     def get_entity_class_id(self, index, db_map):
         entity_class_name = index.sibling(index.row(), self.header.index("entity_class_name")).data()
-        entity_class = self.db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class_name)
+        entity_class = db_map.get_item("entity_class", name=entity_class_name) or {}
         return entity_class.get("id")
 
     def filter_by(self, rows_per_column):
@@ -447,7 +452,7 @@ class FilterEntityAlternativeMixin:
 
 
 class EditParameterValueMixin:
-    """Provides the interface for ParameterValueEditor to edit values."""
+    """Provides the interface to edit values via ParameterValueEditor."""
 
     def index_name(self, index):
         """Generates a name for data at given index.
@@ -496,9 +501,7 @@ class EditParameterValueMixin:
 
 
 class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundModelBase):
-    """A model that concatenates several single object parameter_definition models
-    and one empty object parameter_definition model.
-    """
+    """A model that concatenates several single parameter_definition models and one empty parameter_definition model."""
 
     @property
     def item_type(self):
@@ -515,6 +518,10 @@ class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundModelBas
         ]
 
     @property
+    def field_map(self):
+        return {"parameter_name": "name", "value_list_name": "parameter_value_list_name"}
+
+    @property
     def _single_model_type(self):
         return SingleParameterDefinitionModel
 
@@ -524,9 +531,7 @@ class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundModelBas
 
 
 class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterValueMixin, CompoundModelBase):
-    """A model that concatenates several single object parameter_value models
-    and one empty object parameter_value model.
-    """
+    """A model that concatenates several single parameter_value models and one empty parameter_value model."""
 
     @property
     def item_type(self):
@@ -541,6 +546,10 @@ class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterVal
             "value",
             "database",
         ]
+
+    @property
+    def field_map(self):
+        return {"parameter_name": "parameter_definition_name"}
 
     @property
     def _single_model_type(self):

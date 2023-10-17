@@ -84,11 +84,7 @@ class ParameterNameDelegate(QStyledItemDelegate):
         editor = SearchBarEditor(self.parent(), parent)
         editor.set_data(
             index.data(Qt.ItemDataRole.DisplayRole),
-            {
-                x["parameter_name"]
-                for db_map in self.db_maps
-                for x in self.db_mngr.get_items(db_map, "parameter_definition")
-            },
+            {x["name"] for db_map in self.db_maps for x in self.db_mngr.get_items(db_map, "parameter_definition")},
         )
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
