@@ -153,7 +153,7 @@ class CommitViewer(QMainWindow):
         Args:
             qsettings (QSettings)
             db_mngr (SpineDBManager)
-            db_maps (DiffDatabaseMapping)
+            db_maps (DatabaseMapping)
         """
         super().__init__(parent=parent)
         self.setWindowTitle("Commit viewer")
