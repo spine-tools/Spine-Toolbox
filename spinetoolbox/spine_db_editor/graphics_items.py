@@ -811,6 +811,10 @@ class CrossHairsItem(EntityItem):
     def entity_name(self):
         return None
 
+    @property
+    def has_dimensions(self):
+        return False
+
     def _make_tool_tip(self):
         return "<p>Click on an object to add it to the relationship.</p>"
 
@@ -858,6 +862,10 @@ class CrossHairsEntityItem(EntityItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+
+    @property
+    def has_dimensions(self):
+        return True
 
     def _make_tool_tip(self):
         return None

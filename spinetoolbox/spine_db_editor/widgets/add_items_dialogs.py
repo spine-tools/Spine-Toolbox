@@ -39,6 +39,7 @@ from PySide6.QtGui import QIcon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
+from ...helpers import DB_ITEM_SEPARATOR
 from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate
 from .manage_items_dialogs import (
     ShowIconColorEditorMixin,
@@ -91,8 +92,8 @@ class AddReadyEntitiesDialog(ManageItemsDialogBase):
             item.setFlags(Qt.ItemIsEnabled)
             item.setCheckState(Qt.CheckState.Checked)
             self.table_view.setItem(row, 0, item)
-            for column, element_name in enumerate(entity):
-                item = QTableWidgetItem(element_name)
+            for column, element_byname in enumerate(entity):
+                item = QTableWidgetItem(DB_ITEM_SEPARATOR.join(element_byname))
                 item.setFlags(Qt.ItemIsEnabled)
                 self.table_view.setItem(row, column + 1, item)
         self.table_view.resizeColumnsToContents()
@@ -130,8 +131,8 @@ class AddReadyEntitiesDialog(ManageItemsDialogBase):
         for row in range(self.table_view.rowCount()):
             if self.table_view.item(row, 0).checkState() != Qt.CheckState.Checked:
                 continue
-            entities = self.entities[row]
-            data.append({"class_name": self.entity_class["name"], "element_name_list": entities})
+            byname = tuple(n for element_byname in self.entities[row] for n in element_byname)
+            data.append({"class_name": self.entity_class["name"], "byname": byname})
         return {db_map: data for db_map in self.db_maps}
 
 

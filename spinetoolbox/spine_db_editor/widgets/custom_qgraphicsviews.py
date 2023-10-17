@@ -863,10 +863,10 @@ class EntityQGraphicsView(CustomQGraphicsView):
         delta = scene_pos - cross_hairs_item.scenePos()
         cross_hairs_item.move_by(delta.x(), delta.y())
         self._hovered_ent_item = None
-        ent_items = [
-            item for item in self.items(pos) if isinstance(item, EntityItem) and item is not self.cross_hairs_items[0]
-        ]
-        self._hovered_ent_item = next(iter(ent_items), None)
+        ent_items = (
+            item for item in self.items(pos) if isinstance(item, EntityItem) and item not in self.cross_hairs_items
+        )
+        self._hovered_ent_item = next(ent_items, None)
         if self._hovered_ent_item is not None:
             if self._cross_hairs_has_valid_target():
                 if len(self.entity_class["dimension_ids_to_go"]) == 1:
