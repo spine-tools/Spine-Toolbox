@@ -234,7 +234,7 @@ class MultiDBTreeItem(TreeItem):
 
         Args:
             db_map (DatabaseMapping)
-            id_ (int)
+            id (int)
 
         Returns:
             MultiDBTreemItem
@@ -492,7 +492,6 @@ class MultiDBTreeItem(TreeItem):
     def tear_down(self):
         super().tear_down()
         self._fetch_parent.set_obsolete(True)
-        self._fetch_parent.deleteLater()
 
     def register_fetch_parent(self):
         """Registers item's fetch parent for all model's databases."""

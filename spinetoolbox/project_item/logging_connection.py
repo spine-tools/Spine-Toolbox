@@ -186,9 +186,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         obsolete_urls = set(self._db_maps) - resource_urls
         for url in obsolete_urls:
             db_map = self._db_maps.pop(url)
-            fetch_parent = self._fetch_parents.pop(db_map)
-            fetch_parent.set_obsolete(True)
-            fetch_parent.deleteLater()
+            self._fetch_parents.pop(db_map)
             self._toolbox.db_mngr.unregister_listener(self, db_map)
 
     def _make_fetch_parent(self, db_map, item_type):
