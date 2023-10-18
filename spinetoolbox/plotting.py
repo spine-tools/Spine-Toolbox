@@ -701,14 +701,12 @@ def plot_db_mngr_items(items, db_maps, plot_widget=None):
         except PlottingError as error:
             raise PlottingError(f"Failed to plot value in {db_map.codename}: {error}")
         db_name = db_map.codename
-        parameter_name = item["parameter_name"]
-        object_name_list = item["object_name_list"]
-        if object_name_list is not None:
-            object_names = tuple(object_name_list.split(","))
-        else:
-            object_names = (item["object_name"],)
+        parameter_name = item["parameter_definition_name"]
+        entity_byname = item["entity_byname"]
+        if not isinstance(entity_byname, tuple):
+            entity_byname = (entity_byname,)
         alternative_name = item["alternative_name"]
-        indexes = (db_name, parameter_name) + object_names + (alternative_name,)
+        indexes = (db_name, parameter_name) + entity_byname + (alternative_name,)
         index_names = _pivot_index_names(indexes)
         node = root_node
         for i, index in enumerate(indexes[:-1]):
