@@ -107,11 +107,9 @@ class GraphViewMixin:
             handle_items_updated=self._graph_handle_entities_updated,
             owner=self,
         )
-        self._entity_fetch_parent.setParent(self)
         self._parameter_value_fetch_parent = FlexibleFetchParent(
             "parameter_value", handle_items_added=self._graph_handle_parameter_values_added, owner=self
         )
-        self._parameter_value_fetch_parent.setParent(self)
         self._graph_fetch_more_later()
 
     @Slot(int)
@@ -872,8 +870,6 @@ class GraphViewMixin:
         self.ui.treeView_entity.tree_selection_changed.disconnect(self._handle_entity_tree_selection_changed_in_graph)
         if self.scene is not None:
             self.scene.deleteLater()
-        self._entity_fetch_parent.set_obsolete(True)
-        self._parameter_value_fetch_parent.set_obsolete(True)
         super().closeEvent(event)
 
 

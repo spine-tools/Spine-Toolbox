@@ -58,8 +58,6 @@ class ItemMetadataTableModel(MetadataTableModelBase):
             accepts_item=self._accepts_entity_metadata_item,
             owner=self,
         )
-        self._entity_metadata_fetch_parent.setParent(self)
-        self.destroyed.connect(lambda: self._entity_metadata_fetch_parent.set_obsolete(True))
         self._parameter_value_metadata_fetch_parent = FlexibleFetchParent(
             "parameter_value_metadata",
             handle_items_added=self.add_item_metadata,
@@ -68,8 +66,6 @@ class ItemMetadataTableModel(MetadataTableModelBase):
             accepts_item=self._accepts_parameter_value_metadata_item,
             owner=self,
         )
-        self._parameter_value_metadata_fetch_parent.setParent(self)
-        self.destroyed.connect(lambda: self._parameter_value_metadata_fetch_parent.set_obsolete(True))
 
     def _fetch_parents(self):
         yield self._entity_metadata_fetch_parent

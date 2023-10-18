@@ -172,8 +172,6 @@ class TreeItem:
     def tear_down_recursively(self):
         for child in self._created_children.values():
             child.tear_down_recursively()
-        for child in self._children:
-            child.tear_down_recursively()
         self.tear_down()
 
     def remove_children(self, position, count):

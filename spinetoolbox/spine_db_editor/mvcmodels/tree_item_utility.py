@@ -149,7 +149,6 @@ class FetchMoreMixin:
     def tear_down(self):
         super().tear_down()
         self._natural_fetch_parent.set_obsolete(True)
-        self._natural_fetch_parent.deleteLater()
 
     @property
     def fetch_item_type(self):

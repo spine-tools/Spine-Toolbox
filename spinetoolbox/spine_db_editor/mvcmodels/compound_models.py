@@ -53,8 +53,6 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
             handle_items_updated=self.handle_items_updated,
             owner=self,
         )
-        self._fetch_parent.setParent(self)
-        self.destroyed.connect(lambda: self._fetch_parent.set_obsolete(True))
 
     def _make_header(self):
         raise NotImplementedError()
