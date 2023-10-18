@@ -292,6 +292,8 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
         self._db_mngr = db_mngr
         self._db_maps = db_maps
         self._fetch_parent = fetch_parent
+        self._fetch_parent.setParent(self)
+        self.destroyed.connect(self._fetch_parent.set_obsolete(True))
 
     def canFetchMore(self, _parent):
         result = False
