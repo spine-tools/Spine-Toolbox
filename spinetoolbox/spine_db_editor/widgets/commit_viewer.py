@@ -50,7 +50,7 @@ class _DBCommitViewer(QWidget):
         layout.addWidget(self.splitter)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        for commit in reversed(self._db_mngr.get_items(db_map, "commit")):
+        for commit in reversed(db_map.get_items("commit")):
             tree_item = QTreeWidgetItem(self._commit_list)
             tree_item.setData(0, Qt.ItemDataRole.UserRole + 1, commit["id"])
             self._commit_list.addTopLevelItem(tree_item)

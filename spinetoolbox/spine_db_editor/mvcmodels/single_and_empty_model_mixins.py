@@ -50,7 +50,7 @@ class SplitValueAndTypeMixin(ConvertToDBMixin):
         return item, err
 
 
-class MakeEntityOnTheFlyMixin:
+class MakeEntityOnTheFlyMixin(ConvertToDBMixin):
     """Makes relationships on the fly."""
 
     @staticmethod

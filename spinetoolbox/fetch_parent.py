@@ -54,6 +54,7 @@ class FetchParent(QObject):
         self.chunk_size = chunk_size
 
     def apply_changes_immediately(self):
+        # For tests
         self._changes_pending.connect(self._apply_pending_changes, Qt.UniqueConnection)
 
     @property
