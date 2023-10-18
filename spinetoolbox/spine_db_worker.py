@@ -245,8 +245,8 @@ class SpineDBWorker(QObject):
 
     def refresh_session(self):
         """Refreshes session."""
-        for parents in self._parents_by_type.values():
-            for parent in parents:
+        for parent_type in self._parents_by_type:
+            for parent in self._get_parents(parent_type):
                 parent.reset()
         self._db_map.refresh_session()
         self._parents_fetching.clear()
