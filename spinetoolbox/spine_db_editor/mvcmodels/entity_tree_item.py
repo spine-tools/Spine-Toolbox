@@ -305,3 +305,4 @@ class EntityItem(MultiDBTreeItem):
     def tear_down(self):
         super().tear_down()
         self._entity_group_fetch_parent.set_obsolete(True)
+        self._entity_group_fetch_parent.deleteLater()

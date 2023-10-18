@@ -929,6 +929,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             accepts_item=self._parent.accepts_entity_item,
             owner=self,
         )
+        self._entity_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._entity_fetch_parent.set_obsolete(True))
         self._parameter_definition_fetch_parent = FlexibleFetchParent(
             "parameter_definition",
             handle_items_added=self._handle_parameter_definitions_added,
@@ -937,6 +939,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             accepts_item=self._parent.accepts_parameter_item,
             owner=self,
         )
+        self._entity_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._entity_fetch_parent.set_obsolete(True))
         self._parameter_value_fetch_parent = FlexibleFetchParent(
             "parameter_value",
             handle_items_added=self._handle_parameter_values_added,
@@ -946,6 +950,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             owner=self,
             chunk_size=None,
         )
+        self._parameter_value_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._parameter_value_fetch_parent.set_obsolete(True))
         self._alternative_fetch_parent = FlexibleFetchParent(
             "alternative",
             handle_items_added=self._handle_alternatives_added,
@@ -953,6 +959,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_updated=lambda _: self._parent.refresh_views(),
             owner=self,
         )
+        self._alternative_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._alternative_fetch_parent.set_obsolete(True))
 
     def _handle_entities_added(self, db_map_data):
         data = self._load_empty_parameter_value_data(db_map_entities=db_map_data)
@@ -1338,6 +1346,8 @@ class ElementPivotTableModel(PivotTableModelBase):
             owner=self,
             chunk_size=None,
         )
+        self._entity_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._entity_fetch_parent.set_obsolete(True))
         self._element_fetch_parent = FlexibleFetchParent(
             "entity",
             handle_items_added=self._handle_elements_added,
@@ -1346,6 +1356,8 @@ class ElementPivotTableModel(PivotTableModelBase):
             accepts_item=self._parent.accepts_element_item,
             owner=self,
         )
+        self._element_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._element_fetch_parent.set_obsolete(True))
 
     def _handle_entities_added(self, db_map_data):
         data = self._parent.load_full_element_data(db_map_entities=db_map_data, action="add")
@@ -1462,6 +1474,8 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             handle_items_updated=lambda _: self._parent.refresh_views(),
             owner=self,
         )
+        self._scenario_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._scenario_fetch_parent.set_obsolete(True))
         self._alternative_fetch_parent = FlexibleFetchParent(
             "alternative",
             handle_items_added=self._handle_alternatives_added,
@@ -1469,6 +1483,8 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             handle_items_updated=lambda _: self._parent.refresh_views(),
             owner=self,
         )
+        self._alternative_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._alternative_fetch_parent.set_obsolete(True))
         self._scenario_alternative_fetch_parent = FlexibleFetchParent(
             "scenario_alternative",
             handle_items_added=self._handle_scenario_alternatives_changed,
@@ -1476,6 +1492,8 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             owner=self,
             chunk_size=None,
         )
+        self._scenario_alternative_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._scenario_alternative_fetch_parent.set_obsolete(True))
 
     def _handle_scenarios_added(self, db_map_data):
         data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)

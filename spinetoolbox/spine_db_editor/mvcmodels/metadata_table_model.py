@@ -46,6 +46,8 @@ class MetadataTableModel(MetadataTableModelBase):
             handle_items_updated=self.update_metadata,
             owner=self,
         )
+        self._metadata_fetch_parent.setParent(self)
+        self.destroyed.connect(lambda: self._metadata_fetch_parent.set_obsolete(True))
 
     @staticmethod
     def _make_hidden_adder_columns():
