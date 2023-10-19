@@ -370,7 +370,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         """See base class."""
         h = index.model().header.index
         parameter_name = index.sibling(index.row(), h("parameter_name")).data()
-        parameters = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", parameter_name)
+        parameters = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "name", parameter_name)
         entity_class_id = index.model().get_entity_class_id(index, db_map)
         parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
         value_list_ids = {
