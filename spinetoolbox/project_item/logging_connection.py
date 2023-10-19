@@ -231,6 +231,17 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             return []
         return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario"))
 
+    def _do_purge_before_writing(self, resources):
+        purged_urls = super()._do_purge_before_writing(resources)
+        committed_db_maps = set()
+        for url in purged_urls:
+            db_map = self._toolbox.db_mngr.db_map(url)
+            if db_map:
+                committed_db_maps.add(db_map)
+        if committed_db_maps:
+            self._toolbox.db_mngr.notify_session_committed(self, *committed_db_maps)
+        return purged_urls
+
     def may_have_filters(self):
         """Returns whether this connection may have filters.
 

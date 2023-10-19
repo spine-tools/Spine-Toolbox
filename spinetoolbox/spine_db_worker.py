@@ -258,4 +258,8 @@ class SpineDBWorker(QObject):
         self._offsets.clear()
         self._fetched_item_types.clear()
         self._parents_fetching.clear()
-        self._db_mngr.receive_session_refreshed({self._db_map})
+
+    def reset_session(self):
+        """Resets session."""
+        self._db_map.reset()
+        self.refresh_session()

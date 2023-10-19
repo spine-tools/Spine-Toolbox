@@ -678,6 +678,7 @@ class SpineDBEditorBase(QMainWindow):
             self.msg.emit(msg)
             return
         # Commit done by an 'outside force'.
+        self.init_models()
         self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
