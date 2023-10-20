@@ -787,8 +787,13 @@ class GraphViewMixin:
         dimension_id_list = entity_class["dimension_id_list"]
         for item_permutation in itertools.permutations(entity_items):
             if [item.entity_class_id(db_map) for item in item_permutation] == dimension_id_list:
-                entity = tuple(item.entity_name for item in item_permutation)
-                entities.add(entity)
+                entity = tuple(item.byname for item in item_permutation)
+                if not db_map.get_item(
+                    "entity", class_name=entity_class["name"], byname=tuple(n for byname in entity for n in byname)
+                ):
+                    entities.add(entity)
+        if not entities:
+            return
         dialog = AddReadyEntitiesDialog(self, entity_class, list(entities), self.db_mngr, db_map, commit_data=False)
         dialog.accepted.connect(lambda: self._do_finalize_connecting_entities(dialog, entity_items))
         dialog.show()

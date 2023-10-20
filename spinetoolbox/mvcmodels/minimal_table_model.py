@@ -28,6 +28,7 @@ class MinimalTableModel(QAbstractTableModel):
         super().__init__(parent)
         if header is None:
             header = []
+        self._parent = parent
         self.header = header
         self._main_data = list()
         self._fetched = not lazy

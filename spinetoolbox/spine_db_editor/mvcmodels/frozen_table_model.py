@@ -333,7 +333,7 @@ class FrozenTableModel(QAbstractTableModel):
         if header == "parameter":
             db_map, id_ = value
             item = self.db_mngr.get_item(db_map, "parameter_definition", id_)
-            return item.get("parameter_name")
+            return item.get("name")
         if header == "alternative":
             db_map, id_ = value
             item = self.db_mngr.get_item(db_map, "alternative", id_)

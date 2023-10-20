@@ -14,17 +14,7 @@ Empty models for parameter definitions and values.
 """
 from PySide6.QtCore import Qt
 from ...mvcmodels.empty_row_model import EmptyRowModel
-from .single_and_empty_model_mixins import (
-    SplitValueAndTypeMixin,
-    FillInParameterNameMixin,
-    MakeEntityOnTheFlyMixin,
-    InferEntityClassIdMixin,
-    FillInAlternativeIdMixin,
-    FillInParameterDefinitionIdsMixin,
-    FillInEntityIdsMixin,
-    FillInEntityClassIdMixin,
-    FillInValueListIdMixin,
-)
+from .single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin
 from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from ...helpers import rows_to_row_count_tuples, DB_ITEM_SEPARATOR
 
@@ -32,16 +22,14 @@ from ...helpers import rows_to_row_count_tuples, DB_ITEM_SEPARATOR
 class EmptyModelBase(EmptyRowModel):
     """Base class for all empty models that go in a CompoundModelBase subclass."""
 
-    def __init__(self, parent, header, db_mngr):
+    def __init__(self, parent):
         """Initialize class.
 
         Args:
-            parent (Object): the parent object, typically a CompoundParameterModel
-            header (list): list of field names for the header
-            db_mngr (SpineDBManager)
+            parent (CompoundModelBase): the parent model
         """
-        super().__init__(parent, header)
-        self.db_mngr = db_mngr
+        super().__init__(parent, parent.header)
+        self.db_mngr = parent.db_mngr
         self.db_map = None
         self.entity_class_id = None
 
@@ -49,16 +37,34 @@ class EmptyModelBase(EmptyRowModel):
     def item_type(self):
         raise NotImplementedError()
 
+    @property
+    def field_map(self):
+        return self._parent.field_map
+
     def add_items_to_db(self, db_map_data):
         """Add items to db.
 
         Args:
             db_map_data (dict): mapping DiffDatabaseMapping instance to list of items
         """
-        raise NotImplementedError()
+        db_map_items = {}
+        db_map_error_log = {}
+        for db_map, items in db_map_data.items():
+            for item in items:
+                item_to_add, errors = self._convert_to_db(item)
+                self._autocomplete_row(db_map, item_to_add)
+                if self._check_item(item_to_add):
+                    db_map_items.setdefault(db_map, []).append(item_to_add)
+                if errors:
+                    db_map_error_log.setdefault(db_map, []).extend(errors)
+        if any(db_map_items.values()):
+            self._do_add_items_to_db(db_map_items)
+        if db_map_error_log:
+            self.db_mngr.error_msg.emit(db_map_error_log)
 
     def _make_unique_id(self, item):
-        """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
+        """Returns a unique id for the given model item (name-based). Used by handle_items_added to identify
+        which rows have been added and thus need to be removed."""
         raise NotImplementedError()
 
     @property
@@ -87,7 +93,7 @@ class EmptyModelBase(EmptyRowModel):
         for row in range(self.rowCount()):
             item = self._make_item(row)
             database = item.get("database")
-            unique_id = (database, *self._make_unique_id(item))
+            unique_id = (database, *self._make_unique_id(self._convert_to_db(item)[0]))
             if unique_id in added_ids:
                 removed_rows.append(row)
         for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
@@ -103,10 +109,15 @@ class EmptyModelBase(EmptyRowModel):
         return True
 
     def _autocomplete_row(self, db_map, item):
-        entity_class_id = item.get("entity_class_id")
-        if entity_class_id:
-            entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
-            self._main_data[item["row"]][self.header.index("entity_class_name")] = entity_class["name"]
+        """Fills in entity_class_name whenever other selections make it obvious."""
+        candidates = self._entity_class_name_candidates(db_map, item)
+        if len(candidates) == 1:
+            entity_class_name = candidates[0]
+            item["entity_class_name"] = entity_class_name
+            self._main_data[item["row"]][self.header.index("entity_class_name")] = entity_class_name
+
+    def _entity_class_name_candidates(self, db_map, item):
+        raise NotImplementedError()
 
     def _make_item(self, row):
         return dict(zip(self.header, self._main_data[row]), row=row)
@@ -155,42 +166,38 @@ class ParameterMixin:
             return self.db_mngr.get_value_from_data(data, role)
         return super().data(index, role)
 
+    @staticmethod
+    def _entity_class_name_candidates_by_parameter(db_map, item):
+        return [
+            x["entity_class_name"]
+            for x in db_map.get_items("parameter_definition", name=item.get("parameter_definition_name"))
+        ]
+
 
 class EntityMixin:
     def _do_add_items_to_db(self, db_map_items):
         raise NotImplementedError()
 
-    def add_items_to_db(self, db_map_data, second_pass=False):
-        """See base class."""
-        # First add whatever is ready and also try to add entities on the fly
-        self.build_lookup_dictionary(db_map_data)
-        db_map_items = {}
+    def add_items_to_db(self, db_map_data):
+        """Overriden to add entities on the fly first."""
         db_map_entities = {}
         db_map_error_log = {}
         for db_map, items in db_map_data.items():
             for item in items:
-                item_to_add, errors = self._convert_to_db(item, db_map)
-                entity, more_errors = self._make_entity_on_the_fly(item, db_map)
-                if self._check_item(db_map, item_to_add):
-                    db_map_items.setdefault(db_map, []).append(item_to_add)
-                if entity:
-                    already_added = db_map_entities.setdefault(db_map, [])
-                    # If the entity exists already, don't try to add it a second time
-                    if entity not in already_added:
-                        already_added.append(entity)
-                all_errors = errors + more_errors
-                if all_errors:
-                    db_map_error_log.setdefault(db_map, []).extend(all_errors)
+                item_to_add, _ = self._convert_to_db(item)
                 self._autocomplete_row(db_map, item_to_add)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)
+                entity, errors = self._make_entity_on_the_fly(item, db_map)
+                if entity:
+                    entities = db_map_entities.setdefault(db_map, [])
+                    if entity not in entities:
+                        entities.append(entity)
+                if errors:
+                    db_map_error_log.setdefault(db_map, []).extend(errors)
         if any(db_map_entities.values()):
             self.db_mngr.add_entities(db_map_entities)
-        if any(db_map_items.values()) and second_pass:
-            self._do_add_items_to_db(db_map_items)
-        # Something might have become ready after adding the entities, so we do one more pass
-        if not second_pass:
-            self.add_items_to_db(db_map_data, second_pass=True)
+        if db_map_error_log:
+            self.db_mngr.error_msg.emit(db_map_error_log)
+        super().add_items_to_db(db_map_data)
 
     def _make_item(self, row):
         item = super()._make_item(row)
@@ -198,15 +205,12 @@ class EntityMixin:
             item["entity_byname"] = tuple(item["entity_byname"].split(DB_ITEM_SEPARATOR))
         return item
 
+    @staticmethod
+    def _entity_class_name_candidates_by_entity(db_map, item):
+        return [x["class_name"] for x in db_map.get_items("entity", byname=item.get("entity_byname"))]
 
-class EmptyParameterDefinitionModel(
-    FillInValueListIdMixin,
-    FillInEntityClassIdMixin,
-    FillInParameterNameMixin,
-    SplitValueAndTypeMixin,
-    ParameterMixin,
-    EmptyModelBase,
-):
+
+class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, EmptyModelBase):
     """An empty parameter_definition model."""
 
     @property
@@ -214,43 +218,22 @@ class EmptyParameterDefinitionModel(
         return "parameter_definition"
 
     def _make_unique_id(self, item):
-        """Returns a unique id for the given model item (name-based). Used by handle_items_added."""
-        return (item.get("entity_class_name"), item.get("parameter_name"))
+        return tuple(item.get(x) for x in ("entity_class_name", "name"))
 
-    def add_items_to_db(self, db_map_data):
-        """See base class."""
-        self.build_lookup_dictionary(db_map_data)
-        db_map_param_def = {}
-        db_map_error_log = {}
-        for db_map, items in db_map_data.items():
-            for item in items:
-                param_def, errors = self._convert_to_db(item, db_map)
-                if self._check_item(param_def):
-                    db_map_param_def.setdefault(db_map, []).append(param_def)
-                if errors:
-                    db_map_error_log.setdefault(db_map, []).extend(errors)
-                self._autocomplete_row(db_map, param_def)
-        if any(db_map_param_def.values()):
-            self.db_mngr.add_parameter_definitions(db_map_param_def)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)
-
-    def _check_item(self, item):
+    @staticmethod
+    def _check_item(item):
         """Checks if a db item is ready to be inserted."""
-        return "entity_class_id" in item and "name" in item
+        return "entity_class_name" in item and "name" in item
+
+    def _entity_class_name_candidates(self, db_map, item):
+        return []
+
+    def _do_add_items_to_db(self, db_map_items):
+        self.db_mngr.add_parameter_definitions(db_map_items)
 
 
 class EmptyParameterValueModel(
-    MakeEntityOnTheFlyMixin,
-    InferEntityClassIdMixin,
-    FillInAlternativeIdMixin,
-    FillInParameterDefinitionIdsMixin,
-    FillInEntityIdsMixin,
-    FillInEntityClassIdMixin,
-    SplitValueAndTypeMixin,
-    ParameterMixin,
-    EntityMixin,
-    EmptyModelBase,
+    MakeEntityOnTheFlyMixin, SplitValueAndTypeMixin, ParameterMixin, EntityMixin, EmptyModelBase
 ):
     """An empty parameter_value model."""
 
@@ -258,54 +241,57 @@ class EmptyParameterValueModel(
     def item_type(self):
         return "parameter_value"
 
-    def _check_item(self, db_map, item):
+    @staticmethod
+    def _check_item(item):
         """Checks if a db item is ready to be inserted."""
         return all(
             key in item
-            for key in ("entity_class_id", "entity_id", "parameter_definition_id", "alternative_id", "value")
+            for key in (
+                "entity_class_name",
+                "entity_byname",
+                "parameter_definition_name",
+                "alternative_name",
+                "value",
+                "type",
+            )
         )
 
     def _make_unique_id(self, item):
-        entity_byname = item.get("entity_byname")
-        if entity_byname is None:
-            entity_byname = ()
-        return (
-            item.get("entity_class_name"),
-            DB_ITEM_SEPARATOR.join(entity_byname),
-            item.get("parameter_name"),
-            item.get("alternative_name"),
+        return tuple(
+            item.get(x) for x in ("entity_class_name", "entity_byname", "parameter_definition_name", "alternative_name")
         )
 
     def _do_add_items_to_db(self, db_map_items):
         self.db_mngr.add_parameter_values(db_map_items)
 
+    def _entity_class_name_candidates(self, db_map, item):
+        candidates_by_parameter = self._entity_class_name_candidates_by_parameter(db_map, item)
+        candidates_by_entity = self._entity_class_name_candidates_by_entity(db_map, item)
+        if not candidates_by_parameter:
+            return candidates_by_entity
+        if not candidates_by_entity:
+            return candidates_by_parameter
+        return list(
+            set(self._entity_class_name_candidates_by_parameter(db_map, item))
+            & set(self._entity_class_name_candidates_by_entity(db_map, item))
+        )
 
-class EmptyEntityAlternativeModel(
-    MakeEntityOnTheFlyMixin,
-    InferEntityClassIdMixin,
-    FillInAlternativeIdMixin,
-    FillInEntityIdsMixin,
-    FillInEntityClassIdMixin,
-    EntityMixin,
-    EmptyModelBase,
-):
+
+class EmptyEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, EmptyModelBase):
     @property
     def item_type(self):
         return "entity_alternative"
 
-    def _check_item(self, db_map, item):
+    @staticmethod
+    def _check_item(item):
         """Checks if a db item is ready to be inserted."""
-        return all(key in item for key in ("entity_class_id", "entity_id", "alternative_id", "active"))
+        return all(key in item for key in ("entity_class_name", "entity_byname", "alternative_name", "active"))
 
     def _make_unique_id(self, item):
-        entity_byname = item.get("entity_byname")
-        if entity_byname is None:
-            entity_byname = ()
-        return (
-            item.get("entity_class_name"),
-            DB_ITEM_SEPARATOR.join(entity_byname),
-            item.get("alternative_name"),
-        )
+        return tuple(item.get(x) for x in ("entity_class_name", "entity_byname", "alternative_name"))
 
     def _do_add_items_to_db(self, db_map_items):
         self.db_mngr.add_entity_alternatives(db_map_items)
+
+    def _entity_class_name_candidates(self, db_map, item):
+        return self._entity_class_name_candidates_by_entity(db_map, item)

@@ -514,12 +514,24 @@ class SpineDBManager(QObject):
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
+        refreshed_db_maps = set()
         for db_map in db_maps:
             try:
                 worker = self._get_worker(db_map)
             except KeyError:
                 continue
             worker.refresh_session()
+            refreshed_db_maps.add(db_map)
+        self.receive_session_refreshed(refreshed_db_maps)
+
+    def reset_session(self, *db_maps):
+        for db_map in db_maps:
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            worker.reset_session()
+            self.undo_stack[db_map].clear()
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
         """
@@ -585,7 +597,7 @@ class SpineDBManager(QObject):
             cookie (Any): commit cookie
             *db_maps: database maps that were committed
         """
-        self.refresh_session(*db_maps)
+        self.reset_session(*db_maps)
         self.receive_session_committed(set(db_maps), cookie)
 
     def rollback_session(self, *dirty_db_maps):
