@@ -77,10 +77,11 @@ class SelectDatabaseItems(QWidget):
         self._ui.setupUi(self)
         self._ui.select_data_items_button.clicked.connect(self._select_data_items)
         self._ui.select_scenario_items_button.clicked.connect(self._select_scenario_items)
+        checkable_item_types = tuple(type_ for type_ in DatabaseMapping.item_types() if type_ != "commit")
         checked_states = (
-            checked_states if checked_states is not None else {item: False for item in DatabaseMapping.item_types()}
+            checked_states if checked_states is not None else {item: False for item in checkable_item_types}
         )
-        self._item_check_boxes = {item_type: QCheckBox(item_type, self) for item_type in DatabaseMapping.item_types()}
+        self._item_check_boxes = {item_type: QCheckBox(item_type, self) for item_type in checkable_item_types}
         add_check_boxes(
             self._item_check_boxes,
             checked_states,

@@ -50,7 +50,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
                 qApp.processEvents()
-            if item_type == "alternative":
+            if item_type in ("alternative", "commit"):
                 fetcher.handle_items_added.assert_called_once()
             else:
                 fetcher.handle_items_added.assert_not_called()
