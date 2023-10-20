@@ -151,12 +151,14 @@ class CommitViewer(QMainWindow):
     def __init__(self, qsettings, db_mngr, *db_maps, parent=None):
         """
         Args:
-            qsettings (QSettings)
-            db_mngr (SpineDBManager)
-            db_maps (DatabaseMapping)
+            qsettings (QSettings): application settings
+            db_mngr (SpineDBManager): database manager
+            *db_maps: database mappings to view
+            parent (QWidget, optional): parent widget
         """
         super().__init__(parent=parent)
         self.setWindowTitle("Commit viewer")
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         tab_widget = QTabWidget(self)
         self.setCentralWidget(tab_widget)
         self._qsettings = qsettings
