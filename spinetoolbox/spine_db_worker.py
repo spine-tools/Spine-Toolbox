@@ -134,7 +134,7 @@ class SpineDBWorker(QObject):
             self._do_fetch_more(parent)
 
     def _do_fetch_more(self, parent):
-        if self._iterate_mapping(parent):
+        if self._iterate_mapping(parent) and not self._db_map.has_external_commits():
             # Something fetched from mapping
             return
         item_type = parent.fetch_item_type
@@ -252,6 +252,7 @@ class SpineDBWorker(QObject):
 
     def refresh_session(self):
         """Refreshes session."""
+        self._db_map.refresh_session()
         for parent_type in self._parents_by_type:
             for parent in self._get_parents(parent_type):
                 parent.reset()
