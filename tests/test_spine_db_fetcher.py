@@ -18,6 +18,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.fetch_parent import ItemTypeFetchParent
 from spinedb_api import DatabaseMapping
+from spinedb_api.temp_id import TempId
 from spinedb_api.import_functions import import_data
 from tests.mock_helpers import TestSpineDBManager
 
@@ -39,6 +40,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._logger = MagicMock()  # Collects error messages therefore handy for debugging.
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="test_db", create=True)
+        self._temp_id_reset = False
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -57,6 +59,10 @@ class TestSpineDBFetcher(unittest.TestCase):
             fetcher.set_obsolete(True)
 
     def _import_data(self, **data):
+        if self._temp_id_reset:
+            raise RuntimeError("_import_data can be called only once per test since it resets TempId counters")
+        self._temp_id_reset = True
+        TempId._next_id = {}
         import_data(self._db_map, **data)
         self._db_map.commit_session("ddd")
 
@@ -165,15 +171,14 @@ class TestSpineDBFetcher(unittest.TestCase):
         fetcher.set_obsolete(True)
 
     def test_fetch_relationships(self):
-        self._import_data(entity_classes=(("oc",),), entities=(("oc", "obj"),))
-        self._import_data(entity_classes=(("rc", ("oc",)),), entities=(("rc", ("obj",)),))
+        self._import_data(entity_classes=(("oc",), ("rc", ("oc",))), entities=(("oc", "obj"),("rc", ("obj",))))
         item = {
-            'id': 2,
+            'id': -2,
             'name': 'rc_obj',
-            'class_id': 2,
-            'element_id_list': (1,),
+            'class_id': -2,
+            'element_id_list': (-1,),
             'description': None,
-            'commit_id': 3,
+            'commit_id': 2,
         }
         for item_type in ("entity_class", "entity"):
             dep_fetcher = TestItemTypeFetchParent(item_type)
@@ -201,14 +206,15 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_parameter_definitions(self):
         self._import_data(object_classes=("oc",), object_parameters=(("oc", "param"),))
         item = {
-            'id': 1,
-            'entity_class_id': 1,
+            'id': -1,
+            'entity_class_id': -1,
             'name': 'param',
             'parameter_value_list_id': None,
             'default_value': None,
             'default_type': None,
             'description': None,
             'commit_id': 2,
+            "list_value_id": None,
         }
         for item_type in ("entity_class",):
             dep_fetcher = TestItemTypeFetchParent(item_type)
@@ -217,7 +223,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         fetcher = TestItemTypeFetchParent("parameter_definition")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+        fetcher.handle_items_added.assert_called_once_with({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_definition", 1), item)
         fetcher.set_obsolete(True)
 
@@ -229,14 +235,15 @@ class TestSpineDBFetcher(unittest.TestCase):
             object_parameter_values=(("oc", "obj", "param", 2.3),),
         )
         item = {
-            'id': 1,
-            'entity_class_id': 1,
-            'entity_id': 1,
-            'parameter_definition_id': 1,
+            'id': -1,
+            'entity_class_id': -1,
+            'entity_id': -1,
+            'parameter_definition_id': -1,
             'alternative_id': 1,
             'value': b'2.3',
             'type': None,
             'commit_id': 2,
+            "list_value_id": None,
         }
         for item_type in ("entity_class", "entity", "parameter_definition", "alternative"):
             dep_fetcher = TestItemTypeFetchParent(item_type)
@@ -245,7 +252,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         fetcher = TestItemTypeFetchParent("parameter_value")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+        fetcher.handle_items_added.assert_called_once_with({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value", 1), item)
         fetcher.set_obsolete(True)
 
