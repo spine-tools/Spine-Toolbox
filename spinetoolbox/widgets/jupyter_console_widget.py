@@ -53,8 +53,10 @@ class JupyterConsoleWidget(RichJupyterWidget):
         super().__init__()
         self._toolbox = toolbox
         self.kernel_name = kernel_name
+        self.sysimage_path = None
         self.owners = {owner}
-        self.sysimage_path = owner._options.get("julia_sysimage", None)
+        if owner is not None:
+            self.sysimage_path = owner._options.get("julia_sysimage", None)
         self.kernel_client = None
         self._connection_file = None
         self._execution_manager = None
