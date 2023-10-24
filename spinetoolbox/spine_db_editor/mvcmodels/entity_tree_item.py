@@ -197,6 +197,17 @@ class EntityItem(MultiDBTreeItem):
         return self.db_map_data_field(self.first_db_map, "element_name_list", default=())
 
     @property
+    def element_byname_list(self):
+        return tuple(
+            DB_ITEM_SEPARATOR.join(self.db_mngr.get_item(self.first_db_map, "entity", id_).get("byname", ()))
+            for id_ in self.db_map_data_field(self.first_db_map, "element_id_list", default=())
+        )
+
+    @property
+    def byname(self):
+        return self.db_map_data_field(self.first_db_map, "byname", default=())
+
+    @property
     def entity_class_key(self):
         return tuple(
             self.db_map_data_field(self.first_db_map, field) for field in ("class_name", "dimension_name_list")
@@ -204,15 +215,14 @@ class EntityItem(MultiDBTreeItem):
 
     @property
     def display_data(self):
-        byname = self.db_map_data_field(self.first_db_map, "byname", default=())
-        names = DB_ITEM_SEPARATOR.join(byname).replace(self.parent_item.display_data, "\u2022")
+        names = DB_ITEM_SEPARATOR.join(self.byname).replace(self.parent_item.display_data, "\u2022")
         if self._is_member:
             return "member: " + names
         return names
 
     @property
     def edit_data(self):
-        return DB_ITEM_SEPARATOR.join(self.element_name_list)
+        return DB_ITEM_SEPARATOR.join(self.byname)
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.ToolTipRole:

@@ -36,6 +36,8 @@ class SpineDBWorker(QObject):
         self._parents_by_type = {}
         self.commit_cache = {}
         self._parents_fetching = {}
+        self._offsets = {}
+        self._fetched_item_types = set()
         self._query_advanced.connect(self._fetch_more_later)
 
     def _get_parents(self, item_type):
@@ -132,11 +134,11 @@ class SpineDBWorker(QObject):
             self._do_fetch_more(parent)
 
     def _do_fetch_more(self, parent):
-        if self._iterate_mapping(parent):
+        if self._iterate_mapping(parent) and not self._db_map.has_external_commits():
             # Something fetched from mapping
             return
         item_type = parent.fetch_item_type
-        if not self._db_map.can_fetch_more(item_type):
+        if item_type in self._fetched_item_types:
             # Nothing left in the DB
             parent.set_fetched(True)
             return
@@ -155,7 +157,12 @@ class SpineDBWorker(QObject):
 
     @busy_effect
     def _busy_db_map_fetch_more(self, item_type):
-        return self._db_map.fetch_more(item_type, limit=_CHUNK_SIZE)
+        offset = self._offsets.setdefault(item_type, 0)
+        chunk = self._db_map.fetch_more(item_type, limit=_CHUNK_SIZE, offset=offset)
+        self._offsets[item_type] += len(chunk)
+        if len(chunk) < _CHUNK_SIZE:
+            self._fetched_item_types.add(item_type)
+        return chunk
 
     def _handle_query_advanced(self, item_type, chunk):
         self._populate_commit_cache(item_type, chunk)
@@ -245,9 +252,15 @@ class SpineDBWorker(QObject):
 
     def refresh_session(self):
         """Refreshes session."""
-        for parents in self._parents_by_type.values():
-            for parent in parents:
-                parent.reset()
         self._db_map.refresh_session()
+        for parent_type in self._parents_by_type:
+            for parent in self._get_parents(parent_type):
+                parent.reset()
+        self._offsets.clear()
+        self._fetched_item_types.clear()
         self._parents_fetching.clear()
-        self._db_mngr.receive_session_refreshed({self._db_map})
+
+    def reset_session(self):
+        """Resets session."""
+        self._db_map.reset()
+        self.refresh_session()

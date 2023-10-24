@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QLabel,
 )
 from PySide6.QtCore import Qt, Slot
-from spinetoolbox.helpers import restore_ui, save_ui, busy_effect
+from spinetoolbox.helpers import restore_ui, save_ui, busy_effect, DB_ITEM_SEPARATOR
 
 
 class _DBCommitViewer(QWidget):
@@ -50,7 +50,7 @@ class _DBCommitViewer(QWidget):
         layout.addWidget(self.splitter)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        for commit in reversed(self._db_mngr.get_items(db_map, "commit")):
+        for commit in reversed(db_map.get_items("commit")):
             tree_item = QTreeWidgetItem(self._commit_list)
             tree_item.setData(0, Qt.ItemDataRole.UserRole + 1, commit["id"])
             self._commit_list.addTopLevelItem(tree_item)
@@ -110,25 +110,23 @@ class _AffectedItemsFromOneTable(QTreeWidget):
         if first is None:
             return
         self._margin = 6
-        keys = [key for key in first if not any(word in key for word in {"id", "parsed", "entity"})]
+        keys = [key for key in first._extended() if not any(word in key for word in ("id", "parsed"))]
         self.setHeaderLabels(keys)
-        tree_items = [
-            QTreeWidgetItem(
-                [
-                    item[key].decode('utf-8')
-                    if key in ("value", "default_value") and isinstance(item[key], bytes)
-                    else item[key]
-                    for key in keys
-                ]
-            )
-            for item in items
-        ]
+        tree_items = [QTreeWidgetItem([self._parse_value(item[key]) for key in keys]) for item in items]
         self.addTopLevelItems(tree_items)
         last = tree_items[-1]
         rect = self.visualItemRect(last)
         self._height = rect.bottom()
         for k, _ in enumerate(keys):
             self.resizeColumnToContents(k)
+
+    @staticmethod
+    def _parse_value(value):
+        if isinstance(value, bytes):
+            return value.decode('utf-8')
+        if isinstance(value, (tuple, list)):
+            return DB_ITEM_SEPARATOR.join(value)
+        return value
 
     def moveEvent(self, ev):
         if ev.pos().x() > 0:
@@ -153,12 +151,14 @@ class CommitViewer(QMainWindow):
     def __init__(self, qsettings, db_mngr, *db_maps, parent=None):
         """
         Args:
-            qsettings (QSettings)
-            db_mngr (SpineDBManager)
-            db_maps (DiffDatabaseMapping)
+            qsettings (QSettings): application settings
+            db_mngr (SpineDBManager): database manager
+            *db_maps: database mappings to view
+            parent (QWidget, optional): parent widget
         """
         super().__init__(parent=parent)
         self.setWindowTitle("Commit viewer")
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         tab_widget = QTabWidget(self)
         self.setCentralWidget(tab_widget)
         self._qsettings = qsettings

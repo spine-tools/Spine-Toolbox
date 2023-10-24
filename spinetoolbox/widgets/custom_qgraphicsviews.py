@@ -17,7 +17,6 @@ import math
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
 from PySide6.QtGui import QCursor
 from PySide6.QtCore import Slot, Qt, QTimeLine, QRectF
-from spine_engine.project_item.connection import Connection
 from ..project_item_icon import ProjectItemIcon
 from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
 from ..link import Link, JumpLink
@@ -42,6 +41,7 @@ class CustomQGraphicsView(QGraphicsView):
         self._items_fitting_zoom = 1.0
         self._max_zoom = 10.0
         self._min_zoom = 0.1
+        self._previous_mouse_pos = None
 
     @property
     def _qsettings(self):
@@ -78,6 +78,7 @@ class CustomQGraphicsView(QGraphicsView):
         """Set rubber band selection mode if Control pressed.
         Enable resetting the zoom factor from the middle mouse button.
         """
+        self._previous_mouse_pos = event.position().toPoint()
         item = self.itemAt(event.position().toPoint())
         if not item or not item.acceptedMouseButtons() & event.buttons():
             if event.modifiers() & Qt.ControlModifier:
@@ -87,9 +88,22 @@ class CustomQGraphicsView(QGraphicsView):
                 self.reset_zoom()
         super().mousePressEvent(event)
 
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        if (
+            not self.itemAt(event.position().toPoint())
+            and (event.buttons() & Qt.LeftButton)
+            and self.dragMode() != QGraphicsView.DragMode.RubberBandDrag
+        ):
+            if self._previous_mouse_pos is not None:
+                delta = event.position().toPoint() - self._previous_mouse_pos
+                self._scroll_scene_by(delta.x(), delta.y())
+            self._previous_mouse_pos = event.position().toPoint()
+
     def mouseReleaseEvent(self, event):
         """Reestablish scroll hand drag mode."""
         super().mouseReleaseEvent(event)
+        self._previous_mouse_pos = None
         item = next(iter([x for x in self.items(event.position().toPoint()) if x.hasCursor()]), None)
         was_not_rubber_band_drag = self.dragMode() != QGraphicsView.DragMode.RubberBandDrag
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
@@ -97,6 +111,24 @@ class CustomQGraphicsView(QGraphicsView):
             self.viewport().setCursor(item.cursor())
         else:
             self.viewport().setCursor(Qt.ArrowCursor)
+
+    def _scroll_scene_by(self, dx, dy):
+        if dx == dy == 0:
+            return
+        scene_rect = self.sceneRect()
+        view_scene_rect = self.mapFromScene(scene_rect).boundingRect()
+        view_rect = self.viewport().rect()
+        scene_dx = abs((self.mapToScene(0, 0) - self.mapToScene(dx, 0)).x())
+        scene_dy = abs((self.mapToScene(0, 0) - self.mapToScene(0, dy)).y())
+        if dx < 0 and view_rect.right() - dx >= view_scene_rect.right():
+            scene_rect.adjust(0, 0, scene_dx, 0)
+        elif dx > 0 and view_rect.left() - dx <= view_scene_rect.left():
+            scene_rect.adjust(-scene_dx, 0, 0, 0)
+        if dy < 0 and view_rect.bottom() - dy >= view_scene_rect.bottom():
+            scene_rect.adjust(0, 0, 0, scene_dy)
+        elif dy > 0 and view_rect.top() - dy <= view_scene_rect.top():
+            scene_rect.adjust(0, -scene_dy, 0, 0)
+        self.scene().setSceneRect(scene_rect)
 
     def _use_smooth_zoom(self):
         return self._qsettings.value("appSettings/smoothZoom", defaultValue="false") == "true"

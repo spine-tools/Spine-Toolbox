@@ -120,12 +120,19 @@ class EntityItem(QGraphicsRectItem):
         )
 
     @property
-    def entity_byname(self):
+    def byname(self):
         return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("byname", ())
 
     @property
     def element_name_list(self):
         return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("element_name_list", ())
+
+    @property
+    def element_byname_list(self):
+        return tuple(
+            DB_ITEM_SEPARATOR.join(self.db_mngr.get_item(self.first_db_map, "entity", id_).get("byname", ()))
+            for id_ in self.element_id_list(self.first_db_map)
+        )
 
     def element_id_list(self, db_map):
         return self.db_mngr.get_item(db_map, "entity", self.entity_id(db_map)).get("element_id_list", ())
@@ -344,7 +351,7 @@ class EntityItem(QGraphicsRectItem):
             return None
         return (
             f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
-            f"""{DB_ITEM_SEPARATOR.join(self.entity_byname)}<br>"""
+            f"""{DB_ITEM_SEPARATOR.join(self.byname)}<br>"""
             f"""@{self.display_database}</p></html>"""
         )
 
@@ -354,7 +361,7 @@ class EntityItem(QGraphicsRectItem):
             return {}
         return dict(
             entity_class_name=self.entity_class_name,
-            entity_byname=DB_ITEM_SEPARATOR.join(self.entity_byname),
+            entity_byname=DB_ITEM_SEPARATOR.join(self.byname),
             database=self.first_db_map.codename,
         )
 
@@ -804,6 +811,10 @@ class CrossHairsItem(EntityItem):
     def entity_name(self):
         return None
 
+    @property
+    def has_dimensions(self):
+        return False
+
     def _make_tool_tip(self):
         return "<p>Click on an object to add it to the relationship.</p>"
 
@@ -851,6 +862,10 @@ class CrossHairsEntityItem(EntityItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+
+    @property
+    def has_dimensions(self):
+        return True
 
     def _make_tool_tip(self):
         return None

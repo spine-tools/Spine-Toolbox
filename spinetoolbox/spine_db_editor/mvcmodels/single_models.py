@@ -16,16 +16,7 @@ Single models for parameter definitions and values (as 'for a single entity').
 from PySide6.QtCore import Qt
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ..mvcmodels.single_and_empty_model_mixins import (
-    SplitValueAndTypeMixin,
-    FillInParameterNameMixin,
-    FillInValueListIdMixin,
-    MakeEntityOnTheFlyMixin,
-    FillInAlternativeIdMixin,
-    FillInParameterDefinitionIdsMixin,
-    FillInEntityIdsMixin,
-    ImposeEntityClassIdMixin,
-)
+from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin
 from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from .colors import FIXED_FIELD_COLOR
 
@@ -55,14 +46,17 @@ class HalfSortedTableModel(MinimalTableModel):
 class SingleModelBase(HalfSortedTableModel):
     """Base class for all single models that go in a CompoundModelBase subclass."""
 
-    def __init__(self, header, db_mngr, db_map, entity_class_id, committed, lazy=False):
+    def __init__(self, parent, db_map, entity_class_id, committed, lazy=False):
         """Init class.
 
         Args:
-            header (list): list of field names for the header
+            parent (CompoundModelBase): the parent model
+            db_map (DatabaseMapping)
+            entity_class_id (int)
+            committed (bool)
         """
-        super().__init__(header=header, lazy=lazy)
-        self.db_mngr = db_mngr
+        super().__init__(parent=parent, header=parent.header, lazy=lazy)
+        self.db_mngr = parent.db_mngr
         self.db_map = db_map
         self.entity_class_id = entity_class_id
         self._auto_filter = {}  # Maps field to accepted ids for that field
@@ -78,9 +72,24 @@ class SingleModelBase(HalfSortedTableModel):
         """The DB item type, required by the data method."""
         raise NotImplementedError()
 
+    @property
+    def field_map(self):
+        return self._parent.field_map
+
     def update_items_in_db(self, items):
         """Update items in db. Required by batch_set_data"""
-        raise NotImplementedError()
+        items_to_upd = []
+        error_log = []
+        for item in items:
+            item_to_upd, errors = self._convert_to_db(item)
+            if tuple(item_to_upd.keys()) != ("id",):
+                items_to_upd.append(item_to_upd)
+            if errors:
+                error_log += errors
+        if items_to_upd:
+            self._do_update_items_in_db({self.db_map: items_to_upd})
+        if error_log:
+            self.db_mngr.error_msg.emit({self.db_map: error_log})
 
     @property
     def _references(self):
@@ -103,15 +112,11 @@ class SingleModelBase(HalfSortedTableModel):
         return ["entity_byname"]
 
     @property
-    def _field_map(self):
-        return {}
-
-    @property
     def can_be_filtered(self):
         return True
 
     def _mapped_field(self, field):
-        return self._field_map.get(field, field)
+        return self.field_map.get(field, field)
 
     def item_id(self, row):
         """Returns parameter id for row.
@@ -368,16 +373,10 @@ class ParameterMixin:
 
 class EntityMixin:
     def update_items_in_db(self, items):
-        """Update items in db.
-
-        Args:
-            items (list): dictionary-items
-        """
+        """Overriden to create entities on the fly first."""
         for item in items:
             item["entity_class_name"] = self.entity_class_name
-        self.build_lookup_dictionary({self.db_map: items})
         entities = []
-        items_to_upd = []
         error_log = []
         for item in items:
             entity, errors = self._make_entity_on_the_fly(item, self.db_map)
@@ -387,66 +386,31 @@ class EntityMixin:
                 error_log.extend(errors)
         if entities:
             self.db_mngr.add_entities({self.db_map: entities})
-        self.build_lookup_dictionary({self.db_map: items})
-        for item in items:
-            item_to_upd, errors = self._convert_to_db(item, self.db_map)
-            if tuple(item_to_upd.keys()) != ("id",):
-                items_to_upd.append(item_to_upd)
-            if errors:
-                error_log += errors
-        if items_to_upd:
-            self._do_update_items_in_db({self.db_map: items_to_upd})
         if error_log:
             self.db_mngr.error_msg.emit({self.db_map: error_log})
+        super().update_items_in_db(items)
 
     def _do_update_items_in_db(self, db_map_data):
         raise NotImplementedError()
 
 
-class SingleParameterDefinitionModel(
-    FillInParameterNameMixin, FillInValueListIdMixin, SplitValueAndTypeMixin, ParameterMixin, SingleModelBase
-):
+class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
     """A parameter_definition model for a single entity_class."""
 
     @property
     def item_type(self):
         return "parameter_definition"
 
-    @property
-    def _field_map(self):
-        return {"value_list_name": "parameter_value_list_name"}
-
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return item["parameter_name"]
+        return item["name"]
 
-    def update_items_in_db(self, items):
-        """Update items in db.
-
-        Args:
-            items (list): dictionary-items
-        """
-        self.build_lookup_dictionary({self.db_map: items})
-        param_defs = []
-        error_log = []
-        for item in items:
-            param_def, errors = self._convert_to_db(item, self.db_map)
-            if tuple(param_def.keys()) != ("id",):
-                param_defs.append(param_def)
-            if errors:
-                error_log += errors
-        if param_defs:
-            self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
-        if error_log:
-            self.db_mngr.error_msg.emit({self.db_map: error_log})
+    def _do_update_items_in_db(self, db_map_data):
+        self.db_mngr.update_parameter_definitions(db_map_data)
 
 
 class SingleParameterValueModel(
     MakeEntityOnTheFlyMixin,
-    FillInAlternativeIdMixin,
-    ImposeEntityClassIdMixin,
-    FillInParameterDefinitionIdsMixin,
-    FillInEntityIdsMixin,
     SplitValueAndTypeMixin,
     ParameterMixin,
     EntityMixin,
@@ -467,15 +431,7 @@ class SingleParameterValueModel(
         self.db_mngr.update_parameter_values(db_map_data)
 
 
-class SingleEntityAlternativeModel(
-    MakeEntityOnTheFlyMixin,
-    FillInAlternativeIdMixin,
-    ImposeEntityClassIdMixin,
-    FillInEntityIdsMixin,
-    EntityMixin,
-    FilterEntityAlternativeMixin,
-    SingleModelBase,
-):
+class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
 
     @property

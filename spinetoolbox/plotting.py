@@ -24,14 +24,16 @@ from typing import Dict, List, Optional, Union
 from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt
 
 from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
-from spinedb_api import Array, IndexedValue, TimeSeries, DateTime
+from spinedb_api import IndexedValue, DateTime
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_canvas import LegendPosition
 from .widgets.plot_widget import PlotWidget
 
+
+# FIXME: Does it work after entity changes???
 
 LEGEND_PLACEMENT_THRESHOLD = 8
 
@@ -699,14 +701,12 @@ def plot_db_mngr_items(items, db_maps, plot_widget=None):
         except PlottingError as error:
             raise PlottingError(f"Failed to plot value in {db_map.codename}: {error}")
         db_name = db_map.codename
-        parameter_name = item["parameter_name"]
-        object_name_list = item["object_name_list"]
-        if object_name_list is not None:
-            object_names = tuple(object_name_list.split(","))
-        else:
-            object_names = (item["object_name"],)
+        parameter_name = item["parameter_definition_name"]
+        entity_byname = item["entity_byname"]
+        if not isinstance(entity_byname, tuple):
+            entity_byname = (entity_byname,)
         alternative_name = item["alternative_name"]
-        indexes = (db_name, parameter_name) + object_names + (alternative_name,)
+        indexes = (db_name, parameter_name) + entity_byname + (alternative_name,)
         index_names = _pivot_index_names(indexes)
         node = root_node
         for i, index in enumerate(indexes[:-1]):
