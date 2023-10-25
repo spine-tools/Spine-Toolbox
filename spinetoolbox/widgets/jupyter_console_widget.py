@@ -94,7 +94,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
             server_ip="127.0.0.1",
             environment=environment,
             conda_exe=conda_exe,
-            extra_switches=self.sysimage_path
+            extra_switches=self.sysimage_path,
         )
         try:
             msg_type, msg = self._q.get(timeout=20)  # Blocks until msg (tuple(str, dict)  is received, or timeout.
