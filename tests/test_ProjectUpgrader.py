@@ -22,7 +22,6 @@ import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.project_settings import ProjectSettings
 from spinetoolbox.project_upgrader import ProjectUpgrader
 from spinetoolbox.resources_icons_rc import qInitResources
@@ -319,6 +318,26 @@ class TestProjectUpgrader(unittest.TestCase):
                 except:
                     self.fail("project settings cannot be deserialized")
 
+    def test_upgrade_v11_to_v12(self):
+        pu = ProjectUpgrader(self.toolbox)
+        proj_v11 = make_v11_project_dict()
+        self.assertTrue(pu.is_valid(11, proj_v11))
+        with TemporaryDirectory() as project_dir:
+            with mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
+            ) as mock_backup, mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
+            ) as mock_force_save, mock.patch(
+                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 12
+            ):
+                os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
+                proj_v12 = pu.upgrade(proj_v11, project_dir)
+                mock_backup.assert_called_once()
+                mock_force_save.assert_called_once()
+                self.assertTrue(pu.is_valid(12, proj_v12))
+                self.assertEqual(proj_v12["project"]["version"], 12)
+                self.assertIn("settings", proj_v12["project"])
+
     def test_upgrade_v1_to_latest(self):
         pu = ProjectUpgrader(self.toolbox)
         proj_v1 = make_v1_project_dict()
@@ -351,7 +370,7 @@ class TestProjectUpgrader(unittest.TestCase):
 
     def test_upgrade_with_too_recent_project_version(self):
         """Tests that projects with too recent versions are not opened."""
-        project_dict = make_v10_project_dict()
+        project_dict = make_v12_project_dict()
         project_dict["project"]["version"] = LATEST_PROJECT_VERSION + 1
         pu = ProjectUpgrader(self.toolbox)
         self.assertFalse(pu.upgrade(project_dict, project_dir=""))
@@ -387,6 +406,12 @@ def make_v10_project_dict():
 
 def make_v11_project_dict():
     return _get_project_dict(11)
+
+
+def make_v12_project_dict():
+    v12_proj_dict = make_v11_project_dict()
+    v12_proj_dict["project"]["version"] = 12
+    return v12_proj_dict
 
 
 def _get_project_dict(v):
