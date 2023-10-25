@@ -13,6 +13,7 @@
 Class for a custom RichJupyterWidget that can run Tool instances.
 """
 
+import os
 import logging
 import multiprocessing
 from queue import Empty
@@ -52,7 +53,10 @@ class JupyterConsoleWidget(RichJupyterWidget):
         super().__init__()
         self._toolbox = toolbox
         self.kernel_name = kernel_name
+        self.sysimage_path = None
         self.owners = {owner}
+        if owner is not None:
+            self.sysimage_path = owner._options.get("julia_sysimage", None)
         self.kernel_client = None
         self._connection_file = None
         self._execution_manager = None
@@ -90,6 +94,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
             server_ip="127.0.0.1",
             environment=environment,
             conda_exe=conda_exe,
+            extra_switches=self.sysimage_path,
         )
         try:
             msg_type, msg = self._q.get(timeout=20)  # Blocks until msg (tuple(str, dict)  is received, or timeout.

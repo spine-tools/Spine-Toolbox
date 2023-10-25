@@ -274,17 +274,17 @@ class FilterEntityAlternativeMixin:
         # Set the classes that are explicitly selected by the user.
         self._selected_classes = classes
         all_entity_ids = set()
-        for key, value in self.db_map.get("entity", None).items():
-            if value.get("class_id", None) in self._filter_class_ids:
-                if value.get("class_id", None) not in self._selected_classes:
-                    if bool(set(value.get("element_id_list", None)) & self._filter_entity_ids):
-                        all_entity_ids.add(key)  # In the case the entity class the entity belongs to isn't selected
+        for entity in self.db_map.get_items("entity"):
+            if entity.get("class_id", None) in self._filter_class_ids:
+                if entity.get("class_id", None) not in self._selected_classes:
+                    if bool(set(entity.get("element_id_list", None)) & self._filter_entity_ids):
+                        all_entity_ids.add(entity["id"])  # In the case the entity class the entity belongs to isn't selected
                         # but it is composed of at least one selected entity.
                 else:
-                    all_entity_ids.add(key)  # If the entity class it belongs to is selected.
+                    all_entity_ids.add(entity["id"])  # If the entity class it belongs to is selected.
             else:
-                if bool(set(value.get("element_id_list", None)) & self._filter_entity_ids):
-                    all_entity_ids.add(key)  # Adds 1D+ entities that have a selected entity in them.
+                if bool(set(entity.get("element_id_list", None)) & self._filter_entity_ids):
+                    all_entity_ids.add(entity["id"])  # Adds 1D+ entities that have a selected entity in them.
         if self._all_entity_ids == all_entity_ids | self._filter_entity_ids:
             return False
         self._all_entity_ids = all_entity_ids | self._filter_entity_ids

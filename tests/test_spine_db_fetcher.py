@@ -171,7 +171,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         fetcher.set_obsolete(True)
 
     def test_fetch_relationships(self):
-        self._import_data(entity_classes=(("oc",), ("rc", ("oc",))), entities=(("oc", "obj"),("rc", ("obj",))))
+        self._import_data(entity_classes=(("oc",), ("rc", ("oc",))), entities=(("oc", "obj"), ("rc", ("obj",))))
         item = {
             'id': -2,
             'name': 'rc_obj',

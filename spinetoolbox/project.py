@@ -284,6 +284,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             bool: True if the operation was successful, False otherwise
         """
+        self._toolbox.ui.textBrowser_eventlog.clear()
         project_dict = load_project_dict(self.config_dir, self._logger)
         if project_dict is None:
             return False

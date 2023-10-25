@@ -549,7 +549,7 @@ class TestSpineToolboxProject(unittest.TestCase):
                     "jumps": [],
                     "settings": {"enable_execute_all": True},
                     "specifications": {},
-                    "version": 11,
+                    "version": 12,
                 },
             },
         )

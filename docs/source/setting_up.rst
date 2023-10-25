@@ -23,7 +23,7 @@ them up. To get started with **SpineOpt.jl**, see :ref:`How to Set up SpineOpt.j
 
 Python and Julia Tools can be executed either in an embedded *Basic Console* or in a *Jupyter Console*. GAMS Tools
 are executed in a sub-process. Executable Tools (external programs) are executed in a shell or by running the
-executable file straight. You can also make a Tool that executes a shell command by creating an *Executable* Tool
+executable file directly. You can also make a Tool that executes a shell command by creating an *Executable* Tool
 Spec in **Tool Specification Editor**, entering the shell command to the *Command* line edit and then selecting the
 Shell for this Tool.
 
@@ -46,17 +46,16 @@ Spec. Editor**. Then drag the Python Tool Spec into the **Design View**, and pre
 
 Julia
 *****
-To execute Julia Tools in the Basic Console, first install Julia (v1.6 or later)
+To execute Julia Tools in the Basic Console, first install Julia (v1.6 or later recommended)
 `from here <https://julialang.org/downloads/>`_ and add `<julia install path>/bin` to your PATH environment variable
 (if not done automatically by the installer). Then go to the *Tools* page in **File -> Settings** and make sure that
 the Basic Console radio button is selected in the Julia group. If Julia is in your PATH, the Julia executable line
 edit should show the path as (grey) placeholder text. If you want to use another Julia on your system, you can change
 the path in the line edit. You can also set a Julia Project below the Julia executable line edit.
 
-.. note:: The Julia settings are *global* application settings. All Julia Tools are executed with the settings
-   selected on the *Tools* page in **File -> Settings**. In upcoming versions, the Julia settings will be consistent
-   with the Python settings, in a way that you can select a specific Julia executable and Julia project for each
-   Julia Tool Spec separately.
+.. note:: The Julia settings on the *Tools* page in **File -> Settings** are the *default* settings for new Julia
+   Tool Specs. You can select a different Julia executable & project for each Julia Tool Spec separately using the
+   **Tool Specification Editor**.
 
 Jupyter Consoles
 ----------------
@@ -79,11 +78,11 @@ specific instructions for creating kernel specs for Conda environments below.
 .. image:: img/python_jupyter_console_selected.png
    :align: center
 
-Once the **ipykernel** package is installed, the wizard runs the **ipykernel** install command, which creates the
-kernel specs directory on your system. You can quickly open the kernel spec directory from the
-**Select Python Kernel...** combo box's context-menu (mouse right-click menu). Once the process finishes,
-click Close, and the newly created kernel spec (*python39* in this case) should be selected automatically.
-Click *Ok* to close the **Settings** widget and to save your selections.
+Once the **ipykernel** package is installed, the wizard runs the **ipykernel install** command, which creates the
+kernel specs directory on your system. Once the process finishes, click *Close*, and the newly created kernel spec
+(*python39* in this case) should be selected automatically. For convenience, there is a context-menu (mouse
+right-click menu) in the **Select Python Kernel...** combo box that opens the the kernel spec directory in your
+file browser. Click *Ok* to close the **Settings** widget and to save your selections.
 
 .. image:: img/python_kernel_specification_creator.png
    :align: center
@@ -101,7 +100,10 @@ And to install the kernel specs run::
 
       python -m ipykernel install --user --name python39 --display-name python39_spinetoolbox
 
-Make sure to use the ``--user`` argument to make sure that the kernel specs are discoverable by Spine Toolbox.
+Make sure to use the ``--user`` argument to in order to make the kernel specs discoverable by Spine Toolbox.
+
+.. important:: If you want to have access to `spinedb_api`, you need to install it manually for the Python you
+   select here.
 
 .. note::
    Clicking **Make Python Kernel** button when the kernel specs have already been installed, does NOT open the
@@ -111,9 +113,6 @@ Make sure to use the ``--user`` argument to make sure that the kernel specs are 
    Executing Python Tools using the Jupyter Console supports Python versions from 2.7 all the way to latest one.
    This means, that if you still have some old Python 2.7 scripts lying around, you can incorporate those into
    a Spine Toolbox project workflow and execute them without modifications.
-
-.. important:: If you want to have access to `spinedb_api`, you need to install it manually for the Python you
-   select here.
 
 Julia
 *****
