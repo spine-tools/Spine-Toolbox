@@ -42,30 +42,78 @@ class TestSpineDBEditorFilter(DBEditorTestBase):
             fields = self._filtered_fields[model]
             data = self._parameter_data(model, *fields)
             values = filtered_values[model]
+            unfiltered_data_amount = len(data)
             self.assertTrue(all(value in data for value in values))
             model.refresh()
             data = self._parameter_data(model, *fields)
             self.assertTrue(all(value not in data for value in values))
+            # Check that only the items that were supposed to be filtered were actually filtered.
+            self.assertTrue(len(data) == unfiltered_data_amount - len(values))
 
-    def test_filter_parameter_tables_per_object_class(self):
+    def test_filter_parameter_tables_per_zero_dimensional_entity_class(self):
         """Test that parameter tables are filtered when selecting object classes in the object tree."""
         for model in self._filtered_fields:
             if model.canFetchMore(None):
                 model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
         root_item = self.spine_db_editor.entity_tree_model.root_item
-        fish_item = root_item.child(1)
+        fish_item = root_item.child(2)
         fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
         selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
         selection_model.setCurrentIndex(fish_index, QItemSelectionModel.NoUpdate)
         selection_model.select(fish_index, QItemSelectionModel.Select)
         filtered_values = {
-            self.spine_db_editor.parameter_definition_model: [],
-            self.spine_db_editor.parameter_value_model: [],
+            self.spine_db_editor.parameter_definition_model: [('dog',)],
+            self.spine_db_editor.parameter_value_model: [('dog', 'pluto'), ('dog', 'scooby')],
         }
         self._assert_filter(filtered_values)
 
-    def test_filter_parameter_tables_per_object(self):
+    def test_filter_parameter_tables_per_nonzero_dimensional_entity_class(self):
+        """Test that parameter tables are filtered when selecting relationship classes in the object tree."""
+        for model in self._filtered_fields:
+            if model.canFetchMore(None):
+                model.fetchMore(None)
+        self.put_mock_dataset_in_db_mngr()
+        root_item = self.spine_db_editor.entity_tree_model.root_item
+        fish_dog_item = root_item.child(3)
+        fish_dog_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_dog_item)
+        selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
+        selection_model.setCurrentIndex(fish_dog_index, QItemSelectionModel.NoUpdate)
+        selection_model.select(fish_dog_index, QItemSelectionModel.Select)
+        filtered_values = {
+            self.spine_db_editor.parameter_definition_model: [('dog',), ('fish',), ('dog__fish',)],
+            self.spine_db_editor.parameter_value_model: [
+                ('dog__fish', DB_ITEM_SEPARATOR.join(['pluto', 'nemo'])),
+                ('fish', 'nemo'),
+                ('dog', 'pluto'),
+                ('dog', 'scooby'),
+            ],
+        }
+        self._assert_filter(filtered_values)
+
+    def test_filter_parameter_tables_per_entity_class_and_entity_cross_selection(self):
+        for model in self._filtered_fields:
+            if model.canFetchMore(None):
+                model.fetchMore(None)
+        self.put_mock_dataset_in_db_mngr()
+        root_item = self.spine_db_editor.entity_tree_model.root_item
+        fish_item = root_item.child(2)
+        fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
+        selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
+        dog_item = root_item.child(0)
+        scooby_item = dog_item.child(1)
+        scooby_index = self.spine_db_editor.entity_tree_model.index_from_item(scooby_item)
+        selection_model.setCurrentIndex(fish_index, QItemSelectionModel.NoUpdate)
+        selection_model.select(fish_index, QItemSelectionModel.Select)
+        selection_model.setCurrentIndex(scooby_index, QItemSelectionModel.NoUpdate)
+        selection_model.select(scooby_index, QItemSelectionModel.Select)
+        filtered_values = {
+            self.spine_db_editor.parameter_definition_model: [],
+            self.spine_db_editor.parameter_value_model: [('dog', 'pluto')],
+        }
+        self._assert_filter(filtered_values)
+
+    def test_filter_parameter_tables_per_entity(self):
         """Test that parameter tables are filtered when selecting objects in the object tree."""
         for model in self._filtered_fields:
             if model.canFetchMore(None):
@@ -79,48 +127,11 @@ class TestSpineDBEditorFilter(DBEditorTestBase):
         selection_model.setCurrentIndex(pluto_index, QItemSelectionModel.NoUpdate)
         selection_model.select(pluto_index, QItemSelectionModel.Select)
         filtered_values = {
-            self.spine_db_editor.parameter_definition_model: [],
-            self.spine_db_editor.parameter_value_model: [('fish__dog', DB_ITEM_SEPARATOR.join(['nemo', 'scooby']))],
-        }
-        self._assert_filter(filtered_values)
-
-    def test_filter_parameter_tables_per_relationship_class(self):
-        """Test that parameter tables are filtered when selecting relationship classes in the object tree."""
-        for model in self._filtered_fields:
-            if model.canFetchMore(None):
-                model.fetchMore(None)
-        self.put_mock_dataset_in_db_mngr()
-        root_item = self.spine_db_editor.entity_tree_model.root_item
-        fish_dog_item = root_item.child(3)
-        fish_dog_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_dog_item)
-        selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
-        selection_model.setCurrentIndex(fish_dog_index, QItemSelectionModel.NoUpdate)
-        selection_model.select(fish_dog_index, QItemSelectionModel.Select)
-        filtered_values = {
-            self.spine_db_editor.parameter_definition_model: [('dog__fish',)],
-            self.spine_db_editor.parameter_value_model: [('dog__fish', DB_ITEM_SEPARATOR.join(['pluto', 'nemo']))],
-        }
-        self._assert_filter(filtered_values)
-
-    def test_filter_parameter_tables_per_relationship(self):
-        """Test that parameter tables are filtered when selecting relationships in the object tree."""
-        for model in self._filtered_fields:
-            if model.canFetchMore(None):
-                model.fetchMore(None)
-        self.put_mock_dataset_in_db_mngr()
-        root_item = self.spine_db_editor.entity_tree_model.root_item
-        dog_item = root_item.child(0)
-        pluto_item = dog_item.child(0)
-        fish_dog_nemo_pluto_item = pluto_item.child(1)
-        fish_dog_nemo_pluto_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_dog_nemo_pluto_item)
-        selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
-        selection_model.setCurrentIndex(fish_dog_nemo_pluto_index, QItemSelectionModel.NoUpdate)
-        selection_model.select(fish_dog_nemo_pluto_index, QItemSelectionModel.Select)
-        filtered_values = {
-            self.spine_db_editor.parameter_definition_model: [],
+            self.spine_db_editor.parameter_definition_model: [('fish',)],
             self.spine_db_editor.parameter_value_model: [
                 ('fish__dog', DB_ITEM_SEPARATOR.join(['nemo', 'scooby'])),
-                ('dog__fish', DB_ITEM_SEPARATOR.join(['pluto', 'nemo'])),
+                ('fish', 'nemo'),
+                ('dog', 'scooby'),
             ],
         }
         self._assert_filter(filtered_values)
