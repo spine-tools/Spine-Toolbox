@@ -207,7 +207,7 @@ class MultiDBTreeItem(TreeItem):
     def db_map_data(self, db_map):
         """Returns data for this item in given db_map or an empty dict if not present."""
         id_ = self.db_map_id(db_map)
-        return self.db_mngr.get_item(db_map, self.item_type, id_) or {}
+        return self.db_mngr.get_item(db_map, self.item_type, id_)
 
     def db_map_data_field(self, db_map, field, default=None):
         """Returns field from data for this item in given db_map or None if not found."""
@@ -280,7 +280,7 @@ class MultiDBTreeItem(TreeItem):
 
     def _insert_children_sorted(self, new_children):
         """Inserts and sorts children."""
-        new_children = sorted(new_children, key=attrgetter("display_id"))
+        new_children = sorted(new_children, key=self._children_sort_key)
         for chunk, pos in bisect_chunks(self.children, new_children, key=self._children_sort_key):
             self.insert_children(pos, chunk)
 

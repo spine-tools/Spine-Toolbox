@@ -403,7 +403,7 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return item["name"]
+        return item.get("name", "")
 
     def _do_update_items_in_db(self, db_map_data):
         self.db_mngr.update_parameter_definitions(db_map_data)
@@ -425,7 +425,7 @@ class SingleParameterValueModel(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return tuple(item[k] for k in ("entity_byname", "parameter_name", "alternative_name"))
+        return (item.get("entity_byname", ()), item.get("parameter_name", ""), item.get("alternative_name", ""))
 
     def _do_update_items_in_db(self, db_map_data):
         self.db_mngr.update_parameter_values(db_map_data)
@@ -440,7 +440,7 @@ class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterE
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        return tuple(item[k] for k in ("entity_byname", "alternative_name"))
+        return (item.get("entity_byname", ()), item.get("alternative_name", ""))
 
     @property
     def _references(self):

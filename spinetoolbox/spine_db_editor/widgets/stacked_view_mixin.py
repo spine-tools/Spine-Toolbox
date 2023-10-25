@@ -101,7 +101,7 @@ class StackedViewMixin:
             )
             current_bynames = (
                 [
-                    DB_ITEM_SEPARATOR.join((db_map.get_item("entity", id=id_) or {}).get("byname", ()))
+                    DB_ITEM_SEPARATOR.join(db_map.get_item("entity", id=id_).get("byname", ()))
                     for id_ in entity["element_id_list"]
                 ]
                 if entity

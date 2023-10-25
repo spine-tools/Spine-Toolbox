@@ -401,7 +401,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
 
     def get_entity_class_id(self, index, db_map):
         entity_class_name = index.sibling(index.row(), self.header.index("entity_class_name")).data()
-        entity_class = db_map.get_item("entity_class", name=entity_class_name) or {}
+        entity_class = db_map.get_item("entity_class", name=entity_class_name)
         return entity_class.get("id")
 
     def filter_by(self, rows_per_column):
