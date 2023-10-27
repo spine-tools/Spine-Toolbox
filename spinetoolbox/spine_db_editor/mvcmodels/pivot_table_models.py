@@ -911,6 +911,11 @@ class PivotTableModelBase(QAbstractTableModel):
                 success = success or header_item.add_data(names, db_map)
         return success
 
+    def tear_down(self):
+        """Sets fetch parents obsolete preventing further updates."""
+        for fetch_parent in self._fetch_parents():
+            fetch_parent.set_obsolete(True)
+
 
 class ParameterValuePivotTableModel(PivotTableModelBase):
     """A model for the pivot table in parameter_value input type."""

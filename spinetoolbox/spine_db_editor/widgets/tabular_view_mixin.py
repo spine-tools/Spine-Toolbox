@@ -272,7 +272,7 @@ class TabularViewMixin:
         """Returns a dict containing all possible entity elements in the current class.
 
         Args:
-            db_map_class_entities (dict)
+            db_map_class_entities (dict, optional)
 
         Returns:
             dict: Key is db_map-object_id tuple, value is None.
@@ -307,7 +307,8 @@ class TabularViewMixin:
         """Returns a dict of entity elements in the current class.
 
         Args:
-            db_map_relationships (dict)
+            db_map_entities (dict, optional): a mapping from database map to entities in the current entity class
+            action (str): 'add' or 'remove'
 
         Returns:
             dict: Key is db_map-object id tuple, value is relationship id.
@@ -847,3 +848,10 @@ class TabularViewMixin:
             yield
         finally:
             self._disable_frozen_table_reload = False
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        if not event.isAccepted():
+            return
+        if self.pivot_table_model is not None:
+            self.pivot_table_model.tear_down()
