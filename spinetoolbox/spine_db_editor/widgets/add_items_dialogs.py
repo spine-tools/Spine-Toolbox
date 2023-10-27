@@ -39,18 +39,17 @@ from PySide6.QtGui import QIcon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...helpers import DB_ITEM_SEPARATOR
 from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate
 from .manage_items_dialogs import (
     ShowIconColorEditorMixin,
     GetEntityClassesMixin,
     GetEntitiesMixin,
     ManageItemsDialog,
-    ManageItemsDialogBase,
+    DialogWithTableAndButtons,
 )
 
 
-class AddReadyEntitiesDialog(ManageItemsDialogBase):
+class AddReadyEntitiesDialog(DialogWithTableAndButtons):
     """A dialog to let the user add new 'ready' multidimensional entities."""
 
     def __init__(self, parent, entity_class, entities, db_mngr, *db_maps, commit_data=True):
@@ -67,15 +66,16 @@ class AddReadyEntitiesDialog(ManageItemsDialogBase):
         self.entity_class = entity_class
         self.entities = entities
         self.db_maps = db_maps
-        label = QLabel("<p>Please check the entities you want to add and press <b>Ok</b>.</p>")
-        label.setWordWrap(True)
         self.table_view.horizontalHeader().setMinimumSectionSize(0)
-        self.layout().addWidget(label, 0, 0)
-        self.layout().addWidget(self.table_view, 1, 0)
-        self.layout().addWidget(self.button_box, 2, 0, -1, -1)
         self.setWindowTitle("Add '{0}' entities".format(self.entity_class["name"]))
         self.populate_table_view()
         self.connect_signals()
+
+    def _populate_layout(self):
+        label = QLabel("<p>Please check the entities you want to add and press <b>Ok</b>.</p>")
+        label.setWordWrap(True)
+        self.layout().addWidget(label)
+        super()._populate_layout()
 
     def make_table_view(self):
         return QTableWidget(self)
@@ -92,8 +92,8 @@ class AddReadyEntitiesDialog(ManageItemsDialogBase):
             item.setFlags(Qt.ItemIsEnabled)
             item.setCheckState(Qt.CheckState.Checked)
             self.table_view.setItem(row, 0, item)
-            for column, element_byname in enumerate(entity):
-                item = QTableWidgetItem(DB_ITEM_SEPARATOR.join(element_byname))
+            for column, element_name in enumerate(entity):
+                item = QTableWidgetItem(element_name)
                 item.setFlags(Qt.ItemIsEnabled)
                 self.table_view.setItem(row, column + 1, item)
         self.table_view.resizeColumnsToContents()
@@ -131,8 +131,8 @@ class AddReadyEntitiesDialog(ManageItemsDialogBase):
         for row in range(self.table_view.rowCount()):
             if self.table_view.item(row, 0).checkState() != Qt.CheckState.Checked:
                 continue
-            byname = tuple(n for element_byname in self.entities[row] for n in element_byname)
-            data.append({"class_name": self.entity_class["name"], "byname": byname})
+            element_name_list = tuple(self.entities[row])
+            data.append({"class_name": self.entity_class["name"], "element_name_list": element_name_list})
         return {db_map: data for db_map in self.db_maps}
 
 
@@ -152,6 +152,8 @@ class AddItemsDialog(ManageItemsDialog):
         self.remove_rows_button = QToolButton()
         self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.remove_rows_button.setText("Remove selected rows")
+
+    def _populate_layout(self):
         self.layout().addWidget(self.remove_rows_button, 1, 0)
         self.layout().addWidget(self.button_box, 2, 0, -1, -1)
 
@@ -197,20 +199,15 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         self.spin_box.setMinimum(0)
         layout.addWidget(self.spin_box)
         layout.addStretch()
-        self.layout().addWidget(self.dimension_count_widget, 0, 0, 1, -1)
-        self.layout().addWidget(self.table_view, 1, 0)
-        self.layout().addWidget(self.remove_rows_button, 2, 0)
-        self.layout().addWidget(self.button_box, 3, 0, -1, -1)
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageEntityClassesDelegate(self))
-        dimension_one_name = item.display_data if item.item_type != "root" else None
+        dimension_one_name = item.name if item.item_type != "root" else None
         self.number_of_dimensions = 1 if dimension_one_name is not None else 0
         self.spin_box.setValue(self.number_of_dimensions)
         self.connect_signals()
         labels = ['dimension name (1)'] if dimension_one_name is not None else []
         labels += ['entity class name', 'description', 'display icon', 'databases']
         self.model.set_horizontal_header_labels(labels)
-        self.db_map_ent_cls_lookup_by_name = self.make_db_map_ent_cls_lookup_by_name()
         db_names = ",".join(x.codename for x in item.db_maps)
         self.default_display_icon = None
         self.model.set_default_row(
@@ -221,6 +218,12 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             }
         )
         self.model.clear()
+
+    def _populate_layout(self):
+        self.layout().addWidget(self.dimension_count_widget, 0, 0, 1, -1)
+        self.layout().addWidget(self.table_view, 1, 0)
+        self.layout().addWidget(self.remove_rows_button, 2, 0)
+        self.layout().addWidget(self.button_box, 3, 0, -1, -1)
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -343,31 +346,78 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
         self.ent_cls_combo_box = QComboBox(self)
         layout.addWidget(self.ent_cls_combo_box)
         layout.addStretch()
+        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
+        self.entity_class = None
+        self._class_key = None
+        self.entity_class_keys = None
+
+    def _class_key_to_str(self, key, *db_maps):
+        raise NotImplementedError()
+
+    def _accepts_class(self, ent_cls):
+        """Returns whether the widget should handle the given entity class.
+
+        Args:
+            ent_cls (MappedItem)
+
+        Returns:
+            bool
+        """
+        raise NotImplementedError()
+
+    def make_model(self):
+        raise NotImplementedError()
+
+    def _do_reset_model(self):
+        raise NotImplementedError()
+
+    @property
+    def dimension_name_list(self):
+        return self.entity_class["dimension_name_list"]
+
+    @property
+    def class_name(self):
+        return self.entity_class["name"]
+
+    @Slot(int)
+    def reset_model(self, index):
+        """Setup model according to current entity class selected in combobox."""
+        self._class_key = self.entity_class_keys[index]
+        self._update_entity_class()
+        self._do_reset_model()
+
+    def _update_entity_class(self):
+        entity_classes = (self.db_map_ent_cls_lookup[db_map].get(self._class_key) for db_map in self.db_maps)
+        self.entity_class = next((x for x in entity_classes if x is not None), None)
+
+    def _populate_layout(self):
         self.layout().addWidget(self.header_widget, 0, 0, 1, -1)
         self.layout().addWidget(self.table_view, 1, 0)
         self.layout().addWidget(self.remove_rows_button, 2, 0)
         self.layout().addWidget(self.button_box, 3, 0, -1, -1)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
-        self.db_map_ent_lookup = self.make_db_map_ent_lookup()
-        self.db_map_alt_id_lookup = self.make_db_map_alt_id_lookup()
-        self.db_map_ent_cls_lookup = self.make_db_map_ent_cls_lookup()
-        self.entity_class_keys = []
-        self.class_name = None
-        self.dimension_name_list = None
-
-    def make_model(self):
-        raise NotImplementedError()
 
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
         self.ent_cls_combo_box.currentIndexChanged.connect(self.reset_model)
 
-    @Slot(int)
-    def reset_model(self, index):
-        """Called when relationship_class's combobox's index changes.
-        Update relationship_class attribute accordingly and reset model."""
-        raise NotImplementedError()
+    @Slot(QModelIndex, QModelIndex, list)
+    def _handle_model_data_changed(self, top_left, bottom_right, roles):
+        if roles and Qt.ItemDataRole.EditRole not in roles:
+            return
+        if self.entity_class is None:
+            return
+        header = self.model.horizontal_header_labels()
+        top = top_left.row()
+        left = top_left.column()
+        bottom = bottom_right.row()
+        right = bottom_right.column()
+        dimension_count = len(self.dimension_name_list)
+        for row in range(top, bottom + 1):
+            if header.index('entity name') not in range(left, right + 1):
+                el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
+                entity_name = el_names[0] + "__" if len(el_names) == 1 else "__".join(el_names)
+                self.model.setData(self.model.index(row, dimension_count), entity_name)
 
 
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
@@ -386,24 +436,30 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         self._commit_data = commit_data
         self.entity_names_by_class_name = {}
         if item.item_type == "entity":
-            if not item.element_name_list:
-                entity_name = item.display_data
-                entity_class_name = item.parent_item.display_data
-                self.entity_names_by_class_name = {entity_class_name: entity_name}
-            entity_class_key = item.entity_class_key
+            entity_name = item.name
+            entity_class_name = item.parent_item.name
+            self.entity_names_by_class_name = {entity_class_name: entity_name}
+            if item.parent_item.item_type == "entity_class":
+                self._class_key = item.parent_item.display_id
         elif item.item_type == "entity_class":
-            entity_class_key = item.display_id
-        else:  # item_type == "root"
-            entity_class_key = None
-        self.entity_class = None
+            self._class_key = item.display_id
+        self._update_entity_class()
         self.model.force_default = force_default
         self.setWindowTitle("Add entities")
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
         self.ent_cls_combo_box.setEnabled(not force_default)
-        self.entity_class_keys = self.keys_of_entity_classes_relevant_to_item(item)
-        self.ent_cls_combo_box.addItems(["{0} {1}".format(*key) for key in self.entity_class_keys])
+        db_maps_by_keys = {}
+        for db_map, entity_classes in self.db_map_ent_cls_lookup.items():
+            for key, ent_cls in entity_classes.items():
+                if self._accepts_class(ent_cls):
+                    db_maps_by_keys.setdefault(key, set()).add(db_map)
+
+        self.entity_class_keys = sorted(db_maps_by_keys)
+        self.ent_cls_combo_box.addItems(
+            [self._class_key_to_str(key, *db_maps_by_keys[key]) for key in self.entity_class_keys]
+        )
         try:
-            current_index = self.entity_class_keys.index(entity_class_key)
+            current_index = self.entity_class_keys.index(self._class_key)
             self.reset_model(current_index)
             self._handle_model_reset()
         except ValueError:
@@ -411,49 +467,36 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         self.ent_cls_combo_box.setCurrentIndex(current_index)
         self.connect_signals()
 
+    def _class_key_to_str(self, key, *db_maps):
+        class_name = self.db_map_ent_cls_lookup[db_maps[0]][key]["name"]
+        if len(db_maps) == len(self.db_maps):
+            return class_name
+        return class_name + "@(" + ", ".join(db_map.codename for db_map in db_maps) + ")"
+
+    def _accepts_class(self, ent_cls):
+        if self.entity_class is None:
+            return True
+        if self.entity_class["dimension_name_list"]:
+            # Base class is multidimensional, check if given ent_cls containts the base in its entirety
+            return set(ent_cls["dimension_name_list"]) >= set(self.entity_class["dimension_name_list"])
+        # Base class is zero-dimensional, check if given ent_cls containts it
+        return self.entity_class["name"] in set(ent_cls["dimension_name_list"]) | {ent_cls["name"]}
+
     def make_model(self):
         return EmptyRowModel(self)
 
-    @Slot(int)
-    def reset_model(self, index):
-        """Setup model according to current entity_class selected in combobox."""
-        self.class_name, self.dimension_name_list = self.entity_class_keys[index]
+    def _do_reset_model(self):
         header = self.dimension_name_list + ('entity name', 'databases')
         self.model.set_horizontal_header_labels(header)
-        default_db_maps = [
-            db_map
-            for db_map, ent_cls_list in self.db_map_ent_cls_lookup.items()
-            if (self.class_name, self.dimension_name_list) in ent_cls_list
-        ]
+        default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self._class_key in keys]
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
         defaults = {'databases': db_names}
         defaults.update(self.entity_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
 
-    @Slot(QModelIndex, QModelIndex, list)
-    def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        if Qt.ItemDataRole.EditRole not in roles:
-            return
-        header = self.model.horizontal_header_labels()
-        top = top_left.row()
-        left = top_left.column()
-        bottom = bottom_right.row()
-        right = bottom_right.column()
-        dimension_count = len(self.dimension_name_list)
-        for row in range(top, bottom + 1):
-            if header.index('entity name') not in range(left, right + 1):
-                col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
-                el_names = [col_data(j) for j in range(dimension_count) if col_data(j)]
-                entity_name = self.class_name + "_"
-                if len(el_names) == 1:
-                    entity_name += el_names[0] + "__"
-                else:
-                    entity_name += "__".join(el_names)
-                self.model.setData(self.model.index(row, dimension_count), entity_name)
-
     def get_db_map_data(self):
-        db_map_data = dict()
+        db_map_data = {}
         name_column = self.model.horizontal_header_labels().index("entity name")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
@@ -461,7 +504,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             element_name_list = [row_data[column] for column in range(name_column)]
             entity_name = row_data[name_column]
             if not entity_name:
-                self.parent().msg_error.emit("Entity missing at row {}".format(i + 1))
+                self.parent().msg_error.emit(f"Entity missing at row {i + 1}")
                 return
             pre_item = {'name': entity_name}
             db_names = row_data[db_column]
@@ -469,24 +512,19 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                 db_names = ""
             for db_name in db_names.split(","):
                 if db_name not in self.keyed_db_maps:
-                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
+                    self.parent().msg_error.emit(f"Invalid database {db_name} at row {i + 1}")
                     return
                 db_map = self.keyed_db_maps[db_name]
                 entity_classes = self.db_map_ent_cls_lookup[db_map]
-                if (self.class_name, self.dimension_name_list) not in entity_classes:
-                    self.parent().msg_error.emit(
-                        "Invalid entity class '{}' for db '{}' at row {}".format(self.class_name, db_name, i + 1)
-                    )
-                    return
-                ent_cls = entity_classes[self.class_name, self.dimension_name_list]
+                ent_cls = entity_classes[self._class_key]
                 class_id = ent_cls["id"]
                 dimension_id_list = ent_cls["dimension_id_list"]
                 entities = self.db_map_ent_lookup[db_map]
-                element_id_list = list()
+                element_id_list = []
                 for entity_class_id, element_name in zip(dimension_id_list, element_name_list):
                     if (entity_class_id, element_name) not in entities:
                         self.parent().msg_error.emit(
-                            "Invalid element '{}' for db '{}' at row {}".format(element_name, db_name, i + 1)
+                            f"Invalid element '{element_name}' for db '{db_name}' at row {i + 1}"
                         )
                         return
                     element_id = entities[entity_class_id, element_name]["id"]
@@ -511,36 +549,6 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         self.db_mngr.add_entities(db_map_data)
         super().accept()
 
-    def keys_of_entity_classes_relevant_to_item(self, item):
-        """Returns a list of entity class keys that contain all
-        the entity classes the selected item is composed of.
-
-        Args:
-            item (MultiDBTreeItem): Selected item
-        Returns:
-            entity_class_keys (list): List of relevant entity class keys
-        """
-        if item.item_type == "entity_class":
-            selected = set(item.display_id[1]) if item.display_id[1] else {item.display_id[0]}
-        elif item.item_type == "entity":
-            selected = set(item.entity_class_key[1]) if item.entity_class_key[1] else {item.entity_class_key[0]}
-        else:  # Root selected, return all entity class keys
-            return [key for entity_classes in self.db_map_ent_cls_lookup.values() for key in entity_classes]
-        cls_dim = len(selected)
-        entity_class_keys = list()
-        for entity_classes in self.db_map_ent_cls_lookup.values():
-            for key, value in entity_classes.items():
-                accept = False
-                candidate = set(value.get("dimension_name_list")) if value.get("dimension_name_list") else {key[0]}
-                # Check whether to accept the candidate entity class
-                if bool(selected & candidate) and cls_dim == 0:
-                    accept = True  # Candidate class contains the selected 0-dimensional entity
-                elif len(selected & candidate) == cls_dim and cls_dim != 0:
-                    accept = True  # Candidate class contains the selected N-dimensional entity in its entirety
-                if accept:
-                    entity_class_keys.append(key)
-        return entity_class_keys
-
 
 class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
     """A dialog to query user's preferences for managing entity dimensions."""
@@ -554,6 +562,8 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr, *db_maps)
+        if item.item_type == "entity_class":
+            self._class_key = item.display_id
         self.setWindowTitle("Manage elements")
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
@@ -573,20 +583,12 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         self.add_button.setIconSize(QSize(24, 24))
         self.add_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.add_button.setText(">>")
-        label_available = QLabel("Available elements")
-        label_existing = QLabel("Existing entities")
-        self.layout().addWidget(self.header_widget, 0, 0, 1, 4, Qt.AlignHCenter)
-        self.layout().addWidget(label_available, 1, 0)
-        self.layout().addWidget(label_existing, 1, 2)
-        self.layout().addWidget(self.splitter, 2, 0)
-        self.layout().addWidget(self.add_button, 2, 1)
-        self.layout().addWidget(self.table_view, 2, 2)
-        self.layout().addWidget(self.remove_rows_button, 2, 3)
-        self.layout().addWidget(self.button_box, 3, 0, -1, -1)
+        self._label_available = QLabel("Available elements")
+        self._label_existing = QLabel("Existing entities")
         self.hidable_widgets = [
             self.add_button,
-            label_available,
-            label_existing,
+            self._label_available,
+            self._label_existing,
             self.table_view,
             self.remove_rows_button,
         ]
@@ -596,8 +598,18 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         self.new_items_model = MinimalTableModel(self, lazy=False)
         self.model.sub_models = [self.new_items_model, self.existing_items_model]
         self.db_combo_box.addItems([db_map.codename for db_map in db_maps])
-        self.reset_entity_class_combo_box(db_maps[0].codename, item.display_id)
+        self.reset_entity_class_combo_box(db_maps[0].codename)
         self.connect_signals()
+
+    def _populate_layout(self):
+        self.layout().addWidget(self.header_widget, 0, 0, 1, 4, Qt.AlignHCenter)
+        self.layout().addWidget(self._label_available, 1, 0)
+        self.layout().addWidget(self._label_existing, 1, 2)
+        self.layout().addWidget(self.splitter, 2, 0)
+        self.layout().addWidget(self.add_button, 2, 1)
+        self.layout().addWidget(self.table_view, 2, 2)
+        self.layout().addWidget(self.remove_rows_button, 2, 3)
+        self.layout().addWidget(self.button_box, 3, 0, -1, -1)
 
     def make_model(self):
         return CompoundTableModel(self)
@@ -611,13 +623,21 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         self.db_combo_box.currentTextChanged.connect(self.reset_entity_class_combo_box)
         self.add_button.clicked.connect(self.add_entities)
 
+    def _accepts_class(self, ent_cls):
+        return bool(ent_cls["dimension_id_list"])
+
+    def _class_key_to_str(self, key, *_db_maps):
+        return self.db_map_ent_cls_lookup[self.db_map][key]["name"]
+
     @Slot(str)
-    def reset_entity_class_combo_box(self, database, relationship_class_key=None):
+    def reset_entity_class_combo_box(self, database):
         self.db_map = self.keyed_db_maps[database]
-        self.entity_class_keys = [i for i in self.db_map_ent_cls_lookup[self.db_map] if i[1]]
-        self.ent_cls_combo_box.addItems([f"{name}" for name, _ in self.entity_class_keys])
+        self.entity_class_keys = [
+            key for key, ent_cls in self.db_map_ent_cls_lookup[self.db_map].items() if self._accepts_class(ent_cls)
+        ]
+        self.ent_cls_combo_box.addItems([self._class_key_to_str(key) for key in self.entity_class_keys])
         try:
-            current_index = self.entity_class_keys.index(relationship_class_key)
+            current_index = self.entity_class_keys.index(self._class_key)
             self.reset_model(current_index)
             self._handle_model_reset()
         except ValueError:
@@ -629,29 +649,30 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         element_names = [[item.text(0) for item in wg.selectedItems()] for wg in self.splitter_widgets()]
         candidate = set(product(*element_names))
         existing = {
-            tuple(elements) for elements in self.new_items_model._main_data + self.existing_items_model._main_data
+            tuple(elements[:-1]) for elements in self.new_items_model._main_data + self.existing_items_model._main_data
         }
         to_add = candidate - existing
         count = len(to_add)
+        if not count:
+            return
         self.new_items_model.insertRows(0, count)
-        self.new_items_model._main_data[0:count] = to_add
+        self.new_items_model._main_data[0:count] = [list(row) + [""] for row in to_add]
         self.model.refresh()
+        self.model.dataChanged.emit(self.model.index(0, 0), self.model.index(count - 1, self.model.columnCount() - 2))
 
-    @Slot(int)
-    def reset_model(self, index):
-        """Setup model according to current entity class selected in combobox."""
-        self.class_name, self.dimension_name_list = self.entity_class_keys[index]
-        self.model.set_horizontal_header_labels(self.dimension_name_list)
-        self.existing_items_model.set_horizontal_header_labels(self.dimension_name_list)
-        self.new_items_model.set_horizontal_header_labels(self.dimension_name_list)
+    def _do_reset_model(self):
+        horizontal_header_labels = self.dimension_name_list + ("entity name",)
+        self.model.set_horizontal_header_labels(horizontal_header_labels)
+        self.existing_items_model.set_horizontal_header_labels(horizontal_header_labels)
+        self.new_items_model.set_horizontal_header_labels(horizontal_header_labels)
         self.entity_ids.clear()
         for db_map in self.db_maps:
             entity_classes = self.db_map_ent_cls_lookup[db_map]
-            ent_cls = entity_classes.get((self.class_name, self.dimension_name_list), None)
+            ent_cls = entity_classes.get(self._class_key, None)
             if ent_cls is None:
                 continue
             for entity in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", ent_cls["id"]):
-                key = entity["element_name_list"]
+                key = entity["element_name_list"] + (entity["name"],)
                 self.entity_ids[key] = entity["id"]
         existing_items = sorted(map(list, self.entity_ids))
         self.existing_items_model.reset_model(existing_items)
@@ -696,14 +717,23 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        keys_to_remove = set(self.entity_ids) - {tuple(elements) for elements in self.existing_items_model._main_data}
-        to_remove = [self.entity_ids[key] for key in keys_to_remove]
+        to_remove = set()
+        to_update = []
+        new_name_by_element_name_list = {tuple(row[:-1]): row[-1] for row in self.existing_items_model._main_data}
+        for key, id_ in self.entity_ids.items():
+            element_name_list, old_name = key[:-1], key[-1]
+            new_name = new_name_by_element_name_list.get(element_name_list)
+            if new_name is None:
+                to_remove.add(id_)
+            elif old_name != new_name:
+                to_update.append({"id": id_, "name": new_name})
         to_add = [
-            {"class_name": self.class_name, "element_name_list": tuple(element_name_list)}
-            for element_name_list in self.new_items_model._main_data
+            {"class_name": self.class_name, "element_name_list": tuple(row[:-1]), "name": row[-1]}
+            for row in self.new_items_model._main_data
         ]
         identifier = self.db_mngr.get_command_identifier()
         self.db_mngr.remove_items({self.db_map: {"entity": to_remove}}, identifier=identifier)
+        self.db_mngr.update_items("entity", {self.db_map: to_update}, identifier=identifier)
         self.db_mngr.add_items("entity", {self.db_map: to_add}, identifier=identifier)
         super().accept()
 
@@ -873,14 +903,14 @@ class AddEntityGroupDialog(EntityGroupDialogBase):
     def accept(self):
         if not self._check_validity():
             return
-        class_name = self.entity_class_item.display_data
+        class_name = self.entity_class_item.name
         group_name = self.group_name_line_edit.text()
         member_names = {item.text(0) for item in self.members_tree.findItems("*", Qt.MatchWildcard)}
         db_map_data = {
             self.db_map: {
                 "entities": [(class_name, group_name)],
                 "entity_groups": [
-                    (self.entity_class_item.display_data, group_name, member_name) for member_name in member_names
+                    (self.entity_class_item.name, group_name, member_name) for member_name in member_names
                 ],
             }
         }
@@ -900,7 +930,7 @@ class ManageMembersDialog(EntityGroupDialogBase):
         super().__init__(parent, entity_item.parent_item, db_mngr, *db_maps)
         self.setWindowTitle("Manage members")
         self.group_name_line_edit.setReadOnly(True)
-        self.group_name_line_edit.setText(entity_item.display_data)
+        self.group_name_line_edit.setText(entity_item.name)
         self.entity_item = entity_item
         self.reset_list_widgets(db_maps[0].codename)
         self.connect_signals()

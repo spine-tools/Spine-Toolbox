@@ -75,4 +75,6 @@ class MakeEntityOnTheFlyMixin(ConvertToDBMixin):
         if db_map.get_item("entity", class_name=entity_class_name, byname=entity_byname):
             # Exists already
             return None, []
-        return {"class_name": entity_class_name, "byname": entity_byname}, []
+        if not entity_class["dimension_name_list"]:
+            return {"class_name": entity_class_name, "name": entity_byname[0]}, []
+        return {"class_name": entity_class_name, "element_name_list": entity_byname}, []

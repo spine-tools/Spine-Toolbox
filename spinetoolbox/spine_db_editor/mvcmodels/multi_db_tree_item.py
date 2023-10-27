@@ -108,9 +108,13 @@ class MultiDBTreeItem(TreeItem):
         return next(iter(ids))
 
     @property
+    def name(self):
+        return self.db_map_data_field(self.first_db_map, "name", default="")
+
+    @property
     def display_data(self):
         """Returns the name for display."""
-        return self.db_map_data_field(self.first_db_map, "name")
+        return self.name
 
     @property
     def display_database(self):

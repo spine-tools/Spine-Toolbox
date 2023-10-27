@@ -596,8 +596,8 @@ class SpineDBEditorBase(QMainWindow):
         Args:
             entity_item (EntityTreeItem of EntityItem)
         """
-        orig_name = entity_item.display_data
-        existing_names = {ent.display_data for ent in entity_item.parent_item.children}
+        orig_name = entity_item.name
+        existing_names = {ent.name for ent in entity_item.parent_item.children}
         dup_name = unique_name(orig_name, existing_names)
         parcel = SpineDBParcel(self.db_mngr)
         db_map_ent_ids = {db_map: {entity_item.db_map_id(db_map)} for db_map in entity_item.db_maps}

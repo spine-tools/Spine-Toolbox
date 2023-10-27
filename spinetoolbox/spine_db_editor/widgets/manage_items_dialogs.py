@@ -13,16 +13,17 @@
 Classes for custom QDialogs to add edit and remove database items.
 """
 
-from functools import reduce
+from functools import reduce, cached_property
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
 from PySide6.QtCore import Slot, Qt, QModelIndex
 from PySide6.QtGui import QAction
+from ..mvcmodels.entity_tree_item import EntityClassItem
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
-from ...helpers import busy_effect, preferred_row_height, DB_ITEM_SEPARATOR
+from ...helpers import busy_effect, preferred_row_height
 
 
-class ManageItemsDialogBase(QDialog):
+class DialogWithButtons(QDialog):
     def __init__(self, parent, db_mngr):
         """Init class.
 
@@ -33,31 +34,49 @@ class ManageItemsDialogBase(QDialog):
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.db_mngr = db_mngr
-        self.table_view = self.make_table_view()
-        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        self.table_view.horizontalHeader().setStretchLastSection(True)
-        self.table_view.horizontalHeader().setMinimumSectionSize(120)
-        self.table_view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
         self._accept_action = QAction("OK", parent=self)
         self._accept_action.setShortcut("Ctrl+Return")
         self.addAction(self._accept_action)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
-        layout = QGridLayout(self)
-        layout.addWidget(self.table_view)
-        layout.addWidget(self.button_box)
         self.setAttribute(Qt.WA_DeleteOnClose)
+        QGridLayout(self)
 
-    def make_table_view(self):
-        table_view = CopyPasteTableView(self)
-        table_view.init_copy_and_paste_actions()
-        return table_view
+    def showEvent(self, ev):
+        super().showEvent(ev)
+        self._populate_layout()
+
+    def _populate_layout(self):
+        self.layout().addWidget(self.button_box)
 
     def connect_signals(self):
         """Connect signals to slots."""
         self._accept_action.triggered.connect(self.accept)
         self.button_box.accepted.connect(self._accept_action.trigger)
         self.button_box.rejected.connect(self.reject)
+
+
+class DialogWithTableAndButtons(DialogWithButtons):
+    def __init__(self, parent, db_mngr):
+        """Init class.
+
+        Args:
+            parent (SpineDBEditor): data store widget
+            db_mngr (SpineDBManager)
+        """
+        super().__init__(parent, db_mngr)
+        self.table_view = self.make_table_view()
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.table_view.horizontalHeader().setMinimumSectionSize(120)
+        self.table_view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
+
+    def _populate_layout(self):
+        self.layout().addWidget(self.table_view)
+        super()._populate_layout()
+
+    def make_table_view(self):
+        raise NotImplementedError()
 
     def resize_window_to_columns(self, height=None):
         if height is None:
@@ -75,7 +94,7 @@ class ManageItemsDialogBase(QDialog):
         )
 
 
-class ManageItemsDialog(ManageItemsDialogBase):
+class ManageItemsDialog(DialogWithTableAndButtons):
     """A dialog with a CopyPasteTableView and a QDialogButtonBox. Base class for all
     dialogs to query user's preferences for adding/editing/managing data items.
     """
@@ -89,6 +108,11 @@ class ManageItemsDialog(ManageItemsDialogBase):
         """
         super().__init__(parent, db_mngr)
         self.model = None
+
+    def make_table_view(self):
+        table_view = CopyPasteTableView(self)
+        table_view.init_copy_and_paste_actions()
+        return table_view
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -121,13 +145,18 @@ class ManageItemsDialog(ManageItemsDialogBase):
 class GetEntityClassesMixin:
     """Provides a method to retrieve entity classes for AddEntitiesDialog and AddEntityClassesDialog."""
 
-    def make_db_map_ent_cls_lookup(self):
+    @cached_property
+    def db_map_ent_cls_lookup(self):
         return {
-            db_map: {(x["name"], x["dimension_name_list"]): x for x in self.db_mngr.get_items(db_map, "entity_class")}
+            db_map: {
+                tuple(x[k] for k in EntityClassItem.visual_key): x
+                for x in self.db_mngr.get_items(db_map, "entity_class")
+            }
             for db_map in self.db_maps
         }
 
-    def make_db_map_ent_cls_lookup_by_name(self):
+    @cached_property
+    def db_map_ent_cls_lookup_by_name(self):
         return {
             db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "entity_class")} for db_map in self.db_maps
         }
@@ -138,7 +167,11 @@ class GetEntityClassesMixin:
         """
         db_column = self.model.header.index('databases')
         db_names = self.model._main_data[row][db_column]
-        db_maps = iter(self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps)
+        db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
+        return self._entity_class_name_list_from_db_maps(*db_maps)
+
+    def _entity_class_name_list_from_db_maps(self, *db_maps):
+        db_maps = iter(db_maps)
         db_map = next(db_maps, None)
         if not db_map:
             return []
@@ -155,16 +188,15 @@ class GetEntityClassesMixin:
 class GetEntitiesMixin:
     """Provides a method to retrieve entities for AddEntitiesDialog and EditEntitiesDialog."""
 
-    def make_db_map_ent_lookup(self):
+    @cached_property
+    def db_map_ent_lookup(self):
         return {
-            db_map: {
-                (x["class_id"], DB_ITEM_SEPARATOR.join(x["byname"])): x
-                for x in self.db_mngr.get_items(db_map, "entity")
-            }
+            db_map: {(x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "entity")}
             for db_map in self.db_maps
         }
 
-    def make_db_map_alt_id_lookup(self):
+    @cached_property
+    def db_map_alt_id_lookup(self):
         return {
             db_map: {x["name"]: x["id"] for x in self.db_mngr.get_items(db_map, "alternative")}
             for db_map in self.db_maps

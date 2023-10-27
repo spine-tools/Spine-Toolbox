@@ -85,31 +85,21 @@ class StackedViewMixin:
         entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
         dimension_id_list = entity_class.get("dimension_id_list", ())
         dimension_names = []
-        byname_lists = []
+        entity_name_lists = []
         for id_ in dimension_id_list:
             dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_).get("name")
-            byname_list = [
-                DB_ITEM_SEPARATOR.join(x["byname"])
-                for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", id_)
-            ]
+            entity_name_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", id_)]
             dimension_names.append(dimension_name)
-            byname_lists.append(byname_list)
+            entity_name_lists.append(entity_name_list)
         entity_byname = index.data(Qt.ItemDataRole.EditRole)
         if entity_byname is not None:
             entity = db_map.get_item(
                 "entity", class_name=entity_class["name"], byname=tuple(entity_byname.split(DB_ITEM_SEPARATOR))
             )
-            current_bynames = (
-                [
-                    DB_ITEM_SEPARATOR.join(db_map.get_item("entity", id=id_).get("byname", ()))
-                    for id_ in entity["element_id_list"]
-                ]
-                if entity
-                else []
-            )
+            current_element_name_list = entity["element_name_list"] if entity else []
         else:
-            current_bynames = []
-        editor = ElementNameListEditor(self, index, dimension_names, byname_lists, current_bynames)
+            current_element_name_list = []
+        editor = ElementNameListEditor(self, index, dimension_names, entity_name_lists, current_element_name_list)
         editor.show()
 
     def _set_default_parameter_data(self, index=None):

@@ -1469,8 +1469,8 @@ class SpineDBManager(QObject):
         data = self._get_data_for_export(entity_data)
         data = {
             "entities": [
-                (cls_name, _replace_name(ent_name), description)
-                for (cls_name, ent_name, description) in data.get("entities", [])
+                (cls_name, _replace_name(ent_name), el_name_list, description)
+                for (cls_name, ent_name, el_name_list, description) in data.get("entities", [])
             ],
             "parameter_values": [
                 (cls_name, _replace_name(ent_name), param_name, val, alt)

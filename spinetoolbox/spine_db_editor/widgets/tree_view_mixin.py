@@ -20,7 +20,12 @@ from .add_items_dialogs import (
     ManageElementsDialog,
     ManageMembersDialog,
 )
-from .edit_or_remove_items_dialogs import EditEntityClassesDialog, EditEntitiesDialog, RemoveEntitiesDialog
+from .edit_or_remove_items_dialogs import (
+    EditEntityClassesDialog,
+    EditEntitiesDialog,
+    RemoveEntitiesDialog,
+    SelectSuperclassDialog,
+)
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.alternative_model import AlternativeModel
 from ..mvcmodels.scenario_model import ScenarioModel
@@ -123,6 +128,10 @@ class TreeViewMixin:
         if not parent_item.display_id[1]:  # Don't show for 0-dimensional entity classes
             return
         dialog = ManageElementsDialog(self, parent_item, self.db_mngr, *self.db_maps)
+        dialog.show()
+
+    def show_select_superclass_form(self, entity_class_item):
+        dialog = SelectSuperclassDialog(self, entity_class_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def edit_entity_tree_items(self, selected_indexes):

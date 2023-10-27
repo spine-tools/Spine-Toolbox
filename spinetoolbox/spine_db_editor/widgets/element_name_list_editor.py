@@ -54,38 +54,41 @@ class SearchBarDelegate(QItemDelegate):
 class ElementNameListEditor(ManageItemsDialog):
     """A dialog to select the element name list for an entity using Google-like search bars."""
 
-    def __init__(self, parent, index, entity_class_names, byname_lists, current_bynames):
+    def __init__(self, parent, index, entity_class_names, entity_name_lists, current_element_name_list):
         """Initializes widget.
 
         Args:
             parent (SpineDBEditor)
             index (QModelIndex)
             entity_class_names (list): string entity_class names
-            byname_lists (list): lists of string element bynames
-            current_bynames (list)
+            entity_name_lists (list): lists of string entity names
+            current_element_name_list (list)
         """
         super().__init__(parent, None)
         self.setWindowTitle("Select elements")
         self._index = index
         self.model = QStandardItemModel(self)
-        self.init_model(entity_class_names, byname_lists, current_bynames)
+        self.init_model(entity_class_names, entity_name_lists, current_element_name_list)
         self.table_view.setModel(self.model)
-        self.resize_window_to_columns()
         self.table_view.verticalHeader().hide()
         delegate = SearchBarDelegate(self)
         self.table_view.setItemDelegate(delegate)
         self.connect_signals()
 
-    def init_model(self, entity_class_names, byname_lists, current_bynames):
+    def showEvent(self, ev):
+        super().showEvent(ev)
+        self.resize_window_to_columns()
+
+    def init_model(self, entity_class_names, entity_name_lists, current_element_name_list):
         self.model.setHorizontalHeaderLabels(entity_class_names)
         item_list = []
-        for k, byname_list in enumerate(byname_lists):
+        for k, entity_name_list in enumerate(entity_name_lists):
             try:
-                el_byname = current_bynames[k]
+                el_name = current_element_name_list[k]
             except IndexError:
-                el_byname = None
-            qitem = QStandardItem(el_byname)
-            qitem.setData(byname_list, role=Qt.ItemDataRole.UserRole)
+                el_name = None
+            qitem = QStandardItem(el_name)
+            qitem.setData(entity_name_list, role=Qt.ItemDataRole.UserRole)
             item_list.append(qitem)
         self.model.invisibleRootItem().appendRow(item_list)
 
