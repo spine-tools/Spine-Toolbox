@@ -188,6 +188,29 @@ class GetEntityClassesMixin:
 class GetEntitiesMixin:
     """Provides a method to retrieve entities for AddEntitiesDialog and EditEntitiesDialog."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.entity_class = None
+        self._class_key = None
+
+    @property
+    def class_key(self):
+        return self._class_key
+
+    @property
+    def dimension_name_list(self):
+        return self.entity_class["dimension_name_list"]
+
+    @property
+    def class_name(self):
+        return self.entity_class["name"]
+
+    @class_key.setter
+    def class_key(self, class_key):
+        self._class_key = class_key
+        entity_classes = (self.db_map_ent_cls_lookup[db_map].get(self.class_key) for db_map in self.db_maps)
+        self.entity_class = next((x for x in entity_classes if x is not None), None)
+
     @cached_property
     def db_map_ent_lookup(self):
         return {
@@ -218,13 +241,12 @@ class GetEntitiesMixin:
         db_column = self.model.header.index('databases')
         db_names = self.model._main_data[row][db_column]
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
-        ent_cls_key = (self.class_name, self.dimension_name_list)
         entity_name_lists = []
         for db_map in db_maps:
             entity_classes = self.db_map_ent_cls_lookup[db_map]
-            if ent_cls_key not in entity_classes:
+            if self.class_key not in entity_classes:
                 continue
-            ent_cls = entity_classes[ent_cls_key]
+            ent_cls = entity_classes[self.class_key]
             dimension_id_list = ent_cls["dimension_id_list"]
             dimension_id = dimension_id_list[column]
             entities = self.db_map_ent_lookup[db_map]

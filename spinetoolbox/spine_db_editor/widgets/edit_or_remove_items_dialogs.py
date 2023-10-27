@@ -123,7 +123,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
             selected (set): set of EntityItem instances to edit
-            class_key (tuple): (class_name, dimension_name_list) for identifying the entity class
+            class_key (tuple): for identifying the entity class
         """
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit entities")
@@ -131,15 +131,15 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
         self.connect_signals()
-        self.class_name, self.dimension_name_list = class_key
+        self.db_maps = set(db_map for item in selected for db_map in item.db_maps)
+        self.keyed_db_maps = {x.codename: x for x in self.db_maps}
+        self.class_key = class_key
         self.model.set_horizontal_header_labels(
             [x + ' name' for x in self.dimension_name_list] + ['entity name', 'databases']
         )
-        self.orig_data = list()
-        model_data = list()
-        self.db_maps = set()
+        self.orig_data = []
+        model_data = []
         for item in selected:
-            self.db_maps.update(item.db_maps)
             data = item.db_map_data(item.first_db_map)
             row_data = [*item.element_name_list, data["name"]]
             self.orig_data.append(row_data.copy())
@@ -147,7 +147,6 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
             model_data.append(row_data)
             self.items.append(item)
         self.model.reset_model(model_data)
-        self.keyed_db_maps = {x.codename: x for x in self.db_maps}
 
     @Slot()
     def accept(self):
@@ -181,12 +180,12 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
                 id_ = item.db_map_id(db_map)
                 # Find dimension_id_list
                 entity_classes = self.db_map_ent_cls_lookup[db_map]
-                if (self.class_name, self.dimension_name_list) not in entity_classes:
+                if (self.class_key) not in entity_classes:
                     self.parent().msg_error.emit(
                         f"Invalid entity class '{self.class_name}' for db '{db_map.codename}' at row {i + 1}"
                     )
                     return
-                ent_cls = entity_classes[self.class_name, self.dimension_name_list]
+                ent_cls = entity_classes[self.class_key]
                 dimension_id_list = ent_cls["dimension_id_list"]
                 entities = self.db_map_ent_lookup[db_map]
                 # Find element_id_list

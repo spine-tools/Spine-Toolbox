@@ -153,9 +153,7 @@ class TreeViewMixin:
         items_by_class = {}
         for item in items:
             data = item.db_map_data(item.first_db_map)
-            class_name = data["class_name"]
-            dimension_name_list = data["dimension_name_list"]
-            class_key = (class_name, dimension_name_list)
+            class_key = tuple(data[k] for k in ["class_name", "dimension_name_list", "superclass_name"])
             items_by_class.setdefault(class_key, set()).add(item)
         for class_key, classed_items in items_by_class.items():
             dialog = EditEntitiesDialog(self, self.db_mngr, classed_items, class_key)

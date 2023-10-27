@@ -347,8 +347,6 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
         layout.addWidget(self.ent_cls_combo_box)
         layout.addStretch()
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
-        self.entity_class = None
-        self._class_key = None
         self.entity_class_keys = None
 
     def _class_key_to_str(self, key, *db_maps):
@@ -371,24 +369,11 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
     def _do_reset_model(self):
         raise NotImplementedError()
 
-    @property
-    def dimension_name_list(self):
-        return self.entity_class["dimension_name_list"]
-
-    @property
-    def class_name(self):
-        return self.entity_class["name"]
-
     @Slot(int)
     def reset_model(self, index):
         """Setup model according to current entity class selected in combobox."""
-        self._class_key = self.entity_class_keys[index]
-        self._update_entity_class()
+        self.class_key = self.entity_class_keys[index]
         self._do_reset_model()
-
-    def _update_entity_class(self):
-        entity_classes = (self.db_map_ent_cls_lookup[db_map].get(self._class_key) for db_map in self.db_maps)
-        self.entity_class = next((x for x in entity_classes if x is not None), None)
 
     def _populate_layout(self):
         self.layout().addWidget(self.header_widget, 0, 0, 1, -1)
@@ -440,10 +425,9 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             entity_class_name = item.parent_item.name
             self.entity_names_by_class_name = {entity_class_name: entity_name}
             if item.parent_item.item_type == "entity_class":
-                self._class_key = item.parent_item.display_id
+                self.class_key = item.parent_item.display_id
         elif item.item_type == "entity_class":
-            self._class_key = item.display_id
-        self._update_entity_class()
+            self.class_key = item.display_id
         self.model.force_default = force_default
         self.setWindowTitle("Add entities")
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
@@ -459,7 +443,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             [self._class_key_to_str(key, *db_maps_by_keys[key]) for key in self.entity_class_keys]
         )
         try:
-            current_index = self.entity_class_keys.index(self._class_key)
+            current_index = self.entity_class_keys.index(self.class_key)
             self.reset_model(current_index)
             self._handle_model_reset()
         except ValueError:
@@ -488,7 +472,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
     def _do_reset_model(self):
         header = self.dimension_name_list + ('entity name', 'databases')
         self.model.set_horizontal_header_labels(header)
-        default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self._class_key in keys]
+        default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self.class_key in keys]
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
         defaults = {'databases': db_names}
         defaults.update(self.entity_names_by_class_name)
@@ -516,7 +500,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                     return
                 db_map = self.keyed_db_maps[db_name]
                 entity_classes = self.db_map_ent_cls_lookup[db_map]
-                ent_cls = entity_classes[self._class_key]
+                ent_cls = entity_classes[self.class_key]
                 class_id = ent_cls["id"]
                 dimension_id_list = ent_cls["dimension_id_list"]
                 entities = self.db_map_ent_lookup[db_map]
@@ -563,7 +547,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         """
         super().__init__(parent, db_mngr, *db_maps)
         if item.item_type == "entity_class":
-            self._class_key = item.display_id
+            self.class_key = item.display_id
         self.setWindowTitle("Manage elements")
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
@@ -637,7 +621,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         ]
         self.ent_cls_combo_box.addItems([self._class_key_to_str(key) for key in self.entity_class_keys])
         try:
-            current_index = self.entity_class_keys.index(self._class_key)
+            current_index = self.entity_class_keys.index(self.class_key)
             self.reset_model(current_index)
             self._handle_model_reset()
         except ValueError:
@@ -668,7 +652,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         self.entity_ids.clear()
         for db_map in self.db_maps:
             entity_classes = self.db_map_ent_cls_lookup[db_map]
-            ent_cls = entity_classes.get(self._class_key, None)
+            ent_cls = entity_classes.get(self.class_key, None)
             if ent_cls is None:
                 continue
             for entity in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", ent_cls["id"]):
