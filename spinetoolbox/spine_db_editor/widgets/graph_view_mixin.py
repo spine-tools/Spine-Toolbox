@@ -867,10 +867,14 @@ class GraphViewMixin:
         Args:
             event (QCloseEvent): Closing event
         """
+        super().closeEvent(event)
+        if not event.isAccepted():
+            return
         self.ui.treeView_entity.tree_selection_changed.disconnect(self._handle_entity_tree_selection_changed_in_graph)
         if self.scene is not None:
             self.scene.deleteLater()
-        super().closeEvent(event)
+        # Make sure the fetch parent isn't used to remove discarded changes after we've deleted the graph scene.
+        self._entity_fetch_parent.set_obsolete(True)
 
 
 class _Offset:
