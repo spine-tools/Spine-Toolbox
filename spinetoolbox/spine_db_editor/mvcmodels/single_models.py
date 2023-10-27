@@ -278,7 +278,9 @@ class FilterEntityAlternativeMixin:
             if entity.get("class_id", None) in self._filter_class_ids:
                 if entity.get("class_id", None) not in self._selected_classes:
                     if bool(set(entity.get("element_id_list", None)) & self._filter_entity_ids):
-                        all_entity_ids.add(entity["id"])  # In the case the entity class the entity belongs to isn't selected
+                        all_entity_ids.add(
+                            entity["id"]
+                        )  # In the case the entity class the entity belongs to isn't selected
                         # but it is composed of at least one selected entity.
                 else:
                     all_entity_ids.add(entity["id"])  # If the entity class it belongs to is selected.
