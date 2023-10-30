@@ -273,7 +273,7 @@ class SelectSuperclassDialog(GetEntityClassesMixin, DialogWithButtons):
             superclass_subclass = db_map.get_item("superclass_subclass", subclass_name=self._subclass_name)
             self._combobox_superclass_subclass[db_map] = (combobox, superclass_subclass)
             entity_classes = self._entity_class_name_list_from_db_maps(db_map)
-            combobox.addItems(["No superclass"] + [x for x in entity_classes if x != self._subclass_name])
+            combobox.addItems(["(None)"] + [x for x in entity_classes if x != self._subclass_name])
             if superclass_subclass:
                 combobox.setCurrentText(superclass_subclass["superclass_name"])
             else:

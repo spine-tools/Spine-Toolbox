@@ -75,6 +75,10 @@ class DialogWithTableAndButtons(DialogWithButtons):
         self.layout().addWidget(self.table_view)
         super()._populate_layout()
 
+    def showEvent(self, ev):
+        super().showEvent(ev)
+        self.resize_window_to_columns()
+
     def make_table_view(self):
         raise NotImplementedError()
 
@@ -213,10 +217,12 @@ class GetEntitiesMixin:
 
     @cached_property
     def db_map_ent_lookup(self):
-        return {
-            db_map: {(x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "entity")}
-            for db_map in self.db_maps
-        }
+        db_map_ent_lookup = {}
+        for db_map in self.db_maps:
+            ent_lookup = db_map_ent_lookup.setdefault(db_map, {})
+            for x in self.db_mngr.get_items(db_map, "entity"):
+                ent_lookup[x["class_id"], x["name"]] = ent_lookup[x["superclass_id"], x["name"]] = x
+        return db_map_ent_lookup
 
     @cached_property
     def db_map_alt_id_lookup(self):

@@ -75,10 +75,6 @@ class ElementNameListEditor(ManageItemsDialog):
         self.table_view.setItemDelegate(delegate)
         self.connect_signals()
 
-    def showEvent(self, ev):
-        super().showEvent(ev)
-        self.resize_window_to_columns()
-
     def init_model(self, entity_class_names, entity_name_lists, current_element_name_list):
         self.model.setHorizontalHeaderLabels(entity_class_names)
         item_list = []
