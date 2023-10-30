@@ -60,6 +60,18 @@ class TopLeftHeaderItem:
         if role == Qt.ItemDataRole.ToolTipRole:
             return item.get("description", "No description")
 
+    @staticmethod
+    def accepts(header_id):
+        """Tests if header id is valid.
+
+        Args:
+            header_id (Any): header id
+
+        Returns:
+            bool: True if id is valid, False otherwise
+        """
+        return any(id_ is not None for id_ in header_id[1:])
+
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         """Returns header data for given id.
 
