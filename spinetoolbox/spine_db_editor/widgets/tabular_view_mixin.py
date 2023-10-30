@@ -727,6 +727,8 @@ class TabularViewMixin:
         destination = self._get_insert_index(catcher_list, catcher, position)
         if dropped.area == "frozen" and catcher.area == "frozen":
             source = dropped_list.index(dropped.identifier)
+            if source == destination:
+                return
             self.frozen_table_model.moveColumn(QModelIndex(), source, QModelIndex(), destination)
             self.pivot_table_model.set_frozen(self.frozen_table_model.headers)
             return
