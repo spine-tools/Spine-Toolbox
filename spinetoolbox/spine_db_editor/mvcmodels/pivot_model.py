@@ -166,12 +166,18 @@ class PivotModel:
             result = {index_getter(k): None for k in self._data if frozen_getter(k) == self.frozen_value}
         else:
             result = {index_getter(k): None for k in self._data}
-        return sorted(
-            (x for x in result if None not in x),
-            key=lambda x: tuple(
-                self.top_left_headers[header_name].header_data(header_id) for header_name, header_id in zip(indexes, x)
-            ),
-        )
+        accepted = {}
+        headers = self.top_left_headers
+        for x in result:
+            sort_keys = []
+            for header_name, header_id in zip(indexes, x):
+                header = headers[header_name]
+                if not header.accepts(header_id):
+                    break
+                sort_keys.append(header.header_data(header_id))
+            else:
+                accepted[x] = sort_keys
+        return [item[0] for item in sorted(accepted.items(), key=operator.itemgetter(1))]
 
     def set_pivot(self, rows, columns, frozen, frozen_value):
         """Sets pivot."""
