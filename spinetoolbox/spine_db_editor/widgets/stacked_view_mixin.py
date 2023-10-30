@@ -88,7 +88,11 @@ class StackedViewMixin:
         entity_name_lists = []
         for id_ in dimension_id_list:
             dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_).get("name")
-            entity_name_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", id_)]
+            entity_name_list = [
+                x["name"]
+                for k in ("class_id", "superclass_id")
+                for x in self.db_mngr.get_items_by_field(db_map, "entity", k, id_)
+            ]
             dimension_names.append(dimension_name)
             entity_name_lists.append(entity_name_list)
         entity_byname = index.data(Qt.ItemDataRole.EditRole)
