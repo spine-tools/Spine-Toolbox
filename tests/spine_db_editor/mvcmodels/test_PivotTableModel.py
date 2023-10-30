@@ -15,7 +15,6 @@ Unit tests for :class:`ParameterValuePivotTableModel` module.
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QModelIndex
 from spinedb_api import Map
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestSpineDBManager, fetch_model
@@ -31,9 +30,15 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
         with patch.object(SpineDBEditor, "restore_ui"):
-            self._editor = SpineDBEditor(self._db_mngr, {"sqlite://": db_map.codename})
+            self._editor = SpineDBEditor(self._db_mngr, {"sqlite://": self._db_map.codename})
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
+
+    def _fill_model_with_data(self):
         data = {
             "entity_classes": (("class1",),),
             "parameter_definitions": (("class1", "parameter1"), ("class1", "parameter2")),
@@ -45,7 +50,9 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
                 ("class1", "object2", "parameter2", 7.0),
             ),
         }
-        self._db_mngr.import_data({db_map: data})
+        self._db_mngr.import_data({self._db_map: data})
+
+    def _start(self):
         object_class_index = self._editor.entity_tree_model.index(0, 0)
         fetch_model(self._editor.entity_tree_model)
         index = self._editor.entity_tree_model.index(0, 0, object_class_index)
@@ -58,11 +65,9 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         self._model.endResetModel()
         qApp.processEvents()
 
-    def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        self._db_mngr.clean_up()
-
     def test_x_flag(self):
+        self._fill_model_with_data()
+        self._start()
         self.assertIsNone(self._model.plot_x_column)
         self._model.set_plot_x_column(1, True)
         self.assertEqual(self._model.plot_x_column, 1)
@@ -70,6 +75,8 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         self.assertIsNone(self._model.plot_x_column)
 
     def test_header_name(self):
+        self._fill_model_with_data()
+        self._start()
         self.assertEqual(self._model.rowCount(), 5)
         self.assertEqual(self._model.columnCount(), 4)
         self.assertEqual(self._model.header_name(self._model.index(2, 0)), 'object1')
@@ -78,31 +85,62 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         self.assertEqual(self._model.header_name(self._model.index(0, 2)), 'parameter2')
 
     def test_data(self):
+        self._fill_model_with_data()
+        self._start()
         self.assertEqual(self._model.rowCount(), 5)
         self.assertEqual(self._model.columnCount(), 4)
         self.assertEqual(self._model.index(0, 0).data(), "parameter")
         self.assertEqual(self._model.index(1, 0).data(), "class1")
         self.assertEqual(self._model.index(2, 0).data(), "object1")
         self.assertEqual(self._model.index(3, 0).data(), "object2")
-        self.assertEqual(self._model.index(4, 0).data(), None)
+        self.assertIsNone(self._model.index(4, 0).data())
         self.assertEqual(self._model.index(0, 1).data(), "parameter1")
-        self.assertEqual(self._model.index(1, 1).data(), None)
+        self.assertIsNone(self._model.index(1, 1).data())
         self.assertEqual(self._model.index(2, 1).data(), str(1.0))
         self.assertEqual(self._model.index(3, 1).data(), str(3.0))
-        self.assertEqual(self._model.index(4, 1).data(), None)
+        self.assertIsNone(self._model.index(4, 1).data())
         self.assertEqual(self._model.index(0, 2).data(), "parameter2")
-        self.assertEqual(self._model.index(1, 2).data(), None)
+        self.assertIsNone(self._model.index(1, 2).data())
         self.assertEqual(self._model.index(2, 2).data(), str(5.0))
         self.assertEqual(self._model.index(3, 2).data(), str(7.0))
-        self.assertEqual(self._model.index(4, 2).data(), None)
-        self.assertEqual(self._model.index(0, 3).data(), None)
-        self.assertEqual(self._model.index(1, 3).data(), None)
-        self.assertEqual(self._model.index(2, 3).data(), None)
-        self.assertEqual(self._model.index(3, 3).data(), None)
-        self.assertEqual(self._model.index(4, 3).data(), None)
+        self.assertIsNone(self._model.index(4, 2).data())
+        self.assertIsNone(self._model.index(0, 3).data())
+        self.assertIsNone(self._model.index(1, 3).data())
+        self.assertIsNone(self._model.index(2, 3).data())
+        self.assertIsNone(self._model.index(3, 3).data())
+        self.assertIsNone(self._model.index(4, 3).data())
 
     def test_header_row_count(self):
+        self._fill_model_with_data()
+        self._start()
         self.assertEqual(self._model.headerRowCount(), 2)
+
+    def test_model_works_even_without_entities(self):
+        get_item_exceptions = []
+
+        def guarded_get_item(db_map, item_type, id_):
+            try:
+                return db_map.get_item(item_type, id=id_)
+            except Exception as error:
+                get_item_exceptions.append(error)
+                return None
+
+        data = {
+            "entity_classes": (("class1",),),
+        }
+        self._db_mngr.import_data({self._db_map: data})
+        with patch.object(self._db_mngr, "get_item") as get_item:
+            get_item.side_effect = guarded_get_item
+            self._start()
+            self.assertEqual(get_item_exceptions, [])
+        self.assertEqual(self._model.rowCount(), 3)
+        self.assertEqual(self._model.columnCount(), 2)
+        self.assertEqual(self._model.index(0, 0).data(), "parameter")
+        self.assertEqual(self._model.index(1, 0).data(), "class1")
+        self.assertIsNone(self._model.index(2, 0).data())
+        self.assertIsNone(self._model.index(0, 1).data())
+        self.assertIsNone(self._model.index(1, 1).data())
+        self.assertIsNone(self._model.index(2, 1).data())
 
 
 class TestIndexExpansionPivotTableModel(unittest.TestCase):

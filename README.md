@@ -155,10 +155,52 @@ is active.
 **To upgrade**, pull (or copy) the latest changes from the Spine Toolbox repository 
 
     git pull
- 
+    git fetch --tags origin
+
 and run (to upgrade the other Spine Toolbox packages)
 
     python -m pip install -U -r requirements.txt
+
+**NOTE:** The version number of Spine packages are automatically
+generated from the Git tags during the `pip install` step.  This makes
+it important to fetch new tags from GitHub before running `pip
+install` when upgrading.  This is true also for editable installs.
+
+#### Additional comments for developers
+
+If you are alternating between multiple branches, you should repeat
+the `pip install -e .` step after switching a branch.  This ensures
+the version number is updated correctly.  On the other hand if you do
+not need the version number to be precise, it is okay to skip the
+step.
+
+To illustrate with an example, consider there are two feature branches
+`P` and `Q` that you are working on. Both are based on `master` after
+the release `0.6.18`.
+
+```
+ 0.6.18
+---o----o--o--o  P
+    \
+     o--o--o--o  Q
+```
+
+Then the versions are:
+- `P`: `0.7.0.dev3+g<commit-hash-P>.d<commit-date-P>`,
+- `Q`: `0.7.0.dev4+g<commit-hash-Q>.d<commit-date-Q>`.
+
+The version should be available inside Python as:
+```python
+from spinetoolbox.version import version_tuple
+
+print(version_tuple)
+# P: (0, 7, 0, 'dev3', 'g<commit-hash-P>.d<commit-date-P>')
+# Q: (0, 7, 0, 'dev4', 'g<commit-hash-Q>.d<commit-date-Q>')
+```
+
+So if your code uses any of the components of the `version_tuple` that
+might change, you should re-run `pip install`, otherwise it maybe
+ignored safely.
 
 ### Windows 64-bit installer package
 
@@ -173,7 +215,7 @@ run it, and follow the instructions to install Spine Toolbox.
 
 Python 3.8.1-3.11 is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
 
-See file `setup.cfg` and `requirements.txt` for packages required to run Spine Toolbox.
+See the files `pyproject.toml` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
 
 The requirements include three packages ([`spinedb_api`](https://github.com/spine-tools/Spine-Database-API),

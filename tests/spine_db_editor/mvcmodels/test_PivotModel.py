@@ -18,6 +18,10 @@ from spinetoolbox.spine_db_editor.mvcmodels.pivot_model import PivotModel
 
 
 class _Header:
+    @staticmethod
+    def accepts(header_id):
+        return True
+
     def header_data(self, header_id):
         return header_id
 
