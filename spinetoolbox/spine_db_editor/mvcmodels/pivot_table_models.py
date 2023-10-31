@@ -15,6 +15,7 @@ Provides pivot table models for the Tabular View.
 from collections import defaultdict
 from contextlib import suppress
 from functools import partial
+from typing import Iterable
 
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
@@ -70,7 +71,9 @@ class TopLeftHeaderItem:
         Returns:
             bool: True if id is valid, False otherwise
         """
-        return any(id_ is not None for id_ in header_id[1:])
+        if isinstance(header_id, Iterable):
+            return all(id_ is not None for id_ in header_id[1:])
+        return header_id is not None
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         """Returns header data for given id.

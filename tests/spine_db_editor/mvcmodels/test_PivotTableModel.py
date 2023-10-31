@@ -12,6 +12,7 @@
 """
 Unit tests for :class:`ParameterValuePivotTableModel` module.
 """
+import itertools
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtWidgets import QApplication
@@ -53,6 +54,15 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         self._db_mngr.import_data({self._db_map: data})
 
     def _start(self):
+        get_item_exceptions = []
+
+        def guarded_get_item(db_map, item_type, id_):
+            try:
+                return db_map.get_item(item_type, id=id_)
+            except Exception as error:
+                get_item_exceptions.append(error)
+                return None
+
         object_class_index = self._editor.entity_tree_model.index(0, 0)
         fetch_model(self._editor.entity_tree_model)
         index = self._editor.entity_tree_model.index(0, 0, object_class_index)
@@ -61,9 +71,12 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
             mock_is_visible.return_value = True
             self._editor.do_reload_pivot_table()
         self._model = self._editor.pivot_table_model
-        self._model.beginResetModel()
-        self._model.endResetModel()
-        qApp.processEvents()
+        with patch.object(self._db_mngr, "get_item") as get_item:
+            get_item.side_effect = guarded_get_item
+            self._model.beginResetModel()
+            self._model.endResetModel()
+            qApp.processEvents()
+            self.assertEqual(get_item_exceptions, [])
 
     def test_x_flag(self):
         self._fill_model_with_data()
@@ -116,23 +129,11 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         self.assertEqual(self._model.headerRowCount(), 2)
 
     def test_model_works_even_without_entities(self):
-        get_item_exceptions = []
-
-        def guarded_get_item(db_map, item_type, id_):
-            try:
-                return db_map.get_item(item_type, id=id_)
-            except Exception as error:
-                get_item_exceptions.append(error)
-                return None
-
         data = {
             "entity_classes": (("class1",),),
         }
         self._db_mngr.import_data({self._db_map: data})
-        with patch.object(self._db_mngr, "get_item") as get_item:
-            get_item.side_effect = guarded_get_item
-            self._start()
-            self.assertEqual(get_item_exceptions, [])
+        self._start()
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.columnCount(), 2)
         self.assertEqual(self._model.index(0, 0).data(), "parameter")
@@ -141,6 +142,40 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         self.assertIsNone(self._model.index(0, 1).data())
         self.assertIsNone(self._model.index(1, 1).data())
         self.assertIsNone(self._model.index(2, 1).data())
+
+    def test_drag_and_drop_database_from_frozen_table(self):
+        self._fill_model_with_data()
+        self._start()
+        for frozen_column in range(self._editor.frozen_table_model.columnCount()):
+            frozen_index = self._editor.frozen_table_model.index(0, frozen_column)
+            if frozen_index.data() == "database":
+                break
+        else:
+            raise RuntimeError("No 'database' column found in frozen table")
+        frozen_table_header_widget = self._editor.ui.frozen_table.indexWidget(frozen_index)
+        for row, column in itertools.product(
+            range(self._editor.pivot_table_proxy.rowCount()), range(self._editor.pivot_table_proxy.columnCount())
+        ):
+            index_widget = self._editor.ui.pivot_table.indexWidget(self._editor.pivot_table_proxy.index(row, column))
+            if index_widget.identifier == "parameter":
+                break
+        else:
+            raise RuntimeError("No 'parameter' header found")
+        self._editor.handle_header_dropped(frozen_table_header_widget, index_widget)
+        QApplication.processEvents()
+        self.assertEqual(self._model.rowCount(), 6)
+        self.assertEqual(self._model.columnCount(), 4)
+        expected = [
+            ["database", "test_db", "test_db", "test_db", None],
+            ["parameter", "parameter1", "parameter2", None],
+            ["class1", None, None, None],
+            ["object1", "1.0", "5.0", None],
+            ["object2", "3.0", "7.0", None],
+            [None, None, None, None],
+        ]
+        for row, column in itertools.product(range(self._model.rowCount()), range(self._model.columnCount())):
+            with self.subTest(row=row, column=column):
+                self.assertEqual(self._model.index(row, column).data(), expected[row][column])
 
 
 class TestIndexExpansionPivotTableModel(unittest.TestCase):
