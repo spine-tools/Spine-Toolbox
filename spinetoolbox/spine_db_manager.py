@@ -146,10 +146,10 @@ class SpineDBManager(QObject):
         """Returns a worker.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping): database mapping
 
         Returns:
-            SpineDBWorker
+            SpineDBWorker: worker for the db_map
         """
         return self._workers[db_map]
 

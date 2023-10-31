@@ -20,7 +20,7 @@ from PySide6.QtGui import QAction, QIcon, QActionGroup
 from PySide6.QtWidgets import QWidget
 
 from spinedb_api.helpers import fix_name_ambiguity
-from .custom_menus import TabularViewFilterMenu
+from .custom_menus import TabularViewCodenameFilterMenu, TabularViewDBItemFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...helpers import busy_effect, CharIconEngine, preferred_row_height, disconnect
 from ..mvcmodels.pivot_table_models import (
@@ -644,13 +644,13 @@ class TabularViewMixin:
         self.ui.frozen_table.setCurrentIndex(self.frozen_table_model.index(1, 0))
 
     def create_filter_menu(self, identifier):
-        """Returns a filter menu for given given object_class identifier.
+        """Returns a filter menu for given filterable item.
 
         Args:
-            identifier (int)
+            identifier (str): item identifier
 
         Returns:
-            TabularViewFilterMenu
+            TabularViewDBItemFilterMenu: filter menu corresponding to identifier
         """
         if identifier not in self.filter_menus:
             header = self.pivot_table_model.top_left_headers[identifier]
@@ -670,9 +670,13 @@ class TabularViewMixin:
                 accepts_item = self.accepts_parameter_item
             else:
                 accepts_item = None
-            self.filter_menus[identifier] = menu = TabularViewFilterMenu(
-                self, self.db_mngr, self.db_maps, item_type, accepts_item, identifier, show_empty=False
-            )
+            if identifier == "database":
+                menu = TabularViewCodenameFilterMenu(self, self.db_maps, identifier, show_empty=False)
+            else:
+                menu = TabularViewDBItemFilterMenu(
+                    self, self.db_mngr, self.db_maps, item_type, accepts_item, identifier, show_empty=False
+                )
+            self.filter_menus[identifier] = menu
             menu.filterChanged.connect(self.change_filter)
         return self.filter_menus[identifier]
 
