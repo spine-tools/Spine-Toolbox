@@ -864,6 +864,9 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             header_table.selectionModel().select(selected, QItemSelectionModel.Select)
             header_table.selectionModel().select(deselected, QItemSelectionModel.Deselect)
 
+    def indexWidget(self, proxy_index):
+        return self._top_left_header_table.indexWidget(proxy_index)
+
     def setIndexWidget(self, proxy_index, widget):
         self._top_left_header_table.setIndexWidget(proxy_index, widget)
 
