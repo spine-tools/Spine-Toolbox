@@ -17,7 +17,7 @@ from PySide6.QtWidgets import QMenu, QWidget
 from PySide6.QtCore import Qt, QEvent, QPoint, Signal
 from PySide6.QtGui import QKeyEvent, QKeySequence
 from ...widgets.custom_menus import FilterMenuBase
-from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel
+from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, SimpleFilterCheckboxListModel
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DB_ITEM_SEPARATOR
 
@@ -147,26 +147,49 @@ class AutoFilterMenu(FilterMenuBase):
         self.filterChanged.emit(self._field, auto_filter)
 
 
-class TabularViewFilterMenu(FilterMenuBase):
-    """Filter menu to use together with FilterWidget in TabularViewMixin."""
+class TabularViewFilterMenuBase(FilterMenuBase):
 
     filterChanged = Signal(str, set, bool)
+
+    def __init__(self, parent, identifier):
+        """
+        Args:
+            parent (SpineDBEditor): parent widget
+            identifier (str): header identifier
+        """
+        super().__init__(parent)
+        self.anchor = parent
+        self._identifier = identifier
+
+    def event(self, event):
+        if event.type() == QEvent.Show and self.anchor is not None:
+            if self.anchor.area == "rows":
+                pos = self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(0, self.anchor.height())
+            elif self.anchor.area == "columns":
+                pos = self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(self.anchor.width(), 0)
+            else:
+                raise RuntimeError(f"Unknown anchor area '{self.anchor.area}'")
+            self.move(pos)
+        return super().event(event)
+
+
+class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
+    """Filter menu to use together with FilterWidget in TabularViewMixin."""
 
     def __init__(self, parent, db_mngr, db_maps, item_type, accepts_item, identifier, show_empty=True):
         """
         Args:
-            parent (SpineDBEditor)
-            db_mngr (SpineDBManager)
-            db_maps (Sequence of DatabaseMapping)
-            item_type (str)
-            accepts_item (function)
-            identifier (int): index identifier
+            parent (SpineDBEditor): parent widget
+            db_mngr (SpineDBManager): database manager
+            db_maps (Sequence of DatabaseMapping): database mappings
+            item_type (str): database item type to filter
+            accepts_item (Callable): callable that returns True when database item is accepted
+            identifier (str): header identifier
+            show_empty (bool): if True, an empty row will be added to the end of the item list
         """
-        super().__init__(parent)
-        self.anchor = parent
+        super().__init__(parent, identifier)
         self._db_mngr = db_mngr
         self._item_type = item_type
-        self._identifier = identifier
         self._menu_data = {}
         fetch_parent = FlexibleFetchParent(
             self._item_type,
@@ -208,11 +231,22 @@ class TabularViewFilterMenu(FilterMenuBase):
         valid_values = {db_map_id for v in valid_values for db_map_id in self._menu_data[v]}
         self.filterChanged.emit(self._identifier, valid_values, self._filter.has_filter())
 
-    def event(self, event):
-        if event.type() == QEvent.Show and self.anchor is not None:
-            if self.anchor.area == "rows":
-                pos = self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(0, self.anchor.height())
-            elif self.anchor.area == "columns":
-                pos = self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(self.anchor.width(), 0)
-            self.move(pos)
-        return super().event(event)
+
+class TabularViewCodenameFilterMenu(TabularViewFilterMenuBase):
+    """Filter menu to filter database codenames in Pivot table."""
+
+    def __init__(self, parent, db_maps, identifier, show_empty=True):
+        """
+        Args:
+            parent (SpineDBEditor): parent widget
+            db_maps (Sequence of DatabaseMapping): database mappings
+            identifier (str): header identifier
+            show_empty (bool): if True, an empty row will be added to the end of the item list
+        """
+        super().__init__(parent, identifier)
+        self._set_up(SimpleFilterCheckboxListModel, self, show_empty=show_empty)
+        self._filter.set_filter_list([db_map.codename for db_map in db_maps])
+
+    def emit_filter_changed(self, valid_values):
+        """See base class."""
+        self.filterChanged.emit(self._identifier, valid_values, self._filter.has_filter())

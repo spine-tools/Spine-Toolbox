@@ -25,10 +25,10 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
     _ADD_TO_SELECTION_STR = 'Add current selection to filter'
 
     def __init__(self, parent, show_empty=True):
-        """Init class.
-
+        """
         Args:
-            parent (QWidget)
+            parent (QWidget): parent widget
+            show_empty (bool): if True, adds an empty row to the end of the list
         """
         super().__init__(parent)
         self._data = []
@@ -282,11 +282,13 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
     """Extends SimpleFilterCheckboxListModel to allow for lazy loading in synch with another model."""
 
     def __init__(self, parent, db_mngr, db_maps, fetch_parent, show_empty=True):
-        """Init class.
-
+        """
         Args:
-            parent (SpineDBEditor)
-            fetch_parent (FetchParent)
+            parent (SpineDBEditor): parent widget
+            db_mngr (SpineDBManager): database manager
+            db_maps (Sequence of DatabaseMapping): database maps
+            fetch_parent (FetchParent): fetch parent
+            show_empty (bool): if True, show an empty row at the end of the list
         """
         super().__init__(parent, show_empty=show_empty)
         self._db_mngr = db_mngr
@@ -315,11 +317,11 @@ class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):
     """Extends SimpleFilterCheckboxListModel to allow for translating internal data to a value for display role."""
 
     def __init__(self, parent, data_to_value, show_empty=True):
-        """Init class.
-
+        """
         Args:
-            parent (SpineDBEditor)
+            parent (SpineDBEditor): parent widget
             data_to_value (method): a method to translate item data to a value for display role
+            show_empty (bool): if True, add an empty row to the end of the list
         """
         super().__init__(parent, show_empty=show_empty)
         self.data_to_value = data_to_value
