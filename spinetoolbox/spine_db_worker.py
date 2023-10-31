@@ -183,6 +183,7 @@ class SpineDBWorker(QObject):
         self._db_map.fetch_all()
 
     def close_db_map(self):
+        self._do_fetch_more = lambda worker, *args, **kwargs: None
         self._db_map.close()
 
     @busy_effect
