@@ -14,10 +14,10 @@ The SpineDBWorker class
 """
 from functools import wraps
 from sqlalchemy.exc import DBAPIError
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, Signal, Slot, QMutex, QMutexLocker
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from .helpers import busy_effect, separate_metadata_and_item_metadata
-from .qthread_pool_executor import QtBasedThreadPoolExecutor
+from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 
 
 _CHUNK_SIZE = 1000
@@ -51,7 +51,7 @@ class SpineDBWorker(QObject):
     _more_available = Signal(object)
     _will_have_children_change = Signal(list)
 
-    def __init__(self, db_mngr, db_url):
+    def __init__(self, db_mngr, db_url, synchronous=False):
         super().__init__()
         self._parents_by_type = {}
         self._add_item_callbacks = {}
@@ -66,8 +66,12 @@ class SpineDBWorker(QObject):
         self._fetched_ids = {}
         self._fetched_item_types = set()
         self.commit_cache = {}
-        self._executor = QtBasedThreadPoolExecutor(max_workers=1)
+        if synchronous:
+            self._executor = SynchronousExecutor()
+        else:
+            self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._advance_query_callbacks = {}
+        self._mutex = QMutex()
         self._more_available.connect(self.fetch_more)
         self._will_have_children_change.connect(self._handle_will_have_children_change)
 
@@ -100,6 +104,7 @@ class SpineDBWorker(QObject):
 
     def reset_queries(self):
         """Resets queries and clears caches."""
+        _ = QMutexLocker(self._mutex)
         self._current_fetch_token += 1
         self._offsets.clear()
         self._fetched_ids.clear()
@@ -144,6 +149,7 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if query is being advanced, False otherwise
         """
+        _ = QMutexLocker(self._mutex)
         if item_type in self._fetched_item_types:
             return False
         if item_type in self._advance_query_callbacks:
@@ -164,6 +170,7 @@ class SpineDBWorker(QObject):
         Returns:
             bool: True if new items were fetched from the DB, False otherwise.
         """
+        _ = QMutexLocker(self._mutex)
         try:
             sq_name = self._db_map.cache_sqs[item_type]
         except KeyError:

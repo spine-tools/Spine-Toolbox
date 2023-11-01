@@ -90,7 +90,7 @@ class SpineDBManager(QObject):
     waiting_for_fetcher = Signal()
     fetcher_waiting_over = Signal()
 
-    def __init__(self, settings, parent):
+    def __init__(self, settings, parent, synchronous=False):
         """Initializes the instance.
 
         Args:
@@ -108,6 +108,7 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self._icon_mngr = {}
         self._connect_signals()
+        self._synchronous = synchronous
 
     def _connect_signals(self):
         self.session_refreshed.connect(self.receive_session_refreshed)
@@ -452,7 +453,7 @@ class SpineDBManager(QObject):
             if codename is not None:
                 db_map.codename = codename
             return db_map
-        worker = SpineDBWorker(self, url)
+        worker = SpineDBWorker(self, url, synchronous=self._synchronous)
         try:
             db_map = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
         except Exception as error:
@@ -650,7 +651,7 @@ class SpineDBManager(QObject):
             worker.rollback_session()
             worker.reset_queries()
 
-    def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False, color_code=None):
+    def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False, color=None):
         """Returns an icon renderer for a given entity class.
 
         Args:
@@ -668,7 +669,8 @@ class SpineDBManager(QObject):
         if entity_type == "object_class":
             if for_group:
                 return self.get_icon_mngr(db_map).group_renderer(entity_class["name"])
-            if color_code is not None:
+            if color is not None:
+                color_code = int(color.rgba())
                 return self.get_icon_mngr(db_map).color_class_renderer(entity_class["name"], color_code)
             return self.get_icon_mngr(db_map).class_renderer(entity_class["name"])
         if entity_type == "relationship_class":
@@ -1619,7 +1621,7 @@ class SpineDBManager(QObject):
             error_msg = {None: [f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"]}
             caller.msg_error.emit(error_msg)
         else:
-            caller.sqlite_file_exported.emit(file_path)
+            caller.file_exported.emit(file_path, 1.0, True)
         finally:
             db_map.connection.close()
 
@@ -1628,7 +1630,7 @@ class SpineDBManager(QObject):
         json_data = json.dumps(data_for_export, indent=4)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        caller.file_exported.emit(file_path)
+        caller.file_exported.emit(file_path, 1.0, False)
 
     def export_to_excel(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
         """Exports given data into Excel file."""
@@ -1650,7 +1652,7 @@ class SpineDBManager(QObject):
             error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
             caller.msg_error.emit(error_msg)
         else:
-            caller.file_exported.emit(file_path)
+            caller.file_exported.emit(file_path, 1.0, False)
         finally:
             db_map.connection.close()
 

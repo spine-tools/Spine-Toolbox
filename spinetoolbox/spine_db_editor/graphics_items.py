@@ -12,7 +12,8 @@
 """
 Classes for drawing graphics items on graph view's QGraphicsScene.
 """
-from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF
+from enum import Enum, auto
+from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF, QObject, QByteArray
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -24,39 +25,11 @@ from PySide6.QtWidgets import (
     QApplication,
     QMenu,
 )
-from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvas  # pylint: disable=no-name-in-module
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction, QColor
 
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, color_from_index
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
-
-
-def make_figure_graphics_item(scene, z=0, static=True):
-    """Creates a FigureCanvas and adds it to the given scene.
-    Used for creating heatmaps and associated colorbars.
-
-    Args:
-        scene (QGraphicsScene)
-        z (int, optional): z value. Defaults to 0.
-        static (bool, optional): if True (the default) the figure canvas is not movable
-
-    Returns:
-        QGraphicsProxyWidget: the graphics item that represents the canvas
-        Figure: the figure in the canvas
-    """
-    figure = Figure(tight_layout={"pad": 0})
-    axes = figure.gca(xmargin=0, ymargin=0, frame_on=None)
-    axes.get_xaxis().set_visible(False)
-    axes.get_yaxis().set_visible(False)
-    canvas = FigureCanvas(figure)
-    if static:
-        proxy_widget = scene.addWidget(canvas)
-        proxy_widget.setAcceptedMouseButtons(Qt.NoButton)
-    else:
-        proxy_widget = scene.addWidget(canvas, Qt.Window)
-    proxy_widget.setZValue(z)
-    return proxy_widget, figure
 
 
 class EntityItem(QGraphicsRectItem):
@@ -80,6 +53,8 @@ class EntityItem(QGraphicsRectItem):
         self._dx = self._dy = 0
         self._removed_db_map_ids = ()
         self.arc_items = []
+        self._circle_item = QGraphicsEllipseItem(self)
+        self._circle_item.setPen(Qt.NoPen)
         self.set_pos(x, y)
         self.setPen(Qt.NoPen)
         self._svg_item = QGraphicsSvgItem(self)
@@ -100,6 +75,16 @@ class EntityItem(QGraphicsRectItem):
         self._highlight_color = Qt.transparent
         self._extent = None
         self.label_item = EntityLabelItem(self)
+
+    def clone(self):
+        return type(self)(
+            self._spine_db_editor,
+            self.pos().x(),
+            self.pos().y(),
+            self._given_extent,
+            self._db_map_ids,
+            offset=self._offset,
+        )
 
     def _make_tool_tip(self):
         raise NotImplementedError()
@@ -236,30 +221,48 @@ class EntityItem(QGraphicsRectItem):
             if isinstance(name, str):
                 return name
 
-    def _get_color(self):
-        for db_map, id_ in self.db_map_ids:
-            color = self._spine_db_editor.get_item_color(db_map, self.entity_type, id_)
-            if color is not None:
-                min_val, val, max_val = color
-                count = max_val - min_val
-                if count == 0:
-                    return int(color_from_index(0, 1, value=0).rgba())
-                k = val - min_val
-                return int(color_from_index(k, count).rgba())
+    def _get_prop(self, getter, index):
+        values = {getter(db_map, self.entity_type, id_, index) for db_map, id_ in self.db_map_ids}
+        values.discard(None)
+        if not values:
+            return None
+        values.discard(self._spine_db_editor.NOT_SPECIFIED)
+        if not values:
+            return self._spine_db_editor.NOT_SPECIFIED
+        return next(iter(values))
 
-    def _get_arc_width(self):
-        for db_map, id_ in self.db_map_ids:
-            arc_width = self._spine_db_editor.get_arc_width(db_map, self.entity_type, id_)
-            if arc_width is not None:
-                min_val, val, max_val = arc_width
-                range_ = max_val - min_val
-                if range_ == 0:
-                    return None
-                # val == min_val => result = 1
-                # val == max_val => result = 5
-                return 1 + 9 * (val - min_val) / range_
+    def _get_color(self, index=None):
+        color = self._get_prop(self._spine_db_editor.get_item_color, index)
+        if color in (None, self._spine_db_editor.NOT_SPECIFIED):
+            return color
+        min_val, val, max_val = color
+        count = max(1, max_val - min_val)
+        k = val - min_val
+        return color_from_index(k, count)
 
-    def _set_up(self):
+    def _get_arc_width(self, index=None):
+        arc_width = self._get_prop(self._spine_db_editor.get_arc_width, index)
+        if arc_width in (None, self._spine_db_editor.NOT_SPECIFIED):
+            return arc_width
+        min_val, val, max_val = arc_width
+        range_ = max_val - min_val
+        if range_ == 0:
+            return None
+        if val > 0:
+            return val / max_val, 1
+        return val / min_val, -1
+
+    def _get_vertex_radius(self, index=None):
+        vertex_radius = self._get_prop(self._spine_db_editor.get_vertex_radius, index)
+        if vertex_radius in (None, self._spine_db_editor.NOT_SPECIFIED):
+            return None
+        min_val, val, max_val = vertex_radius
+        range_ = max_val - min_val
+        if range_ == 0:
+            return 0
+        return (val - min_val) / range_
+
+    def set_up(self):
         if self._has_name():
             name = self._get_name()
             if not name:
@@ -277,19 +280,25 @@ class EntityItem(QGraphicsRectItem):
             self.label_item.hide()
             self._extent = self._given_extent
         self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
-        self._init_bg()
+        self._update_bg()
         self.refresh_icon()
         self.update_entity_pos()
 
-    def polish(self):
-        self._renderer = self.db_mngr.entity_class_renderer(
-            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color_code=self._get_color()
-        )
-        self._svg_item.setSharedRenderer(self._renderer)
-        self._update_arcs_width()
+    def update_props(self, index):
+        color = self._get_color(index)
+        arc_width = self._get_arc_width(index)
+        vertex_radius = self._get_vertex_radius(index)
+        self._update_renderer(color, resize=True)
+        self._update_arcs(color, arc_width)
+        self._update_circle(color, vertex_radius)
 
-    def _init_bg(self):
+    def _update_bg(self):
         bg_rect = QRectF(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        if self._bg is not None:
+            self._bg.setRect(bg_rect)
+            self._bg.prepareGeometryChange()
+            self._bg.update()
+            return
         if not self.has_dimensions:
             self._bg = QGraphicsRectItem(bg_rect, self)
             self._bg_brush = Qt.NoBrush
@@ -303,14 +312,21 @@ class EntityItem(QGraphicsRectItem):
 
     def refresh_icon(self):
         """Refreshes the icon."""
-        renderer = self.db_mngr.entity_class_renderer(
-            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color_code=self._get_color()
-        )
-        self._set_renderer(renderer)
+        color = self._get_color()
+        self._update_renderer(color)
 
-    def _set_renderer(self, renderer):
-        self._renderer = renderer
+    def _update_renderer(self, color, resize=True):
+        if color is self._spine_db_editor.NOT_SPECIFIED:
+            color = color_from_index(0, 1, value=0)
+        self._renderer = self.db_mngr.entity_class_renderer(
+            self.first_db_map, self.entity_class_type, self.first_entity_class_id, color=color
+        )
+        self._install_renderer()
+
+    def _install_renderer(self, resize=True):
         self._svg_item.setSharedRenderer(self._renderer)
+        if not resize:
+            return
         size = self._renderer.defaultSize()
         scale = self._extent / max(size.width(), size.height())
         self._svg_item.setScale(scale)
@@ -425,13 +441,33 @@ class EntityItem(QGraphicsRectItem):
         """Moves arc items."""
         for item in self.arc_items:
             item.update_line()
-        self._update_arcs_width()
-
-    def _update_arcs_width(self):
+        color = self._get_color()
         arc_width = self._get_arc_width()
-        if arc_width is not None:
+        self._update_arcs(color, arc_width)
+
+    def _update_arcs(self, color, arc_width):
+        if color not in (None, self._spine_db_editor.NOT_SPECIFIED):
             for item in self.arc_items:
-                item.apply_value_factor(arc_width)
+                item.update_color(color)
+        if arc_width not in (None, self._spine_db_editor.NOT_SPECIFIED):
+            width, sign = arc_width
+            factor = 0.75 * (0.5 + 0.5 * width) * self._extent
+            switched = False
+            for item in self.arc_items:
+                item.apply_value(factor, sign)
+                if not switched:
+                    switched = True
+                    sign = -sign
+
+    def _update_circle(self, color, vertex_radius):
+        if color is self._spine_db_editor.NOT_SPECIFIED:
+            color = color_from_index(0, 1, value=0)
+        else:
+            color = QColor(color)
+        circle_extent = 2 * (0.5 + 0.5 * vertex_radius) * self._extent if vertex_radius is not None else 0
+        self._circle_item.setRect(-circle_extent / 2, -circle_extent / 2, circle_extent, circle_extent)
+        color.setAlphaF(0.5)
+        self._circle_item.setBrush(color)
 
     def itemChange(self, change, value):
         """
@@ -502,7 +538,7 @@ class RelationshipItem(EntityItem):
             db_map_ids (tuple): tuple of (db_map, id) tuples
         """
         super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids, offset=offset)
-        self._set_up()
+        self.set_up()
 
     @property
     def has_dimensions(self):
@@ -568,7 +604,7 @@ class RelationshipItem(EntityItem):
 class ObjectItem(EntityItem):
     """Represents an object in the Entity graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_ids):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_ids, offset=None):
         """Initializes the item.
 
         Args:
@@ -578,10 +614,10 @@ class ObjectItem(EntityItem):
             extent (int): preferred extent
             db_map_ids (tuple): tuple of (db_map, id) tuples
         """
-        super().__init__(spine_db_editor, x, y, extent, db_map_ids=db_map_ids)
+        super().__init__(spine_db_editor, x, y, extent, db_map_ids, offset=offset)
         self._db_map_relationship_class_lists = {}
         self.setZValue(0.5)
-        self._set_up()
+        self.set_up()
 
     @property
     def has_dimensions(self):
@@ -754,20 +790,28 @@ class ArcItem(QGraphicsPathItem):
         self.rel_item = rel_item
         self.obj_item = obj_item
         self._original_width = float(width)
-        self._scaled_width = self._original_width
         self._pen = self._make_pen()
         self.setPen(self._pen)
         self.setZValue(-2)
         self._scaling_factor = 1
-        self._value_factor = 1
+        self._gradient = QGraphicsPathItem(self)
+        self._gradient.setPen(Qt.NoPen)
+        self._gradient_position = 0.5
+        self._gradient_width = 1
+        self._gradient_sign = 1
         rel_item.add_arc_item(self)
         obj_item.add_arc_item(self)
         self.setCursor(Qt.ArrowCursor)
         self.update_line()
 
+    def clone(self, entity_items):
+        rel_item = entity_items[self.rel_item.db_map_ids]
+        obj_item = entity_items[self.obj_item.db_map_ids]
+        return type(self)(rel_item, obj_item, self._original_width)
+
     def _make_pen(self):
         pen = QPen()
-        pen.setWidthF(self._scaled_width)
+        pen.setWidthF(self._original_width)
         color = QGuiApplication.palette().color(QPalette.Normal, QPalette.WindowText)
         color.setAlphaF(0.8)
         pen.setColor(color)
@@ -779,26 +823,21 @@ class ArcItem(QGraphicsPathItem):
         """Does nothing. This item is not moved the regular way, but follows the EntityItems it connects."""
 
     def update_line(self):
-        overlapping_arcs = [arc for arc in self.rel_item.arc_items if arc.obj_item == self.obj_item]
-        count = len(overlapping_arcs)
         path = QPainterPath(self.rel_item.pos())
-        if count == 1:
-            path.lineTo(self.obj_item.pos())
-        else:
-            rank = overlapping_arcs.index(self)
-            line = QLineF(self.rel_item.pos(), self.obj_item.pos())
-            line.setP1(line.center())
-            line = line.normalVector()
-            line.setLength(self._width * count)
-            line.setP1(2 * line.p1() - line.p2())
-            t = rank / (count - 1)
-            ctrl_point = line.pointAt(t)
-            path.quadTo(ctrl_point, self.obj_item.pos())
+        path.lineTo(self.obj_item.pos())
         self.setPath(path)
+        self._do_move_gradient()
 
-    def apply_value_factor(self, factor):
-        self._value_factor = max(1, factor)
+    def update_color(self, color):
+        self._pen.setColor(color)
+        self.setPen(self._pen)
+        color = QColor(color)
+        color.setAlphaF(0.5)
+        self._gradient.setBrush(color)
+
+    def apply_value(self, factor, sign):
         self._update_width()
+        self._move_gradient(factor, sign)
 
     def mousePressEvent(self, event):
         """Accepts the event so it's not propagated."""
@@ -817,9 +856,35 @@ class ArcItem(QGraphicsPathItem):
         self._update_width()
 
     def _update_width(self):
-        width = self._original_width * self._value_factor / self._scaling_factor
+        width = self._original_width / self._scaling_factor
         self._pen.setWidthF(width)
         self.setPen(self._pen)
+
+    def _move_gradient(self, factor, sign):
+        self._gradient_sign = sign
+        self._gradient_width = max(1, factor)
+        self._gradient_position += 0.1 * self._gradient_sign / self._scaling_factor
+        if self._gradient_position > 1:
+            self._gradient_position -= 1
+        elif self._gradient_position < 0:
+            self._gradient_position += 1
+        self._do_move_gradient()
+
+    def _do_move_gradient(self):
+        width = self._original_width * self._gradient_width / self._scaling_factor
+        init_pos, final_pos = self.rel_item.pos(), self.obj_item.pos()
+        line = QLineF(init_pos, final_pos)
+        line.translate(self._gradient_position * line.dx(), self._gradient_position * line.dy())
+        line.setLength(width)
+        line.translate(-line.dx() / 2, -line.dy() / 2)
+        if self._gradient_sign < 0:
+            line.setPoints(line.p2(), line.p1())
+        normal = line.normalVector()
+        normal.translate(-normal.dx() / 2, -normal.dy() / 2)
+        path = QPainterPath(line.p2())
+        path.lineTo(normal.p1())
+        path.lineTo(normal.p2())
+        self._gradient.setPath(path)
 
 
 class CrossHairsItem(RelationshipItem):
@@ -846,8 +911,8 @@ class CrossHairsItem(RelationshipItem):
         return False
 
     def refresh_icon(self):
-        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer("\uf05b", 0)
-        self._set_renderer(renderer)
+        self._renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer("\uf05b", 0)
+        self._install_renderer()
 
     def set_plus_icon(self):
         self.set_icon("\uf067", Qt.blue)
@@ -865,8 +930,8 @@ class CrossHairsItem(RelationshipItem):
         """Refreshes the icon."""
         if (unicode, color) == self._current_icon:
             return
-        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer(unicode, color)
-        self._set_renderer(renderer)
+        self._renderer = self.db_mngr.get_icon_mngr(self.first_db_map).icon_renderer(unicode, color)
+        self._install_renderer()
         self._current_icon = (unicode, color)
 
     def _snap(self, x, y):
@@ -899,10 +964,10 @@ class CrossHairsRelationshipItem(RelationshipItem):
         object_class_name_list = tuple(
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         )
-        renderer = self.db_mngr.get_icon_mngr(self.first_db_map).relationship_class_renderer(
+        self._renderer = self.db_mngr.get_icon_mngr(self.first_db_map).relationship_class_renderer(
             None, object_class_name_list
         )
-        self._set_renderer(renderer)
+        self._install_renderer()
 
     def contextMenuEvent(self, e):
         e.accept()
@@ -963,3 +1028,154 @@ class EntityLabelItem(QGraphicsTextItem):
         y = rectf.height() + 4
         self.setPos(x, y)
         self.bg.setRect(self.boundingRect())
+
+
+class BgItem(QGraphicsRectItem):
+    class Anchor(Enum):
+        TL = auto()
+        TR = auto()
+        BL = auto()
+        BR = auto()
+
+    _getter_setter = {
+        Anchor.TL: ("topLeft", "setTopLeft"),
+        Anchor.TR: ("topRight", "setTopRight"),
+        Anchor.BL: ("bottomLeft", "setBottomLeft"),
+        Anchor.BR: ("bottomRight", "setBottomRight"),
+    }
+
+    _cursors = {
+        Anchor.TL: Qt.SizeFDiagCursor,
+        Anchor.TR: Qt.SizeBDiagCursor,
+        Anchor.BL: Qt.SizeBDiagCursor,
+        Anchor.BR: Qt.SizeFDiagCursor,
+    }
+
+    def __init__(self, svg, parent=None):
+        super().__init__(parent)
+        self._renderer = QSvgRenderer()
+        self._svg_item = _ResizableQGraphicsSvgItem(self)
+        self.svg = svg
+        _loading_ok = self._renderer.load(QByteArray(self.svg))
+        self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
+        self._svg_item.setSharedRenderer(self._renderer)
+        self._scaling_factor = 1
+        size = self._renderer.defaultSize()
+        self.setRect(0, 0, size.width(), size.height())
+        self.setZValue(-1000)
+        self.setPen(Qt.NoPen)
+        self.setAcceptHoverEvents(True)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self._resizers = {anchor: _Resizer(parent=self) for anchor in self.Anchor}
+        for anchor, resizer in self._resizers.items():
+            resizer.resized.connect(lambda delta, strong, anchor=anchor: self._resize(anchor, delta, strong))
+            resizer.setCursor(self._cursors[anchor])
+            resizer.hide()
+
+    def clone(self):
+        other = type(self)(self.svg)
+        other.fit_rect(self.scene_rect())
+        return other
+
+    def hoverEnterEvent(self, ev):
+        super().hoverEnterEvent(ev)
+        for resizer in self._resizers.values():
+            resizer.show()
+
+    def hoverLeaveEvent(self, ev):
+        super().hoverLeaveEvent(ev)
+        for resizer in self._resizers.values():
+            resizer.hide()
+
+    def apply_zoom(self, factor):
+        self._scaling_factor = factor
+        self._place_resizers()
+
+    def _place_resizers(self):
+        for anchor, resizer in self._resizers.items():
+            getter, _ = self._getter_setter[anchor]
+            resizer.setPos(
+                getattr(self.rect(), getter)() - getattr(resizer.rect(), getter)() / self.scale() / self._scaling_factor
+            )
+
+    def _resize(self, anchor, delta, strong):
+        delta /= self.scale() * self._scaling_factor
+        rect = self.rect()
+        getter, setter = self._getter_setter[anchor]
+        get_point = getattr(rect, getter)
+        set_point = getattr(rect, setter)
+        set_point(get_point() + delta)
+        self._do_resize(rect, strong)
+
+    def _do_resize(self, rect, strong):
+        if strong:
+            self._svg_item.resize(rect.width(), rect.height())
+            self._svg_item.setPos(rect.topLeft())
+            self.setPen(Qt.NoPen)
+        else:
+            self.setPen(QPen(Qt.DashLine))
+        self.setRect(rect)
+        self.prepareGeometryChange()
+        self.update()
+        self._place_resizers()
+
+    def fit_rect(self, rect):
+        if not isinstance(rect, QRectF):
+            rect = QRectF(*rect)
+        self._do_resize(rect, True)
+
+    def scene_rect(self):
+        return self.mapToScene(self.rect()).boundingRect()
+
+
+class _ResizableQGraphicsSvgItem(QGraphicsSvgItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._width = 0
+        self._height = 0
+        self.setFlag(QGraphicsItem.ItemStacksBehindParent, True)
+
+    def resize(self, width, height):
+        self._width = width
+        self._height = height
+        self.prepareGeometryChange()
+        self.update()
+
+    def setSharedRenderer(self, renderer):
+        super().setSharedRenderer(renderer)
+        self._width = renderer.defaultSize().width()
+        self._height = renderer.defaultSize().height()
+
+    def boundingRect(self):
+        return QRectF(0, 0, self._width, self._height)
+
+    def paint(self, painter, options, widget):
+        self.renderer().render(painter, self.boundingRect())
+
+
+class _Resizer(QGraphicsRectItem):
+    class SignalsProvider(QObject):
+        resized = Signal(QPointF, bool)
+
+    def __init__(self, rect=QRectF(0, 0, 20, 20), parent=None):
+        super().__init__(rect, parent)
+        self._original_rect = self.rect()
+        self._press_pos = None
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+        self._signal_provider = self.SignalsProvider()
+        self.resized = self._signal_provider.resized
+
+    def mousePressEvent(self, ev):
+        super().mousePressEvent(ev)
+        self._press_pos = ev.pos()
+
+    def mouseMoveEvent(self, ev):
+        super().mouseMoveEvent(ev)
+        delta = ev.pos() - self._press_pos
+        self._signal_provider.resized.emit(delta, False)
+
+    def mouseReleaseEvent(self, ev):
+        super().mouseReleaseEvent(ev)
+        delta = ev.pos() - self._press_pos
+        self._signal_provider.resized.emit(delta, True)

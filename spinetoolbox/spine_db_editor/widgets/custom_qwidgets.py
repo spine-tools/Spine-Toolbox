@@ -25,59 +25,113 @@ from PySide6.QtWidgets import (
     QSlider,
     QVBoxLayout,
     QHBoxLayout,
-    QGridLayout,
+    QFormLayout,
+    QSizePolicy,
+    QDialog,
+    QDateTimeEdit,
+    QSpinBox,
 )
 from PySide6.QtGui import QPainter, QColor, QIcon, QBrush, QPainterPath, QPalette
-from PySide6.QtCore import Signal, Slot, QVariantAnimation, QPointF, Qt, QTimeLine
+from PySide6.QtCore import (
+    Signal,
+    Slot,
+    QVariantAnimation,
+    QPointF,
+    Qt,
+    QTimeLine,
+    QRectF,
+    QTimer,
+    QEasingCurve,
+    QDateTime,
+)
 from sqlalchemy.engine.url import URL
+import numpy as np
 from ...helpers import open_url, CharIconEngine, color_from_index
 
 
-class OpenFileButton(QToolButton):
+class OpenFileButton(QWidget):
     """A button to open files or show them in the folder."""
 
-    def __init__(self, file_path, db_editor):
+    def __init__(self, file_path, progress, db_editor):
         super().__init__()
-        self.db_editor = db_editor
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         self.file_path = file_path
+        self.progress = None
+        self.db_editor = db_editor
         self.dir_name, self.file_name = os.path.split(file_path)
-        self.setText(self.file_name)
-        self.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        self.setStyleSheet(
-            """
-            QToolButton {
-                padding-left: 12px; padding-right: 32px; padding-top: 6px; padding-bottom: 6px;
-                background-color: #ffffff;
-                border: 1px solid #cccccc;
-                border-style: outset;
-                border-radius: 6px;
-            }
-            QToolButton:hover {
-                background-color: #dddddd;
-            }
-            QToolButton:pressed {
-                background-color: #bbbbbb;
-                border-style: inset;
-            }
-            QToolButton::menu-button {
-                border: 1px solid #cccccc;
-                border-style: outset;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-                width: 20px;
-            }
-            QToolButton::menu-button:pressed {
-                border-style: inset;
-            }
-            """
-        )
+        self._progress_bar = QProgressBar()
+        self._button = QToolButton()
+        layout.addWidget(self._progress_bar)
+        layout.addStretch()
+        layout.addWidget(self._button)
+        padding = 4 * " "
+        menu_button_size = self.fontMetrics().horizontalAdvance(padding)
+        self._progress_bar.setFormat(self.file_name + padding)
+        self._progress_bar.setRange(1, 10)
+        self._progress_bar.setValue(1)
+        self._button.hide()
+        self._button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self._button.setText(self.file_name)
+        self._button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         menu = QMenu(db_editor)
-        self.setMenu(menu)
+        self._button.setMenu(menu)
         open_file_action = menu.addAction("Open")
         open_containing_folder_action = menu.addAction("Open containing folder")
         open_file_action.triggered.connect(self.open_file)
         open_containing_folder_action.triggered.connect(self.open_containing_folder)
-        self.clicked.connect(open_file_action.triggered)
+        self._button.clicked.connect(open_file_action.triggered)
+        self.setStyleSheet(
+            f"""
+            QToolButton {{
+                padding-left: 16px; padding-right: {16 + menu_button_size}px; padding-top: 6px; padding-bottom: 6px;
+                background-color: #fff;
+                border: 1px solid #ccc;
+                border-style: outset;
+            }}
+            QToolButton:hover {{
+                background-color: #eee;
+            }}
+            QToolButton:pressed {{
+                background-color: #ddd;
+                border-style: inset;
+            }}
+            QToolButton::menu-button {{
+                border: 1px solid #ccc;
+                border-style: outset;
+                width: {menu_button_size}px;
+            }}
+            QToolButton::menu-button:pressed {{
+                border-style: inset;
+            }}
+            QProgressBar {{
+                text-align: center;
+                background-color: #fff;
+                border: 1px solid #ccc;
+                border-style: inset;
+            }}
+            """
+        )
+        self._button.adjustSize()
+        size = self._button.size()
+        self.setFixedSize(size)
+        self._progress_bar.setFixedSize(size)
+        self.set_progress(progress)
+
+    def set_progress(self, progress):
+        self.progress = progress
+        progress_bar_value = self._progress_bar.minimum() + self.progress * (
+            self._progress_bar.maximum() - self._progress_bar.minimum()
+        )
+        self._progress_bar.setValue(progress_bar_value)
+        if progress_bar_value == self._progress_bar.maximum():
+
+            def _show_button():
+                self._progress_bar.hide()
+                self._button.show()
+
+            QTimer.singleShot(100, _show_button)
 
     @Slot(bool)
     def open_file(self, checked=False):
@@ -91,8 +145,8 @@ class OpenFileButton(QToolButton):
 class OpenSQLiteFileButton(OpenFileButton):
     """A button to open sqlite files, show them in the folder, or add them to the project."""
 
-    def __init__(self, file_path, db_editor):
-        super().__init__(file_path, db_editor)
+    def __init__(self, file_path, progress, db_editor):
+        super().__init__(file_path, progress, db_editor)
         self.url = URL("sqlite", database=self.file_path)
 
     @Slot(bool)
@@ -171,8 +225,6 @@ class ProgressBarWidget(QWidget):
 
 class TimeLineWidget(QWidget):
     index_changed = Signal(object)
-    _STEP_COUNT = 10000
-    _TL_DURATION = 10000
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -184,27 +236,40 @@ class TimeLineWidget(QWidget):
         self._label = QLabel()
         self._play_pause_button = QToolButton()
         self._play_pause_button.setIcon(QIcon(CharIconEngine("\uf04b")))
+        self._step_len_spin_box = QSpinBox()
+        self._step_len_spin_box.setRange(1, 16777215)
+        self._step_len_spin_box.setValue(1)
         controls = QWidget()
         ctrls_layout = QHBoxLayout(controls)
         ctrls_layout.setContentsMargins(2, 2, 2, 2)
         ctrls_layout.setSpacing(2)
         ctrls_layout.addWidget(self._play_pause_button)
         ctrls_layout.addStretch()
+        ctrls_layout.addWidget(QLabel("Step (hours): "))
+        ctrls_layout.addWidget(self._step_len_spin_box)
+        ctrls_layout.addSpacing(6)
         ctrls_layout.addWidget(self._label)
         layout.addWidget(self._slider)
         layout.addWidget(controls)
-        self._slider.setRange(0, self._STEP_COUNT - 1)
         self._min_index = None
         self._max_index = None
-        self._index_incr = None
         self._index = None
+        self._step_len = np.timedelta64(1, 'h')
+        self._ms_per_step = None
         self._playback_tl = QTimeLine()
+        self._playback_tl.setEasingCurve(QEasingCurve(QEasingCurve.Linear))
         self._slider.valueChanged.connect(self._handle_value_changed)
         self._slider.sliderMoved.connect(self._playback_tl.stop)
         self._playback_tl.frameChanged.connect(self._slider.setValue)
         self._playback_tl.stateChanged.connect(self._refresh_button_icon)
         self.index_changed.connect(lambda index: self._label.setText(str(index) + "/" + str(self._max_index)))
         self._play_pause_button.clicked.connect(self._play_pause)
+        self._step_len_spin_box.valueChanged.connect(self._update_step_len)
+
+    @Slot(int)
+    def _update_step_len(self, value):
+        self._step_len = np.timedelta64(value, 'h')
+        self._update_playback()
 
     def _refresh_button_icon(self):
         icon_code = "\uf04c" if self._playback_tl.state() is QTimeLine.Running else "\uf04b"
@@ -217,69 +282,175 @@ class TimeLineWidget(QWidget):
         if self._playback_tl.state() is QTimeLine.Paused:
             self._playback_tl.resume()
             return
-        current_value = self._slider.value()
-        first_frame = current_value if current_value != self._slider.maximum() else self._slider.minimum()
-        self._playback_tl.setFrameRange(first_frame, self._STEP_COUNT - 1)
-        self._playback_tl.setDuration(((self._STEP_COUNT - first_frame - 1) / self._STEP_COUNT) * self._TL_DURATION)
+        self._update_playback()
         self._playback_tl.start()
+
+    def _update_playback(self):
+        current_value = self._slider.value()
+        # Rewind if needed
+        if current_value >= self._slider.maximum():
+            self._slider.setValue(self._slider.minimum())
+            current_value = self._slider.value()
+        step_count = (self._max_index - self._min_index) // self._step_len
+        self._playback_tl.setDuration(step_count * 1000 / 6)  # 6 steps per second
 
     @Slot(int)
     def _handle_value_changed(self, value):
-        self._index = self._min_index + value * self._index_incr
+        self._index = self._min_index + value * np.timedelta64(1, 'h')
         self.index_changed.emit(self._index)
 
     def set_index_range(self, min_index, max_index):
         self._min_index = min_index
         self._max_index = max_index
-        self._index_incr = (max_index - min_index) / self._STEP_COUNT
         self._index = self._min_index
         self.index_changed.emit(self._index)
         self.show()
+        step_count = (self._max_index - self._min_index) // np.timedelta64(1, 'h')
+        self._playback_tl.setFrameRange(0, step_count - 1)
+        self._slider.setRange(0, step_count - 1)
+
+    def get_index_range(self):
+        return (self._min_index, self._max_index)
 
 
 class LegendWidget(QWidget):
+    _BASE_HEIGHT = 30
+    _SPACING = 6
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._layout = QGridLayout(self)
-        self._layout.setContentsMargins(2, 2, 2, 2)
-        self._layout.setSpacing(2)
-        self._layout.setColumnStretch(2, 2)
+        self._legend = []
+        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+
+    def row_count(self):
+        return len(self._legend)
 
     def set_legend(self, legend):
-        while self._layout.count():
-            self._layout.takeAt(0).widget().deleteLater()
-        for i, (legend_type, pname, val_range) in enumerate(legend):
+        self._legend.clear()
+        for legend_type, pname, val_range in legend:
             if not val_range:
                 continue
             min_val, max_val = val_range
             if min_val == max_val:
                 continue
-            legend_widget_factory = {"color": _ColorWidget, "arc_width": _WidthWidget}.get(legend_type)
-            if legend_widget_factory is None:
+            paint_bar = {"color": self._paint_color_bar, "width": self._paint_volume_bar}.get(legend_type)
+            if paint_bar is None:
                 continue
-            self._layout.addWidget(QLabel(pname + ": "), i, 0)
-            self._layout.addWidget(QLabel(str(min_val)), i, 1, Qt.AlignRight)
-            self._layout.addWidget(legend_widget_factory(), i, 2)
-            self._layout.addWidget(QLabel(str(max_val)), i, 3)
+            self._legend.append((pname + ": ", str(round(min_val, 2)), paint_bar, str(round(max_val, 2))))
+        self.setMaximumHeight(len(self._legend) * self._BASE_HEIGHT)
+        self.adjustSize()
 
+    @staticmethod
+    def _paint_color_bar(painter, cell):
+        steps = 360
+        slice_ = QRectF(cell)
+        width = cell.width()
+        left = cell.left()
+        slice_.setWidth(width / steps)
+        for k in range(steps):
+            slice_.moveLeft(left + (k / steps) * width)
+            color = color_from_index(k, steps)
+            painter.fillRect(slice_, QBrush(color))
 
-class _ColorWidget(QWidget):
-    def paintEvent(self, ev):
-        painter = QPainter(self)
-        rect = self.rect()
-        width = rect.width()
-        for k in range(360):
-            rect.setLeft((k / 360) * width)
-            color = color_from_index(k, 360)
-            painter.fillRect(rect, QBrush(color))
-
-
-class _WidthWidget(QWidget):
-    def paintEvent(self, ev):
-        painter = QPainter(self)
-        rect = self.rect()
+    @staticmethod
+    def _paint_volume_bar(painter, cell):
         path = QPainterPath()
-        path.moveTo(rect.bottomLeft())
-        path.lineTo(rect.topRight())
-        path.lineTo(rect.bottomRight())
-        painter.fillPath(path, self.palette().color(QPalette.Normal, QPalette.WindowText))
+        path.moveTo(cell.bottomLeft())
+        path.lineTo(cell.topRight())
+        path.lineTo(cell.bottomRight())
+        painter.fillPath(path, qApp.palette().color(QPalette.Normal, QPalette.WindowText))
+
+    def paintEvent(self, ev):
+        if not self._legend:
+            return
+        painter = QPainter(self)
+        rect = self.rect()
+        self.paint(painter, rect)
+
+    def paint(self, painter, rect):
+        painter.save()
+        row_h = rect.height() / self.row_count()
+        font = painter.font()
+        font.setPointSizeF(0.375 * row_h)
+        painter.setFont(font)
+        text_flags = Qt.AlignBottom
+        # Get column widths
+        pname_cws, min_val_cws, max_val_cws = [], [], []
+        for pname, min_val, _paint_legend, max_val in self._legend:
+            for cws, text in zip((pname_cws, min_val_cws, max_val_cws), (pname, min_val, max_val)):
+                cws.append(painter.boundingRect(rect, text_flags, text).width())
+        pname_cw = max(pname_cws)
+        min_val_cw = max(min_val_cws)
+        max_val_cw = max(max_val_cws)
+        bar_cw = rect.width() - (pname_cw + min_val_cw + max_val_cw) - 5 * self._SPACING
+        # Paint
+        for i, (pname, min_val, paint_bar, max_val) in enumerate(self._legend):
+            cell = QRectF(0, rect.y() + self._SPACING + i * row_h, 0, row_h - 2 * self._SPACING)
+            left = rect.x() + self._SPACING
+            cell.setLeft(left)
+            cell.setWidth(pname_cw)
+            painter.drawText(cell, text_flags, pname)
+            left += pname_cw + self._SPACING
+            cell.setLeft(left)
+            cell.setWidth(min_val_cw)
+            painter.drawText(cell, text_flags | Qt.AlignRight, min_val)
+            left += min_val_cw + self._SPACING
+            cell.setLeft(left)
+            cell.setWidth(bar_cw)
+            paint_bar(painter, cell)
+            left += bar_cw + self._SPACING
+            cell.setLeft(left)
+            cell.setWidth(max_val_cw)
+            painter.drawText(cell, text_flags, max_val)
+        painter.restore()
+
+
+class ExportAsVideoDialog(QDialog):
+    def __init__(self, start, stop, parent=None):
+        super().__init__(parent=parent)
+        start, stop = (QDateTime.fromString(dt, Qt.ISODate) for dt in (start, stop))
+        self.setWindowTitle("Export as video")
+        layout = QVBoxLayout(self)
+        form = QFormLayout()
+        self._start_edit = QDateTimeEdit()
+        self._stop_edit = QDateTimeEdit()
+        for dt_edit in (self._start_edit, self._stop_edit):
+            dt_edit.setMinimumDateTime(start)
+            dt_edit.setMaximumDateTime(stop)
+            dt_edit.setCalendarPopup(True)
+        self._start_edit.setDateTime(start)
+        self._stop_edit.setDateTime(stop)
+        self._start_edit.dateTimeChanged.connect(self._handle_start_dt_changed)
+        self._stop_edit.dateTimeChanged.connect(self._handle_stop_dt_changed)
+        self._step_len_spin_box = QSpinBox()
+        self._step_len_spin_box.setRange(1, 16777215)
+        self._fps_spin_box = QSpinBox()
+        self._fps_spin_box.setRange(1, 20)
+        self._fps_spin_box.setValue(6)
+        form.addRow("Start:", self._start_edit)
+        form.addRow("Stop:", self._stop_edit)
+        form.addRow("Step (hours):", self._step_len_spin_box)
+        form.addRow("Frames per second:", self._fps_spin_box)
+        self._button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self._button_box.accepted.connect(self.accept)
+        self._button_box.rejected.connect(self.reject)
+        layout.addLayout(form)
+        layout.addWidget(self._button_box)
+
+    @Slot(QDateTime)
+    def _handle_start_dt_changed(self, start_dt):
+        if start_dt > self._stop_edit.dateTime():
+            self._stop_edit.setDateTime(start_dt)
+
+    @Slot(QDateTime)
+    def _handle_stop_dt_changed(self, stop_dt):
+        if stop_dt < self._start_edit.dateTime():
+            self._start_edit.setDateTime(stop_dt)
+
+    def selections(self):
+        return (
+            self._start_edit.dateTime().toString(Qt.ISODate),
+            self._stop_edit.dateTime().toString(Qt.ISODate),
+            self._step_len_spin_box.value(),
+            self._fps_spin_box.value(),
+        )

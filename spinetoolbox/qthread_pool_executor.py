@@ -119,11 +119,7 @@ class QtBasedThreadPoolExecutor:
             if self._shutdown:
                 break
             future, fn, args, kwargs = request
-            try:
-                result = fn(*args, **kwargs)
-                future.set_result(result)
-            except Exception as exc:  # pylint: disable=broad-except
-                future.set_exception(exc)
+            _set_future_result_and_exc(future, fn, *args, **kwargs)
             self._semafore.release()
 
     def shutdown(self):
@@ -134,3 +130,21 @@ class QtBasedThreadPoolExecutor:
             thread = self._threads.pop()
             thread.wait()
             thread.deleteLater()
+
+
+class SynchronousExecutor:
+    def submit(self, fn, *args, **kwargs):
+        future = QtBasedFuture()
+        _set_future_result_and_exc(future, fn, *args, **kwargs)
+        return future
+
+    def shutdown(self):
+        pass
+
+
+def _set_future_result_and_exc(future, fn, *args, **kwargs):
+    try:
+        result = fn(*args, **kwargs)
+        future.set_result(result)
+    except Exception as exc:  # pylint: disable=broad-except
+        future.set_exception(exc)
