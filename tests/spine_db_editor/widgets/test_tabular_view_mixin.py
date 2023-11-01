@@ -10,29 +10,20 @@
 ######################################################################################################################
 """Unit tests for Pivot and Frozen tables."""
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager, fetch_model
+from tests.mock_helpers import fetch_model
+from tests.spine_db_editor.widgets.helpers import TestBase
 
 
-class TestPivotHeaderDraggingAndDropping(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
+class TestPivotHeaderDraggingAndDropping(TestBase):
+    db_codename = "pivot_header_dragging_and_dropping_test_db"
 
     def setUp(self):
-        app_settings = MagicMock()
-        logger = MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
-        with patch.object(SpineDBEditor, "restore_ui"):
-            self._editor = SpineDBEditor(self._db_mngr, {"sqlite://": self._db_map.codename})
+        self._common_setup("sqlite://", create=True)
 
     def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        self._db_mngr.clean_up()
+        self._common_tear_down()
 
     def _add_entity_class_data(self):
         data = {
@@ -60,14 +51,14 @@ class TestPivotHeaderDraggingAndDropping(unittest.TestCase):
 
         with patch.object(self._db_mngr, "get_item") as get_item:
             get_item.side_effect = guarded_get_item
-            object_class_index = self._editor.entity_tree_model.index(0, 0)
-            fetch_model(self._editor.entity_tree_model)
-            index = self._editor.entity_tree_model.index(0, 0, object_class_index)
-            self._editor._update_class_attributes(index)
-            with patch.object(self._editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+            object_class_index = self._db_editor.entity_tree_model.index(0, 0)
+            fetch_model(self._db_editor.entity_tree_model)
+            index = self._db_editor.entity_tree_model.index(0, 0, object_class_index)
+            self._db_editor._update_class_attributes(index)
+            with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
                 mock_is_visible.return_value = True
-                self._editor.do_reload_pivot_table()
-            self._model = self._editor.pivot_table_model
+                self._db_editor.do_reload_pivot_table()
+            self._model = self._db_editor.pivot_table_model
             self._model.beginResetModel()
             self._model.endResetModel()
             QApplication.processEvents()
@@ -76,17 +67,17 @@ class TestPivotHeaderDraggingAndDropping(unittest.TestCase):
     def test_drag_and_drop_database_from_frozen_table(self):
         self._add_entity_class_data()
         self._start()
-        for frozen_column in range(self._editor.frozen_table_model.columnCount()):
-            frozen_index = self._editor.frozen_table_model.index(0, frozen_column)
+        for frozen_column in range(self._db_editor.frozen_table_model.columnCount()):
+            frozen_index = self._db_editor.frozen_table_model.index(0, frozen_column)
             if frozen_index.data() == "database":
                 break
         else:
             raise RuntimeError("No 'database' column found in frozen table")
-        original_frozen_columns = tuple(self._editor.pivot_table_model.model.pivot_frozen)
-        frozen_table_header_widget = self._editor.ui.frozen_table.indexWidget(frozen_index)
-        self._editor.handle_header_dropped(frozen_table_header_widget, frozen_table_header_widget)
+        original_frozen_columns = tuple(self._db_editor.pivot_table_model.model.pivot_frozen)
+        frozen_table_header_widget = self._db_editor.ui.frozen_table.indexWidget(frozen_index)
+        self._db_editor.handle_header_dropped(frozen_table_header_widget, frozen_table_header_widget)
         QApplication.processEvents()
-        self.assertEqual(self._editor.pivot_table_model.model.pivot_frozen, original_frozen_columns)
+        self.assertEqual(self._db_editor.pivot_table_model.model.pivot_frozen, original_frozen_columns)
 
 
 if __name__ == '__main__':
