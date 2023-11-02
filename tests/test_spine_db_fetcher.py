@@ -257,7 +257,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         fetcher.set_obsolete(True)
 
     def test_fetch_parameter_value_lists(self):
-        self._import_data(parameter_value_lists=(("value_list", (2.3,)),))
+        self._import_data(parameter_value_lists=(("value_list", [2.3]),))
         item = {'id': 1, 'name': 'value_list', 'commit_id': 2}
         fetcher = TestItemTypeFetchParent("parameter_value_list")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):

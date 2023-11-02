@@ -124,7 +124,7 @@ class AddItemsCommand(SpineDBCommand):
 
     def undo(self):
         super().undo()
-        self.db_mngr.do_remove_items(self.db_map, self.item_type, self.undo_ids)
+        self.db_mngr.do_remove_items(self.db_map, self.item_type, self.undo_ids, check=False)
 
 
 class UpdateItemsCommand(SpineDBCommand):
@@ -164,7 +164,7 @@ class UpdateItemsCommand(SpineDBCommand):
 
 
 class RemoveItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, item_type, ids, **kwargs):
+    def __init__(self, db_mngr, db_map, item_type, ids, check=True, **kwargs):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
@@ -177,14 +177,16 @@ class RemoveItemsCommand(SpineDBCommand):
             self.setObsolete(True)
         self.item_type = item_type
         self.ids = ids
+        self._check = check
         self.setText(f"remove {item_type} items from {db_map.codename}")
 
     def redo(self):
         super().redo()
-        items = self.db_mngr.do_remove_items(self.db_map, self.item_type, self.ids)
+        items = self.db_mngr.do_remove_items(self.db_map, self.item_type, self.ids, check=self._check)
         if not items:
             self.setObsolete(True)
         self.ids = {x["id"] for x in items}
+        self._check = False
 
     def undo(self):
         super().undo()

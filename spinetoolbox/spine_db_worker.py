@@ -231,14 +231,16 @@ class SpineDBWorker(QObject):
         return items
 
     @busy_effect
-    def remove_items(self, item_type, ids):
+    def remove_items(self, item_type, ids, check):
         """Removes items from database.
 
         Args:
             item_type (str): item type
             ids (set): ids of items to remove
         """
-        items = self._db_map.remove_items(item_type, *ids)
+        items, errors = self._db_map.remove_items(item_type, *ids, check=check)
+        if errors:
+            self._db_mngr.error_msg.emit({self._db_map: errors})
         self._db_mngr.items_removed.emit(item_type, {self._db_map: items})
         return items
 
