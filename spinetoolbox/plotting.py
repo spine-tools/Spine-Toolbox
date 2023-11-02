@@ -33,8 +33,6 @@ from .widgets.plot_canvas import LegendPosition
 from .widgets.plot_widget import PlotWidget
 
 
-# FIXME: Does it work after entity changes???
-
 LEGEND_PLACEMENT_THRESHOLD = 8
 
 
@@ -52,7 +50,6 @@ _BASE_SETTINGS = {"alpha": 0.7}
 _SCATTER_PLOT_SETTINGS = {"linestyle": "", "marker": "o"}
 _LINE_PLOT_SETTINGS = {"linestyle": "solid"}
 _SCATTER_LINE_PLOT_SETTINGS = dict(_SCATTER_PLOT_SETTINGS, **_LINE_PLOT_SETTINGS)
-_TIME_SERIES_PLOT_SETTINGS = dict(_LINE_PLOT_SETTINGS, where="post")
 
 
 class PlottingError(Exception):
@@ -452,6 +449,20 @@ class _PlotStackedBars:
         return _bar(x, height, self._axes, bottom=bottom, **_BASE_SETTINGS, **kwargs)
 
 
+def _make_time_series_settings(plot_settings):
+    """Creates plot settings suitable for time series step plots.
+
+    Args:
+        plot_settings (dict): base plot settings
+
+    Returns:
+        dict: time series step plot settings
+    """
+    settings = dict(plot_settings)
+    settings.update(where="post")
+    return settings
+
+
 def _make_plot_function(plot_type, x_data_type, axes):
     """Decides plot method and default keyword arguments based on XYData.
 
@@ -463,27 +474,33 @@ def _make_plot_function(plot_type, x_data_type, axes):
     Returns:
         Callable: plot method
     """
-    if plot_type == PlotType.SCATTER:
-        return functools.partial(_plot_or_step(x_data_type, axes), **_SCATTER_PLOT_SETTINGS, **_BASE_SETTINGS)
-    if plot_type == PlotType.SCATTER_LINE:
-        return functools.partial(_plot_or_step(x_data_type, axes), **_SCATTER_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
-    if plot_type == PlotType.LINE:
-        return functools.partial(_plot_or_step(x_data_type, axes), **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
     if plot_type == PlotType.STACKED_BAR:
         return _PlotStackedBars(axes)
-    raise RuntimeError(f"Unknown plot type '{plot_type}'")
+    is_time_series = _is_time_stamp_type(x_data_type)
+    plot_method = axes.step if is_time_series else axes.plot
+    if plot_type == PlotType.SCATTER:
+        plot_settings = _SCATTER_PLOT_SETTINGS
+    elif plot_type == PlotType.SCATTER_LINE:
+        plot_settings = _SCATTER_LINE_PLOT_SETTINGS
+    elif plot_type == PlotType.LINE:
+        plot_settings = _LINE_PLOT_SETTINGS
+    else:
+        raise RuntimeError(f"Unknown plot type '{plot_type}'")
+    if is_time_series:
+        plot_settings = _make_time_series_settings(plot_settings)
+    return functools.partial(plot_method, **plot_settings, **_BASE_SETTINGS)
 
 
-def _plot_or_step(x_data_type, axes):
-    """Makes choice between Axes.plot() and Axes.step().
+def _is_time_stamp_type(data_type):
+    """Tests if a type looks like time stamp.
 
     Args:
-        x_data_type (Type): data type of x-axis
-        axes (Axes): plot axes
+        data_type (Type): data type to test
+
+    Returns:
+        bool: True if type is a time stamp type, False otherwise
     """
-    if x_data_type in (np.datetime64, datetime.datetime, datetime.date, datetime.time):
-        return axes.step
-    return axes.plot
+    return data_type in (np.datetime64, datetime.datetime, datetime.date, datetime.time)
 
 
 def _bar(x, y, axes, **kwargs):
@@ -858,7 +875,9 @@ def add_time_series_plot(plot_widget, value):
         plot_widget (PlotWidget): a plot widget to modify
         value (TimeSeries): the time series to plot
     """
-    plot_widget.canvas.axes.step(value.indexes, value.values, **_TIME_SERIES_PLOT_SETTINGS, **_BASE_SETTINGS)
+    plot_widget.canvas.axes.step(
+        value.indexes, value.values, **_make_time_series_settings(_LINE_PLOT_SETTINGS), **_BASE_SETTINGS
+    )
     plot_widget.canvas.axes.set_xlabel(value.index_name)
     # matplotlib cannot have time stamps before 0001-01-01T00:00 on the x axis
     left, _ = plot_widget.canvas.axes.get_xlim()
