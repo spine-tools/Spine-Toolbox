@@ -52,7 +52,7 @@ def main():
     _add_pywin32_system32_to_path()
     parser = _make_argument_parser()
     args = parser.parse_args()
-    if args.execute_only or args.list_items:
+    if args.execute_only or args.list_items or args.execute_remotely:
         return_code = headless_main(args)
         if return_code == Status.ARGUMENT_ERROR:
             parser.print_usage()
@@ -94,10 +94,11 @@ def _make_argument_parser():
         "-d",
         "--deselect",
         action="append",
-        help="deselect project item ITEM for execution (takes precendence over --select)",
+        help="deselect project item ITEM for execution (takes precedence over --select)",
         nargs="*",
         metavar="ITEM",
     )
+    parser.add_argument("--execute-remotely", help="execute remotely", action="append", required=True, metavar="SERVER CONFIG FILE")
     return parser
 
 

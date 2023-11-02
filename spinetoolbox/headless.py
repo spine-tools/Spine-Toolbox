@@ -12,6 +12,7 @@
 """
 Contains facilities to open and execute projects without GUI.
 """
+import os
 from copy import deepcopy
 from enum import IntEnum, unique
 import json
@@ -19,13 +20,15 @@ import pathlib
 import sys
 from PySide6.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 import networkx as nx
-
 from spine_engine import SpineEngineState
 from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import deserialize_path
+from spine_engine.utils.helpers import get_file_size
+from spine_engine.server.util.zip_handler import ZipHandler
+from .server.engine_client import EngineClient, RemoteEngineInitFailed
 from .project_item.logging_connection import HeadlessConnection
-from .config import LATEST_PROJECT_VERSION
+from .config import LATEST_PROJECT_VERSION, PROJECT_ZIP_FILENAME
 from .helpers import (
     make_settings_dict_for_engine,
     plugins_dirs,
@@ -193,6 +196,7 @@ class ActionsWithProject(QObject):
         self._plugin_specifications = None
         self._connection_dicts = None
         self._jump_dicts = None
+        self._server_config = None
 
     def _dags(self):
         graph = nx.DiGraph()
@@ -210,6 +214,12 @@ class ActionsWithProject(QObject):
             return
         try:
             status = self._open_project()
+            if self._args.execute_remotely:
+                self._server_config = self._read_server_config()
+                if not self._server_config:
+                    self._logger.msg_error.emit("Reading server config file failed.")
+                    QCoreApplication.instance().exit(Status.ARGUMENT_ERROR)
+                    return
             if status != Status.OK:
                 QCoreApplication.instance().exit(status)
                 return
@@ -319,10 +329,16 @@ class ActionsWithProject(QObject):
                 spec_dict["definition_file_path"] = spec.definition_file_path
                 self._specification_dicts.setdefault(item_type, []).append(spec_dict)
         dags = self._dags()
+        job_id = self._prepare_remote_execution()
+        if not job_id:
+            self._logger.msg_error.emit("Job ID not found.")
+            return Status.ERROR
         settings = make_settings_dict_for_engine(self._app_settings)
         # Force local execution in headless mode
         if not settings.get("engineSettings/remoteExecutionEnabled", "false") == "false":
             settings["engineSettings/remoteExecutionEnabled"] = "false"
+        if self._server_config is not None:
+            settings = self._override_engine_settings(settings)
         selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
         deselected = {name for name_list in self._args.deselect for name in name_list} if self._args.deselect else None
         executed_items = set()
@@ -352,11 +368,10 @@ class ActionsWithProject(QObject):
                 "execution_permits": execution_permits,
                 "items_module_name": "spine_items",
                 "settings": settings,
-                "project_dir": self._project_dir,
+                "project_dir": str(self._project_dir).replace(os.sep, "/"),
             }
-            # exec_remotely is forced to False (see above)
-            exec_remotely = settings.get("engineSettings/remoteExecutionEnabled", "false") == "true"
-            engine_manager = make_engine_manager(exec_remotely)
+            exec_remotely = True if self._server_config else False
+            engine_manager = make_engine_manager(exec_remotely, job_id=job_id)
             try:
                 engine_manager.run_engine(engine_data)
             except EngineInitFailed as error:
@@ -481,6 +496,69 @@ class ActionsWithProject(QObject):
         Args:
             data (dict): message data
         """
+
+    def _read_server_config(self):
+        self._logger.msg.emit("Executing remotely")
+        cfg_file = self._args.execute_remotely[0]
+        cfg_fp = os.path.join(self._project_dir, cfg_file)
+        if os.path.isfile(cfg_fp):
+            with open(cfg_fp, encoding="utf-8") as fp:
+                lines = fp.readlines()
+            lines = [l.strip() for l in lines]
+            cfg_dict = {"host":lines[0], "port":lines[1], "security_model": lines[2], "security_folder": lines[3]}
+            print(cfg_dict)
+            return cfg_dict
+        else:
+            self._logger.msg_error.emit(f"cfg file '{cfg_fp}' missing.")
+            return None
+
+    def _override_engine_settings(self, settings):
+        settings["engineSettings/remoteExecutionEnabled"] = "true"
+        settings["engineSettings/remoteHost"] = self._server_config["host"]
+        settings["engineSettings/remotePort"] = self._server_config["port"]
+        sec_model = "" if self._server_config["security_model"] == "no" else "StoneHouse"
+        settings["engineSettings/remoteSecurityModel"] = sec_model
+        settings["engineSettings/remoteSecurityFolder"] = "" if not sec_model else self._server_config["security_folder"]
+        return settings
+
+    def _prepare_remote_execution(self):
+        """Pings the server and sends the project as a zip-file to server.
+
+        Returns:
+            str: Job Id if server is ready for remote execution, empty string if something went wrong
+                or "1" if local execution is enabled.
+        """
+        if not self._server_config:
+            return "1"
+        host, port = self._server_config["host"], self._server_config["port"]
+        try:
+            engine_client = EngineClient(host, port, self._server_config["security_model"], self._server_config["security_folder"])
+        except RemoteEngineInitFailed as e:
+            self._logger.msg_error.emit(f"Server is not responding in {host}:{port}. {e}.")
+            return ""
+        engine_client.set_start_time()  # Set start_time for upload operation
+        # Archive the project into a zip-file
+        dest_dir = os.path.join(self._project_dir, os.pardir)  # Parent dir of project_dir
+        _, project_name = os.path.split(self._project_dir)
+        self._logger.msg.emit(f"Squeezing project <b>{project_name}</b> into {PROJECT_ZIP_FILENAME}.zip")
+        try:
+            ZipHandler.package(src_folder=self._project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
+        except Exception as e:
+            self._logger.msg_error.emit(f"{e}")
+            engine_client.close()
+            return ""
+        project_zip_file = os.path.abspath(os.path.join(self._project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
+        if not os.path.isfile(project_zip_file):
+            self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
+            engine_client.close()
+            return ""
+        file_size = get_file_size(os.path.getsize(project_zip_file))
+        self._logger.msg_warning.emit(f"Uploading project [{file_size}] ...")
+        job_id = engine_client.upload_project(project_name, project_zip_file)
+        t = engine_client.get_elapsed_time()
+        self._logger.msg.emit(f"Upload time: {t}. Job ID: <b>{job_id}</b>")
+        engine_client.close()
+        return job_id
 
 
 def headless_main(args):

@@ -1,0 +1,15 @@
+{
+    "name": "Simple Tool Spec",
+    "tooltype": "python",
+    "includes": [
+        "simple_script.py"
+    ],
+    "description": "",
+    "inputfiles": [
+        "input_file.txt"
+    ],
+    "inputfiles_opt": [],
+    "outputfiles": [],
+    "cmdline_args": [],
+    "includes_main_path": "../../.."
+}
