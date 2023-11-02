@@ -183,6 +183,11 @@ class SpineDBWorker(QObject):
         self._db_map.fetch_all()
 
     def close_db_map(self):
+        self._do_fetch_more = lambda worker, *args, **kwargs: None
+        for parents in self._parents_by_type.values():
+            for parent in parents:
+                if not parent.is_obsolete:
+                    parent.set_obsolete(True)
         self._db_map.close()
 
     @busy_effect

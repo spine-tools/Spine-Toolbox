@@ -20,6 +20,8 @@ from tests.mock_helpers import TestSpineDBManager
 
 
 class TestFrozenTableModel(unittest.TestCase):
+    db_codename = "frozen_table_model_test_db"
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -29,7 +31,7 @@ class TestFrozenTableModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
         self._parent = QObject()
         self._model = FrozenTableModel(self._db_mngr, self._parent)
 
@@ -74,7 +76,7 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(0, 0).data(), "alternative")
         self.assertEqual(self._model.index(0, 1).data(), "database")
         self.assertEqual(self._model.index(1, 0).data(), "Base")
-        self.assertEqual(self._model.index(1, 1).data(), "test_db")
+        self.assertEqual(self._model.index(1, 1).data(), self.db_codename)
 
     def test_remove_values_before_selected_row(self):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
@@ -143,7 +145,7 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.columnCount(), 2)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.headers, ["database", "alternative"])
-        expected = [["test_db", "Base"], ["test_db", "alternative_1"]]
+        expected = [[self.db_codename, "Base"], [self.db_codename, "alternative_1"]]
         for row in range(1, self._model.rowCount()):
             for column in range(self._model.columnCount()):
                 with self.subTest(f"row {row} column {column}"):
@@ -160,7 +162,7 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.columnCount(), 2)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.headers, ["database", "alternative"])
-        expected = [["test_db", "Base"], ["test_db", "alternative_1"]]
+        expected = [[self.db_codename, "Base"], [self.db_codename, "alternative_1"]]
         for row in range(1, self._model.rowCount()):
             for column in range(self._model.columnCount()):
                 with self.subTest(f"row {row} column {column}"):
@@ -186,7 +188,7 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.columnCount(), 1)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.headers, ["database"])
-        self.assertEqual(self._model.index(1, 0).data(), "test_db")
+        self.assertEqual(self._model.index(1, 0).data(), self.db_codename)
 
     def test_move_columns(self):
         self._model.insert_column_data("database", {self._db_map}, 0)
@@ -201,7 +203,7 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.columnCount(), 2)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.headers, ["alternative", "database"])
-        expected = [["Base", "test_db"], ["alternative_1", "test_db"]]
+        expected = [["Base", self.db_codename], ["alternative_1", self.db_codename]]
         for row in range(1, self._model.rowCount()):
             for column in range(self._model.columnCount()):
                 with self.subTest(f"row {row} column {column}"):
@@ -226,16 +228,16 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(0, 2).data(), "database")
         self.assertEqual(self._model.index(1, 0).data(), "fork")
         self.assertEqual(self._model.index(1, 1).data(), "Base")
-        self.assertEqual(self._model.index(1, 2).data(), "test_db")
+        self.assertEqual(self._model.index(1, 2).data(), self.db_codename)
         self.assertEqual(self._model.index(2, 0).data(), "fork")
         self.assertEqual(self._model.index(2, 1).data(), "alternative_1")
-        self.assertEqual(self._model.index(2, 2).data(), "test_db")
+        self.assertEqual(self._model.index(2, 2).data(), self.db_codename)
         self.assertEqual(self._model.index(3, 0).data(), "spoon")
         self.assertEqual(self._model.index(3, 1).data(), "Base")
-        self.assertEqual(self._model.index(3, 2).data(), "test_db")
+        self.assertEqual(self._model.index(3, 2).data(), self.db_codename)
         self.assertEqual(self._model.index(4, 0).data(), "spoon")
         self.assertEqual(self._model.index(4, 1).data(), "alternative_1")
-        self.assertEqual(self._model.index(4, 2).data(), "test_db")
+        self.assertEqual(self._model.index(4, 2).data(), self.db_codename)
 
 
 if __name__ == '__main__':

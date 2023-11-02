@@ -24,6 +24,8 @@ from tests.mock_helpers import TestSpineDBManager, fetch_model
 
 
 class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
+    db_codename = "compound_object_parameter_definition_model_test_db"
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -33,9 +35,9 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.db_codename})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
@@ -71,7 +73,7 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["oc", "p", None, "None", None, "test_db"]
+        expected = ["oc", "p", None, "None", None, self.db_codename]
         self.assertEqual(row, expected)
 
 
@@ -81,13 +83,15 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
+    codename = "compound_relationships_parameter_definition_model_test_db"
+
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.codename, create=True)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.codename})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
@@ -125,11 +129,13 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["rc", "p", None, "None", None, "test_db"]
+        expected = ["rc", "p", None, "None", None, self.codename]
         self.assertEqual(row, expected)
 
 
 class TestCompoundObjectParameterValueModel(unittest.TestCase):
+    codename = "compound_object_parameter_value_model_test_db"
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -139,10 +145,10 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.codename, create=True)
         self._db_map.fetch_all()
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.codename})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
@@ -194,11 +200,13 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["oc", "o", "p", "Base", "23.0", "test_db"]
+        expected = ["oc", "o", "p", "Base", "23.0", self.codename]
         self.assertEqual(row, expected)
 
 
 class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
+    codename = "compound_relationship_parameter_value_model_test_db"
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -208,10 +216,10 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.codename, create=True)
         self._db_map.fetch_all()
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.codename})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
@@ -265,7 +273,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["rc", "o", "p", "Base", "23.0", "test_db"]
+        expected = ["rc", "o", "p", "Base", "23.0", self.codename]
         self.assertEqual(row, expected)
 
 

@@ -10,34 +10,23 @@
 ######################################################################################################################
 
 """
-Unit tests for :class:`ParameterValuePivotTableModel` module.
+Unit tests for `pivot_table_models` module.
 """
 import itertools
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Map
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager, fetch_model
+from tests.mock_helpers import fetch_model
+from tests.spine_db_editor.widgets.helpers import TestBase
 
 
-class TestParameterValuePivotTableModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestParameterValuePivotTableModel(TestBase):
     def setUp(self):
-        app_settings = MagicMock()
-        logger = MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
-        with patch.object(SpineDBEditor, "restore_ui"):
-            self._editor = SpineDBEditor(self._db_mngr, {"sqlite://": self._db_map.codename})
+        self._common_setup("sqlite://", create=True)
 
     def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        self._db_mngr.clean_up()
+        self._common_tear_down()
 
     def _fill_model_with_data(self):
         data = {
@@ -63,14 +52,14 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
                 get_item_exceptions.append(error)
                 return None
 
-        object_class_index = self._editor.entity_tree_model.index(0, 0)
-        fetch_model(self._editor.entity_tree_model)
-        index = self._editor.entity_tree_model.index(0, 0, object_class_index)
-        self._editor._update_class_attributes(index)
-        with patch.object(self._editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+        object_class_index = self._db_editor.entity_tree_model.index(0, 0)
+        fetch_model(self._db_editor.entity_tree_model)
+        index = self._db_editor.entity_tree_model.index(0, 0, object_class_index)
+        self._db_editor._update_class_attributes(index)
+        with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
             mock_is_visible.return_value = True
-            self._editor.do_reload_pivot_table()
-        self._model = self._editor.pivot_table_model
+            self._db_editor.do_reload_pivot_table()
+        self._model = self._db_editor.pivot_table_model
         with patch.object(self._db_mngr, "get_item") as get_item:
             get_item.side_effect = guarded_get_item
             self._model.beginResetModel()
@@ -146,27 +135,29 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
     def test_drag_and_drop_database_from_frozen_table(self):
         self._fill_model_with_data()
         self._start()
-        for frozen_column in range(self._editor.frozen_table_model.columnCount()):
-            frozen_index = self._editor.frozen_table_model.index(0, frozen_column)
+        for frozen_column in range(self._db_editor.frozen_table_model.columnCount()):
+            frozen_index = self._db_editor.frozen_table_model.index(0, frozen_column)
             if frozen_index.data() == "database":
                 break
         else:
             raise RuntimeError("No 'database' column found in frozen table")
-        frozen_table_header_widget = self._editor.ui.frozen_table.indexWidget(frozen_index)
+        frozen_table_header_widget = self._db_editor.ui.frozen_table.indexWidget(frozen_index)
         for row, column in itertools.product(
-            range(self._editor.pivot_table_proxy.rowCount()), range(self._editor.pivot_table_proxy.columnCount())
+            range(self._db_editor.pivot_table_proxy.rowCount()), range(self._db_editor.pivot_table_proxy.columnCount())
         ):
-            index_widget = self._editor.ui.pivot_table.indexWidget(self._editor.pivot_table_proxy.index(row, column))
+            index_widget = self._db_editor.ui.pivot_table.indexWidget(
+                self._db_editor.pivot_table_proxy.index(row, column)
+            )
             if index_widget.identifier == "parameter":
                 break
         else:
             raise RuntimeError("No 'parameter' header found")
-        self._editor.handle_header_dropped(frozen_table_header_widget, index_widget)
+        self._db_editor.handle_header_dropped(frozen_table_header_widget, index_widget)
         QApplication.processEvents()
         self.assertEqual(self._model.rowCount(), 6)
         self.assertEqual(self._model.columnCount(), 4)
         expected = [
-            ["database", "test_db", "test_db", "test_db", None],
+            ["database", self.db_codename, self.db_codename, self.db_codename, None],
             ["parameter", "parameter1", "parameter2", None],
             ["class1", None, None, None],
             ["object1", "1.0", "5.0", None],
@@ -178,19 +169,9 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
                 self.assertEqual(self._model.index(row, column).data(), expected[row][column])
 
 
-class TestIndexExpansionPivotTableModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestIndexExpansionPivotTableModel(TestBase):
     def setUp(self):
-        app_settings = MagicMock()
-        logger = MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
-        db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
-        with patch.object(SpineDBEditor, "restore_ui"):
-            self._editor = SpineDBEditor(self._db_mngr, {"sqlite://": db_map.codename})
+        self._common_setup("sqlite://", create=True)
         data = {
             "entity_classes": (("class1",),),
             "parameter_definitions": (("class1", "parameter1"), ("class1", "parameter2")),
@@ -202,26 +183,25 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
                 ("class1", "object2", "parameter2", Map(["A", "B"], [-1.2, -2.2])),
             ),
         }
-        self._db_mngr.import_data({db_map: data})
-        object_class_index = self._editor.entity_tree_model.index(0, 0)
-        fetch_model(self._editor.entity_tree_model)
-        index = self._editor.entity_tree_model.index(0, 0, object_class_index)
-        for action in self._editor.pivot_action_group.actions():
-            if action.text() == self._editor._INDEX_EXPANSION:
+        self._db_mngr.import_data({self._db_map: data})
+        object_class_index = self._db_editor.entity_tree_model.index(0, 0)
+        fetch_model(self._db_editor.entity_tree_model)
+        index = self._db_editor.entity_tree_model.index(0, 0, object_class_index)
+        for action in self._db_editor.pivot_action_group.actions():
+            if action.text() == self._db_editor._INDEX_EXPANSION:
                 action.trigger()
                 break
-        self._editor._update_class_attributes(index)
-        with patch.object(self._editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+        self._db_editor._update_class_attributes(index)
+        with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
             mock_is_visible.return_value = True
-            self._editor.do_reload_pivot_table()
-        self._model = self._editor.pivot_table_model
+            self._db_editor.do_reload_pivot_table()
+        self._model = self._db_editor.pivot_table_model
         self._model.beginResetModel()
         self._model.endResetModel()
         qApp.processEvents()
 
     def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        self._db_mngr.clean_up()
+        self._common_tear_down()
 
     def test_data(self):
         self.assertEqual(self._model.rowCount(), 11)

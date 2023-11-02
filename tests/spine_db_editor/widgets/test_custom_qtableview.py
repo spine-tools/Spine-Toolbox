@@ -61,13 +61,13 @@ class TestParameterTableView(TestBase):
         self.assertEqual(model.index(0, 2).data(), None)
         self.assertEqual(model.index(0, 3).data(), None)
         self.assertEqual(model.index(0, 4).data(), None)
-        self.assertEqual(model.index(0, 5).data(), "database")
+        self.assertEqual(model.index(0, 5).data(), self.db_codename)
         self.assertEqual(model.index(1, 0).data(), None)
         self.assertEqual(model.index(1, 1).data(), None)
         self.assertEqual(model.index(1, 2).data(), None)
         self.assertEqual(model.index(1, 3).data(), None)
         self.assertEqual(model.index(1, 4).data(), None)
-        self.assertEqual(model.index(1, 5).data(), "database")
+        self.assertEqual(model.index(1, 5).data(), self.db_codename)
         selection_model = table_view.selectionModel()
         selection_model.select(index, QItemSelectionModel.ClearAndSelect)
         table_view.remove_selected()
@@ -102,9 +102,9 @@ class TestParameterTableView(TestBase):
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.columnCount(), 6)
         expected = [
-            ["an_object_class", "object_1", "a_parameter", "Base", "value_1", "database"],
-            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", "database"],
-            [None, None, None, None, None, "database"],
+            ["an_object_class", "object_1", "a_parameter", "Base", "value_1", self.db_codename],
+            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
+            [None, None, None, None, None, self.db_codename],
         ]
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
@@ -113,8 +113,8 @@ class TestParameterTableView(TestBase):
         table_view.remove_selected()
         self.assertFalse(model.canFetchMore(QModelIndex()))
         expected = [
-            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", "database"],
-            [None, None, None, None, None, "database"],
+            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
+            [None, None, None, None, None, self.db_codename],
         ]
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
@@ -138,8 +138,8 @@ class TestParameterTableView(TestBase):
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         expected = [
-            ["an_object_class", "an_object", "a_parameter", "Base", "value_1", "database"],
-            [None, None, None, None, None, "database"],
+            ["an_object_class", "an_object", "a_parameter", "Base", "value_1", self.db_codename],
+            [None, None, None, None, None, self.db_codename],
         ]
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
@@ -180,10 +180,10 @@ class TestParameterTableView(TestBase):
         self.assertEqual(model.rowCount(), 4)
         self.assertEqual(model.columnCount(), 6)
         expected = [
-            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", "database"],
-            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", "database"],
-            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", "database"],
-            [None, None, None, None, None, "database"],
+            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
+            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
+            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
+            [None, None, None, None, None, self.db_codename],
         ]
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
@@ -193,10 +193,10 @@ class TestParameterTableView(TestBase):
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = [
-            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", "database"],
-            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", "database"],
-            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", "database"],
-            [None, None, None, None, None, "database"],
+            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
+            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
+            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
+            [None, None, None, None, None, self.db_codename],
         ]
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
@@ -252,8 +252,8 @@ class TestParameterTableWithExistingData(TestBase):
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 2)
         expected = [
-            ["object_class", "object_1", "parameter_1", "Base", None, "database"],
-            [None, None, None, None, None, "database"],
+            ["object_class", "object_1", "parameter_1", "Base", None, self.db_codename],
+            [None, None, None, None, None, self.db_codename],
         ]
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
@@ -279,12 +279,12 @@ class TestParameterTableWithExistingData(TestBase):
             QApplication.processEvents()
         expected = sorted(
             [
-                ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", "database"]
+                ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
                 for object_n, parameter_n in itertools.product(range(self._n_objects), range(self._n_parameters))
             ],
             key=lambda x: (x[1], x[2]),
         )
-        expected.append([None, None, None, None, None, "database"])
+        expected.append([None, None, None, None, None, self.db_codename])
         self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
@@ -306,13 +306,13 @@ class TestParameterTableWithExistingData(TestBase):
             QApplication.processEvents()
         expected = sorted(
             [
-                ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", "database"]
+                ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
                 for object_n, parameter_n in itertools.product(range(self._n_objects), range(self._n_parameters))
             ],
             key=lambda x: (x[1], x[2]),
         )
         QApplication.processEvents()
-        expected.append([None, None, None, None, None, "database"])
+        expected.append([None, None, None, None, None, self.db_codename])
         self.assertEqual(model.rowCount(), self._n_objects * self._n_parameters + 1)
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])

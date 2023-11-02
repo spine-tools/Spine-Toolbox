@@ -39,7 +39,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         app_settings = MagicMock()
         self._logger = MagicMock()  # Collects error messages therefore handy for debugging.
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="db_fetcher_test_db", create=True)
         self._temp_id_reset = False
 
     def tearDown(self):
