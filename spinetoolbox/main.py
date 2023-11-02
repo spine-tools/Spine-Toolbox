@@ -98,7 +98,7 @@ def _make_argument_parser():
         nargs="*",
         metavar="ITEM",
     )
-    parser.add_argument("--execute-remotely", help="execute remotely", action="append", required=True, metavar="SERVER CONFIG FILE")
+    parser.add_argument("--execute-remotely", help="execute remotely", action="append", metavar="SERVER CONFIG FILE")
     return parser
 
 
