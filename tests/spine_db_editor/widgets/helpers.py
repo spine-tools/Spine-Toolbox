@@ -124,6 +124,7 @@ class TestBase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.db_codename = cls.__name__ + "_db"
         if not QApplication.instance():
             QApplication()
 
@@ -135,8 +136,8 @@ class TestBase(unittest.TestCase):
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=create)
-            self._db_editor = SpineDBEditor(self._db_mngr, {url: "database"})
+            self._db_map = self._db_mngr.get_db_map(url, logger, codename=self.db_codename, create=create)
+            self._db_editor = SpineDBEditor(self._db_mngr, {url: self.db_codename})
         QApplication.processEvents()
 
     def _common_tear_down(self):

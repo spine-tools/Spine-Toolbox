@@ -40,13 +40,15 @@ class _TestBase(unittest.TestCase):
 
 
 class TestScenarioModel(_TestBase):
+    db_codename = "scenario_model_test_db"
+
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.db_codename})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
@@ -63,7 +65,7 @@ class TestScenarioModel(_TestBase):
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         data = model_data_to_dict(model)
-        expected = [[{"test_db": [["Type new scenario name here...", ""]]}, None]]
+        expected = [[{self.db_codename: [["Type new scenario name here...", ""]]}, None]]
         self.assertEqual(data, expected)
 
     def test_add_scenario(self):
@@ -75,7 +77,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [{"scenario_1": [["Type scenario alternative name here...", ""]]}, "Just a test."],
                         ["Type new scenario name here...", ""],
                     ]
@@ -97,7 +99,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [{"scenario_2.0": [["Type scenario alternative name here...", ""]]}, "More than just a test."],
                         ["Type new scenario name here...", ""],
                     ]
@@ -114,7 +116,7 @@ class TestScenarioModel(_TestBase):
         self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1", "description": "Just a test.", "id": 1}]})
         self._db_mngr.remove_items({self._db_map: {"scenario": {1}}})
         data = model_data_to_dict(model)
-        expected = [[{"test_db": [["Type new scenario name here...", ""]]}, None]]
+        expected = [[{self.db_codename: [["Type new scenario name here...", ""]]}, None]]
         self.assertEqual(data, expected)
 
     def test_mimeData(self):
@@ -175,7 +177,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [
                             {
                                 "my_scenario": [
@@ -212,7 +214,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [
                             {
                                 "my_scenario": [
@@ -238,7 +240,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [
                             {
                                 "my_scenario": [
@@ -265,7 +267,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [
                             {
                                 "my_scenario": [
@@ -290,7 +292,7 @@ class TestScenarioModel(_TestBase):
         model.build_tree()
         self._fetch_recursively(model)
         root_index = model.index(0, 0)
-        self.assertEqual(root_index.data(), "test_db")
+        self.assertEqual(root_index.data(), self.db_codename)
         edit_index = model.index(0, 0, root_index)
         model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
         scenario_index = model.index(0, 0, root_index)
@@ -305,7 +307,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [{"my_scenario": [["alternative_1", ""], ["Type scenario alternative name here...", ""]]}, ""],
                         ["Type new scenario name here...", ""],
                     ]
@@ -321,7 +323,7 @@ class TestScenarioModel(_TestBase):
         model.build_tree()
         self._fetch_recursively(model)
         root_index = model.index(0, 0)
-        self.assertEqual(root_index.data(), "test_db")
+        self.assertEqual(root_index.data(), self.db_codename)
         edit_index = model.index(0, 0, root_index)
         model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
         scenario_index = model.index(0, 0, root_index)
@@ -336,7 +338,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [
                             {
                                 "my_scenario": [
@@ -362,7 +364,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [
                             {
                                 "my_scenario": [
@@ -399,7 +401,7 @@ class TestScenarioModel(_TestBase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         [
                             {
                                 "my_scenario": [

@@ -23,6 +23,8 @@ from tests.mock_helpers import model_data_to_dict, TestSpineDBManager
 
 
 class TestAlternativeModel(unittest.TestCase):
+    db_codename = "alternative_model_test_db"
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -32,9 +34,9 @@ class TestAlternativeModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.db_codename})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
@@ -51,7 +53,7 @@ class TestAlternativeModel(unittest.TestCase):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         data = model_data_to_dict(model)
-        expected = [[{"test_db": [["Type new alternative name here...", ""]]}, None]]
+        expected = [[{self.db_codename: [["Type new alternative name here...", ""]]}, None]]
         self.assertEqual(data, expected)
 
     def test_add_alternatives(self):
@@ -63,7 +65,7 @@ class TestAlternativeModel(unittest.TestCase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         ["Base", "Base alternative"],
                         ["alternative_1", ""],
                         ["Type new alternative name here...", ""],
@@ -83,7 +85,13 @@ class TestAlternativeModel(unittest.TestCase):
         data = model_data_to_dict(model)
         expected = [
             [
-                {"test_db": [["Base", "Base alternative"], ["renamed", ""], ["Type new alternative name here...", ""]]},
+                {
+                    self.db_codename: [
+                        ["Base", "Base alternative"],
+                        ["renamed", ""],
+                        ["Type new alternative name here...", ""],
+                    ]
+                },
                 None,
             ]
         ]
@@ -96,7 +104,9 @@ class TestAlternativeModel(unittest.TestCase):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
         self._db_mngr.remove_items({self._db_map: {"alternative": {2}}})
         data = model_data_to_dict(model)
-        expected = [[{"test_db": [["Base", "Base alternative"], ["Type new alternative name here...", ""]]}, None]]
+        expected = [
+            [{self.db_codename: [["Base", "Base alternative"], ["Type new alternative name here...", ""]]}, None]
+        ]
         self.assertEqual(data, expected)
 
     def test_mimeData(self):
@@ -115,6 +125,8 @@ class TestAlternativeModel(unittest.TestCase):
 
 
 class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
+    db_codename = "alternative_model_with_two_databases_test_db"
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -127,9 +139,9 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_map1 = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db_1", create=True)
         url2 = "sqlite:///" + str(Path(self._temp_dir.name, "db2.sqlite"))
-        self._db_map2 = self._db_mngr.get_db_map(url2, logger, codename="test_db_2", create=True)
+        self._db_map2 = self._db_mngr.get_db_map(url2, logger, codename=self.db_codename, create=True)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db_1", url2: "test_db_2"})
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db_1", url2: self.db_codename})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
@@ -155,7 +167,7 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
         self.assertEqual(source_index.data(), "my_alternative")
         mime_data = model.mimeData([source_index])
         target_index = model.index(1, 0)
-        self.assertEqual(target_index.data(), "test_db_2")
+        self.assertEqual(target_index.data(), self.db_codename)
         target_item = model.item_from_index(target_index)
         model.paste_alternative_mime_data(mime_data, target_item)
         _fetch_all_recursively(model)
@@ -173,7 +185,7 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
             ],
             [
                 {
-                    "test_db_2": [
+                    self.db_codename: [
                         ["Base", "Base alternative"],
                         ["my_alternative", "My test alternative"],
                         ["Type new alternative name here...", ""],
