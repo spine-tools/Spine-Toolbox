@@ -14,9 +14,16 @@ Classes for custom QDialogs to edit items in databases.
 """
 
 from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QComboBox, QTabWidget
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate, RemoveEntitiesDelegate
-from .manage_items_dialogs import ShowIconColorEditorMixin, GetEntitiesMixin, GetEntityClassesMixin, ManageItemsDialog
+from .manage_items_dialogs import (
+    ShowIconColorEditorMixin,
+    GetEntitiesMixin,
+    GetEntityClassesMixin,
+    ManageItemsDialog,
+    DialogWithButtons,
+)
 from ...helpers import default_icon_id
 
 
@@ -56,7 +63,7 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
-            row_data = [item.display_data, data['description'], data['display_icon']]
+            row_data = [item.name, data['description'], data['display_icon']]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -116,7 +123,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
             selected (set): set of EntityItem instances to edit
-            class_key (tuple): (class_name, dimension_name_list) for identifying the entity class
+            class_key (tuple): for identifying the entity class
         """
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit entities")
@@ -124,26 +131,22 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
         self.connect_signals()
-        self.class_name, self.dimension_name_list = class_key
+        self.db_maps = set(db_map for item in selected for db_map in item.db_maps)
+        self.keyed_db_maps = {x.codename: x for x in self.db_maps}
+        self.class_key = class_key
         self.model.set_horizontal_header_labels(
-            [x + ' byname' for x in self.dimension_name_list] + ['entity name', 'databases']
+            [x + ' name' for x in self.dimension_name_list] + ['entity name', 'databases']
         )
-        self.orig_data = list()
-        model_data = list()
-        self.db_maps = set()
+        self.orig_data = []
+        model_data = []
         for item in selected:
-            self.db_maps.update(item.db_maps)
             data = item.db_map_data(item.first_db_map)
-            row_data = [*item.element_byname_list, data["name"]]
+            row_data = [*item.element_name_list, data["name"]]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
             self.items.append(item)
         self.model.reset_model(model_data)
-        self.keyed_db_maps = {x.codename: x for x in self.db_maps}
-        self.db_map_ent_lookup = self.make_db_map_ent_lookup()
-        self.db_map_ent_cls_lookup = self.make_db_map_ent_cls_lookup()
-        self.db_map_alt_id_lookup = self.make_db_map_alt_id_lookup()
 
     @Slot()
     def accept(self):
@@ -177,12 +180,12 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
                 id_ = item.db_map_id(db_map)
                 # Find dimension_id_list
                 entity_classes = self.db_map_ent_cls_lookup[db_map]
-                if (self.class_name, self.dimension_name_list) not in entity_classes:
+                if (self.class_key) not in entity_classes:
                     self.parent().msg_error.emit(
                         f"Invalid entity class '{self.class_name}' for db '{db_map.codename}' at row {i + 1}"
                     )
                     return
-                ent_cls = entity_classes[self.class_name, self.dimension_name_list]
+                ent_cls = entity_classes[self.class_key]
                 dimension_id_list = ent_cls["dimension_id_list"]
                 entities = self.db_map_ent_lookup[db_map]
                 # Find element_id_list
@@ -226,7 +229,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
         model_data = list()
         for item_type, items in selected.items():
             for item in items:
-                row_data = [item_type, item.display_data, item.display_database]
+                row_data = [item_type, item.name, item.display_database]
                 model_data.append(row_data)
                 self.items.append(item)
         self.model.reset_model(model_data)
@@ -254,4 +257,57 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
             self.parent().msg_error.emit("Nothing to remove")
             return
         self.db_mngr.remove_items(db_map_typed_data)
+        super().accept()
+
+
+class SelectSuperclassDialog(GetEntityClassesMixin, DialogWithButtons):
+    def __init__(self, parent, entity_class_item, db_mngr, *db_maps):
+        super().__init__(parent, db_mngr)
+        self.entity_class_item = entity_class_item
+        self.db_maps = db_maps
+        self._tab_widget = QTabWidget(self)
+        self._subclass_name = self.entity_class_item.name
+        self._combobox_superclass_subclass = {}
+        for db_map in self.db_maps:
+            combobox = QComboBox(self)
+            superclass_subclass = db_map.get_item("superclass_subclass", subclass_name=self._subclass_name)
+            self._combobox_superclass_subclass[db_map] = (combobox, superclass_subclass)
+            entity_classes = self._entity_class_name_list_from_db_maps(db_map)
+            combobox.addItems(["(None)"] + [x for x in entity_classes if x != self._subclass_name])
+            if superclass_subclass:
+                combobox.setCurrentText(superclass_subclass["superclass_name"])
+            else:
+                combobox.setCurrentIndex(0)
+            self._tab_widget.addTab(combobox, db_map.codename)
+        self.connect_signals()
+        self.setWindowTitle(f"Select {self._subclass_name}'s superclass")
+
+    def _populate_layout(self):
+        self.layout().addWidget(self._tab_widget)
+        super()._populate_layout()
+
+    @Slot()
+    def accept(self):
+        db_map_data_to_add = {}
+        db_map_data_to_upd = {}
+        db_map_typed_ids_to_rm = {}
+        for db_map, (combobox, superclass_subclass) in self._combobox_superclass_subclass.items():
+            if combobox.currentIndex() == 0:
+                if superclass_subclass:
+                    db_map_typed_ids_to_rm[db_map] = {"superclass_subclass": {superclass_subclass["id"]}}
+                continue
+            superclass_name = combobox.currentText()
+            if not superclass_subclass:
+                db_map_data_to_add[db_map] = [
+                    {"subclass_name": self._subclass_name, "superclass_name": superclass_name}
+                ]
+            elif superclass_name != superclass_subclass["superclass_name"]:
+                db_map_data_to_upd[db_map] = [{"id": superclass_subclass["id"], "superclass_name": superclass_name}]
+        if not db_map_data_to_add and not db_map_data_to_upd and not db_map_typed_ids_to_rm:
+            self.parent().msg_error.emit("Nothing changed")
+            return
+        identifier = self.db_mngr.get_command_identifier()
+        self.db_mngr.add_items("superclass_subclass", db_map_data_to_add, identifier=identifier)
+        self.db_mngr.update_items("superclass_subclass", db_map_data_to_upd, identifier=identifier)
+        self.db_mngr.remove_items(db_map_typed_ids_to_rm, identifier=identifier)
         super().accept()

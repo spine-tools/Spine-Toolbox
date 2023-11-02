@@ -239,7 +239,7 @@ class TabularViewMixin:
         if self.current_class_id == class_id:
             return
         self.current_class_id = class_id
-        self.current_class_name = current_class_item.display_data
+        self.current_class_name = current_class_item.name
 
     @staticmethod
     def _get_current_class_item(current_index):

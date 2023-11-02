@@ -20,7 +20,12 @@ from .add_items_dialogs import (
     ManageElementsDialog,
     ManageMembersDialog,
 )
-from .edit_or_remove_items_dialogs import EditEntityClassesDialog, EditEntitiesDialog, RemoveEntitiesDialog
+from .edit_or_remove_items_dialogs import (
+    EditEntityClassesDialog,
+    EditEntitiesDialog,
+    RemoveEntitiesDialog,
+    SelectSuperclassDialog,
+)
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.alternative_model import AlternativeModel
 from ..mvcmodels.scenario_model import ScenarioModel
@@ -125,6 +130,10 @@ class TreeViewMixin:
         dialog = ManageElementsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
+    def show_select_superclass_form(self, entity_class_item):
+        dialog = SelectSuperclassDialog(self, entity_class_item, self.db_mngr, *self.db_maps)
+        dialog.show()
+
     def edit_entity_tree_items(self, selected_indexes):
         """Starts editing given indexes."""
         ent_cls_items = {ind.internalPointer() for ind in selected_indexes.get("entity_class", {})}
@@ -144,9 +153,7 @@ class TreeViewMixin:
         items_by_class = {}
         for item in items:
             data = item.db_map_data(item.first_db_map)
-            class_name = data["class_name"]
-            dimension_name_list = data["dimension_name_list"]
-            class_key = (class_name, dimension_name_list)
+            class_key = tuple(data[k] for k in ["class_name", "dimension_name_list", "superclass_name"])
             items_by_class.setdefault(class_key, set()).add(item)
         for class_key, classed_items in items_by_class.items():
             dialog = EditEntitiesDialog(self, self.db_mngr, classed_items, class_key)

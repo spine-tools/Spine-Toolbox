@@ -54,13 +54,13 @@ class EntityTreeView(ResizableTreeView):
         self._duplicate_entity_action = None
         self._manage_elements_action = None
         self._manage_members_action = None
+        self._select_superclass_action = None
         self._export_action = None
         self._edit_action = None
         self._remove_action = None
         self._cube_plus_icon = QIcon(":/icons/menu_icons/cube_plus.svg")
         self._cube_minus_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         self._cube_pen_icon = QIcon(":/icons/menu_icons/cube_pen.svg")
-        self._cubes_plus_icon = QIcon(":/icons/menu_icons/cubes_plus.svg")
         self._cubes_pen_icon = QIcon(":/icons/menu_icons/cubes_pen.svg")
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
@@ -96,6 +96,9 @@ class EntityTreeView(ResizableTreeView):
             self._cubes_pen_icon, "Manage elements", self.manage_elements
         )
         self._manage_members_action = self._menu.addAction(self._cube_pen_icon, "Manage members", self.manage_members)
+        self._select_superclass_action = self._menu.addAction(
+            self._cube_pen_icon, "Select superclass", self.select_superclass
+        )
         self._menu.addSeparator()
         self._find_next_action = self._menu.addAction(
             QIcon(CharIconEngine("\uf141")), "Find next occurrence", self.find_next_entity
@@ -274,14 +277,18 @@ class EntityTreeView(ResizableTreeView):
         self._fully_expand_action.setEnabled(item_has_children)
         self._fully_collapse_action.setEnabled(item_has_children)
         self._add_entity_classes_action.setEnabled(item.item_type in ("root", "entity_class"))
-        self._add_entities_action.setEnabled(item.item_type in ("root", "entity_class", "entity"))
+        self._add_entities_action.setEnabled(
+            item.item_type in ("root", "entity_class")
+            or (item.item_type == "entity" and item.parent_item.item_type == "entity_class")
+        )
         self._add_entity_group_action.setEnabled(item.item_type == "entity_class")
         self._duplicate_entity_action.setEnabled(
             item.item_type == "entity" and not item.is_group and not item.element_name_list
         )
         self._manage_members_action.setEnabled(item.item_type == "entity" and item.is_group)
+        self._select_superclass_action.setEnabled(item.item_type == "entity_class")
         self._manage_elements_action.setEnabled(
-            item.item_type == "root" or (item.item_type == "entity_class" and bool(item.display_id[1]))
+            item.item_type == "root" or (item.item_type == "entity_class" and item.has_dimensions)
         )
         read_only = item.item_type in ("root", "members")
         self._export_action.setEnabled(not read_only)
@@ -329,6 +336,9 @@ class EntityTreeView(ResizableTreeView):
 
     def manage_members(self):
         self._spine_db_editor.show_manage_members_form(self._context_item)
+
+    def select_superclass(self):
+        self._spine_db_editor.show_select_superclass_form(self._context_item)
 
 
 class ItemTreeView(ResizableTreeView):

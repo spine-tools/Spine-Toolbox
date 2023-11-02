@@ -127,13 +127,6 @@ class EntityItem(QGraphicsRectItem):
     def element_name_list(self):
         return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("element_name_list", ())
 
-    @property
-    def element_byname_list(self):
-        return tuple(
-            DB_ITEM_SEPARATOR.join(self.db_mngr.get_item(self.first_db_map, "entity", id_).get("byname", ()))
-            for id_ in self.element_id_list(self.first_db_map)
-        )
-
     def element_id_list(self, db_map):
         return self.db_mngr.get_item(db_map, "entity", self.entity_id(db_map)).get("element_id_list", ())
 
@@ -424,7 +417,7 @@ class EntityItem(QGraphicsRectItem):
             line = QLineF(QPointF(new_pos_x, new_pos_y), el_item.pos()).normalVector()
             if offset < 0:
                 line.setAngle(line.angle() + 180)
-            line.setLength(abs(offset) * self._extent)
+            line.setLength(3 * abs(offset) * self._extent)
             new_pos_x, new_pos_y = line.x2(), line.y2()
         self.setPos(new_pos_x, new_pos_y)
         self.update_arcs_line()

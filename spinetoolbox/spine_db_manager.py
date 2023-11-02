@@ -1344,7 +1344,7 @@ class SpineDBManager(QObject):
         return worker.update_items(item_type, data, check)
 
     @busy_effect
-    def do_remove_items(self, db_map, item_type, ids):
+    def do_remove_items(self, db_map, item_type, ids, check=True):
         """Removes items from database.
 
         Args:
@@ -1356,7 +1356,7 @@ class SpineDBManager(QObject):
             worker = self._get_worker(db_map)
         except KeyError:
             return []
-        return worker.remove_items(item_type, ids)
+        return worker.remove_items(item_type, ids, check)
 
     @busy_effect
     def do_restore_items(self, db_map, item_type, ids):
@@ -1469,8 +1469,8 @@ class SpineDBManager(QObject):
         data = self._get_data_for_export(entity_data)
         data = {
             "entities": [
-                (cls_name, _replace_name(ent_name), description)
-                for (cls_name, ent_name, description) in data.get("entities", [])
+                (cls_name, _replace_name(ent_name), el_name_list, description)
+                for (cls_name, ent_name, el_name_list, description) in data.get("entities", [])
             ],
             "parameter_values": [
                 (cls_name, _replace_name(ent_name), param_name, val, alt)

@@ -35,6 +35,7 @@ class TestSelectDatabaseItems(unittest.TestCase):
                     "metadata": False,
                     "entity": True,
                     "entity_class": False,
+                    "superclass_subclass": False,
                     "entity_alternative": False,
                     "parameter_definition": False,
                     "parameter_value": False,

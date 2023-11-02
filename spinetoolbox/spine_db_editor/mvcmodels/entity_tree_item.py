@@ -88,7 +88,7 @@ class EntityTreeRootItem(MultiDBTreeItem):
 class EntityClassItem(MultiDBTreeItem):
     """An entity_class item."""
 
-    visual_key = ["name", "dimension_name_list"]
+    visual_key = ["name", "dimension_name_list", "superclass_name"]
     item_type = "entity_class"
     _fetch_index = EntityClassIndex()
 
@@ -111,7 +111,20 @@ class EntityClassItem(MultiDBTreeItem):
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
-        return dict(entity_class_name=self.display_data, database=self.first_db_map.codename)
+        return dict(entity_class_name=self.name, database=self.first_db_map.codename)
+
+    @property
+    def display_data(self):
+        """Returns the name for display."""
+        name = self.name
+        superclass_name = self.db_map_data_field(self.first_db_map, "superclass_name")
+        if superclass_name:
+            name += f"({superclass_name})"
+        return name
+
+    @property
+    def has_dimensions(self):
+        return bool(self.db_map_data_field(self.first_db_map, "dimension_id_list"))
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
@@ -189,19 +202,8 @@ class EntityItem(MultiDBTreeItem):
         )
 
     @property
-    def name(self):
-        return self.db_map_data_field(self.first_db_map, "name", default="")
-
-    @property
     def element_name_list(self):
         return self.db_map_data_field(self.first_db_map, "element_name_list", default=())
-
-    @property
-    def element_byname_list(self):
-        return tuple(
-            DB_ITEM_SEPARATOR.join(self.db_mngr.get_item(self.first_db_map, "entity", id_).get("byname", ()))
-            for id_ in self.db_map_data_field(self.first_db_map, "element_id_list", default=())
-        )
 
     @property
     def byname(self):
@@ -215,10 +217,14 @@ class EntityItem(MultiDBTreeItem):
 
     @property
     def display_data(self):
-        names = DB_ITEM_SEPARATOR.join(self.byname).replace(self.parent_item.display_data, "\u2022")
-        if self._is_member:
-            return "member: " + names
-        return names
+        name = self.name
+        if self.element_name_list:
+            element_name_list = [
+                x if not isinstance(self.parent_item, EntityItem) or x != self.parent_item.name else "\u066D"
+                for x in self.element_name_list
+            ]
+            name += "[" + DB_ITEM_SEPARATOR.join(element_name_list) + "]"
+        return name
 
     @property
     def edit_data(self):

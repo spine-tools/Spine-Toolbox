@@ -222,7 +222,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(model.rowCount(class_index), 1)
         entity_index = model.index(0, 0, class_index)
         self.assertEqual(model.rowCount(entity_index), 0)
-        self.assertEqual(entity_index.data(), "an_entity")
+        self.assertEqual(entity_index.data(), "a_relationship[an_entity]")
         database_index = model.index(0, 1, class_index)
         self.assertEqual(database_index.data(), self.db_codename)
         self._commit_changes_to_database("Add an entities.")
@@ -471,13 +471,13 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         entity_ndex = model.index(0, 0, class_index)
         self.assertEqual(model.rowCount(entity_ndex), 0)
         self.assertEqual(model.columnCount(entity_ndex), 2)
-        self.assertEqual(entity_ndex.data(), "object_11 ǀ object_21")
+        self.assertEqual(entity_ndex.data(), "object_11__object_21[object_11 ǀ object_21]")
         database_index = model.index(0, 1, class_index)
         self.assertEqual(database_index.data(), self.db_codename)
         entity_ndex = model.index(1, 0, class_index)
         self.assertEqual(model.rowCount(entity_ndex), 0)
         self.assertEqual(model.columnCount(entity_ndex), 2)
-        self.assertEqual(entity_ndex.data(), "object_11 ǀ object_22")
+        self.assertEqual(entity_ndex.data(), "object_11__object_22[object_11 ǀ object_22]")
         database_index = model.index(1, 1, class_index)
         self.assertEqual(database_index.data(), self.db_codename)
 
@@ -531,7 +531,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         )
         self.assertEqual(len(data), 2)
         names = {i.name for i in data}
-        self.assertEqual(names, {"renamed_relationship", "relationship_class_object_11__object_22"})
+        self.assertEqual(names, {"renamed_relationship", "object_11__object_22"})
 
     def test_modify_entitys_elements(self):
         view = self._db_editor.ui.treeView_entity
@@ -549,7 +549,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         view.setCurrentIndex(entity_index)
         _edit_entity_tree_item({0: "object_12"}, view, "Edit...", EditEntitiesDialog)
         QApplication.processEvents()  # Fixes "silent" Traceback.
-        self.assertEqual(entity_index.data(), "object_12 ǀ object_21")
+        self.assertEqual(entity_index.data(), "object_11__object_21[object_12 ǀ object_21]")
         self._commit_changes_to_database("Change relationship's objects.")
         class_id = (
             self._db_map.query(self._db_map.entity_class_sq)
@@ -608,7 +608,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
             .filter(self._db_map.wide_entity_sq.c.class_id == class_id)
             .one()
         )
-        self.assertEqual(record.name, "relationship_class_object_11__object_22")
+        self.assertEqual(record.name, "object_11__object_22")
 
     def test_removing_dimension_class_removes_corresponding_multidimensional_entity_class(self):
         object_tree_view = self._db_editor.ui.treeView_entity
@@ -658,13 +658,11 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         while model.rowCount(class_index) != 1:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
-        self.assertEqual(entity_index.data(), "object_11 ǀ object_22")
+        self.assertEqual(entity_index.data(), "object_11__object_22[object_11 ǀ object_22]")
         self._commit_changes_to_database("Remove object.")
         data = self._db_map.query(self._db_map.entity_sq).all()
         self.assertEqual(len(data), 4)
-        self.assertEqual(
-            {i.name for i in data}, {"object_11", "object_12", "object_22", "relationship_class_object_11__object_22"}
-        )
+        self.assertEqual({i.name for i in data}, {"object_11", "object_12", "object_22", "object_11__object_22"})
 
     def _rename_class(self, class_name):
         view = self._db_editor.ui.treeView_entity
