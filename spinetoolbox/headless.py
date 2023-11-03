@@ -406,6 +406,7 @@ class ActionsWithProject(QObject):
             "standard_execution_msg": self._handle_standard_execution_msg,
             "persistent_execution_msg": self._handle_persistent_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
+            "server_status_msg": self._handle_server_status_msg,
         }.get(event_type)
         if handler is None:
             return
@@ -498,6 +499,17 @@ class ActionsWithProject(QObject):
             data (dict): message data
         """
 
+    def _handle_server_status_msg(self, data):
+        """Handles received remote execution messages."""
+        if data["msg_type"] == "success":
+            self._logger.msg_success.emit(data["text"])
+        elif data["msg_type"] == "neutral":
+            self._logger.msg.emit(data["text"])
+        elif data["msg_type"] == "fail":
+            self._logger.msg_error.emit(data["text"])
+        elif data["msg_type"] == "warning":
+            self._logger.msg_warning.emit(data["text"])
+
     def _read_server_config(self):
         """Reads the user provided server settings file that the client requires to establish connection.
 
@@ -520,7 +532,6 @@ class ActionsWithProject(QObject):
             else:
                 sec_folder = ""
             cfg_dict = {"host": host, "port": port, "security_model": sec_model, "security_folder": sec_folder}
-            print(f"cfg_dict:{cfg_dict}")
             return cfg_dict
         else:
             self._logger.msg_error.emit(f"cfg file '{cfg_fp}' missing.")

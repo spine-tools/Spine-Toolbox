@@ -59,8 +59,6 @@ class EngineClient:
             secret_keys_dir = os.path.join(base_dir, 'private_keys')
             keys_dir = os.path.join(base_dir, 'certificates')
             public_keys_dir = os.path.join(base_dir, 'public_keys')
-            print(f"secret_keys_dir:{secret_keys_dir} exists:{os.path.exists(secret_keys_dir)} as abs:{os.path.abspath(secret_keys_dir)}")
-            print(f"public_keys_dir:{public_keys_dir} exists:{os.path.exists(public_keys_dir)} as abs:{os.path.abspath(public_keys_dir)}")
             # We need two certificates, one for the client and one for
             # the server. The client must know the server's public key
             # to make a CURVE connection.
