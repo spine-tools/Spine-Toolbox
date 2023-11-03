@@ -334,10 +334,10 @@ class ActionsWithProject(QObject):
             self._logger.msg_error.emit("Pinging the server or uploading the project failed.")
             return Status.ERROR
         settings = make_settings_dict_for_engine(self._app_settings)
-        # Enable remote exeution if server config file was given, else force local execution
+        # Enable remote execution if server config file was given, else force local execution
         if self._server_config is not None:
             settings["engineSettings/remoteExecutionEnabled"] = "true"
-            settings = self._override_engine_settings(settings)
+            settings = self._insert_remote_engine_settings(settings)
         else:
             settings["engineSettings/remoteExecutionEnabled"] = "false"
         selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
@@ -369,7 +369,7 @@ class ActionsWithProject(QObject):
                 "execution_permits": execution_permits,
                 "items_module_name": "spine_items",
                 "settings": settings,
-                "project_dir": str(self._project_dir).replace(os.sep, "/"),
+                "project_dir": solve_project_dir(self._project_dir),
             }
             exec_remotely = True if self._server_config else False
             engine_manager = make_engine_manager(exec_remotely, job_id=job_id)
@@ -510,13 +510,23 @@ class ActionsWithProject(QObject):
             with open(cfg_fp, encoding="utf-8") as fp:
                 lines = fp.readlines()
             lines = [l.strip() for l in lines]
-            cfg_dict = {"host":lines[0], "port":lines[1], "security_model": lines[2], "security_folder": lines[3]}
+            host = lines[0]
+            port = lines[1]
+            smodel = lines[2]
+            rel_sec_folder = lines[3]
+            sec_model = "stonehouse" if smodel.lower() == "on" else ""
+            if sec_model == "stonehouse":
+                sec_folder = os.path.abspath(os.path.join(solve_project_dir(self._project_dir), rel_sec_folder))
+            else:
+                sec_folder = ""
+            cfg_dict = {"host": host, "port": port, "security_model": sec_model, "security_folder": sec_folder}
+            print(f"cfg_dict:{cfg_dict}")
             return cfg_dict
         else:
             self._logger.msg_error.emit(f"cfg file '{cfg_fp}' missing.")
             return None
 
-    def _override_engine_settings(self, settings):
+    def _insert_remote_engine_settings(self, settings):
         """Inserts remote engine client settings into the settings dictionary that is delivered to the engine.
 
         Args:
@@ -527,9 +537,8 @@ class ActionsWithProject(QObject):
         """
         settings["engineSettings/remoteHost"] = self._server_config["host"]
         settings["engineSettings/remotePort"] = self._server_config["port"]
-        sec_model = "stonehouse" if self._server_config["security_model"].lower() == "on" else ""
-        settings["engineSettings/remoteSecurityModel"] = sec_model
-        settings["engineSettings/remoteSecurityFolder"] = "" if not sec_model else self._server_config["security_folder"]
+        settings["engineSettings/remoteSecurityModel"] = self._server_config["security_model"]
+        settings["engineSettings/remoteSecurityFolder"] = self._server_config["security_folder"]
         return settings
 
     def _prepare_remote_execution(self):
@@ -545,7 +554,7 @@ class ActionsWithProject(QObject):
         if not self._server_config:
             return "1"
         host, port = self._server_config["host"], self._server_config["port"]
-        security_on = True if self._server_config["security_model"].lower() == "on" else False
+        security_on = False if self._server_config["security_model"].lower() == "" else True
         sec_model = ClientSecurityModel.STONEHOUSE if security_on else ClientSecurityModel.NONE
         try:
             engine_client = EngineClient(host, port, sec_model, self._server_config["security_folder"])
@@ -644,6 +653,17 @@ def _specification_dicts(project_dict, project_dir, logger):
             specification_dicts.setdefault(item_type, list()).append(specification_dict)
     return specification_dicts
 
+
+def solve_project_dir(pd):
+    """Makes given path object OS independent.
+
+    Args:
+        pd (Path): Path Object
+
+    Returns:
+        str: OS independent path as string.
+    """
+    return str(pd).replace(os.sep, "/")
 
 @unique
 class Status(IntEnum):
