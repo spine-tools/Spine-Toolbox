@@ -15,6 +15,8 @@ from unittest.mock import patch
 
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
+
+from spinedb_api import Map
 from tests.mock_helpers import fetch_model
 from tests.spine_db_editor.widgets.helpers import TestBase
 
@@ -38,6 +40,28 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
                 ("class1", "object2", "parameter1", 3.0),
                 ("class1", "object1", "parameter2", 5.0),
                 ("class1", "object2", "parameter2", 7.0),
+            ),
+        }
+        self._db_mngr.import_data({self._db_map: data})
+
+    def _add_entity_class_data_with_indexes_values(self):
+        data = {
+            "entity_classes": (("class1",),),
+            "parameter_definitions": (("class1", "parameter1"),),
+            "entities": (("class1", "object1"), ("class1", "object2")),
+            "parameter_values": (
+                (
+                    "class1",
+                    "object1",
+                    "parameter1",
+                    Map(["k1", "k2"], [Map(["q1", "q2"], [11.0, 111.0]), Map(["q1", "q2"], [22.0, 222.0])]),
+                ),
+                (
+                    "class1",
+                    "object2",
+                    "parameter1",
+                    Map(["k1", "k2"], [Map(["q1", "q2"], [-11.0, -111.0]), Map(["q1", "q2"], [-22.0, -222.0])]),
+                ),
             ),
         }
         self._db_mngr.import_data({self._db_map: data})
@@ -66,6 +90,16 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
             pivot_model.endResetModel()
             QApplication.processEvents()
             self.assertEqual(get_item_exceptions, [])
+
+    def _change_pivot_input_type(self, input_type):
+        for action in self._db_editor.pivot_action_group.actions():
+            if action.text() == input_type:
+                with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+                    mock_is_visible.return_value = True
+                    action.trigger()
+                break
+        else:
+            raise RuntimeError(f"Unknown input type '{input_type}'.")
 
     def test_drag_and_drop_database_from_frozen_table(self):
         self._add_entity_class_data()
@@ -127,6 +161,30 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
         self._assert_model_data_equals(pivot_model, expected)
         self._db_mngr.purge_items({self._db_map: ["entity_class"]})
         self.assertEqual(pivot_model.rowCount(), 0)
+
+    def test_purging_entity_classes_in_index_mode_does_not_crash_pivot_filter_menu(self):
+        self._add_entity_class_data_with_indexes_values()
+        self._start()
+        self._change_pivot_input_type(self._db_editor._INDEX_EXPANSION)
+        for filter_menu in self._db_editor.filter_menus.values():
+            filter_menu._filter._filter_model.canFetchMore(None)
+            filter_menu._filter._filter_model.fetchMore(None)
+        while self._db_editor.pivot_table_model.rowCount() != 7:
+            QApplication.processEvents()
+        expected = [
+            [None, "parameter", "parameter1", None],
+            ["class1", "index", None, None],
+            ["object1", "k1", "Map", None],
+            ["object1", "k2", "Map", None],
+            ["object2", "k1", "Map", None],
+            ["object2", "k2", "Map", None],
+            [None, None, None, None],
+        ]
+        self._assert_model_data_equals(self._db_editor.pivot_table_model, expected)
+        self._db_mngr.purge_items({self._db_map: ["entity_class"]})
+        self.assertEqual(self._db_editor.pivot_table_model.rowCount(), 0)
+        for filter_menu in self._db_editor.filter_menus.values():
+            self.assertEqual(filter_menu._menu_data, {})
 
     @staticmethod
     def _get_header_widget(table_view, name):

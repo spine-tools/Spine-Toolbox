@@ -16,6 +16,9 @@ Classes for custom context menus and pop-up menus.
 from PySide6.QtWidgets import QMenu, QWidget
 from PySide6.QtCore import Qt, QEvent, QPoint, Signal
 from PySide6.QtGui import QKeyEvent, QKeySequence
+
+from spinedb_api import IndexedValue
+from spinedb_api.db_mapping_base import PublicItem
 from ...widgets.custom_menus import FilterMenuBase
 from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, SimpleFilterCheckboxListModel
 from ...fetch_parent import FlexibleFetchParent
@@ -161,8 +164,8 @@ class TabularViewFilterMenuBase(FilterMenuBase):
         self.anchor = parent
         self._identifier = identifier
 
-    def event(self, event):
-        if event.type() == QEvent.Show and self.anchor is not None:
+    def showEvent(self, event):
+        if self.anchor is not None:
             if self.anchor.area == "rows":
                 pos = self.anchor.mapToGlobal(QPoint(0, 0)) + QPoint(0, self.anchor.height())
             elif self.anchor.area == "columns":
@@ -170,7 +173,7 @@ class TabularViewFilterMenuBase(FilterMenuBase):
             else:
                 raise RuntimeError(f"Unknown anchor area '{self.anchor.area}'")
             self.move(pos)
-        return super().event(event)
+        super().showEvent(event)
 
 
 class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
@@ -212,16 +215,23 @@ class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
 
     def _get_values(self, db_map, item):
         if self._item_type == "parameter_value":
-            for index in self._db_mngr.get_value_indexes(db_map, "parameter_value", item["id"]):
-                yield str(index), (None, index)
+            if isinstance(item, PublicItem):
+                for index in self._db_mngr.get_value_indexes(db_map, "parameter_value", item["id"]):
+                    yield str(index), (None, index)
+            else:
+                if isinstance(item.parsed_value, IndexedValue):
+                    for index in item.parsed_value.indexes:
+                        yield str(index), (None, index)
+                else:
+                    yield ""
         else:
             yield item["name"], (db_map, item["id"])
 
     def _handle_items_removed(self, db_map_data):
         for db_map, items in db_map_data.items():
             for item in items:
-                display_value = item["name"]
-                self._menu_data.get(display_value, set()).discard((db_map, item["id"]))
+                for display_value, value in self._get_values(db_map, item):
+                    self._menu_data.get(display_value, set()).discard(value)
         to_remove = {display_value for display_value, data in self._menu_data.items() if not data}
         for display_value in to_remove:
             del self._menu_data[display_value]

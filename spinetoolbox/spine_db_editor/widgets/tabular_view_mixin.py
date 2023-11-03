@@ -159,7 +159,6 @@ class TabularViewMixin:
         """Initializes models."""
         super().init_models()
         self.current_class_id.clear()
-        self.current_class_type = None
         self.current_class_name = None
         self.clear_pivot_table()
 
