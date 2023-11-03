@@ -8,9 +8,12 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""Unit tests for Pivot and Frozen tables."""
+"""Unit tests for ``tabular_view_mixin`` module."""
+import itertools
 import unittest
 from unittest.mock import patch
+
+from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from tests.mock_helpers import fetch_model
 from tests.spine_db_editor.widgets.helpers import TestBase
@@ -58,26 +61,107 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
             with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
                 mock_is_visible.return_value = True
                 self._db_editor.do_reload_pivot_table()
-            self._model = self._db_editor.pivot_table_model
-            self._model.beginResetModel()
-            self._model.endResetModel()
+            pivot_model = self._db_editor.pivot_table_model
+            pivot_model.beginResetModel()
+            pivot_model.endResetModel()
             QApplication.processEvents()
             self.assertEqual(get_item_exceptions, [])
 
     def test_drag_and_drop_database_from_frozen_table(self):
         self._add_entity_class_data()
         self._start()
+        original_frozen_columns = tuple(self._db_editor.pivot_table_model.model.pivot_frozen)
+        frozen_table_header_widget = self._get_header_widget(self._db_editor.ui.frozen_table, "database")
+        self._drag_and_drop_header(frozen_table_header_widget, frozen_table_header_widget)
+        self.assertEqual(self._db_editor.pivot_table_model.model.pivot_frozen, original_frozen_columns)
+
+    def test_purging_data_in_value_mode(self):
+        self._add_entity_class_data()
+        self._start()
+        pivot_model = self._db_editor.pivot_table_model
+        self.assertEqual(pivot_model.rowCount(), 5)
+        self._db_mngr.purge_items({self._db_map: ["alternative", "entity_class"]})
+        self.assertEqual(pivot_model.rowCount(), 0)
+        self.assertEqual(self._db_editor.frozen_table_model.rowCount(), 1)
+
+    def test_purging_data_in_value_mode_when_entity_class_is_frozen(self):
+        self._add_entity_class_data()
+        self._start()
+        database_header_widget = self._get_header_widget(self._db_editor.ui.frozen_table, "database")
+        class_header_widget = self._get_header_widget(self._db_editor.ui.pivot_table, "class1")
+        self._drag_and_drop_header(database_header_widget, class_header_widget)
+        self._select_frozen_row(1)
+        expected = [["alternative"], ["Base"]]
+        self._assert_model_data_equals(self._db_editor.frozen_table_model, expected)
+        expected = [
+            [None, "parameter", "parameter1", "parameter2", None],
+            ["database", "class1", None, None, None],
+            ["TestPivotHeaderDraggingAndDropping_db", "object1", "1.0", "5.0", None],
+            ["TestPivotHeaderDraggingAndDropping_db", "object2", "3.0", "7.0", None],
+            ["TestPivotHeaderDraggingAndDropping_db", None, None, None, None],
+        ]
+        self._assert_model_data_equals(self._db_editor.pivot_table_model, expected)
+        frozen_model = self._db_editor.frozen_table_model
+        QApplication.processEvents()
         for frozen_column in range(self._db_editor.frozen_table_model.columnCount()):
             frozen_index = self._db_editor.frozen_table_model.index(0, frozen_column)
-            if frozen_index.data() == "database":
+            if frozen_index.data() == "alternative":
                 break
         else:
-            raise RuntimeError("No 'database' column found in frozen table")
-        original_frozen_columns = tuple(self._db_editor.pivot_table_model.model.pivot_frozen)
-        frozen_table_header_widget = self._db_editor.ui.frozen_table.indexWidget(frozen_index)
-        self._db_editor.handle_header_dropped(frozen_table_header_widget, frozen_table_header_widget)
+            raise RuntimeError("No 'alternative' column found in frozen table")
+        alternative_header_widget = self._db_editor.ui.frozen_table.indexWidget(frozen_index)
+        self._db_editor.handle_header_dropped(class_header_widget, alternative_header_widget)
         QApplication.processEvents()
-        self.assertEqual(self._db_editor.pivot_table_model.model.pivot_frozen, original_frozen_columns)
+        expected = [["class1", "alternative"], ["object1", "Base"], ["object2", "Base"]]
+        self._assert_model_data_equals(frozen_model, expected)
+        self._select_frozen_row(1)
+        pivot_model = self._db_editor.pivot_table_model
+        while pivot_model.rowCount() != 4:
+            QApplication.processEvents()
+        expected = [
+            ["parameter", "parameter1", "parameter2", None],
+            ["database", None, None, None],
+            ["TestPivotHeaderDraggingAndDropping_db", "1.0", "5.0", None],
+            ["TestPivotHeaderDraggingAndDropping_db", None, None, None],
+        ]
+        self._assert_model_data_equals(pivot_model, expected)
+        self._db_mngr.purge_items({self._db_map: ["entity_class"]})
+        self.assertEqual(pivot_model.rowCount(), 0)
+
+    @staticmethod
+    def _get_header_widget(table_view, name):
+        model = table_view.model()
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
+            source_index = model.index(row, column)
+            if source_index.data() == name:
+                break
+        else:
+            raise RuntimeError(f"No '{name}' column found in {type(model).__name__}.")
+        return table_view.indexWidget(source_index)
+
+    def _drag_and_drop_header(self, source_header_widget, target_header_widget):
+        self._db_editor.handle_header_dropped(source_header_widget, target_header_widget)
+        QApplication.processEvents()
+
+    def _select_frozen_row(self, row):
+        model = self._db_editor.frozen_table_model
+        self.assertGreater(row, 0)
+        self.assertLess(row, model.rowCount())
+        selected = model.index(row, 0)
+        self._db_editor.ui.frozen_table.selectionModel().setCurrentIndex(
+            selected, QItemSelectionModel.SelectionFlags.ClearAndSelect
+        )
+        QApplication.processEvents()
+        self.assertEqual(model._selected_row, row)
+
+    def _assert_model_data_equals(self, model, expected):
+        row_count = model.rowCount()
+        column_count = model.columnCount()
+        self.assertEqual(row_count, len(expected))
+        self.assertEqual(column_count, len(expected[0]))
+        for row, column in itertools.product(range(row_count), range(column_count)):
+            with self.subTest(row=row, column=column):
+                self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
 if __name__ == '__main__':
