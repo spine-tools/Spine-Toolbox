@@ -9,7 +9,9 @@
         "input_file.txt"
     ],
     "inputfiles_opt": [],
-    "outputfiles": [],
+    "outputfiles": [
+        "output_file.txt"
+    ],
     "cmdline_args": [],
     "includes_main_path": "../../.."
 }
