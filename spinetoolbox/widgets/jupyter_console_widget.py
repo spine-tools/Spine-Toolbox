@@ -291,6 +291,10 @@ class JupyterConsoleWidget(RichJupyterWidget):
             text = text[:-1]
         QApplication.clipboard().setText(text)
 
+    def _show_interpreter_prompt(self, number=None):
+        if self.kernel_client is not None:
+            super()._show_interpreter_prompt(number)
+
     def closeEvent(self, e):
         """Catches close event to shut down the kernel client
         and sends a signal to Toolbox to request Spine Engine
