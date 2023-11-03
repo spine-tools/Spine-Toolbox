@@ -10,7 +10,6 @@ from spine_items.tool.utils import find_last_output_files
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
 
 
-
 class RunHelloWorldOnServer(unittest.TestCase):
     _root_path = Path(__file__).parent
     _tool_output_path = _root_path / ".spinetoolbox" / "items" / "simple_tool" / "output"

@@ -1,12 +1,10 @@
 import os
 import sys
 from pathlib import Path
-import shutil
 import subprocess
 import unittest
 import zmq
 from spinetoolbox.config import PROJECT_ZIP_FILENAME
-from spine_items.tool.utils import find_last_output_files
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
 from spinedb_api import create_new_spine_database, DatabaseMapping
 
@@ -47,7 +45,6 @@ class RunSimpleImporterOnServer(unittest.TestCase):
         self._db_url = "sqlite:///" + str(self._db_path)
         create_new_spine_database(self._db_url)
 
-
     def test_execution(self):
         # Check that DS1.sqlite is empty
         with DatabaseMapping(self._db_url) as db_map:
@@ -79,6 +76,7 @@ class RunSimpleImporterOnServer(unittest.TestCase):
                     self.assertEqual("Factory3", entity["name"])
                 else:
                     self.fail()
+
 
 if __name__ == '__main__':
     unittest.main()

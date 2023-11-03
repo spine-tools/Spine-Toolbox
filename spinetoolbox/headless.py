@@ -676,6 +676,7 @@ def solve_project_dir(pd):
     """
     return str(pd).replace(os.sep, "/")
 
+
 @unique
 class Status(IntEnum):
     """Status codes returned from headless execution."""
