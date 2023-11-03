@@ -1,24 +1,29 @@
+import os
 import sys
 from pathlib import Path
 import shutil
 import subprocess
 import unittest
 import zmq
+from spinetoolbox.config import PROJECT_ZIP_FILENAME
 from spine_items.tool.utils import find_last_output_files
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
+
 
 
 class RunHelloWorldOnServer(unittest.TestCase):
     _root_path = Path(__file__).parent
     _tool_output_path = _root_path / ".spinetoolbox" / "items" / "simple_tool" / "output"
     _output_fname = "output_file.txt"
+    _output_fpath = _root_path / _output_fname
+    _zip_fname = PROJECT_ZIP_FILENAME + ".zip"
+    _zip_fpath = _root_path.parent / _zip_fname
+    _server_secfolder_path = _root_path / "server_secfolder"
 
     def setUp(self):
-        if self._tool_output_path.exists():
-            shutil.rmtree(self._tool_output_path)
         test_name = self.id().split(".")[-1]
         if test_name == "test_execution_with_stonehouse_security":
-            self.service = EngineServer("tcp", 50002, ServerSecurityModel.STONEHOUSE, "./server_secfolder")
+            self.service = EngineServer("tcp", 50002, ServerSecurityModel.STONEHOUSE, str(self._server_secfolder_path))
         else:
             self.service = EngineServer("tcp", 50002, ServerSecurityModel.NONE, "")
         self.context = zmq.Context()
@@ -38,6 +43,12 @@ class RunHelloWorldOnServer(unittest.TestCase):
             self.pull_socket.close()
         if not self.context.closed:
             self.context.term()
+        if self._zip_fpath.exists():
+            os.remove(self._zip_fpath)
+        if self._output_fpath.exists():
+            os.remove(self._output_fpath)
+        if self._tool_output_path.exists():
+            shutil.rmtree(self._tool_output_path)
 
     def test_execution(self):
         completed = subprocess.run(
