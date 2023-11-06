@@ -1284,6 +1284,7 @@ class SpineDBManager(QObject):
 
         Args:
             db_map_item_types (dict): mapping from database map to list of purgable item types
+            **kwargs: keyword arguments passed to ``remove_items()``
         """
         db_map_typed_data = {
             db_map: {item_type: {Asterisk} for item_type in item_types}

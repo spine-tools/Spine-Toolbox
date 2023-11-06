@@ -13,6 +13,7 @@
 Contains FrozenTableModel class.
 """
 from itertools import product
+from typing import Iterable
 
 from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel, Signal
 from .colors import SELECTED_COLOR
@@ -48,6 +49,7 @@ class FrozenTableModel(QAbstractTableModel):
             return
         self.beginResetModel()
         self._data = [headers]
+        self._selected_row = None
         self.endResetModel()
 
     def clear_model(self):
@@ -95,6 +97,8 @@ class FrozenTableModel(QAbstractTableModel):
             self.endRemoveRows()
         if self._selected_row in removed_i:
             self._selected_row = min(self._selected_row, len(self._data) - 1)
+            if self._selected_row == 0:
+                self._selected_row = None
             self.selected_row_changed.emit()
         else:
             selected_row = self._find_first(frozen_value)

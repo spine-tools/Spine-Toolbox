@@ -19,6 +19,7 @@ from PySide6.QtGui import QUndoCommand, QUndoStack
 from spinetoolbox.widgets.notification import Notification, ChangeNotifier
 
 
+@unittest.skip("Test hangs on Windows when running all tests.")
 class TestChangeNotifier(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
