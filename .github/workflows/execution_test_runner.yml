@@ -1,0 +1,44 @@
+# GitHub Action to run execution tests
+name: Execution Test suite
+
+# Run workflow when unittest workflow has completed
+on:
+  workflow_run:
+    workflows: [Test suite]
+    types:
+      - completed
+    branches: [0.8-dev, support_remote_execution_in_headless_mode]
+
+jobs:
+  execution-tests:
+    name: Execution tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.8, 3.9, "3.10", 3.11]
+        os: [windows-latest, ubuntu-22.04]
+    needs: unit-tests
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install additional packages for Linux
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y libegl1
+    - name: Install dependencies
+      env:
+        PYTHONUTF8: 1
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: List packages
+      run:
+        pip list
+    - name: Run tests
+      run:
+        python -m unittest discover --pattern execution_test.py --verbose
