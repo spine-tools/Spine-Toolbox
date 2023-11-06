@@ -18,7 +18,6 @@ jobs:
       matrix:
         python-version: [3.8, 3.9, "3.10", 3.11]
         os: [windows-latest, ubuntu-22.04]
-    needs: unit-tests
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
