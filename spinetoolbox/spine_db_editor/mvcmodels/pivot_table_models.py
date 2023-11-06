@@ -128,6 +128,10 @@ class TopLeftEntityHeaderItem(TopLeftHeaderItem):
     def name(self):
         return self._name
 
+    @property
+    def class_id(self):
+        return self._class_id
+
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         """See base class."""
         return self._get_header_data_from_db("entity", header_id, "name", role)
@@ -941,6 +945,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
+        self._entity_class_fetch_parent = FlexibleFetchParent(
+            "entity_class",
+            handle_items_added=self._handle_entity_classes_added,
+            handle_items_removed=self._handle_entity_classes_removed,
+            handle_items_updated=lambda _: self._parent.refresh_views(),
+            accepts_item=self._parent.accepts_entity_class_item,
+            owner=self,
+        )
         self._entity_fetch_parent = FlexibleFetchParent(
             "entity",
             handle_items_added=self._handle_entities_added,
@@ -973,6 +985,17 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             handle_items_updated=lambda _: self._parent.refresh_views(),
             owner=self,
         )
+
+    def _handle_entity_classes_added(self, db_map_data):
+        pass
+
+    def _handle_entity_classes_removed(self, db_map_data):
+        for header_item in self.model.top_left_headers.values():
+            if isinstance(header_item, TopLeftEntityHeaderItem):
+                for db_map, class_id in header_item.class_id.items():
+                    if any(class_item["id"] == class_id for class_item in db_map_data[db_map]):
+                        self.clear_model()
+                        return
 
     def _handle_entities_added(self, db_map_data):
         data = self._load_empty_parameter_value_data(db_map_entities=db_map_data)
@@ -1029,6 +1052,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         yield self._alternative_fetch_parent
         yield self._parameter_definition_fetch_parent
         yield self._entity_fetch_parent
+        yield self._entity_class_fetch_parent
 
     def _db_map_element_ids(self, header_ids):
         entity_indexes = [
@@ -1269,10 +1293,10 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
 
     def call_reset_model(self, pivot=None):
         """See base class."""
-        object_class_ids = self._parent.current_dimension_ids
+        entity_class_ids = self._parent.current_dimension_ids
         data = {}
         top_left_headers = [
-            TopLeftEntityHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+            TopLeftEntityHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(entity_class_ids.items())
         ]
         self._index_top_left_header = TopLeftParameterIndexHeaderItem(self)
         top_left_headers += [
@@ -1401,10 +1425,10 @@ class ElementPivotTableModel(PivotTableModelBase):
 
     def call_reset_model(self, pivot=None):
         """See base class."""
-        object_class_ids = self._parent.current_dimension_ids
+        entity_class_ids = self._parent.current_dimension_ids
         data = {}
         top_left_headers = [
-            TopLeftEntityHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(object_class_ids.items())
+            TopLeftEntityHeaderItem(self, k, name, id_) for k, (name, id_) in enumerate(entity_class_ids.items())
         ]
         top_left_headers += [TopLeftDatabaseHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}

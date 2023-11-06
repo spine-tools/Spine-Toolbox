@@ -159,7 +159,6 @@ class TabularViewMixin:
         """Initializes models."""
         super().init_models()
         self.current_class_id.clear()
-        self.current_class_type = None
         self.current_class_name = None
         self.clear_pivot_table()
 
@@ -172,6 +171,8 @@ class TabularViewMixin:
         current_dimension_id_list = [{} for _ in self.current_dimension_name_list]
         for db_map, class_id in self.current_class_id.items():
             entity_class = self.db_mngr.get_item(db_map, "entity_class", class_id)
+            if not entity_class:
+                continue
             if not entity_class["dimension_id_list"]:
                 current_dimension_id_list[0][db_map] = class_id
                 continue
@@ -187,6 +188,8 @@ class TabularViewMixin:
     @property
     def current_dimension_name_list(self):
         entity_class = self.first_current_entity_class
+        if not entity_class:
+            return []
         if not entity_class["dimension_id_list"]:
             return [entity_class["name"]]
         return fix_name_ambiguity(entity_class["dimension_name_list"])
@@ -413,16 +416,22 @@ class TabularViewMixin:
             }
         if db_map_alternative_ids is None:
             db_map_alternative_ids = {
-                db_map: [(db_map, a["id"]) for a in self.db_mngr.get_items(db_map, "alternative")]
+                db_map: [
+                    (db_map, id_) for a in self.db_mngr.get_items(db_map, "alternative") if (id_ := a["id"]) is not None
+                ]
                 for db_map in self.db_maps
             }
         db_map_entity_ids = {
-            db_map: [tuple((db_map, id_) for id_ in e["element_id_list"] or (e["id"],)) for e in entities]
+            db_map: [
+                id_tuple
+                for e in entities
+                if (id_tuple := tuple((db_map, id_) for id_ in e["element_id_list"] or (e["id"],)))
+            ]
             for db_map, entities in db_map_entities.items()
         }
-        if not any(db_map_entity_ids.values()):
+        if not any(db_map_entity_ids.values()) and (current_dimension_id_list := self.current_dimension_id_list):
             db_map_entity_ids = {
-                db_map: [tuple((db_map, None) for _ in self.current_dimension_id_list)] for db_map in self.db_maps
+                db_map: [tuple((db_map, None) for _ in current_dimension_id_list)] for db_map in self.db_maps
             }
         if not any(db_map_parameter_ids.values()):
             db_map_parameter_ids = {db_map: [(db_map, None)] for db_map in self.db_maps}
@@ -833,6 +842,9 @@ class TabularViewMixin:
         """Reacts to session rolled back event."""
         super().receive_session_rolled_back(db_maps)
         self.clear_pivot_table()
+
+    def accepts_entity_class_item(self, item, db_map):
+        return item["id"] == self.current_class_id.get(db_map)
 
     def accepts_entity_item(self, item, db_map):
         return item["class_id"] == self.current_class_id.get(db_map)

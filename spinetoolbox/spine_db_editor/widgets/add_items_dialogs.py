@@ -149,7 +149,7 @@ class AddItemsDialog(ManageItemsDialog):
         super().__init__(parent, db_mngr)
         self.db_maps = db_maps
         self.keyed_db_maps = {x.codename: x for x in db_maps}
-        self.remove_rows_button = QToolButton()
+        self.remove_rows_button = QToolButton(self)
         self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.remove_rows_button.setText("Remove selected rows")
 
@@ -558,7 +558,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         layout = self.header_widget.layout()
         self.db_combo_box = QComboBox(self)
         layout.addSpacing(32)
-        layout.addWidget(QLabel("Database"))
+        layout.addWidget(QLabel("Database", self))
         layout.addWidget(self.db_combo_box)
         self.splitter = QSplitter(self)
         self.add_button = QToolButton(self)
@@ -567,8 +567,8 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         self.add_button.setIconSize(QSize(24, 24))
         self.add_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.add_button.setText(">>")
-        self._label_available = QLabel("Available elements")
-        self._label_existing = QLabel("Existing entities")
+        self._label_available = QLabel("Available elements", self)
+        self._label_existing = QLabel("Existing entities", self)
         self.hidable_widgets = [
             self.add_button,
             self._label_available,
