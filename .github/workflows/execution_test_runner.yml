@@ -7,7 +7,6 @@ on:
     workflows: [Test suite]
     types:
       - completed
-    branches: [master, 0.8-dev, support_remote_execution_in_headless_mode]
 
 jobs:
   execution-tests:
