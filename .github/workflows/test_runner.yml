@@ -45,7 +45,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: List packages
-      run: 
+      run:
         pip list
     - name: Install python3 kernelspecs
       run: |
@@ -60,7 +60,6 @@ jobs:
       shell: bash
     - name: Upload coverage report to Codecov
       uses: codecov/codecov-action@v3
-
   execution-tests:
     name: Execution tests
     runs-on: ${{ matrix.os }}
@@ -69,7 +68,7 @@ jobs:
       matrix:
         python-version: [3.8, 3.9, "3.10", 3.11]
         os: [windows-latest, ubuntu-22.04]
-    needs: unit-tests
+#    needs: unit-tests
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}

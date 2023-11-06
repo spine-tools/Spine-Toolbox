@@ -12,6 +12,7 @@
 """
 Contains facilities to open and execute projects without GUI.
 """
+import os
 from copy import deepcopy
 from enum import IntEnum, unique
 import json
@@ -19,13 +20,15 @@ import pathlib
 import sys
 from PySide6.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 import networkx as nx
-
 from spine_engine import SpineEngineState
 from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import deserialize_path
+from spine_engine.utils.helpers import get_file_size
+from spine_engine.server.util.zip_handler import ZipHandler
+from .server.engine_client import EngineClient, RemoteEngineInitFailed, ClientSecurityModel
 from .project_item.logging_connection import HeadlessConnection
-from .config import LATEST_PROJECT_VERSION
+from .config import LATEST_PROJECT_VERSION, PROJECT_ZIP_FILENAME
 from .helpers import (
     make_settings_dict_for_engine,
     plugins_dirs,
@@ -193,6 +196,7 @@ class ActionsWithProject(QObject):
         self._plugin_specifications = None
         self._connection_dicts = None
         self._jump_dicts = None
+        self._server_config = None
 
     def _dags(self):
         graph = nx.DiGraph()
@@ -210,6 +214,12 @@ class ActionsWithProject(QObject):
             return
         try:
             status = self._open_project()
+            if self._args.execute_remotely:
+                self._server_config = self._read_server_config()
+                if not self._server_config:
+                    self._logger.msg_error.emit("Reading server config file failed.")
+                    QCoreApplication.instance().exit(Status.ARGUMENT_ERROR)
+                    return
             if status != Status.OK:
                 QCoreApplication.instance().exit(status)
                 return
@@ -319,9 +329,16 @@ class ActionsWithProject(QObject):
                 spec_dict["definition_file_path"] = spec.definition_file_path
                 self._specification_dicts.setdefault(item_type, []).append(spec_dict)
         dags = self._dags()
+        job_id = self._prepare_remote_execution()
+        if not job_id:
+            self._logger.msg_error.emit("Pinging the server or uploading the project failed.")
+            return Status.ERROR
         settings = make_settings_dict_for_engine(self._app_settings)
-        # Force local execution in headless mode
-        if not settings.get("engineSettings/remoteExecutionEnabled", "false") == "false":
+        # Enable remote execution if server config file was given, else force local execution
+        if self._server_config is not None:
+            settings["engineSettings/remoteExecutionEnabled"] = "true"
+            settings = self._insert_remote_engine_settings(settings)
+        else:
             settings["engineSettings/remoteExecutionEnabled"] = "false"
         selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
         deselected = {name for name_list in self._args.deselect for name in name_list} if self._args.deselect else None
@@ -352,11 +369,10 @@ class ActionsWithProject(QObject):
                 "execution_permits": execution_permits,
                 "items_module_name": "spine_items",
                 "settings": settings,
-                "project_dir": self._project_dir,
+                "project_dir": solve_project_dir(self._project_dir),
             }
-            # exec_remotely is forced to False (see above)
-            exec_remotely = settings.get("engineSettings/remoteExecutionEnabled", "false") == "true"
-            engine_manager = make_engine_manager(exec_remotely)
+            exec_remotely = True if self._server_config else False
+            engine_manager = make_engine_manager(exec_remotely, job_id=job_id)
             try:
                 engine_manager.run_engine(engine_data)
             except EngineInitFailed as error:
@@ -390,6 +406,7 @@ class ActionsWithProject(QObject):
             "standard_execution_msg": self._handle_standard_execution_msg,
             "persistent_execution_msg": self._handle_persistent_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
+            "server_status_msg": self._handle_server_status_msg,
         }.get(event_type)
         if handler is None:
             return
@@ -482,6 +499,103 @@ class ActionsWithProject(QObject):
             data (dict): message data
         """
 
+    def _handle_server_status_msg(self, data):
+        """Handles received remote execution messages."""
+        if data["msg_type"] == "success":
+            self._logger.msg_success.emit(data["text"])
+        elif data["msg_type"] == "neutral":
+            self._logger.msg.emit(data["text"])
+        elif data["msg_type"] == "fail":
+            self._logger.msg_error.emit(data["text"])
+        elif data["msg_type"] == "warning":
+            self._logger.msg_warning.emit(data["text"])
+
+    def _read_server_config(self):
+        """Reads the user provided server settings file that the client requires to establish connection.
+
+        Returns:
+            dict: Dictionary containing the EngineClient settings or None if the given config file does not exist.
+        """
+        cfg_file = self._args.execute_remotely[0]
+        cfg_fp = os.path.join(self._project_dir, cfg_file)
+        if os.path.isfile(cfg_fp):
+            with open(cfg_fp, encoding="utf-8") as fp:
+                lines = fp.readlines()
+            lines = [l.strip() for l in lines]
+            host = lines[0]
+            port = lines[1]
+            smodel = lines[2]
+            rel_sec_folder = lines[3]
+            sec_model = "stonehouse" if smodel.lower() == "on" else ""
+            if sec_model == "stonehouse":
+                sec_folder = os.path.abspath(os.path.join(solve_project_dir(self._project_dir), rel_sec_folder))
+            else:
+                sec_folder = ""
+            cfg_dict = {"host": host, "port": port, "security_model": sec_model, "security_folder": sec_folder}
+            return cfg_dict
+        else:
+            self._logger.msg_error.emit(f"cfg file '{cfg_fp}' missing.")
+            return None
+
+    def _insert_remote_engine_settings(self, settings):
+        """Inserts remote engine client settings into the settings dictionary that is delivered to the engine.
+
+        Args:
+            settings (dict): Original settings dictionary
+
+        Returns:
+            dict: Settings dictionary containing remote engine client settings
+        """
+        settings["engineSettings/remoteHost"] = self._server_config["host"]
+        settings["engineSettings/remotePort"] = self._server_config["port"]
+        settings["engineSettings/remoteSecurityModel"] = self._server_config["security_model"]
+        settings["engineSettings/remoteSecurityFolder"] = self._server_config["security_folder"]
+        return settings
+
+    def _prepare_remote_execution(self):
+        """If remote execution is enabled, makes an EngineClient for pinging and uploading the project.
+        If ping is successful, the project is uploaded to the server. If the upload is successful, the
+        server responds with a Job id, which is later used by the client to make a 'start execution'
+        request.
+
+        Returns:
+            str: Job id if server is ready for remote execution, empty string if something went wrong
+                or "1" if local execution is enabled.
+        """
+        if not self._server_config:
+            return "1"
+        host, port = self._server_config["host"], self._server_config["port"]
+        security_on = False if self._server_config["security_model"].lower() == "" else True
+        sec_model = ClientSecurityModel.STONEHOUSE if security_on else ClientSecurityModel.NONE
+        try:
+            engine_client = EngineClient(host, port, sec_model, self._server_config["security_folder"])
+        except RemoteEngineInitFailed as e:
+            self._logger.msg_error.emit(f"Server is not responding in {host}:{port}. {e}.")
+            return ""
+        engine_client.set_start_time()  # Set start_time for upload operation
+        # Archive the project into a zip-file
+        dest_dir = os.path.join(self._project_dir, os.pardir)  # Parent dir of project_dir
+        _, project_name = os.path.split(self._project_dir)
+        self._logger.msg.emit(f"Squeezing project <b>{project_name}</b> into {PROJECT_ZIP_FILENAME}.zip")
+        try:
+            ZipHandler.package(src_folder=self._project_dir, dst_folder=dest_dir, fname=PROJECT_ZIP_FILENAME)
+        except Exception as e:
+            self._logger.msg_error.emit(f"{e}")
+            engine_client.close()
+            return ""
+        project_zip_file = os.path.abspath(os.path.join(self._project_dir, os.pardir, PROJECT_ZIP_FILENAME + ".zip"))
+        if not os.path.isfile(project_zip_file):
+            self._logger.msg_error.emit(f"Project zip-file {project_zip_file} does not exist")
+            engine_client.close()
+            return ""
+        file_size = get_file_size(os.path.getsize(project_zip_file))
+        self._logger.msg_warning.emit(f"Uploading project [{file_size}] ...")
+        job_id = engine_client.upload_project(project_name, project_zip_file)
+        t = engine_client.get_elapsed_time()
+        self._logger.msg.emit(f"Upload time: {t}. Job ID: <b>{job_id}</b>")
+        engine_client.close()
+        return job_id
+
 
 def headless_main(args):
     """
@@ -549,6 +663,18 @@ def _specification_dicts(project_dict, project_dir, logger):
             specification_dict["definition_file_path"] = path
             specification_dicts.setdefault(item_type, list()).append(specification_dict)
     return specification_dicts
+
+
+def solve_project_dir(pd):
+    """Makes given path object OS independent.
+
+    Args:
+        pd (Path): Path Object
+
+    Returns:
+        str: OS independent path as string.
+    """
+    return str(pd).replace(os.sep, "/")
 
 
 @unique

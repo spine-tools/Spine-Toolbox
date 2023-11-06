@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Changed
 - Julia execution settings are now Tool specification settings instead of global application settings. You can 
   select a different Julia executable & project or Julia kernel for each Tool spec.
+- Headless mode now supports remote execution (see 'python -m spinetoolbox --help')
 
 ### Deprecated
 
