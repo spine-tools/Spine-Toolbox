@@ -706,6 +706,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
                 db_map, id_ = source_model._header_id(index)
                 db_map_typed_data.setdefault(db_map, {}).setdefault("scenario", set()).add(id_)
             self._db_editor.db_mngr.remove_items(db_map_typed_data)
+            self._db_editor.do_reload_pivot_table()
 
         def duplicate_scenario(self):
             """Duplicates current scenario in the database."""
