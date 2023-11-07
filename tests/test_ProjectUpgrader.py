@@ -21,7 +21,7 @@ import sys
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 from spinetoolbox.project_settings import ProjectSettings
 from spinetoolbox.project_upgrader import ProjectUpgrader
 from spinetoolbox.resources_icons_rc import qInitResources
@@ -139,11 +139,15 @@ class TestProjectUpgrader(unittest.TestCase):
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
                 'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 2
-            ):
+            ), mock.patch(
+                "spinetoolbox.project_upgrader.QMessageBox.question"
+            ) as mock_mb:
                 # Upgrade to version 2
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 proj_v2 = pu.upgrade(proj_v1, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
                 self.assertTrue(pu.is_valid(2, proj_v2))
                 # Check that items were transferred successfully by checking that item names are found in new
                 # 'items' dict and that they contain a dict
@@ -166,7 +170,10 @@ class TestProjectUpgrader(unittest.TestCase):
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
                 'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 3
-            ):
+            ), mock.patch(
+                "spinetoolbox.project_upgrader.QMessageBox.question"
+            ) as mock_mb:
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
@@ -176,6 +183,7 @@ class TestProjectUpgrader(unittest.TestCase):
                 proj_v3 = pu.upgrade(proj_v2, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
                 self.assertTrue(pu.is_valid(3, proj_v3))
                 # Check that items were transferred successfully by checking that item names are found in new
                 # 'items' dict and that they contain a dict
@@ -196,7 +204,10 @@ class TestProjectUpgrader(unittest.TestCase):
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
                 'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 4
-            ):
+            ), mock.patch(
+                "spinetoolbox.project_upgrader.QMessageBox.question"
+            ) as mock_mb:
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
@@ -206,6 +217,7 @@ class TestProjectUpgrader(unittest.TestCase):
                 proj_v4 = pu.upgrade(proj_v3, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
                 self.assertTrue(pu.is_valid(4, proj_v4))
                 # Check that items were transferred successfully by checking that item names are found in new
                 # 'items' dict and that they contain a dict
@@ -226,7 +238,10 @@ class TestProjectUpgrader(unittest.TestCase):
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
                 'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 5
-            ):
+            ), mock.patch(
+                "spinetoolbox.project_upgrader.QMessageBox.question"
+            ) as mock_mb:
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
@@ -236,6 +251,7 @@ class TestProjectUpgrader(unittest.TestCase):
                 proj_v5 = pu.upgrade(proj_v4, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
                 self.assertTrue(pu.is_valid(5, proj_v5))
                 # Check that items were transferred successfully by checking that item names are found in new
                 # 'items' dict and that they contain a dict. Combiners should be gone in v5
@@ -265,7 +281,10 @@ class TestProjectUpgrader(unittest.TestCase):
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
                 'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 10
-            ):
+            ), mock.patch(
+                "spinetoolbox.project_upgrader.QMessageBox.question"
+            ) as mock_mb:
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
@@ -275,6 +294,7 @@ class TestProjectUpgrader(unittest.TestCase):
                 proj_v10 = pu.upgrade(proj_v9, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
                 self.assertTrue(pu.is_valid(10, proj_v10))
                 v10_items = proj_v10["items"]
                 # Make a list of Gimlet and GdxExporter names in v9
@@ -305,11 +325,15 @@ class TestProjectUpgrader(unittest.TestCase):
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
                 'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 11
-            ):
+            ), mock.patch(
+                "spinetoolbox.project_upgrader.QMessageBox.question"
+            ) as mock_mb:
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 proj_v11 = pu.upgrade(proj_v10, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
                 self.assertTrue(pu.is_valid(11, proj_v11))
                 self.assertEqual(proj_v11["project"]["version"], 11)
                 self.assertIn("settings", proj_v11["project"])
@@ -329,11 +353,15 @@ class TestProjectUpgrader(unittest.TestCase):
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
                 'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 12
-            ):
+            ), mock.patch(
+                "spinetoolbox.project_upgrader.QMessageBox.question"
+            ) as mock_mb:
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 proj_v12 = pu.upgrade(proj_v11, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
                 self.assertTrue(pu.is_valid(12, proj_v12))
                 self.assertEqual(proj_v12["project"]["version"], 12)
                 self.assertIn("settings", proj_v12["project"])
@@ -345,7 +373,12 @@ class TestProjectUpgrader(unittest.TestCase):
         with TemporaryDirectory() as project_dir:
             with mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save:
+            ) as mock_backup, mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
+            ) as mock_force_save, mock.patch(
+                "spinetoolbox.project_upgrader.QMessageBox.question"
+            ) as mock_mb:
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")
@@ -355,6 +388,7 @@ class TestProjectUpgrader(unittest.TestCase):
                 proj_latest = pu.upgrade(proj_v1, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
                 self.assertTrue(pu.is_valid(LATEST_PROJECT_VERSION, proj_latest))
                 self.assertEqual(proj_latest["project"]["version"], LATEST_PROJECT_VERSION)
                 # Check that items were transferred successfully by checking that item names are found in new

@@ -57,6 +57,8 @@ class ProjectUpgrader:
             )
             return False
         if v < LATEST_PROJECT_VERSION:
+            if not self.confirm_upgrade(project_dir):
+                return False
             # Back up project.json file before upgrading
             if not self.backup_project_file(project_dir, v):
                 self._toolbox.msg_error.emit(f"Upgrading project <b>{project_dir}</b> failed")
@@ -68,6 +70,18 @@ class ProjectUpgrader:
                 return False
             return upgraded_dict
         return project_dict
+
+    def confirm_upgrade(self, project_dir):
+        """Asks user whether to upgrade the project to a new version."""
+        button = QMessageBox.question(
+            self._toolbox,
+            "Upgrade project?",
+            f"Project <b>{project_dir}</b> needs an upgrade to work "
+            f"with this version of Spine Toolbox. <br><br>Upgrade project?",
+        )
+        if button == QMessageBox.StandardButton.Yes:
+            return True
+        return False
 
     def upgrade_to_latest(self, v, project_dict, project_dir):
         """Upgrades the given project dictionary to the latest version.
