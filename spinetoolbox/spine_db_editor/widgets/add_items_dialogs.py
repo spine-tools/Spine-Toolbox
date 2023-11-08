@@ -672,7 +672,11 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             header_item = QTreeWidgetItem([name])
             header_item.setTextAlignment(0, Qt.AlignHCenter)
             tree_widget.setHeaderItem(header_item)
-            elements = self.db_mngr.get_items_by_field(self.db_map, "entity", "class_name", name)
+            elements = [
+                x
+                for k in ("class_name", "superclass_name")
+                for x in self.db_mngr.get_items_by_field(self.db_map, "entity", k, name)
+            ]
             items = [QTreeWidgetItem([el["name"]]) for el in elements]
             tree_widget.addTopLevelItems(items)
             tree_widget.resizeColumnToContents(0)
