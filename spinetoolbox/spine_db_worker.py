@@ -148,7 +148,7 @@ class SpineDBWorker(QObject):
             return
         self._parents_fetching[item_type] = {parent}
         callback = lambda future: self._handle_query_advanced(item_type, future.result())
-        self._executor.submit(self._busy_db_map_fetch_more, item_type, id(parent)).add_done_callback(callback)
+        self._executor.submit(self._busy_db_map_fetch_more, item_type).add_done_callback(callback)
 
     @Slot(object)
     def _fetch_more_later(self, parents):
@@ -156,12 +156,12 @@ class SpineDBWorker(QObject):
             QTimer.singleShot(0, lambda parent=parent: self._do_fetch_more(parent))
 
     @busy_effect
-    def _busy_db_map_fetch_more(self, item_type, ticket):
+    def _busy_db_map_fetch_more(self, item_type):
         offset = self._offsets.setdefault(item_type, 0)
-        chunk = self._db_map.fetch_more(item_type, limit=_CHUNK_SIZE, offset=offset, ticket=ticket)
-        self._offsets[item_type] += len(chunk)
+        chunk = self._db_map.fetch_more(item_type, limit=_CHUNK_SIZE, offset=offset)
         if len(chunk) < _CHUNK_SIZE:
             self._fetched_item_types.add(item_type)
+        self._offsets[item_type] += len(chunk)
         return chunk
 
     def _handle_query_advanced(self, item_type, chunk):
@@ -183,6 +183,7 @@ class SpineDBWorker(QObject):
         self._db_map.fetch_all()
 
     def close_db_map(self):
+        # FIXME: maybe check if self._db_map.closed is True in self._do_fetch_more instead?
         self._do_fetch_more = lambda worker, *args, **kwargs: None
         for parents in self._parents_by_type.values():
             for parent in parents:
