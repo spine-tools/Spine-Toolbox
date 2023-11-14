@@ -41,7 +41,7 @@ class TestParameterValueFormatting(unittest.TestCase):
             if item_type != "parameter_value":
                 return {}
             try:
-                parsed_value = from_database(value, value_type=type_)
+                parsed_value = from_database(value, type_=type_)
             except ParameterValueFormatError as error:
                 parsed_value = error
             return {"parsed_value": parsed_value, "value": value, "type": type_, "list_value_id": None}
