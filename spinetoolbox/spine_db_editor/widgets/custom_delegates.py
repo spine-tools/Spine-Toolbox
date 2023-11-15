@@ -474,9 +474,15 @@ class AlternativeNameDelegate(TableDelegate):
 
 
 class BooleanValueDelegate(TableDelegate):
+    TRUE = "true"
+    FALSE = "false"
+
     def setModelData(self, editor, model, index):
-        """Send signal."""
-        value = {"True": True, "False": False}[editor.data()]
+        """Sends signal."""
+        try:
+            value = {self.TRUE: True, self.FALSE: False}[editor.data()]
+        except KeyError:
+            return
         self.data_committed.emit(index, value)
 
     def createEditor(self, parent, option, index):
@@ -485,7 +491,7 @@ class BooleanValueDelegate(TableDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        editor.set_data(str(index.data(Qt.ItemDataRole.EditRole)), ["True", "False"])
+        editor.set_data(str(index.data(Qt.ItemDataRole.EditRole)), [self.TRUE, self.FALSE])
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
