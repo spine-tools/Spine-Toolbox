@@ -1299,6 +1299,16 @@ class SignalWaiter(QObject):
 
 @contextmanager
 def signal_waiter(signal, condition=None, timeout=None):
+    """Gives a context manager that waits for the emission of given Qt signal.
+
+    Args:
+        signal (Any): signal to wait
+        condition (Callable, optional): a callable that takes the signal's parameters and returns True to stop waiting
+        timeout (float, optional): timeout in seconds; if None, wait indefinitely
+
+    Yields:
+        SignalWaiter: waiter instance
+    """
     waiter = SignalWaiter(condition=condition, timeout=timeout)
     signal.connect(waiter.trigger)
     try:
