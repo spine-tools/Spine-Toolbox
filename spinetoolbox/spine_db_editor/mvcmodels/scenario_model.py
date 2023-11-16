@@ -9,7 +9,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """Contains scenario tree model."""
-import json
+import pickle
 
 from PySide6.QtCore import QMimeData, Qt, QByteArray
 from spinetoolbox.helpers import unique_name
@@ -61,7 +61,7 @@ class ScenarioModel(TreeModelBase):
                 db_item = item.parent_item
                 db_key = self.db_mngr.db_map_key(db_item.db_map)
                 scenario_data.setdefault(db_key, []).append(item.id)
-            mime.setData(mime_types.SCENARIO_DATA, QByteArray(json.dumps(scenario_data)))
+            mime.setData(mime_types.SCENARIO_DATA, QByteArray(pickle.dumps(scenario_data)))
             mime.setText(two_column_as_csv(scenario_indexes))
             return mime
         alternative_indexes = []
@@ -79,7 +79,7 @@ class ScenarioModel(TreeModelBase):
                 db_item = item.parent_item.parent_item
                 db_key = self.db_mngr.db_map_key(db_item.db_map)
                 alternative_data.setdefault(db_key, []).append(item.alternative_id)
-            mime.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(alternative_data)))
+            mime.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(alternative_data)))
             mime.setText(two_column_as_csv(alternative_indexes))
             return mime
         return None
@@ -90,8 +90,8 @@ class ScenarioModel(TreeModelBase):
         if not mime_data.hasFormat(mime_types.ALTERNATIVE_DATA):
             return False
         try:
-            payload = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
-        except json.JSONDecodeError:
+            payload = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
+        except pickle.UnpicklingError:
             return False
         if not isinstance(payload, dict):
             return False
@@ -123,15 +123,7 @@ class ScenarioModel(TreeModelBase):
             # on a wrong tree item (bug in Qt or canDropMimeData()?).
             # In those cases the type of scen_item is StandardTreeItem or ScenarioRootItem.
             return False
-        old_alternative_id_list = list(scenario_item.alternative_id_list)
-        if row == -1:
-            row = len(old_alternative_id_list)
-        _db_map_key, alternative_ids = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data()).popitem()
-        alternative_id_list = [id_ for id_ in old_alternative_id_list[:row] if id_ not in alternative_ids]
-        alternative_id_list += alternative_ids
-        alternative_id_list += [id_ for id_ in old_alternative_id_list[row:] if id_ not in alternative_ids]
-        db_item = {"id": scenario_item.id, "alternative_id_list": alternative_id_list}
-        self.db_mngr.set_scenario_alternatives({scenario_item.db_map: [db_item]})
+        self.paste_alternative_mime_data(mime_data, row, scenario_item)
         return True
 
     def paste_alternative_mime_data(self, mime_data, row, scenario_item):
@@ -145,16 +137,18 @@ class ScenarioModel(TreeModelBase):
         old_alternative_id_list = list(scenario_item.alternative_id_list)
         if row == -1:
             row = len(old_alternative_id_list)
-        data_to_add = {}
-        for db_map_key, alternative_ids in json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data()).items():
+        new_alternative_ids = []
+        for db_map_key, alternative_names in pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data()).items():
             target_db_map = self.db_mngr.db_map_from_key(db_map_key)
             if target_db_map != scenario_item.db_map:
                 continue
-            alternative_id_list = [id_ for id_ in old_alternative_id_list[:row] if id_ not in alternative_ids]
-            alternative_id_list += alternative_ids
-            alternative_id_list += [id_ for id_ in old_alternative_id_list[row:] if id_ not in alternative_ids]
-            data_to_add[target_db_map] = [{"id": scenario_item.id, "alternative_id_list": alternative_id_list}]
-        self.db_mngr.set_scenario_alternatives(data_to_add)
+            for name in alternative_names:
+                new_alternative_ids.append(scenario_item.db_map.get_alternative_item(name=name)["id"])
+        alternative_id_list = [id_ for id_ in old_alternative_id_list[:row] if id_ not in new_alternative_ids]
+        alternative_id_list += new_alternative_ids
+        alternative_id_list += [id_ for id_ in old_alternative_id_list[row:] if id_ not in new_alternative_ids]
+        db_item = {"id": scenario_item.id, "alternative_id_list": alternative_id_list}
+        self.db_mngr.set_scenario_alternatives({scenario_item.db_map: [db_item]})
 
     def paste_scenario_mime_data(self, mime_data, db_item):
         """Adds scenarios and their alternatives from MIME data to the model.
@@ -168,15 +162,15 @@ class ScenarioModel(TreeModelBase):
         alternative_names_by_scenario = {}
         existing_scenarios = {i["name"] for i in self.db_mngr.get_items(db_item.db_map, "scenario")}
         existing_alternatives = {i["name"] for i in self.db_mngr.get_items(db_item.db_map, "alternative")}
-        for db_map_key, scenario_ids in json.loads(mime_data.data(mime_types.SCENARIO_DATA).data()).items():
+        for db_map_key, scenario_names in pickle.loads(mime_data.data(mime_types.SCENARIO_DATA).data()).items():
             db_map = self.db_mngr.db_map_from_key(db_map_key)
             if db_map is db_item.db_map:
                 continue
-            for id_ in scenario_ids:
-                scenario_data = self.db_mngr.get_item(db_map, "scenario", id_)
+            for name in scenario_names:
+                scenario_data = db_map.get_scenario_item(name=name)
                 if scenario_data["name"] in existing_scenarios:
                     continue
-                alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, id_)
+                alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scenario_data["id"])
                 for alternative_id in alternative_id_list:
                     alternative_db_item = self.db_mngr.get_item(db_map, "alternative", alternative_id)
                     alternative_names_by_scenario.setdefault(scenario_data["name"], []).append(

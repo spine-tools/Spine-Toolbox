@@ -9,7 +9,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """Contains alternative tree model."""
-import json
+import pickle
+from collections import defaultdict
 
 from PySide6.QtCore import QMimeData, QByteArray
 from .tree_model_base import TreeModelBase
@@ -38,17 +39,17 @@ class AlternativeModel(TreeModelBase):
         Returns:
             QMimeData: MIME data
         """
-        d = {}
+        d = defaultdict(list)
         # We have two columns and consequently usually twice the same item per row.
         # Make items unique without losing order using a dictionary trick.
         items = list(dict.fromkeys(self.item_from_index(ind) for ind in indexes))
         for item in items:
             db_item = item.parent_item
             db_key = self.db_mngr.db_map_key(db_item.db_map)
-            d.setdefault(db_key, []).append(item.id)
+            d[db_key].append(item.name)
         mime = QMimeData()
         mime.setText(two_column_as_csv(indexes))
-        mime.setData(mime_types.ALTERNATIVE_DATA, QByteArray(json.dumps(d)))
+        mime.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(d)))
         return mime
 
     def paste_alternative_mime_data(self, mime_data, database_item):
@@ -58,7 +59,7 @@ class AlternativeModel(TreeModelBase):
             mime_data (QMimeData): mime data
             database_item (alternative_item.DBItem): target database item
         """
-        alternative_data = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
+        alternative_data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
         names_to_descriptions = {}
         for db_key in alternative_data:
             db_map = self.db_mngr.db_map_from_key(db_key)
