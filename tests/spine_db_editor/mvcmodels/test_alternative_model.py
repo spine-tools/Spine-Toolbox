@@ -9,8 +9,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """Unit tests for :class:`AlternativeModel`."""
-import json
 from pathlib import Path
+import pickle
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
@@ -120,8 +120,8 @@ class TestAlternativeModel(unittest.TestCase):
         self.assertTrue(mime_data.hasText())
         self.assertEqual(mime_data.text(), "Base\tBase alternative\r\n")
         self.assertTrue(mime_data.hasFormat(mime_types.ALTERNATIVE_DATA))
-        alternative_data = json.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
-        self.assertEqual(alternative_data, {self._db_mngr.db_map_key(self._db_map): [1]})
+        alternative_data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
+        self.assertEqual(alternative_data, {self._db_mngr.db_map_key(self._db_map): ["Base"]})
 
 
 class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
