@@ -36,6 +36,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Slot, Qt, QSize, QModelIndex
 from PySide6.QtGui import QIcon
+
+from spinedb_api.helpers import name_from_elements
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
@@ -273,10 +275,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             else:
                 col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
                 obj_cls_names = [col_data(j) for j in range(self.number_of_dimensions) if col_data(j)]
-                if len(obj_cls_names) == 1:
-                    relationship_class_name = obj_cls_names[0] + "__"
-                else:
-                    relationship_class_name = "__".join(obj_cls_names)
+                relationship_class_name = name_from_dimensions(obj_cls_names)
                 self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
 
     @Slot()
@@ -401,7 +400,7 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
         for row in range(top, bottom + 1):
             if header.index('entity name') not in range(left, right + 1):
                 el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
-                entity_name = el_names[0] + "__" if len(el_names) == 1 else "__".join(el_names)
+                entity_name = name_from_elements(el_names)
                 self.model.setData(self.model.index(row, dimension_count), entity_name)
 
 

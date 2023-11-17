@@ -174,7 +174,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._import_data(entity_classes=(("oc",), ("rc", ("oc",))), entities=(("oc", "obj"), ("rc", None, ("obj",))))
         item = {
             'id': -2,
-            'name': 'obj',
+            'name': 'obj__',
             'class_id': -2,
             'element_id_list': (-1,),
             'description': None,

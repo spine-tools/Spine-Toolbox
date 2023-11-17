@@ -491,7 +491,9 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         self._db_mngr.add_scenarios({self._db_map1: [{"name": "my_scenario"}]})
         self._db_mngr.add_alternatives({self._db_map1: [{"name": "alternative_1"}]})
         scenario_id = self._db_map1.get_scenario_item(name="my_scenario")["id"]
-        self._db_mngr.set_scenario_alternatives({self._db_map1: [{"id": scenario_id, "alternative_name_list": ["alternative_1", "Base"]}]})
+        self._db_mngr.set_scenario_alternatives(
+            {self._db_map1: [{"id": scenario_id, "alternative_name_list": ["alternative_1", "Base"]}]}
+        )
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
         model.build_tree()
         self._fetch_recursively(model)
