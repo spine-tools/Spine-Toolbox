@@ -21,6 +21,7 @@ from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModel
 from PySide6.QtGui import QFont
 
 from spinedb_api import DatabaseMapping
+from spinedb_api.helpers import name_from_elements
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier
 from spinetoolbox.fetch_parent import FlexibleFetchParent
@@ -1461,11 +1462,8 @@ class ElementPivotTableModel(PivotTableModelBase):
 
     def _batch_set_entity_data(self, row_map, column_map, data, values):
         def entity_to_add(db_map, header_ids):
-            ent_cls_name = self.db_mngr.get_item(db_map, "entity_class", self._parent.current_class_id.get(db_map))[
-                "name"
-            ]
             element_names = [self.db_mngr.get_item(db_map, "entity", id_)["name"] for id_ in header_ids]
-            name = ent_cls_name + "_" + "__".join(element_names)
+            name = name_from_elements(element_names)
             return dict(element_id_list=list(header_ids), class_id=self._parent.current_class_id.get(db_map), name=name)
 
         to_add = {}
