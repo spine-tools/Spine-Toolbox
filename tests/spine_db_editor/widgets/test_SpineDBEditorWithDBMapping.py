@@ -8,17 +8,18 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Unit tests for SpineDBEditor classes.
-"""
+""" Unit tests for SpineDBEditor classes. """
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 import logging
 import sys
+
+from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
+
+from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestSpineDBManager
 
@@ -87,9 +88,34 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
         nemo_item = fish_item.child(0)
-        self.spine_db_editor.duplicate_entity(nemo_item)
+        with mock.patch.object(self.db_mngr, "error_msg") as error_msg_signal:
+            self.spine_db_editor.duplicate_entity(nemo_item)
+            error_msg_signal.emit.assert_not_called()
+        self.assertEqual(fish_item.row_count(), 2)
         nemo_dupe = fish_item.child(1)
         self.assertEqual(nemo_dupe.display_data, "nemo (1)")
+        fish_dog_item = next(iter(item for item in root_item.children if item.display_data == "fish__dog"))
+        fish_dog_item.fetch_more()
+        self.assertEqual(fish_dog_item.row_count(), 2)
+        nemo_pluto_dupe = fish_dog_item.child(1)
+        self.assertEqual(nemo_pluto_dupe.display_data, "nemo (1)__pluto[nemo (1) ǀ pluto]")
+        root_index = self.spine_db_editor.entity_tree_model.index_from_item(root_item)
+        self.spine_db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
+            root_index, QItemSelectionModel.SelectionFlags.ClearAndSelect
+        )
+        while self.spine_db_editor.parameter_value_model.rowCount() != 3:
+            QApplication.processEvents()
+        expected = [
+            ["fish", "nemo", "color", "Base", "orange", "db"],
+            ["fish", "nemo (1)", "color", "Base", "orange", "db"],
+            [None, None, None, None, None, "db"],
+        ]
+        for row in range(3):
+            for column in range(self.spine_db_editor.parameter_value_model.columnCount()):
+                with self.subTest(row=row, column=column):
+                    self.assertEqual(
+                        self.spine_db_editor.parameter_value_model.index(row, column).data(), expected[row][column]
+                    )
 
 
 if __name__ == '__main__':

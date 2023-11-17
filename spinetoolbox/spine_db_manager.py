@@ -41,6 +41,7 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     to_database,
 )
+from spinedb_api.helpers import name_from_elements
 from spinedb_api.parameter_value import load_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
@@ -1461,24 +1462,48 @@ class SpineDBManager(QObject):
         }
         self.import_data({db_map: data}, command_text="Duplicate scenario")
 
-    def duplicate_entity(self, entity_data, orig_name, dup_name, db_maps):
-        def _replace_name(ent_name):
-            if ent_name == orig_name:
-                return dup_name
-            return tuple(name if name != orig_name else dup_name for name in ent_name)
+    def duplicate_entity(self, orig_name, dup_name, class_name, db_maps):
+        """Duplicates entity, its parameter values and related multidimensional entities.
 
-        data = self._get_data_for_export(entity_data)
-        data = {
-            "entities": [
-                (cls_name, _replace_name(ent_name), el_name_list, description)
-                for (cls_name, ent_name, el_name_list, description) in data.get("entities", [])
-            ],
-            "parameter_values": [
-                (cls_name, _replace_name(ent_name), param_name, val, alt)
-                for (cls_name, ent_name, param_name, val, alt) in data.get("parameter_values", [])
-            ],
-        }
-        self.import_data({db_map: data for db_map in db_maps}, command_text="Duplicate entity")
+        Args:
+            orig_name (str): original entity's name
+            dup_name (str): duplicate's name
+            class_name (str): entity class name
+            db_maps (Iterable of DatabaseMapping): database mappings where duplication should take place
+        """
+        dup_import_data = {}
+        for db_map in db_maps:
+            entity = db_map.get_entity_item(class_name=class_name, name=orig_name)
+            element_name_list = entity["element_name_list"]
+            if element_name_list:
+                first_import_entry = (class_name, dup_name, element_name_list, entity["description"])
+            else:
+                first_import_entry = (class_name, dup_name, entity["description"])
+            dup_entity_import_data = [first_import_entry]
+            for item in db_map.get_entity_items():
+                element_name_list = item["element_name_list"]
+                item_class_name = item["class_name"]
+                if orig_name in element_name_list and item_class_name != class_name:
+                    index = item["dimension_name_list"].index(class_name)
+                    name_list = element_name_list
+                    dup_name_list = name_list[:index] + (dup_name,) + name_list[index + 1 :]
+                    dup_entity_import_data.append(
+                        (item_class_name, name_from_elements(dup_name_list), dup_name_list, item["description"])
+                    )
+            dup_import_data[db_map] = {"entities": dup_entity_import_data}
+            dup_value_import_data = []
+            for item in db_map.get_parameter_value_items(entity_class_name=class_name, entity_name=orig_name):
+                dup_value_import_data.append(
+                    (
+                        class_name,
+                        dup_name,
+                        item["parameter_definition_name"],
+                        item["parsed_value"],
+                        item["alternative_name"],
+                    )
+                )
+            dup_import_data[db_map].update(parameter_values=dup_value_import_data)
+        self.import_data(dup_import_data, command_text="Duplicate entity")
 
     def _get_data_for_export(self, db_map_item_ids):
         data = {}

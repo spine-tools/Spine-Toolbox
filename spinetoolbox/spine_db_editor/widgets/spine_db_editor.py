@@ -597,12 +597,10 @@ class SpineDBEditorBase(QMainWindow):
             entity_item (EntityTreeItem of EntityItem)
         """
         orig_name = entity_item.name
+        class_name = entity_item.parent_item.name
         existing_names = {ent.name for ent in entity_item.parent_item.children}
         dup_name = unique_name(orig_name, existing_names)
-        parcel = SpineDBParcel(self.db_mngr)
-        db_map_ent_ids = {db_map: {entity_item.db_map_id(db_map)} for db_map in entity_item.db_maps}
-        parcel.inner_push_entity_ids(db_map_ent_ids)
-        self.db_mngr.duplicate_entity(parcel.data, orig_name, dup_name, entity_item.db_maps)
+        self.db_mngr.duplicate_entity(orig_name, dup_name, class_name, entity_item.db_maps)
 
     def duplicate_scenario(self, db_map, scen_id):
         """
