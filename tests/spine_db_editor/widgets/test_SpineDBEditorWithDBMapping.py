@@ -19,7 +19,6 @@ import sys
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 
-from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestSpineDBManager
 
