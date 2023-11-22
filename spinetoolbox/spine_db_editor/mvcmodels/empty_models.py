@@ -111,10 +111,11 @@ class EmptyModelBase(EmptyRowModel):
     def _autocomplete_row(self, db_map, item):
         """Fills in entity_class_name whenever other selections make it obvious."""
         candidates = self._entity_class_name_candidates(db_map, item)
+        row = item.pop("row", None)
         if len(candidates) == 1:
             entity_class_name = candidates[0]
             item["entity_class_name"] = entity_class_name
-            self._main_data[item["row"]][self.header.index("entity_class_name")] = entity_class_name
+            self._main_data[row][self.header.index("entity_class_name")] = entity_class_name
 
     def _entity_class_name_candidates(self, db_map, item):
         raise NotImplementedError()
