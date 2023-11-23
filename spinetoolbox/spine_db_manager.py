@@ -822,7 +822,7 @@ class SpineDBManager(QObject):
     @staticmethod
     def _parse_value(db_value, type_=None):
         try:
-            return from_database(db_value, type_=value_type)
+            return from_database(db_value, type_=type_)
         except ParameterValueFormatError as error:
             return error
 
