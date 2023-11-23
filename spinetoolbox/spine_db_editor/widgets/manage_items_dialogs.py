@@ -20,7 +20,7 @@ from PySide6.QtGui import QAction
 from ..mvcmodels.entity_tree_item import EntityClassItem
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
-from ...helpers import busy_effect, preferred_row_height
+from ...helpers import busy_effect, preferred_row_height, DB_ITEM_SEPARATOR
 
 
 class DialogWithButtons(QDialog):
@@ -221,7 +221,8 @@ class GetEntitiesMixin:
         for db_map in self.db_maps:
             ent_lookup = db_map_ent_lookup.setdefault(db_map, {})
             for x in self.db_mngr.get_items(db_map, "entity"):
-                ent_lookup[x["class_id"], x["name"]] = ent_lookup[x["superclass_id"], x["name"]] = x
+                byname = DB_ITEM_SEPARATOR.join(x["byname"])
+                ent_lookup[x["class_id"], byname] = ent_lookup[x["superclass_id"], byname] = x
         return db_map_ent_lookup
 
     @cached_property

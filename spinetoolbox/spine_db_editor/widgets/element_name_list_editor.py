@@ -54,42 +54,44 @@ class SearchBarDelegate(QItemDelegate):
 class ElementNameListEditor(ManageItemsDialog):
     """A dialog to select the element name list for an entity using Google-like search bars."""
 
-    def __init__(self, parent, index, entity_class_names, entity_name_lists, current_element_name_list):
+    def __init__(self, parent, index, entity_class_names, entity_byname_lists, current_element_byname_list):
         """Initializes widget.
 
         Args:
             parent (SpineDBEditor)
             index (QModelIndex)
             entity_class_names (list): string entity_class names
-            entity_name_lists (list): lists of string entity names
-            current_element_name_list (list)
+            entity_byname_lists (list): lists of string entity names
+            current_element_byname_list (list)
         """
         super().__init__(parent, None)
         self.setWindowTitle("Select elements")
         self._index = index
         self.model = QStandardItemModel(self)
-        self.init_model(entity_class_names, entity_name_lists, current_element_name_list)
+        self.init_model(entity_class_names, entity_byname_lists, current_element_byname_list)
         self.table_view.setModel(self.model)
         self.table_view.verticalHeader().hide()
         delegate = SearchBarDelegate(self)
         self.table_view.setItemDelegate(delegate)
         self.connect_signals()
 
-    def init_model(self, entity_class_names, entity_name_lists, current_element_name_list):
+    def init_model(self, entity_class_names, entity_byname_lists, current_element_byname_list):
         self.model.setHorizontalHeaderLabels(entity_class_names)
         item_list = []
-        for k, entity_name_list in enumerate(entity_name_lists):
+        for k, entity_byname_list in enumerate(entity_byname_lists):
             try:
-                el_name = current_element_name_list[k]
+                el_byname = DB_ITEM_SEPARATOR.join(current_element_byname_list[k])
             except IndexError:
-                el_name = None
-            qitem = QStandardItem(el_name)
-            qitem.setData(entity_name_list, role=Qt.ItemDataRole.UserRole)
+                el_byname = None
+            qitem = QStandardItem(el_byname)
+            qitem.setData([DB_ITEM_SEPARATOR.join(bn) for bn in entity_byname_list], role=Qt.ItemDataRole.UserRole)
             item_list.append(qitem)
         self.model.invisibleRootItem().appendRow(item_list)
 
     @Slot()
     def accept(self):
+        x = DB_ITEM_SEPARATOR.join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
+        print(x)
         self._index.model().setData(
             self._index, DB_ITEM_SEPARATOR.join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
         )

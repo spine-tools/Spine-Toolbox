@@ -41,6 +41,7 @@ from spinedb_api.helpers import name_from_elements, name_from_dimensions
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
+from ...helpers import DB_ITEM_SEPARATOR
 from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate
 from .manage_items_dialogs import (
     ShowIconColorEditorMixin,
@@ -484,7 +485,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
-            element_name_list = [row_data[column] for column in range(name_column)]
+            element_byname_list = [row_data[column] for column in range(name_column)]
             entity_name = row_data[name_column]
             if not entity_name:
                 self.parent().msg_error.emit(f"Entity missing at row {i + 1}")
@@ -504,13 +505,13 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                 dimension_id_list = ent_cls["dimension_id_list"]
                 entities = self.db_map_ent_lookup[db_map]
                 element_id_list = []
-                for entity_class_id, element_name in zip(dimension_id_list, element_name_list):
-                    if (entity_class_id, element_name) not in entities:
+                for entity_class_id, element_byname in zip(dimension_id_list, element_byname_list):
+                    if (entity_class_id, element_byname) not in entities:
                         self.parent().msg_error.emit(
-                            f"Invalid element '{element_name}' for db '{db_name}' at row {i + 1}"
+                            f"Invalid element '{element_byname}' for db '{db_name}' at row {i + 1}"
                         )
                         return
-                    element_id = entities[entity_class_id, element_name]["id"]
+                    element_id = entities[entity_class_id, element_byname]["id"]
                     element_id_list.append(element_id)
                 item = pre_item.copy()
                 item.update({'element_id_list': element_id_list, 'class_id': class_id})
@@ -553,7 +554,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         self.remove_rows_button.setToolTip("<p>Remove selected entities.</p>")
         self.remove_rows_button.setIconSize(QSize(24, 24))
         self.db_map = db_maps[0]
-        self.entity_ids = dict()
+        self.entity_ids = {}
         layout = self.header_widget.layout()
         self.db_combo_box = QComboBox(self)
         layout.addSpacing(32)
@@ -655,9 +656,11 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             if ent_cls is None:
                 continue
             for entity in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", ent_cls["id"]):
-                key = entity["element_name_list"] + (entity["name"],)
+                key = tuple(DB_ITEM_SEPARATOR.join(byname) for byname in entity["element_byname_list"]) + (
+                    entity["name"],
+                )
                 self.entity_ids[key] = entity["id"]
-        existing_items = sorted(map(list, self.entity_ids))
+        existing_items = sorted(self.entity_ids)
         self.existing_items_model.reset_model(existing_items)
         self.model.refresh()
         self.model.modelReset.emit()
@@ -676,7 +679,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
                 for k in ("class_name", "superclass_name")
                 for x in self.db_mngr.get_items_by_field(self.db_map, "entity", k, name)
             ]
-            items = [QTreeWidgetItem([el["name"]]) for el in elements]
+            items = [QTreeWidgetItem([DB_ITEM_SEPARATOR.join(el["byname"])]) for el in elements]
             tree_widget.addTopLevelItems(items)
             tree_widget.resizeColumnToContents(0)
             self.splitter.addWidget(tree_widget)
@@ -706,16 +709,20 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         """Collect info from dialog and try to add items."""
         to_remove = set()
         to_update = []
-        new_name_by_element_name_list = {tuple(row[:-1]): row[-1] for row in self.existing_items_model._main_data}
+        new_name_by_element_byname_list = {tuple(row[:-1]): row[-1] for row in self.existing_items_model._main_data}
         for key, id_ in self.entity_ids.items():
-            element_name_list, old_name = key[:-1], key[-1]
-            new_name = new_name_by_element_name_list.get(element_name_list)
+            element_byname_list, old_name = key[:-1], key[-1]
+            new_name = new_name_by_element_byname_list.get(element_byname_list)
             if new_name is None:
                 to_remove.add(id_)
             elif old_name != new_name:
                 to_update.append({"id": id_, "name": new_name})
         to_add = [
-            {"class_name": self.class_name, "element_name_list": tuple(row[:-1]), "name": row[-1]}
+            {
+                "class_name": self.class_name,
+                "byname": tuple(x for byname in row[:-1] for x in byname.split(DB_ITEM_SEPARATOR)),
+                "name": row[-1],
+            }
             for row in self.new_items_model._main_data
         ]
         identifier = self.db_mngr.get_command_identifier()

@@ -206,6 +206,10 @@ class EntityItem(MultiDBTreeItem):
         return self.db_map_data_field(self.first_db_map, "element_name_list", default=())
 
     @property
+    def element_byname_list(self):
+        return self.db_map_data_field(self.first_db_map, "element_byname_list", default=())
+
+    @property
     def byname(self):
         return self.db_map_data_field(self.first_db_map, "byname", default=())
 
@@ -217,14 +221,16 @@ class EntityItem(MultiDBTreeItem):
 
     @property
     def display_data(self):
-        name = self.name
-        if self.element_name_list:
-            element_name_list = [
-                x if not isinstance(self.parent_item, EntityItem) or x != self.parent_item.name else "\u066D"
-                for x in self.element_name_list
+        element_byname_list = self.element_byname_list
+        if element_byname_list:
+            element_byname_list = [
+                x
+                if not isinstance(self.parent_item, EntityItem) or x != self.parent_item.byname
+                else ["\u066D"] * len(x)
+                for x in element_byname_list
             ]
-            name += "[" + DB_ITEM_SEPARATOR.join(element_name_list) + "]"
-        return name
+            return DB_ITEM_SEPARATOR.join([DB_ITEM_SEPARATOR.join(x) for x in element_byname_list])
+        return self.name
 
     @property
     def edit_data(self):
