@@ -114,7 +114,7 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def dimension_id_list(self):
-        # FIXME: where is this used?
+        # FIXME: is this used?
         return self.db_mngr.get_item(self.first_db_map, "entity_class", self.first_entity_class_id).get(
             "dimension_id_list", ()
         )
@@ -411,7 +411,10 @@ class EntityItem(QGraphicsRectItem):
         self.do_update_entity_pos()
 
     def do_update_entity_pos(self):
-        el_items = [arc_item.el_item for arc_item in self.arc_items if arc_item.el_item is not self]
+        el_items = sorted(
+            (arc_item.el_item for arc_item in self.arc_items if arc_item.el_item is not self),
+            key=lambda x: x.entity_id(x.first_db_map) or 0,
+        )
         dim_count = len(el_items)
         if not dim_count:
             return

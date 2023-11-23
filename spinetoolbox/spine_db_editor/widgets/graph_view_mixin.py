@@ -718,7 +718,7 @@ class GraphViewMixin:
         element_id_list = entity.get("element_id_list")
         if not element_id_list:
             return None
-        key = (db_map, element_id_list)
+        key = (db_map, tuple(sorted(element_id_list)))
         offsets = self._entity_offsets.setdefault(key, [])
         offset = _Offset(offsets)
         offsets.append(offset)
