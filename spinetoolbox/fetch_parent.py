@@ -90,15 +90,15 @@ class FetchParent(QObject):
     def _apply_pending_changes(self):
         if self.is_obsolete:
             return
-        for db_map in list(self._items_to_add):
-            data = self._items_to_add.pop(db_map)
-            self.handle_items_added({db_map: data})
-        for db_map in list(self._items_to_update):
-            data = self._items_to_update.pop(db_map)
-            self.handle_items_updated({db_map: data})
         for db_map in list(self._items_to_remove):
             data = self._items_to_remove.pop(db_map)
             self.handle_items_removed({db_map: data})
+        for db_map in list(self._items_to_update):
+            data = self._items_to_update.pop(db_map)
+            self.handle_items_updated({db_map: data})
+        for db_map in list(self._items_to_add):
+            data = self._items_to_add.pop(db_map)
+            self.handle_items_added({db_map: data})
         QTimer.singleShot(0, lambda: self.set_busy(False))
 
     def bind_item(self, item, db_map):
