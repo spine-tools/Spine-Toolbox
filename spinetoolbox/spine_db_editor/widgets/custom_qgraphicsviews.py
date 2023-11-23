@@ -19,11 +19,11 @@ import tempfile
 from contextlib import contextmanager
 import numpy as np
 from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF, QRunnable, QThreadPool
-from PySide6.QtWidgets import QMenu, QGraphicsView, QInputDialog, QColorDialog, QMessageBox, QLineEdit, QGraphicsScene
+from PySide6.QtWidgets import QMenu, QInputDialog, QColorDialog, QMessageBox, QLineEdit, QGraphicsScene
 from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
-from ...helpers import CharIconEngine
+from ...helpers import CharIconEngine, remove_first
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
 from ..graphics_items import EntityItem, CrossHairsArcItem, BgItem, ArcItem
@@ -805,7 +805,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def _cross_hairs_has_valid_target(self):
         db_map = self.entity_class["db_map"]
-        return self._hovered_ent_item.entity_class_id(db_map) in self.entity_class["dimension_ids_to_go"]
+        return any(
+            id_ in self.entity_class["dimension_ids_to_go"] for id_ in self._hovered_ent_item.entity_class_ids(db_map)
+        )
 
     def mousePressEvent(self, event):
         """Handles relationship creation if one it's in process."""
@@ -817,7 +819,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             return
         if self._cross_hairs_has_valid_target():
             db_map = self.entity_class["db_map"]
-            self.entity_class["dimension_ids_to_go"].remove(self._hovered_ent_item.entity_class_id(db_map))
+            remove_first(self.entity_class["dimension_ids_to_go"], self._hovered_ent_item.entity_class_ids(db_map))
             if self.entity_class["dimension_ids_to_go"]:
                 # Add hovered as member and keep going, we're not done yet
                 ch_ent_item = self.cross_hairs_items[1]

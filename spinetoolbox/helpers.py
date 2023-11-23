@@ -1615,3 +1615,12 @@ def solve_connection_file(connection_file, connection_file_dict):
         fp.close()
         return connection_file
     return connection_file
+
+
+def remove_first(lst, items):
+    for x in items:
+        try:
+            lst.remove(x)
+            break
+        except ValueError:
+            pass

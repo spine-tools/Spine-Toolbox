@@ -157,6 +157,12 @@ class EntityItem(QGraphicsRectItem):
     def entity_class_id(self, db_map):
         return self.db_mngr.get_item(db_map, "entity", self.entity_id(db_map)).get("class_id")
 
+    def entity_class_ids(self, db_map):
+        return {self.entity_class_id(db_map)} | {
+            x["superclass_id"]
+            for x in db_map.get_items("superclass_subclass", subclass_id=self.entity_class_id(db_map))
+        }
+
     def entity_id(self, db_map):
         return dict(self.db_map_ids).get(db_map)
 
@@ -592,7 +598,7 @@ class EntityItem(QGraphicsRectItem):
         for db_map, ents in self.db_mngr.find_cascading_entities(db_map_entity_ids).items():
             for ent in ents:
                 entity_ids_per_class.setdefault((db_map, ent["class_id"]), set()).add(ent["id"])
-        db_map_entity_class_ids = {db_map: {self.entity_class_id(db_map)} for db_map in self.db_maps}
+        db_map_entity_class_ids = {db_map: self.entity_class_ids(db_map) for db_map in self.db_maps}
         for db_map, ent_clss in self.db_mngr.find_cascading_entity_classes(db_map_entity_class_ids).items():
             for ent_cls in ent_clss:
                 ent_cls = ent_cls._extended()
@@ -630,7 +636,7 @@ class EntityItem(QGraphicsRectItem):
             if not isinstance(item, EntityItem):
                 continue
             for db_map in item.db_maps:
-                entity_class_ids_in_graph.setdefault(db_map, set()).add(item.entity_class_id(db_map))
+                entity_class_ids_in_graph.setdefault(db_map, set()).update(item.entity_class_ids(db_map))
         action_name_icon_enabled = []
         for name, db_map_ent_clss in self._db_map_entity_class_lists.items():
             for db_map, ent_cls in db_map_ent_clss:

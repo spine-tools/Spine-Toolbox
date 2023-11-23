@@ -20,7 +20,7 @@ from PySide6.QtCore import Slot, QTimer, QThreadPool
 from spinedb_api import from_database
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ...helpers import get_save_file_name_in_last_dir, get_open_file_name_in_last_dir, busy_effect
+from ...helpers import get_save_file_name_in_last_dir, get_open_file_name_in_last_dir, busy_effect, remove_first
 from ...fetch_parent import FlexibleFetchParent
 from ..graphics_items import EntityItem, ArcItem, CrossHairsItem, CrossHairsEntityItem, CrossHairsArcItem
 from .graph_layout_generator import GraphLayoutGenerator, GraphLayoutGeneratorRunnable
@@ -760,7 +760,7 @@ class GraphViewMixin:
             ent_item (..graphics_items.EntityItem)
         """
         dimension_ids_to_go = entity_class["dimension_id_list"].copy()
-        dimension_ids_to_go.remove(ent_item.entity_class_id(db_map))
+        remove_first(dimension_ids_to_go, ent_item.entity_class_ids(db_map))
         entity_class["dimension_ids_to_go"] = dimension_ids_to_go
         entity_class["db_map"] = db_map
         db_map_ids = ((db_map, None),)
@@ -784,12 +784,13 @@ class GraphViewMixin:
         """
         db_map = entity_class["db_map"]
         entities = set()
-        dimension_id_list = entity_class["dimension_id_list"]
         for item_permutation in itertools.permutations(entity_items):
-            if [item.entity_class_id(db_map) for item in item_permutation] == dimension_id_list:
+            dimension_id_lists = list(itertools.product(*[item.entity_class_ids(db_map) for item in item_permutation]))
+            if tuple(entity_class["dimension_id_list"]) in dimension_id_lists:
                 element_name_list = tuple(item.entity_name for item in item_permutation)
-                if not db_map.get_item("entity", class_name=entity_class["name"], byname=element_name_list):
-                    entities.add(element_name_list)
+                if not db_map.get_item("entity", class_name=entity_class["name"], element_name_list=element_name_list):
+                    element_byname_list = tuple(item.byname for item in item_permutation)
+                    entities.add(element_byname_list)
         if not entities:
             return
         dialog = AddReadyEntitiesDialog(self, entity_class, list(entities), self.db_mngr, db_map, commit_data=False)

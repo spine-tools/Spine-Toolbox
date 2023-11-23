@@ -95,8 +95,8 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
             item.setFlags(Qt.ItemIsEnabled)
             item.setCheckState(Qt.CheckState.Checked)
             self.table_view.setItem(row, 0, item)
-            for column, element_name in enumerate(entity):
-                item = QTableWidgetItem(element_name)
+            for column, element_byname in enumerate(entity):
+                item = QTableWidgetItem(DB_ITEM_SEPARATOR.join(element_byname))
                 item.setFlags(Qt.ItemIsEnabled)
                 self.table_view.setItem(row, column + 1, item)
         self.table_view.resizeColumnsToContents()
@@ -134,8 +134,9 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
         for row in range(self.table_view.rowCount()):
             if self.table_view.item(row, 0).checkState() != Qt.CheckState.Checked:
                 continue
-            element_name_list = tuple(self.entities[row])
-            data.append({"class_name": self.entity_class["name"], "element_name_list": element_name_list})
+            element_byname_list = tuple(self.entities[row])
+            byname = tuple(x for byname in element_byname_list for x in byname)
+            data.append({"class_name": self.entity_class["name"], "byname": byname})
         return {db_map: data for db_map in self.db_maps}
 
 
