@@ -47,7 +47,13 @@ from spinedb_api.parameter_value import join_value_and_type, split_value_and_typ
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
-from .spine_db_commands import AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
+from .spine_db_commands import (
+    AgedUndoStack,
+    AddItemsCommand,
+    UpdateItemsCommand,
+    AddUpdateItemsCommand,
+    RemoveItemsCommand,
+)
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .helpers import get_upgrade_db_promt_text, busy_effect
@@ -930,14 +936,13 @@ class SpineDBManager(QObject):
                 db_map_error_log.setdefault(db_map, []).append(msg)
                 continue
             identifier = self.get_command_identifier()
-            for item_type, (to_add, to_update, import_error_log) in data_for_import:
+            for item_type, items in data_for_import:
                 if item_type in ("object_class", "relationship_class", "object", "relationship"):
                     continue
-                db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
-                if to_update:
-                    self.update_items(item_type, {db_map: to_update}, check=False, identifier=identifier)
-                if to_add:
-                    self.add_items(item_type, {db_map: to_add}, check=False, identifier=identifier)
+                if isinstance(items, tuple):
+                    items, errors = items
+                    db_map_error_log.setdefault(db_map, []).extend(errors)
+                self.add_update_items(item_type, {db_map: list(items)}, identifier=identifier)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
@@ -1311,6 +1316,15 @@ class SpineDBManager(QObject):
                 UpdateItemsCommand(self, db_map, item_type, data, identifier=identifier, **kwargs)
             )
 
+    def add_update_items(self, item_type, db_map_data, identifier=None, **kwargs):
+        """Pushes commands to add_update items to undo stack."""
+        if identifier is None:
+            identifier = self.get_command_identifier()
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(
+                AddUpdateItemsCommand(self, db_map, item_type, data, identifier=identifier, **kwargs)
+            )
+
     def remove_items(self, db_map_typed_ids, identifier=None, **kwargs):
         """Pushes commands to remove items to undo stack."""
         if identifier is None:
@@ -1344,6 +1358,15 @@ class SpineDBManager(QObject):
             # We're closing the kiosk.
             return []
         return worker.update_items(item_type, data, check)
+
+    @busy_effect
+    def do_add_update_items(self, db_map, item_type, data, check=True):
+        try:
+            worker = self._get_worker(db_map)
+        except KeyError:
+            # We're closing the kiosk.
+            return []
+        return worker.add_update_items(item_type, data, check)
 
     @busy_effect
     def do_remove_items(self, db_map, item_type, ids, check=True):

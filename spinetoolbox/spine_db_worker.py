@@ -232,6 +232,24 @@ class SpineDBWorker(QObject):
         return items
 
     @busy_effect
+    def add_update_items(self, item_type, orig_items, check):
+        """Add-updates items in db.
+
+        Args:
+            item_type (str): item type
+            orig_items (list): dict-items to update
+            check (bool): Whether or not to check integrity
+        """
+        added, updated, errors = self._db_map.add_update_items(item_type, *orig_items, check=check)
+        if errors:
+            self._db_mngr.error_msg.emit({self._db_map: errors})
+        self._db_mngr.update_icons(self._db_map, item_type, added + updated)
+        self._wake_up_parents(item_type, added)
+        self._db_mngr.items_added.emit(item_type, {self._db_map: added})
+        self._db_mngr.items_updated.emit(item_type, {self._db_map: updated})
+        return added, updated
+
+    @busy_effect
     def remove_items(self, item_type, ids, check):
         """Removes items from database.
 

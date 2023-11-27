@@ -163,6 +163,55 @@ class UpdateItemsCommand(SpineDBCommand):
         self.db_mngr.do_update_items(self.db_map, self.item_type, self.undo_data, check=False)
 
 
+class AddUpdateItemsCommand(SpineDBCommand):
+    def __init__(self, db_mngr, db_map, item_type, data, check=True, **kwargs):
+        """
+        Args:
+            db_mngr (SpineDBManager): SpineDBManager instance
+            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            item_type (str): the item type
+            data (list): list of dict-items to add-update
+        """
+        super().__init__(db_mngr, db_map, **kwargs)
+        if not data:
+            self.setObsolete(True)
+        self.item_type = item_type
+        self.new_data = data
+        old_data = [x._asdict() for item in data if (x := self.db_map.get_item(item_type, **item))]
+        if self.new_data == old_data:
+            self.setObsolete(True)
+        self.old_data = {x["id"]: x for x in old_data}
+        self.redo_restore_ids = None
+        self.redo_update_data = None
+        self.undo_remove_ids = None
+        self.undo_update_data = None
+        self.setText(f"update {item_type} items in {db_map.codename}")
+
+    def redo(self):
+        super().redo()
+        if self.redo_restore_ids is None:
+            added, updated = self.db_mngr.do_add_update_items(self.db_map, self.item_type, self.new_data)
+            if not added and not updated:
+                self.setObsolete(True)
+                return
+            self.redo_restore_ids = {x["id"] for x in added}
+            self.redo_update_data = [x._asdict() for x in updated]
+            self.undo_remove_ids = {x["id"] for x in added}
+            self.undo_update_data = [self.old_data[id_] for id_ in {x["id"] for x in updated}]
+            return
+        if self.redo_restore_ids:
+            self.db_mngr.do_restore_items(self.db_map, self.item_type, self.redo_restore_ids)
+        if self.redo_update_data:
+            self.db_mngr.do_update_items(self.db_map, self.item_type, self.redo_update_data, check=False)
+
+    def undo(self):
+        super().undo()
+        if self.undo_remove_ids:
+            self.db_mngr.do_remove_items(self.db_map, self.item_type, self.undo_remove_ids, check=False)
+        if self.undo_update_data:
+            self.db_mngr.do_update_items(self.db_map, self.item_type, self.undo_update_data, check=False)
+
+
 class RemoveItemsCommand(SpineDBCommand):
     def __init__(self, db_mngr, db_map, item_type, ids, check=True, **kwargs):
         """
