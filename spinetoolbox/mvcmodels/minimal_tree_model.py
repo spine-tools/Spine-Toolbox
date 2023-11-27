@@ -78,14 +78,13 @@ class TreeItem:
 
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
-        try:
+        if 0 <= row < self.child_count():
             return self.children[row]
-        except IndexError:
-            return None
+        return None
 
     def last_child(self):
         """Returns the last child."""
-        return self.child(-1)
+        return self.child(self.child_count() - 1)
 
     def child_count(self):
         """Returns the number of children."""
@@ -100,7 +99,7 @@ class TreeItem:
         """Returns the rank of this item within its parent or -1 if it's an orphan."""
         if self.parent_item:
             return self.parent_item.children.index(self)
-        return -1
+        return None
 
     def find_children(self, cond=lambda child: True):
         """Returns children that meet condition expressed as a lambda function."""
@@ -118,7 +117,7 @@ class TreeItem:
 
     def previous_sibling(self):
         """Returns the previous sibling or None if it's the first."""
-        if self.child_number() <= 0:
+        if self.child_number() is None:
             return None
         return self.parent_item.child(self.child_number() - 1)
 
@@ -310,7 +309,7 @@ class MinimalTreeModel(QAbstractItemModel):
             QModelIndex: item's index
         """
         row = item.child_number()
-        if row < 0:
+        if row is None:
             return QModelIndex()
         return self.createIndex(row, 0, item)
 

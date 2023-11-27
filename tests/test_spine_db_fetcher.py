@@ -49,7 +49,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_empty_database(self):
         for item_type in DatabaseMapping.item_types():
             fetcher = TestItemTypeFetchParent(item_type)
-            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+            while self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
                 qApp.processEvents()
             if item_type in ("alternative", "commit"):
@@ -171,7 +171,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         fetcher.set_obsolete(True)
 
     def test_fetch_relationships(self):
-        self._import_data(entity_classes=(("oc",), ("rc", ("oc",))), entities=(("oc", "obj"), ("rc", None, ("obj",))))
+        self._import_data(entity_classes=(("oc",), ("rc", ("oc",))), entities=(("oc", "obj"), ("rc", ("obj",))))
         item = {
             'id': -2,
             'name': 'obj__',

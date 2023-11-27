@@ -56,24 +56,26 @@ class MultiDBTreeItem(TreeItem):
         return self.children
 
     def row_count(self):
+        """Overriden to use visible_children."""
         return len(self.visible_children)
 
     def child(self, row):
-        """Returns the child at given row or None if out of bounds."""
-        try:
+        """Overriden to use visible_children."""
+        if 0 <= row < self.row_count():
             return self.visible_children[row]
-        except IndexError:
-            return None
+        return None
 
     def child_number(self):
+        """Overriden to use find_row which is a dict-lookup rather than a list.index() call."""
+        if not self.parent_item:
+            return None
         try:
             db_map, id_ = next(iter(self._db_map_ids.items()))
         except StopIteration:
-            return -1
-        try:
+            return None
+        if isinstance(self.parent_item, MultiDBTreeItem):
             return self.parent_item.find_row(db_map, id_)
-        except AttributeError:
-            return super().child_number()
+        return 0
 
     def refresh_child_map(self):
         """Recomputes the child map."""
@@ -382,7 +384,7 @@ class MultiDBTreeItem(TreeItem):
         for db_map, ids in db_map_ids.items():
             for id_ in ids:
                 row = self.find_row(db_map, id_)
-                if row != -1:
+                if row is not None:
                     rows_to_update.add(row)
                 else:
                     db_map_ids_to_add.setdefault(db_map, set()).add(id_)
@@ -451,7 +453,7 @@ class MultiDBTreeItem(TreeItem):
         self._insert_children_sorted([child])
 
     def find_row(self, db_map, id_):
-        return self._child_map.get(db_map, {}).get(id_, -1)
+        return self._child_map.get(db_map, {}).get(id_)
 
     def find_children_by_id(self, db_map, *ids, reverse=True):
         """Generates children with the given ids in the given db_map.
@@ -473,7 +475,7 @@ class MultiDBTreeItem(TreeItem):
             # Yield all children with the db_map *and* the id
             for id_ in ids:
                 row = self.find_row(db_map, id_)
-                if row != -1:
+                if row is not None:
                     yield row
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):

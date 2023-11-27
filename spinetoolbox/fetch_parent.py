@@ -35,9 +35,7 @@ class FetchParent(QObject):
         self._restore_item_callbacks = {}
         self._update_item_callbacks = {}
         self._remove_item_callbacks = {}
-        self._items_to_add = {}
-        self._items_to_update = {}
-        self._items_to_remove = {}
+        self._changes_by_db_map = {}
         self._obsolete = False
         self._fetched = False
         self._busy = False
@@ -71,9 +69,7 @@ class FetchParent(QObject):
         self._update_item_callbacks.clear()
         self._remove_item_callbacks.clear()
         self._timer.stop()
-        self._items_to_add.clear()
-        self._items_to_update.clear()
-        self._items_to_remove.clear()
+        self._changes_by_db_map.clear()
         self._fetched = False
         self._busy = False
         self._position.clear()
@@ -90,15 +86,20 @@ class FetchParent(QObject):
     def _apply_pending_changes(self):
         if self.is_obsolete:
             return
-        for db_map in list(self._items_to_remove):
-            data = self._items_to_remove.pop(db_map)
-            self.handle_items_removed({db_map: data})
-        for db_map in list(self._items_to_update):
-            data = self._items_to_update.pop(db_map)
-            self.handle_items_updated({db_map: data})
-        for db_map in list(self._items_to_add):
-            data = self._items_to_add.pop(db_map)
-            self.handle_items_added({db_map: data})
+        for db_map in list(self._changes_by_db_map):
+            changes = self._changes_by_db_map.pop(db_map)
+            last_handler = None
+            items = []
+            for handler, item in changes:
+                if handler is last_handler:
+                    items.append(item)
+                    continue
+                if items:
+                    last_handler({db_map: items})  # pylint: disable=not-callable
+                items = [item]
+                last_handler = handler
+            if items:
+                last_handler({db_map: items})
         QTimer.singleShot(0, lambda: self.set_busy(False))
 
     def bind_item(self, item, db_map):
@@ -127,26 +128,21 @@ class FetchParent(QObject):
     def _is_valid(self, version):
         return (version is None or version == self._version) and not self.is_obsolete
 
-    def add_item(self, item, db_map, version=None):
+    def _change_item(self, handler, item, db_map, version):
         if not self._is_valid(version):
             return False
-        self._items_to_add.setdefault(db_map, []).append(item)
+        self._changes_by_db_map.setdefault(db_map, []).append((handler, item))
         self._changes_pending.emit()
         return True
+
+    def add_item(self, item, db_map, version=None):
+        return self._change_item(self.handle_items_added, item, db_map, version)
 
     def update_item(self, item, db_map, version=None):
-        if not self._is_valid(version):
-            return False
-        self._items_to_update.setdefault(db_map, []).append(item)
-        self._changes_pending.emit()
-        return True
+        return self._change_item(self.handle_items_updated, item, db_map, version)
 
     def remove_item(self, item, db_map, version=None):
-        if not self._is_valid(version):
-            return False
-        self._items_to_remove.setdefault(db_map, []).append(item)
-        self._changes_pending.emit()
-        return True
+        return self._change_item(self.handle_items_removed, item, db_map, version)
 
     @property
     def fetch_item_type(self):
