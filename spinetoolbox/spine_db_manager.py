@@ -1487,9 +1487,7 @@ class SpineDBManager(QObject):
                     index = item["dimension_name_list"].index(class_name)
                     name_list = element_name_list
                     dup_name_list = name_list[:index] + (dup_name,) + name_list[index + 1 :]
-                    dup_entity_import_data.append(
-                        (item_class_name, name_from_elements(dup_name_list), dup_name_list, item["description"])
-                    )
+                    dup_entity_import_data.append((item_class_name, dup_name_list, item["description"]))
             dup_import_data[db_map] = {"entities": dup_entity_import_data}
             dup_value_import_data = []
             for item in db_map.get_parameter_value_items(entity_class_name=class_name, entity_name=orig_name):
