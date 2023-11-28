@@ -83,6 +83,7 @@ class DialogWithTableAndButtons(DialogWithButtons):
         raise NotImplementedError()
 
     def resize_window_to_columns(self, height=None):
+        self.table_view.resizeColumnsToContents()
         if height is None:
             height = self.sizeHint().height()
         slack = 64
