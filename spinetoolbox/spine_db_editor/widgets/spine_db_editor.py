@@ -154,7 +154,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionVacuum.setEnabled(False)
         self.url_toolbar.reload_action.setEnabled(False)
         if not db_url_codenames:
-            return False
+            return True
         if not self.tear_down():
             return False
         if self.db_maps:
