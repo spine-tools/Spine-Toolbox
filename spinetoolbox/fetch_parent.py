@@ -91,15 +91,14 @@ class FetchParent(QObject):
             last_handler = None
             items = []
             for handler, item in changes:
-                if handler is last_handler:
+                if handler == last_handler:
                     items.append(item)
                     continue
                 if items:
                     last_handler({db_map: items})  # pylint: disable=not-callable
                 items = [item]
                 last_handler = handler
-            if items:
-                last_handler({db_map: items})
+            last_handler({db_map: items})
         QTimer.singleShot(0, lambda: self.set_busy(False))
 
     def bind_item(self, item, db_map):
