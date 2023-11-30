@@ -94,11 +94,6 @@ class GraphViewMixin:
         self._thread_pool = QThreadPool()
         self.layout_gens = {}
         self._layout_gen_id = None
-        self._extend_graph_timer = QTimer(self)
-        self._extend_graph_timer.setSingleShot(True)
-        self._extend_graph_timer.setInterval(100)
-        self._extend_graph_timer.timeout.connect(self._do_build_graph)
-        self._extending_graph = False
         self._entity_fetch_parent = FlexibleFetchParent(
             "entity",
             accepts_item=self._accepts_entity_item,
@@ -199,10 +194,7 @@ class GraphViewMixin:
         if not new_db_map_id_sets:
             self._graph_fetch_more_later(entity=True, parameter_value=False)
             return
-        if self._extending_graph:
-            self._extend_graph_timer.start()
-            return
-        self._do_build_graph()
+        self._refresh_graph()
 
     def _graph_handle_entities_removed(self, db_map_data):
         """Runs when entities are removed from the db. Rebuilds graph if needed.
@@ -277,10 +269,7 @@ class GraphViewMixin:
             self.ui.graphicsView.vertex_radius_parameter,
         }
         if pnames & position_pnames:
-            if self._extending_graph:
-                self._extend_graph_timer.start()
-                return
-            self._do_build_graph()
+            self._refresh_graph()
             return
         if pnames & property_pnames:
             self.polish_items()
@@ -492,12 +481,12 @@ class GraphViewMixin:
             self._owes_graph = True
             return
         self._owes_graph = False
+        self.ui.graphicsView.clear_scene()
         self._entity_fetch_parent.reset()
         self._parameter_value_fetch_parent.reset()
         self._graph_fetch_more_later()
 
-    def _do_build_graph(self):
-        self._extending_graph = True
+    def _refresh_graph(self):
         self._update_graph_data()
         self.ui.graphicsView.clear_cross_hairs_items()  # Needed
         self._stop_layout_generators()
@@ -524,7 +513,6 @@ class GraphViewMixin:
         # Ignore layouts from obsolete generators
         if layout_gen_id != self._layout_gen_id:
             return
-        self._extending_graph = True
         self.ui.graphicsView.selected_items.clear()
         self.ui.graphicsView.hidden_items.clear()
         self.ui.graphicsView.clear_scene()
