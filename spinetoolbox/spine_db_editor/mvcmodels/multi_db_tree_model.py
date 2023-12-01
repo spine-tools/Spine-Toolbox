@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-A base model class to represent items from multiple databases in a tree.
-"""
+""" A base model class to represent items from multiple databases in a tree. """
 from PySide6.QtCore import QModelIndex, Qt
 from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 
@@ -20,8 +17,7 @@ class MultiDBTreeModel(MinimalTreeModel):
     """Base class for all tree models in Spine db editor."""
 
     def __init__(self, db_editor, db_mngr, *db_maps):
-        """Init class.
-
+        """
         Args:
             db_editor (SpineDBEditor)
             db_mngr (SpineDBManager): A manager for the given db_maps
@@ -32,6 +28,7 @@ class MultiDBTreeModel(MinimalTreeModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._root_item = None
+        self.destroyed.connect(lambda obj=None: self._invisible_root_item.tear_down_recursively())
 
     @property
     def root_item_type(self):
@@ -53,8 +50,8 @@ class MultiDBTreeModel(MinimalTreeModel):
     def build_tree(self):
         """Builds tree."""
         self.beginResetModel()
+        self._invisible_root_item.tear_down_recursively()
         self._invisible_root_item = TreeItem(self)
-        self.destroyed.connect(lambda obj=None: self._invisible_root_item.tear_down_recursively())
         self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
         self._invisible_root_item.append_children([self._root_item])
         self.endResetModel()
