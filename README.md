@@ -117,24 +117,22 @@ follow the instructions above to install Python and get the latest version of pi
 
 2. Clone or download the source code from this repository.
    
-3. Browse to the folder where Spine Toolbox was cloned and create a Python virtual environment using
+3. Create an environment either through a) Python or b) conda
+
+    a) Through Python virtual environment. First, make sure you have the right Python version in the system path, or use the full path of the Python 
+    version you want to use (replace 'python' below with [path]/python.
 
         python -m venv .venv
     
-    Make sure you have the right Python version in the system path, or then use the full path of the Python 
-    version you want to use.
-    <br>
-    <br>
-    Instead of venv, one can also use a 
-    [miniconda](https://docs.conda.io/projects/conda/en/stable/glossary.html#miniconda-glossary) environment. You 
+    b) Through [miniconda](https://docs.conda.io/projects/conda/en/stable/glossary.html#miniconda-glossary) environment. You 
     can [download miniconda from here](https://docs.conda.io/en/latest/miniconda.html). **Note: Anaconda 
-    environments are not supported.** Create a new miniconda environment without linking packages from the base 
-    environment for e.g. Python 3.9 using
+    environments are not supported.** Create a new miniconda environment just for Toolbox (without the packages that may be in your conda base 
+    environment). For Python 3.9 use
 
         conda create -n spinetoolbox python=3.9
     
-4. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
-   or `source .venv/bin/activate` (bash, zsh) or `conda activate spinetoolbox`. 
+4. Activate the Python environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
+   or `source .venv/bin/activate` (bash, zsh) or the conda environment with `conda activate spinetoolbox`. 
 
 5. Make sure that the terminal prompt indicates the active environment
    and get the latest version of `pip` (pip is a package manager for Python)
