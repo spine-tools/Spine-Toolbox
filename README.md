@@ -59,33 +59,35 @@ with new releases. The instructions below are written for Windows, but they also
 apply to Linux and Mac where applicable.
 
 1. If you don't have Python installed, please install e.g. **Python 3.9**
-   from [Python.org](https://www.python.org/downloads/release/python-3913/).
+   from [Python.org](https://www.python.org/downloads/release/python-3913/). If you have other than Python 3.9 installed,
+   consider installing also 3.9 or make sure you can fix the issues mentioned with the other Python versions.
 
-2. If you want to use Python 3.10 or 3.11 on Windows, please install **Microsoft Visual C++ 14.0 or greater** on 
+3. If you want to use Python 3.10 or 3.11 on Windows, please install **Microsoft Visual C++ 14.0 or greater** on 
    Windows. Get it with *Microsoft C++ Build Tools*: 
    https://visualstudio.microsoft.com/visual-cpp-build-tools/. (Earlier versions of Python use earlier versions of 
    C++ libraries that should be available with Windows.)
    
-3. If you don't have Git, Windows version can be found here: https://git-scm.com/download/win.
-
 4. Open a terminal (e.g., Command Prompt). Windows: If you have issues with Python and/or git not found in path, 
    you can add the paths to environment variables manually. This can be done from Windows Control Panel 
    (use find with 'environmental') or from a command prompt using `set PATH=%PATH%;[path-to-executable]` e.g. 
    `set PATH=%PATH%;C:\Users\my_user_name\AppData\Local\Programs\Git\Cmd`. 
 
-5. Get the latest version of `pip` (pip is a package manager for Python)
+5. Managing the packages requires Git, so if your terminal doesn't find Git (try e.g. `git --version`), please install (or add to path if it already exists).
+   Windows version can be found here: https://git-scm.com/download/win. 
+
+7. Get the latest version of `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-6. Install [pipx](https://pypa.github.io/pipx/). pipx helps in creating an isolated 
+8. Install [pipx](https://pypa.github.io/pipx/). pipx helps in creating an isolated 
    environment for Spine Toolbox to avoid package conflicts.
 
         python -m pip install --user pipx
         python -m pipx ensurepath
 
-7. Restart the terminal or re-login for the changes of the latest command to take effect.
+9. Restart the terminal or re-login for the changes of the latest command to take effect.
 
-8. Choose which Toolbox version to install (**NOTE: There is no release version for Python 3.11, yet**). Latest 
+10. Choose which Toolbox version to install (**NOTE: There is no release version for Python 3.11, yet**). Latest 
    *release* version is installed using 
 
         python -m pipx install spinetoolbox
@@ -110,7 +112,8 @@ development version.
 
 ### Installation from sources using Git
 
-This option is for developers and other contributors who want to debug or edit Spine Toolbox source code. First, 
+This option is for developers _**and**_ 
+for those who want to get the latest features right away and are willing to report bugs. First, 
 follow the instructions above to install Python and get the latest version of pip.
 
 1. Make sure you have git: https://git-scm.com/download/win
@@ -119,7 +122,7 @@ follow the instructions above to install Python and get the latest version of pi
    
 3. Create an environment either through a) Python or b) conda
 
-    a) Through Python virtual environment. First, make sure you have the right Python version in the system path, or use the full path of the Python 
+    a) Through Python virtual environment. First, make sure you have the right Python version in the system path (see above about Python versions), or use the full path of the Python 
     version you want to use (replace 'python' below with [path]/python.
 
         python -m venv .venv
