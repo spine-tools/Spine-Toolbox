@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- New context menu action (Select superclass) for entity class items in the entity tree.
 
 ### Changed
 - Julia execution settings are now Tool specification settings instead of global application settings. You can 
@@ -19,6 +20,28 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Fixed
 
 ### Security
+
+## [0.7.2] - 2023-12-04
+
+### Added
+
+- Data Connection items now support schemas in database references
+- Importer Specification Editor now supports database schemas
+
+## [0.7.1] - 2023-10-06
+
+### Added
+
+- Allow choosing of highlight color for items found in entity graph
+
+### Fixed
+
+- Fixed issues when remote databases were used as references in Data Connections
+- Fixed a bug where the order of scenario alternatives would be messed up when copy-pasting
+  the alternatives in the Scenario Tree
+- Fixed a bug with time series plots
+- Fixed issues with Pivot table
+
 
 ## [0.7.0] - 2023-08-25
 
@@ -51,7 +74,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - ``project.json`` now has an experimental option ["project"]["settings"]["enable_execute_all"] which disables the
   Execute Project button when set to ``false``. The option is currently not settable in the UI.
 - New context menu action (Find...) to find items by name in DB editor's entity graph.
-- New context menu action (Select superclass) for entity class items in the entity tree.
 
 ### Changed
 - The console settings of Python tools as well as the command and shell settings of executable tools
