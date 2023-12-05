@@ -186,6 +186,7 @@ class SpineDBEditorBase(QMainWindow):
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
         self.restore_ui()
+        self.update_commit_enabled()
         return True
 
     def init_add_undo_redo_actions(self):
