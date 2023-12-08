@@ -662,6 +662,14 @@ class ExclamationIcon(QGraphicsTextItem):
         self._notifications.clear()
         self.hide()
 
+    def clear_other_notifications(self, subtext):
+        """Remove notifications that don't include the given subtext."""
+        k = next((i for i, text in enumerate(self._notifications) if subtext not in text), None)
+        if k is not None:
+            self._notifications.pop(k)
+            if not self._notifications:
+                self.hide()
+
     def add_notification(self, text):
         """Add a notification."""
         self._notifications.append(text)

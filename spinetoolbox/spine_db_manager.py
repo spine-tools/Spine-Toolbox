@@ -111,6 +111,7 @@ class SpineDBManager(QObject):
         self._connect_signals()
         self._cmd_id = 0
         self._synchronous = synchronous
+        self.data_stores = dict()
 
     def _connect_signals(self):
         self.error_msg.connect(self.receive_error_msg)
@@ -422,6 +423,7 @@ class SpineDBManager(QObject):
             listener (object)
             db_maps (DiffDatabaseMapping)
         """
+        self.update_data_store_db_maps()
         for db_map in db_maps:
             self.add_db_map_listener(db_map, listener)
             stack = self.undo_stack[db_map]
@@ -429,6 +431,8 @@ class SpineDBManager(QObject):
                 stack.canRedoChanged.connect(listener.update_undo_redo_actions)
                 stack.canUndoChanged.connect(listener.update_undo_redo_actions)
                 stack.cleanChanged.connect(listener.update_commit_enabled)
+                for store in self.data_stores.get(db_map):
+                    self.undo_stack[db_map].cleanChanged.connect(store.notify_about_dirtiness)
             except AttributeError:
                 pass
 
@@ -452,6 +456,14 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].canRedoChanged.disconnect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].canUndoChanged.disconnect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
+                if not self.db_map_listeners(db_map) == 1:
+                    # Unregister the dirty listeners for every data store ONLY when the last editor
+                    # for that db map is closed. This way the dirtiness state of a data store that is
+                    # not open in a db editor can still be affected.
+                    continue
+                for store in self.data_stores.get(db_map):
+                    self.undo_stack[db_map].cleanChanged.disconnect(store.notify_about_dirtiness)
+                    store.notify_about_dirtiness(True)
             except AttributeError:
                 pass
         if dirty_db_maps:
@@ -466,12 +478,40 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].canRedoChanged.connect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].canUndoChanged.connect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].cleanChanged.connect(listener.update_commit_enabled)
+                for store in self.data_stores.get(db_map):
+                    self.undo_stack[db_map].cleanChanged.connect(store.notify_about_dirtiness)
             except AttributeError:
                 pass
         for db_map in db_maps:
             if not self.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
         return failed_db_maps
+
+    def add_data_store_db_map(self, db_map, store):
+        """Adds a Data Store instance under a db_map into memory"""
+        if db_map in self.data_stores:
+            self.data_stores[db_map].append(store)
+        else:
+            self.data_stores[db_map] = [store]
+
+    def remove_data_store_db_map(self, db_map, store):
+        """Removes a Data Store instance from memory"""
+        if self.data_stores.get(db_map):
+            self.data_stores[db_map].remove(store)
+
+    def update_data_store_db_maps(self):
+        """Updates the db maps of the dict that maps db_maps to Data Stores"""
+        new_data_stores = {}
+        old_stores = []
+        for store in self.data_stores.values():
+            old_stores.extend(store)
+        for store in old_stores:
+            db_map = store.get_db_map_for_ds()
+            if db_map in new_data_stores:
+                new_data_stores[db_map].append(store)
+            else:
+                new_data_stores[db_map] = [store]
+        self.data_stores = new_data_stores
 
     def is_dirty(self, db_map):
         """Returns True if mapping has pending changes.

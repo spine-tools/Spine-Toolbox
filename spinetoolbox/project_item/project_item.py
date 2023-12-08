@@ -203,7 +203,12 @@ class ProjectItem(LogMixin, MetaObject):
         self.get_icon().exclamation_icon.add_notification(text)
 
     def remove_notification(self, text):
+        """Remove the first notification that includes given subtext."""
         self.get_icon().exclamation_icon.remove_notification(text)
+
+    def clear_other_notifications(self, text):
+        """Remove notifications that don't include the given subtext."""
+        self.get_icon().exclamation_icon.clear_other_notifications(text)
 
     def set_rank(self, rank):
         """Set rank of this item for displaying in the design view."""
