@@ -46,7 +46,9 @@ from ..helpers import (
     dir_is_valid,
     home_dir,
     open_url,
+    is_valid_conda_executable,
 )
+from spine_items.tool.tool_specifications import PythonTool, JuliaTool
 
 
 class SettingsWidgetBase(QWidget):
@@ -346,6 +348,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.toolButton_browse_python.clicked.connect(self.browse_python_button_clicked)
         self.ui.toolButton_browse_conda.clicked.connect(self.browse_conda_button_clicked)
         self.ui.toolButton_pick_secfolder.clicked.connect(self.browse_certificate_directory_clicked)
+        self.ui.toolButton_set_julia_defaults.clicked.connect(self._set_default_julia_execution_settings)
+        self.ui.toolButton_set_python_defaults.clicked.connect(self._set_default_python_execution_settings)
         self.ui.pushButton_make_python_kernel.clicked.connect(self.make_python_kernel)
         self.ui.pushButton_make_julia_kernel.clicked.connect(self.make_julia_kernel)
         self.ui.comboBox_python_kernel.customContextMenuRequested.connect(
@@ -360,6 +364,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.comboBox_julia_kernel.view().customContextMenuRequested.connect(
             self.show_julia_kernel_context_menu_on_combobox_list
         )
+        self.ui.lineEdit_conda_path.textChanged.connect(self._refresh_python_kernels)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
@@ -683,6 +688,64 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def _update_properties_widget(self, _checked=False):
         self._toolbox.ui.tabWidget_item_properties.update()
 
+    def _set_default_julia_execution_settings(self, _checked=False):
+        self._set_default_execution_settings("julia")
+
+    def _set_default_python_execution_settings(self, _checked=False):
+        self._set_default_execution_settings("python")
+
+    def _set_default_execution_settings(self, _type):
+        """Sets the default execution settings to all Julia or Python Tools in the currently opened project.
+
+        Args:
+            _type (str): 'python' sets execution settings for Python Tools, 'julia' for Julia Tools.
+        """
+        project = self._toolbox.project()
+        if not project:
+            Notification(self, "Open a project to use this feature").show()
+            return
+        if _type == "python":
+            use_jupyter_console, exe_path, kernel, env = self._get_python_settings()
+        else:
+            use_jupyter_console, exe_path, julia_project, kernel = self._get_julia_settings()
+        use_jupyter_console = True if use_jupyter_console == "2" else False
+        if use_jupyter_console:
+            if not kernel:
+                Notification(self, f"{_type.capitalize()} kernel missing").show()
+                return
+        if _type == "python":
+            exe_path = resolve_python_interpreter(exe_path)
+        else:
+            exe_path = resolve_julia_executable(exe_path)
+        if not exe_path:
+            Notification(self, f"{_type.capitalize()} executable missing").show()
+            return
+        # Unselect items on Design View because Tool properties still shows the old exec. settings after this operation
+        self._toolbox.ui.graphicsView.scene().clearSelection()
+        # Close all Julia or Python Tool Spec editor tabs
+        for editor in self._toolbox.get_all_multi_tab_spec_editors(item_type="Tool"):
+            n = editor.tab_widget.count()
+            for tab_index in reversed(range(n)):
+                tab = editor.tab_widget.widget(tab_index)
+                tooltype = tab._ui.comboBox_tooltype.currentText()
+                if tooltype.lower() == _type:
+                    editor._close_tab(tab_index)
+            n_after = editor.tab_widget.count()
+        n = 0
+        for item in project.get_items():
+            if item.item_type() == "Tool" and item.specification() is not None:
+                if isinstance(item.specification(), PythonTool) and _type == "python":
+                    item.specification().set_execution_settings(use_jupyter_console, exe_path, kernel, env)
+                    n += 1
+                elif isinstance(item.specification(), JuliaTool) and _type == "julia":
+                    item.specification().set_execution_settings(use_jupyter_console, exe_path, julia_project, kernel)
+                    n += 1
+        if n == 0:
+            Notification(self, f"Project does not have any {_type.capitalize()} Tool Specs").show()
+        else:
+            Notification(self, f"Project saved!\n{n} {_type.capitalize()} Tool specs updated").show()
+            project.save()
+
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
@@ -935,6 +998,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/pythonKernel", python_kernel)
         # Conda
         conda_exe = self.ui.lineEdit_conda_path.text().strip()
+        if not is_valid_conda_executable(conda_exe):
+            conda_exe = ""
         self._qsettings.setValue("appSettings/condaPath", conda_exe)
         # Work directory
         work_dir = self.ui.lineEdit_work_dir.text().strip()
@@ -984,14 +1049,29 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         return True
 
     def _get_julia_settings(self):
+        """Returns current Julia execution settings in Settings->Tools widget."""
         use_julia_jupyter_console = "2" if self.ui.radioButton_use_julia_jupyter_console.isChecked() else "0"
         julia_exe = self.ui.lineEdit_julia_path.text().strip()
         julia_project = self.ui.lineEdit_julia_project_path.text().strip()
-        if self.ui.comboBox_julia_kernel.currentIndex() == 0:
-            julia_kernel = ""
-        else:
+        julia_kernel = ""
+        if self.ui.comboBox_julia_kernel.currentIndex() != 0:
             julia_kernel = self.ui.comboBox_julia_kernel.currentText()
         return use_julia_jupyter_console, julia_exe, julia_project, julia_kernel
+
+    def _get_python_settings(self):
+        """Returns current Python execution settings in Settings->Tools widget."""
+        use_python_jupyter_console = "2" if self.ui.radioButton_use_python_jupyter_console.isChecked() else "0"
+        python_exe = self.ui.lineEdit_python_path.text().strip()
+        python_kernel = ""
+        env = ""
+        row = self.ui.comboBox_python_kernel.currentIndex()
+        if row != 0:
+            python_kernel = self.ui.comboBox_python_kernel.currentText()
+            item = self._python_kernel_model.item(row)
+            is_conda = item.data()["is_conda"]
+            if is_conda:
+                env = "conda"
+        return use_python_jupyter_console, python_exe, python_kernel, env
 
     def set_work_directory(self, new_work_dir):
         """Sets new work directory.
@@ -1055,6 +1135,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.julia_kernel_fetcher = KernelFetcher(conda_path, fetch_mode=4)
         self.julia_kernel_fetcher.kernel_found.connect(self.add_julia_kernel)
         self.julia_kernel_fetcher.finished.connect(self.restore_saved_julia_kernel)
+        self.julia_kernel_fetcher.finished.connect(self.julia_kernel_fetcher.deleteLater)
         self.julia_kernel_fetcher.start()
 
     @Slot()
@@ -1091,18 +1172,23 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_julia_kernel.setCurrentIndex(0)
         else:
             self.ui.comboBox_julia_kernel.setCurrentIndex(ind)
+        self.julia_kernel_fetcher = None
 
-    def start_fetching_python_kernels(self):
+    def start_fetching_python_kernels(self, conda_path_updated=False):
         """Starts a thread for fetching Python kernels."""
         if self.python_kernel_fetcher is not None and self.python_kernel_fetcher.isRunning():
             # Trying to start a new thread when the old one is still running
             return
         self._python_kernel_model.clear()
         self.ui.comboBox_python_kernel.addItem("Select Python kernel...")
-        conda_path = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
+        if not conda_path_updated:
+            conda_path = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
+        else:
+            conda_path = self.ui.lineEdit_conda_path.text().strip()
         self.python_kernel_fetcher = KernelFetcher(conda_path, fetch_mode=2)
         self.python_kernel_fetcher.kernel_found.connect(self.add_python_kernel)
         self.python_kernel_fetcher.finished.connect(self.restore_saved_python_kernel)
+        self.python_kernel_fetcher.finished.connect(self.python_kernel_fetcher.deleteLater)
         self.python_kernel_fetcher.start()
 
     @Slot()
@@ -1120,6 +1206,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         item = QStandardItem(kernel_name)
         item.setIcon(icon)
         item.setToolTip(resource_dir)
+        deats["is_conda"] = conda
         item.setData(deats)
         self._python_kernel_model.appendRow(item)
 
@@ -1139,6 +1226,20 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_python_kernel.setCurrentIndex(0)
         else:
             self.ui.comboBox_python_kernel.setCurrentIndex(ind)
+        self.python_kernel_fetcher = None
+
+    @Slot(str)
+    def _refresh_python_kernels(self, conda_path):
+        """Refreshes Python kernels when the conda line edit points to a valid conda
+        executable or when the line edit is cleared.
+
+        Args:
+            conda_path (str): Text in line edit after it's been changed.
+        """
+        if conda_path and not is_valid_conda_executable(conda_path):
+            return
+        self.newly_created_kernel = self.ui.comboBox_python_kernel.currentText()
+        self.start_fetching_python_kernels(conda_path_updated=True)
 
     def closeEvent(self, ev):
         self.stop_fetching_julia_kernels()
