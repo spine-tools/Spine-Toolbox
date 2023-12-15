@@ -118,11 +118,13 @@ follow the instructions above to install Python and get the latest version of pi
 
 1. Make sure you have git: https://git-scm.com/download/win
 
-2. Clone or download the source code from this repository.
+2. Clone or download the source code from this repository. To clone (last argument is optional, will use repository name if not given):
    
-3. Create an environment either through a) Python or b) conda
+        git clone https://github.com/spine-tools/Spine-Toolbox.git spine-toolbox
+   
+4. Create an environment either through a) Python or b) conda
 
-    a) Through Python virtual environment. First, make sure you have the right Python version in the system path (see above about Python versions), or use the full path of the Python 
+    a) Through Python virtual environment. First, make sure you have the right Python version (`python --version`) in the system path (see issues about Python versions above), or use the full path of the Python 
     version you want to use (replace 'python' below with [path]/python.
 
         python -m venv .venv
@@ -134,19 +136,19 @@ follow the instructions above to install Python and get the latest version of pi
 
         conda create -n spinetoolbox python=3.9
     
-4. Activate the Python environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
+5. Activate the Python environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
    or `source .venv/bin/activate` (bash, zsh) or the conda environment with `conda activate spinetoolbox`. 
 
-5. Make sure that the terminal prompt indicates the active environment
+6. Make sure that the terminal prompt indicates the active environment
    and get the latest version of `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-6. Install Spine Toolbox along with its dependencies with
+7. Install Spine Toolbox along with its dependencies with
 
         python -m pip install -r requirements.txt
     
-7. (Optional) Install additional development packages with
+8. (Optional) Install additional development packages with
 
         python -m pip install -r dev-requirements.txt
 
