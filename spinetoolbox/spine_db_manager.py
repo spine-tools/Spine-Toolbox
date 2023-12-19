@@ -431,7 +431,10 @@ class SpineDBManager(QObject):
                 stack.canRedoChanged.connect(listener.update_undo_redo_actions)
                 stack.canUndoChanged.connect(listener.update_undo_redo_actions)
                 stack.cleanChanged.connect(listener.update_commit_enabled)
-                for store in self.data_stores.get(db_map):
+                stores = self.data_stores.get(db_map)
+                if not stores:
+                    continue
+                for store in stores:
                     self.undo_stack[db_map].cleanChanged.connect(store.notify_about_dirtiness)
             except AttributeError:
                 pass
@@ -461,7 +464,10 @@ class SpineDBManager(QObject):
                     # for that db map is closed. This way the dirtiness state of a data store that is
                     # not open in a db editor can still be affected.
                     continue
-                for store in self.data_stores.get(db_map):
+                stores = self.data_stores.get(db_map)
+                if not stores:
+                    continue
+                for store in stores:
                     self.undo_stack[db_map].cleanChanged.disconnect(store.notify_about_dirtiness)
                     store.notify_about_dirtiness(True)
             except AttributeError:
@@ -478,7 +484,10 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].canRedoChanged.connect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].canUndoChanged.connect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].cleanChanged.connect(listener.update_commit_enabled)
-                for store in self.data_stores.get(db_map):
+                stores = self.data_stores.get(db_map)
+                if not stores:
+                    continue
+                for store in stores:
                     self.undo_stack[db_map].cleanChanged.connect(store.notify_about_dirtiness)
             except AttributeError:
                 pass
