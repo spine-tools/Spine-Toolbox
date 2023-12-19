@@ -78,7 +78,7 @@ class TreeItem:
 
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
-        if 0 <= row < self.child_count():
+        if 0 <= row < len(self._children):
             return self.children[row]
         return None
 
