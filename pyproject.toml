@@ -31,6 +31,8 @@ dependencies = [
     "jill >=0.9.2",
     "pyzmq >=21.0",
     "spine-items>=0.21.0",
+    # pendulum 3.0.0 seems to break nearly all of the tests in github actions
+    "pendulum < 3.0.0",
 ]
 
 [project.urls]
