@@ -33,7 +33,7 @@ class ConvertToDBMixin:
         item = item.copy()
         for field, real_field in self.field_map.items():
             if field in item:
-                item[real_field] = item.pop(field, None)
+                item[real_field] = item.pop(field)
         return item.copy(), []
 
 
