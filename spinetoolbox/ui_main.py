@@ -1791,7 +1791,7 @@ class ToolboxUI(QMainWindow):
     @Slot()
     def refresh_edit_action_states(self):
         """Sets the enabled/disabled state for copy, paste, duplicate,
-        and remove actions in File-Edit menu, project tree view
+        remove and rename actions in File-Edit menu, project tree view
         context menu, and in Design View context menus just before the
         menus are shown to user."""
         clipboard = QApplication.clipboard()
@@ -1807,6 +1807,17 @@ class ToolboxUI(QMainWindow):
             for x in selected_project_items
         ]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
+        # Renaming an item should always be allowed except when it's a Data Store that is open in an editor
+        items = [self.project_item_model.get_item(x.name()).project_item for x in selected_items]
+        for item in items:
+            if item.item_type() == "Data Store" and item.has_listeners():
+                self.ui.actionRename_item.setEnabled(False)
+                self.ui.actionRename_item.setToolTip(
+                    f"<p>The editor for {item.name} needs to be closed before renaming.</p>"
+                )
+            else:
+                self.ui.actionRename_item.setEnabled(True)
+                self.ui.actionRename_item.setToolTip("Rename project item")
         self.ui.actionCopy.setEnabled(can_copy)
         self.ui.actionPaste.setEnabled(can_paste)
         self.ui.actionPasteAndDuplicateFiles.setEnabled(can_paste)
