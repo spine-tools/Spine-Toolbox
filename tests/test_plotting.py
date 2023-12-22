@@ -228,7 +228,7 @@ class TestPlotPivotTableSelection(TestBase):
     def test_row_filtering(self):
         self._fill_pivot({"floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
-        model.set_filter("class", {(self._db_map, 1), (self._db_map, 3)})
+        model.set_filter("class", {(self._db_map, -1), (self._db_map, -3)})
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
@@ -250,7 +250,7 @@ class TestPlotPivotTableSelection(TestBase):
     def test_column_filtering(self):
         self._fill_pivot({"floats": [1.1, 1.2, 1.3], "ints": [-3, -1, 2]})
         model = self._db_editor.pivot_table_proxy
-        model.set_filter("parameter", {(self._db_map, 2)})
+        model.set_filter("parameter", {(self._db_map, -2)})
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
@@ -334,7 +334,7 @@ class TestPlotPivotTableSelection(TestBase):
         self._fill_pivot({"a-ints": [-3, -1, 2], "b-floats": [1.1, 1.2, 1.3]})
         model = self._db_editor.pivot_table_proxy
         model.sourceModel().set_plot_x_column(2, True)
-        model.set_filter("parameter", {(self._db_map, 1)})
+        model.set_filter("parameter", {(self._db_map, -1)})
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:

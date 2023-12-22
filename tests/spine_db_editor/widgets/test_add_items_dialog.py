@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Unit tests for ``add_items_dialog`` module.
-"""
+""" Unit tests for ``add_items_dialog`` module. """
 
 import unittest
 from unittest import mock
@@ -185,7 +182,7 @@ class TestManageElementsDialog(TestBase):
         relationships = [x for x in self._db_mngr.get_items(self._db_map, "entity") if x["element_id_list"]]
         self.assertEqual(
             relationships,
-            [{'class_id': 3, 'description': None, 'id': 5, 'name': 'r21', 'element_id_list': (2, 3)}],
+            [{'class_id': -3, 'description': None, 'id': -5, 'name': 'r21', 'element_id_list': (-2, -3)}],
         )
 
 

@@ -143,7 +143,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(mime_data.text(), "Base\tBase alternative\r\n")
         self.assertTrue(mime_data.hasFormat(mime_types.ALTERNATIVE_DATA))
         data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
-        self.assertEqual(data, {self._db_mngr.db_map_key(self._db_map): [1]})
+        self.assertEqual(data, {self._db_mngr.db_map_key(self._db_map): [-1]})
 
     def test_canDropMimeData_returns_true_when_dropping_alternative_to_empty_scenario(self):
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)

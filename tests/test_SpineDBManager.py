@@ -214,11 +214,11 @@ class TestAddItems(unittest.TestCase):
 
     def test_add_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
-        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value.", "id": 1}]}
+        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value.", "id": -1}]}
         self._db_mngr.add_items("metadata", db_map_data)
         self.assertEqual(
-            self._db_mngr.get_item(db_map, "metadata", 1)._asdict(),
-            {'name': 'my_metadata', 'value': 'Metadata value.', 'id': 1},
+            self._db_mngr.get_item(db_map, "metadata", -1)._asdict(),
+            {'name': 'my_metadata', 'value': 'Metadata value.', 'id': -1},
         )
 
     def test_add_object_metadata(self):
@@ -228,10 +228,11 @@ class TestAddItems(unittest.TestCase):
         import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
         db_map.commit_session("Add test data.")
         db_map.close()
-        db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1, "id": 1}]}
+        db_map_data = {db_map: [{"entity_id": -1, "metadata_id": -1, "id": -1}]}
         self._db_mngr.add_items("entity_metadata", db_map_data)
         self.assertEqual(
-            self._db_mngr.get_item(db_map, "entity_metadata", 1)._asdict(), {'entity_id': 1, 'metadata_id': 1, 'id': 1}
+            self._db_mngr.get_item(db_map, "entity_metadata", -1)._asdict(),
+            {'entity_id': -1, 'metadata_id': -1, 'id': -1},
         )
 
 
