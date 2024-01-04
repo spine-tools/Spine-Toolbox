@@ -3,6 +3,27 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.7.2]
+
+### Added
+
+- Data Connection items now support schemas in database references
+- Importer Specification Editor now supports database schemas
+
+## [0.7.1]
+
+### Added
+
+- Allow choosing of highlight color for items found in entity graph
+
+### Fixed
+
+- Fixed issues when remote databases were used as references in Data Connections
+- Fixed a bug where the order of scenario alternatives would be messed up when copy-pasting
+  the alternatives in the Scenario Tree
+- Fixed a bug with time series plots
+- Fixed issues with Pivot table
+
 ## [0.7.0] - 2023-08-25
 
 ### Added
