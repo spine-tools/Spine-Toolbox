@@ -185,8 +185,6 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         db_map_item_metadata = {
             self._db_map: [
                 {
-                    "id": 3,
-                    "metadata_id": 5,
                     "metadata_name": "author",
                     "metadata_value": "Anonymous",
                     "parameter_value_id": 2,
@@ -211,8 +209,6 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         db_map_item_metadata = {
             self._db_map: [
                 {
-                    "id": 3,
-                    "metadata_id": 5,
                     "metadata_name": "author",
                     "metadata_value": "Anonymous",
                     "entity_id": 2,
