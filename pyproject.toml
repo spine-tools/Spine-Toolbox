@@ -31,8 +31,6 @@ dependencies = [
     "jill >=0.9.2",
     "pyzmq >=21.0",
     "spine-items>=0.21.3",
-    # dagster versions lower that 1.5.7 do not support pendulum >= 3.0.0
-    "pendulum < 3.0.0",
 ]
 
 [project.urls]
