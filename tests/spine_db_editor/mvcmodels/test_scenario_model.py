@@ -258,9 +258,7 @@ class TestScenarioModel(_TestBase):
             ]
         ]
         self.assertEqual(model_data, expected)
-        mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map): ["Base"]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
+        mime_data = model.mimeData([model.index(1, 0, scenario_index)])
         self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, 0, 0, scenario_index))
         self._fetch_recursively(model)
         model_data = model_data_to_dict(model)

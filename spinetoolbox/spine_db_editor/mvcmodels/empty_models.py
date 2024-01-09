@@ -224,7 +224,7 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     @staticmethod
     def _check_item(item):
         """Checks if a db item is ready to be inserted."""
-        return "entity_class_name" in item and "name" in item
+        return item.get("entity_class_name") and item.get("name")
 
     def _entity_class_name_candidates(self, db_map, item):
         return []

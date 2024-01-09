@@ -219,7 +219,7 @@ class FetchMoreMixin:
             self.model.dataChanged.emit(index, index)
             if leaf_item.children:
                 top_left = self.model.index_from_item(leaf_item.child(0))
-                bottom_right = self.model.index_from_item(leaf_item.child(-1))
+                bottom_right = self.model.index_from_item(leaf_item.child(leaf_item.child_count() - 1))
                 self.model.dataChanged.emit(top_left, bottom_right)
 
 
