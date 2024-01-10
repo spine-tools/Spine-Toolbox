@@ -50,8 +50,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "spinetoolbox/_version.py"
-# default: guess-next-dev, alternatives: post-release, no-guess-dev
-version_scheme = "release-branch-semver"
+# Temporarily set the version scheme to guess-next-dev for 0.7 because we have
+# a separate 0.8-dev branch for 0.8.
+# Normally we use release-branch-semver here.
+version_scheme = "guess-next-dev"
 
 [tool.setuptools]
 zip-safe = false
