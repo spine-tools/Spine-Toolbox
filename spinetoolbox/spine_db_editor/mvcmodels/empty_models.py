@@ -208,7 +208,7 @@ class EntityMixin:
 
     @staticmethod
     def _entity_class_name_candidates_by_entity(db_map, item):
-        return [x["class_name"] for x in db_map.get_items("entity", byname=item.get("entity_byname"))]
+        return [x["class_name"] for x in db_map.get_items("entity", entity_byname=item.get("entity_byname"))]
 
 
 class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, EmptyModelBase):

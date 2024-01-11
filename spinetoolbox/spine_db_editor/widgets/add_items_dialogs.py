@@ -136,7 +136,7 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
                 continue
             element_byname_list = tuple(self.entities[row])
             byname = tuple(x for byname in element_byname_list for x in byname)
-            data.append({"class_name": self.entity_class["name"], "byname": byname})
+            data.append({"class_name": self.entity_class["name"], "entity_byname": byname})
         return {db_map: data for db_map in self.db_maps}
 
 
@@ -680,7 +680,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
                 for k in ("class_name", "superclass_name")
                 for x in self.db_mngr.get_items_by_field(self.db_map, "entity", k, name)
             ]
-            items = [QTreeWidgetItem([DB_ITEM_SEPARATOR.join(el["byname"])]) for el in elements]
+            items = [QTreeWidgetItem([DB_ITEM_SEPARATOR.join(el["entity_byname"])]) for el in elements]
             tree_widget.addTopLevelItems(items)
             tree_widget.resizeColumnToContents(0)
             self.splitter.addWidget(tree_widget)
@@ -721,7 +721,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         to_add = [
             {
                 "class_name": self.class_name,
-                "byname": tuple(x for byname in row[:-1] for x in byname.split(DB_ITEM_SEPARATOR)),
+                "entity_byname": tuple(x for byname in row[:-1] for x in byname.split(DB_ITEM_SEPARATOR)),
                 "name": row[-1],
             }
             for row in self.new_items_model._main_data

@@ -89,7 +89,7 @@ class StackedViewMixin:
         for id_ in dimension_id_list:
             dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_).get("name")
             entity_name_list = [
-                x["byname"]
+                x["entity_byname"]
                 for k in ("class_id", "superclass_id")
                 for x in self.db_mngr.get_items_by_field(db_map, "entity", k, id_)
             ]
