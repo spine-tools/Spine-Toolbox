@@ -51,7 +51,7 @@ class TestEntityItem(unittest.TestCase):
                         "name": "r",
                         "id": 2,
                         "class_id": 2,
-                        "class_name": "rc",
+                        "entity_class_name": "rc",
                         "element_id_list": [1],
                     }
                 ]
@@ -109,7 +109,7 @@ class TestEntityItem(unittest.TestCase):
                 'name': 'r',
                 'id': 2,
                 'class_id': 2,
-                'class_name': 'rc',
+                'entity_class_name': 'rc',
                 'element_id_list': (1,),
                 'description': None,
             },

@@ -136,7 +136,7 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
                 continue
             element_byname_list = tuple(self.entities[row])
             byname = tuple(x for byname in element_byname_list for x in byname)
-            data.append({"class_name": self.entity_class["name"], "entity_byname": byname})
+            data.append({"entity_class_name": self.entity_class["name"], "entity_byname": byname})
         return {db_map: data for db_map in self.db_maps}
 
 
@@ -677,7 +677,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             tree_widget.setHeaderItem(header_item)
             elements = [
                 x
-                for k in ("class_name", "superclass_name")
+                for k in ("entity_class_name", "superclass_name")
                 for x in self.db_mngr.get_items_by_field(self.db_map, "entity", k, name)
             ]
             items = [QTreeWidgetItem([DB_ITEM_SEPARATOR.join(el["entity_byname"])]) for el in elements]
@@ -720,7 +720,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
                 to_update.append({"id": id_, "name": new_name})
         to_add = [
             {
-                "class_name": self.class_name,
+                "entity_class_name": self.class_name,
                 "entity_byname": tuple(x for byname in row[:-1] for x in byname.split(DB_ITEM_SEPARATOR)),
                 "name": row[-1],
             }

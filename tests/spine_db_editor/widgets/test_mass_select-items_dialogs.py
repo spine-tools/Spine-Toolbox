@@ -80,7 +80,7 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
             [
                 {
                     'class_id': 1,
-                    'class_name': 'my_class',
+                    'entity_class_name': 'my_class',
                     'commit_id': None,
                     'group_id': None,
                     'id': 1,

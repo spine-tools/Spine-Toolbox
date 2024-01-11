@@ -73,5 +73,5 @@ class MakeEntityOnTheFlyMixin(ConvertToDBMixin):
         entity_byname = item.get("entity_byname")
         if not entity_byname:
             return None, []
-        item = {"class_name": entity_class_name, "entity_byname": entity_byname}
+        item = {"entity_class_name": entity_class_name, "entity_byname": entity_byname}
         return None if db_map.get_item("entity", **item) else item, []
