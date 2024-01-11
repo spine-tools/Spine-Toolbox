@@ -581,7 +581,7 @@ class GraphViewMixin:
     def get_entity_key(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
         entity = self.db_mngr.get_item(db_map, "entity", entity_id)
-        key = (entity["class_name"], entity["dimension_name_list"], entity["byname"])
+        key = (entity["entity_class_name"], entity["dimension_name_list"], entity["entity_byname"])
         if not self.ui.graphicsView.get_property("merge_dbs"):
             key += (db_map.codename,)
         return key
@@ -616,8 +616,8 @@ class GraphViewMixin:
         pv = db_map.get_item(
             "parameter_value",
             parameter_definition_name=pname,
-            entity_class_name=entity["class_name"],
-            entity_byname=entity["byname"],
+            entity_class_name=entity["entity_class_name"],
+            entity_byname=entity["entity_byname"],
             alternative_name=alternative["name"],
         )
         if not pv:
@@ -776,7 +776,9 @@ class GraphViewMixin:
             dimension_id_lists = list(itertools.product(*[item.entity_class_ids(db_map) for item in item_permutation]))
             if tuple(entity_class["dimension_id_list"]) in dimension_id_lists:
                 element_name_list = tuple(item.entity_name for item in item_permutation)
-                if not db_map.get_item("entity", class_name=entity_class["name"], element_name_list=element_name_list):
+                if not db_map.get_item(
+                    "entity", entity_class_name=entity_class["name"], element_name_list=element_name_list
+                ):
                     element_byname_list = tuple(item.byname for item in item_permutation)
                     entities.add(element_byname_list)
         if not entities:

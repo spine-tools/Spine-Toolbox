@@ -222,7 +222,7 @@ class GetEntitiesMixin:
         for db_map in self.db_maps:
             ent_lookup = db_map_ent_lookup.setdefault(db_map, {})
             for x in self.db_mngr.get_items(db_map, "entity"):
-                byname = DB_ITEM_SEPARATOR.join(x["byname"])
+                byname = DB_ITEM_SEPARATOR.join(x["entity_byname"])
                 ent_lookup[x["class_id"], byname] = ent_lookup[x["superclass_id"], byname] = x
         return db_map_ent_lookup
 

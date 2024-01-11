@@ -195,7 +195,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._import_data(
             object_classes=("oc",), objects=(("oc", "obj"), ("oc", "group")), object_groups=(("oc", "group", "obj"),)
         )
-        item = {'id': 1, 'entity_class_id': 1, 'entity_id': 2, 'member_id': 1, 'commit_id': 2}
+        item = {'id': 1, 'entity_class_id': 1, 'entity_id': 2, 'member_id': 1}
         fetcher = TestItemTypeFetchParent("entity_group")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
             self._db_mngr.fetch_more(self._db_map, fetcher)

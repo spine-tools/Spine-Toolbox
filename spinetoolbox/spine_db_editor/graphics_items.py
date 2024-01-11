@@ -121,7 +121,7 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def byname(self):
-        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("byname", ())
+        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("entity_byname", ())
 
     @property
     def element_name_list(self):
