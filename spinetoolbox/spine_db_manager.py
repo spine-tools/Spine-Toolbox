@@ -1496,7 +1496,7 @@ class SpineDBManager(QObject):
         """
         dup_import_data = {}
         for db_map in db_maps:
-            entity = db_map.get_entity_item(class_name=class_name, name=orig_name)
+            entity = db_map.get_entity_item(entity_class_name=class_name, name=orig_name)
             element_name_list = entity["element_name_list"]
             if element_name_list:
                 first_import_entry = (class_name, dup_name, element_name_list, entity["description"])
@@ -1505,7 +1505,7 @@ class SpineDBManager(QObject):
             dup_entity_import_data = [first_import_entry]
             for item in db_map.get_entity_items():
                 element_name_list = item["element_name_list"]
-                item_class_name = item["class_name"]
+                item_class_name = item["entity_class_name"]
                 if orig_name in element_name_list and item_class_name != class_name:
                     index = item["dimension_name_list"].index(class_name)
                     name_list = element_name_list

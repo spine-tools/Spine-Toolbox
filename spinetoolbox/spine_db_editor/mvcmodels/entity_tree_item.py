@@ -164,7 +164,7 @@ class EntityClassItem(MultiDBTreeItem):
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
 
-    visual_key = ["class_name", "byname"]
+    visual_key = ["entity_class_name", "entity_byname"]
     item_type = "entity"
     _fetch_index = EntityIndex()
     _entity_group_index = EntityGroupIndex()
@@ -211,12 +211,12 @@ class EntityItem(MultiDBTreeItem):
 
     @property
     def byname(self):
-        return self.db_map_data_field(self.first_db_map, "byname", default=())
+        return self.db_map_data_field(self.first_db_map, "entity_byname", default=())
 
     @property
     def entity_class_key(self):
         return tuple(
-            self.db_map_data_field(self.first_db_map, field) for field in ("class_name", "dimension_name_list")
+            self.db_map_data_field(self.first_db_map, field) for field in ("entity_class_name", "dimension_name_list")
         )
 
     @property
@@ -248,8 +248,8 @@ class EntityItem(MultiDBTreeItem):
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
-            entity_class_name=self.db_map_data_field(self.first_db_map, "class_name"),
-            entity_byname=DB_ITEM_SEPARATOR.join(self.db_map_data_field(self.first_db_map, "byname")),
+            entity_class_name=self.db_map_data_field(self.first_db_map, "entity_class_name"),
+            entity_byname=DB_ITEM_SEPARATOR.join(self.db_map_data_field(self.first_db_map, "entity_byname")),
             database=self.first_db_map.codename,
         )
 

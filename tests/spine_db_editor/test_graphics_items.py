@@ -48,13 +48,13 @@ class TestEntityItem(unittest.TestCase):
                         "name": "r",
                         "id": 2,
                         "class_id": 2,
-                        "class_name": "rc",
+                        "entity_class_name": "rc",
                         "element_id_list": [1],
                     }
                 ]
             }
         )
-        r_item = self._db_map.get_entity_item(name="r", class_name="rc")
+        r_item = self._db_map.get_entity_item(name="r", entity_class_name="rc")
         with mock.patch.object(EntityItem, "refresh_icon"):
             self._item = EntityItem(self._spine_db_editor, 0.0, 0.0, 0, ((self._db_map, r_item["id"]),))
 
@@ -107,7 +107,7 @@ class TestEntityItem(unittest.TestCase):
                 'name': 'r',
                 'id': -2,
                 'class_id': -2,
-                'class_name': 'rc',
+                'entity_class_name': 'rc',
                 'element_id_list': (-1,),
                 'description': None,
             },
