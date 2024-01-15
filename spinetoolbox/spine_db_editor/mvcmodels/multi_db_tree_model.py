@@ -31,6 +31,8 @@ class MultiDBTreeModel(MinimalTreeModel):
         self.db_editor = db_editor
         self.db_mngr = db_mngr
         self.db_maps = db_maps
+        self._invisible_root_item = TreeItem(self)
+        self.destroyed.connect(lambda obj=None: self._invisible_root_item.tear_down_recursively())
         self._root_item = None
 
     @property
@@ -52,12 +54,13 @@ class MultiDBTreeModel(MinimalTreeModel):
 
     def build_tree(self):
         """Builds tree."""
-        self.beginResetModel()
-        self._invisible_root_item = TreeItem(self)
-        self.destroyed.connect(lambda obj=None: self._invisible_root_item.tear_down_recursively())
+        if self._invisible_root_item.has_children():
+            self.beginRemoveRows(QModelIndex(), 0, self.rowCount() - 1)
+            self._invisible_root_item = TreeItem(self)
+            self.destroyed.connect(lambda obj=None: self._invisible_root_item.tear_down_recursively())
+            self.endRemoveRows()
         self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
         self._invisible_root_item.append_children([self._root_item])
-        self.endResetModel()
 
     def columnCount(self, parent=QModelIndex()):
         return len(self._header_labels)
