@@ -201,7 +201,7 @@ class MultiDBTreeItem(TreeItem):
     def deep_merge(self, other):
         """Merges another item and all its descendants into this one."""
         if not isinstance(other, type(self)):
-            raise ValueError(f"Can't merge an instance of {type(other)} into a MultiDBTreeItem.")
+            raise ValueError(f"Can't merge an instance of {type(other).__name__} into a MultiDBTreeItem.")
         for db_map in other.db_maps:
             self.add_db_map_id(db_map, other.db_map_id(db_map))
         self._merge_children(other.children)

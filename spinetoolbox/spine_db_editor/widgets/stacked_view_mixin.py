@@ -89,7 +89,7 @@ class StackedViewMixin:
         for id_ in dimension_id_list:
             dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_).get("name")
             entity_name_list = [
-                x["byname"]
+                x["entity_byname"]
                 for k in ("class_id", "superclass_id")
                 for x in self.db_mngr.get_items_by_field(db_map, "entity", k, id_)
             ]
@@ -98,7 +98,7 @@ class StackedViewMixin:
         entity_byname = index.data(Qt.ItemDataRole.EditRole)
         if entity_byname is not None:
             entity = db_map.get_item(
-                "entity", class_name=entity_class["name"], byname=tuple(entity_byname.split(DB_ITEM_SEPARATOR))
+                "entity", entity_class_name=entity_class["name"], byname=tuple(entity_byname.split(DB_ITEM_SEPARATOR))
             )
             current_element_byname_list = entity["element_byname_list"] if entity else []
         else:

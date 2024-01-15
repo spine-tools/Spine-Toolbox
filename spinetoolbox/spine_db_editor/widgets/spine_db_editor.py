@@ -147,7 +147,7 @@ class SpineDBEditorBase(QMainWindow):
         """
         return True
 
-    def load_db_urls(self, db_url_codenames, create=False, update_history=True):
+    def load_db_urls(self, db_url_codenames, create=False, update_history=True, window=False):
         self.ui.actionImport.setEnabled(False)
         self.ui.actionExport.setEnabled(False)
         self.ui.actionMass_remove_items.setEnabled(False)
@@ -163,7 +163,7 @@ class SpineDBEditorBase(QMainWindow):
         self._changelog.clear()
         self._purge_change_notifiers()
         for url, codename in db_url_codenames.items():
-            db_map = self.db_mngr.get_db_map(url, self, codename=codename, create=create)
+            db_map = self.db_mngr.get_db_map(url, self, codename=codename, create=create, window=window)
             if db_map is not None:
                 self.db_maps.append(db_map)
         if not self.db_maps:

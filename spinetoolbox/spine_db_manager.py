@@ -319,7 +319,9 @@ class SpineDBManager(QObject):
         for url in list(self._db_maps):
             self.close_session(url)
 
-    def get_db_map(self, url, logger, ignore_version_error=False, codename=None, create=False, upgrade=False):
+    def get_db_map(
+        self, url, logger, ignore_version_error=False, codename=None, create=False, upgrade=False, window=False
+    ):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
@@ -329,12 +331,13 @@ class SpineDBManager(QObject):
             codename (str, NoneType, optional)
             upgrade (bool, optional)
             create (bool, optional)
+            window (bool, optional)
 
         Returns:
             DiffDatabaseMapping, NoneType
         """
         try:
-            return self._do_get_db_map(url, codename, create, upgrade)
+            return self._do_get_db_map(url, codename, create, upgrade, window)
         except SpineDBVersionError as v_err:
             if ignore_version_error:
                 return None
@@ -350,7 +353,7 @@ class SpineDBManager(QObject):
                 ret = msg.exec()  # Show message box
                 if ret == QMessageBox.StandardButton.Cancel:
                     return None
-                return self.get_db_map(url, logger, codename=codename, create=create, upgrade=True)
+                return self.get_db_map(url, logger, codename=codename, create=create, upgrade=True, window=window)
             QMessageBox.information(
                 qApp.activeWindow(),  # pylint: disable=undefined-variable
                 "Unsupported database version",
@@ -365,7 +368,7 @@ class SpineDBManager(QObject):
             return None
 
     @busy_effect
-    def _do_get_db_map(self, url, codename, create, upgrade):
+    def _do_get_db_map(self, url, codename, create, upgrade, window):
         """Returns a memorized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
@@ -374,6 +377,7 @@ class SpineDBManager(QObject):
             codename (str, NoneType)
             upgrade (bool)
             create (bool)
+            window (bool)
 
         Returns:
             DiffDatabaseMapping
@@ -381,8 +385,10 @@ class SpineDBManager(QObject):
         url = str(url)
         db_map = self._db_maps.get(url)
         if db_map is not None:
-            if codename is not None:
-                db_map.codename = codename
+            if codename is not None and db_map.codename != codename:
+                if window:  # If new editor window is being opened
+                    return db_map
+                return None
             return db_map
         worker = SpineDBWorker(self, url, synchronous=self._synchronous)
         try:
@@ -1496,7 +1502,7 @@ class SpineDBManager(QObject):
         """
         dup_import_data = {}
         for db_map in db_maps:
-            entity = db_map.get_entity_item(class_name=class_name, name=orig_name)
+            entity = db_map.get_entity_item(entity_class_name=class_name, name=orig_name)
             element_name_list = entity["element_name_list"]
             if element_name_list:
                 first_import_entry = (class_name, dup_name, element_name_list, entity["description"])
@@ -1505,7 +1511,7 @@ class SpineDBManager(QObject):
             dup_entity_import_data = [first_import_entry]
             for item in db_map.get_entity_items():
                 element_name_list = item["element_name_list"]
-                item_class_name = item["class_name"]
+                item_class_name = item["entity_class_name"]
                 if orig_name in element_name_list and item_class_name != class_name:
                     index = item["dimension_name_list"].index(class_name)
                     name_list = element_name_list
