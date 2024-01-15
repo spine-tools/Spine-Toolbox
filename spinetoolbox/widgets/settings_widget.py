@@ -720,6 +720,23 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if not exe_path:
             Notification(self, f"{_type.capitalize()} executable missing").show()
             return
+        msg = (
+            f"You are about to set all {_type.capitalize()} Tool's execution settings in "
+            f"the current project to defaults. This operation is <b>irreversible</b> because "
+            f"the project will be saved afterwards. <br><br>Do you want to continue?"
+        )
+        box = QMessageBox(
+            QMessageBox.Icon.Question,
+            f"Set {_type.capitalize()} Tools to default execution settings?",
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=self,
+        )
+        box.button(QMessageBox.StandardButton.Ok).setText("Do it!")
+        box.setWindowIcon(QIcon(":/symbols/app.ico"))
+        answer = box.exec()
+        if answer != QMessageBox.StandardButton.Ok:
+            return
         # Unselect items on Design View because Tool properties still shows the old exec. settings after this operation
         self._toolbox.ui.graphicsView.scene().clearSelection()
         # Close all Julia or Python Tool Spec editor tabs
@@ -730,7 +747,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
                 tooltype = tab._ui.comboBox_tooltype.currentText()
                 if tooltype.lower() == _type:
                     editor._close_tab(tab_index)
-            n_after = editor.tab_widget.count()
         n = 0
         for item in project.get_items():
             if item.item_type() == "Tool" and item.specification() is not None:
@@ -741,9 +757,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
                     item.specification().set_execution_settings(use_jupyter_console, exe_path, julia_project, kernel)
                     n += 1
         if n == 0:
-            Notification(self, f"Project does not have any {_type.capitalize()} Tool Specs").show()
+            Notification(
+                self,
+                f"Project does not have any Tools using {_type.capitalize()} Tool specifications"
+            ).show()
         else:
-            Notification(self, f"Project saved!\n{n} {_type.capitalize()} Tool specs updated").show()
+            Notification(self, f"Project saved!\n{n} {_type.capitalize()} Tools updated").show()
             project.save()
 
     def read_settings(self):
