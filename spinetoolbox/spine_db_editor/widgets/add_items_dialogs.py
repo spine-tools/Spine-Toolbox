@@ -8,11 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Classes for custom QDialogs to add items to databases.
-
-"""
+""" Classes for custom QDialogs to add items to databases. """
 
 from itertools import product
 from PySide6.QtWidgets import (
@@ -210,14 +206,15 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         self.spin_box.setValue(self.number_of_dimensions)
         self.connect_signals()
         labels = ['dimension name (1)'] if dimension_one_name is not None else []
-        labels += ['entity class name', 'description', 'display icon', 'databases']
+        labels += ['entity class name', 'description', 'display icon', "active by default", 'databases']
         self.model.set_horizontal_header_labels(labels)
         db_names = ",".join(x.codename for x in item.db_maps)
         self.default_display_icon = None
         self.model.set_default_row(
             **{
                 'dimension name (1)': dimension_one_name,
-                'display_icon': self.default_display_icon,
+                'display icon': self.default_display_icon,
+                "active by default": self.number_of_dimensions != 0,
                 'databases': db_names,
             }
         )
@@ -245,6 +242,13 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             self.insert_column()
         elif i < self.number_of_dimensions:
             self.remove_column()
+        default_value = self.number_of_dimensions != 0
+        self.model.default_row["active by default"] = default_value
+        column = self.model.horizontal_header_labels().index("active by default")
+        last_row = self.model.rowCount() - 1
+        index = self.model.index(last_row, column)
+        if index.data() != default_value:
+            self.model.setData(index, default_value)
         self.spin_box.setEnabled(True)
         self.resize_window_to_columns()
 
@@ -284,10 +288,12 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
-        name_column = self.model.horizontal_header_labels().index("entity class name")
-        description_column = self.model.horizontal_header_labels().index("description")
-        display_icon_column = self.model.horizontal_header_labels().index("display icon")
-        db_column = self.model.horizontal_header_labels().index("databases")
+        header_labels = self.model.horizontal_header_labels()
+        name_column = header_labels.index("entity class name")
+        description_column = header_labels.index("description")
+        display_icon_column = header_labels.index("display icon")
+        active_by_default_column = header_labels.index("active by default")
+        db_column = header_labels.index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
             entity_class_name = row_data[name_column]
@@ -298,7 +304,13 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             display_icon = row_data[display_icon_column]
             if not display_icon:
                 display_icon = self.default_display_icon
-            pre_item = {'name': entity_class_name, 'description': description, 'display_icon': display_icon}
+            active_by_default = row_data[active_by_default_column]
+            pre_item = {
+                'name': entity_class_name,
+                'description': description,
+                'display_icon': display_icon,
+                "active_by_default": active_by_default,
+            }
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""

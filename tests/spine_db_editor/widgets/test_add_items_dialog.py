@@ -66,7 +66,7 @@ class TestAddItemsDialog(unittest.TestCase):
         model = dialog.model
         header = model.header
         model.fetchMore(QModelIndex())
-        self.assertEqual(header, ['entity class name', 'description', 'display icon', 'databases'])
+        self.assertEqual(header, ['entity class name', 'description', 'display icon', "active by default", 'databases'])
         indexes = [model.index(0, header.index(field)) for field in ('entity class name', 'databases')]
         values = ['fish', 'mock_db']
         model.batch_set_data(indexes, values)
@@ -86,7 +86,7 @@ class TestAddItemsDialog(unittest.TestCase):
         model = dialog.model
         header = model.header
         model.fetchMore(QModelIndex())
-        self.assertEqual(header, ['entity class name', 'description', 'display icon', 'databases'])
+        self.assertEqual(header, ['entity class name', 'description', 'display icon', "active by default", 'databases'])
         indexes = [model.index(0, header.index(field)) for field in ('entity class name', 'databases')]
         values = ['fish', 'gibberish']
         model.batch_set_data(indexes, values)

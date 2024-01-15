@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Custom editors for model/view programming.
-"""
+""" Custom editors for model/view programming. """
 
 from PySide6.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide6.QtWidgets import (
@@ -286,6 +283,19 @@ class SearchBarEditor(QTableView):
             return
         self.proxy_model.setData(self.first_index, index.data(Qt.ItemDataRole.EditRole))
         self.data_committed.emit()
+
+
+class BooleanSearchBarEditor(SearchBarEditor):
+    TRUE = "true"
+    FALSE = "false"
+
+    def data(self):
+        data = super().data()
+        return {self.TRUE: True, self.FALSE: False}[data]
+
+    def set_data(self, current, items):
+        current = {True: self.TRUE, False: self.FALSE}[bool(current)]
+        super().set_data(current, [self.TRUE, self.FALSE])
 
 
 class CheckListEditor(QTableView):
