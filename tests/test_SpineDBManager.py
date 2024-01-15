@@ -301,7 +301,12 @@ class TestOpenDBEditor(unittest.TestCase):
         self._db_mngr.open_db_editor({self._db_url: "not_the_same"})
         self.assertEqual(len(editors), 1)
         editor = editors[0]
-        self.assertEqual(editor.tab_widget.count(), 2)
+        self.assertEqual(editor.tab_widget.count(), 1)
+        # Finally try to open the first tab again
+        self._db_mngr.open_db_editor({self._db_url: "test"})
+        editors = list(self._db_mngr.get_all_multi_spine_db_editors())
+        editor = editors[0]
+        self.assertEqual(editor.tab_widget.count(), 1)
         for editor in self._db_mngr.get_all_multi_spine_db_editors():
             QApplication.processEvents()
             editor.close()
