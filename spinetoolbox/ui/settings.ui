@@ -182,7 +182,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="General">
        <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1810,7 +1810,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="engine_processes_button_group"/>
   <buttongroup name="persistent_processes_button_group"/>
+  <buttongroup name="engine_processes_button_group"/>
  </buttongroups>
 </ui>
