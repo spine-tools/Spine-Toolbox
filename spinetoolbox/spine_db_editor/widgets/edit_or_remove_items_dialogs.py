@@ -219,8 +219,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
     """A dialog to query user's preferences for removing tree items."""
 
     def __init__(self, parent, db_mngr, selected):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the removal

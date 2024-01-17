@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Classes for drawing graphics items on graph view's QGraphicsScene.
-"""
+""" Classes for drawing graphics items on graph view's QGraphicsScene. """
 from enum import Enum, auto
 from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF, QObject, QByteArray
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
@@ -101,7 +98,7 @@ class EntityItem(QGraphicsRectItem):
         return self._db_map_ids
 
     @property
-    def entity_name(self):
+    def name(self):
         return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("name", "")
 
     @property
@@ -144,7 +141,7 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def display_data(self):
-        return self.entity_name
+        return self.name
 
     @property
     def display_database(self):
@@ -685,11 +682,10 @@ class EntityItem(QGraphicsRectItem):
 
 
 class ArcItem(QGraphicsPathItem):
-    """Connects a two EntityItems."""
+    """Connects two EntityItems."""
 
     def __init__(self, ent_item, el_item, width):
-        """Initializes item.
-
+        """
         Args:
             ent_item (spinetoolbox.widgets.graph_view_graphics_items.EntityItem): entity item
             el_item (spinetoolbox.widgets.graph_view_graphics_items.EntityItem): element item
@@ -810,7 +806,7 @@ class CrossHairsItem(EntityItem):
         return None
 
     @property
-    def entity_name(self):
+    def name(self):
         return None
 
     @property

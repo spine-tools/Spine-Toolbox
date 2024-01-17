@@ -368,7 +368,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if not ok:
             return
         names = [x.strip() for x in expr.split(",")]
-        items = [item for item in self.entity_items if any(n == item.entity_name for n in names)]
+        items = [item for item in self.entity_items if any(n == item.name for n in names)]
         if not items:
             return
         color = QColorDialog.getColor(Qt.yellow, self, "Choose highlight color")
@@ -406,7 +406,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def _get_selected_entity_names(self):
         if not self.selected_items:
             return ""
-        names = "'" + self.selected_items[0].entity_name + "'"
+        names = "'" + self.selected_items[0].name + "'"
         if len(self.selected_items) > 1:
             names += f" and {len(self.selected_items) - 1} other entities"
         return names
@@ -530,7 +530,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 )
                 data.setdefault("parameter_values", []).extend(
                     [
-                        (class_name, item.element_name_list or item.entity_name, pname, val)
+                        (class_name, item.element_name_list or item.name, pname, val)
                         for item in ent_items
                         for pname, val in zip(
                             (self.pos_x_parameter, self.pos_y_parameter),

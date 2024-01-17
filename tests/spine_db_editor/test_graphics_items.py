@@ -75,8 +75,8 @@ class TestEntityItem(unittest.TestCase):
         self._spine_db_editor.deleteLater()
         self._spine_db_editor = None
 
-    def test_entity_name(self):
-        self.assertEqual(self._item.entity_name, "r")
+    def test_name(self):
+        self.assertEqual(self._item.name, "r")
 
     def test_entity_class_id(self):
         self.assertEqual(self._item.entity_class_id(self._db_map), 2)

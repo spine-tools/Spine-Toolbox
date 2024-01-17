@@ -713,11 +713,14 @@ class GraphViewMixin:
         return offset
 
     def _make_new_items(self, x, y):
-        """Returns new items for the graph.
+        """Makes new items for the graph.
 
         Args:
             x (list)
             y (list)
+
+        Returns:
+            bool: True if graph contains any items after the operation, False otherwise
         """
         self.entity_items = [
             EntityItem(
@@ -775,7 +778,7 @@ class GraphViewMixin:
         for item_permutation in itertools.permutations(entity_items):
             dimension_id_lists = list(itertools.product(*[item.entity_class_ids(db_map) for item in item_permutation]))
             if tuple(entity_class["dimension_id_list"]) in dimension_id_lists:
-                element_name_list = tuple(item.entity_name for item in item_permutation)
+                element_name_list = tuple(item.name for item in item_permutation)
                 if not db_map.get_item(
                     "entity", entity_class_name=entity_class["name"], element_name_list=element_name_list
                 ):
