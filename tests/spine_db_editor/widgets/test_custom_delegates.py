@@ -38,10 +38,10 @@ class TestBooleanValueDelegate(unittest.TestCase):
     def test_set_model_data_emits_when_true_is_selected(self):
         editor = mock.MagicMock()
         index = self._model.index(0, 0)
-        for editor_value, value in {BooleanValueDelegate.TRUE: True, BooleanValueDelegate.FALSE: False}.items():
-            with self.subTest(editor_value=editor_value):
-                editor.data.return_value = editor_value
-                with signal_waiter(self._delegate.data_committed) as waiter:
+        for value in (True, False):
+            with self.subTest(value=value):
+                editor.data.return_value = value
+                with signal_waiter(self._delegate.data_committed, timeout=1.0) as waiter:
                     self._delegate.setModelData(editor, self._model, index)
                     waiter.wait()
                     self.assertEqual(len(waiter.args), 2)

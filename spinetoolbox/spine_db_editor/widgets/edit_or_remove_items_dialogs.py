@@ -8,13 +8,12 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Classes for custom QDialogs to edit items in databases.
-"""
+""" Classes for custom QDialogs to edit items in databases. """
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QComboBox, QTabWidget
+
+from ..helpers import string_to_bool, string_to_display_icon
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate, RemoveEntitiesDelegate
 from .manage_items_dialogs import (
@@ -53,17 +52,21 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         """
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit entity classes")
+        self.table_view.set_column_converter_for_pasting("display icon", string_to_display_icon)
+        self.table_view.set_column_converter_for_pasting("active by default", string_to_bool)
         self.model = MinimalTableModel(self)
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageEntityClassesDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['entity class name', 'description', 'display icon', 'databases'])
+        self.model.set_horizontal_header_labels(
+            ['entity class name', 'description', 'display icon', "active by default", 'databases']
+        )
         self.orig_data = list()
         self.default_display_icon = default_icon_id()
         model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
-            row_data = [item.name, data['description'], data['display_icon']]
+            row_data = [item.name, data['description'], data['display_icon'], data["active_by_default"]]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -82,7 +85,7 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
         for i in range(self.model.rowCount()):
-            name, description, display_icon, db_names = self.model.row_data(i)
+            name, description, display_icon, active_by_default, db_names = self.model.row_data(i)
             if db_names is None:
                 db_names = ""
             item = self.items[i]
@@ -101,10 +104,14 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
                 continue
             if not display_icon:
                 display_icon = self.default_display_icon
-            pre_db_item = {'name': name, 'description': description, 'display_icon': display_icon}
             for db_map in db_maps:
-                db_item = pre_db_item.copy()
-                db_item['id'] = item.db_map_id(db_map)
+                db_item = {
+                    "id": item.db_map_id(db_map),
+                    'name': name,
+                    'description': description,
+                    'display_icon': display_icon,
+                    "active_by_default": active_by_default,
+                }
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to update")

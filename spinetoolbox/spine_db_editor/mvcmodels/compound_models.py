@@ -8,11 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Compound models.
-These models concatenate several 'single' models and one 'empty' model.
-"""
+""" Compound models. These models concatenate several 'single' models and one 'empty' model. """
 from PySide6.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide6.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
@@ -32,7 +28,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Args:
             parent (SpineDBEditor): the parent object
             db_mngr (SpineDBManager): the database manager
-            *db_maps (DiffDatabaseMapping): the database maps included in the model
+            *db_maps (DatabaseMapping): the database maps included in the model
         """
         super().__init__(parent=parent, header=self._make_header())
         self._parent = parent
@@ -272,7 +268,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         """Returns a collection of single models with given db_map.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
 
         Returns:
             list
@@ -303,7 +299,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Also notifies the empty model so it can remove rows that are already in.
 
         Args:
-            db_map_data (dict): list of added dict-items keyed by DiffDatabaseMapping
+            db_map_data (dict): list of added dict-items keyed by DatabaseMapping
         """
         for db_map, items in db_map_data.items():
             db_map_single_models = [m for m in self.single_models if m.db_map is db_map]
@@ -340,7 +336,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         """Creates new single model and resets it with the given parameter ids.
 
         Args:
-            db_map (DiffDatabaseMapping): database map
+            db_map (DatabaseMapping): database map
             entity_class_id (int): parameter's entity class id
             ids (list of int): parameter ids
             committed (bool): True if the ids have been committed, False otherwise
@@ -362,7 +358,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Emits dataChanged so the parameter_name column is refreshed.
 
         Args:
-            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
+            db_map_data (dict): list of updated dict-items keyed by DatabaseMapping
         """
         self.dataChanged.emit(
             self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1), [Qt.ItemDataRole.DisplayRole]
@@ -373,18 +369,33 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Removes the affected rows from the corresponding single models.
 
         Args:
-            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
+            db_map_data (dict): list of removed dict-items keyed by DatabaseMapping
         """
         self.layoutAboutToBeChanged.emit()
         for db_map, items in db_map_data.items():
             items_per_class = self._items_per_class(items)
-            for model in self._models_with_db_map(db_map):
-                removed_ids = [x["id"] for x in items_per_class.get(model.entity_class_id, {})]
+            emptied_single_model_indexes = []
+            for model_index, model in enumerate(self.single_models):
+                if model.db_map != db_map:
+                    continue
+                removed_ids = {x["id"] for x in items_per_class.get(model.entity_class_id, {})}
                 if not removed_ids:
                     continue
-                removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
+                removed_rows = []
+                for row in range(model.rowCount()):
+                    id_ = model._main_data[row]
+                    if id_ in removed_ids:
+                        removed_rows.append(row)
+                        removed_ids.remove(id_)
+                        if not removed_ids:
+                            break
                 for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
                     del model._main_data[row : row + count]
+                if model.rowCount() == 0:
+                    emptied_single_model_indexes.append(model_index)
+            for model_index in reversed(emptied_single_model_indexes):
+                model = self.sub_models.pop(model_index)
+                model.deleteLater()
         self._do_refresh()
         self.layoutChanged.emit()
 

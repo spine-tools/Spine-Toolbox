@@ -8,16 +8,14 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Custom QTableView classes that support copy-paste and the like.
-"""
+""" Custom QTableView classes that support copy-paste and the like. """
 
 from dataclasses import replace
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint, QItemSelection, QItemSelectionModel
 from PySide6.QtWidgets import QTableView, QMenu, QWidget
 from PySide6.QtGui import QKeySequence, QAction
 from .scenario_generator import ScenarioGenerator
+from ..helpers import string_to_bool
 from ..mvcmodels.pivot_table_models import (
     ParameterValuePivotTableModel,
     ElementPivotTableModel,
@@ -363,6 +361,10 @@ class ParameterValueTableView(ParameterTableView):
 
 class EntityAlternativeTableView(StackedTableView):
     """Visualize entities and their alternatives."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.set_column_converter_for_pasting("active", string_to_bool)
 
     def create_delegates(self):
         super().create_delegates()

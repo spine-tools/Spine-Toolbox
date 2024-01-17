@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Custom item delegates.
-"""
+""" Custom item delegates. """
 
 from numbers import Number
 from PySide6.QtCore import QModelIndex, Qt, Signal
@@ -19,6 +16,7 @@ from PySide6.QtWidgets import QStyledItemDelegate, QComboBox
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
 from ...widgets.custom_editors import (
+    BooleanSearchBarEditor,
     CustomLineEditor,
     PivotHeaderTableLineEditor,
     SearchBarEditor,
@@ -474,14 +472,10 @@ class AlternativeNameDelegate(TableDelegate):
 
 
 class BooleanValueDelegate(TableDelegate):
-    TRUE = "true"
-    FALSE = "false"
-
     def setModelData(self, editor, model, index):
         """Sends signal."""
-        try:
-            value = {self.TRUE: True, self.FALSE: False}[editor.data()]
-        except KeyError:
+        value = editor.data()
+        if not isinstance(value, bool):
             return
         self.data_committed.emit(index, value)
 
@@ -490,9 +484,14 @@ class BooleanValueDelegate(TableDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = SearchBarEditor(self.parent(), parent)
-        editor.set_data(str(index.data(Qt.ItemDataRole.EditRole)), [self.TRUE, self.FALSE])
+        editor = self.make_editor(self.parent(), parent, index)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
+        return editor
+
+    @classmethod
+    def make_editor(cls, parent, tutor, index):
+        editor = BooleanSearchBarEditor(parent, tutor)
+        editor.set_data(index.data(Qt.ItemDataRole.EditRole), None)
         return editor
 
 
@@ -742,14 +741,17 @@ class ManageEntityClassesDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'display icon':
+        label = header[index.column()]
+        if label == 'display icon':
             self.icon_color_editor_requested.emit(index)
             editor = None
-        elif header[index.column()] in ('entity class name', 'description'):
+        elif label in ('entity class name', 'description'):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
-        elif header[index.column()] == 'databases':
+        elif label == 'databases':
             editor = self._create_database_editor(parent, index)
+        elif label == "active by default":
+            editor = BooleanValueDelegate.make_editor(self.parent(), parent, index)
         else:
             editor = SearchBarEditor(parent)
             entity_class_name_list = self.parent().entity_class_name_list(index.row())
