@@ -8,6 +8,7 @@ from spinedb_api import (
     DatabaseMapping,
     import_alternatives,
     import_entities,
+    import_entity_alternatives,
     import_entity_classes,
     import_parameter_definitions,
     import_parameter_values,
@@ -30,10 +31,11 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
             self._database_path.unlink()
         url = "sqlite:///" + str(self._database_path)
         with DatabaseMapping(url, create=True) as db_map:
-            import_entity_classes(db_map, ("object_class",))
+            import_entity_classes(db_map, (("object_class",),))
             import_entities(db_map, (("object_class", "object"),))
             import_parameter_definitions(db_map, (("object_class", "parameter"),))
             import_alternatives(db_map, ("alternative",))
+            import_entity_alternatives(db_map, (("object_class", "object", "alternative", True),))
             import_parameter_values(
                 db_map,
                 (
