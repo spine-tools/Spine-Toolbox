@@ -318,6 +318,36 @@ class TestParameterTableWithExistingData(TestBase):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
+class TestEntityAlternativeTableView(TestBase):
+    def setUp(self):
+        self._common_setup("sqlite://", create=True)
+
+    def tearDown(self):
+        self._common_tear_down()
+
+    def test_pasting_gibberish_to_the_active_column_converts_to_false(self):
+        self._db_map.add_entity_class_item(name="Object")
+        self._db_map.add_entity_item(entity_class_name="Object", name="spoon")
+        table_view = self._db_editor.ui.tableView_entity_alternative
+        model = table_view.model()
+        table_view.selectionModel().setCurrentIndex(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        mock_clipboard = mock.MagicMock()
+        mock_clipboard.text.return_value = "Object\tspoon\tBase\tGIBBERISH"
+        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            clipboard.return_value = mock_clipboard
+            self.assertTrue(table_view.paste())
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 5)
+        expected = [
+            ["Object", "spoon", "Base", False, "TestEntityAlternativeTableView_db"],
+            [None, None, None, None, "TestEntityAlternativeTableView_db"],
+        ]
+        for row in range(model.rowCount()):
+            for column in range(model.columnCount()):
+                with self.subTest(row=row, column=column):
+                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+
 def _set_row_data(view, model, row, data, delegate_mock):
     for column, cell_data in enumerate(data):
         delegate_mock.reset()

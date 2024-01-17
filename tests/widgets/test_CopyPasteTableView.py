@@ -8,15 +8,12 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Unit tests for CopyPasteTableView class.
-"""
+""" Unit tests for CopyPasteTableView class. """
 
 import locale
 import unittest
-from unittest.mock import patch
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QItemSelectionModel, Qt
+from unittest.mock import MagicMock, patch
+from PySide6.QtCore import QAbstractTableModel, QItemSelection, QModelIndex, QItemSelectionModel, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
 
@@ -150,6 +147,38 @@ class TestCopyPasteTableView(unittest.TestCase):
         QApplication.clipboard().setText("unit,node")
         self.assertTrue(view.paste())
         self.assertEqual(model.index(0, 2).data(), "unit,node")
+
+    def test_pasting_normal_with_column_converter(self):
+        view = CopyPasteTableView()
+        view.set_column_converter_for_pasting("Column 2", float)
+        model = _MockModel()
+        view.setModel(model)
+        selection_model = view.selectionModel()
+        selection_model.setCurrentIndex(model.index(0, 2), QItemSelectionModel.ClearAndSelect)
+        mock_clipboard = MagicMock()
+        mock_clipboard.text.return_value = "3.14"
+        with patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            clipboard.return_value = mock_clipboard
+            self.assertTrue(view.paste())
+        data = model.index(0, 2).data()
+        self.assertIsInstance(data, float)
+        self.assertEqual(data, 3.14)
+
+    def test_pasting_selection_with_column_converter(self):
+        view = CopyPasteTableView()
+        view.set_column_converter_for_pasting("Column 2", float)
+        model = _MockModel()
+        view.setModel(model)
+        selection = QItemSelection(model.index(1, 0), model.index(1, 2))
+        selection_model = view.selectionModel()
+        selection_model.select(selection, QItemSelectionModel.ClearAndSelect)
+        mock_clipboard = MagicMock()
+        mock_clipboard.text.return_value = "G\tH\t3.14"
+        with patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            clipboard.return_value = mock_clipboard
+            self.assertTrue(view.paste())
+        data = [model.index(1, column).data() for column in range(3)]
+        self.assertEqual(data, ["G", "H", 3.14])
 
 
 if __name__ == '__main__':

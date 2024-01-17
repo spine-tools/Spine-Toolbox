@@ -9,6 +9,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - New context menu action (Select superclass) for entity class items in the entity tree.
 
 ### Changed
+
+#### Spine data structure
+
+Many parts of the Spine data structure have been redesigned.
+
+- *Entities* have replaced objects and relationships.
+  Zero-dimensional entities correspond to objects while multidimensional entities replace the former relationships.
+  Unlike relationships, the *elements* of multidimensional entities can now be other multidimensional entities.
+- Simple inheritance is now supported by *superclasses*.
+- Tools, features and methods have been removed.
+  The functionality that was previously implemented using the is_active parameter
+  has been replaced by *entity alternatives*.
+  Entity classes have a default setting for the entity alternative called *active by default*.
+
+#### Miscellaneous changes
+
 - Julia execution settings are now Tool specification settings instead of global application settings. You can 
   select a different Julia executable & project or Julia kernel for each Tool spec.
 - Headless mode now supports remote execution (see 'python -m spinetoolbox --help')

@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Custom editors for model/view programming.
-"""
+""" Custom editors for model/view programming. """
 
 from PySide6.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide6.QtWidgets import (
@@ -30,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPalette, QStandardItemModel, QStandardItem, QColor
 from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
+from ..spine_db_editor.helpers import FALSE_STRING, TRUE_STRING
 
 
 class CustomLineEditor(QLineEdit):
@@ -286,6 +284,16 @@ class SearchBarEditor(QTableView):
             return
         self.proxy_model.setData(self.first_index, index.data(Qt.ItemDataRole.EditRole))
         self.data_committed.emit()
+
+
+class BooleanSearchBarEditor(SearchBarEditor):
+    def data(self):
+        data = super().data()
+        return {TRUE_STRING: True, FALSE_STRING: False}.get(data, False)
+
+    def set_data(self, current, items):
+        current = {True: TRUE_STRING, False: FALSE_STRING}[bool(current)]
+        super().set_data(current, [TRUE_STRING, FALSE_STRING])
 
 
 class CheckListEditor(QTableView):

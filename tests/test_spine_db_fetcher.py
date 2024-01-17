@@ -116,6 +116,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'display_order': 99,
             'display_icon': None,
             'hidden': 0,
+            "active_by_default": False,
             'dimension_id_list': (),
         }
         fetcher = TestItemTypeFetchParent("entity_class")
@@ -157,6 +158,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'display_order': 99,
             'display_icon': None,
             'hidden': 0,
+            "active_by_default": True,
             'dimension_id_list': (1,),
         }
         for item_type in ("entity_class",):

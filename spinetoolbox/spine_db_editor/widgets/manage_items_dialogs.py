@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Classes for custom QDialogs to add edit and remove database items.
-"""
+""" Classes for custom QDialogs to add edit and remove database items. """
 
 from functools import reduce, cached_property
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
@@ -25,8 +22,7 @@ from ...helpers import busy_effect, preferred_row_height, DB_ITEM_SEPARATOR
 
 class DialogWithButtons(QDialog):
     def __init__(self, parent, db_mngr):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
@@ -58,8 +54,7 @@ class DialogWithButtons(QDialog):
 
 class DialogWithTableAndButtons(DialogWithButtons):
     def __init__(self, parent, db_mngr):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
@@ -105,8 +100,7 @@ class ManageItemsDialog(DialogWithTableAndButtons):
     """
 
     def __init__(self, parent, db_mngr):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
