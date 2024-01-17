@@ -13,6 +13,7 @@
 Classes for drawing graphics items on QGraphicsScene.
 """
 
+import os
 import math
 from PySide6.QtCore import Qt, QPointF, QRectF, QLineF
 from PySide6.QtWidgets import (
@@ -84,6 +85,8 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.name_item = QGraphicsSimpleTextItem(self._name)
         self.name_item.setZValue(100)
         self.set_name_attributes()  # Set font, size, position, etc.
+        self.spec_item = None  # For displaying Tool Spec icon
+        self.spec_item_renderer = None
         # Make connector buttons
         self.connectors = dict(
             bottom=ConnectorButton(toolbox, self, position="bottom"),
@@ -96,6 +99,32 @@ class ProjectItemIcon(QGraphicsPathItem):
         shadow_effect.setEnabled(False)
         self.setGraphicsEffect(shadow_effect)
         self._update_path()
+
+    def setup_spec_icon(self, spec_icon_path):
+        """Adds an SVG icon under the item icon based on Tool Specification type.
+
+        Args:
+            spec_icon_path (str): Path to icon resource file.
+        """
+        self.spec_item = QGraphicsSvgItem(self)
+        self.spec_item_renderer = QSvgRenderer()
+        loading_ok = self.spec_item_renderer.load(spec_icon_path)
+        if not loading_ok:
+            self._toolbox.msg_error.emit(f"Loading SVG icon from resource {spec_icon_path} failed")
+            return
+        size = self.spec_item_renderer.defaultSize()
+        self.spec_item.setSharedRenderer(self.spec_item_renderer)
+        self.spec_item.setElementId("")
+        dim_max = max(size.width(), size.height())
+        rect_w = 0.3 * self.rect().width()  # Parent rect width
+        self.spec_item.setScale(rect_w / dim_max)
+        self.spec_item.setPos(self.sceneBoundingRect().center() - self.spec_item.sceneBoundingRect().center() + QPointF(0, 50))
+
+    def remove_specification_icon(self):
+        """Removes the specification icon SVG from the scene."""
+        self.spec_item.setParentItem(None)
+        self.spec_item.deleteLater()
+        self.spec_item = None
 
     def rect(self):
         return self._rect

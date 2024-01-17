@@ -56,6 +56,19 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
+    def specification_icon(specification):
+        """
+        Returns the specification icon resource path.
+
+        Args:
+            specification (ProjectItemSpecification): Item's specification
+
+        Returns:
+            str
+        """
+        return None
+
+    @staticmethod
     def make_add_item_widget(toolbox, x, y, specification):
         """
         Returns an appropriate Add project item widget.
