@@ -9,7 +9,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """ Classes for custom QDialogs to add items to databases. """
-
+from contextlib import suppress
 from itertools import product
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -34,6 +34,7 @@ from PySide6.QtCore import Slot, Qt, QSize, QModelIndex
 from PySide6.QtGui import QIcon
 
 from spinedb_api.helpers import name_from_elements, name_from_dimensions
+from ..helpers import string_to_bool, string_to_display_icon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
@@ -189,6 +190,8 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Add entity classes")
+        self.table_view.set_column_converter_for_pasting("display icon", string_to_display_icon)
+        self.table_view.set_column_converter_for_pasting("active by default", string_to_bool)
         self.model = EmptyRowModel(self)
         self.model.force_default = force_default
         self.table_view.setModel(self.model)

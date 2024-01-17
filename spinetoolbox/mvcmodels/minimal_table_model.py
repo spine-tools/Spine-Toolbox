@@ -14,9 +14,10 @@ from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
 class MinimalTableModel(QAbstractTableModel):
-    def __init__(self, parent=None, header=None, lazy=True):
-        """Table model for outlining simple tabular data.
+    """Table model for outlining simple tabular data."""
 
+    def __init__(self, parent=None, header=None, lazy=True):
+        """
         Args:
             parent (QObject, optional): the parent object
             header (list of str): header labels

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPalette, QStandardItemModel, QStandardItem, QColor
 from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
+from ..spine_db_editor.helpers import FALSE_STRING, TRUE_STRING
 
 
 class CustomLineEditor(QLineEdit):
@@ -286,16 +287,13 @@ class SearchBarEditor(QTableView):
 
 
 class BooleanSearchBarEditor(SearchBarEditor):
-    TRUE = "true"
-    FALSE = "false"
-
     def data(self):
         data = super().data()
-        return {self.TRUE: True, self.FALSE: False}[data]
+        return {TRUE_STRING: True, FALSE_STRING: False}.get(data, False)
 
     def set_data(self, current, items):
-        current = {True: self.TRUE, False: self.FALSE}[bool(current)]
-        super().set_data(current, [self.TRUE, self.FALSE])
+        current = {True: TRUE_STRING, False: FALSE_STRING}[bool(current)]
+        super().set_data(current, [TRUE_STRING, FALSE_STRING])
 
 
 class CheckListEditor(QTableView):

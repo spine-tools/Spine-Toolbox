@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Unit tests for ``add_items_dialog`` module.
-"""
+""" Unit tests for ``add_items_dialog`` module. """
 
 import unittest
 from unittest import mock
@@ -59,7 +56,7 @@ class TestAddItemsDialog(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_add_entity_classes(self):
-        """Test object classes are added through the manager when accepting the dialog."""
+        """Test entity classes are added through the manager when accepting the dialog."""
         dialog = AddEntityClassesDialog(
             self._db_editor, self._db_editor.entity_tree_model.root_item, self._db_mngr, self._db_map
         )
@@ -77,7 +74,7 @@ class TestAddItemsDialog(unittest.TestCase):
         self.assertEqual(data[0].name, "fish")
 
     def test_do_not_add_entity_classes_with_invalid_db(self):
-        """Test object classes aren't added when the database is not correct."""
+        """Test entity classes aren't added when the database is not correct."""
         dialog = AddEntityClassesDialog(
             self._db_editor, self._db_editor.entity_tree_model.root_item, self._db_mngr, self._db_map
         )
@@ -92,6 +89,48 @@ class TestAddItemsDialog(unittest.TestCase):
         model.batch_set_data(indexes, values)
         dialog.accept()
         self._db_editor.msg_error.emit.assert_called_with("Invalid database gibberish at row 1")
+
+    def test_pasting_data_to_active_by_default_column(self):
+        dialog = AddEntityClassesDialog(
+            self._db_editor, self._db_editor.entity_tree_model.root_item, self._db_mngr, self._db_map
+        )
+        model = dialog.model
+        header = model.header
+        model.fetchMore(QModelIndex())
+        self.assertEqual(header, ['entity class name', 'description', 'display icon', "active by default", 'databases'])
+        active_by_default_column = header.index("active by default")
+        index = model.index(0, active_by_default_column)
+        self.assertFalse(index.data())
+        dialog.table_view.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        self._paste_to_table_view("true", dialog)
+        self.assertTrue(model.index(0, active_by_default_column).data())
+        self._paste_to_table_view("GIBBERISH", dialog)
+        self.assertFalse(model.index(0, active_by_default_column).data())
+
+    def test_pasting_data_to_display_icon_column(self):
+        dialog = AddEntityClassesDialog(
+            self._db_editor, self._db_editor.entity_tree_model.root_item, self._db_mngr, self._db_map
+        )
+        model = dialog.model
+        header = model.header
+        model.fetchMore(QModelIndex())
+        self.assertEqual(header, ['entity class name', 'description', 'display icon', "active by default", 'databases'])
+        display_icon_column = header.index("display icon")
+        index = model.index(0, display_icon_column)
+        self.assertIsNone(index.data())
+        dialog.table_view.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        self._paste_to_table_view("23", dialog)
+        self.assertEqual(model.index(0, display_icon_column).data(), 23)
+        self._paste_to_table_view("GIBBERISH", dialog)
+        self.assertIsNone(model.index(0, display_icon_column).data())
+
+    @staticmethod
+    def _paste_to_table_view(text, dialog):
+        mock_clipboard = mock.MagicMock()
+        mock_clipboard.text.return_value = text
+        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            clipboard.return_value = mock_clipboard
+            dialog.table_view.paste()
 
     def _commit_changes_to_database(self, commit_message):
         with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:

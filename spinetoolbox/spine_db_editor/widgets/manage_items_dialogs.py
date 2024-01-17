@@ -22,8 +22,7 @@ from ...helpers import busy_effect, preferred_row_height, DB_ITEM_SEPARATOR
 
 class DialogWithButtons(QDialog):
     def __init__(self, parent, db_mngr):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
@@ -55,8 +54,7 @@ class DialogWithButtons(QDialog):
 
 class DialogWithTableAndButtons(DialogWithButtons):
     def __init__(self, parent, db_mngr):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
@@ -102,8 +100,7 @@ class ManageItemsDialog(DialogWithTableAndButtons):
     """
 
     def __init__(self, parent, db_mngr):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
