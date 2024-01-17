@@ -383,8 +383,9 @@ class Ui_SettingsForm(object):
 
         self.groupBox_julia = QGroupBox(self.ExternalTools)
         self.groupBox_julia.setObjectName(u"groupBox_julia")
-        self.verticalLayout_16 = QVBoxLayout(self.groupBox_julia)
-        self.verticalLayout_16.setObjectName(u"verticalLayout_16")
+        self.verticalLayout_10 = QVBoxLayout(self.groupBox_julia)
+        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
+        self.verticalLayout_10.setContentsMargins(-1, 9, -1, -1)
         self.horizontalLayout_14 = QHBoxLayout()
         self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
         self.verticalLayout = QVBoxLayout()
@@ -475,14 +476,31 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_14.addLayout(self.verticalLayout_15)
 
 
-        self.verticalLayout_16.addLayout(self.horizontalLayout_14)
+        self.verticalLayout_10.addLayout(self.horizontalLayout_14)
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer_2)
+
+        self.toolButton_set_julia_defaults = QToolButton(self.groupBox_julia)
+        self.toolButton_set_julia_defaults.setObjectName(u"toolButton_set_julia_defaults")
+        icon6 = QIcon()
+        icon6.addFile(u":/icons/share.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_set_julia_defaults.setIcon(icon6)
+
+        self.horizontalLayout.addWidget(self.toolButton_set_julia_defaults)
+
+
+        self.verticalLayout_10.addLayout(self.horizontalLayout)
 
         self.line = QFrame(self.groupBox_julia)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.HLine)
         self.line.setFrameShadow(QFrame.Sunken)
 
-        self.verticalLayout_16.addWidget(self.line)
+        self.verticalLayout_10.addWidget(self.line)
 
         self.horizontalLayout_12 = QHBoxLayout()
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
@@ -501,7 +519,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_12.addWidget(self.pushButton_add_up_spine_opt)
 
 
-        self.verticalLayout_16.addLayout(self.horizontalLayout_12)
+        self.verticalLayout_10.addLayout(self.horizontalLayout_12)
 
 
         self.verticalLayout_13.addWidget(self.groupBox_julia)
@@ -511,8 +529,11 @@ class Ui_SettingsForm(object):
         sizePolicy.setHeightForWidth(self.groupBox_python.sizePolicy().hasHeightForWidth())
         self.groupBox_python.setSizePolicy(sizePolicy)
         self.groupBox_python.setMinimumSize(QSize(0, 95))
-        self.horizontalLayout_3 = QHBoxLayout(self.groupBox_python)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.verticalLayout_16 = QVBoxLayout(self.groupBox_python)
+        self.verticalLayout_16.setObjectName(u"verticalLayout_16")
+        self.verticalLayout_16.setContentsMargins(-1, 9, -1, -1)
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.verticalLayout_14 = QVBoxLayout()
         self.verticalLayout_14.setObjectName(u"verticalLayout_14")
         self.radioButton_use_python_basic_console = QRadioButton(self.groupBox_python)
@@ -526,14 +547,14 @@ class Ui_SettingsForm(object):
         self.verticalLayout_14.addWidget(self.radioButton_use_python_jupyter_console)
 
 
-        self.horizontalLayout_3.addLayout(self.verticalLayout_14)
+        self.horizontalLayout_5.addLayout(self.verticalLayout_14)
 
         self.line_2 = QFrame(self.groupBox_python)
         self.line_2.setObjectName(u"line_2")
         self.line_2.setFrameShape(QFrame.VLine)
         self.line_2.setFrameShadow(QFrame.Sunken)
 
-        self.horizontalLayout_3.addWidget(self.line_2)
+        self.horizontalLayout_5.addWidget(self.line_2)
 
         self.verticalLayout_5 = QVBoxLayout()
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
@@ -577,7 +598,25 @@ class Ui_SettingsForm(object):
         self.verticalLayout_5.addLayout(self.horizontalLayout_11)
 
 
-        self.horizontalLayout_3.addLayout(self.verticalLayout_5)
+        self.horizontalLayout_5.addLayout(self.verticalLayout_5)
+
+
+        self.verticalLayout_16.addLayout(self.horizontalLayout_5)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
+
+        self.toolButton_set_python_defaults = QToolButton(self.groupBox_python)
+        self.toolButton_set_python_defaults.setObjectName(u"toolButton_set_python_defaults")
+        self.toolButton_set_python_defaults.setIcon(icon6)
+
+        self.horizontalLayout_3.addWidget(self.toolButton_set_python_defaults)
+
+
+        self.verticalLayout_16.addLayout(self.horizontalLayout_3)
 
 
         self.verticalLayout_13.addWidget(self.groupBox_python)
@@ -998,7 +1037,8 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.lineEdit_julia_project_path, self.toolButton_browse_julia_project)
         QWidget.setTabOrder(self.toolButton_browse_julia_project, self.comboBox_julia_kernel)
         QWidget.setTabOrder(self.comboBox_julia_kernel, self.pushButton_make_julia_kernel)
-        QWidget.setTabOrder(self.pushButton_make_julia_kernel, self.pushButton_install_julia)
+        QWidget.setTabOrder(self.pushButton_make_julia_kernel, self.toolButton_set_julia_defaults)
+        QWidget.setTabOrder(self.toolButton_set_julia_defaults, self.pushButton_install_julia)
         QWidget.setTabOrder(self.pushButton_install_julia, self.pushButton_add_up_spine_opt)
         QWidget.setTabOrder(self.pushButton_add_up_spine_opt, self.radioButton_use_python_basic_console)
         QWidget.setTabOrder(self.radioButton_use_python_basic_console, self.radioButton_use_python_jupyter_console)
@@ -1006,7 +1046,8 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.lineEdit_python_path, self.toolButton_browse_python)
         QWidget.setTabOrder(self.toolButton_browse_python, self.comboBox_python_kernel)
         QWidget.setTabOrder(self.comboBox_python_kernel, self.pushButton_make_python_kernel)
-        QWidget.setTabOrder(self.pushButton_make_python_kernel, self.lineEdit_conda_path)
+        QWidget.setTabOrder(self.pushButton_make_python_kernel, self.toolButton_set_python_defaults)
+        QWidget.setTabOrder(self.toolButton_set_python_defaults, self.lineEdit_conda_path)
         QWidget.setTabOrder(self.lineEdit_conda_path, self.toolButton_browse_conda)
         QWidget.setTabOrder(self.toolButton_browse_conda, self.checkBox_commit_at_exit)
         QWidget.setTabOrder(self.checkBox_commit_at_exit, self.checkBox_db_editor_show_undo)
@@ -1027,6 +1068,17 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.comboBox_security, self.lineEdit_secfolder)
         QWidget.setTabOrder(self.lineEdit_secfolder, self.toolButton_pick_secfolder)
         QWidget.setTabOrder(self.toolButton_pick_secfolder, self.listWidget)
+        QWidget.setTabOrder(self.listWidget, self.checkBox_entity_tree_sticky_selection)
+        QWidget.setTabOrder(self.checkBox_entity_tree_sticky_selection, self.checkBox_hide_empty_classes)
+        QWidget.setTabOrder(self.checkBox_hide_empty_classes, self.checkBox_smooth_entity_graph_rotation)
+        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_smooth_entity_graph_zoom)
+        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_zoom, self.spinBox_layout_algo_max_iterations)
+        QWidget.setTabOrder(self.spinBox_layout_algo_max_iterations, self.spinBox_layout_algo_spread_factor)
+        QWidget.setTabOrder(self.spinBox_layout_algo_spread_factor, self.checkBox_auto_expand_entities)
+        QWidget.setTabOrder(self.checkBox_auto_expand_entities, self.checkBox_snap_entities)
+        QWidget.setTabOrder(self.checkBox_snap_entities, self.checkBox_merge_dbs)
+        QWidget.setTabOrder(self.checkBox_merge_dbs, self.spinBox_layout_algo_neg_weight_exp)
+        QWidget.setTabOrder(self.spinBox_layout_algo_neg_weight_exp, self.spinBox_max_ent_dim_count)
 
         self.retranslateUi(SettingsForm)
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
@@ -1158,6 +1210,9 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.pushButton_make_julia_kernel.setText(QCoreApplication.translate("SettingsForm", u"Make Julia Kernel", None))
 #if QT_CONFIG(tooltip)
+        self.toolButton_set_julia_defaults.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Set Julia Tool execution settings in the current project to defaults</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
         self.pushButton_install_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Installs the latest Julia on your system using Python's <span style=\" font-weight:700;\">jill</span> package</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_install_julia.setText(QCoreApplication.translate("SettingsForm", u"Install Julia", None))
@@ -1191,6 +1246,9 @@ class Ui_SettingsForm(object):
         self.pushButton_make_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Creates a Python kernel for selected Python interpreter if it does not exist using the <span style=\" font-weight:700;\">ipykernel </span>package. Selects a Python kernel matching the selected Python interpreter if it already exists. </p><p>You can also create Python kernels manually using the <span style=\" font-weight:700;\">ipykernel</span> package.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_make_python_kernel.setText(QCoreApplication.translate("SettingsForm", u"Make Python Kernel", None))
+#if QT_CONFIG(tooltip)
+        self.toolButton_set_python_defaults.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Set Python Tool execution settings in the current project to defaults</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_2.setTitle(QCoreApplication.translate("SettingsForm", u"Conda", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_conda_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select Miniconda executable for running Tool specifications in a Conda environment.</p><p>If you started Spine Toolbox in Miniconda, the <span style=\" font-weight:600;\">Conda executable is set up automatically</span>.</p><p>If not on Miniconda, please select <span style=\" font-weight:600;\">&lt;base_env&gt;\\scripts\\conda.exe</span> (on Win10), where <span style=\" font-weight:600;\">&lt;base_env&gt;</span> is the root directory of your Miniconda installation (i.e. base environment location).</p></body></html>", None))

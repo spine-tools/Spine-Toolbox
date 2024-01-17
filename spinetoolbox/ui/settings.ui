@@ -668,7 +668,10 @@
           <property name="title">
            <string>Julia</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_16">
+          <layout class="QVBoxLayout" name="verticalLayout_10">
+           <property name="topMargin">
+            <number>9</number>
+           </property>
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_14">
              <item>
@@ -822,6 +825,34 @@
             </layout>
            </item>
            <item>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <spacer name="horizontalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QToolButton" name="toolButton_set_julia_defaults">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set Julia Tool execution settings in the current project to defaults&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="icon">
+                <iconset resource="resources/resources_icons.qrc">
+                 <normaloff>:/icons/share.svg</normaloff>:/icons/share.svg</iconset>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
             <widget class="Line" name="line">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -888,115 +919,150 @@
           <property name="title">
            <string>Python</string>
           </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <layout class="QVBoxLayout" name="verticalLayout_16">
+           <property name="topMargin">
+            <number>9</number>
+           </property>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_14">
+            <layout class="QHBoxLayout" name="horizontalLayout_5">
              <item>
-              <widget class="QRadioButton" name="radioButton_use_python_basic_console">
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Execute Python Tool specifications in basic Python REPL.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="text">
-                <string>Basic Console</string>
+              <layout class="QVBoxLayout" name="verticalLayout_14">
+               <item>
+                <widget class="QRadioButton" name="radioButton_use_python_basic_console">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Execute Python Tool specifications in basic Python REPL.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Basic Console</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="radioButton_use_python_jupyter_console">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use Jupyter Console to execute Python Tool specs. Select a Python kernel spec to use this option.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Jupyter Console</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="Line" name="line_2">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QRadioButton" name="radioButton_use_python_jupyter_console">
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use Jupyter Console to execute Python Tool specs. Select a Python kernel spec to use this option.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="text">
-                <string>Jupyter Console</string>
-               </property>
-              </widget>
+              <layout class="QVBoxLayout" name="verticalLayout_5">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_10">
+                 <item>
+                  <widget class="QLineEdit" name="lineEdit_python_path">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter for Basic Console. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Using current Python interpreter</string>
+                   </property>
+                   <property name="clearButtonEnabled">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="toolButton_browse_python">
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="resources/resources_icons.qrc">
+                     <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_11">
+                 <item>
+                  <widget class="CustomQComboBox" name="comboBox_python_kernel">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="contextMenuPolicy">
+                    <enum>Qt::CustomContextMenu</enum>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel spec for Jupyter Console.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="pushButton_make_python_kernel">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Creates a Python kernel for selected Python interpreter if it does not exist using the &lt;span style=&quot; font-weight:700;&quot;&gt;ipykernel &lt;/span&gt;package. Selects a Python kernel matching the selected Python interpreter if it already exists. &lt;/p&gt;&lt;p&gt;You can also create Python kernels manually using the &lt;span style=&quot; font-weight:700;&quot;&gt;ipykernel&lt;/span&gt; package.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>Make Python Kernel</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
              </item>
             </layout>
            </item>
            <item>
-            <widget class="Line" name="line_2">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QVBoxLayout" name="verticalLayout_5">
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_10">
-               <item>
-                <widget class="QLineEdit" name="lineEdit_python_path">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter for Basic Console. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="placeholderText">
-                  <string>Using current Python interpreter</string>
-                 </property>
-                 <property name="clearButtonEnabled">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QToolButton" name="toolButton_browse_python">
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="icon">
-                  <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+              <spacer name="horizontalSpacer_3">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_11">
-               <item>
-                <widget class="CustomQComboBox" name="comboBox_python_kernel">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="contextMenuPolicy">
-                  <enum>Qt::CustomContextMenu</enum>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel spec for Jupyter Console.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QPushButton" name="pushButton_make_python_kernel">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Creates a Python kernel for selected Python interpreter if it does not exist using the &lt;span style=&quot; font-weight:700;&quot;&gt;ipykernel &lt;/span&gt;package. Selects a Python kernel matching the selected Python interpreter if it already exists. &lt;/p&gt;&lt;p&gt;You can also create Python kernels manually using the &lt;span style=&quot; font-weight:700;&quot;&gt;ipykernel&lt;/span&gt; package.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string>Make Python Kernel</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+              <widget class="QToolButton" name="toolButton_set_python_defaults">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set Python Tool execution settings in the current project to defaults&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="icon">
+                <iconset resource="resources/resources_icons.qrc">
+                 <normaloff>:/icons/share.svg</normaloff>:/icons/share.svg</iconset>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
@@ -1679,6 +1745,7 @@
   <tabstop>toolButton_browse_julia_project</tabstop>
   <tabstop>comboBox_julia_kernel</tabstop>
   <tabstop>pushButton_make_julia_kernel</tabstop>
+  <tabstop>toolButton_set_julia_defaults</tabstop>
   <tabstop>pushButton_install_julia</tabstop>
   <tabstop>pushButton_add_up_spine_opt</tabstop>
   <tabstop>radioButton_use_python_basic_console</tabstop>
@@ -1687,6 +1754,7 @@
   <tabstop>toolButton_browse_python</tabstop>
   <tabstop>comboBox_python_kernel</tabstop>
   <tabstop>pushButton_make_python_kernel</tabstop>
+  <tabstop>toolButton_set_python_defaults</tabstop>
   <tabstop>lineEdit_conda_path</tabstop>
   <tabstop>toolButton_browse_conda</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
@@ -1708,6 +1776,17 @@
   <tabstop>lineEdit_secfolder</tabstop>
   <tabstop>toolButton_pick_secfolder</tabstop>
   <tabstop>listWidget</tabstop>
+  <tabstop>checkBox_entity_tree_sticky_selection</tabstop>
+  <tabstop>checkBox_hide_empty_classes</tabstop>
+  <tabstop>checkBox_smooth_entity_graph_rotation</tabstop>
+  <tabstop>checkBox_smooth_entity_graph_zoom</tabstop>
+  <tabstop>spinBox_layout_algo_max_iterations</tabstop>
+  <tabstop>spinBox_layout_algo_spread_factor</tabstop>
+  <tabstop>checkBox_auto_expand_entities</tabstop>
+  <tabstop>checkBox_snap_entities</tabstop>
+  <tabstop>checkBox_merge_dbs</tabstop>
+  <tabstop>spinBox_layout_algo_neg_weight_exp</tabstop>
+  <tabstop>spinBox_max_ent_dim_count</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
@@ -1731,7 +1810,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="engine_processes_button_group"/>
   <buttongroup name="persistent_processes_button_group"/>
+  <buttongroup name="engine_processes_button_group"/>
  </buttongroups>
 </ui>

@@ -864,13 +864,27 @@ def select_conda_executable(parent, line_edit):
     if answer[0] == "":  # Canceled
         return
     # Check that selected file at least starts with string 'conda'
-    _, selected_file = os.path.split(answer[0])
-    if not selected_file.lower().startswith("conda"):
+    if not is_valid_conda_executable(answer[0]):
+        _, selected_file = os.path.split(answer[0])
         msg = "Selected file <b>{0}</b> is not a valid Conda executable".format(selected_file)
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.warning(parent, "Invalid Conda selected", msg)
         return
     line_edit.setText(answer[0])
+
+
+def is_valid_conda_executable(p):
+    """Checks that given path points to an existing file and the file name starts with 'conda'.
+
+    Args:
+        p (str): Absolute path to a file
+    """
+    if not os.path.isfile(p):
+        return False
+    _, filename = os.path.split(p)
+    if not filename.lower().startswith("conda"):
+        return False
+    return True
 
 
 def select_certificate_directory(parent, line_edit):

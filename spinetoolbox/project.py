@@ -1489,7 +1489,8 @@ class SpineToolboxProject(MetaObject):
         return job_id
 
     def finalize_remote_execution(self, job_id):
-        """Sends a request to server to remove the project directory and removes the project ZIP file from client.y
+        """Sends a request to server to remove the project directory. In addition,
+        removes the project ZIP file from client machine.
 
         Args:
             job_id (str): job id

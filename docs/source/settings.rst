@@ -3,6 +3,9 @@
 .. |open-folder| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
    :width: 16
 
+.. |share| image:: ../../spinetoolbox/ui/resources/share.svg
+   :width: 16
+
 .. _Settings:
 
 ********
@@ -119,6 +122,9 @@ Choose the settings on how Julia Tools are executed.
   package which will be installed to the selected *Julia project*. After **IJulia** has been installed, the kernel is
   installed. This process can take a couple of minutes to finish.
 
+- |share| This button sets **all Julia Tools** execution settings in the current project to defaults. This
+  operation is irreversible because the project will be saved afterwards.
+
 - **Install Julia** Installs the latest Julia on your system using the **jill** package.
 
 - **Add/Update SpineOpt** Installs the latest compatible **SpineOpt** to the selected Julia project. If the selected
@@ -146,6 +152,9 @@ Choose the settings on how Python Tools are executed.
   progress of the operation is shown in another dialog. Installing a Python kernel (actually IPython kernel)
   requires the **ipykernel** package which will be installed to the selected *Python executables*. After
   **ipykernel** has been installed, the kernel is installed. This process can take a couple of minutes to finish.
+
+- |share| This button sets **all Python Tools** execution settings in the current project to defaults. This
+  operation is irreversible because the project will be saved afterwards.
 
 Settings in the **Conda** group:
 
