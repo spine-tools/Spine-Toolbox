@@ -757,10 +757,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
                     item.specification().set_execution_settings(use_jupyter_console, exe_path, julia_project, kernel)
                     n += 1
         if n == 0:
-            Notification(
-                self,
-                f"Project does not have any Tools using {_type.capitalize()} Tool specifications"
-            ).show()
+            Notification(self, f"Project does not have any Tools using {_type.capitalize()} Tool specifications").show()
         else:
             Notification(self, f"Project saved!\n{n} {_type.capitalize()} Tools updated").show()
             project.save()
