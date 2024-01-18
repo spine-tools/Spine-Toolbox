@@ -2247,9 +2247,6 @@ class ToolboxUI(QMainWindow):
         project_item = self._project.get_item(item_name)
         icon = self.project_item_icon(project_item.item_type())
         project_item.set_icon(icon)
-        spec_icon_p = self.project_item_specification_icon(project_item)
-        if spec_icon_p is not None:
-            project_item.setup_specification_icon(spec_icon_p)
         properties_ui = self.project_item_properties_ui(project_item.item_type())
         project_item.set_properties_ui(properties_ui)
 
@@ -2266,9 +2263,6 @@ class ToolboxUI(QMainWindow):
 
     def project_item_icon(self, item_type):
         return self.item_factories[item_type].make_icon(self)
-
-    def project_item_specification_icon(self, project_item):
-        return self.item_factories[project_item.item_type()].specification_icon(project_item.specification())
 
     @Slot(bool)
     def _open_project_directory(self, _):

@@ -100,7 +100,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.setGraphicsEffect(shadow_effect)
         self._update_path()
 
-    def setup_spec_icon(self, spec_icon_path):
+    def add_specification_icon(self, spec_icon_path):
         """Adds an SVG icon under the item icon based on Tool Specification type.
 
         Args:
@@ -123,7 +123,6 @@ class ProjectItemIcon(QGraphicsPathItem):
     def remove_specification_icon(self):
         """Removes the specification icon SVG from the scene."""
         self.spec_item.setParentItem(None)
-        self.spec_item.deleteLater()
         self.spec_item = None
 
     def rect(self):
