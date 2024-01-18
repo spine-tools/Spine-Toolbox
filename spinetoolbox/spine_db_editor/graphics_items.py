@@ -117,6 +117,12 @@ class EntityItem(QGraphicsRectItem):
         )
 
     @property
+    def dimension_name_list(self):
+        return self.db_mngr.get_item(self.first_db_map, "entity_class", self.first_entity_class_id).get(
+            "dimension_name_list", ()
+        )
+
+    @property
     def byname(self):
         return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("entity_byname", ())
 
@@ -571,12 +577,19 @@ class EntityItem(QGraphicsRectItem):
 
     def _rotate_svg_item(self):
         arc_items_as_ent = [x for x in self.arc_items if x.ent_item is self]
-        if len(arc_items_as_ent) != 2:
+        if len(arc_items_as_ent) != 2 or self.first_id is None:
             self._svg_item.setRotation(0)
             return
-        arc1, arc2 = arc_items_as_ent  # pylint: disable=unbalanced-tuple-unpacking
-        obj1, obj2 = arc1.el_item, arc2.el_item
-        line = QLineF(obj1.pos(), obj2.pos())
+        first_dimension = self.dimension_name_list[0]
+        element1 = arc_items_as_ent[0].el_item
+        element2 = arc_items_as_ent[1].el_item
+        if element1.entity_class_name == first_dimension:
+            start = element1.pos()
+            end = element2.pos()
+        else:
+            start = element2.pos()
+            end = element1.pos()
+        line = QLineF(start, end)
         self._svg_item.setRotation(-line.angle())
 
     def mouseDoubleClickEvent(self, e):
