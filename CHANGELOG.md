@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - New context menu action (Select superclass) for entity class items in the entity tree.
 - Added buttons to Settings->Tools widget and to Tool Specification Editor for restoring default 
   (defined in Settings->Tools) execution settings.
+- Added Tool Specification type (Python, Gams, etc.) icons on Design View.
 
 ### Changed
 
