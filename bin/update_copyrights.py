@@ -9,7 +9,7 @@ root_dir = Path(__file__).parent.parent
 project_source_dir = Path(root_dir, "spinetoolbox")
 test_source_dir = Path(root_dir, "tests")
 
-expected = f"# Copyright (C) 2023-{current_year} Mopo project consortium"
+expected = f"# Copyright (C) 2017-{current_year} Spine project consortium"
 
 
 def update_copyrights(path, suffix, recursive=True):
@@ -18,8 +18,8 @@ def update_copyrights(path, suffix, recursive=True):
             i = 0
             with open(path) as python_file:
                 lines = python_file.readlines()
-                for i, line in enumerate(lines[1:5]):
-                    if line.startswith("# Copyright (C) ") and "Mopo" in line:
+                for i, line in enumerate(lines[1:4]):
+                    if line.startswith("# Copyright (C) "):
                         lines[i + 1] = lines[i + 1][:21] + str(current_year) + lines[i + 1][25:]
                         break
             if len(lines) <= i + 1 or not lines[i + 1].startswith(expected):
