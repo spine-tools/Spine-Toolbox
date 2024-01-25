@@ -95,6 +95,8 @@ class MultiSpineDBEditor(MultiTabWindow):
         # Checks if the same url is already opened under a different codename
         if db_url_codenames:
             for url, codename in db_url_codenames.items():
+                if not codename:
+                    continue
                 current_codename = codename
                 for db_map in self.db_mngr.db_maps:
                     is_same = str(url) == db_map.db_url
