@@ -28,7 +28,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtGui import QDropEvent
 from spinetoolbox.project_item_icon import ProjectItemIcon
 from spinetoolbox.project import SpineToolboxProject
-from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
+from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin, NiceButton
 from spinetoolbox.widgets.persistent_console_widget import PersistentConsoleWidget
 from spinetoolbox.link import Link
 from spinetoolbox.mvcmodels.project_tree_item import RootProjectTreeItem
@@ -611,13 +611,16 @@ class TestToolboxUI(unittest.TestCase):
         ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
             self.toolbox, "show_add_project_item_form"
         ) as mock_show_add_project_item_form:
-            mock_drop_event_source.return_value = ProjectItemDragMixin()
+            mock_drop_event_source.return_value = MockDraggableButton()
             gv.dropEvent(event)
             mock_show_add_project_item_form.assert_called_once()
             mock_show_add_project_item_form.assert_called_with(item_type, scene_pos.x(), scene_pos.y(), spec="spec")
         item_shadow = gv.scene().item_shadow
         self.assertTrue(item_shadow.isVisible())
         self.assertEqual(item_shadow.pos(), scene_pos)
+
+    def mock_set_cursor(self, value):
+        return True
 
     def test_remove_item(self):
         """Test removing a single project item."""
@@ -919,6 +922,13 @@ class TestToolboxUI(unittest.TestCase):
             return "2"
         if key == "appSettings/saveAtExit":
             return "automatic"
+
+
+class MockDraggableButton(ProjectItemDragMixin, NiceButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # NiceButton.__init__(self, *args, **kwargs)
+        # ProjectItemDragMixin.__init__(self,*args, **kwargs)
 
 
 class TestToolboxUIWithTestSettings(unittest.TestCase):

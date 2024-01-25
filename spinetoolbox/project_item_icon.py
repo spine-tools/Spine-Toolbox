@@ -737,7 +737,7 @@ class RankIcon(QGraphicsTextItem):
         self._parent = parent
         self._rect = parent.component_rect
         self.bg = QGraphicsPathItem(self)
-        bg_brush = QApplication.palette().brush(QPalette.ToolTipBase)
+        bg_brush = QBrush(QColor(Qt.GlobalColor.white))
         self.bg.setBrush(bg_brush)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
