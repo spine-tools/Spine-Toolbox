@@ -27,9 +27,17 @@ class ProjectItemDragMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._reset()
+
+    def _reset(self):
         self.drag_start_pos = None
         self.pixmap = None
         self.mime_data = None
+        self.setCursor(Qt.OpenHandCursor)
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.setCursor(Qt.ClosedHandCursor)
 
     def mouseMoveEvent(self, event):
         """Start dragging action if needed"""
@@ -53,9 +61,11 @@ class ProjectItemDragMixin:
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""
         super().mouseReleaseEvent(event)
-        self.drag_start_pos = None
-        self.pixmap = None
-        self.mime_data = None
+        self._reset()
+
+    def enterEvent(self, event):
+        super().enterEvent(event)
+        self.setCursor(Qt.OpenHandCursor)
 
 
 class NiceButton(QToolButton):
