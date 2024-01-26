@@ -52,11 +52,10 @@ We provide three options for installing Spine Toolbox:
 - [From source files](#installation-from-sources-using-git) (this is the cutting edge - and more likely to have bugs)
 - [Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
 
-### Installation with Python and pipx
+### Pre-installation
 
-This works best for users that just want to use Spine Toolbox and keep it updated 
-with new releases. The instructions below are written for Windows, but they also 
-apply to Linux and Mac where applicable.
+These steps apply to both `Installation with Python and pipx` and to `Installation from sources using Git` 
+installation options.
 
 1. If you don't have Python installed, please install e.g. **Python 3.9**
    from [Python.org](https://www.python.org/downloads/release/python-3913/).
@@ -73,24 +72,31 @@ apply to Linux and Mac where applicable.
    (use find with 'environmental') or from a command prompt using `set PATH=%PATH%;[path-to-executable]` e.g. 
    `set PATH=%PATH%;C:\Users\my_user_name\AppData\Local\Programs\Git\Cmd`. 
 
-5. Get the latest version of `pip` (pip is a package manager for Python)
+5. Update `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-6. Install [pipx](https://pypa.github.io/pipx/). pipx helps in creating an isolated 
+### Installation with Python and pipx
+
+This works best for users that just want to use Spine Toolbox and keep it updated 
+with new releases. The instructions below are written for Windows, but they also 
+apply to Linux and Mac where applicable.
+
+Once you have completed the pre-installation steps:
+
+1. Install [pipx](https://pypa.github.io/pipx/). pipx helps in creating an isolated 
    environment for Spine Toolbox to avoid package conflicts.
 
         python -m pip install --user pipx
         python -m pipx ensurepath
 
-7. Restart the terminal or re-login for the changes of the latest command to take effect.
+2. Restart the terminal or re-login for the changes of the latest command to take effect.
 
-8. Choose which Toolbox version to install (**NOTE: There is no release version for Python 3.11, yet**). Latest 
-   *release* version is installed using 
+3. Choose which Toolbox version to install. Latest *release* version is installed using 
 
         python -m pipx install spinetoolbox
 
-   or get the latest *development* version using
+   or the latest *development* version using
 
         python -m pipx install git+https://github.com/spine-tools/spinetoolbox-dev
 
@@ -110,14 +116,13 @@ development version.
 
 ### Installation from sources using Git
 
-This option is for developers and other contributors who want to debug or edit Spine Toolbox source code. First, 
-follow the instructions above to install Python and get the latest version of pip.
+This option is for developers and other contributors who want to debug or edit Spine Toolbox source code. Once 
+you have completed the `Pre-installation` steps.
 
-1. Make sure you have git: https://git-scm.com/download/win
-
-2. Clone or download the source code from this repository.
+1. Clone or download the source code from this repository.
    
-3. Browse to the folder where Spine Toolbox was cloned and create a Python virtual environment using
+2. Open command prompt and `browse` (cd) to the folder where Spine Toolbox was cloned and create a Python virtual 
+environment using
 
         python -m venv .venv
     
@@ -125,27 +130,25 @@ follow the instructions above to install Python and get the latest version of pi
     version you want to use.
     <br>
     <br>
-    Instead of venv, one can also use a 
-    [miniconda](https://docs.conda.io/projects/conda/en/stable/glossary.html#miniconda-glossary) environment. You 
-    can [download miniconda from here](https://docs.conda.io/en/latest/miniconda.html). **Note: Anaconda 
-    environments are not supported.** Create a new miniconda environment without linking packages from the base 
-    environment for e.g. Python 3.9 using
+    Instead of venv, one can also use a [miniconda](https://docs.conda.io/projects/conda/en/stable/glossary.html#miniconda-glossary) environment. You  can [download miniconda from here](https://docs.conda.io/en/latest/miniconda.html). 
+    **Note: Anaconda environments are not supported.** Create a new miniconda environment without linking packages 
+    from the base environment for e.g. Python 3.9 using
 
         conda create -n spinetoolbox python=3.9
     
-4. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
+3. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
    or `source .venv/bin/activate` (bash, zsh) or `conda activate spinetoolbox`. 
 
-5. Make sure that the terminal prompt indicates the active environment
+4. Make sure that the terminal prompt indicates the active environment
    and get the latest version of `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-6. Install Spine Toolbox along with its dependencies with
+5. Install Spine Toolbox along with its dependencies with
 
         python -m pip install -r requirements.txt
     
-7. (Optional) Install additional development packages with
+6. (Optional) Install additional development packages with
 
         python -m pip install -r dev-requirements.txt
 
