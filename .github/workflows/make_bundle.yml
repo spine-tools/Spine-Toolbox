@@ -21,8 +21,11 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -37,7 +40,7 @@ jobs:
         run: |
           mkdir embedded-python
           cd embedded-python
-          curl -o python.zip https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip
+          curl -o python.zip https://www.python.org/ftp/python/3.12.3/python-3.12.3-embed-amd64.zip
           tar xf python.zip
           del python.zip
       - name: Build bundle
