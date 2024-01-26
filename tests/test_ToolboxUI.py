@@ -619,9 +619,6 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(item_shadow.isVisible())
         self.assertEqual(item_shadow.pos(), scene_pos)
 
-    def mock_set_cursor(self, value):
-        return True
-
     def test_remove_item(self):
         """Test removing a single project item."""
         self._temp_dir = TemporaryDirectory()
@@ -927,8 +924,6 @@ class TestToolboxUI(unittest.TestCase):
 class MockDraggableButton(ProjectItemDragMixin, NiceButton):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # NiceButton.__init__(self, *args, **kwargs)
-        # ProjectItemDragMixin.__init__(self,*args, **kwargs)
 
 
 class TestToolboxUIWithTestSettings(unittest.TestCase):
