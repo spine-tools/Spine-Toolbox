@@ -119,6 +119,8 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v10_to_v11(project_dict)
             elif v == 11:
                 project_dict = self.upgrade_v11_to_v12(project_dict)
+            elif v == 12:
+                project_dict = self.upgrade_v12_to_v13(project_dict)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -559,6 +561,25 @@ class ProjectUpgrader:
         return new
 
     @staticmethod
+    def upgrade_v12_to_v13(old):
+        """Upgrades version 12 project dictionary to version 13.
+
+        Changes:
+            1. Connections now have enabled filter types field.
+            Old projects should open just fine so this only updates the project version
+            to make sure that these projects cannot be opened with an older Toolbox version.
+
+        Args:
+            old (dict): Version 12 project dictionary
+
+        Returns:
+            dict: Version 13 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 13
+        return new
+
+    @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
 
@@ -614,7 +635,7 @@ class ProjectUpgrader:
             return self.is_valid_v2_to_v8(p, v)
         if 9 <= v <= 10:
             return self.is_valid_v9_to_v10(p)
-        if 11 <= v <= 12:
+        if 11 <= v <= 13:
             return self.is_valid_v11_to_v12(p)
         raise NotImplementedError(f"No validity check available for version {v}")
 
