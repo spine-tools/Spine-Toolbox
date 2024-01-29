@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Added buttons to Settings->Tools widget and to Tool Specification Editor for restoring default 
   (defined in Settings->Tools) execution settings.
 - Added Tool Specification type (Python, Gams, etc.) icons on Design View.
+- There is now a new filter type, Alternative filter available in Link properties.
+  Unlike scenario filters, the execution is not parallelized.
+  Instead, a successor item sees parameter values of all selected alternatives.
+  Because of this behavior,
+  alternative filters cannot be used at the same time with scenario filters.
+  Link properties tab has a combo box that lets one choose which filter type to use.
 
 ### Changed
 

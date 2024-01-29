@@ -485,6 +485,34 @@ class SetConnectionDefaultFilterOnlineStatus(SpineToolboxCommand):
         connection.set_filter_default_online_status(not self._checked)
 
 
+class SetConnectionFilterTypeEnabled(SpineToolboxCommand):
+    """Command to enable and disable connection's filter types."""
+
+    def __init__(self, project, connection, filter_type, enabled):
+        """
+        Args:
+            project (SpineToolboxProject): project
+            connection (LoggingConnection): connection
+            filter_type (str): filter type
+            enabled (bool): whether filter type is enabled
+        """
+        super().__init__()
+        self.setText(f"change  {connection.name}")
+        self._project = project
+        self._source_name = connection.source
+        self._destination_name = connection.destination
+        self._filter_type = filter_type
+        self._enabled = enabled
+
+    def redo(self):
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.set_filter_type_enabled(self._filter_type, self._enabled)
+
+    def undo(self):
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.set_filter_type_enabled(self._filter_type, not self._enabled)
+
+
 class SetConnectionOptionsCommand(SpineToolboxCommand):
     def __init__(self, project, connection, options):
         """Command to set connection options.

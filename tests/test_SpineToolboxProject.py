@@ -29,7 +29,7 @@ from spinetoolbox.helpers import SignalWaiter
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.project_item.logging_connection import LoggingConnection
-from spinetoolbox.config import PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
+from spinetoolbox.config import LATEST_PROJECT_VERSION, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.project import node_successors
 from tests.mock_helpers import (
     clean_up_toolbox,
@@ -549,7 +549,7 @@ class TestSpineToolboxProject(unittest.TestCase):
                     "jumps": [],
                     "settings": {"enable_execute_all": True},
                     "specifications": {},
-                    "version": 12,
+                    "version": LATEST_PROJECT_VERSION,
                 },
             },
         )

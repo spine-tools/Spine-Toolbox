@@ -19,6 +19,7 @@ from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QApplication
 
 from spine_engine.project_item.project_item_resource import database_resource
+from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
 
@@ -44,17 +45,19 @@ class TestResourceFilterModel(unittest.TestCase):
         project.find_connection.return_value = connection
 
         def online_filters(resource_label, resource_type):
-            return {SCENARIO_FILTER_TYPE: {}}[resource_type]
+            return {SCENARIO_FILTER_TYPE: {"my_scenario": True}, ALTERNATIVE_FILTER_TYPE: {}}[resource_type]
 
         connection.online_filters.side_effect = online_filters
-        connection.get_scenario_names.return_value = ["my_scenario"]
-        connection.get_tool_names.return_value = ["my_tool"]
+        connection.get_filter_item_names.side_effect = lambda filter_type, url: {
+            SCENARIO_FILTER_TYPE: ["my_scenario"],
+            ALTERNATIVE_FILTER_TYPE: ["Base"],
+        }[filter_type]
         connection.is_filter_online_by_default = True
         with resource_filter_model(connection, project, self._undo_stack, self._logger) as model:
             connection.resource_filter_model = model
             model.build_tree()
             root_index = model.index(0, 0)
-            self.assertEqual(model.rowCount(root_index), 1)
+            self.assertEqual(model.rowCount(root_index), 2)
             scenario_root_index = model.index(0, 0, root_index)
             self.assertEqual(model.rowCount(scenario_root_index), 2)
             my_scenario_index = model.index(1, 0, scenario_root_index)
@@ -70,6 +73,25 @@ class TestResourceFilterModel(unittest.TestCase):
                 model.setData(my_scenario_index, Qt.CheckState.Checked.value, Qt.ItemDataRole.CheckStateRole)
             )
             self.assertEqual(model.data(my_scenario_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked.value)
+            alternative_root_index = model.index(1, 0, root_index)
+            self.assertEqual(model.rowCount(alternative_root_index), 2)
+            base_alternative_index = model.index(1, 0, alternative_root_index)
+            self.assertEqual(base_alternative_index.data(), "Base")
+            self.assertEqual(
+                model.data(base_alternative_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked.value
+            )
+            self.assertTrue(
+                model.setData(base_alternative_index, Qt.CheckState.Unchecked.value, Qt.ItemDataRole.CheckStateRole)
+            )
+            self.assertEqual(
+                model.data(base_alternative_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Unchecked.value
+            )
+            self.assertTrue(
+                model.setData(base_alternative_index, Qt.CheckState.Checked.value, Qt.ItemDataRole.CheckStateRole)
+            )
+            self.assertEqual(
+                model.data(base_alternative_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked.value
+            )
 
 
 @contextmanager
