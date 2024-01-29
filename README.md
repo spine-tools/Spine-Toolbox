@@ -47,7 +47,8 @@ system with scenario and data management" SoftwareX, Vol. 17, 100967, https://do
 
 ## Installation
 
-We provide three options for installing Spine Toolbox: 
+We provide three options for installing Spine Toolbox. The first two options also require that you **follow 
+the Pre-installation steps**: 
 - [Python/pipx](#installation-with-python-and-pipx) (we intend to make stable releases every month or so)
 - [From source files](#installation-from-sources-using-git) (this is the cutting edge - and more likely to have bugs)
 - [Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
@@ -133,14 +134,14 @@ or upgrade the *development* version with
 This option is for developers and other contributors who want to debug or edit Spine Toolbox source code. Once 
 you have completed the [Pre-installation](#pre-installation) steps, do the following:
 
-1. Clone this repository. Open a terminal, cd to some data directory (preferably not a OneDrive folder on Windows) 
-and run
+1. Clone this repository. Open a terminal, use the `cd` command to change the current directory to some data 
+directory (preferably not a OneDrive folder on Windows), and run
 
        git clone https://github.com/spine-tools/Spine-Toolbox.git
 
-    This creates a `Spine-Toolbox` directory in your current directory.
+    This creates a `Spine-Toolbox` directory into your current directory.
 
-2. cd to `Spine-Toolbox` dir
+2. Use the `cd` command to go to `Spine-Toolbox` dir
 
        cd ./Spine-Toolbox
 
@@ -154,8 +155,8 @@ anywhere on your system. <br><br>
     Optional: Instead of venv, one can also use a
 [miniconda](https://docs.conda.io/projects/conda/en/stable/glossary.html#miniconda-glossary) environment. 
 You can [download miniconda from here](https://docs.conda.io/en/latest/miniconda.html). **Note: Anaconda 
-environments are not supported.** Create a new miniconda environment without linking packages from the 
-base environment for Python 3.9 using
+environments are not supported.** Create a new Python 3.9 miniconda environment without linking packages from the 
+base environment using
 
         conda create -n spinetoolbox python=3.9
 
@@ -168,13 +169,14 @@ base environment for Python 3.9 using
 
        source .venv/bin/activate
 
-    or on a Conda prompt
+    or on a Conda prompt (if you are using a miniconda environment instead of venv)
 
        conda activate spinetoolbox 
 
     **Make sure that the terminal prompt now indicates the active environment.**
 
-5. cd back to `Spine-Toolbox` (the one that contains `requirements.txt`)
+5. Use the `cd ..` command to go back to the `Spine-Toolbox` directory (the one that 
+contains `requirements.txt`) if needed.
 
 6. Install Spine Toolbox along with its dependencies with
 
@@ -236,7 +238,7 @@ print(version_tuple)
 ```
 
 So if your code uses any of the components of the `version_tuple` that
-might change, you should re-run `pip install`, otherwise it maybe
+might change, you should re-run `pip install`, otherwise this can be 
 ignored safely.
 
 ### Windows 64-bit installer package
