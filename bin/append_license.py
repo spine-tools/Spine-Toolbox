@@ -6,6 +6,7 @@ import sys
 license_text = [
 "######################################################################################################################\n",
 "# Copyright (C) 2017-2022 Spine project consortium\n",
+"# Copyright Spine Toolbox contributors\n",
 "# This file is part of Spine Toolbox.\n",
 "# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General\n",
 "# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)\n",
