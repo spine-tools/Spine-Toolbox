@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Unit tests for Database editor's ``graphics_items`` module.
-"""
+""" Unit tests for Database editor's ``graphics_items`` module. """
 import unittest
 from unittest import mock
 from PySide6.QtCore import QPointF
@@ -57,8 +54,9 @@ class TestEntityItem(unittest.TestCase):
                 ]
             }
         )
+        r_item = self._db_map.get_entity_item(name="r", entity_class_name="rc")
         with mock.patch.object(EntityItem, "refresh_icon"):
-            self._item = EntityItem(self._spine_db_editor, 0.0, 0.0, 0, ((self._db_map, 2),))
+            self._item = EntityItem(self._spine_db_editor, 0.0, 0.0, 0, ((self._db_map, r_item["id"]),))
 
     @classmethod
     def tearDownClass(cls):
@@ -79,7 +77,7 @@ class TestEntityItem(unittest.TestCase):
         self.assertEqual(self._item.name, "r")
 
     def test_entity_class_id(self):
-        self.assertEqual(self._item.entity_class_id(self._db_map), 2)
+        self.assertEqual(self._item.entity_class_id(self._db_map), -2)
 
     def test_entity_class_name(self):
         self.assertEqual(self._item.entity_class_name, "rc")
@@ -88,7 +86,7 @@ class TestEntityItem(unittest.TestCase):
         self.assertIs(self._item.first_db_map, self._db_map)
 
     def test_entity_id(self):
-        self.assertEqual(self._item.entity_id(self._db_map), 2)
+        self.assertEqual(self._item.entity_id(self._db_map), -2)
 
     def test_first_db_map(self):
         self.assertIs(self._item.first_db_map, self._db_map)
@@ -107,10 +105,10 @@ class TestEntityItem(unittest.TestCase):
             self._item.db_map_data(self._db_map)._asdict(),
             {
                 'name': 'r',
-                'id': 2,
-                'class_id': 2,
+                'id': -2,
+                'class_id': -2,
                 'entity_class_name': 'rc',
-                'element_id_list': (1,),
+                'element_id_list': (-1,),
                 'description': None,
             },
         )

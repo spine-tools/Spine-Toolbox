@@ -8,10 +8,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-A base model class to represent items from multiple databases in a tree.
-"""
+""" A base model class to represent items from multiple databases in a tree. """
 from PySide6.QtCore import QModelIndex, Qt
 from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 
@@ -20,8 +17,7 @@ class MultiDBTreeModel(MinimalTreeModel):
     """Base class for all tree models in Spine db editor."""
 
     def __init__(self, db_editor, db_mngr, *db_maps):
-        """Init class.
-
+        """
         Args:
             db_editor (SpineDBEditor)
             db_mngr (SpineDBManager): A manager for the given db_maps
@@ -56,6 +52,7 @@ class MultiDBTreeModel(MinimalTreeModel):
         """Builds tree."""
         if self._invisible_root_item.has_children():
             self.beginRemoveRows(QModelIndex(), 0, self.rowCount() - 1)
+            self._invisible_root_item.tear_down_recursively()
             self._invisible_root_item = TreeItem(self)
             self.destroyed.connect(lambda obj=None: self._invisible_root_item.tear_down_recursively())
             self.endRemoveRows()
