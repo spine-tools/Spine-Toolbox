@@ -180,7 +180,9 @@ selected from the dropdown list.
 
 .. note:: The Tool specification is now saved to disk but the project itself is not. Remember to save the project
    every once in a while when you are working. You can do this by selecting **File -> Save project**
-   from the main window or by pressing **Ctrl+S** when the main window is active.
+   from the main window or by pressing **Ctrl+S** when the main window is active. If the project is in such a state
+   that it has unsaved changes, an asterisk `*` is visible after the project name and path in the upper left corner
+   of the main window.
 
 Executing a Tool
 ----------------

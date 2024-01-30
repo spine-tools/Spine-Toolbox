@@ -1798,7 +1798,6 @@ class ToolboxUI(QMainWindow):
         byte_data = clipboard.mimeData().data("application/vnd.spinetoolbox.ProjectItem")
         can_paste = not byte_data.isNull()
         selected_items = self.ui.graphicsView.scene().selectedItems()
-        has_selection = bool(selected_items)
         can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
         has_items = self.project_item_model.n_items() > 0
         selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
@@ -1808,8 +1807,7 @@ class ToolboxUI(QMainWindow):
         ]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
         # Renaming an item should always be allowed except when it's a Data Store that is open in an editor
-        items = [self.project_item_model.get_item(x.name()).project_item for x in selected_items]
-        for item in items:
+        for item in (self.project_item_model.get_item(x.name()).project_item for x in selected_project_items):
             if item.item_type() == "Data Store" and item.has_listeners():
                 self.ui.actionRename_item.setEnabled(False)
                 self.ui.actionRename_item.setToolTip(
@@ -1823,7 +1821,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionPasteAndDuplicateFiles.setEnabled(can_paste)
         self.ui.actionDuplicate.setEnabled(can_copy)
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(can_duplicate_files)
-        self.ui.actionRemove.setEnabled(has_selection)
+        self.ui.actionRemove.setEnabled(bool(selected_items))
         self.ui.actionRemove_all.setEnabled(has_items)
 
     @Slot()

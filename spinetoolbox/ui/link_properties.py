@@ -25,10 +25,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QFrame,
-    QHBoxLayout, QHeaderView, QLabel, QPushButton,
-    QSizePolicy, QSpacerItem, QTreeView, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
+    QFormLayout, QFrame, QHBoxLayout, QHeaderView,
+    QLabel, QPushButton, QSizePolicy, QSpacerItem,
+    QTreeView, QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_qwidgets import PropertyQSpinBox
 from spinetoolbox import resources_icons_rc
@@ -40,6 +40,21 @@ class Ui_Form(object):
         Form.resize(372, 355)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.formLayout = QFormLayout()
+        self.formLayout.setObjectName(u"formLayout")
+        self.filter_type_label = QLabel(Form)
+        self.filter_type_label.setObjectName(u"filter_type_label")
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.filter_type_label)
+
+        self.filter_type_combo_box = QComboBox(Form)
+        self.filter_type_combo_box.setObjectName(u"filter_type_combo_box")
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.filter_type_combo_box)
+
+
+        self.verticalLayout.addLayout(self.formLayout)
+
         self.treeView_filters = QTreeView(Form)
         self.treeView_filters.setObjectName(u"treeView_filters")
         self.treeView_filters.setAcceptDrops(True)
@@ -135,6 +150,10 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.filter_type_label.setText(QCoreApplication.translate("Form", u"Filter type:", None))
+#if QT_CONFIG(tooltip)
+        self.filter_type_combo_box.setToolTip(QCoreApplication.translate("Form", u"Select filter type between mutually exclusive filters.", None))
+#endif // QT_CONFIG(tooltip)
         self.auto_check_filters_check_box.setText(QCoreApplication.translate("Form", u"Check new filters automatically", None))
         self.open_filter_validation_menu_button.setText(QCoreApplication.translate("Form", u"Filter validation", None))
         self.label_write_index.setText(QCoreApplication.translate("Form", u"Write index (lower writes earlier):", None))
