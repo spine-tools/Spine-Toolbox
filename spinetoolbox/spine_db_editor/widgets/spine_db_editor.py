@@ -9,7 +9,10 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Contains the SpineDBEditor class. """
+
+"""
+Contains the SpineDBEditor class.
+"""
 
 import os
 import json
@@ -640,8 +643,6 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def refresh_session(self, checked=False):
-        for db_map in self.db_maps:
-            self.db_mngr.undo_stack[db_map].clear()
         self.db_mngr.refresh_session(*self.db_maps)
 
     @Slot(bool)
@@ -692,9 +693,6 @@ class SpineDBEditorBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        for db_map in db_maps:
-            if db_map.any_uncommitted_items():
-                self.db_mngr.undo_stack[db_map].resetClean()
         self.init_models()
         self.msg.emit("Session refreshed.")
 

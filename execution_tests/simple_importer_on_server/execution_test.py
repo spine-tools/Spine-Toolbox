@@ -49,6 +49,7 @@ class RunSimpleImporterOnServer(unittest.TestCase):
         # Check that DS1.sqlite is empty
         with DatabaseMapping(self._db_url) as db_map:
             entities = db_map.get_items("entity")
+            print(entities)
             self.assertEqual(0, len(entities))
         completed = subprocess.run(
             (
@@ -65,7 +66,16 @@ class RunSimpleImporterOnServer(unittest.TestCase):
         # Check that entities are now in DB
         with DatabaseMapping(self._db_url) as db_map:
             entities = db_map.get_items("entity")
-            self.assertCountEqual([entity["name"] for entity in entities], ["Factory1", "Factory2", "Factory3"])
+            self.assertEqual(3, len(entities))
+            for entity in entities:
+                if entity["id"] == 1:
+                    self.assertEqual("Factory1", entity["name"])
+                elif entity["id"] == 2:
+                    self.assertEqual("Factory2", entity["name"])
+                elif entity["id"] == 3:
+                    self.assertEqual("Factory3", entity["name"])
+                else:
+                    self.fail()
 
 
 if __name__ == '__main__':
