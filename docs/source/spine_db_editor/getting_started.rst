@@ -1,3 +1,8 @@
+.. |reload| image:: ../../../spinetoolbox/ui/resources/menu_icons/sync.svg
+   :width: 16
+.. |database| image:: ../../../spinetoolbox/ui/resources/database.svg
+   :width: 16
+
 ***************
 Getting started
 ***************
@@ -41,12 +46,8 @@ Note that for e.g. an SQLite database, the url should start with ``sqlite:///`` 
 Adding multiple databases to one editor
 ---------------------------------------
 
-One editor window can have multiple tabs. New tabs can be added by pressing the plus-sign (**+**) in the tab bar.
-In the newly created tab, databases can be opened once again with the instructions given above. Tabs can be deleted
-from the editor by pressing the cross (**X**) inside a tab. The tabs can be dragged from the tab bar to create new
-editor windows. Tabs from different windows can also be dragged into others, fusing them into the same editor window.
-It is also possible to have multiple databases open in the same tab. This allows the simultaneous viewing and
-modification of the databases data.
+It is possible to open multiple databases in the same editor. This allows one to view and modify
+the data of the open databases in one editor.
 
 To open multiple SQLite databases in the same Spine database editor by file browser:
 
@@ -62,6 +63,55 @@ By using the database URL:
 
 Knowing the UI
 --------------
+
+When you open an empty database for the first time in a Spine Database Editor, it should look something
+like this:
+
+.. image:: img/plain_db_editor.png
+   :align: center
+
+The dock widgets can be scaled by dragging them from the sides and moved around by dragging them from their
+darker colored headers. Like with other widgets, Toolbox remembers the customizations and the editor will
+open in the same configuration when it is opened the next time. If the view is changed from the hamburger
+menu the modifications will be lost and the UI will be reverted back to default.
+
+Tab bar
+=======
+
+The uppermost UI element is the tab bar. One editor window can have multiple tabs. New tabs can be added by
+pressing the plus-sign (**+**) in the tab bar. In the newly created tab, databases can be opened once again
+with the instructions given above. Tabs can be deleted from the editor by pressing the cross (**X**) inside
+a tab. The tabs can be dragged from the tab bar to create new editor windows. Tabs from different windows
+can also be dragged into others, fusing them into the same editor window.
+
+Navigation bar
+==============
+
+Right below the tab bar there is the navigation bar. With the backwards and forwards arrows it is possible
+to go back to the database that was previously loaded in the specific tab. This is kind of analogous of web
+browsers and going back to the previous page. Next to the arrows there is the **reload** (|reload|) button.
+It can be used to reload the data of the database. Next up is the Data Store icon (|database|) which lists
+the Data Store items in the project and can be used to open any of them in the current tab. The URL bar
+contains the URL of the databases tha are currently open in the tab. As mentioned before, databases can
+be opened by inserting valid database URLs into this field and pressing enter. The URL bar also contains
+the filter (more about this later). After the URL bar there is the Spine-Toolbox logo which when clicked
+brings up the Spine-Toolbox main window. Finally there is the hamburger menu (☰) which holds much of the
+power of the Spine Database Editor (more on this also later).
+
+Hamburger menu
+==============
+
+WIP
+
+Filter
+======
+
+WIP
+
+Views and trees
+===============
+
+WIP
 
 Spine Database Editor has the following main UI components:
 
