@@ -225,7 +225,7 @@ class TestManageElementsDialog(TestBase):
         relationships = [x for x in self._db_mngr.get_items(self._db_map, "entity") if x["element_id_list"]]
         self.assertEqual(
             relationships,
-            [{'class_id': -3, 'description': None, 'id': -5, 'name': 'r21', 'element_id_list': (-2, -3)}],
+            [{'class_id': 3, 'description': None, 'id': 5, 'name': 'r21', 'element_id_list': (2, 3)}],
         )
 
 

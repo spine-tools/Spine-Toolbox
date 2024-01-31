@@ -200,8 +200,7 @@ class TestParameterTableView(TestBase):
             [None, None, None, None, None, self.db_codename],
         ]
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+            self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
 class TestParameterTableWithExistingData(TestBase):
