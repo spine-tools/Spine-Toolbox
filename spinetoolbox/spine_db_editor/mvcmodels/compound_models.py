@@ -122,6 +122,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         return self._make_auto_filter_menu(self.header[logical_index])
 
     def _make_auto_filter_menu(self, field):
+        field = self.field_map.get(field, field)
         if field not in self._auto_filter_menus:
             self._auto_filter_menus[field] = menu = AutoFilterMenu(
                 self._parent, self.db_mngr, self.db_maps, self.item_type, field, show_empty=False
@@ -131,12 +132,14 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
 
     def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""
+        field = self.header[section]
+        real_field = self.field_map.get(field, field)
         italic_font = QFont()
         italic_font.setItalic(True)
         if (
             role == Qt.ItemDataRole.FontRole
             and orientation == Qt.Orientation.Horizontal
-            and self._auto_filter.get(self.header[section], {}) != {}
+            and self._auto_filter.get(real_field, {}) != {}
         ):
             return italic_font
         return super().headerData(section, orientation, role)
