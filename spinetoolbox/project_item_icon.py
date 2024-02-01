@@ -10,22 +10,17 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for drawing graphics items on QGraphicsScene.
-"""
+"""Classes for drawing graphics items on QGraphicsScene."""
 
-import os
 import math
 from PySide6.QtCore import Qt, QPointF, QRectF, QLineF
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
-    QGraphicsSimpleTextItem,
     QGraphicsPathItem,
     QGraphicsEllipseItem,
     QGraphicsColorizeEffect,
     QGraphicsDropShadowEffect,
-    QApplication,
     QToolTip,
     QStyle,
 )
@@ -34,7 +29,6 @@ from PySide6.QtGui import (
     QPen,
     QBrush,
     QTextCursor,
-    QPalette,
     QTextBlockFormat,
     QFont,
     QPainterPath,
@@ -83,7 +77,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.rank_icon = RankIcon(self)
         # Make item name graphics item.
         self._name = ""
-        self.name_item = QGraphicsSimpleTextItem(self._name)
+        self.name_item = QGraphicsTextItem(self._name)
         self.name_item.setZValue(100)
         self.set_name_attributes()  # Set font, size, position, etc.
         self.spec_item = None  # For displaying Tool Spec icon
@@ -102,7 +96,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self._update_path()
 
     def add_specification_icon(self, spec_icon_path):
-        """Adds an SVG icon under the item icon based on Tool Specification type.
+        """Adds an SVG icon to bottom left corner of the item icon based on Tool Specification type.
 
         Args:
             spec_icon_path (str): Path to icon resource file.
@@ -157,8 +151,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self._selection_halo.setPen(selection_pen)
 
     def finalize(self, name, x, y):
-        """
-        Names the icon and moves it by given amount.
+        """Names the icon and moves it by a given amount.
 
         Args:
             name (str): icon's name
@@ -169,7 +162,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.update_name_item(name)
 
     def _setup(self):
-        """Setup item's attributes."""
+        """Sets up item attributes."""
         self.colorizer.setColor(self._icon_color)
         background_color = fix_lightness_color(self._icon_color)
         gradient = QRadialGradient(self._rect.center(), 1 * self._rect.width())
@@ -218,25 +211,28 @@ class ProjectItemIcon(QGraphicsPathItem):
         return self._name
 
     def update_name_item(self, new_name):
-        """Set a new text to name item.
+        """Sets a new text to name item.
 
         Args:
             new_name (str): icon's name
         """
         self._name = new_name
-        self.name_item.setText(new_name)
+        self.name_item.setPlainText(new_name)
         self._reposition_name_item()
+        self.name_item.setTextWidth(100)
 
     def set_name_attributes(self):
-        """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
-        # Set font size and style
+        """Sets name item attributes (font, size, style, alignment)."""
         font = self.name_item.font()
         font.setPixelSize(self.FONT_SIZE_PIXELS)
         font.setBold(True)
         self.name_item.setFont(font)
+        option = self.name_item.document().defaultTextOption()
+        option.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_item.document().setDefaultTextOption(option)
 
     def _reposition_name_item(self):
-        """Set name item position (centered on top of the master icon)."""
+        """Sets name item position (centered on top of the master icon)."""
         main_rect = self.sceneBoundingRect()
         name_rect = self.name_item.sceneBoundingRect()
         self.name_item.setPos(main_rect.center().x() - name_rect.width() / 2, main_rect.y() - name_rect.height() - 4)
