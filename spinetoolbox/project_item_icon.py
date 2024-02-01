@@ -120,7 +120,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         rect_w = 0.3 * self.rect().width()  # Parent rect width
         self.spec_item.setScale(rect_w / dim_max)
         self.spec_item.setPos(
-            self.sceneBoundingRect().center() - self.spec_item.sceneBoundingRect().center() + QPointF(0, 50)
+            self.sceneBoundingRect().bottomLeft() - self.spec_item.sceneBoundingRect().center()
         )
 
     def remove_specification_icon(self):
