@@ -806,7 +806,7 @@ class SpineDBEditorBase(QMainWindow):
             self, *self.db_maps, dirty_db_maps=dirty_db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg
         )
         if failed_db_maps:
-            msg = f"Fail to commit due to locked database"
+            msg = f"Failed to commit {[db_map.codename for db_map in failed_db_maps]}"
             self.db_mngr.receive_error_msg({i: [msg] for i in failed_db_maps})
             return False
         return True
