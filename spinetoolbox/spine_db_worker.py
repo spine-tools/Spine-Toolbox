@@ -15,7 +15,7 @@ The SpineDBWorker class
 """
 from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtCore import QTimer
-from spinedb_api import DatabaseMapping
+from spinedb_api import Asterisk, DatabaseMapping
 from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 from .helpers import busy_effect
 
@@ -273,6 +273,8 @@ class SpineDBWorker(QObject):
             ids (set): ids of items to restore
         """
         items = self._db_map.restore_items(item_type, *ids)
+        if Asterisk in ids:
+            items = self._db_map.get_items(item_type)
         self._db_mngr.update_icons(self._db_map, item_type, items)
         self._db_mngr.items_added.emit(item_type, {self._db_map: items})
         return items
