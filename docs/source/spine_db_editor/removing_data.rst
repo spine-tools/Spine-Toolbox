@@ -1,3 +1,4 @@
+.. _Removing data:
 
 Removing data
 -------------
