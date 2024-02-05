@@ -296,7 +296,7 @@ class EntityTreeView(ResizableTreeView):
         self._edit_action.setEnabled(not read_only)
         self._remove_action.setEnabled(not read_only)
         self._find_next_action.setEnabled(
-            item.item_type == "entity" and item.parent_item.parent_item.item_type == "entity"
+            item.item_type == "entity" and item.parent_item.parent_item.item_type == "entity_class"
         )
 
     def edit_selected(self):
