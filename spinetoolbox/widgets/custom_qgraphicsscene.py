@@ -124,6 +124,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
             self.emit_connection_failed()
             return False
         if self.link_drawer.src_connector == self.link_drawer.dst_connector:
+            self.link_drawer.sleep()
             return False
         self.link_drawer.dst_connector.set_normal_brush()
         self.link_drawer.add_link()
