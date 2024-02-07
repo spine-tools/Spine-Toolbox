@@ -113,9 +113,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         dim_max = max(size.width(), size.height())
         rect_w = 0.3 * self.rect().width()  # Parent rect width
         self.spec_item.setScale(rect_w / dim_max)
-        self.spec_item.setPos(
-            self.sceneBoundingRect().bottomLeft() - self.spec_item.sceneBoundingRect().center()
-        )
+        self.spec_item.setPos(self.sceneBoundingRect().bottomLeft() - self.spec_item.sceneBoundingRect().center())
 
     def remove_specification_icon(self):
         """Removes the specification icon SVG from the scene."""
