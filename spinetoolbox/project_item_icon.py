@@ -441,11 +441,6 @@ class ProjectItemIcon(QGraphicsPathItem):
             pass
         return restablished
 
-    def select_item(self):
-        """Update GUI to show the details of the selected item."""
-        ind = self._toolbox.project_item_model.find_item(self.name())
-        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
-
     def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
         selected = bool(option.state & QStyle.StateFlag.State_Selected)
@@ -528,7 +523,6 @@ class ConnectorButton(QGraphicsPathItem):
         if event.button() != Qt.LeftButton:
             event.accept()
             return
-        self._parent.select_item()
         self._start_link(event)
 
     def _start_link(self, event):

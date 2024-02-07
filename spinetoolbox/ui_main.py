@@ -24,7 +24,6 @@ from zipfile import ZipFile
 import numpy as np
 from PySide6.QtCore import (
     QByteArray,
-    QItemSelection,
     QMimeData,
     QModelIndex,
     QPoint,
@@ -152,7 +151,7 @@ class ToolboxUI(QMainWindow):
         self.ui.graphicsView.set_ui(self)
         self.key_press_filter = ChildCyclingKeyPressFilter(self)
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
-        self._share_item_edit_actions()
+        self._add_item_edit_actions()
         self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
         # Set style sheets
         self.setStyleSheet(MAINWINDOW_SS)
@@ -171,7 +170,6 @@ class ToolboxUI(QMainWindow):
         self.active_link_item = None
         self._selected_item_names = set()
         self.execution_in_progress = False
-        self.sync_item_selection_with_scene = True
         self._anchor_callbacks = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
         # DB manager
@@ -307,15 +305,12 @@ class ToolboxUI(QMainWindow):
         self.ui.actionRemove.triggered.connect(self._remove_selected_items)
         # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
-        self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
-        # Context-menus
-        self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
+        self.show_supported_img_formats.triggered.connect(supported_img_formats)
         # Undo stack
         self.undo_stack.cleanChanged.connect(self.update_window_modified)
         # Views
         self.ui.listView_console_executions.selectionModel().currentChanged.connect(self._select_console_execution)
         self.ui.listView_console_executions.model().layoutChanged.connect(self._refresh_console_execution_list)
-        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Models
         self.project_item_model.rowsInserted.connect(self._update_execute_enabled)
         self.project_item_model.rowsRemoved.connect(self._update_execute_enabled)
@@ -324,15 +319,11 @@ class ToolboxUI(QMainWindow):
         self.ui.actionExecute_selection.triggered.connect(self._execute_selection)
         self.ui.actionStop_execution.triggered.connect(self._stop_execution)
         # Open dir
-        self._button_item_dir.clicked.connect(self._open_active_item_dir)
+        self._button_item_dir.clicked.connect(self._open_project_item_directory)
         # Consoles
         self.jupyter_console_requested.connect(self._setup_jupyter_console)
         self.kernel_shutdown.connect(self._handle_kernel_shutdown)
         self.persistent_console_requested.connect(self._setup_persistent_console, Qt.BlockingQueuedConnection)
-
-    @Slot(bool)
-    def _open_active_item_dir(self, _checked=False):
-        self.active_project_item.open_directory()
 
     @staticmethod
     def set_error_mode():
@@ -378,6 +369,7 @@ class ToolboxUI(QMainWindow):
             self.ui.actionExecute_project.setToolTip(self._original_execute_project_action_tooltip)
 
     def _update_execute_selected_enabled(self):
+        """Enables or disables execute selected action based on the number of selected items."""
         has_selection = bool(self._selected_item_names)
         self.ui.actionExecute_selection.setEnabled(has_selection and not self.execution_in_progress)
 
@@ -615,7 +607,6 @@ class ToolboxUI(QMainWindow):
             self.remove_path_from_recent_projects(self._project.project_dir)
             return False
         self._plugin_manager.reload_plugins_with_local_data()
-        self.ui.treeView_project.expandAll()
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
         self.update_recent_projects()
@@ -655,7 +646,7 @@ class ToolboxUI(QMainWindow):
         self._unset_execution_in_progress()
 
     def refresh_toolbars(self):
-        """Set toolbars' color using highest possible contrast."""
+        """Set toolbars' color using the highest possible contrast."""
         all_toolbars = list(self._toolbars())
         for k, toolbar in enumerate(all_toolbars):
             color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
@@ -782,7 +773,6 @@ class ToolboxUI(QMainWindow):
         for category in CATEGORIES:
             category_item = CategoryProjectTreeItem(str(category), CATEGORY_DESCRIPTIONS[category])
             self.project_item_model.insert_item(category_item)
-        self.ui.treeView_project.setModel(self.project_item_model)
 
     def init_specification_model(self):
         """Initializes specification model."""
@@ -946,22 +936,6 @@ class ToolboxUI(QMainWindow):
                     return False
         return True
 
-    @Slot(QItemSelection, QItemSelection)
-    def item_selection_changed(self, selected, deselected):
-        """Synchronizes selection with scene. The scene handles item/link de/activation."""
-        inds = self.ui.treeView_project.selectedIndexes()
-        self._selected_item_names = {
-            self.project_item_model.item(i).name for i in self.ui.treeView_project.selectedIndexes()
-        }
-        self._update_execute_selected_enabled()
-        if not self.sync_item_selection_with_scene:
-            return
-        project_items = [self.project_item_model.item(i).project_item for i in inds]
-        project_item_names = {i.name for i in project_items}
-        scene = self.ui.graphicsView.scene()
-        for icon in scene.project_item_icons():
-            icon.setSelected(icon.name() in project_item_names)
-
     def refresh_active_elements(self, active_project_item, active_link_item, selected_item_names):
         self._selected_item_names = selected_item_names
         self._update_execute_selected_enabled()
@@ -982,9 +956,10 @@ class ToolboxUI(QMainWindow):
         self.activate_no_selection_tab()
 
     def _set_active_project_item(self, active_project_item):
-        """
+        """Activates given project item.
+
         Args:
-            active_project_item (ProjectItemBase or NoneType)
+            active_project_item (ProjectItemBase or NoneType): Active project item
         """
         if self.active_project_item == active_project_item:
             return
@@ -1001,11 +976,10 @@ class ToolboxUI(QMainWindow):
             self._item_properties_uis[self.active_project_item.item_type()].set_item(self.active_project_item)
 
     def _set_active_link_item(self, active_link_item):
-        """
-        Sets active link and connects to corresponding properties widget.
+        """Activates given link and connects it to the corresponding Properties widget.
 
         Args:
-            active_link_item (LoggingConnection or LoggingJump, optional)
+            active_link_item (LoggingConnection or LoggingJump, optional): Active link
         """
         if self.active_link_item is active_link_item:
             return
@@ -1059,6 +1033,7 @@ class ToolboxUI(QMainWindow):
             widget.repaint()
 
     def _get_active_properties_widget(self):
+        """Returns the active item's or link's properties widget or None if no item or link is active."""
         if self.active_project_item is not None:
             return self._item_properties_uis[self.active_project_item.item_type()]
         if self.active_link_item is not None:
@@ -1107,7 +1082,7 @@ class ToolboxUI(QMainWindow):
         """Repairs specification if it is broken.
 
         Args:
-            name (str): specification's name
+            name (str): Specification's name
         """
         specification = self._project.get_specification(name)
         item_factory = self.item_factories.get(specification.item_type)
@@ -1118,12 +1093,12 @@ class ToolboxUI(QMainWindow):
         """Shows a dialog for the user to select a path to save a file.
 
         Args:
-            title (str): dialog window title
-            proposed_path (str): A proposed location.
-            file_filter (str): file extension filter
+            title (str): Dialog window title
+            proposed_path (str): Proposed location.
+            file_filter (str): File extension filter
 
         Returns:
-            str: absolute path or None if dialog was cancelled
+            str: Absolute path or None if dialog was cancelled
         """
         answer = QFileDialog.getSaveFileName(self, title, proposed_path, file_filter)
         if not answer[0]:  # Cancel button clicked
@@ -1136,8 +1111,8 @@ class ToolboxUI(QMainWindow):
         together with a clickable link to change the location.
 
         Args:
-            name (str): specification's name
-            path (str): specification's file path
+            name (str): Specification's name
+            path (str): Specification's file path
         """
         self.msg_success.emit(
             f"Specification <b>{name}</b> successfully saved as "
@@ -1175,8 +1150,8 @@ class ToolboxUI(QMainWindow):
         Used by ``ToolFactory.repair_specification()``.
 
         Args:
-            url (str): The anchor url
-            callback (function): A function to call when the anchor is clicked on event log.
+            url (str): Anchor url
+            callback (function): Function to call when the anchor is clicked
         """
         self._anchor_callbacks[url] = callback
 
@@ -1210,7 +1185,7 @@ class ToolboxUI(QMainWindow):
         otherwise tries to find the specification from the plugin manager.
 
         Args:
-            name (str): specification's name
+            name (str): Specification's name
         """
         if self._project is not None:
             if not self._project.is_specification_name_reserved(name):
@@ -1366,17 +1341,15 @@ class ToolboxUI(QMainWindow):
             dock.setMinimumSize(0, 0)
             dock.setVisible(True)
             dock.setFloating(False)
-        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_eventlog, Qt.Orientation.Vertical)
         self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Orientation.Horizontal)
         self.ui.dockWidget_eventlog.raise_()
-        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Orientation.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Orientation.Horizontal)
-        docks = (self.ui.dockWidget_project, self.ui.dockWidget_design_view, self.ui.dockWidget_item)
-        width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.3 * width], Qt.Orientation.Horizontal)
-        docks = (self.ui.dockWidget_project, self.ui.dockWidget_eventlog)
-        width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.6 * width, 0.4 * width], Qt.Orientation.Vertical)
+        top_docks = (self.ui.dockWidget_design_view, self.ui.dockWidget_item)
+        width = sum(d.size().width() for d in top_docks)
+        self.resizeDocks(top_docks, [0.7 * width, 0.3 * width], Qt.Orientation.Horizontal)
+        bottom_docks = (self.ui.dockWidget_eventlog, self.ui.dockWidget_console)
+        # bottom_width = sum(d.size().width() for d in bottom_docks)
+        self.resizeDocks(bottom_docks, [0.5 * width, 0.5 * width], Qt.Orientation.Horizontal)
 
     def _add_execute_actions(self):
         """Adds execution handler actions to the main window."""
@@ -1395,7 +1368,6 @@ class ToolboxUI(QMainWindow):
         """Adds extra actions to Edit and View menu."""
         self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_console.toggleViewAction())
@@ -1425,7 +1397,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(str)
     def add_message(self, msg):
-        """Append regular message to Event Log.
+        """Appends a regular message to the Event Log.
 
         Args:
             msg (str): String written to QTextBrowser
@@ -1435,7 +1407,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(str)
     def add_success_message(self, msg):
-        """Append message with green text color to Event Log.
+        """Appends a message with green text to the Event Log.
 
         Args:
             msg (str): String written to QTextBrowser
@@ -1445,7 +1417,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(str)
     def add_error_message(self, msg):
-        """Append message with red color to Event Log.
+        """Appends a message with red color to the Event Log.
 
         Args:
             msg (str): String written to QTextBrowser
@@ -1455,7 +1427,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(str)
     def add_warning_message(self, msg):
-        """Append message with yellow (golden) color to Event Log.
+        """Appends a message with yellow (golden) color to the Event Log.
 
         Args:
             msg (str): String written to QTextBrowser
@@ -1465,7 +1437,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(str)
     def add_process_message(self, msg):
-        """Writes message from stdout to process output QTextBrowser.
+        """Writes message from stdout to the Event Log.
 
         Args:
             msg (str): String written to QTextBrowser
@@ -1475,7 +1447,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(str)
     def add_process_error_message(self, msg):
-        """Writes message from stderr to process output QTextBrowser.
+        """Writes message from stderr to the Event Log.
 
         Args:
             msg (str): String written to QTextBrowser
@@ -1571,11 +1543,10 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form.show()
 
     def supports_specification(self, item_type):
-        """
-        Returns True if given item type supports specifications.
+        """Returns True if given item type supports specifications.
 
         Args:
-            item_type (str): item's type
+            item_type (str): Item's type
 
         Returns:
             bool: True if item supports specifications, False otherwise
@@ -1584,14 +1555,13 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def show_specification_form(self, item_type, specification=None, item=None, **kwargs):
-        """
-        Shows specification widget.
+        """Shows specification widget.
 
         Args:
-            item_type (str): item's type
-            specification (ProjectItemSpecification, optional): specification
-            item (ProjectItem, optional): project item
-            **kwargs: parameters passed to the specification widget
+            item_type (str): Item's type
+            specification (ProjectItemSpecification, optional): Specification
+            item (ProjectItem, optional): Project item
+            **kwargs: Parameters passed to the specification widget
         """
         if not self._project:
             self.msg.emit("Please open or create a project first")
@@ -1636,20 +1606,20 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def show_settings(self):
-        """Show Settings widget."""
+        """Shows the Settings widget."""
         self.settings_form = SettingsWidget(self)
         self.settings_form.show()
 
     @Slot()
     def show_about(self):
-        """Show About Spine Toolbox form."""
+        """Shows the About Spine Toolbox widget."""
         form = AboutWidget(self)
         form.show()
 
     # pylint: disable=no-self-use
     @Slot()
     def show_user_guide(self):
-        """Open Spine Toolbox documentation index page in browser."""
+        """Opens Spine Toolbox documentation index page in browser."""
         index_url = f"{ONLINE_DOCUMENTATION_URL}/index.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         open_url(index_url)
@@ -1657,7 +1627,7 @@ class ToolboxUI(QMainWindow):
     # pylint: disable=no-self-use
     @Slot()
     def show_getting_started_guide(self):
-        """Open Spine Toolbox Getting Started HTML page in browser."""
+        """Opens Spine Toolbox Getting Started HTML page in browser."""
         index_url = f"{ONLINE_DOCUMENTATION_URL}/getting_started.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         open_url(index_url)
@@ -1736,17 +1706,6 @@ class ToolboxUI(QMainWindow):
         )
         return host, port, sec_model, sec_folder
 
-    @Slot(QPoint)
-    def show_item_context_menu(self, pos):
-        """Context menu for project items listed in the project QTreeView.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        ind = self.ui.treeView_project.indexAt(pos)
-        global_pos = self.ui.treeView_project.viewport().mapToGlobal(pos)
-        self.show_project_or_item_context_menu(global_pos, ind)
-
     def show_project_or_item_context_menu(self, pos, index):
         """Creates and shows the project item context menu.
 
@@ -1773,11 +1732,11 @@ class ToolboxUI(QMainWindow):
         menu.deleteLater()
 
     def show_link_context_menu(self, pos, link):
-        """Context menu for connection links.
+        """Shows the Context menu for connection links.
 
         Args:
             pos (QPoint): Mouse position
-            link (Link(QGraphicsPathItem)): The concerned link
+            link (Link(QGraphicsPathItem)): The link in question
         """
         menu = QMenu(self)
         menu.addAction(self.ui.actionRemove)
@@ -1837,8 +1796,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(True)
 
     def _tasks_before_exit(self):
-        """
-        Returns a list of tasks to perform before exiting the application.
+        """Returns a list of tasks to perform before exiting the application.
 
         Possible tasks are:
 
@@ -1847,7 +1805,7 @@ class ToolboxUI(QMainWindow):
         - `"save"`: save project before quitting
 
         Returns:
-            a list containing zero or more tasks
+            list: Zero or more tasks in a list
         """
         save_at_exit = (
             self._qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
@@ -1865,11 +1823,10 @@ class ToolboxUI(QMainWindow):
         return tasks
 
     def _perform_pre_exit_tasks(self):
-        """
-        Prompts user to confirm quitting and saves the project if necessary.
+        """Prompts user to confirm quitting and saves the project if necessary.
 
         Returns:
-            True if exit should proceed, False if the process was cancelled
+            bool: True if exit should proceed, False if the process was cancelled
         """
         tasks = self._tasks_before_exit()
         for task in tasks:
@@ -1884,11 +1841,10 @@ class ToolboxUI(QMainWindow):
         return True
 
     def _confirm_exit(self):
-        """
-        Confirms exiting from user.
+        """Confirms exiting from user.
 
         Returns:
-            True if exit should proceed, False if user cancelled
+            bool: True if exit should proceed, False if user cancelled
         """
         msg = QMessageBox(parent=self)
         msg.setIcon(QMessageBox.Icon.Question)
@@ -1911,11 +1867,10 @@ class ToolboxUI(QMainWindow):
         return False
 
     def _confirm_project_close(self):
-        """
-        Confirms exit from user and saves the project if requested.
+        """Confirms exit from user and saves the project if requested.
 
         Returns:
-            True if exiting should proceed, False if user cancelled
+            bool: True if exiting should proceed, False if user cancelled
         """
         msg = QMessageBox(parent=self)
         msg.setIcon(QMessageBox.Icon.Question)
@@ -2033,8 +1988,7 @@ class ToolboxUI(QMainWindow):
         event.accept()
 
     def _serialize_selected_items(self):
-        """
-        Serializes selected project items into a dictionary.
+        """Serializes selected project items into a dictionary.
 
         The serialization protocol tries to imitate the format in which projects are saved.
 
@@ -2056,15 +2010,15 @@ class ToolboxUI(QMainWindow):
         return items_dict
 
     def _deserialized_item_position_shifts(self, item_dicts):
-        """
-        Calculates horizontal and vertical shifts for project items being deserialized.
+        """Calculates horizontal and vertical shifts for project items being deserialized.
 
         If the mouse cursor is on the Design view we try to place the items unders the cursor.
-        Otherwise the items will get a small shift so they don't overlap a possible item below.
+        Otherwise, the items will get a small shift, so they don't overlap a possible item below.
         In case the items don't fit the scene rect we clamp their coordinates within it.
 
         Args:
-            item_dicts (dict): a dictionary of serialized items being deserialized
+            item_dicts (dict): Dictionary of serialized items being deserialized
+
         Returns:
             tuple: a tuple of (horizontal shift, vertical shift) in scene's coordinates
         """
@@ -2093,11 +2047,10 @@ class ToolboxUI(QMainWindow):
         item_dict["y"] = new_y
 
     def _deserialize_items(self, items_dict, duplicate_files=False):
-        """
-        Deserializes project items from a dictionary and adds them to the current project.
+        """Deserializes project items from a dictionary and adds them to the current project.
 
         Args:
-            items_dict (dict): serialized project items
+            items_dict (dict): Serialized project items
         """
         if self._project is None:
             return
@@ -2152,8 +2105,8 @@ class ToolboxUI(QMainWindow):
             return
         self._deserialize_items(item_dicts, duplicate_files)
 
-    def _share_item_edit_actions(self):
-        """Adds generic actions to project tree view and Design View."""
+    def _add_item_edit_actions(self):
+        """Adds generic actions to Design View."""
         actions = [
             self.ui.actionCopy,
             self.ui.actionPaste,
@@ -2164,7 +2117,6 @@ class ToolboxUI(QMainWindow):
         ]
         for action in actions:
             action.setShortcutContext(Qt.WidgetShortcut)
-            self.ui.treeView_project.addAction(action)
             self.ui.graphicsView.addAction(action)
 
     @Slot(str, str)
@@ -2174,6 +2126,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(str, str)
     def _show_error_box(self, title, message):
+        """Shows an error message with the given title and message."""
         box = QErrorMessage(self)
         box.setWindowTitle(title)
         box.setWindowModality(Qt.ApplicationModal)
@@ -2241,7 +2194,7 @@ class ToolboxUI(QMainWindow):
         """Adds properties UI to given project item.
 
         Args:
-            item_name (str): item's name
+            item_name (str): Item's name
         """
         project_item = self._project.get_item(item_name)
         icon = self.project_item_icon(project_item.item_type())
@@ -2253,10 +2206,10 @@ class ToolboxUI(QMainWindow):
         """Returns the properties tab widget's ui.
 
         Args:
-            item_type (str): project item's type
+            item_type (str): Project item's type
 
         Returns:
-            QWidget: item's properties tab widget
+            QWidget: Item's properties tab widget
         """
         return self._item_properties_uis[item_type].ui
 
@@ -2273,13 +2226,8 @@ class ToolboxUI(QMainWindow):
 
     @Slot(bool)
     def _open_project_item_directory(self, _):
-        """Opens project item's directory in system's file browser."""
-        selection_model = self.ui.treeView_project.selectionModel()
-        current = selection_model.currentIndex()
-        if not current.isValid():
-            return
-        item = self.project_item_model.item(current)
-        item.project_item.open_directory()
+        """Opens active project item's directory in system's file browser."""
+        self.active_project_item.open_directory()
 
     @Slot(bool)
     def _remove_selected_items(self, _):
@@ -2325,12 +2273,8 @@ class ToolboxUI(QMainWindow):
 
     @Slot(bool)
     def _rename_project_item(self, _):
-        """Renames current project item."""
-        selection_model = self.ui.treeView_project.selectionModel()
-        current = selection_model.currentIndex()
-        if not current.isValid():
-            return
-        item = self.project_item_model.item(current)
+        """Renames active project item."""
+        item = self.active_project_item
         answer = QInputDialog.getText(
             self, "Rename Item", "New name:", text=item.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
         )
@@ -2354,10 +2298,10 @@ class ToolboxUI(QMainWindow):
         """Creates a context menu for project items.
 
         Args:
-            additional_actions (list of QAction): actions to be prepended to the menu
+            additional_actions (list of QAction): Actions to be prepended to the menu
 
         Returns:
-            QMenu: project item context menu
+            QMenu: Project item context menu
         """
         menu = QMenu(self)
         menu.setToolTipsVisible(True)
@@ -2559,13 +2503,13 @@ class ToolboxUI(QMainWindow):
     def _make_log_entry_title(title):
         return f'<b>{title}</b>'
 
-    def start_execution(self, timestamp):
-        """Starts execution.
+    def make_execution_timestamp(self, timestamp):
+        """Appends a timestamp to Event Log.
 
         Args:
-            timestamp (str): time stamp
+            timestamp (str): Time stamp
         """
-        self.ui.textBrowser_eventlog.start_execution(timestamp)
+        self.ui.textBrowser_eventlog.make_log_entry_point(timestamp)
 
     def add_log_message(self, item_name, filter_id, message):
         """Adds a message to an item's execution log.

@@ -10,12 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Widget shown to user when a new Project Item is created.
-"""
+"""Widget shown to user when a new Project Item is created."""
 
 from PySide6.QtWidgets import QWidget, QStatusBar
-from PySide6.QtCore import Slot, Qt, QItemSelectionModel
+from PySide6.QtCore import Slot, Qt
 from spine_engine.utils.helpers import shorten
 from ..config import STATUSBAR_SS
 from ..helpers import unique_name
@@ -110,11 +108,11 @@ class AddProjectItemWidget(QWidget):
             self.statusbar.showMessage(msg, 3000)
             return
         self.call_add_item()
+        self._toolbox.ui.graphicsView.scene().clearSelection()
+        for icon in self._toolbox.ui.graphicsView.scene().project_item_icons():
+            if icon.name() == self.name:
+                icon.setSelected(True)
         self.close()
-        # Select the newly created item
-        index = self._toolbox.project_item_model.find_item(self.name)
-        self._toolbox.ui.treeView_project.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
-        self._toolbox.refresh_active_elements(self._toolbox._project._project_items.get(self.name), None, None)
 
     def call_add_item(self):
         """Creates new Item according to user's selections.
