@@ -23,9 +23,9 @@ Here is a list of items that you should be aware of when running projects on Spi
 - **Python Jupyter Console**. Kernel spec setting in Tool Specification Editor is ignored. Jupyter Console is
   launched using the **python3** kernel spec. This must be installed before the server is started. See instructions
   below.
-- **Julia Basic Console**. Interpreter setting in app settings (Tools page in File->Settings) is ignored. Basic
-  Console runs the Julia that is found in PATH. See installation instructions below.
-- **Julia Jupyter Console**. Kernel spec setting in app settings (Tools page in File->Settings) is ignored. Jupyter
+- **Julia Basic Console**. Julia executable setting in Tool Specification Editor is ignored. Basic
+  Console runs the Julia that is found in the server machine's PATH. See installation instructions below.
+- **Julia Jupyter Console**. Kernel spec setting in Tool Specification Editor is ignored. Jupyter
   Console is launched using the **julia-1.8** kernel spec. This must be installed before the server is started.
   See instructions below.
 
