@@ -16,12 +16,12 @@ Executing Projects
 
 This section describes how executing a project works and what resources are passed between project
 items at execution time. The buttons used to control executions are located in the **Toolbar**'s Execute -section.
-Execution happens by either pressing the **Project** button (|play-all|) to execute the
-whole project, or by pressing the **Selection** button (|play-selected|) to only execute selected items.
+Execution happens by either pressing the *Execute Project* button (|play-all|) to execute the
+whole project, or by pressing the *Execute Selected* button (|play-selected|) to only execute selected items.
 Next to these buttons is the **Stop** button (|stop|), which can be used to stop an ongoing execution.
 A project consists of project items and connections (yellow arrows) that are visualized on the **Design View**.
 You use the project items and the connections to build a **Directed Acyclic Graph (DAG)**, with the project
-items as *nodes* and the connections as *edges*. A DAG is traversed using the **breadth-first-search** algorithm.
+items as *nodes* and the connections as *edges*. The DAG is traversed using the **breadth-first-search** algorithm.
 
 Rules of DAGs:
 
@@ -69,8 +69,7 @@ The image below shows such a DAG where the items form a loop.
 
 You can also execute only the selected parts of a project by multi-selecting the items you want to
 execute and pressing the |play-selected| button in the tool bar. For example, to execute only items
-*b*, *d* and *f*, select the items in **Design View** or in the project item list in **Project** dock
-widget and then press the |play-selected| button.
+*b*, *d* and *f*, select the items in **Design View** |play-selected| button.
 
 .. tip::
    You can select multiple project items by holding the **Ctrl** key down and clicking on

@@ -1015,7 +1015,7 @@ class SpineToolboxProject(MetaObject):
             worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
             self._engine_workers.append(worker)
         timestamp = create_timestamp()
-        self._toolbox.start_execution(timestamp)
+        self._toolbox.make_execution_timestamp(timestamp)
         # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others
         # are added to ``_engine_workers``, and thus ``_handle_engine_worker_finished()`` will believe
         # that the project is done executing before it's fully loaded.

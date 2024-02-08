@@ -41,6 +41,7 @@ Many parts of the Spine data structure have been redesigned.
 ### Deprecated
 
 ### Removed
+- Project dock widget
 
 ### Fixed
 

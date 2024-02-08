@@ -192,8 +192,8 @@ By default data is mapped to columns but it is also possible to create pivot tab
 
 Exporter also uses specifications so the same configurations
 can be reused by other exporters even in other projects.
-The specification can be edited in *Exporter specification editor*
-which is accessible by the |wrench| button in the item's Properties dock
+The specification can be edited in **Exporter specification editor**
+which is accessible by the |wrench| button in the item's **Properties** dock
 or by double clicking Exporter's icon on the **Design View**.
 A specification that is not associated with any specific Exporter project item can be created
 and edited from the Main toolbar.
@@ -201,14 +201,14 @@ and edited from the Main toolbar.
 Properties dock
 ~~~~~~~~~~~~~~~
 
-Exporter's Properties dock controls project item specific settings
+Exporter's **Properties** dock controls project item specific settings
 that are not part of the item's specification.
 
 .. image:: img/exporter_properties.png
    :align: center
 
 Specification used by the active Exporter item can be selected from the *Specification* combobox.
-The |wrench| button opens *Exporter specification editor*
+The |wrench| button opens **Exporter specification editor**
 where it is possible to edit the specification.
 
 Data Stores that are connected to the exporter and are available for export are listed below

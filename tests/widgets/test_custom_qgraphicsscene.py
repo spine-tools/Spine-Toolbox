@@ -50,21 +50,6 @@ class TestDesignGraphicsScene(unittest.TestCase):
         clean_up_toolbox(self._toolbox)
         self._temp_dir.cleanup()
 
-    def test_handle_selection_changed_synchronizes_with_project_tree(self):
-        project = self._toolbox.project()
-        dc = DataConnection("dc", "", 0.0, 0.0, self._toolbox, project)
-        project.add_item(dc)
-        scene = self._toolbox.ui.graphicsView.scene()
-        self.assertEqual(scene.selectedItems(), [])
-        dc.get_icon().setSelected(True)
-        self.assertIs(scene.selectedItems()[0], dc.get_icon())
-        indexes = self._toolbox.ui.treeView_project.selectionModel().selectedIndexes()
-        self.assertEqual(len(indexes), 1)
-        self.assertEqual(indexes[0].data(), "dc")
-        current_index = self._toolbox.ui.treeView_project.selectionModel().currentIndex()
-        self.assertTrue(current_index.isValid())
-        self.assertEqual(current_index.data(), "dc")
-
 
 if __name__ == "__main__":
     unittest.main()
