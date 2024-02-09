@@ -36,10 +36,14 @@ Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine T
   vertices and edges. In Spine Toolbox, we use project items as vertices and connections as edges to
   build a DAG that represents a data processing chain (workflow).
 - **Edge** Graph theory term. See *Connection*
+- **Element** is what the entities making up a multi dimensional entity are called. See also multidimensional
+  entity.
 - **Importer** is a project item that can be used to import data from e.g. an Excel file, transform it
   to Spine data structure, and into a Data Store.
 - **Loop** (aka **jump**) is a special sort of connection which only connects the two attached project
   items if the user defined loop condition is met.
+- **Multidimensional entity/entity class** (aka N-D entity/class) An entity/entity class that consists of multiple
+  other entities that are as it's members. Acts just like any other entity/entity class.
 - **Node** Graph theory term. See *Project item*.
 - **Predecessor** Graph theory term that is also used in Spine Toolbox. Preceding project
   items of a certain project item in a DAG. For example, in DAG *x->y->z*, nodes *x* and *y* are
