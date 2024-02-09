@@ -19,6 +19,7 @@ from spinedb_api.parameter_value import join_value_and_type
 from ...widgets.custom_editors import (
     BooleanSearchBarEditor,
     CustomLineEditor,
+    CustomComboBoxEditor,
     PivotHeaderTableLineEditor,
     SearchBarEditor,
     CheckListEditor,
@@ -810,7 +811,7 @@ class ItemMetadataDelegate(QStyledItemDelegate):
         self._column = column
 
     def createEditor(self, parent, option, index):
-        editor = QComboBox(parent)
+        editor = CustomComboBoxEditor(parent)
         editor.setEditable(True)
         database_codename = self._item_metadata_model.index(index.row(), MetadataColumn.DB_MAP).data()
         items = set()

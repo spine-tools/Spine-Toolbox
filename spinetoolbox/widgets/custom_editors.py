@@ -11,7 +11,18 @@
 ######################################################################################################################
 """ Custom editors for model/view programming. """
 
-from PySide6.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
+from PySide6.QtCore import (
+    Qt,
+    Slot,
+    Signal,
+    QSortFilterProxyModel,
+    QEvent,
+    QCoreApplication,
+    QModelIndex,
+    QPoint,
+    QSize,
+    QObject,
+)
 from PySide6.QtWidgets import (
     QLineEdit,
     QTableView,
@@ -25,14 +36,40 @@ from PySide6.QtWidgets import (
     QListView,
     QStyle,
     QLabel,
+    QComboBox,
 )
 from PySide6.QtGui import QPalette, QStandardItemModel, QStandardItem, QColor
 from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
 from ..spine_db_editor.helpers import FALSE_STRING, TRUE_STRING
 
 
+class EventFilterForCatchingRollbackShortcut(QObject):
+    def eventFilter(self, obj, event):
+        """Catches Rollback action shortcut (Ctrl+backspace) while editing is in progress."""
+        if (
+            event.type() == QEvent.ShortcutOverride
+            and event.keyCombination().key() == Qt.Key.Key_Backspace
+            and event.keyCombination().keyboardModifiers() == Qt.KeyboardModifier.ControlModifier
+        ):
+            event.accept()
+            return True
+        return QObject.eventFilter(self, obj, event)  # Pass event further
+
+
+class CustomComboBoxEditor(QComboBox):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.event_filter = EventFilterForCatchingRollbackShortcut()
+        self.installEventFilter(self.event_filter)
+
+
 class CustomLineEditor(QLineEdit):
     """A custom QLineEdit to handle data from models."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.event_filter = EventFilterForCatchingRollbackShortcut()
+        self.installEventFilter(self.event_filter)
 
     def set_data(self, data):
         """Sets editor's text.
