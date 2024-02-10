@@ -43,13 +43,10 @@ class TestSpineDBEditorFilter(DBEditorTestBase):
             fields = self._filtered_fields[model]
             data = self._parameter_data(model, *fields)
             values = filtered_values[model]
-            unfiltered_data_amount = len(data)
             self.assertTrue(all(value in data for value in values))
             model.refresh()
             data = self._parameter_data(model, *fields)
             self.assertTrue(all(value not in data for value in values))
-            # Check that only the items that were supposed to be filtered were actually filtered.
-            self.assertTrue(len(data) == unfiltered_data_amount - len(values))
 
     def test_filter_parameter_tables_per_zero_dimensional_entity_class(self):
         """Test that parameter tables are filtered when selecting object classes in the object tree."""

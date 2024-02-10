@@ -441,33 +441,16 @@ class FilterEntityAlternativeMixin:
         super().__init__(*args, **kwargs)
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
-        self._filter_class_ids = {}
-        self._filter_class_ids_selected = {}
 
     def init_model(self):
         super().init_model()
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
-        self._filter_class_ids = {}
-        self._filter_class_ids_selected = {}
-
-    def set_filter_class_ids(self, class_ids):
-        if class_ids != self._filter_class_ids:
-            self._filter_class_ids = class_ids
-            for model in self.single_models:
-                model.set_filter_class_ids(class_ids)
-            self._invalidate_filter()
 
     def set_filter_entity_ids(self, entity_ids):
         self._filter_entity_ids = entity_ids
         for model in self.single_models:
             if model.set_filter_entity_ids(entity_ids):
-                self._invalidate_filter()
-
-    def set_filter_all_entity_ids(self, class_ids_selected):
-        self._filter_class_ids_selected = class_ids_selected
-        for model in self.single_models:
-            if model.set_filter_all_entity_ids(class_ids_selected):
                 self._invalidate_filter()
 
     def set_filter_alternative_ids(self, alternative_ids):
