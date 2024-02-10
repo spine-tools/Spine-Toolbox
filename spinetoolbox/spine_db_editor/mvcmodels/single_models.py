@@ -250,7 +250,7 @@ class FilterEntityAlternativeMixin:
         self._filter_entity_ids = set()
         self._filter_class_ids = set()
         self._all_entity_ids = set()
-        self._selected_classes = set()
+        self._selected_class_ids = set()
 
     def set_filter_entity_ids(self, db_map_entity_ids):
         filter_entity_ids = db_map_entity_ids.get(self.db_map, set())
@@ -269,28 +269,28 @@ class FilterEntityAlternativeMixin:
     def set_filter_all_entity_ids(self, db_map_class_ids_selected):
         """Creates a set containing the ids of all selected entities as well as the entities
         belonging to selected classes."""
-        classes = set()
-        for db_map, ids in db_map_class_ids_selected.items():
-            classes |= ids
         # Set the classes that are explicitly selected by the user.
-        self._selected_classes = classes
+        self._selected_class_ids = set().union(*db_map_class_ids_selected.values())
+        # entities = (self.db_map.get_item("entity", ent_id) for ent_id in self._filter_entity_ids)
+        # self._all_entity_ids = set().union(
+        #     *(ent.get("element_id_list", ()) for ent in entities if ent.get("class_id") not in self._selected_class_ids)
+        # )
+        # return True
         all_entity_ids = set()
         for entity in self.db_map.get_items("entity"):
-            if entity.get("class_id", None) in self._filter_class_ids:
-                if entity.get("class_id", None) not in self._selected_classes:
-                    if bool(set(entity.get("element_id_list", None)) & self._filter_entity_ids):
+            if entity.get("class_id") in self._filter_class_ids:
+                if entity.get("class_id") not in self._selected_class_ids:
+                    if bool(set(entity.get("element_id_list")) & self._filter_entity_ids):
                         all_entity_ids.add(
                             entity["id"]
                         )  # In the case the entity class the entity belongs to isn't selected
                         # but it is composed of at least one selected entity.
                 else:
                     all_entity_ids.add(entity["id"])  # If the entity class it belongs to is selected.
-            else:
-                if bool(set(entity.get("element_id_list", None)) & self._filter_entity_ids):
-                    all_entity_ids.add(entity["id"])  # Adds 1D+ entities that have a selected entity in them.
-        if self._all_entity_ids == all_entity_ids | self._filter_entity_ids:
+        all_entity_ids |= self._filter_entity_ids
+        if self._all_entity_ids == all_entity_ids:
             return False
-        self._all_entity_ids = all_entity_ids | self._filter_entity_ids
+        self._all_entity_ids = all_entity_ids
         return True
 
     def set_filter_alternative_ids(self, db_map_alternative_ids):
@@ -312,15 +312,27 @@ class FilterEntityAlternativeMixin:
         """Returns the result of the entity filter."""
         if not self._filter_entity_ids:  # If no entities are selected, only entity classes
             return True
+
+        # entity_id = item[self._mapped_field("entity_id")]
+        # return entity_id in self._filter_entity_ids or bool(set(item["element_id_list"]) & self._filter_entity_ids)
+
         entity_id = item.get(self._mapped_field("entity_id"), None)
         class_id = item.get(self._mapped_field("entity_class_id"), None)
-        if not self._selected_classes:  # If only entities and no classes are selected
+        if not self._selected_class_ids:
+            # only entities and no classes are selected
             return entity_id in self._filter_entity_ids or bool(set(item["element_id_list"]) & self._filter_entity_ids)
-        else:  # If both entity classes and entities are selected
-            if class_id not in self._selected_classes:
-                return entity_id in self._all_entity_ids or bool(set(item["element_id_list"]) & self._all_entity_ids)
-            else:  # If the class is not selected, this is allows the non-0D entities of selected classes to show
-                return True
+        if class_id in self._selected_class_ids:
+            return True
+        # return set(item.get("element_id_list")) & self._all_entity_ids
+
+        return entity_id in self._all_entity_ids or bool(set(item["element_id_list"]) & self._all_entity_ids)
+
+        if class_id not in self._selected_class_ids:
+            # classes are selected but not this one
+            return entity_id in self._all_entity_ids or bool(set(item["element_id_list"]) & self._all_entity_ids)
+            # return bool(set(item["element_id_list"]) & self._filter_entity_ids)
+        # The class is selected, this allows the multi-D entities of selected classes to show
+        return True
 
     def _alternative_filter_accepts_item(self, item):
         """Returns the result of the alternative filter."""

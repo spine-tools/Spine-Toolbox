@@ -144,10 +144,7 @@ class StackedViewMixin:
         """Resets filters."""
         for model in self._all_stacked_models:
             model.set_filter_class_ids(self._filter_class_ids)
-            if not model.item_type == "parameter_definition":
-                model.set_filter_all_entity_ids(self._filter_cls_ids_selected)
         for model in (self.parameter_value_model, self.entity_alternative_model):
-            model.set_filter_class_ids(self._filter_class_ids)
             model.set_filter_entity_ids(self._filter_entity_ids)
             model.set_filter_alternative_ids(self._filter_alternative_ids)
             model.set_filter_all_entity_ids(self._filter_cls_ids_selected)
