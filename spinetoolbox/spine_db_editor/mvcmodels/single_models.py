@@ -249,11 +249,12 @@ class FilterEntityAlternativeMixin:
         self._filter_alternative_ids = set()
         self._filter_entity_ids = set()
 
-    def set_filter_entity_ids(self, db_map_entity_ids_by_class_id):
+    def set_filter_entity_ids(self, db_map_class_entity_ids):
+        # Don't accept entity id filters from entities that don't belong in this model
         filter_entity_ids = set().union(
             *(
                 ent_ids
-                for (db_map, class_id), ent_ids in db_map_entity_ids_by_class_id.items()
+                for (db_map, class_id), ent_ids in db_map_class_entity_ids.items()
                 if db_map == self.db_map and (class_id == self.entity_class_id or class_id in self.dimension_id_list)
             )
         )
