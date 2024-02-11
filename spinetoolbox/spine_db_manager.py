@@ -1411,7 +1411,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def db_map_class_ids(db_map_data):
-        d = dict()
+        d = {}
         for db_map, items in db_map_data.items():
             for item in items:
                 d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
