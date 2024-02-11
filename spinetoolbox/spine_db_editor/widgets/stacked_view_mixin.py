@@ -34,7 +34,7 @@ class StackedViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._filter_class_ids = {}
-        self._filter_entity_ids_by_class_id = {}
+        self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
         self.parameter_value_model = CompoundParameterValueModel(self, self.db_mngr)
         self.parameter_definition_model = CompoundParameterDefinitionModel(self, self.db_mngr)
@@ -131,7 +131,7 @@ class StackedViewMixin:
         for model in self._all_stacked_models:
             model.clear_auto_filter()
         self._filter_class_ids = {}
-        self._filter_entity_ids_by_class_id = {}
+        self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
         self._reset_filters()
         trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
@@ -143,7 +143,7 @@ class StackedViewMixin:
         for model in self._all_stacked_models:
             model.set_filter_class_ids(self._filter_class_ids)
         for model in (self.parameter_value_model, self.entity_alternative_model):
-            model.set_filter_entity_ids(self._filter_entity_ids_by_class_id)
+            model.set_filter_entity_ids(self._filter_entity_ids)
             model.set_filter_alternative_ids(self._filter_alternative_ids)
 
     @Slot(list)
@@ -156,7 +156,7 @@ class StackedViewMixin:
         self._filter_class_ids = {}
         for db_map, items in active_items.items():
             self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self._filter_entity_ids_by_class_id = self.db_mngr.db_map_class_ids(active_items)
+        self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
         self._reset_filters()
 
     @Slot(dict)
@@ -169,7 +169,7 @@ class StackedViewMixin:
             if self.entity_tree_model.item_from_index(parent_ind).item_type == "entity_class"
         }
         self._filter_class_ids = self._db_map_ids(ent_cls_inds)
-        self._filter_entity_ids_by_class_id = self._db_map_class_ids(ent_inds)
+        self._filter_entity_ids = self._db_map_class_ids(ent_inds)
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
             self._filter_alternative_ids.clear()
             self._clear_all_other_selections(self.ui.treeView_entity)
@@ -206,7 +206,7 @@ class StackedViewMixin:
             alternative_ids = {}
             self._clear_all_other_selections(this_tree_view)
             self._filter_class_ids.clear()
-            self._filter_entity_ids_by_class_id.clear()
+            self._filter_entity_ids.clear()
         for db_map, alt_ids in selected_db_map_alt_ids.items():
             alternative_ids.setdefault(db_map, set()).update(alt_ids)
         self._filter_alternative_ids = alternative_ids
