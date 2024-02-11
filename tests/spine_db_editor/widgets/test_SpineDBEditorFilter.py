@@ -48,7 +48,6 @@ class TestSpineDBEditorFilter(DBEditorTestBase):
             model.refresh()
             data = self._parameter_data(model, *fields)
             filtered_count = len(data)
-            print(model, data)
             self.assertTrue(all(value not in data for value in values))
             # Check that only the items that were supposed to be filtered were actually filtered.
             self.assertEqual(filtered_count, unfiltered_count - len(values))
@@ -112,7 +111,11 @@ class TestSpineDBEditorFilter(DBEditorTestBase):
         selection_model.select(scooby_index, QItemSelectionModel.Select)
         filtered_values = {
             self.spine_db_editor.parameter_definition_model: [],
-            self.spine_db_editor.parameter_value_model: [('dog', 'pluto')],
+            self.spine_db_editor.parameter_value_model: [
+                ('dog', 'pluto'),
+                ('fish__dog', 'nemo ǀ pluto'),
+                ('dog__fish', 'pluto ǀ nemo'),
+            ],
         }
         self._assert_filter(filtered_values)
 
