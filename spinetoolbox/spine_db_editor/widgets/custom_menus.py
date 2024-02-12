@@ -17,7 +17,6 @@ Classes for custom context menus and pop-up menus.
 from PySide6.QtWidgets import QMenu, QWidget
 from PySide6.QtCore import Qt, QEvent, QPoint, Signal
 from PySide6.QtGui import QKeyEvent, QKeySequence
-
 from spinedb_api import IndexedValue
 from spinedb_api.db_mapping_base import PublicItem
 from ...widgets.custom_menus import FilterMenuBase

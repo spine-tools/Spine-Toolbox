@@ -13,12 +13,13 @@
 
 from numbers import Number
 from PySide6.QtCore import QModelIndex, Qt, Signal
-from PySide6.QtWidgets import QStyledItemDelegate, QComboBox
+from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
 from ...widgets.custom_editors import (
     BooleanSearchBarEditor,
     CustomLineEditor,
+    CustomComboBoxEditor,
     PivotHeaderTableLineEditor,
     SearchBarEditor,
     CheckListEditor,
@@ -330,7 +331,7 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
 
     def createEditor(self, parent, option, index):
         """If the parameter has associated a value list, returns a SearchBarEditor.
-        Otherwise returns or requests a dedicated parameter_value editor.
+        Otherwise, returns or requests a dedicated parameter_value editor.
         """
         self._db_value_list_lookup = {}
         db_map = self._get_db_map(index)
@@ -615,6 +616,17 @@ class ScenarioDelegate(QStyledItemDelegate):
         self.setModelData(editor, index.model(), index)
 
 
+class ParameterDefinitionNameAndDescriptionDelegate(TableDelegate):
+    """A delegate for the parameter_name and description columns in Parameter Definition Table View."""
+
+    def setEditorData(self, editor, index):
+        editor.setText(index.data(Qt.ItemDataRole.DisplayRole))
+
+    def createEditor(self, parent, option, index):
+        editor = CustomLineEditor(parent)
+        return editor
+
+
 class ParameterValueListDelegate(QStyledItemDelegate):
     """A delegate for the parameter value list tree."""
 
@@ -793,6 +805,16 @@ class RemoveEntitiesDelegate(ManageItemsDelegate):
             return editor
 
 
+class MetadataDelegate(QStyledItemDelegate):
+    """A delegate for the name and value columns in Metadata Table View."""
+    def setEditorData(self, editor, index):
+        editor.setText(index.data(Qt.ItemDataRole.DisplayRole))
+
+    def createEditor(self, parent, option, index):
+        editor = CustomLineEditor(parent)
+        return editor
+
+
 class ItemMetadataDelegate(QStyledItemDelegate):
     """A delegate for name and value columns in item metadata editor."""
 
@@ -801,7 +823,7 @@ class ItemMetadataDelegate(QStyledItemDelegate):
         Args:
             item_metadata_model (ItemMetadataModel): item metadata model
             metadata_model (MetadataTableModel): metadata model
-            column (int): item metadata table column column
+            column (int): item metadata table column
             parent (QObject, optional): parent object
         """
         super().__init__(parent)
@@ -810,7 +832,7 @@ class ItemMetadataDelegate(QStyledItemDelegate):
         self._column = column
 
     def createEditor(self, parent, option, index):
-        editor = QComboBox(parent)
+        editor = CustomComboBoxEditor(parent)
         editor.setEditable(True)
         database_codename = self._item_metadata_model.index(index.row(), MetadataColumn.DB_MAP).data()
         items = set()

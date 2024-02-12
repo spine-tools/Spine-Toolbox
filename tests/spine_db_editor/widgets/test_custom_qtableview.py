@@ -301,6 +301,7 @@ class TestParameterTableWithExistingData(TestBase):
             instance = roll_back_dialog.return_value
             instance.exec.return_value = QMessageBox.StandardButton.Ok
             self._db_editor.ui.actionRollback.trigger()
+            self._db_editor.rollback_session()
         while model.rowCount() != self._n_objects * self._n_parameters + 1:
             # Fetch the entire model, because we want to validate all the data.
             model.fetchMore(QModelIndex())
