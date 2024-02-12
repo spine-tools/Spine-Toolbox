@@ -10,8 +10,8 @@ This section describes the available tools to view data.
 Viewing entities and entity classes
 ===================================
 
-Using the Entity Tree
-~~~~~~~~~~~~~~~~~~~~~
+Using the **Entity Tree**
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The **Entity Tree** presents the structure of entity classes and entities in all databases in the shape of a tree:
 
@@ -67,8 +67,8 @@ Unavailable options are still visible but they are greyed out:
    extend the selection by clicking on items *without pressing* **Ctrl**. To enable **Sticky selection**, select
    **Settings** from the hamburger menu, and check the corresponding box.
 
-Using the Graph View
-~~~~~~~~~~~~~~~~~~~~
+Using the **Graph View**
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Graph View** presents the structure of entities from one database in the shape of a graph:
 
@@ -170,8 +170,8 @@ To display an entity item's context menu, just right-click on it. The context me
 Viewing parameter definitions and values as well as entity alternatives
 =======================================================================
 
-Using Table Views
-~~~~~~~~~~~~~~~~~~~~~~
+Using **Table Views**
+~~~~~~~~~~~~~~~~~~~~~
 
 **Table View**'s: *Parameter value*, *Parameter definition* and *Entity alternative* present entity data
 from all databases in the form of tables:
@@ -208,8 +208,8 @@ to show the context menu, and then select **Filter by** or **Filter excluding**.
 .. tip:: You can rearrange columns in *Table Views* by dragging the headers with your mouse.
    The ordering will be remembered the next time you open Spine DB editor.
 
-Entity alternative
-~~~~~~~~~~~~~~~~~~
+**Entity alternative**
+~~~~~~~~~~~~~~~~~~~~~~
 
 Entity alternative provides a way to set which entities are active and which are not:
 
@@ -221,10 +221,10 @@ Viewing parameter values and multidimensional entities
 
 .. _using_pivot_table_and_frozen_table:
 
-Using Pivot View and Frozen table
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Using **Pivot View** and **Frozen Table**
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Pivot View** and **Frozen table** present data for an individual class from one database in the form of a pivot table,
+**Pivot View** and **Frozen Table** present data for an individual class from one database in the form of a pivot table,
 optionally with frozen dimensions:
 
 
@@ -237,7 +237,7 @@ just select the corresponding class item in **Entity Tree**.
 Selecting the input type
 ************************
 
-**Pivot View** and **Frozen table** support four different input types:
+**Pivot View** and **Frozen Table** support four different input types:
 
 - **Value** (the default): it shows entities, parameter definitions, alternatives, and databases in the headers,
   and corresponding parameter values in the table body.
@@ -283,7 +283,7 @@ Additionally, you can type in the search bar at the top of the menu to filter th
 To remove the current filter, select **Remove filters**.
 
 To filter the **Pivot View** by an individual vector across the frozen dimensions,
-select the corresponding row in **Frozen table**.
+select the corresponding row in **Frozen Table**.
 
 
 Viewing alternatives and scenarios
