@@ -135,8 +135,7 @@ class SpineDBIconManager:
 
     def class_renderer(self, entity_class):
         name, dimension_name_list = entity_class["name"], entity_class["dimension_name_list"]
-        display_icon = self.display_icons.get(name)
-        if display_icon:
+        if not dimension_name_list:
             if name not in self._class_renderers:
                 self._create_class_renderer(name)
             return self._class_renderers[name]
