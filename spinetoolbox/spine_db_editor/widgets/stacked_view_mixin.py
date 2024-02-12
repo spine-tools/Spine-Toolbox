@@ -35,7 +35,6 @@ class StackedViewMixin:
         super().__init__(*args, **kwargs)
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
-        self._filter_cls_ids_selected = {}
         self._filter_alternative_ids = {}
         self.parameter_value_model = CompoundParameterValueModel(self, self.db_mngr)
         self.parameter_definition_model = CompoundParameterDefinitionModel(self, self.db_mngr)
@@ -134,7 +133,6 @@ class StackedViewMixin:
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
-        self._filter_cls_ids_selected = {}
         self._reset_filters()
         trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
         for tree in trees:
@@ -144,13 +142,9 @@ class StackedViewMixin:
         """Resets filters."""
         for model in self._all_stacked_models:
             model.set_filter_class_ids(self._filter_class_ids)
-            if not model.item_type == "parameter_definition":
-                model.set_filter_all_entity_ids(self._filter_cls_ids_selected)
         for model in (self.parameter_value_model, self.entity_alternative_model):
-            model.set_filter_class_ids(self._filter_class_ids)
             model.set_filter_entity_ids(self._filter_entity_ids)
             model.set_filter_alternative_ids(self._filter_alternative_ids)
-            model.set_filter_all_entity_ids(self._filter_cls_ids_selected)
 
     @Slot(list)
     def _handle_graph_selection_changed(self, selected_items):
@@ -162,26 +156,20 @@ class StackedViewMixin:
         self._filter_class_ids = {}
         for db_map, items in active_items.items():
             self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self._filter_entity_ids = self.db_mngr.db_map_ids(active_items)
+        self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
         self._reset_filters()
 
     @Slot(dict)
     def _handle_entity_tree_selection_changed_in_parameter_tables(self, selected_indexes):
         """Resets filter according to entity tree selection."""
         ent_inds = set(selected_indexes.get("entity", {}).keys())
-        # For filtering purposes differentiate between classes that have been selected vs classes that are
-        # active due to their entities being selected.
-        ent_cls_inds_selected = set(selected_indexes.get("entity_class", {}).keys())
-        ent_cls_inds = ent_cls_inds_selected | {
+        ent_cls_inds = set(selected_indexes.get("entity_class", {}).keys()) | {
             parent_ind
             for parent_ind in (ind.parent() for ind in ent_inds)
             if self.entity_tree_model.item_from_index(parent_ind).item_type == "entity_class"
         }
         self._filter_class_ids = self._db_map_ids(ent_cls_inds)
-        self._filter_entity_ids = self._db_map_ids(ent_inds)
-        mixed_selection = bool(ent_cls_inds_selected) and bool(ent_inds)
-        # If both entity classes and entities are selected at the same time
-        self._filter_cls_ids_selected = self._db_map_ids(ent_cls_inds_selected) if mixed_selection else dict()
+        self._filter_entity_ids = self._db_map_class_ids(ent_inds)
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
             self._filter_alternative_ids.clear()
             self._clear_all_other_selections(self.ui.treeView_entity)
