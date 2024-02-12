@@ -47,9 +47,11 @@ from .custom_delegates import (
     ValueListDelegate,
     ParameterValueDelegate,
     ParameterNameDelegate,
+    ParameterDefinitionNameAndDescriptionDelegate,
     EntityClassNameDelegate,
     EntityBynameDelegate,
     AlternativeNameDelegate,
+    MetadataDelegate,
     ItemMetadataDelegate,
     BooleanValueDelegate,
 )
@@ -294,6 +296,8 @@ class ParameterDefinitionTableView(ParameterTableView):
     def create_delegates(self):
         super().create_delegates()
         self._make_delegate("value_list_name", ValueListDelegate)
+        self._make_delegate("parameter_name", ParameterDefinitionNameAndDescriptionDelegate)
+        self._make_delegate("description", ParameterDefinitionNameAndDescriptionDelegate)
         delegate = self._make_delegate("default_value", ParameterDefaultValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
@@ -1036,6 +1040,10 @@ class MetadataTableView(MetadataTableViewBase):
 
     def _enable_delegates(self, db_editor):
         """See base class."""
+        name_column_delegate = MetadataDelegate(self)
+        self.setItemDelegateForColumn(MetadataColumn.NAME, name_column_delegate)
+        value_column_delegate = MetadataDelegate(self)
+        self.setItemDelegateForColumn(MetadataColumn.VALUE, value_column_delegate)
         delegate = DatabaseNameDelegate(self, db_editor.db_mngr)
         self.setItemDelegateForColumn(MetadataColumn.DB_MAP, delegate)
         delegate.data_committed.connect(self._set_model_data)

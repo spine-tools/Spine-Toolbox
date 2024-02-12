@@ -49,7 +49,7 @@ class AlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
     @property
     def tool_tip(self):
         if self.id:
-            return "<p>Drag this item it onto a <b>scenario</b> item in Scenario tree to add it to that scenario.</p>"
+            return "<p>Drag this item on a <b>scenario</b> item in Scenario tree to add it to that scenario.</p>"
 
     def add_item_to_db(self, db_item):
         self.db_mngr.add_alternatives({self.db_map: [db_item]})
