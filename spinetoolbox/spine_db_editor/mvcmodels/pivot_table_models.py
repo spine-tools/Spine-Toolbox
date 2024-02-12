@@ -1660,7 +1660,9 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
     def accept_index(self, index, index_ids):
         for i, identifier in zip(index, index_ids):
             valid = self.index_filters.get(identifier)
-            if valid is not None and i not in valid:
+            # NOTE: the tuple() below is to work-around TempId.__hash__,
+            # but we should fix the latter.
+            if valid is not None and i not in tuple(valid):
                 return False
         return True
 

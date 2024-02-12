@@ -317,7 +317,7 @@ class TabularViewMixin:
         Returns:
             dict: Key is db_map-object id tuple, value is relationship id.
         """
-        if not self.first_current_entity_class["dimension_id_list"]:
+        if not self.first_current_entity_class.get("dimension_id_list", None):
             return {}
         if db_map_entities is None:
             db_map_entities = self.get_db_map_entities()
