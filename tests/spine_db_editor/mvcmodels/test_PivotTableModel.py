@@ -42,6 +42,8 @@ class TestParameterValuePivotTableModel(TestBase):
             ),
         }
         self._db_mngr.import_data({self._db_map: data})
+        while self._db_editor.entity_tree_model._root_item.row_count() == 0:
+            QApplication.processEvents()
 
     def _start(self):
         get_item_exceptions = []
@@ -123,6 +125,8 @@ class TestParameterValuePivotTableModel(TestBase):
             "entity_classes": (("class1",),),
         }
         self._db_mngr.import_data({self._db_map: data})
+        while self._db_editor.entity_tree_model._root_item.row_count() == 0:
+            QApplication.processEvents()
         self._start()
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.columnCount(), 2)
