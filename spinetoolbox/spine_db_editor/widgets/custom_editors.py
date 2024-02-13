@@ -9,6 +9,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """ Custom editors for model/view programming. """
 
 from PySide6.QtCore import (
@@ -39,8 +40,8 @@ from PySide6.QtWidgets import (
     QComboBox,
 )
 from PySide6.QtGui import QPalette, QStandardItemModel, QStandardItem, QColor
-from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
-from ..spine_db_editor.helpers import FALSE_STRING, TRUE_STRING
+from spinetoolbox.helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
+from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING
 
 
 class EventFilterForCatchingRollbackShortcut(QObject):

@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QStyledItemDelegate,
 )
-from ...widgets.custom_editors import SearchBarEditor
+from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
 
 
 class SelectGraphParametersDialog(QDialog):

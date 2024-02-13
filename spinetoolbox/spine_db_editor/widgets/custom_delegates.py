@@ -9,14 +9,15 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Custom item delegates. """
+
+"""Custom item delegates."""
 
 from numbers import Number
 from PySide6.QtCore import QModelIndex, Qt, Signal
 from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
-from ...widgets.custom_editors import (
+from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     BooleanSearchBarEditor,
     CustomLineEditor,
     CustomComboBoxEditor,

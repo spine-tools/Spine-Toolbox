@@ -9,10 +9,11 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Contains alternative tree model."""
+
 import pickle
 from collections import defaultdict
-
 from PySide6.QtCore import QMimeData, QByteArray
 from .tree_model_base import TreeModelBase
 from .alternative_item import DBItem

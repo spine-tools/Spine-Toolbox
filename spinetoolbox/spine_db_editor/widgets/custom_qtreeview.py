@@ -10,13 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QTreeView.
-"""
+"""Classes for custom QTreeView."""
+
 from PySide6.QtWidgets import QApplication, QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
 from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication
-
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
 from spinetoolbox.widgets.custom_qwidgets import ResizingViewMixin

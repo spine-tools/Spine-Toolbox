@@ -16,7 +16,7 @@ from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayou
 from PySide6.QtCore import Slot, Qt, QModelIndex
 from PySide6.QtGui import QAction
 from ..mvcmodels.entity_tree_item import EntityClassItem
-from ...widgets.custom_editors import IconColorEditor
+from spinetoolbox.spine_db_editor.widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
 from ...helpers import busy_effect, preferred_row_height, DB_ITEM_SEPARATOR
 

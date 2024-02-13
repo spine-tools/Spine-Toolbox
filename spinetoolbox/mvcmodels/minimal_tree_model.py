@@ -10,9 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Models to represent items in a tree.
-"""
+"""Models to represent items in a tree."""
+
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
 
 

@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom context menus and pop-up menus.
-"""
+"""Classes for custom context menus and pop-up menus."""
 
 from PySide6.QtWidgets import QMenu, QWidget
 from PySide6.QtCore import Qt, QEvent, QPoint, Signal

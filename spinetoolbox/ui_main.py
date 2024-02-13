@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains ToolboxUI class.
-"""
+"""Contains class for the main window of Spine Toolbox."""
 
 import os
 import sys
