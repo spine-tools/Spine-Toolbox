@@ -135,11 +135,14 @@ class SpineDBWorker(QObject):
             self._do_fetch_more(parent)
 
     def _do_fetch_more(self, parent):
-        if self._iterate_mapping(parent) and not self._db_map.has_external_commits():
-            # Something fetched from mapping
-            return
         item_type = parent.fetch_item_type
-        if item_type in self._fetched_item_types:
+        fully_fetched = item_type in self._fetched_item_types
+        # Only trust mapping if no external commits or fully fetched
+        if not self._db_map.has_external_commits() or fully_fetched:
+            if self._iterate_mapping(parent):
+                # Something fetched from mapping
+                return
+        if fully_fetched:
             # Nothing left in the DB
             parent.set_fetched(True)
             return
