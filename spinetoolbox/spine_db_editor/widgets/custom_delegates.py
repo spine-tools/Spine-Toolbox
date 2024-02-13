@@ -807,6 +807,7 @@ class RemoveEntitiesDelegate(ManageItemsDelegate):
 
 class MetadataDelegate(QStyledItemDelegate):
     """A delegate for the name and value columns in Metadata Table View."""
+
     def setEditorData(self, editor, index):
         editor.setText(index.data(Qt.ItemDataRole.DisplayRole))
 
