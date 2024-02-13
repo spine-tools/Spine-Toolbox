@@ -91,8 +91,6 @@ class ElementNameListEditor(ManageItemsDialog):
 
     @Slot()
     def accept(self):
-        x = DB_ITEM_SEPARATOR.join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
-        print(x)
         self._index.model().setData(
             self._index, DB_ITEM_SEPARATOR.join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
         )
