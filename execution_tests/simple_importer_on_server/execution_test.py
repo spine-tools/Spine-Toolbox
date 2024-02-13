@@ -49,7 +49,6 @@ class RunSimpleImporterOnServer(unittest.TestCase):
         # Check that DS1.sqlite is empty
         with DatabaseMapping(self._db_url) as db_map:
             entities = db_map.get_items("entity")
-            print(entities)
             self.assertEqual(0, len(entities))
         completed = subprocess.run(
             (

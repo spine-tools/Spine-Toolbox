@@ -237,6 +237,7 @@ class TabularViewMixin:
     def _update_class_attributes(self, current_index):
         """Updates current class (type and id) and reloads pivot table for it."""
         current_class_item = self._get_current_class_item(current_index)
+        print(f"current_class_item {current_class_item}")
         if current_class_item is None:
             return
         class_id = current_class_item.db_map_ids
@@ -548,15 +549,18 @@ class TabularViewMixin:
     def do_reload_pivot_table(self):
         """Reloads pivot table."""
         if not self._can_build_pivot_table():
+            print("*** Cannot build pivot table")
             return
         if not self.ui.dockWidget_pivot_table.isVisible():
             self._pending_reload = True
+            print("*** Pivot table widget is invisible")
             return
         self.pivot_actions[self.current_input_type].setChecked(True)
         self.ui.dockWidget_frozen_table.setVisible(True)
         self._pending_reload = False
         pivot_table_model = self._pivot_table_models[self.current_input_type]
         if self.pivot_table_model is not pivot_table_model:
+            print(f"*** Setting model to {pivot_table_model}")
             self.pivot_table_model = pivot_table_model
             self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
             self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
@@ -565,6 +569,8 @@ class TabularViewMixin:
             self.pivot_table_model.frozen_values_removed.connect(self._remove_values_from_frozen_table)
             delegate = self.pivot_table_model.make_delegate(self)
             self.ui.pivot_table.setItemDelegate(delegate)
+        else:
+            print("*** Pivot table widget is the same")
         pivot = self.get_pivot_preferences()
         self.wipe_out_filter_menus()
         self.pivot_table_model.call_reset_model(pivot)
