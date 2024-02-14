@@ -66,15 +66,9 @@ class RunSimpleImporterOnServer(unittest.TestCase):
         with DatabaseMapping(self._db_url) as db_map:
             entities = db_map.get_items("entity")
             self.assertEqual(3, len(entities))
-            for entity in entities:
-                if entity["id"] == 1:
-                    self.assertEqual("Factory1", entity["name"])
-                elif entity["id"] == 2:
-                    self.assertEqual("Factory2", entity["name"])
-                elif entity["id"] == 3:
-                    self.assertEqual("Factory3", entity["name"])
-                else:
-                    self.fail()
+            self.assertTrue(entities[0]["name"] == "Factory1")
+            self.assertTrue(entities[1]["name"] == "Factory2")
+            self.assertTrue(entities[2]["name"] == "Factory3")
 
 
 if __name__ == '__main__':
