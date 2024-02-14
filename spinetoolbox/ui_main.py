@@ -68,7 +68,7 @@ from .widgets.custom_qwidgets import ToolBarWidgetAction
 from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets.persistent_console_widget import PersistentConsoleWidget
 from .widgets import toolbars
-from .widgets.open_project_widget import OpenProjectDialog
+from .widgets.open_project_dialog import OpenProjectDialog
 from .widgets.jump_properties_widget import JumpPropertiesWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
 from .project import SpineToolboxProject

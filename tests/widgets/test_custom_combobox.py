@@ -10,20 +10,30 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Class for a custom QComboBox.
-"""
+"""Unit tests for the classes in ``custom_combobox`` module.
+OpenProjectDialogComboBox is tested in test_open_project_dialog module."""
 
-from PySide6.QtWidgets import QComboBox
+import unittest
+from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtGui import QPaintEvent
+from spinetoolbox.widgets.custom_combobox import CustomQComboBox, ElidedCombobox
 
 
-class CustomQComboBox(QComboBox):
-    """A custom QComboBox for showing kernels in Settings->Tools."""
+class TestCustomComboBoxes(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
 
-    def mouseMoveEvent(self, e):
-        """Catch mouseMoveEvent and accept it because the comboBox
-        popup (QListView) has mouse tracking on as default.
-        This makes sure the comboBox popup appears in correct
-        position and clicking on the combobox repeatedly does
-        not move the Settings window."""
-        e.accept()
+    def test_custom_combobox(self):
+        self.parent = QWidget()
+        cb = CustomQComboBox(self.parent)
+        cb.addItems(["a", "b", "c"])
+        self.assertEqual("a", cb.itemText(0))
+        self.parent.deleteLater()
+
+    def test_elided_combobox(self):
+        self.parent = QWidget()
+        cb = ElidedCombobox(self.parent)
+        cb.paintEvent(QPaintEvent(cb.rect()))
+        self.parent.deleteLater()

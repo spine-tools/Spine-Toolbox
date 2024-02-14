@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the models in ``custom_qwidgets`` module.
-"""
+"""Unit tests for the models in ``custom_qwidgets`` module."""
 
 import unittest
 from contextlib import contextmanager

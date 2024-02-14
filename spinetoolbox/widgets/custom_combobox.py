@@ -10,15 +10,25 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains a custom combo box for the custom open project dialog.
-"""
+"""Contains custom combo box classes."""
 
 import os
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox, QStyle, QStylePainter, QStyleOptionComboBox, QDialog, QAbstractItemView
 from PySide6.QtGui import QValidator
 from .notification import Notification
+
+
+class CustomQComboBox(QComboBox):
+    """A custom QComboBox for showing kernels in Settings->Tools."""
+
+    def mouseMoveEvent(self, e):
+        """Catch mouseMoveEvent and accept it because the comboBox
+        popup (QListView) has mouse tracking on as default.
+        This makes sure the comboBox popup appears in correct
+        position and clicking on the combobox repeatedly does
+        not move the Settings window."""
+        e.accept()
 
 
 class ElidedCombobox(QComboBox):
