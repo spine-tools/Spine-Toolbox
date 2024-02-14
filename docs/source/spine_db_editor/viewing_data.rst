@@ -211,7 +211,7 @@ to show the context menu, and then select **Filter by** or **Filter excluding**.
 **Entity alternative**
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Entity alternative provides a way to set which entities are active and which are not:
+Entity alternative provides a way to set which entities are active and which are not in each alternative:
 
 .. image:: img/entity_alternative_table.png
    :align: center
