@@ -67,11 +67,11 @@ class RunSimpleImporterOnServer(unittest.TestCase):
             entities = db_map.get_items("entity")
             self.assertEqual(3, len(entities))
             for entity in entities:
-                if entity["id"] == 1:
+                if entity["id"].db_id == 1:
                     self.assertEqual("Factory1", entity["name"])
-                elif entity["id"] == 2:
+                elif entity["id"].db_id == 2:
                     self.assertEqual("Factory2", entity["name"])
-                elif entity["id"] == 3:
+                elif entity["id"].db_id == 3:
                     self.assertEqual("Factory3", entity["name"])
                 else:
                     self.fail()
