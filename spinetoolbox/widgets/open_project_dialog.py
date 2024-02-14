@@ -289,9 +289,7 @@ class OpenProjectDialog(QDialog):
                 return
             # self.selection() now contains a valid Spine Toolbox project directory.
             # Add the parent directory of selected directory to qsettings
-            self.update_recents(
-                os.path.abspath(os.path.join(self.selection(), os.path.pardir)), self._qsettings
-            )
+            self.update_recents(os.path.abspath(os.path.join(self.selection(), os.path.pardir)), self._qsettings)
         super().done(r)
 
     @staticmethod

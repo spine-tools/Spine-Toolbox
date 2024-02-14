@@ -33,7 +33,9 @@ class TestOpenProjectDialog(unittest.TestCase):
         opw.go_home_action.trigger()
         opw.go_documents_action.trigger()
         opw.go_desktop_action.trigger()
-        with mock.patch("spinetoolbox.widgets.open_project_dialog.OpenProjectDialogComboBoxContextMenu.get_action") as mock_cb_context_menu:
+        with mock.patch(
+            "spinetoolbox.widgets.open_project_dialog.OpenProjectDialogComboBoxContextMenu.get_action"
+        ) as mock_cb_context_menu:
             mock_cb_context_menu.return_value = "Clear history"
             opw.show_context_menu(QPoint(0, 0))
             mock_cb_context_menu.assert_called()
@@ -63,6 +65,7 @@ class TestOpenProjectDialog(unittest.TestCase):
                 opw.remove_directory_from_recents(temp_dir2, opw._qsettings)
                 expected_str4 = ""
                 self.assertEqual(expected_str4, opw._qsettings.recent_storages)
+
 
 class DummyToolbox(QWidget):
     def __init__(self, parent):

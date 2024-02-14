@@ -56,7 +56,9 @@ class TestEditors(unittest.TestCase):
             self.assertEqual("abc", editor.data())
             keypress_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_A, Qt.KeyboardModifier.NoModifier)
             QApplication.sendEvent(editor, keypress_event)
-            so_event = QKeyEvent(QEvent.Type.ShortcutOverride, Qt.Key.Key_Backspace, Qt.KeyboardModifier.ControlModifier)
+            so_event = QKeyEvent(
+                QEvent.Type.ShortcutOverride, Qt.Key.Key_Backspace, Qt.KeyboardModifier.ControlModifier
+            )
             QApplication.sendEvent(editor, so_event)
 
     def test_custom_combobox_editor(self):
@@ -92,10 +94,13 @@ class TestEditors(unittest.TestCase):
             delegate.setModelData(editor, model, index)
             editor = delegate.createEditor(parent, None, index)
             editor.deleteLater()
-            delegate.eventFilter(editor, QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Tab, Qt.KeyboardModifier.NoModifier))
+            delegate.eventFilter(
+                editor, QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Tab, Qt.KeyboardModifier.NoModifier)
+            )
             delegate.eventFilter(editor, QFocusEvent(QEvent.Type.FocusOut, Qt.FocusReason.OtherFocusReason))
-            delegate.eventFilter(editor,
-                                 QKeyEvent(QEvent.Type.ShortcutOverride, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier))
+            delegate.eventFilter(
+                editor, QKeyEvent(QEvent.Type.ShortcutOverride, Qt.Key.Key_Escape, Qt.KeyboardModifier.NoModifier)
+            )
 
     def test_checklist_editor_set_data(self):
         with q_object(QWidget()) as parent:
