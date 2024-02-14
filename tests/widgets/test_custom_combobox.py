@@ -10,19 +10,30 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Contains a custom line edit."""
+"""Unit tests for the classes in ``custom_combobox`` module.
+OpenProjectDialogComboBox is tested in test_open_project_dialog module."""
 
-from PySide6.QtWidgets import QLineEdit
-from .custom_qwidgets import UndoRedoMixin
+import unittest
+from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtGui import QPaintEvent
+from spinetoolbox.widgets.custom_combobox import CustomQComboBox, ElidedCombobox
 
 
-class PropertyQLineEdit(UndoRedoMixin, QLineEdit):
-    """A custom QLineEdit for Project Item Properties."""
+class TestCustomComboBoxes(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
 
-    def setText(self, text):
-        """Overridden to prevent the cursor going to the end whenever the user is still editing.
-        This happens because we set the text programmatically in undo/redo implementations.
-        """
-        pos = self.cursorPosition()
-        super().setText(text)
-        self.setCursorPosition(pos)
+    def test_custom_combobox(self):
+        self.parent = QWidget()
+        cb = CustomQComboBox(self.parent)
+        cb.addItems(["a", "b", "c"])
+        self.assertEqual("a", cb.itemText(0))
+        self.parent.deleteLater()
+
+    def test_elided_combobox(self):
+        self.parent = QWidget()
+        cb = ElidedCombobox(self.parent)
+        cb.paintEvent(QPaintEvent(cb.rect()))
+        self.parent.deleteLater()

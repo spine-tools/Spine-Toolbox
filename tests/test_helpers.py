@@ -19,10 +19,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QLineEdit
-
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (

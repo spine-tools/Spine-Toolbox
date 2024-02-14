@@ -10,20 +10,30 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Class for a custom QComboBox.
-"""
+"""Unit tests for the classes in ``plugin_manager_widgets`` module."""
 
-from PySide6.QtWidgets import QComboBox
+import unittest
+from PySide6.QtWidgets import QApplication, QWidget
+from spinetoolbox.widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDialog
 
 
-class CustomQComboBox(QComboBox):
-    """A custom QComboBox for showing kernels in Settings->Tools."""
+class TestPluginManagerWidgets(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
 
-    def mouseMoveEvent(self, e):
-        """Catch mouseMoveEvent and accept it because the comboBox
-        popup (QListView) has mouse tracking on as default.
-        This makes sure the comboBox popup appears in correct
-        position and clicking on the combobox repeatedly does
-        not move the Settings window."""
-        e.accept()
+    def test_install_plugins_dialog(self):
+        self._parent = QWidget()
+        d = InstallPluginDialog(self._parent)
+        d.populate_list(["Plugin1", "Plugin2"])
+        d.close()
+        self._parent.deleteLater()
+
+    def test_manage_plugins_dialog(self):
+        self._parent = QWidget()
+        d = ManagePluginsDialog(self._parent)
+        d.populate_list([("Plugin", True)])
+        d._emit_item_removed("Plugin")
+        d.close()
+        self._parent.deleteLater()

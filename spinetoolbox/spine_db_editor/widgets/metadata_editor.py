@@ -10,9 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains machinery to deal with metadata editor.
-"""
+"""Contains machinery to deal with metadata editor."""
+
 from PySide6.QtCore import Qt
 from ..mvcmodels.metadata_table_model import MetadataTableModel
 

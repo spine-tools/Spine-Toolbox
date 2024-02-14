@@ -9,13 +9,13 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for ``custom_delegates`` module."""
+
 import unittest
 from unittest import mock
-
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.custom_delegates import BooleanValueDelegate
 

@@ -9,6 +9,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """ Custom QTableView classes that support copy-paste and the like. """
 
 from dataclasses import replace

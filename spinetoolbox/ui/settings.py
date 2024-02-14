@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QAbstractScro
     QSpinBox, QSplitter, QStackedWidget, QToolButton,
     QVBoxLayout, QWidget)
 
-from spinetoolbox.widgets.custom_qcombobox import CustomQComboBox
+from spinetoolbox.widgets.custom_combobox import CustomQComboBox
 from spinetoolbox import resources_icons_rc
 
 class Ui_SettingsForm(object):

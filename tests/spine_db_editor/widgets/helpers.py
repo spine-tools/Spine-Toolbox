@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, AddEntitiesDialog
 from spinetoolbox.helpers import signal_waiter
-from spinetoolbox.widgets.custom_editors import SearchBarEditor
+from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
 from tests.mock_helpers import TestSpineDBManager
 
 

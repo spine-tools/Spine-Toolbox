@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QItemDelegate
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from .manage_items_dialogs import ManageItemsDialog
-from ...widgets.custom_editors import SearchBarEditor
+from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
 
 
 class SearchBarDelegate(QItemDelegate):

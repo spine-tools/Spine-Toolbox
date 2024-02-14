@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains a class for a widget that represents a 'Open Project Directory' dialog.
-"""
+"""Contains a class for a widget that represents a 'Open Project Directory' dialog."""
 
 import os
 from PySide6.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QComboBox
@@ -36,7 +34,7 @@ class OpenProjectDialog(QDialog):
         from ..ui import open_project_dialog  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, f=Qt.Dialog)  # Setting the parent inherits the stylesheet
-        self._toolbox = toolbox
+        self._qsettings = toolbox.qsettings()
         # Set up the user interface from Designer file
         self.ui = open_project_dialog.Ui_Dialog()
         self.ui.setupUi(self)
@@ -68,7 +66,7 @@ class OpenProjectDialog(QDialog):
         self.ui.comboBox_current_path.setValidator(self.validator)
         self.ui.comboBox_current_path.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         # Read recent project directories and populate combobox
-        recents = self._toolbox.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+        recents = self._qsettings.value("appSettings/recentProjectStorages", defaultValue=None)
         if recents:
             recents_lst = str(recents).split("\n")
             self.ui.comboBox_current_path.insertItems(0, recents_lst)
@@ -161,7 +159,7 @@ class OpenProjectDialog(QDialog):
         """
         p = self.ui.comboBox_current_path.itemText(i)
         if not os.path.isdir(p):
-            self.remove_directory_from_recents(p, self._toolbox.qsettings())
+            self.remove_directory_from_recents(p, self._qsettings)
             return
         fm_index = self.file_model.index(p)
         self.ui.treeView_file_system.collapseAll()
@@ -291,9 +289,7 @@ class OpenProjectDialog(QDialog):
                 return
             # self.selection() now contains a valid Spine Toolbox project directory.
             # Add the parent directory of selected directory to qsettings
-            self.update_recents(
-                os.path.abspath(os.path.join(self.selection(), os.path.pardir)), self._toolbox.qsettings()
-            )
+            self.update_recents(os.path.abspath(os.path.join(self.selection(), os.path.pardir)), self._qsettings)
         super().done(r)
 
     @staticmethod
@@ -358,7 +354,7 @@ class OpenProjectDialog(QDialog):
         action = self.combobox_context_menu.get_action()
         if action == "Clear history":
             self.ui.comboBox_current_path.clear()
-            self._toolbox.qsettings().setValue("appSettings/recentProjectStorages", "")
+            self._qsettings.setValue("appSettings/recentProjectStorages", "")
             self.go_root()
         else:  # No option selected
             pass

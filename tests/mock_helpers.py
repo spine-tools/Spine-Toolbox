@@ -10,12 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes and functions that can be shared among unit test modules.
-"""
+"""Classes and functions that can be shared among unit test modules."""
+
 from contextlib import contextmanager
 from unittest import mock
-
 from PySide6.QtCore import QModelIndex
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
