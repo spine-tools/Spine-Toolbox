@@ -144,10 +144,10 @@ class ScenarioModel(TreeModelBase):
             if target_db_map != scenario_item.db_map:
                 continue
             for name in alternative_names:
-                if isinstance(name, int):  # When rearranging alternatives in a scenario, the id is given straight
-                    new_alternative_ids.append(name)
-                else:
+                if isinstance(name, str):
                     new_alternative_ids.append(scenario_item.db_map.get_alternative_item(name=name)["id"])
+                else:  # When rearranging alternatives in a scenario, the id is given straight
+                    new_alternative_ids.append(name)
         alternative_id_list = [id_ for id_ in old_alternative_id_list[:row] if id_ not in new_alternative_ids]
         alternative_id_list += new_alternative_ids
         alternative_id_list += [id_ for id_ in old_alternative_id_list[row:] if id_ not in new_alternative_ids]

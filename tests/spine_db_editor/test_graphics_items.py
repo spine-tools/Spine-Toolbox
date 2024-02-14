@@ -80,7 +80,7 @@ class TestEntityItem(unittest.TestCase):
         self.assertEqual(self._item.name, "r")
 
     def test_entity_class_id(self):
-        self.assertEqual(self._item.entity_class_id(self._db_map), 2)
+        self.assertEqual(self._item.entity_class_id(self._db_map), self._db_map.get_entity_class_item(id=2)["id"])
 
     def test_entity_class_name(self):
         self.assertEqual(self._item.entity_class_name, "rc")
@@ -105,7 +105,7 @@ class TestEntityItem(unittest.TestCase):
 
     def test_db_map_data(self):
         self.assertEqual(
-            self._item.db_map_data(self._db_map)._asdict(),
+            self._item.db_map_data(self._db_map).resolve(),
             {
                 'name': 'r',
                 'id': 2,
