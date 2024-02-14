@@ -218,7 +218,7 @@ class TestAddItems(unittest.TestCase):
         db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value.", "id": 1}]}
         self._db_mngr.add_items("metadata", db_map_data)
         self.assertEqual(
-            self._db_mngr.get_item(db_map, "metadata", 1)._asdict(),
+            self._db_mngr.get_item(db_map, "metadata", 1).resolve(),
             {'name': 'my_metadata', 'value': 'Metadata value.', 'id': 1},
         )
 
@@ -232,7 +232,7 @@ class TestAddItems(unittest.TestCase):
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1, "id": 1}]}
         self._db_mngr.add_items("entity_metadata", db_map_data)
         self.assertEqual(
-            self._db_mngr.get_item(db_map, "entity_metadata", 1)._asdict(), {'entity_id': 1, 'metadata_id': 1, 'id': 1}
+            self._db_mngr.get_item(db_map, "entity_metadata", 1).resolve(), {'entity_id': 1, 'metadata_id': 1, 'id': 1}
         )
 
 
