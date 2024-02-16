@@ -215,6 +215,10 @@ class EntityItem(MultiDBTreeItem):
         return self.db_map_data_field(self.first_db_map, "entity_byname", default=())
 
     @property
+    def entity_class_name(self):
+        return self.db_map_data_field(self.first_db_map, "entity_class_name", default="")
+
+    @property
     def entity_class_key(self):
         return tuple(
             self.db_map_data_field(self.first_db_map, field) for field in ("entity_class_name", "dimension_name_list")

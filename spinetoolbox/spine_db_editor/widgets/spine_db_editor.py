@@ -596,11 +596,13 @@ class SpineDBEditorBase(QMainWindow):
         Duplicates an entity.
 
         Args:
-            entity_item (EntityTreeItem of EntityItem)
+            entity_item (EntityItem)
         """
         orig_name = entity_item.name
-        class_name = entity_item.parent_item.name
-        existing_names = {ent.name for ent in entity_item.parent_item.children}
+        class_name = entity_item.entity_class_name
+        existing_names = {
+            ent["name"] for db_map in self.db_maps for ent in db_map.get_items("entity", entity_class_name=class_name)
+        }
         dup_name = unique_name(orig_name, existing_names)
         self.db_mngr.duplicate_entity(orig_name, dup_name, class_name, entity_item.db_maps)
 
