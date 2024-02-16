@@ -1414,7 +1414,8 @@ class SpineDBManager(QObject):
         d = {}
         for db_map, items in db_map_data.items():
             for item in items:
-                d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
+                if item:
+                    d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
         return d
 
     def find_cascading_entity_classes(self, db_map_ids):
