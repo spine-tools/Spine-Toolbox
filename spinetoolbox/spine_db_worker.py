@@ -87,6 +87,7 @@ class SpineDBWorker(QObject):
                 index.increment_position(self._db_map)
                 if not item:
                     continue
+                _ = item.is_valid()
                 index.process_item(item, self._db_map)
             parent_key = parent.key_for_index(self._db_map)
             items = index.get_items(parent_key, self._db_map)[parent_pos:]
