@@ -1184,7 +1184,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
         return self._batch_set_parameter_value_data(row_map, column_map, data, values)
 
-    def _entity_parameter_value_to_add(self, db_map, header_ids, value_and_type, ent_id_lookup):
+    def _entity_parameter_value_to_add(self, db_map, header_ids, value_and_type, ent_id_lookup=None):
         entity_id = (
             header_ids[0] if ent_id_lookup is None else ent_id_lookup[db_map, tuple(id_ for id_ in header_ids[:-2])]
         )
