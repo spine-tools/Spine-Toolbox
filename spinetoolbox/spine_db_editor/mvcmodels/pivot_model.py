@@ -148,6 +148,8 @@ class PivotModel:
             Callable: an itemgetter
         """
         keys = tuple(self.index_ids.index(i) for i in indexes if i in self.index_ids)
+        if not keys:
+            return lambda _: ()
         return tuple_itemgetter(operator.itemgetter(*keys), len(keys))
 
     def _get_unique_index_values(self, indexes):
