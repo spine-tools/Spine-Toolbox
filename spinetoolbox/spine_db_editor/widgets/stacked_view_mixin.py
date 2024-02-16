@@ -69,7 +69,7 @@ class StackedViewMixin:
         """Initializes models."""
         super().init_models()
         for model in self._all_stacked_models:
-            model.db_maps = self.db_maps
+            model.reset_db_maps(self.db_maps)
             model.init_model()
         self._set_default_parameter_data()
 

@@ -100,6 +100,13 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
     def shows_item(self, item, db_map):
         return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
 
+    def reset_db_maps(self, db_maps):
+        if set(db_maps) == set(self.db_maps):
+            return
+        self.db_maps = db_maps
+        self._fetch_parent.set_obsolete(False)
+        self._fetch_parent.reset()
+
     def init_model(self):
         """Initializes the model."""
         super().init_model()

@@ -868,6 +868,7 @@ class GraphViewMixin:
             self.scene.deleteLater()
         # Make sure the fetch parent isn't used to remove discarded changes after we've deleted the graph scene.
         self._entity_fetch_parent.set_obsolete(True)
+        self._parameter_value_fetch_parent.set_obsolete(True)
 
 
 class _Offset:
