@@ -164,7 +164,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 links.append(item)
         # Set active project item and active link in toolbox
         active_project_item = (
-            self._toolbox.project_item_model.get_item(project_item_icons[0].name()).project_item
+            self._toolbox.project().get_item(project_item_icons[0].name())
             if len(project_item_icons) == 1
             else None
         )

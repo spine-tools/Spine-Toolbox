@@ -149,7 +149,7 @@ def create_dir(base_path, folder="", verbosity=False):
 
 
 def rename_dir(old_dir, new_dir, toolbox, box_title):
-    """Renames directory. Called by ``ProjectItemModel.set_item_name()``
+    """Renames directory.
 
     Args:
         old_dir (str): Absolute path to directory that will be renamed

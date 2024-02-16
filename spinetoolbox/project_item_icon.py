@@ -353,8 +353,8 @@ class ProjectItemIcon(QGraphicsPathItem):
         event.accept()
         self.scene().clearSelection()
         self.setSelected(True)
-        ind = self._toolbox.project_item_model.find_item(self.name())
-        self._toolbox.show_project_or_item_context_menu(event.screenPos(), ind)
+        item = self._toolbox.project().get_item(self.name())
+        self._toolbox.show_project_or_item_context_menu(event.screenPos(), item)
 
     def itemChange(self, change, value):
         """

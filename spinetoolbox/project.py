@@ -10,9 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Spine Toolbox project class.
-"""
+"""Spine Toolbox project class."""
+
 from enum import auto, Enum, unique
 from itertools import chain
 import os
@@ -155,8 +154,50 @@ class SpineToolboxProject(MetaObject):
         return list(self._project_items)
 
     @property
+    def n_items(self):
+        return len(self.all_item_names)
+
+    @property
     def settings(self):
         return self._settings
+
+    def has_items(self):
+        """Returns True if project has project items.
+
+        Returns:
+            bool: True if project has items, False otherwise
+        """
+        return bool(self._project_items)
+
+    def get_item(self, name):
+        """Returns project item.
+
+        Args:
+            name (str): Item's name
+
+        Returns:
+            ProjectItem: Project item
+        """
+        return self._project_items[name]
+
+    def get_items(self):
+        """Returns all project items.
+
+        Returns:
+            list of ProjectItem: All project items
+        """
+        return list(self._project_items.values())
+
+    def get_items_by_type(self, _type):
+        """Returns all project items with given _type.
+
+        Args:
+            _type (str): Project Item type
+
+        Returns:
+            list of ProjectItem: Project Items with given type or an empty list if none found
+        """
+        return  [item for item in self.get_items() if item.item_type() == _type]
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -591,33 +632,6 @@ class SpineToolboxProject(MetaObject):
         item.set_up()
         if not silent:
             self._logger.msg.emit(f"{item.item_type()} <b>{name}</b> added to project")
-
-    def has_items(self):
-        """Returns True if project has project items.
-
-        Returns:
-            bool: True if project has items, False otherwise
-        """
-        return bool(self._project_items)
-
-    def get_item(self, name):
-        """Returns project item.
-
-        Args:
-            name (str): item's name
-
-        Returns:
-            ProjectItem: project item
-        """
-        return self._project_items[name]
-
-    def get_items(self):
-        """Returns all project items.
-
-        Returns:
-            list of ProjectItem: all project items
-        """
-        return list(self._project_items.values())
 
     def rename_item(self, previous_name, new_name, rename_data_dir_message):
         """Renames a project item
