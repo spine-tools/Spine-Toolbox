@@ -269,6 +269,9 @@ To unfreeze a frozen dimension, just do the opposite.
 
 .. note:: Your pivoting and freezing selections for any class will be remembered when switching to another class.
 
+.. tip:: If you are not seeing the data you think you should be seeing, it might be because there is
+         some selection active in the **Frozen Table** that is filtering those values out of the **Pivot View**.
+
 Filtering
 *********
 
