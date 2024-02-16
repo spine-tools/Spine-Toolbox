@@ -49,7 +49,6 @@ from ..helpers import (
     open_url,
     is_valid_conda_executable,
 )
-from spine_items.tool.tool_specifications import PythonTool, JuliaTool
 
 
 class SettingsWidgetBase(QWidget):
@@ -751,10 +750,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         n = 0
         for item in project.get_items():
             if item.item_type() == "Tool" and item.specification() is not None:
-                if isinstance(item.specification(), PythonTool) and _type == "python":
+                if type(item.specification()).__name__ == "PythonTool" and _type == "python":
                     item.specification().set_execution_settings(use_jupyter_console, exe_path, kernel, env)
                     n += 1
-                elif isinstance(item.specification(), JuliaTool) and _type == "julia":
+                elif type(item.specification()).__name__ == "JuliaTool" and _type == "julia":
                     item.specification().set_execution_settings(use_jupyter_console, exe_path, julia_project, kernel)
                     n += 1
         if n == 0:

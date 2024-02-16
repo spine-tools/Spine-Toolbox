@@ -293,18 +293,18 @@ class TestOpenDBEditor(unittest.TestCase):
     def test_open_db_editor(self):
         editors = list(self._db_mngr.get_all_multi_spine_db_editors())
         self.assertFalse(editors)
-        self._db_mngr.open_db_editor({self._db_url: "test"})
+        self._db_mngr.open_db_editor({self._db_url: "test"}, reuse_existing_editor=True)
         editors = list(self._db_mngr.get_all_multi_spine_db_editors())
         self.assertEqual(len(editors), 1)
-        self._db_mngr.open_db_editor({self._db_url: "test"})
+        self._db_mngr.open_db_editor({self._db_url: "test"}, reuse_existing_editor=True)
         editors = list(self._db_mngr.get_all_multi_spine_db_editors())
         self.assertEqual(len(editors), 1)
-        self._db_mngr.open_db_editor({self._db_url: "not_the_same"})
+        self._db_mngr.open_db_editor({self._db_url: "not_the_same"}, reuse_existing_editor=True)
         self.assertEqual(len(editors), 1)
         editor = editors[0]
         self.assertEqual(editor.tab_widget.count(), 1)
         # Finally try to open the first tab again
-        self._db_mngr.open_db_editor({self._db_url: "test"})
+        self._db_mngr.open_db_editor({self._db_url: "test"}, reuse_existing_editor=True)
         editors = list(self._db_mngr.get_all_multi_spine_db_editors())
         editor = editors[0]
         self.assertEqual(editor.tab_widget.count(), 1)
