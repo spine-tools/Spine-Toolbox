@@ -87,7 +87,7 @@ class SpineDBWorker(QObject):
                 index.increment_position(self._db_map)
                 if not item:
                     continue
-                _ = item.is_valid()
+                item.validate()
                 index.process_item(item, self._db_map)
             parent_key = parent.key_for_index(self._db_map)
             items = index.get_items(parent_key, self._db_map)[parent_pos:]
@@ -99,10 +99,10 @@ class SpineDBWorker(QObject):
             parent.increment_position(self._db_map)
             if not item:
                 continue
-            is_item_valid = item.is_valid()  # Need to call this before `accepts_item` so references are resolved
+            item.validate()
             if index is not None or parent.accepts_item(item, self._db_map):
                 parent.bind_item(item, self._db_map)
-                if is_item_valid:
+                if item.is_valid():
                     parent.add_item(item, self._db_map)
                     if parent.shows_item(item, self._db_map):
                         added_count += 1
