@@ -83,6 +83,7 @@ class FrozenTableModel(QAbstractTableModel):
         removed_rows = {i + 1 for i, val in enumerate(self._data[1:]) if val in data}
         if not removed_rows:
             return
+        frozen_value = self._data[self._selected_row] if self._selected_row is not None else None
         for first, count in reversed(rows_to_row_count_tuples(removed_rows)):
             last = first + count - 1
             self.beginRemoveRows(QModelIndex(), first, last)
@@ -93,8 +94,7 @@ class FrozenTableModel(QAbstractTableModel):
             if self._selected_row == 0:
                 self._selected_row = None
             self.selected_row_changed.emit()
-        elif self._selected_row is not None:
-            frozen_value = self._data[self._selected_row]
+        elif frozen_value is not None:
             selected_row = self._find_first(frozen_value)
             if selected_row != self._selected_row:
                 self._selected_row = selected_row

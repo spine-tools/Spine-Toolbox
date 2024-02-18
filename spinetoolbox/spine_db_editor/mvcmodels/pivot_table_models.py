@@ -496,10 +496,8 @@ class PivotTableModelBase(QAbstractTableModel):
         if not data:
             return
         row_count, column_count = self.model.remove_from_model(data)
-        removed_frozen_values = self.model.frozen_values(data)
-        remaining_frozen_values = self.model.frozen_values(self.model._data)
-        if not removed_frozen_values & remaining_frozen_values:
-            # It's safe to remove the removed_frozen_values as they are not in the remaining
+        removed_frozen_values = self.model.frozen_values(data) - self.model.frozen_values(self.model._data)
+        if removed_frozen_values:
             self.frozen_values_removed.emit(removed_frozen_values)
         if row_count > 0:
             first = self.headerRowCount()
