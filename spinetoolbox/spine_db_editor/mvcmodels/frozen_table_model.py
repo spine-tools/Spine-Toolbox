@@ -14,7 +14,6 @@
 Contains FrozenTableModel class.
 """
 from itertools import product
-from typing import Iterable
 
 from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel, Signal
 from .colors import SELECTED_COLOR
@@ -81,27 +80,21 @@ class FrozenTableModel(QAbstractTableModel):
         Args:
             data (set of tuple): frozen values
         """
-        removed_i = set()
-        for removed_row in data:
-            for i, row in enumerate(self._data[1:]):
-                if row == removed_row:
-                    removed_i.add(i + 1)
-                    break
-        if not removed_i:
+        removed_rows = {i + 1 for i, val in enumerate(self._data[1:]) if val in data}
+        if not removed_rows:
             return
-        frozen_value = self._data[self._selected_row]
-        intervals = rows_to_row_count_tuples(removed_i)
-        for interval in reversed(intervals):
-            end = interval[0] + interval[1]
-            self.beginRemoveRows(QModelIndex(), interval[0], end - 1)
-            del self._data[interval[0] : end]
+        frozen_value = self._data[self._selected_row] if self._selected_row is not None else None
+        for first, count in reversed(rows_to_row_count_tuples(removed_rows)):
+            last = first + count - 1
+            self.beginRemoveRows(QModelIndex(), first, last)
+            del self._data[first : last + 1]
             self.endRemoveRows()
-        if self._selected_row in removed_i:
+        if self._selected_row in removed_rows:
             self._selected_row = min(self._selected_row, len(self._data) - 1)
             if self._selected_row == 0:
                 self._selected_row = None
             self.selected_row_changed.emit()
-        else:
+        elif frozen_value is not None:
             selected_row = self._find_first(frozen_value)
             if selected_row != self._selected_row:
                 self._selected_row = selected_row
@@ -174,12 +167,12 @@ class FrozenTableModel(QAbstractTableModel):
             self.endInsertColumns()
             return
         column_values = self._unique_values()
-        new_data = [row for row in product(*column_values[:column], values, *column_values[column:])]
-        previous_selected_value = self._data[self._selected_row] if self._selected_row is not None else None
+        new_data = list(product(*column_values[:column], values, *column_values[column:]))
+        previously_selected_value = self._data[self._selected_row] if self._selected_row is not None else None
         self.beginResetModel()
         self._data[0] = headers[:column] + [header] + headers[column:]
         self._data[1:] = new_data
-        self._selected_row = self._find_first(previous_selected_value, column)
+        self._selected_row = self._find_first(previously_selected_value, column)
         self.endResetModel()
         self._keep_sorted()
 
@@ -201,7 +194,7 @@ class FrozenTableModel(QAbstractTableModel):
             self.endRemoveColumns()
             return
         column_values = self._unique_values()
-        new_data = [row for row in product(*column_values[:column], *column_values[column + 1 :])]
+        new_data = list(product(*column_values[:column], *column_values[column + 1 :]))
         selected_data = self._data[self._selected_row]
         self.beginResetModel()
         self._data[0] = headers[:column] + headers[column + 1 :]
