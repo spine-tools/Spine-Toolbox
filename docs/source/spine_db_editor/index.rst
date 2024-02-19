@@ -21,3 +21,4 @@ that you can use to visualize and edit data in one or more Spine databases.
    managing_data
    importing_and_exporting_data
    committing_and_history
+   vacuum
