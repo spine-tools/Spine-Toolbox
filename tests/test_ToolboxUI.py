@@ -21,7 +21,7 @@ import logging
 import os
 import sys
 import spinetoolbox.ui_main
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QApplication, QMessageBox, QMenu
 from PySide6.QtCore import QSettings, Qt, QPoint, QPointF, QMimeData
 from PySide6.QtTest import QTest
 from PySide6.QtGui import QDropEvent
@@ -35,7 +35,6 @@ from .mock_helpers import (
     clean_up_toolbox,
     create_toolboxui,
     create_project,
-    add_ds,
     add_dc,
     add_tool,
     qsettings_value_side_effect,
@@ -213,6 +212,26 @@ class TestToolboxUI(unittest.TestCase):
                 self.assertTrue(self.toolbox.close_project())
                 mock_qsettings_value.assert_called()
         self.assertIsNone(self.toolbox.project())
+
+    def test_show_project_or_item_context_menu(self):
+        self._temp_dir = TemporaryDirectory()
+        with mock.patch("spinetoolbox.ui_main.QSettings.setValue") as mock_set_value, mock.patch(
+            "spinetoolbox.ui_main.QSettings.sync"
+        ) as mock_sync, mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+            mock_dir_getter.return_value = self._temp_dir.name
+            self.toolbox.new_project()
+            mock_set_value.assert_called()
+            mock_sync.assert_called()
+            mock_dir_getter.assert_called()
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        # mocking "PySide6.QtWidgets.QMenu.exec directly doesn't work because QMenu.exec is overloaded!
+        with mock.patch("spinetoolbox.ui_main.QMenu") as mock_qmenu:
+            mock_qmenu.side_effect = MockQMenu
+            self.toolbox.show_project_or_item_context_menu(QPoint(0, 0), None)
+        with mock.patch("spinetoolbox.ui_main.QMenu") as mock_qmenu:
+            mock_qmenu.side_effect = MockQMenu
+            dc = self.toolbox.project().get_item("DC")
+            self.toolbox.show_project_or_item_context_menu(QPoint(0, 0), dc)
 
     def test_selection_in_design_view_1(self):
         """Test item selection in Design View. Simulates mouse click on a Data Connection item.
@@ -765,6 +784,10 @@ def toolbox_with_settings(settings_dict):
         settings.deleteLater()
         clean_up_toolbox(toolbox)
 
+
+class MockQMenu(QMenu):
+    def exec(self, pos):
+        return True
 
 if __name__ == '__main__':
     unittest.main()

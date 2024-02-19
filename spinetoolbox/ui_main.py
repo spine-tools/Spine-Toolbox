@@ -1699,7 +1699,7 @@ class ToolboxUI(QMainWindow):
             menu.addSeparator()
             menu.addAction(self.ui.actionOpen_project_directory)
         else:  # Clicked on an item, show the context menu for that item
-                menu = self.project_item_context_menu(item.actions())
+            menu = self.project_item_context_menu(item.actions())
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
