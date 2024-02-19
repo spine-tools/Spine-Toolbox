@@ -15,11 +15,10 @@ Contains SpineEngineWorker.
 """
 import copy
 from PySide6.QtCore import Signal, Slot, QObject, QThread
-from PySide6.QtWidgets import QMessageBox
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
+from .widgets.options_dialog import OptionsDialog
 from .spine_engine_manager import make_engine_manager, LocalSpineEngineManager
-from .helpers import get_upgrade_db_promt_text
 
 
 @Slot(list)
@@ -64,29 +63,10 @@ def _handle_process_message_arrived(item, filter_id, msg_type, msg_text):
 
 @Slot(dict, object)
 def _handle_prompt_arrived(prompt, engine_mngr, logger=None):
-    prompt_type = prompt["type"]
-    if prompt_type == "upgrade_db":
-        url = prompt["url"]
-        current = prompt["current"]
-        expected = prompt["expected"]
-        text, info_text = get_upgrade_db_promt_text(url, current, expected)
-    else:
-        info_text = ""
-        text = prompt["text"]
     item_name = prompt["item_name"]
-    # pylint: disable=undefined-variable
-    box = QMessageBox(
-        QMessageBox.Icon.Question,
-        item_name,
-        text,
-        buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        parent=logger,
-    )
-    if info_text:
-        box.setInformativeText(info_text)
-    answer = box.exec()
-    accepted = answer == QMessageBox.StandardButton.Yes
-    engine_mngr.answer_prompt(item_name, accepted)
+    title, text, option_to_result, notes, preferred = prompt["data"]
+    result = OptionsDialog.get_option(logger, title, text, option_to_result, notes=notes, preferred=preferred)
+    engine_mngr.answer_prompt(item_name, result)
 
 
 @Slot(object)

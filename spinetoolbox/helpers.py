@@ -1060,21 +1060,6 @@ def unique_name(prefix, existing):
     return f"{prefix} ({free})"
 
 
-def get_upgrade_db_promt_text(url, current, expected):
-    text = (
-        f"The database at <b>{url}</b> is at revision <b>{current}</b> and needs to be "
-        f"upgraded to revision <b>{expected}</b> in order to be used with the current "
-        "version of Spine Toolbox."
-    )
-    info_text = (
-        "<b>WARNING</b>: After the upgrade, "
-        "the database may no longer be used "
-        "with previous versions of Spine."
-        "<p>Do you want to upgrade the database now?"
-    )
-    return text, info_text
-
-
 def parse_specification_file(spec_path, logger):
     """Parses specification file.
 

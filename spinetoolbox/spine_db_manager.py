@@ -34,7 +34,6 @@ from spinedb_api import (
     Map,
     ParameterValueFormatError,
     relativedelta_to_duration,
-    SpineDBVersionError,
     SpineDBAPIError,
     TimePattern,
     TimeSeries,
@@ -42,9 +41,9 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     to_database,
 )
-from spinedb_api.helpers import name_from_elements
 from spinedb_api.parameter_value import load_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
+from spinedb_api.helpers import remove_credentials_from_url
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
@@ -56,8 +55,9 @@ from .spine_db_commands import (
     RemoveItemsCommand,
 )
 from .mvcmodels.shared import PARSED_ROLE
+from .widgets.options_dialog import OptionsDialog
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, busy_effect
+from .helpers import busy_effect
 
 
 @busy_effect
@@ -275,22 +275,22 @@ class SpineDBManager(QObject):
         url = str(url)
         return self._db_maps.get(url)
 
-    def create_new_spine_database(self, url, logger):
+    def create_new_spine_database(self, url, logger, overwrite=False):
+        if not overwrite and not is_empty(url):
+            msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
+            msg.setIcon(QMessageBox.Icon.Question)
+            msg.setWindowTitle("Database not empty")
+            msg.setText(f"The URL <b>{remove_credentials_from_url(url)}</b> points to an existing database.")
+            msg.setInformativeText("Do you want to overwrite it?")
+            overwrite_button = msg.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
+            msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+            msg.exec()
+            # We have custom buttons, exec() returns an opaque value.
+            # Let's check the clicked button explicitly instead.
+            clicked_button = msg.clickedButton()
+            if clicked_button is not overwrite_button:
+                return
         try:
-            if not is_empty(url):
-                msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
-                msg.setIcon(QMessageBox.Icon.Question)
-                msg.setWindowTitle("Database not empty")
-                msg.setText(f"The URL <b>{url}</b> points to an existing database.")
-                msg.setInformativeText("Do you want to overwrite it?")
-                overwrite_button = msg.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
-                msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
-                msg.exec()
-                # We have custom buttons, exec() returns an opaque value.
-                # Let's check the clicked button explicitly instead.
-                clicked_button = msg.clickedButton()
-                if clicked_button is not overwrite_button:
-                    return
             do_create_new_spine_database(url)
             logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
             db_map = self.db_map(url)
@@ -320,56 +320,52 @@ class SpineDBManager(QObject):
         for url in list(self._db_maps):
             self.close_session(url)
 
-    def get_db_map(
-        self, url, logger, ignore_version_error=False, codename=None, create=False, upgrade=False, window=False
-    ):
+    def get_db_map(self, url, logger, ignore_version_error=False, window=False, codename=None, create=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
         Args:
             url (str, URL)
             logger (LoggerInterface)
-            codename (str, NoneType, optional)
-            upgrade (bool, optional)
-            create (bool, optional)
+            ignore_version_error (bool, optional)
             window (bool, optional)
+            codename (str, NoneType, optional)
+            create (bool, optional)
 
         Returns:
             DiffDatabaseMapping, NoneType
         """
+        url = str(url)
+        db_map = self._db_maps.get(url)
+        if db_map is not None:
+            if not window and codename is not None and db_map.codename != codename:
+                return None
+            return db_map
         try:
-            return self._do_get_db_map(url, codename, create, upgrade, window)
-        except SpineDBVersionError as v_err:
+            prompt_data = DatabaseMapping.get_upgrade_db_prompt_data(url, create=create)
+        except SpineDBAPIError as err:
+            logger.msg_error.emit(err.msg)
+            return None
+        if prompt_data is not None:
             if ignore_version_error:
                 return None
-            if v_err.upgrade_available:
-                text, info_text = get_upgrade_db_promt_text(url, v_err.current, v_err.expected)
-                msg = QMessageBox(self.parent() or qApp.activeWindow())  # pylint: disable=undefined-variable
-                msg.setIcon(QMessageBox.Icon.Question)
-                msg.setWindowTitle("Incompatible database version")
-                msg.setText(text)
-                msg.setInformativeText(info_text)
-                msg.addButton(QMessageBox.StandardButton.Cancel)
-                msg.addButton("Upgrade", QMessageBox.ButtonRole.YesRole)
-                ret = msg.exec()  # Show message box
-                if ret == QMessageBox.StandardButton.Cancel:
-                    return None
-                return self.get_db_map(url, logger, codename=codename, create=create, upgrade=True, window=window)
-            QMessageBox.information(
-                qApp.activeWindow(),  # pylint: disable=undefined-variable
-                "Unsupported database version",
-                f"Database at <b>{url}</b> is newer than this version of Spine Toolbox can handle.<br><br>"
-                f"The db is at revision <b>{v_err.current}</b> while this version "
-                f"of Spine Toolbox supports revisions up to <b>{v_err.expected}</b>.<br><br>"
-                "Please upgrade Spine Toolbox to open this database.",
+            title, text, option_to_kwargs, notes, preferred = prompt_data
+            kwargs = OptionsDialog.get_option(
+                self.parent(), title, text, option_to_kwargs, notes=notes, preferred=preferred
             )
-            return None
+            if kwargs is None:
+                return None
+        else:
+            kwargs = {}
+        kwargs.update(codename=codename, create=create)
+        try:
+            return self._do_get_db_map(url, **kwargs)
         except SpineDBAPIError as err:
             logger.msg_error.emit(err.msg)
             return None
 
     @busy_effect
-    def _do_get_db_map(self, url, codename, create, upgrade, window):
+    def _do_get_db_map(self, url, **kwargs):
         """Returns a memorized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
@@ -378,22 +374,13 @@ class SpineDBManager(QObject):
             codename (str, NoneType)
             upgrade (bool)
             create (bool)
-            window (bool)
 
         Returns:
             DiffDatabaseMapping
         """
-        url = str(url)
-        db_map = self._db_maps.get(url)
-        if db_map is not None:
-            if codename is not None and db_map.codename != codename:
-                if window:  # If new editor window is being opened
-                    return db_map
-                return None
-            return db_map
         worker = SpineDBWorker(self, url, synchronous=self._synchronous)
         try:
-            db_map = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
+            db_map = worker.get_db_map(**kwargs)
         except Exception as error:
             worker.clean_up()
             raise error
