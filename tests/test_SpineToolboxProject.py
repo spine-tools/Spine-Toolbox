@@ -110,6 +110,12 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(item.item_type(), "Data Connection")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
+        # test get_items_by_type()
+        data_connections = self.toolbox.project().get_items_by_type("Data Connection")
+        self.assertEqual(1, len(data_connections))
+        self.assertIsInstance(data_connections[0], ProjectItem)
+        tools = self.toolbox.project().get_items_by_type("Tool")
+        self.assertEqual(0, len(tools))
 
     def test_add_tool(self):
         name = "Tool"
@@ -168,6 +174,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(exporter_name, exporter.name)
         merger = p.get_item(merger_name)
         self.assertEqual(merger_name, merger.name)
+        # Test has_items(), and get_items()
+        self.assertTrue(p.has_items())
+        self.assertEqual(8, len(p.get_items()))
         # DAG handler should now have eight graphs, each with one item
         dags = [dag for dag in self.toolbox.project()._dag_iterator()]
         self.assertEqual(8, len(dags))

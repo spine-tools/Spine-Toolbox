@@ -89,7 +89,6 @@ class UrlToolBar(QToolBar):
 
     @Slot()
     def _update_open_project_url_menu(self):
-        toolbox = self._db_editor.toolbox
         self._open_project_url_menu.clear()
         ds_items = self._db_editor.toolbox.project().get_items_by_type("Data Store")
         self._project_urls = {ds.name: ds.sql_alchemy_url() for ds in ds_items}
