@@ -335,6 +335,12 @@ class SpineDBManager(QObject):
         Returns:
             DiffDatabaseMapping, NoneType
         """
+        url = str(url)
+        db_map = self._db_maps.get(url)
+        if db_map is not None:
+            if not window and codename is not None and db_map.codename != codename:
+                return None
+            return db_map
         prompt_data = DatabaseMapping.get_upgrade_db_prompt_data(url, create=create)
         if prompt_data is not None:
             if ignore_version_error:
@@ -349,13 +355,13 @@ class SpineDBManager(QObject):
             kwargs = {}
         kwargs.update(codename=codename, create=create)
         try:
-            return self._do_get_db_map(url, window, **kwargs)
+            return self._do_get_db_map(url, **kwargs)
         except SpineDBAPIError as err:
             logger.msg_error.emit(err.msg)
             return None
 
     @busy_effect
-    def _do_get_db_map(self, url, window, **kwargs):
+    def _do_get_db_map(self, url, **kwargs):
         """Returns a memorized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
@@ -364,20 +370,10 @@ class SpineDBManager(QObject):
             codename (str, NoneType)
             upgrade (bool)
             create (bool)
-            window (bool)
 
         Returns:
             DiffDatabaseMapping
         """
-        url = str(url)
-        db_map = self._db_maps.get(url)
-        if db_map is not None:
-            codename = kwargs.get("codename")
-            if codename is not None and db_map.codename != codename:
-                if window:  # If new editor window is being opened
-                    return db_map
-                return None
-            return db_map
         worker = SpineDBWorker(self, url, synchronous=self._synchronous)
         try:
             db_map = worker.get_db_map(**kwargs)
