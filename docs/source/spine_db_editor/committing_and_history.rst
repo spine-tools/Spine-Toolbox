@@ -1,7 +1,7 @@
 
 .. _committing_and_history:
 
-Committing and history
+Committing and History
 ======================
 
 .. contents::
