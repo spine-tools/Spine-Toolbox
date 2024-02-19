@@ -341,7 +341,11 @@ class SpineDBManager(QObject):
             if not window and codename is not None and db_map.codename != codename:
                 return None
             return db_map
-        prompt_data = DatabaseMapping.get_upgrade_db_prompt_data(url, create=create)
+        try:
+            prompt_data = DatabaseMapping.get_upgrade_db_prompt_data(url, create=create)
+        except SpineDBAPIError as err:
+            logger.msg_error.emit(err.msg)
+            return None
         if prompt_data is not None:
             if ignore_version_error:
                 return None

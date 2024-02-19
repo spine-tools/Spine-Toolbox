@@ -72,7 +72,6 @@ class OptionsDialog(QDialog):
         self.ok_button = QPushButton("Ok")
         self.ok_button.clicked.connect(self.accept)
         layout.addWidget(self.ok_button)
-        preferred = None
         if preferred is not None:
             self.button_group.button(preferred).setChecked(True)
         self.button_group.idToggled.connect(self._update_ok_button_enabled)
