@@ -109,7 +109,7 @@ class Ui_MainWindow(object):
         self.actionMass_remove_items.setObjectName(u"actionMass_remove_items")
         self.actionMass_remove_items.setEnabled(False)
         icon10 = QIcon()
-        icon10.addFile(u":/icons/menu_icons/cube_minus.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon10.addFile(u":/icons/menu_icons/bolt-lightning.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionMass_remove_items.setIcon(icon10)
         self.actionExport_session = QAction(MainWindow)
         self.actionExport_session.setObjectName(u"actionExport_session")

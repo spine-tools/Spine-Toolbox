@@ -2,6 +2,7 @@
 <!--
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -266,9 +267,6 @@
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_entity_tree">
-   <property name="features">
-    <set>QDockWidget::AllDockWidgetFeatures</set>
-   </property>
    <property name="allowedAreas">
     <set>Qt::AllDockWidgetAreas</set>
    </property>
@@ -863,7 +861,7 @@
    </property>
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/cube_minus.svg</normaloff>:/icons/menu_icons/cube_minus.svg</iconset>
+     <normaloff>:/icons/menu_icons/bolt-lightning.svg</normaloff>:/icons/menu_icons/bolt-lightning.svg</iconset>
    </property>
    <property name="text">
     <string>P&amp;urge...</string>
@@ -1056,12 +1054,6 @@
   </customwidget>
   <customwidget>
    <class>LegendWidget</class>
-   <extends>QWidget</extends>
-   <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ProgressBarWidget</class>
    <extends>QWidget</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
    <container>1</container>
