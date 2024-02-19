@@ -183,7 +183,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="General">
        <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -826,34 +826,6 @@
             </layout>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout">
-             <item>
-              <spacer name="horizontalSpacer_2">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
-              <widget class="QToolButton" name="toolButton_set_julia_defaults">
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set Julia Tool execution settings in the current project to defaults&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="icon">
-                <iconset resource="resources/resources_icons.qrc">
-                 <normaloff>:/icons/share.svg</normaloff>:/icons/share.svg</iconset>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
             <widget class="Line" name="line">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -1036,34 +1008,6 @@
                 </layout>
                </item>
               </layout>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_3">
-             <item>
-              <spacer name="horizontalSpacer_3">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
-              <widget class="QToolButton" name="toolButton_set_python_defaults">
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set Python Tool execution settings in the current project to defaults&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="icon">
-                <iconset resource="resources/resources_icons.qrc">
-                 <normaloff>:/icons/share.svg</normaloff>:/icons/share.svg</iconset>
-               </property>
-              </widget>
              </item>
             </layout>
            </item>
@@ -1746,7 +1690,6 @@
   <tabstop>toolButton_browse_julia_project</tabstop>
   <tabstop>comboBox_julia_kernel</tabstop>
   <tabstop>pushButton_make_julia_kernel</tabstop>
-  <tabstop>toolButton_set_julia_defaults</tabstop>
   <tabstop>pushButton_install_julia</tabstop>
   <tabstop>pushButton_add_up_spine_opt</tabstop>
   <tabstop>radioButton_use_python_basic_console</tabstop>
@@ -1755,7 +1698,6 @@
   <tabstop>toolButton_browse_python</tabstop>
   <tabstop>comboBox_python_kernel</tabstop>
   <tabstop>pushButton_make_python_kernel</tabstop>
-  <tabstop>toolButton_set_python_defaults</tabstop>
   <tabstop>lineEdit_conda_path</tabstop>
   <tabstop>toolButton_browse_conda</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
