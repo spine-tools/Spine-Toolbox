@@ -9,18 +9,15 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""
-Widget for controlling user settings.
-"""
+""" Widget for controlling user settings. """
 
 import os
 from PySide6.QtWidgets import QWidget, QFileDialog, QColorDialog, QMenu, QMessageBox
 from PySide6.QtCore import Slot, Qt, QSize, QSettings, QPoint, QEvent
 from PySide6.QtGui import QPixmap, QIcon, QStandardItemModel, QStandardItem
 from spine_engine.utils.helpers import (
-    resolve_python_interpreter,
-    resolve_julia_executable,
+    resolve_current_python_interpreter,
+    resolve_default_julia_executable,
     resolve_gams_executable,
     resolve_conda_executable,
     get_julia_env,
@@ -348,8 +345,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.toolButton_browse_python.clicked.connect(self.browse_python_button_clicked)
         self.ui.toolButton_browse_conda.clicked.connect(self.browse_conda_button_clicked)
         self.ui.toolButton_pick_secfolder.clicked.connect(self.browse_certificate_directory_clicked)
-        self.ui.toolButton_set_julia_defaults.clicked.connect(self._set_default_julia_execution_settings)
-        self.ui.toolButton_set_python_defaults.clicked.connect(self._set_default_python_execution_settings)
         self.ui.pushButton_make_python_kernel.clicked.connect(self.make_python_kernel)
         self.ui.pushButton_make_julia_kernel.clicked.connect(self.make_julia_kernel)
         self.ui.comboBox_python_kernel.customContextMenuRequested.connect(
@@ -507,7 +502,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Makes a Python kernel for Jupyter Console based on selected Python interpreter.
         If a kernel using this Python interpreter already exists, sets that kernel selected in the comboBox."""
         python_exe = self.ui.lineEdit_python_path.text().strip()
-        python_exe = resolve_python_interpreter(python_exe)
+        if not python_exe:
+            python_exe = resolve_current_python_interpreter()
         python_kernel = _get_kernel_name_by_exe(python_exe, self._python_kernel_model)
         if not python_kernel:
             mpke = MiniPythonKernelEditor(self, python_exe)
@@ -525,7 +521,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         If a kernel using the selected Julia executable and project already exists, sets that kernel
         selected in the comboBox."""
         use_julia_jupyter_console, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
-        julia_exe = resolve_julia_executable(julia_exe)
+        if not julia_exe:
+            julia_exe = resolve_default_julia_executable()
         julia_kernel = _get_kernel_name_by_exe(julia_exe, self._julia_kernel_model)
         if julia_kernel:  # Kernel with matching executable found
             match = _selected_project_matches_kernel_project(julia_kernel, julia_project, self._julia_kernel_model)
@@ -688,80 +685,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def _update_properties_widget(self, _checked=False):
         self._toolbox.ui.tabWidget_item_properties.update()
 
-    def _set_default_julia_execution_settings(self, _checked=False):
-        self._set_default_execution_settings("julia")
-
-    def _set_default_python_execution_settings(self, _checked=False):
-        self._set_default_execution_settings("python")
-
-    def _set_default_execution_settings(self, _type):
-        """Sets the default execution settings to all Julia or Python Tools in the currently opened project.
-
-        Args:
-            _type (str): 'python' sets execution settings for Python Tools, 'julia' for Julia Tools.
-        """
-        project = self._toolbox.project()
-        if not project:
-            Notification(self, "Open a project to use this feature").show()
-            return
-        if _type == "python":
-            use_jupyter_console, exe_path, kernel, env = self._get_python_settings()
-        else:
-            use_jupyter_console, exe_path, julia_project, kernel = self._get_julia_settings()
-        use_jupyter_console = True if use_jupyter_console == "2" else False
-        if use_jupyter_console:
-            if not kernel:
-                Notification(self, f"{_type.capitalize()} kernel missing").show()
-                return
-        if _type == "python":
-            exe_path = resolve_python_interpreter(exe_path)
-        else:
-            exe_path = resolve_julia_executable(exe_path)
-        if not exe_path:
-            Notification(self, f"{_type.capitalize()} executable missing").show()
-            return
-        msg = (
-            f"You are about to set all {_type.capitalize()} Tool's execution settings in "
-            f"the current project to defaults. This operation is <b>irreversible</b> because "
-            f"the project will be saved afterwards. <br><br>Do you want to continue?"
-        )
-        box = QMessageBox(
-            QMessageBox.Icon.Question,
-            f"Set {_type.capitalize()} Tools to default execution settings?",
-            msg,
-            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            parent=self,
-        )
-        box.button(QMessageBox.StandardButton.Ok).setText("Do it!")
-        box.setWindowIcon(QIcon(":/symbols/app.ico"))
-        answer = box.exec()
-        if answer != QMessageBox.StandardButton.Ok:
-            return
-        # Unselect items on Design View because Tool properties still shows the old exec. settings after this operation
-        self._toolbox.ui.graphicsView.scene().clearSelection()
-        # Close all Julia or Python Tool Spec editor tabs
-        for editor in self._toolbox.get_all_multi_tab_spec_editors(item_type="Tool"):
-            n = editor.tab_widget.count()
-            for tab_index in reversed(range(n)):
-                tab = editor.tab_widget.widget(tab_index)
-                tooltype = tab._ui.comboBox_tooltype.currentText()
-                if tooltype.lower() == _type:
-                    editor._close_tab(tab_index)
-        n = 0
-        for item in project.get_items():
-            if item.item_type() == "Tool" and item.specification() is not None:
-                if type(item.specification()).__name__ == "PythonTool" and _type == "python":
-                    item.specification().set_execution_settings(use_jupyter_console, exe_path, kernel, env)
-                    n += 1
-                elif type(item.specification()).__name__ == "JuliaTool" and _type == "julia":
-                    item.specification().set_execution_settings(use_jupyter_console, exe_path, julia_project, kernel)
-                    n += 1
-        if n == 0:
-            Notification(self, f"Project does not have any Tools using {_type.capitalize()} Tool specifications").show()
-        else:
-            Notification(self, f"Project saved!\n{n} {_type.capitalize()} Tools updated").show()
-            project.save()
-
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
@@ -840,14 +763,14 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.radioButton_use_julia_jupyter_console.setChecked(True)
         else:
             self.ui.radioButton_use_julia_basic_console.setChecked(True)
-        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable(""))
+        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_default_julia_executable())
         self.ui.lineEdit_julia_path.setText(julia_path)
         self.ui.lineEdit_julia_project_path.setText(julia_project_path)
         if use_python_jupyter_console == 2:
             self.ui.radioButton_use_python_jupyter_console.setChecked(True)
         else:
             self.ui.radioButton_use_python_basic_console.setChecked(True)
-        self.ui.lineEdit_python_path.setPlaceholderText(resolve_python_interpreter(""))
+        self.ui.lineEdit_python_path.setPlaceholderText(resolve_current_python_interpreter())
         self.ui.lineEdit_python_path.setText(python_path)
         conda_placeholder_txt = resolve_conda_executable("")
         if conda_placeholder_txt:
@@ -1073,21 +996,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if self.ui.comboBox_julia_kernel.currentIndex() != 0:
             julia_kernel = self.ui.comboBox_julia_kernel.currentText()
         return use_julia_jupyter_console, julia_exe, julia_project, julia_kernel
-
-    def _get_python_settings(self):
-        """Returns current Python execution settings in Settings->Tools widget."""
-        use_python_jupyter_console = "2" if self.ui.radioButton_use_python_jupyter_console.isChecked() else "0"
-        python_exe = self.ui.lineEdit_python_path.text().strip()
-        python_kernel = ""
-        env = ""
-        row = self.ui.comboBox_python_kernel.currentIndex()
-        if row != 0:
-            python_kernel = self.ui.comboBox_python_kernel.currentText()
-            item = self._python_kernel_model.item(row)
-            is_conda = item.data()["is_conda"]
-            if is_conda:
-                env = "conda"
-        return use_python_jupyter_console, python_exe, python_kernel, env
 
     def set_work_directory(self, new_work_dir):
         """Sets new work directory.

@@ -88,6 +88,10 @@ class ProjectItem(LogMixin, MetaObject):
         raise NotImplementedError()
 
     @property
+    def project(self):
+        return self._project
+
+    @property
     def logger(self):
         return self._logger
 
