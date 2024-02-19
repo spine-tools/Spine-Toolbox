@@ -17,7 +17,7 @@ from PySide6.QtCore import Slot, Qt, QSize, QSettings, QPoint, QEvent
 from PySide6.QtGui import QPixmap, QIcon, QStandardItemModel, QStandardItem
 from spine_engine.utils.helpers import (
     resolve_current_python_interpreter,
-    resolve_julia_executable,
+    resolve_default_julia_executable,
     resolve_gams_executable,
     resolve_conda_executable,
     get_julia_env,
@@ -521,7 +521,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         If a kernel using the selected Julia executable and project already exists, sets that kernel
         selected in the comboBox."""
         use_julia_jupyter_console, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
-        julia_exe = resolve_julia_executable(julia_exe)
+        if not julia_exe:
+            julia_exe = resolve_default_julia_executable()
         julia_kernel = _get_kernel_name_by_exe(julia_exe, self._julia_kernel_model)
         if julia_kernel:  # Kernel with matching executable found
             match = _selected_project_matches_kernel_project(julia_kernel, julia_project, self._julia_kernel_model)
@@ -762,7 +763,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.radioButton_use_julia_jupyter_console.setChecked(True)
         else:
             self.ui.radioButton_use_julia_basic_console.setChecked(True)
-        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable(""))
+        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_default_julia_executable())
         self.ui.lineEdit_julia_path.setText(julia_path)
         self.ui.lineEdit_julia_project_path.setText(julia_project_path)
         if use_python_jupyter_console == 2:
