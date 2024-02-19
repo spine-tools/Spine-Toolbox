@@ -64,9 +64,9 @@ def _handle_process_message_arrived(item, filter_id, msg_type, msg_text):
 @Slot(dict, object)
 def _handle_prompt_arrived(prompt, engine_mngr, logger=None):
     item_name = prompt["item_name"]
-    title, text, option_to_result, notes, preferred = prompt["data"]
-    result = OptionsDialog.get_option(logger, title, text, option_to_result, notes=notes, preferred=preferred)
-    engine_mngr.answer_prompt(item_name, result)
+    title, text, option_to_action, notes, preferred = prompt["data"]
+    action = OptionsDialog.get_action(logger, title, text, option_to_action, notes=notes, preferred=preferred)
+    engine_mngr.answer_prompt(item_name, action)
 
 
 @Slot(object)

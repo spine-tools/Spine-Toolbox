@@ -21,13 +21,13 @@ from PySide6.QtCore import Slot, Qt
 class OptionsDialog(QDialog):
     """A dialog with options."""
 
-    def __init__(self, parent, title, text, option_to_result, notes=None, preferred=None):
+    def __init__(self, parent, title, text, option_to_action, notes=None, preferred=None):
         """
         Args:
             parent (QWidget): the parent widget
             title (srt): title of the window
             text (str): text to show to the user
-            option_to_result (dict): mapping option string to corresponding result to return
+            option_to_action (dict): mapping option string to corresponding action to return
             preferred (int,optional): preselected option if any
         """
         super().__init__(parent)
@@ -37,7 +37,7 @@ class OptionsDialog(QDialog):
         self.setWindowModality(Qt.ApplicationModal)
         self.setWindowTitle(title)
         layout = QVBoxLayout(self)
-        if option_to_result:
+        if option_to_action:
             text += "<br><p>What do you want to do?"
         text_label = QLabel(text)
         text_label.setWordWrap(True)
@@ -45,7 +45,7 @@ class OptionsDialog(QDialog):
         options_frame = QFrame()
         options_layout = QVBoxLayout(options_frame)
         self.button_group = QButtonGroup()
-        for i, o in enumerate(option_to_result):
+        for i, o in enumerate(option_to_action):
             note = notes.get(o)
             if i == preferred:
                 o += " (RECOMMENDED)"
@@ -78,16 +78,16 @@ class OptionsDialog(QDialog):
         self._update_ok_button_enabled()
 
     @classmethod
-    def get_option(cls, parent, title, text, option_to_result, notes=None, preferred=None):
-        obj = cls(parent, title, text, option_to_result, notes=notes, preferred=preferred)
+    def get_action(cls, parent, title, text, option_to_action, notes=None, preferred=None):
+        obj = cls(parent, title, text, option_to_action, notes=notes, preferred=preferred)
         obj.exec()
         if obj.result() != QDialog.Accepted:
             return None
         id_ = obj.button_group.checkedId()
         if id_ == -1:
             return None
-        option = list(option_to_result)[id_]
-        return option_to_result[option]
+        option = list(option_to_action)[id_]
+        return option_to_action[option]
 
     @Slot(int)
     def _update_ok_button_enabled(self, _id=None):
