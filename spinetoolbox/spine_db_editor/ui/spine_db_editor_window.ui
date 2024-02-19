@@ -2,6 +2,7 @@
 <!--
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -266,9 +267,6 @@
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_entity_tree">
-   <property name="features">
-    <set>QDockWidget::AllDockWidgetFeatures</set>
-   </property>
    <property name="allowedAreas">
     <set>Qt::AllDockWidgetAreas</set>
    </property>
@@ -724,6 +722,9 @@
    <property name="text">
     <string>&amp;Commit...</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Commit&lt;/p&gt;&lt;p&gt;Ctrl+Enter&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+Return</string>
    </property>
@@ -738,6 +739,9 @@
    </property>
    <property name="text">
     <string>Roll&amp;back</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Rollback&lt;/p&gt;&lt;p&gt;Ctrl+Backspace&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Backspace</string>
@@ -796,6 +800,9 @@
    <property name="text">
     <string>Cop&amp;y name(s) as text</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copy name(s) as text&lt;/p&gt;&lt;p&gt;Ctrl+C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
    </property>
@@ -810,6 +817,9 @@
    </property>
    <property name="text">
     <string>P&amp;aste</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Paste&lt;/p&gt;&lt;p&gt;Ctrl+V&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+V</string>
@@ -863,7 +873,7 @@
    </property>
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/cube_minus.svg</normaloff>:/icons/menu_icons/cube_minus.svg</iconset>
+     <normaloff>:/icons/menu_icons/bolt-lightning.svg</normaloff>:/icons/menu_icons/bolt-lightning.svg</iconset>
    </property>
    <property name="text">
     <string>P&amp;urge...</string>
@@ -922,6 +932,9 @@
    <property name="text">
     <string>Un&amp;do</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Undo&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </action>
   <action name="actionRedo">
    <property name="enabled">
@@ -933,6 +946,9 @@
    </property>
    <property name="text">
     <string>&amp;Redo</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Redo&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionNew_db_file">
@@ -1056,12 +1072,6 @@
   </customwidget>
   <customwidget>
    <class>LegendWidget</class>
-   <extends>QWidget</extends>
-   <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>ProgressBarWidget</class>
    <extends>QWidget</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qwidgets.h</header>
    <container>1</container>

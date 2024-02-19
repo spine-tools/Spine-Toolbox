@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, Slot, Qt
 from PySide6.QtGui import QCursor
-from spine_engine.utils.helpers import resolve_python_interpreter
+from spine_engine.utils.helpers import resolve_current_python_interpreter
 from ..execution_managers import QProcessExecutionManager
 from ..config import APPLICATION_PATH
 from .custom_qwidgets import HyperTextLabel, QWizardProcessPage, LabelWithCopyButton
@@ -211,7 +211,7 @@ class InstallJuliaPage(QWizardProcessPage):
         # 1. sys.executable when not frozen
         # 2. PATH python if frozen (This fails if no jill installed)
         # 3. If no PATH python, uses embedded python <install_dir>/tools/python.exe
-        python = resolve_python_interpreter("")
+        python = resolve_current_python_interpreter()
         self._exec_mngr = QProcessExecutionManager(self, python, args, semisilent=True)
         self.completeChanged.emit()
         self._exec_mngr.execution_finished.connect(self._handle_julia_install_finished)

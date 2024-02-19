@@ -403,9 +403,9 @@ class SpineDBEditorBase(QMainWindow):
     @Slot()
     def _refresh_undo_redo_actions(self):
         self.ui.actionUndo.setEnabled(self.undo_action.isEnabled())
-        self.ui.actionUndo.setToolTip(f"<p>{self.undo_action.text()}")
+        self.ui.actionUndo.setToolTip(f"<p>{self.undo_action.text()}</p><p>Ctrl+Z</p>")
         self.ui.actionRedo.setEnabled(self.redo_action.isEnabled())
-        self.ui.actionRedo.setToolTip(f"<p>{self.redo_action.text()}")
+        self.ui.actionRedo.setToolTip(f"<p>{self.redo_action.text()}</p><p>Ctrl+Y</p>")
 
     @Slot(bool)
     def update_commit_enabled(self, _clean=False):

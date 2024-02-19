@@ -1,4 +1,5 @@
-.. |purge| image:: ../img/project_item_icons/bolt-lightning.svg
+
+.. |purge| image:: ../../../spinetoolbox/ui/resources/menu_icons/bolt-lightning.svg
    :width: 16
 
 .. _Removing data:
@@ -14,7 +15,7 @@ This section describes the available tools to remove data.
 Purging items
 =============
 
-To remove all items of specific types, select **Edit -> Purge...** from the hamburger menu.
+To remove all items of specific types, select **Edit -> Purge...** (|purge|) from the hamburger menu.
 The *Purge items* dialog will pop up:
 
 .. image:: img/purge_dialog.png
