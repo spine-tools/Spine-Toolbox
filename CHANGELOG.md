@@ -7,8 +7,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 - New context menu action (Select superclass) for entity class items in the entity tree.
-- Added buttons to Settings->Tools widget and to Tool Specification Editor for restoring default 
-  (defined in Settings->Tools) execution settings.
 - Added Tool Specification type (Python, Gams, etc.) icons on Design View.
 - There is now a new filter type, Alternative filter available in Link properties.
   Unlike scenario filters, the execution is not parallelized.
@@ -34,8 +32,8 @@ Many parts of the Spine data structure have been redesigned.
 
 #### Miscellaneous changes
 
-- Julia execution settings are now Tool specification settings instead of global application settings. You can 
-  select a different Julia executable & project or Julia kernel for each Tool spec.
+- You can now select a different Julia executable & project or Julia kernel for each Tool spec.
+  This overrides the global setting from Toolbox Settings.
 - Headless mode now supports remote execution (see 'python -m spinetoolbox --help')
 
 ### Deprecated

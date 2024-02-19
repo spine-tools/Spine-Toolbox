@@ -221,6 +221,7 @@ class GraphViewMixin:
                 if not item.has_unique_key():
                     self.build_graph(persistent=True)
                     break
+                item.set_up()
 
     def _db_map_ids_by_key(self, db_map_data):
         added_db_map_ids_by_key = {}

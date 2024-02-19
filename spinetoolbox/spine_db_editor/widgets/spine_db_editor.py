@@ -403,9 +403,9 @@ class SpineDBEditorBase(QMainWindow):
     @Slot()
     def _refresh_undo_redo_actions(self):
         self.ui.actionUndo.setEnabled(self.undo_action.isEnabled())
-        self.ui.actionUndo.setToolTip(f"<p>{self.undo_action.text()}")
+        self.ui.actionUndo.setToolTip(f"<p>{self.undo_action.text()}</p><p>Ctrl+Z</p>")
         self.ui.actionRedo.setEnabled(self.redo_action.isEnabled())
-        self.ui.actionRedo.setToolTip(f"<p>{self.redo_action.text()}")
+        self.ui.actionRedo.setToolTip(f"<p>{self.redo_action.text()}</p><p>Ctrl+Y</p>")
 
     @Slot(bool)
     def update_commit_enabled(self, _clean=False):
@@ -596,11 +596,13 @@ class SpineDBEditorBase(QMainWindow):
         Duplicates an entity.
 
         Args:
-            entity_item (EntityTreeItem of EntityItem)
+            entity_item (EntityItem)
         """
         orig_name = entity_item.name
-        class_name = entity_item.parent_item.name
-        existing_names = {ent.name for ent in entity_item.parent_item.children}
+        class_name = entity_item.entity_class_name
+        existing_names = {
+            ent["name"] for db_map in self.db_maps for ent in db_map.get_items("entity", entity_class_name=class_name)
+        }
         dup_name = unique_name(orig_name, existing_names)
         self.db_mngr.duplicate_entity(orig_name, dup_name, class_name, entity_item.db_maps)
 
@@ -1076,6 +1078,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_parameter_value.hide()
         self.ui.dockWidget_parameter_definition.hide()
+        self.ui.dockWidget_entity_alternative.hide()
         self.ui.metadata_dock_widget.hide()
         self.ui.item_metadata_dock_widget.hide()
         docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]

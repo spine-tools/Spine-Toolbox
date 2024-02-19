@@ -10,7 +10,7 @@ Adding data
 This section describes the available tools to add new data. Note that after adding
 data to a Spine Database, it still needs to be committed in order for the changes
 to take effect beyond just the current session in the Spine Database Editor. More
-information about this in the chapter :ref:`committing_and_rolling_back`.
+information about this in the chapter :ref:`committing_and_history`.
 
 .. contents::
    :local:

@@ -1647,15 +1647,16 @@ class SpineDBManager(QObject):
                     return multi_db_editor, db_editor
         return None
 
-    def open_db_editor(self, db_url_codenames):
+    def open_db_editor(self, db_url_codenames, reuse_existing_editor):
         """Opens a SpineDBEditor with given urls. Uses an existing MultiSpineDBEditor if any.
         Also, if the same urls are open in an existing SpineDBEditor, just raises that one
         instead of creating another.
 
         Args:
             db_url_codenames (dict): mapping url to codename
+            reuse_existing_editor (bool): if True and the same URL is already open, just raise the existing window
         """
-        multi_db_editor = next(self.get_all_multi_spine_db_editors(), None)
+        multi_db_editor = next(self.get_all_multi_spine_db_editors(), None) if reuse_existing_editor else None
         if multi_db_editor is None:
             multi_db_editor = MultiSpineDBEditor(self, db_url_codenames)
             if multi_db_editor.tab_load_success:  # don't open an editor if tabs were not loaded successfully

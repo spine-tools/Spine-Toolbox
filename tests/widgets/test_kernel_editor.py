@@ -22,7 +22,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 import venv
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
-from spine_engine.utils.helpers import resolve_julia_executable
+from spine_engine.utils.helpers import resolve_default_julia_executable
 from spinetoolbox.widgets.kernel_editor import KernelEditorBase
 
 
@@ -80,7 +80,7 @@ class TestKernelEditorBase(unittest.TestCase):
     def test_make_julia_kernel(self):
         """Makes a new Julia kernel if Julia is in PATH and the base project (@.) has
         IJulia installed. Test Julia kernel is removed in the end if available."""
-        julia_exec = resolve_julia_executable("")
+        julia_exec = resolve_default_julia_executable()
         if not julia_exec:
             self.skipTest("Julia not found in PATH.")
         kernel_name = "spinetoolbox_test_make_julia_kernel"

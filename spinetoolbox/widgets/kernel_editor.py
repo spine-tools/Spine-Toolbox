@@ -18,7 +18,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QWidget
 from PySide6.QtCore import Slot, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QIcon
 from jupyter_client.kernelspec import find_kernel_specs
-from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable
+from spine_engine.utils.helpers import resolve_current_python_interpreter, resolve_default_julia_executable
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.helpers import (
     busy_effect,
@@ -566,16 +566,13 @@ class MiniPythonKernelEditor(KernelEditorBase):
     the constructor, then calling ``make_kernel`` starts the process.
     """
 
-    """A reduced version of KernelEditor that basically just takes care of installing one Python kernel.
-    The python exe is passed in the constructor, then calling ``make_kernel`` starts the process.
-    """
-
     def __init__(self, parent, python_exe):
         super().__init__(parent, "python")
         self.ui.label_message.setText("Finalizing Python configuration... ")
         self.ui.stackedWidget.setCurrentIndex(0)
         self.setWindowTitle("Python Kernel Specification Creator")
-        python_exe = resolve_python_interpreter(python_exe)
+        if not python_exe:
+            python_exe = resolve_current_python_interpreter()
         self.ui.lineEdit_python_interpreter.setText(python_exe)
         self.python_exe = python_exe
         self._kernel_name = "python_kernel"  # Fallback name
@@ -627,7 +624,8 @@ class MiniJuliaKernelEditor(KernelEditorBase):
         self.ui.label_message.setText("Finalizing Julia configuration... ")
         self.ui.stackedWidget.setCurrentIndex(1)
         self.setWindowTitle("Julia Kernel Specification Creator")
-        julia_exe = resolve_julia_executable(julia_exe)
+        if not julia_exe:
+            julia_exe = resolve_default_julia_executable()
         self.ui.lineEdit_julia_executable.setText(julia_exe)
         self.ui.lineEdit_julia_project.setText(julia_project)
         self._kernel_name = "julia"  # This is a prefix, IJulia decides the final kernel name

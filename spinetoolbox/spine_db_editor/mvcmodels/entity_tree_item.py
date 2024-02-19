@@ -215,6 +215,10 @@ class EntityItem(MultiDBTreeItem):
         return self.db_map_data_field(self.first_db_map, "entity_byname", default=())
 
     @property
+    def entity_class_name(self):
+        return self.db_map_data_field(self.first_db_map, "entity_class_name", default="")
+
+    @property
     def entity_class_key(self):
         return tuple(
             self.db_map_data_field(self.first_db_map, field) for field in ("entity_class_name", "dimension_name_list")
@@ -308,10 +312,16 @@ class EntityItem(MultiDBTreeItem):
     def _handle_entity_group_items_removed(self, db_map_data):
         db_map_ids = {db_map: [x["member_id"] for x in data] for db_map, data in db_map_data.items()}
         self.remove_children_by_id(db_map_ids)
+        if not any(self.db_mngr.get_item(db_map, "entity", self.db_map_id(db_map)) for db_map in self.db_maps):
+            # Not an entity anymore
+            return
         if self._is_group:
-            for db_map in self.db_maps:
-                if self.db_mngr.get_items_by_field(db_map, "entity_group", "group_id", self.db_map_id(db_map)):
-                    return
+            if any(
+                self.db_mngr.get_items_by_field(db_map, "entity_group", "group_id", self.db_map_id(db_map))
+                for db_map in self.db_maps
+            ):
+                # Still a group
+                return
             self._is_group = False
             self.parent_item.reposition_child(self.child_number())
 

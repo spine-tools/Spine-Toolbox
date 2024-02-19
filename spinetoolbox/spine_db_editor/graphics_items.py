@@ -135,6 +135,11 @@ class EntityItem(QGraphicsRectItem):
         return self.db_mngr.get_item(db_map, "entity", self.entity_id(db_map)).get("element_id_list", ())
 
     @property
+    def element_byname_list(self):
+        # NOTE: Needed by EditEntitiesDialog
+        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("element_byname_list", ())
+
+    @property
     def first_db_map_id(self):
         return next(iter(self.db_map_ids), (None, None))
 
