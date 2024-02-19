@@ -722,6 +722,9 @@
    <property name="text">
     <string>&amp;Commit...</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Commit&lt;/p&gt;&lt;p&gt;Ctrl+Enter&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+Return</string>
    </property>
@@ -736,6 +739,9 @@
    </property>
    <property name="text">
     <string>Roll&amp;back</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Rollback&lt;/p&gt;&lt;p&gt;Ctrl+Backspace&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Backspace</string>
@@ -794,6 +800,9 @@
    <property name="text">
     <string>Cop&amp;y name(s) as text</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copy name(s) as text&lt;/p&gt;&lt;p&gt;Ctrl+C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
    </property>
@@ -808,6 +817,9 @@
    </property>
    <property name="text">
     <string>P&amp;aste</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Paste&lt;/p&gt;&lt;p&gt;Ctrl+V&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+V</string>
@@ -920,6 +932,9 @@
    <property name="text">
     <string>Un&amp;do</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Undo&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </action>
   <action name="actionRedo">
    <property name="enabled">
@@ -931,6 +946,9 @@
    </property>
    <property name="text">
     <string>&amp;Redo</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Redo&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionNew_db_file">
