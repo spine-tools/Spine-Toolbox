@@ -14,7 +14,7 @@
 Provides OptionsDialog.
 """
 
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QButtonGroup, QRadioButton, QPushButton, QFrame, QStyle
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QButtonGroup, QRadioButton, QFrame, QStyle, QDialogButtonBox
 from PySide6.QtCore import Slot, Qt
 
 
@@ -38,20 +38,20 @@ class OptionsDialog(QDialog):
         self.setWindowTitle(title)
         layout = QVBoxLayout(self)
         if option_to_action:
-            text += "<br><p>What do you want to do?"
+            text += "<br><p>Please select an option below:"
         text_label = QLabel(text)
         text_label.setWordWrap(True)
         layout.addWidget(text_label)
         options_frame = QFrame()
         options_layout = QVBoxLayout(options_frame)
-        self.button_group = QButtonGroup()
+        self._button_group = QButtonGroup()
         for i, o in enumerate(option_to_action):
             note = notes.get(o)
             if i == preferred:
                 o += " (RECOMMENDED)"
             option_button = QRadioButton(o)
             options_layout.addWidget(option_button)
-            self.button_group.addButton(option_button, id=i)
+            self._button_group.addButton(option_button, id=i)
             if note is not None:
                 note_label = QLabel(note)
                 note_label.setWordWrap(True)
@@ -69,12 +69,16 @@ class OptionsDialog(QDialog):
                 note_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
                 options_layout.addWidget(note_label)
         layout.addWidget(options_frame)
-        self.ok_button = QPushButton("Ok")
-        self.ok_button.clicked.connect(self.accept)
-        layout.addWidget(self.ok_button)
+        button_box = QDialogButtonBox(self)
+        self._ok_button = button_box.addButton("Ok", QDialogButtonBox.AcceptRole)
+        button_box.accepted.connect(self.accept)
+        if option_to_action:
+            button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
+            button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
         if preferred is not None:
-            self.button_group.button(preferred).setChecked(True)
-        self.button_group.idToggled.connect(self._update_ok_button_enabled)
+            self._button_group.button(preferred).setChecked(True)
+        self._button_group.idToggled.connect(self._update_ok_button_enabled)
         self._update_ok_button_enabled()
 
     @classmethod
@@ -83,7 +87,7 @@ class OptionsDialog(QDialog):
         obj.exec()
         if obj.result() != QDialog.Accepted:
             return None
-        id_ = obj.button_group.checkedId()
+        id_ = obj._button_group.checkedId()
         if id_ == -1:
             return None
         option = list(option_to_action)[id_]
@@ -91,4 +95,4 @@ class OptionsDialog(QDialog):
 
     @Slot(int)
     def _update_ok_button_enabled(self, _id=None):
-        self.ok_button.setEnabled(not self.button_group.buttons() or self.button_group.checkedButton() is not None)
+        self._ok_button.setEnabled(not self._button_group.buttons() or self._button_group.checkedButton() is not None)
