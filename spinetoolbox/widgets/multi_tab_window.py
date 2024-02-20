@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the MultiTabWindow and TabBarPlus classes.
-"""
-
+"""Contains the MultiTabWindow and TabBarPlus classes."""
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QTabBar, QToolButton, QApplication, QMenu
 from PySide6.QtCore import Qt, Slot, QPoint, Signal, QEvent
 from PySide6.QtGui import QGuiApplication, QCursor, QIcon, QMouseEvent
@@ -65,7 +62,7 @@ class MultiTabWindow(QMainWindow):
         """List of other MultiTabWindows of the same type.
 
         Returns:
-            list of MultiTabWindow: other MutliTabWindows windows
+            list of MultiTabWindow: other MultiTabWindows windows
         """
         return [w for w in self._other_editor_windows[type(self).__name__] if w is not self]
 
@@ -79,7 +76,7 @@ class MultiTabWindow(QMainWindow):
         raise NotImplementedError()
 
     def show_plus_button_context_menu(self, global_pos):
-        """Opens a context menu for the tool bar.
+        """Opens a context menu for the toolbar.
 
         Args:
             global_pos (QPoint): menu position on screen

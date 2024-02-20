@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for SpineToolboxProject class."""
-
 import json
 import os.path
 from pathlib import Path

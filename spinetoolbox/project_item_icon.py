@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Classes for drawing graphics items on QGraphicsScene."""
-
 import math
 from PySide6.QtCore import Qt, QPointF, QRectF, QLineF
 from PySide6.QtWidgets import (
@@ -360,7 +359,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         """
         Reacts to item removal and position changes.
 
-        In particular, destroys the drop shadow effect when the items is removed from a scene
+        In particular, destroys the drop shadow effect when the item is removed from a scene
         and keeps track of item's movements on the scene.
 
         Args:

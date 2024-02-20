@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for ToolboxUI class."""
-
 from pathlib import Path
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory

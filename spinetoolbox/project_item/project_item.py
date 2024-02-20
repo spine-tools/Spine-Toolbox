@@ -9,13 +9,11 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""
-Contains base classes for project items and item factories.
-"""
 
+"""Contains base classes for project items and item factories."""
 import os
 import logging
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Slot
 from spine_engine.utils.helpers import shorten
 from ..helpers import create_dir, open_url
 from ..metaobject import MetaObject

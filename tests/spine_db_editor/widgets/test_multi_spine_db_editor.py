@@ -10,20 +10,15 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Unit tests for the ``url_toolbar`` module."""
-
-from unittest import mock
+"""Unit tests for SpineDBEditor classes."""
 from tempfile import TemporaryDirectory
-from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.widgets.url_toolbar import UrlToolBar
-from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
+from PySide6.QtCore import QPoint
+from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+from .spine_db_editor_test_base import DBEditorTestBase
 from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, FakeDataStore
 
-class TestURLToolbar(DBEditorTestBase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
+
+class TestMultiSpineDBEditor(DBEditorTestBase):
 
     def setUp(self):
         super().setUp()
@@ -35,16 +30,14 @@ class TestURLToolbar(DBEditorTestBase):
         clean_up_toolbox(self._toolbox)
         self._temp_dir.cleanup()
 
-    def test_url_toolbar(self):
+    def test_multi_spine_db_editor(self):
         self.db_mngr.setParent(self._toolbox)
-        tb = UrlToolBar(self.spine_db_editor)
-        tb.add_urls_to_history(self.db_mngr.db_urls)
-        self.assertEqual({"sqlite://"}, tb.get_previous_urls())
-        self.assertEqual({"sqlite://"}, tb.get_next_urls())
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.url_toolbar._UrlFilterDialog.show") as mock_show_dialog:
-            mock_show_dialog.show.return_value = True
-            tb._show_filter_menu()
-            mock_show_dialog.assert_called()
+        multieditor = MultiSpineDBEditor(self.db_mngr)
+        multieditor.add_new_tab()
+        self.assertEqual(1, multieditor.tab_widget.count())
+        multieditor.make_context_menu(0)
+        multieditor.show_plus_button_context_menu(QPoint(0, 0))
         # Add fake data stores to project
         self._toolbox.project()._project_items = {"a": FakeDataStore("a")}
-        tb._update_open_project_url_menu()
+        multieditor.show_plus_button_context_menu(QPoint(0, 0))
+        multieditor._take_tab(0)

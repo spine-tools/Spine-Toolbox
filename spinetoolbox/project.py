@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Spine Toolbox project class."""
-
 from enum import auto, Enum, unique
 from itertools import chain
 import os

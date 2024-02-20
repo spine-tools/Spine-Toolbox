@@ -10,8 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Contains class for the main window of Spine Toolbox."""
-
+"""Contains a class for the main window of Spine Toolbox."""
 import os
 import sys
 import locale
@@ -1690,7 +1689,7 @@ class ToolboxUI(QMainWindow):
 
         Args:
             pos (QPoint): Mouse position
-            item (ProjectItemQModelIndex, optional): Index of concerned item or None
+            item (ProjectItem, optional): Project item or None
         """
         if not item:  # Clicked on a blank area in Design view
             menu = QMenu(self)
