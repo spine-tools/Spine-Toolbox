@@ -151,7 +151,6 @@ class ToolboxUI(QMainWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
-        self._item_categories = dict()
         self._item_properties_uis = dict()
         self.item_factories = dict()  # maps item types to `ProjectItemFactory` objects
         self._item_specification_factories = dict()  # maps item types to `ProjectItemSpecificationFactory` objects
@@ -369,7 +368,7 @@ class ToolboxUI(QMainWindow):
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
-        self._item_categories, self.item_factories = load_project_items("spine_items")
+        self.item_factories = load_project_items("spine_items")
         self._item_specification_factories = load_item_specification_factories("spine_items")
 
     def set_work_directory(self, new_work_dir=None):
@@ -2255,17 +2254,6 @@ class ToolboxUI(QMainWindow):
             return
         new_name = answer[0]
         self.undo_stack.push(RenameProjectItemCommand(self._project, item.name, new_name))
-
-    def item_category_context_menu(self):
-        """Creates a context menu for category items.
-
-        Returns:
-            QMenu: category context menu
-        """
-        menu = QMenu(self)
-        menu.setToolTipsVisible(True)
-        menu.addAction(self.ui.actionOpen_project_directory)
-        return menu
 
     def project_item_context_menu(self, additional_actions):
         """Creates a context menu for project items.

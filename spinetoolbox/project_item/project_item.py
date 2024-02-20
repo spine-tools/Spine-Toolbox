@@ -76,15 +76,6 @@ class ProjectItem(LogMixin, MetaObject):
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def item_category():
-        """Item's category.
-
-        Returns:
-            str: category name
-        """
-        raise NotImplementedError()
-
     @property
     def project(self):
         return self._project

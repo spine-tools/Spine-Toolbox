@@ -599,7 +599,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_and_save_specification_with_local_data(self):
         project = self.toolbox.project()
         specification = _MockSpecificationWithLocalData(
-            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "a specification", "Specification for testing.", "Tester", "my precious data"
         )
         project.add_specification(specification)
         self.assertTrue(specification.is_equivalent(project.get_specification("a specification")))
@@ -624,13 +624,13 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_renaming_specification_with_local_data_updates_local_data_file(self):
         project = self.toolbox.project()
         original_specification = _MockSpecificationWithLocalData(
-            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "a specification", "Specification for testing.", "Tester", "my precious data"
         )
         project.add_specification(original_specification)
         local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
         self.assertTrue(local_data_file.exists())
         specification = _MockSpecificationWithLocalData(
-            "another specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "another specification", "Specification for testing.", "Tester", "my precious data"
         )
         project.replace_specification("a specification", specification)
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
@@ -651,7 +651,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_replace_specification_with_local_data_by_one_without_removes_local_data_from_the_file(self):
         project = self.toolbox.project()
         specification_with_local_data = _MockSpecificationWithLocalData(
-            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "a specification", "Specification for testing.", "Tester", "my precious data"
         )
         project.add_specification(specification_with_local_data)
         local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
@@ -723,10 +723,6 @@ class _MockItemWithLocalData(ProjectItem):
     def item_type():
         return "Tester"
 
-    @staticmethod
-    def item_category():
-        return "Tools"
-
     def set_rank(self, rank):
         pass
 
@@ -751,8 +747,8 @@ class _MockSpecification(ProjectItemSpecification):
 
 
 class _MockSpecificationWithLocalData(ProjectItemSpecification):
-    def __init__(self, name, description, item_type, item_category, local_data):
-        super().__init__(name, description, item_type, item_category)
+    def __init__(self, name, description, item_type, local_data):
+        super().__init__(name, description, item_type)
         self._local_data = local_data
 
     def to_dict(self):

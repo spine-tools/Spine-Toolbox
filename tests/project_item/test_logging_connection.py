@@ -9,6 +9,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for the ``logging_connection`` module."""
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -181,10 +182,6 @@ class _DataStore(ProjectItem):
     @staticmethod
     def item_type():
         return "Mock Data Store"
-
-    @staticmethod
-    def item_category():
-        return "Data Stores"
 
     # pylint: disable=no-self-use
     def resources_for_direct_successors(self):
