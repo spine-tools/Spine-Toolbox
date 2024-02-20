@@ -38,7 +38,7 @@ class OptionsDialog(QDialog):
         self.setWindowTitle(title)
         layout = QVBoxLayout(self)
         if option_to_action:
-            text += "<br><p>Please select an option below:"
+            text += "<br><p>Please select an option:"
         text_label = QLabel(text)
         text_label.setWordWrap(True)
         layout.addWidget(text_label)
