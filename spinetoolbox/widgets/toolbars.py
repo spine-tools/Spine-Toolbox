@@ -31,32 +31,44 @@ class ToolBar(QToolBar):
             toolbox (ToolboxUI): Toolbox main window
         """
         super().__init__(name, parent=toolbox)
+        self._name = name
         self.setObjectName(name.replace(" ", "_"))
         self._toolbox = toolbox
         self._title_font = self.font()
         self._title_font.setItalic(True)
+        self._title_font.setBold(True)
         self._title_font.setPointSize(self._title_font.pointSize() - 2)
         self._title_height = QFontMetrics(self._title_font).height()
-        self._title_margin = self._title_height / 2
+        self._title_margin = 0.25 * self._title_height
+
+    def name(self):
+        return self._name
 
     def sizeHint(self):
         size = super().sizeHint()
-        title_width = QFontMetrics(self._title_font).horizontalAdvance(self._name)
+        title_width = QFontMetrics(self._title_font).horizontalAdvance(self.name())
         size.setWidth(max(size.width(), 2 * self._title_margin + title_width))
-        size.setHeight(size.height() + self._title_height)
+        size.setHeight(size.height() + self._title_height + self._title_margin)
         return size
 
     def paintEvent(self, ev):
+        layout = self.layout()
+        widgets = [w for i in range(layout.count()) if isinstance((w := layout.itemAt(i).widget()), NiceButton)]
+        height = self._title_height + 3 * self._title_margin
         if self.orientation() == Qt.Horizontal:
-            layout = self.layout()
-            for i in range(layout.count()):
-                widget = layout.itemAt(i).widget()
-                if isinstance(widget, NiceButton):
-                    widget.move(widget.pos().x(), self._title_height + self._title_margin)
+            for w in widgets:
+                w.move(w.pos().x(), height)
+        elif self.orientation() == Qt.Vertical:
+            top_w = min(widgets, key=lambda w: w.pos().y())
+            adjustment = height - top_w.pos().y()
+            if adjustment > 0:
+                for w in widgets:
+                    pos = w.pos()
+                    w.move(pos.x(), pos.y() + adjustment)
         super().paintEvent(ev)
         painter = QPainter(self)
         painter.setFont(self._title_font)
-        painter.drawText(self._title_margin, self._title_height, self._name)
+        painter.drawText(2 * self._title_margin, self._title_height + self._title_margin, self.name())
         painter.end()
 
     def set_colored_icons(self, colored):
@@ -130,9 +142,11 @@ class PluginToolBar(ToolBar):
             parent (ToolboxUI): QMainWindow instance
         """
         super().__init__(name, parent)  # Inherits stylesheet from ToolboxUI
-        self._name = name
         self._buttons = {}
         self._toolbox.specification_model.specification_replaced.connect(self._update_spec_button_name)
+
+    def name(self):
+        return self._name + " plugin"
 
     def buttons(self):
         return self._buttons.values()
@@ -166,10 +180,12 @@ class PluginToolBar(ToolBar):
 
 class ProjectToolBar(ToolBar):
     def __init__(self, parent):
-        super().__init__("Project toolbar", parent)  # Inherits stylesheet from ToolboxUI
-        self._name = "Project specific"
+        super().__init__("Project specific", parent)  # Inherits stylesheet from ToolboxUI
         self._actions = {}
         self._model = None
+
+    def name(self):
+        return self._name + " items"
 
     def buttons(self):
         return (self.widgetForAction(a) for a in self._actions.values())
@@ -248,12 +264,14 @@ class BaseToolBar(ToolBar):
         Args:
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__("Base Toolbar", parent)  # Inherits stylesheet from ToolboxUI
-        self._name = "Basic"
+        super().__init__("Generic", parent)  # Inherits stylesheet from ToolboxUI
         self._buttons = []
         self._drop_source_action = None
         self._drop_target_action = None
         self.setAcceptDrops(True)
+
+    def name(self):
+        return self._name + " items"
 
     def buttons(self):
         return self._buttons
@@ -377,8 +395,7 @@ class ExecuteToolBar(ToolBar):
             stop_execution_action (QAction): action to stop execution
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__("Execute Toolbar", parent)  # Inherits stylesheet from ToolboxUI
-        self._name = "Execute"
+        super().__init__("Execute", parent)  # Inherits stylesheet from ToolboxUI
         self._execute_project_action = execute_project_action
         self.execute_project_button = None
         self._execute_selection_action = execute_selection_action
