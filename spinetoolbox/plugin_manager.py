@@ -154,7 +154,6 @@ class PluginManager:
         self._plugin_specs.update(plugin_specs)
         toolbar = self._plugin_toolbars[name] = PluginToolBar(name, parent=self._toolbox)
         toolbar.setup(plugin_specs, disabled_plugins)
-        self._toolbox.addToolBar(Qt.TopToolBarArea, toolbar)
 
     def _create_worker(self):
         worker = _PluginWorker()

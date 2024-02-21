@@ -46,18 +46,12 @@ class AddProjectItemWidget(QWidget):
         self.statusbar.setSizeGripEnabled(False)
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
+        self.ui.comboBox_specification.hide()
         # Init
-        if toolbox.supports_specifications(class_.item_type()):
-            self.ui.comboBox_specification.setModel(toolbox.filtered_spec_factory_models[class_.item_type()])
-            if spec:
-                self.ui.comboBox_specification.setCurrentText(spec)
-                prefix = spec
-            else:
-                prefix = class_.item_type()
-                self.ui.comboBox_specification.setCurrentIndex(-1)
+        if toolbox.supports_specifications(class_.item_type()) and spec:
+            prefix = spec
         else:
             prefix = class_.item_type()
-            self.ui.comboBox_specification.setEnabled(False)
         existing_item_names = toolbox.project().all_item_names
         self.name = unique_name(prefix, existing_item_names) if prefix in existing_item_names else prefix
         self.ui.lineEdit_name.setText(self.name)

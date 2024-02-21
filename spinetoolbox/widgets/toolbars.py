@@ -14,11 +14,11 @@
 Functions to make and handle QToolBars.
 """
 
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QToolBar, QLabel
-from PySide6.QtGui import QIcon, QPainter
+from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtWidgets import QToolBar, QToolButton, QMenu
+from PySide6.QtGui import QIcon, QPainter, QFontMetrics
 from ..helpers import make_icon_toolbar_ss, ColoredIcon, CharIconEngine
-from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
+from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton
 
 
 class ToolBar(QToolBar):
@@ -33,6 +33,36 @@ class ToolBar(QToolBar):
         super().__init__(name, parent=toolbox)
         self.setObjectName(name.replace(" ", "_"))
         self._toolbox = toolbox
+        self._title_font = self.font()
+        self._title_font.setItalic(True)
+        self._title_font.setPointSize(self._title_font.pointSize() - 2)
+        self._title_height = QFontMetrics(self._title_font).height()
+        self._title_margin = self._title_height / 2
+
+    def sizeHint(self):
+        size = super().sizeHint()
+        title_width = QFontMetrics(self._title_font).horizontalAdvance(self._name)
+        size.setWidth(max(size.width(), 2 * self._title_margin + title_width))
+        size.setHeight(size.height() + self._title_height)
+        return size
+
+    def paintEvent(self, ev):
+        if self.orientation() == Qt.Horizontal:
+            layout = self.layout()
+            for i in range(layout.count()):
+                widget = layout.itemAt(i).widget()
+                if isinstance(widget, NiceButton):
+                    widget.move(widget.pos().x(), self._title_height + self._title_margin)
+        super().paintEvent(ev)
+        painter = QPainter(self)
+        painter.setFont(self._title_font)
+        painter.drawText(self._title_margin, self._title_height, self._name)
+        painter.end()
+
+    def set_colored_icons(self, colored):
+        for w in self.buttons():
+            w.set_colored_icons(colored)
+        self.update()
 
     def set_color(self, color):
         """Sets toolbar's background color.
@@ -40,7 +70,7 @@ class ToolBar(QToolBar):
         Args:
             color (QColor): background color
         """
-        raise NotImplementedError()
+        self.setStyleSheet(make_icon_toolbar_ss(color))
 
     def set_project_actions_enabled(self, enabled):
         """Enables or disables project related actions.
@@ -48,9 +78,46 @@ class ToolBar(QToolBar):
         Args:
             enabled (bool): True to enable actions, False to disable
         """
-        for child_type in (ProjectItemButton, ProjectItemSpecButton):
-            for button in self.findChildren(child_type):
-                button.setEnabled(enabled)
+        for button in self.findChildren(NiceButton):
+            button.setEnabled(enabled)
+
+    def _add_tool_button(self, button):
+        """Adds a button to the toolbar.
+
+        Args:
+            button (QToolButton): button to add
+        """
+        button.setStyleSheet("QToolButton{padding: 2px}")
+        button.set_orientation(self.orientation())
+        self.orientationChanged.connect(button.set_orientation)
+        self.addWidget(button)
+
+    def _make_tool_button(self, icon, text, slot=None, tip=None):
+        """Makes a new tool button and adds it to the toolbar.
+
+        Args:
+            icon (QIcon): button's icon
+            text (str): button's text
+            slot (Callable): slot where to connect button's clicked signal
+            tip (str): button's tooltip
+
+        Returns:
+            QToolButton: created button
+        """
+        button = NiceButton()
+        button.setIcon(icon)
+        button.setText(text)
+        button.setToolTip(f"<p>{tip}</p>")
+        if slot is not None:
+            button.clicked.connect(slot)
+        self._add_tool_button(button)
+        return button
+
+    def _icon_from_factory(self, factory):
+        colored = self._toolbox.qsettings().value("appSettings/colorToolbarIcons", defaultValue="false") == "true"
+        icon_file_name = factory.icon()
+        icon_color = factory.icon_color().darker(120)
+        return ColoredIcon(icon_file_name, icon_color, self.iconSize(), colored=colored)
 
 
 class PluginToolBar(ToolBar):
@@ -67,6 +134,9 @@ class PluginToolBar(ToolBar):
         self._buttons = {}
         self._toolbox.specification_model.specification_replaced.connect(self._update_spec_button_name)
 
+    def buttons(self):
+        return self._buttons.values()
+
     def setup(self, plugin_specs, disabled_names):
         """Sets up the toolbar.
 
@@ -74,20 +144,16 @@ class PluginToolBar(ToolBar):
             plugin_specs (dict): mapping from specification name to specification
             disabled_names (Iterable of str): specifications that should be disabled
         """
-        self.addWidget(PaddingLabel(self._name))
         for specs in plugin_specs.values():
             for spec in specs:
                 factory = self._toolbox.item_factories[spec.item_type]
-                icon = QIcon(factory.icon())
+                icon = self._icon_from_factory(factory)
                 button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
                 button.setIconSize(self.iconSize())
                 if spec.name in disabled_names:
                     button.setEnabled(False)
                 self.addWidget(button)
                 self._buttons[spec.name] = button
-
-    def set_color(self, color):
-        self.setStyleSheet(make_icon_toolbar_ss(color))
 
     @Slot(str, str)
     def _update_spec_button_name(self, old_name, new_name):
@@ -98,138 +164,125 @@ class PluginToolBar(ToolBar):
         button.spec_name = new_name
 
 
-class MainToolBar(ToolBar):
-    """The main application toolbar: Items | Execute"""
+class ProjectToolBar(ToolBar):
+    def __init__(self, parent):
+        super().__init__("Project toolbar", parent)  # Inherits stylesheet from ToolboxUI
+        self._name = "Project specific"
+        self._actions = {}
+        self._model = None
+
+    def buttons(self):
+        return (self.widgetForAction(a) for a in self._actions.values())
+
+    @Slot(QModelIndex, int, int)
+    def _insert_specs(self, parent, first, last):
+        for row in range(first, last + 1):
+            self._add_spec(row)
+
+    def _add_spec(self, row):
+        spec = self._model.specification(row)
+        if spec.plugin:
+            return
+        next_row = row + 1
+        while True:
+            next_spec = self._model.specification(next_row)
+            if next_spec is None or not next_spec.plugin:
+                break
+            next_row += 1
+        factory = self._toolbox.item_factories[spec.item_type]
+        icon = self._icon_from_factory(factory)
+        button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
+        button.setIconSize(self.iconSize())
+        action = self.insertWidget(self._actions[next_spec.name], button) if next_spec else self.addWidget(button)
+        self._actions[spec.name] = action
+
+    @Slot(QModelIndex, int, int)
+    def _remove_specs(self, parent, first, last):
+        for row in range(first, last + 1):
+            self._remove_spec(row)
+
+    def _remove_spec(self, row):
+        spec_name = self._model.index(row, 0).data(Qt.ItemDataRole.DisplayRole)
+        try:
+            action = self._actions.pop(spec_name)
+            self.removeAction(action)
+        except KeyError:
+            pass  # Happens when Plugins are removed
+
+    @Slot()
+    def _reset_specs(self):
+        for action in self._actions.values():
+            self.removeAction(action)
+        self._actions.clear()
+        for row in range(self._model.rowCount()):
+            self._add_spec(row)
+
+    def setup(self):
+        self._model = self._toolbox.specification_model
+        self._model.rowsInserted.connect(self._insert_specs)
+        self._model.rowsAboutToBeRemoved.connect(self._remove_specs)
+        self._model.modelReset.connect(self._reset_specs)
+        menu = QMenu(self)
+        for item_type, factory in self._toolbox.item_factories.items():
+            if factory.is_deprecated() or not self._toolbox.supports_specification(item_type):
+                continue
+            menu.addAction(
+                item_type, lambda item_type=item_type: self._toolbox.show_specification_form(item_type)
+            ).setIcon(self._icon_from_factory(factory))
+        menu.addSeparator()
+        menu.addAction("From specification file...", self._toolbox.import_specification).setIcon(
+            QIcon(CharIconEngine("\uf067", color=Qt.darkGreen))
+        )
+        button = self._make_tool_button(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)), "New...")
+        button.setPopupMode(QToolButton.InstantPopup)
+        button.setMenu(menu)
+
+
+class BaseToolBar(ToolBar):
+    """The base items"""
 
     _SEPARATOR = ";;"
 
-    def __init__(self, execute_project_action, execute_selection_action, stop_execution_action, parent):
+    def __init__(self, parent):
         """
         Args:
-            execute_project_action (QAction): action to execute project
-            execute_selection_action (QAction): action to execute selected items
-            stop_execution_action (QAction): action to stop execution
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__("Main Toolbar", parent)  # Inherits stylesheet from ToolboxUI
-        self._execute_project_action = execute_project_action
-        self.execute_project_button = None
-        self._execute_selection_action = execute_selection_action
-        self.execute_selection_button = None
-        self._stop_execution_action = stop_execution_action
-        self.stop_execution_button = None
+        super().__init__("Base Toolbar", parent)  # Inherits stylesheet from ToolboxUI
+        self._name = "Basic"
         self._buttons = []
-        self._spec_arrays = []
         self._drop_source_action = None
         self._drop_target_action = None
         self.setAcceptDrops(True)
 
-    def set_project_actions_enabled(self, enabled):
-        super().set_project_actions_enabled(enabled)
-        for arr in self._spec_arrays:
-            arr.update()
-
-    def set_color(self, color):
-        self.setStyleSheet(make_icon_toolbar_ss(color))
-        self.layout().setSpacing(1)
-        for arr in self._spec_arrays:
-            arr.set_color(color)
+    def buttons(self):
+        return self._buttons
 
     def setup(self):
         self.add_project_item_buttons()
-        self.add_execute_buttons()
 
     def add_project_item_buttons(self):
-        self.addWidget(PaddingLabel("Items"))
-        colored = self._toolbox.qsettings().value("appSettings/colorToolbarIcons", defaultValue="false") == "true"
         icon_ordering = self._toolbox.qsettings().value("appSettings/toolbarIconOrdering", defaultValue="")
         ordered_item_types = icon_ordering.split(self._SEPARATOR)
         for item_type in ordered_item_types:
             factory = self._toolbox.item_factories.get(item_type)
             if factory is None:
                 continue
-            self._add_project_item_button(item_type, factory, colored)
+            self._add_project_item_button(item_type, factory)
         for item_type, factory in self._toolbox.item_factories.items():
             if item_type in ordered_item_types:
                 continue
-            self._add_project_item_button(item_type, factory, colored)
-        self._make_tool_button(
-            QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)),
-            "From file...",
-            self._toolbox.import_specification,
-            tip="Add item specification from file...",
-        )
+            self._add_project_item_button(item_type, factory)
 
-    def _add_project_item_button(self, item_type, factory, colored):
-        if factory.is_deprecated():
+    def _add_project_item_button(self, item_type, factory):
+        if factory.is_deprecated() or self._toolbox.supports_specification(item_type):
             return
-        icon_file_name = factory.icon()
-        icon_color = factory.icon_color().darker(120)
-        icon = ColoredIcon(icon_file_name, icon_color, self.iconSize(), colored=colored)
-        if not self._toolbox.supports_specification(item_type):
-            button = ProjectItemButton(self._toolbox, item_type, icon)
-            button.set_orientation(self.orientation())
-            self.orientationChanged.connect(button.set_orientation)
-            self.addWidget(button)
-            self._buttons.append(button)
-        else:
-            model = self._toolbox.filtered_spec_factory_models.get(item_type)
-            spec_array = ProjectItemSpecArray(self._toolbox, model, item_type, icon)
-            spec_array.setOrientation(self.orientation())
-            self._spec_arrays.append(spec_array)
-            self.addWidget(spec_array)
-            self.orientationChanged.connect(spec_array.setOrientation)
-
-    def set_colored_icons(self, colored):
-        for w in self._buttons + self._spec_arrays:
-            w.set_colored_icons(colored)
-        self.update()
-
-    def _make_tool_button(self, icon, text, slot, tip=None):
-        """Makes a new tool button and adds it to the toolbar.
-
-        Args:
-            icon (QIcon): button's icon
-            text (str): button's text
-            slot (Callable): slot where to connect button's clicked signal
-            tip (str): button's tooltip
-
-        Returns:
-            QToolButton: created button
-        """
-        button = NiceButton()
-        button.setIcon(icon)
-        button.setText(text)
-        button.setToolTip(f"<p>{tip}</p>")
-        button.clicked.connect(slot)
-        self._add_tool_button(button)
-        return button
-
-    def _add_tool_button(self, button):
-        """Adds a button to the toolbar.
-
-        Args:
-            button (QToolButton): button to add
-        """
-        button.setStyleSheet("QToolButton{padding: 2px}")
+        icon = self._icon_from_factory(factory)
+        button = ProjectItemButton(self._toolbox, item_type, icon)
         button.set_orientation(self.orientation())
         self.orientationChanged.connect(button.set_orientation)
         self.addWidget(button)
-
-    def add_execute_buttons(self):
-        """Adds project execution buttons to the toolbar."""
-        self.addSeparator()
-        self.addWidget(PaddingLabel("Execute"))
-        self.execute_project_button = NiceButton()
-        self.execute_project_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-        self.execute_project_button.setDefaultAction(self._execute_project_action)
-        self._add_tool_button(self.execute_project_button)
-        self.execute_selection_button = NiceButton()
-        self.execute_selection_button.setDefaultAction(self._execute_selection_action)
-        self._add_tool_button(self.execute_selection_button)
-        self.stop_execution_button = NiceButton()
-        self.stop_execution_button.setDefaultAction(self._stop_execution_action)
-        self._add_tool_button(self.stop_execution_button)
+        self._buttons.append(button)
 
     def dragLeaveEvent(self, event):
         event.accept()
@@ -269,7 +322,7 @@ class MainToolBar(ToolBar):
             return
         while target.parent() != self:
             target = target.parent()
-        if not isinstance(target, (ProjectItemButton, ProjectItemSpecArray)):
+        if not isinstance(target, ProjectItemButton):
             return
         while source.parent() != self:
             source = source.parent()
@@ -309,16 +362,43 @@ class MainToolBar(ToolBar):
         item_types = []
         for a in self.actions():
             w = self.widgetForAction(a)
-            if not isinstance(w, (ProjectItemButton, ProjectItemSpecArray)):
+            if not isinstance(w, ProjectItemButton):
                 continue
             item_types.append(w.item_type)
         return self._SEPARATOR.join(item_types)
 
 
-class PaddingLabel(QLabel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        font = self.font()
-        font.setPointSize(8)
-        self.setFont(font)
-        self.setStyleSheet("QLabel{padding: 2px}")
+class ExecuteToolBar(ToolBar):
+    def __init__(self, execute_project_action, execute_selection_action, stop_execution_action, parent):
+        """
+        Args:
+            execute_project_action (QAction): action to execute project
+            execute_selection_action (QAction): action to execute selected items
+            stop_execution_action (QAction): action to stop execution
+            parent (ToolboxUI): QMainWindow instance
+        """
+        super().__init__("Execute Toolbar", parent)  # Inherits stylesheet from ToolboxUI
+        self._name = "Execute"
+        self._execute_project_action = execute_project_action
+        self.execute_project_button = None
+        self._execute_selection_action = execute_selection_action
+        self.execute_selection_button = None
+        self._stop_execution_action = stop_execution_action
+        self.stop_execution_button = None
+        self.setAcceptDrops(False)
+
+    def setup(self):
+        self.add_execute_buttons()
+
+    def add_execute_buttons(self):
+        """Adds project execution buttons to the toolbar."""
+        self.execute_project_button = NiceButton()
+        self.execute_project_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.execute_project_button.setDefaultAction(self._execute_project_action)
+        self._add_tool_button(self.execute_project_button)
+        self.execute_selection_button = NiceButton()
+        self.execute_selection_button.setDefaultAction(self._execute_selection_action)
+        self._add_tool_button(self.execute_selection_button)
+        self.stop_execution_button = NiceButton()
+        self.stop_execution_button.setDefaultAction(self._stop_execution_action)
+        self._add_tool_button(self.stop_execution_button)

@@ -679,7 +679,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     @Slot(bool)
     def set_toolbar_colored_icons(self, checked=False):
-        self._toolbox.main_toolbar.set_colored_icons(checked)
+        self._toolbox.set_toolbar_colored_icons(checked)
 
     @Slot(bool)
     def _update_properties_widget(self, _checked=False):

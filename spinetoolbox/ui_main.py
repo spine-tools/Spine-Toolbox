@@ -178,10 +178,11 @@ class ToolboxUI(QMainWindow):
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         self.kernels_menu = KernelsPopupMenu(self)
         # Make and initialize toolbars
-        self.main_toolbar = toolbars.MainToolBar(
+        self.base_toolbar = toolbars.BaseToolBar(self)
+        self.project_toolbar = toolbars.ProjectToolBar(self)
+        self.execute_toolbar = toolbars.ExecuteToolBar(
             self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
         )
-        self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self._original_execute_project_action_tooltip = self.ui.actionExecute_project.toolTip()
         self.setStatusBar(None)
         # Additional consoles for item execution
@@ -212,7 +213,9 @@ class ToolboxUI(QMainWindow):
         self.init_project_item_model()
         self.init_specification_model()
         self.make_item_properties_uis()
-        self.main_toolbar.setup()
+        self.base_toolbar.setup()
+        self.project_toolbar.setup()
+        self.execute_toolbar.setup()
         self.link_properties_widgets = {
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
@@ -613,8 +616,13 @@ class ToolboxUI(QMainWindow):
 
     def _toolbars(self):
         """Yields all toolbars in the window."""
-        yield self.main_toolbar
+        yield self.base_toolbar
+        yield self.project_toolbar
         yield from self._plugin_manager.plugin_toolbars.values()
+
+    def set_toolbar_colored_icons(self, checked):
+        for toolbar in self._toolbars():
+            toolbar.set_colored_icons(checked)
 
     def _disable_project_actions(self):
         """Disables all project-related actions, except
@@ -649,6 +657,8 @@ class ToolboxUI(QMainWindow):
         for k, toolbar in enumerate(all_toolbars):
             color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
             toolbar.set_color(color)
+            self.addToolBar(Qt.TopToolBarArea, toolbar)
+        self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
 
     @Slot()
     def show_recent_projects_menu(self):
@@ -1364,7 +1374,7 @@ class ToolboxUI(QMainWindow):
 
     def add_menu_actions(self):
         """Adds extra actions to Edit and View menu."""
-        self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.base_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
@@ -1968,7 +1978,7 @@ class ToolboxUI(QMainWindow):
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             self.update_recent_projects()
-        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.main_toolbar.icon_ordering())
+        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.base_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
