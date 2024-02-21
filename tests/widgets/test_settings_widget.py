@@ -12,10 +12,8 @@
 """Unit tests for the ``settings_widget`` module."""
 import os
 import unittest
-
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.widgets.settings_widget import SettingsWidget
 from tests.mock_helpers import create_toolboxui
 

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the AboutWidget class.
-"""
-
+"""Unit tests for the AboutWidget class."""
 import unittest
 from PySide6.QtWidgets import QApplication, QWidget
 from spinetoolbox.widgets.about_widget import AboutWidget

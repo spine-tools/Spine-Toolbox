@@ -10,6 +10,4 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-This subpackage contains base classes for project items.
-"""
+"""This subpackage contains base classes for project items."""

@@ -10,43 +10,41 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Unit tests for custom graphics scenes."""
+"""Unit tests for the ``url_toolbar`` module."""
+from unittest import mock
 from tempfile import TemporaryDirectory
-import unittest
-from PySide6.QtWidgets import QApplication, QGraphicsRectItem
-from spinetoolbox.widgets.custom_qgraphicsscene import CustomGraphicsScene
-from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from PySide6.QtWidgets import QApplication
+from spinetoolbox.spine_db_editor.widgets.url_toolbar import UrlToolBar
+from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
+from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, FakeDataStore
 
 
-class TestCustomGraphicsScene(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
-    def test_center_items(self):
-        scene = CustomGraphicsScene()
-        rect = scene.addRect(-120.0, 66.0, 1.0, 1.0)
-        child_rect = QGraphicsRectItem(23.3, -5.5, 0.3, 0.3, rect)
-        scene.center_items()
-        self.assertEqual(scene.itemsBoundingRect(), scene.sceneRect())
-        scene.deleteLater()
-
-
-class TestDesignGraphicsScene(unittest.TestCase):
+class TestURLToolbar(DBEditorTestBase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
 
     def setUp(self):
+        super().setUp()
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
     def tearDown(self):
+        super().tearDown()
         clean_up_toolbox(self._toolbox)
         self._temp_dir.cleanup()
 
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_url_toolbar(self):
+        self.db_mngr.setParent(self._toolbox)
+        tb = UrlToolBar(self.spine_db_editor)
+        tb.add_urls_to_history(self.db_mngr.db_urls)
+        self.assertEqual({"sqlite://"}, tb.get_previous_urls())
+        self.assertEqual({"sqlite://"}, tb.get_next_urls())
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.url_toolbar._UrlFilterDialog.show") as mock_show_dialog:
+            mock_show_dialog.show.return_value = True
+            tb._show_filter_menu()
+            mock_show_dialog.assert_called()
+        # Add fake data stores to project
+        self._toolbox.project()._project_items = {"a": FakeDataStore("a")}
+        tb._update_open_project_url_menu()

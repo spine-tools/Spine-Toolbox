@@ -10,8 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-""" Custom editors for model/view programming. """
-
+"""Custom editors for model/view programming."""
 from PySide6.QtCore import (
     Qt,
     Slot,

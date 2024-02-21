@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains FilterExecutionModel.
-"""
-
+"""Contains FilterExecutionModel."""
 from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel
 
 

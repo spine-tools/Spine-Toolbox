@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for MapTableView class.
-"""
-
+"""Unit tests for MapTableView class."""
 import csv
 import locale
 from io import StringIO

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom QGraphicsScene used in the Design View.
-"""
-
+"""Custom QGraphicsScene used in the Design View."""
 import math
 from PySide6.QtCore import Qt, Signal, Slot, QPointF, QEvent, QTimer
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
@@ -164,9 +161,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 links.append(item)
         # Set active project item and active link in toolbox
         active_project_item = (
-            self._toolbox.project_item_model.get_item(project_item_icons[0].name()).project_item
-            if len(project_item_icons) == 1
-            else None
+            self._toolbox.project().get_item(project_item_icons[0].name()) if len(project_item_icons) == 1 else None
         )
         active_link_item = links[0].item if len(links) == 1 else None
         selected_item_names = {icon.name() for icon in project_item_icons}

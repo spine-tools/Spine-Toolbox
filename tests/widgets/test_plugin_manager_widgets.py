@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the classes in ``plugin_manager_widgets`` module."""
-
 import unittest
 from PySide6.QtWidgets import QApplication, QWidget
 from spinetoolbox.widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDialog

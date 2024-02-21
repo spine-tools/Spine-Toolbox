@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for :class:`SpecificationEditorWindowBase` and its supports.
-"""
+"""Unit tests for :class:`SpecificationEditorWindowBase` and its supports."""
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import call, MagicMock, patch, PropertyMock
@@ -174,10 +172,6 @@ class _MockProjectItem(ProjectItem):
     @staticmethod
     def item_type():
         return "Mock"
-
-    @staticmethod
-    def item_category():
-        return "Tools"
 
 
 if __name__ == "__main__":

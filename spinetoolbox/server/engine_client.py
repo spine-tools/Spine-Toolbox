@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Client for exchanging messages between the toolbox and the Spine Engine Server.
-"""
-
+"""Client for exchanging messages between the toolbox and the Spine Engine Server."""
 import os
 import time
 import random

@@ -9,6 +9,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Helper utilites for unit tests that test Database manager's table and tree views."""
 from types import MethodType
 import unittest
@@ -16,7 +17,6 @@ from unittest import mock
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, AddEntitiesDialog
 from spinetoolbox.helpers import signal_waiter

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Models to represent entities in a tree.
-"""
-
+"""Models to represent entities in a tree."""
 from .entity_tree_item import EntityTreeRootItem
 from .multi_db_tree_model import MultiDBTreeModel
 

@@ -10,6 +10,4 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Interface logic for Spine db editor.
-"""
+"""Interface logic for Spine db editor."""

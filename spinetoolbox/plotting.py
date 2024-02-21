@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Functions for plotting on PlotWidget.
-"""
+"""Functions for plotting on PlotWidget."""
 import datetime
 from enum import auto, Enum, unique
 import math
@@ -21,12 +19,10 @@ from dataclasses import dataclass, field, replace
 import functools
 from operator import methodcaller, itemgetter
 from typing import Dict, List, Optional, Union
-
 from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide6.QtCore import Qt
-
 from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
 from spinedb_api import IndexedValue, DateTime
 from .mvcmodels.shared import PARSED_ROLE

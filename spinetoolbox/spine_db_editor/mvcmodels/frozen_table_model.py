@@ -10,11 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains FrozenTableModel class.
-"""
+"""Contains FrozenTableModel class."""
 from itertools import product
-
 from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel, Signal
 from .colors import SELECTED_COLOR
 from ...helpers import rows_to_row_count_tuples

@@ -10,6 +10,4 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Init file for widgets package. Intentionally empty.
-"""
+"""Init file for widgets package. Intentionally empty."""

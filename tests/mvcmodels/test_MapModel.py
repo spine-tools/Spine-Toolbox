@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for MapModel class.
-"""
-
+"""Unit tests for MapModel class."""
 import unittest
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QColor

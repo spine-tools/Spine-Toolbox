@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains custom QHeaderView for the pivot table.
-"""
-
+"""Contains custom QHeaderView for the pivot table."""
 from PySide6.QtCore import Signal, Slot, Qt, QPoint
 from PySide6.QtWidgets import QHeaderView, QMenu, QWidget
 from PySide6.QtGui import QAction

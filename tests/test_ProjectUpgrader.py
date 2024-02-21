@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for ProjectUpgrader class.
-"""
-
+"""Unit tests for ProjectUpgrader class."""
 import unittest
 import json
 from unittest import mock

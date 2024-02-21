@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the TreeViewMixin class.
-"""
+"""Contains the TreeViewMixin class."""
 from PySide6.QtCore import Slot
 from .add_items_dialogs import (
     AddEntityClassesDialog,

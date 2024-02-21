@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QGraphicsViews for the Entity graph view.
-"""
-
+"""Classes for custom QGraphicsViews for the Entity graph view."""
 import os
 import sys
 import tempfile

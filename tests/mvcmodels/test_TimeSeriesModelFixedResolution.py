@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the TimeSeriesModelFixedResolution class.
-"""
-
+"""Unit tests for the TimeSeriesModelFixedResolution class."""
 import unittest
 import dateutil.parser
 from dateutil.relativedelta import relativedelta

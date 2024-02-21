@@ -10,11 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains ProjectUpgrader class used in upgrading and converting projects
-and project dicts from earlier versions to the latest version.
-"""
-
+"""Contains ProjectUpgrader class used in upgrading and converting projects
+and project dicts from earlier versions to the latest version."""
 import shutil
 import os
 import json

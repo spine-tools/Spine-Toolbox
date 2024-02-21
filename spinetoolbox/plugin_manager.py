@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains PluginManager class.
-"""
+"""Contains PluginManager class."""
 import itertools
 import os
 import json

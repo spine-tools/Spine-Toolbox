@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the jump properties widget.
-"""
+"""Unit tests for the jump properties widget."""
 from tempfile import TemporaryDirectory
 import unittest
 from PySide6.QtGui import QTextCursor

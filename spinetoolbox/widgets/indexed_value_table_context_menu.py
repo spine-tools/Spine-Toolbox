@@ -10,11 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Context menus for parameter value editor widgets.
-"""
+"""Context menus for parameter value editor widgets."""
 from operator import itemgetter
-
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QInputDialog, QMenu
 from PySide6.QtGui import QAction

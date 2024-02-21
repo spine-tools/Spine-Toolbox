@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains facilities to open and execute projects without GUI.
-"""
+"""Contains facilities to open and execute projects without GUI."""
 import os
 from copy import deepcopy
 from enum import IntEnum, unique

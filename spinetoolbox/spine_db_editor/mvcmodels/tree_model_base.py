@@ -9,9 +9,8 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""
-Models to represent things in a tree.
-"""
+
+"""Models to represent things in a tree."""
 from PySide6.QtCore import QObject, Qt, QModelIndex, Slot
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from .tree_item_utility import StandardTreeItem

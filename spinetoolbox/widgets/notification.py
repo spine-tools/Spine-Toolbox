@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains a notification widget.
-"""
-
+"""Contains a notification widget."""
 from PySide6.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton
 from PySide6.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
 from PySide6.QtGui import QFont, QColor

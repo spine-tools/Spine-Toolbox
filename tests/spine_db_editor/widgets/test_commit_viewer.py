@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for ``commit_viewer`` module.
-"""
-
+"""Unit tests for ``commit_viewer`` module."""
 import unittest
 from unittest import mock
 from tempfile import TemporaryDirectory

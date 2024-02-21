@@ -10,16 +10,13 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for DB editor's custom ``QTreeView`` classes.
-"""
+"""Unit tests for DB editor's custom ``QTreeView`` classes."""
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide6.QtCore import Qt, QItemSelectionModel
 from PySide6.QtWidgets import QApplication
-
 from spinedb_api import (
     DatabaseMapping,
     from_database,

@@ -9,9 +9,9 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Contains scenario tree model."""
 import pickle
-
 from PySide6.QtCore import QMimeData, Qt, QByteArray
 from spinetoolbox.helpers import unique_name
 from .tree_model_base import TreeModelBase

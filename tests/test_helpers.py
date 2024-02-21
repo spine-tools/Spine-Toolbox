@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the helpers module.
-"""
+"""Unit tests for the helpers module."""
 import json
 import re
 from pathlib import Path

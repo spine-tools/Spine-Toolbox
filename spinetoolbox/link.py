@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for drawing graphics items on QGraphicsScene.
-"""
-
+"""Classes for drawing graphics items on QGraphicsScene."""
 import functools
 from math import sin, cos, pi, radians
 from PySide6.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains a class for storing Tool specifications.
-"""
-
+"""Contains a class for storing Tool specifications."""
 import bisect
 from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot, Signal
 

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for PivotModel class.
-"""
-
+"""Unit tests for PivotModel class."""
 import unittest
 from spinetoolbox.spine_db_editor.mvcmodels.pivot_model import PivotModel
 

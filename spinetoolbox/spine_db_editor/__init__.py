@@ -10,6 +10,4 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-This subpackage contains GUI files for the Spine db editor.
-"""
+"""This subpackage contains GUI files for the Spine db editor."""

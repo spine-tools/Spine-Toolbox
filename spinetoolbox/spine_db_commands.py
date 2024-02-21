@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-QUndoCommand subclasses for modifying the db.
-"""
-
+"""QUndoCommand subclasses for modifying the db."""
 import time
 from PySide6.QtGui import QUndoCommand, QUndoStack
 

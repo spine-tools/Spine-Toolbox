@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for ArrayTableView class.
-"""
-
+"""Unit tests for ArrayTableView class."""
 import csv
 import locale
 from io import StringIO

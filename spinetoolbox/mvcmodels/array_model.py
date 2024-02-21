@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains model for the Array editor widget.
-"""
+"""Contains model for the Array editor widget."""
 import locale
 from numbers import Number
 import numpy

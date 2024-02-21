@@ -9,16 +9,15 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for ``scenario_model`` module."""
 from pathlib import Path
 import pickle
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-
 from PySide6.QtCore import QMimeData, Qt, QByteArray
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.scenario_model import ScenarioModel
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types

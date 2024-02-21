@@ -10,8 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Contains class for the main window of Spine Toolbox."""
-
+"""Contains a class for the main window of Spine Toolbox."""
 import os
 import sys
 import locale
@@ -51,11 +50,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
 )
 from spine_engine.load_project_items import load_item_specification_factories
-from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .project_item_icon import ProjectItemIcon
 from .load_project_items import load_project_items
-from .mvcmodels.project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
-from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .project_settings import ProjectSettings
@@ -155,12 +151,10 @@ class ToolboxUI(QMainWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
-        self._item_categories = dict()
         self._item_properties_uis = dict()
         self.item_factories = dict()  # maps item types to `ProjectItemFactory` objects
         self._item_specification_factories = dict()  # maps item types to `ProjectItemSpecificationFactory` objects
         self._project = None
-        self.project_item_model = None
         self.specification_model = None
         self.filtered_spec_factory_models = {}
         self.show_datetime = self.update_datetime()
@@ -210,7 +204,6 @@ class ToolboxUI(QMainWindow):
         self.ui.listView_console_executions.hide()
         self.ui.listView_console_executions.installEventFilter(self)
         self.parse_project_item_modules()
-        self.init_project_item_model()
         self.init_specification_model()
         self.make_item_properties_uis()
         self.base_toolbar.setup()
@@ -312,9 +305,6 @@ class ToolboxUI(QMainWindow):
         # Views
         self.ui.listView_console_executions.selectionModel().currentChanged.connect(self._select_console_execution)
         self.ui.listView_console_executions.model().layoutChanged.connect(self._refresh_console_execution_list)
-        # Models
-        self.project_item_model.rowsInserted.connect(self._update_execute_enabled)
-        self.project_item_model.rowsRemoved.connect(self._update_execute_enabled)
         # Execution
         self.ui.actionExecute_project.triggered.connect(self._execute_project)
         self.ui.actionExecute_selection.triggered.connect(self._execute_selection)
@@ -352,17 +342,16 @@ class ToolboxUI(QMainWindow):
             try:
                 old_value = int(self._qsettings.value("appSettings/saveAtExit"))
             except ValueError:
-                # Old value is already of correct form.
+                # Old value is already of correct form
                 pass
             else:
                 new_value = {0: "prompt", 1: "prompt", 2: "automatic"}[old_value]
                 self._qsettings.setValue("appSettings/saveAtExit", new_value)
 
     def _update_execute_enabled(self):
-        first_index = next(self.project_item_model.leaf_indexes(), None)
         enabled_by_project = self._project.settings.enable_execute_all if self._project is not None else False
         self.ui.actionExecute_project.setEnabled(
-            enabled_by_project and first_index is not None and not self.execution_in_progress
+            enabled_by_project and not self.execution_in_progress
         )
         if not enabled_by_project:
             self.ui.actionExecute_project.setToolTip("Executing entire project disabled by project settings.")
@@ -382,7 +371,7 @@ class ToolboxUI(QMainWindow):
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
-        self._item_categories, self.item_factories = load_project_items("spine_items")
+        self.item_factories = load_project_items("spine_items")
         self._item_specification_factories = load_item_specification_factories("spine_items")
 
     def set_work_directory(self, new_work_dir=None):
@@ -524,7 +513,6 @@ class ToolboxUI(QMainWindow):
             settings=ProjectSettings(),
             logger=self,
         )
-        self.project_item_model.connect_to_project(self._project)
         self.specification_model.connect_to_project(self._project)
         self._enable_project_actions()
         self.ui.actionSave.setDisabled(True)  # Disable in a clean project
@@ -596,7 +584,6 @@ class ToolboxUI(QMainWindow):
             settings=ProjectSettings(),
             logger=self,
         )
-        self.project_item_model.connect_to_project(self._project)
         self.specification_model.connect_to_project(self._project)
         self._enable_project_actions()
         self.ui.actionSave.setDisabled(True)  # Save is disabled in a clean project
@@ -773,14 +760,6 @@ class ToolboxUI(QMainWindow):
             return
         dialog = SetDescriptionDialog(self, self._project)
         dialog.show()
-
-    def init_project_item_model(self):
-        """Initializes project item model. Create root and category items and add them to the model."""
-        root_item = RootProjectTreeItem()
-        self.project_item_model = ProjectItemModel(root_item, self)
-        for category in CATEGORIES:
-            category_item = CategoryProjectTreeItem(str(category), CATEGORY_DESCRIPTIONS[category])
-            self.project_item_model.insert_item(category_item)
 
     def init_specification_model(self):
         """Initializes specification model."""
@@ -1716,25 +1695,21 @@ class ToolboxUI(QMainWindow):
         )
         return host, port, sec_model, sec_folder
 
-    def show_project_or_item_context_menu(self, pos, index):
+    def show_project_or_item_context_menu(self, pos, item):
         """Creates and shows the project item context menu.
 
         Args:
             pos (QPoint): Mouse position
-            index (QModelIndex, optional): Index of concerned item or None
+            item (ProjectItem, optional): Project item or None
         """
-        if not index:  # Clicked on a blank area in Design view
+        if not item:  # Clicked on a blank area in Design view
             menu = QMenu(self)
             menu.addAction(self.ui.actionPaste)
             menu.addAction(self.ui.actionPasteAndDuplicateFiles)
             menu.addSeparator()
             menu.addAction(self.ui.actionOpen_project_directory)
-        elif not index.isValid():  # Clicked on a blank area in Project tree view
-            menu = QMenu(self)
-            menu.addAction(self.ui.actionOpen_project_directory)
-        else:  # Clicked on an item, show the custom context menu for that item
-            item = self.project_item_model.item(index)
-            menu = item.custom_context_menu(self)
+        else:  # Clicked on an item, show the context menu for that item
+            menu = self.project_item_context_menu(item.actions())
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
@@ -1769,15 +1744,15 @@ class ToolboxUI(QMainWindow):
         can_paste = not byte_data.isNull()
         selected_items = self.ui.graphicsView.scene().selectedItems()
         can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
-        has_items = self.project_item_model.n_items() > 0
+        has_items = self.project().n_items > 0
         selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
         _methods = [
-            getattr(self.project_item_model.get_item(x.name()).project_item, "copy_local_data")
+            getattr(self.project().get_item(x.name()), "copy_local_data")
             for x in selected_project_items
         ]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
         # Renaming an item should always be allowed except when it's a Data Store that is open in an editor
-        for item in (self.project_item_model.get_item(x.name()).project_item for x in selected_project_items):
+        for item in (self.project().get_item(x.name()) for x in selected_project_items):
             if item.item_type() == "Data Store" and item.has_listeners():
                 self.ui.actionRename_item.setEnabled(False)
                 self.ui.actionRename_item.setToolTip(
@@ -2011,8 +1986,7 @@ class ToolboxUI(QMainWindow):
             if not isinstance(item_icon, ProjectItemIcon):
                 continue
             name = item_icon.name()
-            index = self.project_item_model.find_item(name)
-            project_item = self.project_item_model.item(index).project_item
+            project_item = self.project().get_item(name)
             item_dict = dict(project_item.item_dict())
             item_dict["original_data_dir"] = project_item.data_dir
             item_dict["original_db_url"] = item_dict.get("url")
@@ -2071,7 +2045,7 @@ class ToolboxUI(QMainWindow):
         final_items_dict = dict()
         for name, item_dict in items_dict.items():
             item_dict["duplicate_files"] = duplicate_files
-            if self.project_item_model.find_item(name) is not None:
+            if name in self.project().all_item_names:
                 new_name = unique_name(name, self.project().all_item_names)
                 final_items_dict[new_name] = item_dict
             else:
@@ -2292,17 +2266,6 @@ class ToolboxUI(QMainWindow):
             return
         new_name = answer[0]
         self.undo_stack.push(RenameProjectItemCommand(self._project, item.name, new_name))
-
-    def item_category_context_menu(self):
-        """Creates a context menu for category items.
-
-        Returns:
-            QMenu: category context menu
-        """
-        menu = QMenu(self)
-        menu.setToolTipsVisible(True)
-        menu.addAction(self.ui.actionOpen_project_directory)
-        return menu
 
     def project_item_context_menu(self, additional_actions):
         """Creates a context menu for project items.

@@ -9,12 +9,10 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""
-Color constants for models.
-"""
+
+"""Color constants for models."""
 from PySide6.QtGui import QColor
 
 PIVOT_TABLE_HEADER_COLOR = QColor("#efefef")
-
 FIXED_FIELD_COLOR = QColor("lightGray")
 SELECTED_COLOR = QColor.fromString("paleturquoise")

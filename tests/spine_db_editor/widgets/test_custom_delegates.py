@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for ``custom_delegates`` module."""
-
 import unittest
 from unittest import mock
 from PySide6.QtGui import QStandardItem, QStandardItemModel

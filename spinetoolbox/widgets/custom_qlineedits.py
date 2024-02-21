@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Contains a custom line edit."""
-
 from PySide6.QtWidgets import QLineEdit
 from .custom_qwidgets import UndoRedoMixin
 

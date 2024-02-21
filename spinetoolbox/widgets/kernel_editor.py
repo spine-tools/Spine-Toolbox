@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Widget for showing the progress of making a Julia or Python kernel.
-"""
+"""Widget for showing the progress of making a Julia or Python kernel."""
 import subprocess
 from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QWidget
 from PySide6.QtCore import Slot, Qt, QTimer

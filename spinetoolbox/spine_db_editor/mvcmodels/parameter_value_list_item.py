@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Tree items for parameter_value lists.
-"""
-
+"""Tree items for parameter_value lists."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE

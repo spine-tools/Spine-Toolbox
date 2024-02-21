@@ -9,13 +9,12 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Contains unit tests for the ``frozen_table_model`` module."""
 import unittest
 from unittest.mock import MagicMock
-
 from PySide6.QtCore import QModelIndex, QObject
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.spine_db_editor.mvcmodels.frozen_table_model import FrozenTableModel
 from tests.mock_helpers import TestSpineDBManager
 

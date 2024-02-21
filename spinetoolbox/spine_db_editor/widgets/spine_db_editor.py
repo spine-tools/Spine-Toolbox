@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the SpineDBEditor class.
-"""
-
+"""Contains the SpineDBEditor class."""
 import os
 import json
 from sqlalchemy.engine.url import URL

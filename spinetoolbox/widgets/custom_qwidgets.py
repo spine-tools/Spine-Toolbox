@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom QWidgets for Filtering and Zooming.
-"""
-
+"""Custom QWidgets for Filtering and Zooming."""
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,

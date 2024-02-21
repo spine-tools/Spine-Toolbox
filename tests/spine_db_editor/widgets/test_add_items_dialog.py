@@ -9,8 +9,8 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Unit tests for ``add_items_dialog`` module. """
 
+"""Unit tests for ``add_items_dialog`` module."""
 import unittest
 from unittest import mock
 from tempfile import TemporaryDirectory

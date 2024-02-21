@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Class for a custom QTextBrowser for showing the logs and tool output.
-"""
-
+"""Class for a custom QTextBrowser for showing the logs and tool output."""
 from contextlib import contextmanager
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QTextCursor, QFontDatabase, QTextBlockFormat, QTextFrameFormat, QBrush, QAction, QPalette

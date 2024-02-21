@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the ObjectNameListEditor class.
-"""
-
+"""Contains the ObjectNameListEditor class."""
 from PySide6.QtCore import Qt, Slot, Signal, QEvent, QCoreApplication
 from PySide6.QtWidgets import QItemDelegate
 from PySide6.QtGui import QStandardItemModel, QStandardItem

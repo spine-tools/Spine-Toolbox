@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for AddProjectItemWidget.
-"""
+"""Unit tests for AddProjectItemWidget."""
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
@@ -37,10 +35,7 @@ class TestAddProjectItemWidget(unittest.TestCase):
             "spinetoolbox.ui_main.load_project_items"
         ) as mock_load_project_items:
             mock_jump_props_widget.return_value = QWidget()
-            mock_load_project_items.return_value = (
-                {TestProjectItem.item_type(): TestProjectItem.item_category()},
-                {TestProjectItem.item_type(): TestItemFactory},
-            )
+            mock_load_project_items.return_value = {TestProjectItem.item_type(): TestItemFactory}
             self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
     def tearDown(self):
@@ -72,10 +67,7 @@ class TestAddProjectItemWidgetWithSpecifications(unittest.TestCase):
             "spinetoolbox.ui_main.load_item_specification_factories"
         ) as mock_load_specification_factories:
             mock_jump_props_widget.return_value = QWidget()
-            mock_load_project_items.return_value = (
-                {TestProjectItem.item_type(): TestProjectItem.item_category()},
-                {TestProjectItem.item_type(): TestItemFactory},
-            )
+            mock_load_project_items.return_value = {TestProjectItem.item_type(): TestItemFactory}
             mock_load_specification_factories.return_value = {TestProjectItem.item_type(): TestSpecificationFactory}
             self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
@@ -96,10 +88,6 @@ class TestProjectItem(ProjectItem):
     @staticmethod
     def item_type():
         return "TestItemType"
-
-    @staticmethod
-    def item_category():
-        return "TestCategory"
 
     @property
     def executable_class(self):

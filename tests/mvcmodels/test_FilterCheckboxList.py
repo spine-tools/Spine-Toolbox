@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for FilterCheckboxListModel class.
-"""
-
+"""Unit tests for FilterCheckboxListModel class."""
 import unittest
 from unittest import mock
 from PySide6.QtCore import Qt

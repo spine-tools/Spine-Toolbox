@@ -10,13 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Base classes to represent items from multiple databases in a tree.
-"""
+"""Base classes to represent items from multiple databases in a tree."""
 from operator import attrgetter
-
 from PySide6.QtCore import Qt
-
 from ...helpers import rows_to_row_count_tuples, bisect_chunks
 from ...fetch_parent import FlexibleFetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem

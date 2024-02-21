@@ -10,19 +10,14 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the plotting module.
-"""
-
+"""Unit tests for the plotting module."""
 import unittest
 from contextlib import contextmanager
 from unittest.mock import Mock, MagicMock, patch
-
 import numpy
 from PySide6.QtCore import QModelIndex, QItemSelectionModel, QObject
 from PySide6.QtWidgets import QApplication, QMessageBox
 from matplotlib.gridspec import GridSpec
-
 from spinedb_api import (
     DateTime,
     Map,

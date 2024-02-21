@@ -11,7 +11,6 @@
 
 """Classes to represent items in scenario tree."""
 from PySide6.QtCore import Qt
-
 from .tree_item_utility import (
     BoldTextMixin,
     EditableMixin,

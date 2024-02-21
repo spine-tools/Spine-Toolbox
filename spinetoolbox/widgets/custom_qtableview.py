@@ -9,8 +9,8 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Custom QTableView classes that support copy-paste and the like. """
 
+"""Custom QTableView classes that support copy-paste and the like."""
 import csv
 import ctypes
 import io
@@ -19,7 +19,6 @@ from contextlib import contextmanager
 from numbers import Number
 import re
 from operator import methodcaller
-
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
 from PySide6.QtGui import QKeySequence, QIcon, QAction

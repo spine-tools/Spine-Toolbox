@@ -9,13 +9,12 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for the ``utils`` module."""
 import unittest
-
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.spine_db_editor.mvcmodels.utils import two_column_as_csv
 
 

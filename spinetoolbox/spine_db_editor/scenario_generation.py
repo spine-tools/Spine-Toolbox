@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains functions for automatically generating scenarios from a set of alternatives.
-"""
+"""Contains functions for automatically generating scenarios from a set of alternatives."""
 from itertools import compress, permutations
 
 

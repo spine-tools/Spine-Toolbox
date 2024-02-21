@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Miscelaneous mixins for parameter models
-"""
+"""Miscellaneous mixins for parameter models."""
 
 from spinedb_api.parameter_value import split_value_and_type
 
