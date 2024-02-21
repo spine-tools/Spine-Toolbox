@@ -350,7 +350,7 @@ class SpineDBManager(QObject):
             if ignore_version_error:
                 return None
             title, text, option_to_kwargs, notes, preferred = prompt_data
-            kwargs = OptionsDialog.get_action(
+            kwargs = OptionsDialog.get_answer(
                 self.parent(), title, text, option_to_kwargs, notes=notes, preferred=preferred
             )
             if kwargs is None:

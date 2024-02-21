@@ -42,12 +42,12 @@ class SpineEngineManagerBase:
         """Stops a running engine."""
         raise NotImplementedError()
 
-    def answer_prompt(self, item_name, accepted):
+    def answer_prompt(self, prompter_id, answer):
         """Answers prompt.
 
         Args:
-            item_name (str): The item that emitted the prompt
-            accepted (bool): The user's decision.
+            prompter_id (int): The id of the prompter
+            answer: The user's decision.
         """
         raise NotImplementedError()
 
@@ -159,8 +159,8 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         if self._engine is not None:
             self._engine.stop()
 
-    def answer_prompt(self, item_name, accepted):
-        self._engine.answer_prompt(item_name, accepted)
+    def answer_prompt(self, prompter_id, answer):
+        self._engine.answer_prompt(prompter_id, answer)
 
     def restart_kernel(self, connection_file):
         # pylint: disable=import-outside-toplevel
@@ -327,9 +327,9 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 self.q.put(event)
         self.engine_client.close()
 
-    def answer_prompt(self, item_name, accepted):
+    def answer_prompt(self, prompter_id, answer):
         """See base class."""
-        self.engine_client.answer_prompt(self.exec_job_id, item_name, accepted)
+        self.engine_client.answer_prompt(self.exec_job_id, prompter_id, answer)
 
     def restart_kernel(self, connection_file):
         """See base class."""
