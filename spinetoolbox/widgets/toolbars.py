@@ -318,8 +318,11 @@ class BaseToolBar(ToolBar):
         self.update()
 
     def dropEvent(self, event):
-        if self._drop_target_action != self._drop_source_action:
-            self.insertAction(self._drop_target_action, self._drop_source_action)
+        if self._drop_source_action is not None:
+            if self._drop_target_action is not None:
+                self.insertAction(self._drop_target_action, self._drop_source_action)
+            else:
+                self.addAction(self._drop_source_action)
         self._drop_source_action = None
         self._drop_target_action = None
         self.update()
@@ -349,32 +352,45 @@ class BaseToolBar(ToolBar):
         else:
             after = target.geometry().center().y() < event.position().toPoint().y()
         actions = self.actions()
-        source_action = next((a for a in actions if self.widgetForAction(a) == source))
+        self._drop_source_action = next((a for a in actions if self.widgetForAction(a) == source))
         target_index = next((i for i, a in enumerate(actions) if self.widgetForAction(a) == target))
         if after:
             target_index += 1
-        target_action = actions[target_index]
-        self._drop_source_action = source_action
-        self._drop_target_action = target_action
+        try:
+            self._drop_target_action = actions[target_index]
+        except IndexError:
+            self._drop_target_action = None
 
     def paintEvent(self, ev):
         """Draw a line as drop indicator."""
         super().paintEvent(ev)
-        if self._drop_target_action is None:
+        if self._drop_source_action is None:
             return
         painter = QPainter(self)
         painter.drawLine(*self._drop_line())  # Draw line from (x1, y1) to (x2, y2)
         painter.end()
 
     def _drop_line(self):
-        widget = self.widgetForAction(self._drop_target_action)
-        geom = widget.geometry()
+        widget = self.widgetForAction(self._drop_target_action) if self._drop_target_action is not None else None
         margins = self.layout().contentsMargins()
         if self.orientation() == Qt.Orientation.Horizontal:
-            x = geom.left() - 1
-            return x, margins.left(), x, self.height() - margins.top()
-        y = geom.top() - 1
-        return margins.top(), y, self.width() - margins.left(), y
+            x = (
+                widget.geometry().left()
+                if widget is not None
+                else self.widgetForAction(self.actions()[-1]).geometry().right()
+            ) - 1
+            return (
+                x,
+                self._title_height + 2 * self._title_margin + margins.top(),
+                x,
+                self.height() - self._title_margin - margins.bottom(),
+            )
+        y = (
+            widget.geometry().top()
+            if widget is not None
+            else self.widgetForAction(self.actions()[-1]).geometry().bottom()
+        ) - 1
+        return margins.left(), y, self.width() - margins.right(), y
 
     def icon_ordering(self):
         item_types = []
