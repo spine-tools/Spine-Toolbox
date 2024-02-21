@@ -580,9 +580,7 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_and_save_specification(self):
         project = self.toolbox.project()
-        specification = _MockSpecification(
-            "a specification", "Specification for testing.", "Tester", "Testing category"
-        )
+        specification = _MockSpecification("a specification", "Specification for testing.", "Tester")
         project.add_specification(specification)
         self.assertTrue(specification.is_equivalent(project.get_specification("a specification")))
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
@@ -656,9 +654,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         project.add_specification(specification_with_local_data)
         local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
         self.assertTrue(local_data_file.exists())
-        specification = _MockSpecification(
-            "another specification", "Specification without local data", "Tester", "Testing category"
-        )
+        specification = _MockSpecification("another specification", "Specification without local data", "Tester")
         project.replace_specification("a specification", specification)
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
         self.assertTrue(specification_dir.exists())
