@@ -21,13 +21,13 @@ from PySide6.QtCore import Slot, Qt
 class OptionsDialog(QDialog):
     """A dialog with options."""
 
-    def __init__(self, parent, title, text, option_to_action, notes=None, preferred=None):
+    def __init__(self, parent, title, text, option_to_answer, notes=None, preferred=None):
         """
         Args:
             parent (QWidget): the parent widget
             title (srt): title of the window
             text (str): text to show to the user
-            option_to_action (dict): mapping option string to corresponding action to return
+            option_to_answer (dict): mapping option string to corresponding answer to return
             preferred (int,optional): preselected option if any
         """
         super().__init__(parent)
@@ -37,7 +37,7 @@ class OptionsDialog(QDialog):
         self.setWindowModality(Qt.ApplicationModal)
         self.setWindowTitle(title)
         layout = QVBoxLayout(self)
-        if option_to_action:
+        if option_to_answer:
             text += "<br><p>Please select an option:"
         text_label = QLabel(text)
         text_label.setWordWrap(True)
@@ -45,7 +45,7 @@ class OptionsDialog(QDialog):
         options_frame = QFrame()
         options_layout = QVBoxLayout(options_frame)
         self._button_group = QButtonGroup()
-        for i, o in enumerate(option_to_action):
+        for i, o in enumerate(option_to_answer):
             note = notes.get(o)
             if i == preferred:
                 o += " (RECOMMENDED)"
@@ -72,7 +72,7 @@ class OptionsDialog(QDialog):
         button_box = QDialogButtonBox(self)
         self._ok_button = button_box.addButton("Ok", QDialogButtonBox.AcceptRole)
         button_box.accepted.connect(self.accept)
-        if option_to_action:
+        if option_to_answer:
             button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
             button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -82,16 +82,16 @@ class OptionsDialog(QDialog):
         self._update_ok_button_enabled()
 
     @classmethod
-    def get_action(cls, parent, title, text, option_to_action, notes=None, preferred=None):
-        obj = cls(parent, title, text, option_to_action, notes=notes, preferred=preferred)
+    def get_answer(cls, parent, title, text, option_to_answer, notes=None, preferred=None):
+        obj = cls(parent, title, text, option_to_answer, notes=notes, preferred=preferred)
         obj.exec()
         if obj.result() != QDialog.Accepted:
             return None
         id_ = obj._button_group.checkedId()
         if id_ == -1:
             return None
-        option = list(option_to_action)[id_]
-        return option_to_action[option]
+        option = list(option_to_answer)[id_]
+        return option_to_answer[option]
 
     @Slot(int)
     def _update_ok_button_enabled(self, _id=None):

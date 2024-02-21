@@ -191,15 +191,15 @@ class EngineClient:
         response_server_message = ServerMessage.parse(response[1])
         return response_server_message.getData()
 
-    def answer_prompt(self, job_id, item_name, accepted):
+    def answer_prompt(self, job_id, prompter_id, answer):
         """Sends a request to answer a prompt from the DAG that is managed by this client.
 
         Args:
             job_id (str): Job Id on server to stop
-            item_name (str)
-            accepted (Bool)
+            prompter_id (int)
+            answer
         """
-        req = ServerMessage("answer_prompt", job_id, json.dumps((item_name, True)), None)
+        req = ServerMessage("answer_prompt", job_id, json.dumps((prompter_id, answer)), None)
         self.socket.send_multipart([req.to_bytes()])
 
     def download_files(self, q):
