@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QGraphicsViews for the Design and Graph views.
-"""
-
+"""Classes for custom QGraphicsViews for the Design and Graph views."""
 import math
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
 from PySide6.QtGui import QCursor

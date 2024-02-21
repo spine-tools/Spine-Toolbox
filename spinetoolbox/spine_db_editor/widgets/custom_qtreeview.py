@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Classes for custom QTreeView."""
-
 from PySide6.QtWidgets import QApplication, QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
 from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication

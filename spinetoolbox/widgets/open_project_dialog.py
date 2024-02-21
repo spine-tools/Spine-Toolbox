@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Contains a class for a widget that represents a 'Open Project Directory' dialog."""
-
 import os
 from PySide6.QtWidgets import QDialog, QFileSystemModel, QAbstractItemView, QComboBox
 from PySide6.QtCore import Qt, Slot, QDir, QStandardPaths, QModelIndex

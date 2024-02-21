@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Tests for Remote Spine Engine Manager.
-"""
-
+"""Tests for Remote Spine Engine Manager."""
 import unittest
 from unittest import mock
 from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager

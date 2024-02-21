@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the GraphLayoutGeneratorRunnable class.
-"""
-
+"""Contains the GraphLayoutGeneratorRunnable class."""
 from PySide6.QtCore import Signal, Slot, QObject, QRunnable
 from spinedb_api.graph_layout_generator import GraphLayoutGenerator
 

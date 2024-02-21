@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs to add items to databases.
-"""
+"""Classes for custom QDialogs to add items to databases."""
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QDialog,

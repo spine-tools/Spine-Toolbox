@@ -196,7 +196,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             list of ProjectItem: Project Items with given type or an empty list if none found
         """
-        return  [item for item in self.get_items() if item.item_type() == _type]
+        return [item for item in self.get_items() if item.item_type() == _type]
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.

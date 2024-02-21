@@ -9,13 +9,12 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Unit tests for edit_or_remove_items_dialogs module. """
+
+"""Unit tests for edit_or_remove_items_dialogs module."""
 import unittest
 from unittest import mock
-
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import EditEntityClassesDialog
 from tests.spine_db_editor.widgets.helpers import TestBase
 

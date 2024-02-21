@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the TimeSeriesModelVariableResolution class.
-"""
-
+"""Unit tests for the TimeSeriesModelVariableResolution class."""
 import unittest
 import numpy
 from PySide6.QtCore import QObject, Qt

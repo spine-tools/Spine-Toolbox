@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A base model class to represent items from multiple databases in a tree.
-"""
+"""A base model class to represent items from multiple databases in a tree."""
 from PySide6.QtCore import QModelIndex, Qt
 from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 

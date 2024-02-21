@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A model for maps, used by the parameter_value editors.
-"""
+"""A model for maps, used by the parameter_value editors."""
 from copy import deepcopy
 from numbers import Number
 from itertools import takewhile

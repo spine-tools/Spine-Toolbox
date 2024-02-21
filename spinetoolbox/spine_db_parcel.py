@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-SpineDBParcel class.
-"""
-
+"""SpineDBParcel class."""
 from spinedb_api import Asterisk
 
 

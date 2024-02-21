@@ -10,16 +10,13 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains TabularViewMixin class.
-"""
+"""Contains TabularViewMixin class."""
 from contextlib import contextmanager
 from itertools import product
 from collections import namedtuple
 from PySide6.QtCore import QModelIndex, Qt, Slot, QTimer
 from PySide6.QtGui import QAction, QIcon, QActionGroup
 from PySide6.QtWidgets import QWidget
-
 from spinedb_api.helpers import fix_name_ambiguity
 from .custom_menus import TabularViewCodenameFilterMenu, TabularViewDBItemFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget

@@ -10,11 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains :class:`ItemMetadataTableModel` and associated functionality.
-"""
+"""Contains :class:`ItemMetadataTableModel` and associated functionality."""
 from enum import auto, Enum, IntEnum, unique
-
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from .metadata_table_model_base import Column, FLAGS_EDITABLE, FLAGS_FIXED, MetadataTableModelBase
 

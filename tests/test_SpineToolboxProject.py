@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Unit tests for SpineToolboxProject class."""
+"""Unit tests for the SpineToolboxProject class."""
 import json
 import os.path
 from pathlib import Path

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains TabularViewHeaderWidget class.
-"""
-
+"""Contains TabularViewHeaderWidget class."""
 from PySide6.QtCore import Qt, QMimeData, Signal
 from PySide6.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout, QWidget
 from PySide6.QtGui import QDrag

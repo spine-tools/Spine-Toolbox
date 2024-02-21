@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the models in ``custom_qwidgets`` module."""
-
 import unittest
 from contextlib import contextmanager
 from PySide6.QtCore import Qt

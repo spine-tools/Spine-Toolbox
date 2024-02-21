@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides the main() function.
-"""
+"""Provides the main() function."""
 import os
 import multiprocessing
 import PySide6

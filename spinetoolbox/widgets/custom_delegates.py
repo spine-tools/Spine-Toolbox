@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom item delegates.
-"""
-
+"""Custom item delegates."""
 from PySide6.QtCore import Qt, Signal, QEvent, QPoint, QRect, QModelIndex
 from PySide6.QtWidgets import (
     QComboBox,

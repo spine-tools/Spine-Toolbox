@@ -788,5 +788,6 @@ class MockQMenu(QMenu):
     def exec(self, pos):
         return True
 
+
 if __name__ == '__main__':
     unittest.main()

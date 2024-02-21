@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the ParameterValueEditor widget.
-"""
-
+"""Unit tests for the ParameterValueEditor widget."""
 import unittest
 import dateutil.parser
 import numpy as np

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the indexed_value_table_context_menu module.
-"""
-
+"""Unit tests for the indexed_value_table_context_menu module."""
 import unittest
 from unittest.mock import MagicMock
 from PySide6.QtWidgets import QApplication

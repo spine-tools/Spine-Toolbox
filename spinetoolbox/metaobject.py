@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-MetaObject class.
-"""
-
+"""MetaObject class."""
 from PySide6.QtCore import QObject
 from spine_engine.utils.helpers import shorten
 

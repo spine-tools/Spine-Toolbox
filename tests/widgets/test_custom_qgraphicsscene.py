@@ -10,13 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for custom graphics scenes.
-"""
+"""Unit tests for custom graphics scenes."""
 from tempfile import TemporaryDirectory
 import unittest
 from PySide6.QtWidgets import QApplication, QGraphicsRectItem
-from spine_items.data_connection.data_connection import DataConnection
 from spinetoolbox.widgets.custom_qgraphicsscene import CustomGraphicsScene
 from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 

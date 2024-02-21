@@ -10,6 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
+"""Contains a widget acting as a console for Julia & Python REPL's."""
 import os
 import uuid
 from pygments.styles import get_style_by_name

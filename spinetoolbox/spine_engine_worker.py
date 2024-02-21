@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains SpineEngineWorker.
-"""
+"""Contains SpineEngineWorker."""
 import copy
 from PySide6.QtCore import Signal, Slot, QObject, QThread
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed

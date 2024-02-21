@@ -10,17 +10,13 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides pivot table models for the Tabular View.
-"""
+"""Provides pivot table models for the Tabular View."""
 from collections import defaultdict
 from contextlib import suppress
 from functools import partial
 from typing import Iterable
-
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
-
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_elements
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type

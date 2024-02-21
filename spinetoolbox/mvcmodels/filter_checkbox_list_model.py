@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides FilterCheckboxListModel for FilterWidget.
-"""
-
+"""Provides FilterCheckboxListModel for FilterWidget."""
 import re
 from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel
 from spinetoolbox.helpers import bisect_chunks

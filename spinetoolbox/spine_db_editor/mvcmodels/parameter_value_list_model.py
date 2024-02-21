@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A tree model for parameter_value lists.
-"""
-
+"""A tree model for parameter_value lists."""
 from PySide6.QtCore import Qt, QModelIndex
 from .tree_model_base import TreeModelBase
 from .parameter_value_list_item import DBItem

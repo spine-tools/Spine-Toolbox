@@ -15,10 +15,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
-
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
-
 from spine_engine.project_item.project_item_resource import database_resource
 from spine_engine.project_item.connection import FilterSettings
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE

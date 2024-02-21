@@ -10,12 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Common models.
-Contains a generic File list model and an Item for that model.
-Used by the Importer and Tool project items but this may be handy for other project items
-as well.
-"""
+"""Contains a generic File list model and an Item for that model."""
 from collections import namedtuple
 from itertools import combinations, takewhile
 import json

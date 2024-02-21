@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Empty models for parameter definitions and values.
-"""
+"""Empty models for parameter definitions and values."""
 from PySide6.QtCore import Qt
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from .single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin

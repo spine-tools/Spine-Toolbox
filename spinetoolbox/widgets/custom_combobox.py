@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Contains custom combo box classes."""
-
 import os
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox, QStyle, QStylePainter, QStyleOptionComboBox, QDialog, QAbstractItemView

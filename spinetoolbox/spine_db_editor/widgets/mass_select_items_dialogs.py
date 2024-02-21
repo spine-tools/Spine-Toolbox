@@ -10,12 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs to add edit and remove database items.
-"""
+"""Classes for custom QDialogs to add edit and remove database items."""
 from PySide6.QtWidgets import QCheckBox, QDialogButtonBox, QWidget
 from PySide6.QtCore import Signal, Slot
-
 from spinetoolbox.widgets.custom_qwidgets import SelectDatabaseItemsDialog
 from spinetoolbox.widgets.select_database_items import add_check_boxes
 

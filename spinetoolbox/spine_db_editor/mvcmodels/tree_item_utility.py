@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A tree model for parameter_value lists.
-"""
-
+"""A tree model for parameter_value lists."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for IndexedValueTableView class.
-"""
-
+"""Unit tests for IndexedValueTableView class."""
 import locale
 import unittest
 from PySide6.QtCore import QItemSelectionModel

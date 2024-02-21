@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QListView.
-"""
-
+"""Classes for custom QListView."""
 from textwrap import fill
 from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QMimeData, QMargins
 from PySide6.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine

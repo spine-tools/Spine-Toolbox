@@ -9,12 +9,10 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""
-A widget and utilities to select database items.
-"""
+
+"""A widget and utilities to select database items."""
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QCheckBox, QWidget
-
 from spinedb_api.db_mapping import DatabaseMapping
 
 

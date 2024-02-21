@@ -9,10 +9,9 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Unit tests for Database editor's ``helpers`` module. """
 
+"""Unit tests for Database editor's ``helpers`` module."""
 import unittest
-
 from spinetoolbox.spine_db_editor.helpers import string_to_bool, string_to_display_icon
 
 

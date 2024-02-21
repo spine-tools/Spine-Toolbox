@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides OptionsDialog.
-"""
-
+"""Provides OptionsDialog."""
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QButtonGroup, QRadioButton, QFrame, QStyle, QDialogButtonBox
 from PySide6.QtCore import Slot, Qt
 

@@ -10,12 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A model for variable resolution time series, used by the parameter_value editors.
-"""
-
+"""A model for variable resolution time series, used by the parameter_value editors."""
 import numpy as np
-
 from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import TimeSeriesVariableResolution
 from .indexed_value_table_model import IndexedValueTableModel

@@ -11,13 +11,13 @@
 ######################################################################################################################
 
 """Unit tests for the ``url_toolbar`` module."""
-
 from unittest import mock
 from tempfile import TemporaryDirectory
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.url_toolbar import UrlToolBar
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, FakeDataStore
+
 
 class TestURLToolbar(DBEditorTestBase):
     @classmethod

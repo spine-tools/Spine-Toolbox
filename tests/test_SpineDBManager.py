@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the spine_db_manager module.
-"""
+"""Unit tests for the spine_db_manager module."""
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest

@@ -12,7 +12,6 @@
 
 """Unit tests for the classes in ``custom_combobox`` module.
 OpenProjectDialogComboBox is tested in test_open_project_dialog module."""
-
 import unittest
 from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtGui import QPaintEvent

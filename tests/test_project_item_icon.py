@@ -99,6 +99,7 @@ class TestProjectItemIcon(unittest.TestCase):
             icon.contextMenuEvent(QGraphicsSceneMouseEvent(QEvent.Type.ContextMenu))
             mock_show_menu.assert_called()
 
+
 class TestExclamationIcon(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

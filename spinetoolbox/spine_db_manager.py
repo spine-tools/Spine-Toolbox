@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-The SpineDBManager class
-"""
-
+"""The SpineDBManager class."""
 import os
 import json
 from PySide6.QtCore import Qt, QObject, Signal, Slot

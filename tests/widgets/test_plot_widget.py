@@ -11,14 +11,11 @@
 ######################################################################################################################
 
 """Unit tests for the ``plot_widget`` module."""
-
 import unittest
 from itertools import product
 from unittest import mock
-
 from matplotlib.gridspec import GridSpec
 from PySide6.QtWidgets import QApplication
-
 from spinedb_api.parameter_value import TimeSeriesFixedResolution
 from spinetoolbox.plotting import plot_data, TreeNode, turn_node_to_xy_data, convert_indexed_value_to_tree
 from spinetoolbox.widgets.plot_canvas import LegendPosition

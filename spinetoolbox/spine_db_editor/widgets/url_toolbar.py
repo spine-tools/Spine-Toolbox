@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Contains the UrlToolBar class and helpers."""
-
 from PySide6.QtWidgets import (
     QToolBar,
     QLineEdit,

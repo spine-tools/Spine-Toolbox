@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Functions to make and handle QToolBars.
-"""
-
+"""Functions to make and handle QToolBars."""
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QToolBar, QLabel
 from PySide6.QtGui import QIcon, QPainter

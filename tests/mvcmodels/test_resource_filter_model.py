@@ -13,11 +13,9 @@
 import unittest
 from unittest import mock
 from contextlib import contextmanager
-
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QApplication
-
 from spine_engine.project_item.project_item_resource import database_resource
 from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE

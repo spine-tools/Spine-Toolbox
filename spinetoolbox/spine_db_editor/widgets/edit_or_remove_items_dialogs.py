@@ -9,11 +9,10 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Classes for custom QDialogs to edit items in databases. """
 
+"""Classes for custom QDialogs to edit items in databases."""
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QComboBox, QTabWidget
-
 from ..helpers import string_to_bool, string_to_display_icon
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate, RemoveEntitiesDelegate

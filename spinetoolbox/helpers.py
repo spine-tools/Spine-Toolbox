@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-General helper functions and classes.
-"""
+"""General helper functions and classes."""
 import functools
 import time
 from enum import Enum, unique

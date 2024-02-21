@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the MultiSpineDBEditor class.
-"""
-
+"""Contains the MultiSpineDBEditor class."""
 import os
 from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton, QMessageBox
 from PySide6.QtCore import Slot, QPoint

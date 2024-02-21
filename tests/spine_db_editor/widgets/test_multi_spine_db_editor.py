@@ -19,7 +19,6 @@ from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, 
 
 
 class TestMultiSpineDBEditor(DBEditorTestBase):
-
     def setUp(self):
         super().setUp()
         self._temp_dir = TemporaryDirectory()

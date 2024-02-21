@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-An editor dialog for editing database (relationship) parameter values.
-"""
+"""An editor dialog for editing database (relationship) parameter values."""
 from PySide6.QtWidgets import QMessageBox
 from spinedb_api import ParameterValueFormatError, to_database
 from .array_editor import ArrayEditor

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A base for editor windows for editing parameter values.
-"""
-
+"""A base for editor windows for editing parameter values."""
 from enum import auto, Enum, unique
 from numbers import Number
 from PySide6.QtCore import Qt, Slot

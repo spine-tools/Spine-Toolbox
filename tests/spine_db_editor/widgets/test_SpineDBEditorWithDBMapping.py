@@ -9,17 +9,16 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Unit tests for SpineDBEditor classes. """
+
+"""Unit tests for SpineDBEditor classes."""
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 import logging
 import sys
-
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestSpineDBManager
 

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the StackedViewMixin class.
-"""
-
+"""Contains the StackedViewMixin class."""
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSignalBlocker
 from PySide6.QtWidgets import QHeaderView
 from PySide6.QtGui import QGuiApplication

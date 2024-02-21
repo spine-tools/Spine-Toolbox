@@ -10,13 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-An editor widget for editing a time pattern type (relationship) parameter values.
-"""
-
+"""An editor widget for editing a time pattern type (relationship) parameter values."""
 from PySide6.QtCore import QPoint, Qt, Slot
 from PySide6.QtWidgets import QWidget
-
 from spinedb_api import TimePattern
 from ..helpers import inquire_index_name
 from ..mvcmodels.time_pattern_model import TimePatternModel

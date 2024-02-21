@@ -10,6 +10,4 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Package for Remote Spine Engine Client side tests.
-"""
+"""Package for Remote Spine Engine Client side tests."""

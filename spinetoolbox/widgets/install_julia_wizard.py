@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs for julia setup.
-"""
-
+"""Classes for custom QDialogs for julia setup."""
 import os
 from enum import IntEnum, auto
 

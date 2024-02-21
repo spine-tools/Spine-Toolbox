@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the GraphViewMixin class.
-"""
-
+"""Contains the GraphViewMixin class."""
 import itertools
 import json
 from time import monotonic

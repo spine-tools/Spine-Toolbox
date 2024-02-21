@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides PivotModel.
-"""
-
+"""Provides PivotModel."""
 import operator
 from ...helpers import tuple_itemgetter
 

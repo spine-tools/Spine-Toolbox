@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A model for fixed resolution time series, used by the parameter_value editors.
-"""
-
+"""A model for fixed resolution time series, used by the parameter_value editors."""
 import numpy as np
 from PySide6.QtCore import QModelIndex, Qt, Slot, QLocale
 from spinedb_api import TimeSeriesFixedResolution

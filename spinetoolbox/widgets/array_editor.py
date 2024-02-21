@@ -10,13 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains an editor widget for array type parameter values.
-"""
-
+"""Contains an editor widget for array type parameter values."""
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QWidget
-
 from spinedb_api import DateTime, Duration, ParameterValueFormatError
 from .array_value_editor import ArrayValueEditor
 from .indexed_value_table_context_menu import ArrayTableContextMenu
