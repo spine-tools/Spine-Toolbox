@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Functions to make and handle QStatusBars.
-"""
+"""Functions to make and handle QStatusBars."""
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QStatusBar, QToolButton, QMenu
 from PySide6.QtGui import QAction

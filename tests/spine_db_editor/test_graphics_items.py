@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for Database editor's ``graphics_items`` module.
-"""
+"""Unit tests for Database editor's ``graphics_items`` module."""
 import unittest
 from unittest import mock
 from PySide6.QtCore import QPointF

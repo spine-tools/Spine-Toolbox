@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-An editor dialog for Array elements.
-"""
+"""An editor dialog for Array elements."""
 from PySide6.QtCore import Qt
 from .duration_editor import DurationEditor
 from .datetime_editor import DatetimeEditor

@@ -10,8 +10,6 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-spinetoolbox package.
-"""
+"""spinetoolbox package."""
 
 from .version import __version__, __version_info__

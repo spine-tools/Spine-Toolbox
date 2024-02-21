@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the MultiSpineDBEditor class.
-"""
-
+"""Contains the MultiSpineDBEditor class."""
 import os
 from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton, QMessageBox
 from PySide6.QtCore import Slot, QPoint
@@ -119,7 +116,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         toolbox = self.db_mngr.parent()
         if toolbox is None:
             return
-        data_stores = tuple(ds_item.project_item for ds_item in toolbox.project_item_model.items("Data Stores"))
+        data_stores = toolbox.project().get_items_by_type("Data Store")
         ds_urls = {ds.name: ds.sql_alchemy_url() for ds in data_stores}
         is_url_validated = {ds.name: ds.is_url_validated() for ds in data_stores}
         if not ds_urls:

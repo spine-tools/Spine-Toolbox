@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-An editor widget for editing datetime database (relationship) parameter values.
-"""
-
+"""An editor widget for editing datetime database (relationship) parameter values."""
 from datetime import datetime
 from PySide6.QtCore import QDate, QDateTime, QTime, Slot
 from PySide6.QtWidgets import QWidget

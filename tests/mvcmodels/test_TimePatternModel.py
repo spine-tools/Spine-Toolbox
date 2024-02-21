@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the TimePatternModel class.
-"""
-
+"""Unit tests for the TimePatternModel class."""
 import unittest
 import numpy as np
 import numpy.testing

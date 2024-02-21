@@ -9,10 +9,10 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for the ``tree_item_utility`` module."""
 from operator import attrgetter
 import unittest
-
 from spinetoolbox.spine_db_editor.mvcmodels.tree_item_utility import SortChildrenMixin
 
 

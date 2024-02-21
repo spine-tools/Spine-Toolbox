@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Functions to report failures in plotting to the user.
-"""
-
+"""Functions to report failures in plotting to the user."""
 from PySide6.QtWidgets import QMessageBox
 
 

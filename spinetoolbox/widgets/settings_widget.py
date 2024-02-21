@@ -9,8 +9,8 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Widget for controlling user settings. """
 
+"""Widget for controlling user settings."""
 import os
 from PySide6.QtWidgets import QWidget, QFileDialog, QColorDialog, QMenu, QMessageBox
 from PySide6.QtCore import Slot, Qt, QSize, QSettings, QPoint, QEvent

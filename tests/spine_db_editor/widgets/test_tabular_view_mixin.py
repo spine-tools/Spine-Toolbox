@@ -9,14 +9,13 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for ``tabular_view_mixin`` module."""
 import itertools
 import unittest
 from unittest.mock import patch
-
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
-
 from spinedb_api import Map
 from tests.mock_helpers import fetch_model
 from tests.spine_db_editor.widgets.helpers import TestBase

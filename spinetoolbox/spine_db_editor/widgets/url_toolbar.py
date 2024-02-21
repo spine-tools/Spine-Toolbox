@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the UrlToolBar class and helpers.
-"""
+"""Contains the UrlToolBar class and helpers."""
 from PySide6.QtWidgets import (
     QToolBar,
     QLineEdit,
@@ -86,34 +84,14 @@ class UrlToolBar(QToolBar):
         menu_button.setToolTip("<p>Open URL from project</p>")
         menu.aboutToShow.connect(self._update_open_project_url_menu)
         menu.triggered.connect(self._open_ds_url)
-        slot = lambda *args: self._update_ds_url_menu_enabled()
-        self._connect_project_item_model_signals(slot)
-        self.destroyed.connect(lambda obj=None, slot=slot: self._disconnect_project_item_model_signals(slot))
         return menu
-
-    def _update_ds_url_menu_enabled(self):
-        ds_items = self._db_editor.toolbox.project_item_model.items("Data Stores")
-        self._open_project_url_menu.setEnabled(bool(ds_items))
-
-    def _connect_project_item_model_signals(self, slot):
-        project_item_model = self._db_editor.toolbox.project_item_model
-        project_item_model.modelReset.connect(slot)
-        project_item_model.rowsRemoved.connect(slot)
-        project_item_model.rowsInserted.connect(slot)
-
-    def _disconnect_project_item_model_signals(self, slot):
-        project_item_model = self._db_editor.toolbox.project_item_model
-        project_item_model.modelReset.disconnect(slot)
-        project_item_model.rowsRemoved.disconnect(slot)
-        project_item_model.rowsInserted.disconnect(slot)
 
     @Slot()
     def _update_open_project_url_menu(self):
-        toolbox = self._db_editor.toolbox
         self._open_project_url_menu.clear()
-        ds_items = toolbox.project_item_model.items("Data Stores")
-        self._project_urls = {ds.name: ds.project_item.sql_alchemy_url() for ds in ds_items}
-        is_url_validated = {ds.name: ds.project_item.is_url_validated() for ds in ds_items}
+        ds_items = self._db_editor.toolbox.project().get_items_by_type("Data Store")
+        self._project_urls = {ds.name: ds.sql_alchemy_url() for ds in ds_items}
+        is_url_validated = {ds.name: ds.is_url_validated() for ds in ds_items}
         for name, url in self._project_urls.items():
             action = self._open_project_url_menu.addAction(name)
             action.setEnabled(url is not None and is_url_validated[name])

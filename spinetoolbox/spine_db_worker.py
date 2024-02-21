@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-The SpineDBWorker class
-"""
+"""The SpineDBWorker class."""
 from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtCore import QTimer
 from spinedb_api import Asterisk, DatabaseMapping

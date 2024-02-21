@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Spine Toolbox application main file.
-"""
-
+"""Spine Toolbox application main file."""
 import sys
 from spinetoolbox.main import main
 

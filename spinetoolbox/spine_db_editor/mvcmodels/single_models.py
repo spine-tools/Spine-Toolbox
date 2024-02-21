@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Single models for parameter definitions and values (as 'for a single entity').
-"""
-
+"""Single models for parameter definitions and values (as 'for a single entity')."""
 from PySide6.QtCore import Qt
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel

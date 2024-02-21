@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the item metadata table model.
-"""
+"""Unit tests for the item metadata table model."""
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock

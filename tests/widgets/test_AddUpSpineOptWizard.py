@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the Add/Update SpineOpt Wizard.
-"""
-
+"""Unit tests for the Add/Update SpineOpt Wizard."""
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication, QWizard

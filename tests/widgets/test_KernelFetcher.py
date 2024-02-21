@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the KernelFetcher class.
-"""
-
+"""Unit tests for the KernelFetcher class."""
 import unittest
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.kernel_fetcher import KernelFetcher

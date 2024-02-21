@@ -9,11 +9,11 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Unit tests for the models in ``compound_parameter_models`` module. """
+
+"""Unit tests for the models in ``compound_parameter_models`` module."""
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtWidgets import QApplication
-
 from spinedb_api import to_database
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,

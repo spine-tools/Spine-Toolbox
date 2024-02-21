@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-The FetchParent and FlexibleFetchParent classes.
-"""
-
+"""The FetchParent and FlexibleFetchParent classes."""
 from PySide6.QtCore import QTimer, Signal, QObject, Qt
 from .helpers import busy_effect
 

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains unit tests for the SpineDBEditorBase class.
-"""
-
+"""Contains unit tests for the SpineDBEditorBase class."""
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication

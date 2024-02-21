@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Models that vertically concatenate two or more table models.
-"""
-
+"""Models that vertically concatenate two or more table models."""
 import bisect
 from PySide6.QtCore import Qt, Signal, Slot, QModelIndex, QTimer
 from ..mvcmodels.minimal_table_model import MinimalTableModel

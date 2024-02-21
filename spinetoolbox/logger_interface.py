@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A logger interface.
-"""
-
+"""A logger interface."""
 from PySide6.QtCore import QObject, Signal
 
 

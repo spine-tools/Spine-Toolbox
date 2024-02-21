@@ -10,8 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-""" Custom QTableView classes that support copy-paste and the like. """
-
+"""Custom QTableView classes that support copy-paste and the like."""
 from dataclasses import replace
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint, QItemSelection, QItemSelectionModel
 from PySide6.QtWidgets import QTableView, QMenu, QWidget

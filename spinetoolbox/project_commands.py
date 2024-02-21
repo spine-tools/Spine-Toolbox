@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-QUndoCommand subclasses for modifying the project.
-"""
-
+"""QUndoCommand subclasses for modifying the project."""
 from PySide6.QtGui import QUndoCommand
 from spine_engine.project_item.connection import Jump
 

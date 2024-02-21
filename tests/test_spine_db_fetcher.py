@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for ``spine_db_fetcher`` module.
-"""
+"""Unit tests for ``spine_db_fetcher`` module."""
 import unittest
 from unittest.mock import MagicMock
 from PySide6.QtGui import QIcon

@@ -9,13 +9,13 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """ Functions to load project item modules. """
 import importlib
 
 
 def load_project_items(items_package_name):
-    """
-    Loads project item modules.
+    """Loads project item modules.
 
     Args:
         items_package_name (str): name of the package that contains the project items
@@ -25,4 +25,4 @@ def load_project_items(items_package_name):
             while second maps item type to item factory
     """
     items = importlib.import_module(items_package_name)
-    return items.item_categories(), items.item_factories()
+    return items.item_factories()

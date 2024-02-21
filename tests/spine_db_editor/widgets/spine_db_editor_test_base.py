@@ -9,10 +9,8 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""
-Base classes and helpers for database editor tests.
-"""
 
+"""Base classes and helpers for database editor tests."""
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication

@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the ``open_project_dialog`` module."""
-
 import unittest
 from unittest import mock
 from tempfile import TemporaryDirectory

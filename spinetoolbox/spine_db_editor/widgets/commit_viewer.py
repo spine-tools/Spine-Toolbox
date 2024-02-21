@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the CommitViewer class.
-"""
-
+"""Contains the CommitViewer class."""
 from PySide6.QtWidgets import (
     QMainWindow,
     QTabWidget,

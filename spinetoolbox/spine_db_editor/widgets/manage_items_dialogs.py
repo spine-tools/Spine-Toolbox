@@ -9,8 +9,8 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Classes for custom QDialogs to add edit and remove database items. """
 
+"""Classes for custom QDialogs to add edit and remove database items."""
 from functools import reduce, cached_property
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
 from PySide6.QtCore import Slot, Qt, QModelIndex

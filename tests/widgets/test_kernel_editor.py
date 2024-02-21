@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the ``kernel_editor`` module.
-"""
+"""Unit tests for the ``kernel_editor`` module."""
 import json
 import pathlib
 import subprocess

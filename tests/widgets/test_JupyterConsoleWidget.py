@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the JupyterConsoleWidget.
-"""
-
+"""Unit tests for the JupyterConsoleWidget."""
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A widget for editing project description
-"""
-
+"""A widget for editing project description."""
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QDialog, QFormLayout, QLabel, QPlainTextEdit, QDialogButtonBox
 

@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the EmptyParameterModel subclasses.
-"""
+"""Unit tests for the EmptyParameterModel subclasses."""
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication

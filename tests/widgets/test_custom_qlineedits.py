@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the classes in ``custom_qlineedits`` module."""
-
 import unittest
 from PySide6.QtWidgets import QApplication, QWidget
 from spinetoolbox.widgets.custom_qlineedits import PropertyQLineEdit

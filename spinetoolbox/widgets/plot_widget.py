@@ -10,14 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A Qt widget showing a toolbar and a matplotlib plotting canvas.
-"""
-
+"""A Qt widget showing a toolbar and a matplotlib plotting canvas."""
 import itertools
 import io
 import csv
-
 import numpy
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
 from PySide6.QtCore import QMetaObject, Qt

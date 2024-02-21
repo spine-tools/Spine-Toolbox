@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom QWidgets.
-"""
-
+"""Custom QWidgets."""
 import os
 from PySide6.QtWidgets import (
     QWidget,

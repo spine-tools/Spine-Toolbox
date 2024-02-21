@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for `pivot_table_models` module.
-"""
+"""Unit tests for `pivot_table_models` module."""
 import itertools
 import unittest
 from unittest.mock import patch

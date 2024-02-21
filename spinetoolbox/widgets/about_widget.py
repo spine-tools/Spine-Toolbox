@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A widget for presenting basic information about the application.
-"""
-
+"""A widget for presenting basic information about the application."""
 import os
 import sys
 import platform

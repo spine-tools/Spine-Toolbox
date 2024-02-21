@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains SpecificationEditorWindowBase and ChangeSpecPropertyCommand
-"""
-
+"""Contains SpecificationEditorWindowBase and ChangeSpecPropertyCommand"""
 from PySide6.QtGui import QKeySequence, QIcon, QUndoStack, QAction, QUndoCommand
 from PySide6.QtCore import Signal, Slot, Qt
 from PySide6.QtWidgets import (

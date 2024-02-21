@@ -10,15 +10,13 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the metadata table model.
-"""
+"""Unit tests for the metadata table model."""
 import itertools
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel

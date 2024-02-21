@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Qt-based thread pool executor.
-"""
+"""Qt-based thread pool executor."""
 import os
 from PySide6.QtCore import QMutex, QSemaphore, QThread
 

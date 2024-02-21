@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains logic for the variable resolution time series editor widget.
-"""
-
+"""Contains logic for the variable resolution time series editor widget."""
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution

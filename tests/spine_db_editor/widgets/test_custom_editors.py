@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for ``custom_editors`` module."""
-
 import unittest
 from PySide6.QtWidgets import QApplication, QWidget, QStyleOptionViewItem
 from PySide6.QtGui import QKeyEvent, QFocusEvent, QStandardItemModel, QStandardItem

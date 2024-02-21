@@ -10,12 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Version info for Spine Toolbox package. Inspired by python sys.version and sys.version_info.
-"""
-
+"""Version info for Spine Toolbox package. Inspired by python sys.version and sys.version_info."""
 import re
 from typing import NamedTuple
-
 from ._version import version_tuple
 
 

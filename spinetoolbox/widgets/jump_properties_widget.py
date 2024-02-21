@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains jump properties widget's business logic.
-"""
+"""Contains jump properties widget's business logic."""
 from PySide6.QtCore import Slot, QItemSelection
 from .properties_widget import PropertiesWidgetBase
 from ..project_commands import SetJumpConditionCommand, UpdateJumpCmdLineArgsCommand

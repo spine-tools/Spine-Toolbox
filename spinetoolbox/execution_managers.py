@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes to manage tool instance execution in various forms.
-"""
-
+"""Classes to manage tool instance execution in various forms."""
 import logging
 from PySide6.QtCore import QObject, QProcess, Slot, Signal
 

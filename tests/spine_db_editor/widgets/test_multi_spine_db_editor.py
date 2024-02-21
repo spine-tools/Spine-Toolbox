@@ -10,43 +10,33 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Unit tests for custom graphics scenes."""
+"""Unit tests for SpineDBEditor classes."""
 from tempfile import TemporaryDirectory
-import unittest
-from PySide6.QtWidgets import QApplication, QGraphicsRectItem
-from spinetoolbox.widgets.custom_qgraphicsscene import CustomGraphicsScene
-from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from PySide6.QtCore import QPoint
+from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+from .spine_db_editor_test_base import DBEditorTestBase
+from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, FakeDataStore
 
 
-class TestCustomGraphicsScene(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
-    def test_center_items(self):
-        scene = CustomGraphicsScene()
-        rect = scene.addRect(-120.0, 66.0, 1.0, 1.0)
-        child_rect = QGraphicsRectItem(23.3, -5.5, 0.3, 0.3, rect)
-        scene.center_items()
-        self.assertEqual(scene.itemsBoundingRect(), scene.sceneRect())
-        scene.deleteLater()
-
-
-class TestDesignGraphicsScene(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestMultiSpineDBEditor(DBEditorTestBase):
     def setUp(self):
+        super().setUp()
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
     def tearDown(self):
+        super().tearDown()
         clean_up_toolbox(self._toolbox)
         self._temp_dir.cleanup()
 
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_multi_spine_db_editor(self):
+        self.db_mngr.setParent(self._toolbox)
+        multieditor = MultiSpineDBEditor(self.db_mngr)
+        multieditor.add_new_tab()
+        self.assertEqual(1, multieditor.tab_widget.count())
+        multieditor.make_context_menu(0)
+        multieditor.show_plus_button_context_menu(QPoint(0, 0))
+        # Add fake data stores to project
+        self._toolbox.project()._project_items = {"a": FakeDataStore("a")}
+        multieditor.show_plus_button_context_menu(QPoint(0, 0))
+        multieditor._take_tab(0)

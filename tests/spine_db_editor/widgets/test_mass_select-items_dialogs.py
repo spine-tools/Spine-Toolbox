@@ -11,12 +11,9 @@
 ######################################################################################################################
 
 """Test for `mass_select_items_dialogs` module."""
-
 import unittest
 from unittest import mock
-
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
-
 from spinetoolbox.spine_db_editor.widgets.mass_select_items_dialogs import MassRemoveItemsDialog
 from spinetoolbox.spine_db_manager import SpineDBManager
 

@@ -10,15 +10,13 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for ``graphics_items`` module.
-"""
+"""Unit tests for ``project_item_icon`` module."""
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch, MagicMock
 from PySide6.QtCore import QEvent, QPoint, Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QContextMenuEvent
 from PySide6.QtWidgets import QApplication, QGraphicsSceneMouseEvent
 from spinedb_api import DatabaseMapping, import_scenarios
 from spine_engine.project_item.project_item_resource import database_resource
@@ -92,6 +90,14 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(self._toolbox.undo_stack.count(), 1)
         move_command = self._toolbox.undo_stack.command(0)
         self.assertIsInstance(move_command, MoveIconCommand)
+
+    def test_context_menu_event(self):
+        item = add_view(self._toolbox.project(), self._toolbox.item_factories, "View")
+        icon = item.get_icon()
+        with patch("spinetoolbox.ui_main.ToolboxUI.show_project_or_item_context_menu") as mock_show_menu:
+            mock_show_menu.return_value = True
+            icon.contextMenuEvent(QGraphicsSceneMouseEvent(QEvent.Type.ContextMenu))
+            mock_show_menu.assert_called()
 
 
 class TestExclamationIcon(unittest.TestCase):

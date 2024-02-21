@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Application constants and style sheets
-"""
-
+"""Application constants and style sheets."""
 import sys
 import os
 from pathlib import Path

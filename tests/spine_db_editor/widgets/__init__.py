@@ -10,6 +10,4 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for Spine db editor's widgets.
-"""
+"""Unit tests for Spine db editor's widgets."""

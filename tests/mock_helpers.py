@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Classes and functions that can be shared among unit test modules."""
-
 from contextlib import contextmanager
 from unittest import mock
 from PySide6.QtCore import QModelIndex
@@ -325,3 +324,20 @@ def fetch_model(model):
     while model.canFetchMore(QModelIndex()):
         model.fetchMore(QModelIndex())
         qApp.processEvents()
+
+
+class FakeDataStore:
+    def __init__(self, n):
+        self.name = n
+
+    def item_type(self):
+        return "Data Store"
+
+    def sql_alchemy_url(self):
+        return f"{self.name}_sql_alchemy_url"
+
+    def is_url_validated(self):
+        return True
+
+    def tear_down(self):
+        return True

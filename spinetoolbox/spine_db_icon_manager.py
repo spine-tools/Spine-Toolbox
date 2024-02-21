@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides SpineDBIconManager.
-"""
-
+"""Provides SpineDBIconManager."""
 from PySide6.QtCore import Qt, QPointF, QRectF, QBuffer
 from PySide6.QtWidgets import QGraphicsScene
 from PySide6.QtGui import QIcon, QFont, QTextOption, QPainter

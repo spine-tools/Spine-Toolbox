@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the ArrayModel class.
-"""
+"""Unit tests for the ArrayModel class."""
 import unittest
 from PySide6.QtCore import QObject, Qt
 from spinedb_api import Array

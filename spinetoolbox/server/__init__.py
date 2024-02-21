@@ -10,6 +10,4 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Package for handling the client part of executing projects on Spine Engine Server.
-"""
+"""Package for handling the client part of executing projects on Spine Engine Server."""

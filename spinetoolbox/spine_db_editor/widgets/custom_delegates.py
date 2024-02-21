@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Custom item delegates."""
-
 from numbers import Number
 from PySide6.QtCore import QModelIndex, Qt, Signal
 from PySide6.QtWidgets import QStyledItemDelegate

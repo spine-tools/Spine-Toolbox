@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains PluginManager dialogs and widgets.
-"""
+"""Contains PluginManager dialogs and widgets."""
 from PySide6.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QTimer, QSize
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QListView, QDialogButtonBox
 from PySide6.QtGui import QStandardItemModel, QStandardItem

@@ -12,9 +12,7 @@
 
 """Test for `scenario_generator` module."""
 import unittest
-
 from PySide6.QtCore import Qt
-
 from spinetoolbox.spine_db_editor.widgets.scenario_generator import ScenarioGenerator
 from .helpers import TestBase
 

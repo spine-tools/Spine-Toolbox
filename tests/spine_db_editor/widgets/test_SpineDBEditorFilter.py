@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for filtering in Database editor.
-"""
-
+"""Unit tests for filtering in Database editor."""
 from PySide6.QtCore import Qt, QItemSelectionModel
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from .spine_db_editor_test_base import DBEditorTestBase

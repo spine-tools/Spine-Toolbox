@@ -10,13 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-An editor widget for editing a map type parameter values.
-"""
-
+"""An editor widget for editing a map type parameter values."""
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QWidget
-
 from spinedb_api import Map
 from ..helpers import inquire_index_name
 from .map_value_editor import MapValueEditor

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the KernelEditor widget.
-"""
-
+"""Unit tests for the KernelEditor widget."""
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication, QWizard

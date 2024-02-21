@@ -9,6 +9,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """ Classes for custom QDialogs to add items to databases. """
 from contextlib import suppress
 from itertools import product
@@ -33,7 +34,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Slot, Qt, QSize, QModelIndex
 from PySide6.QtGui import QIcon
-
 from spinedb_api.helpers import name_from_elements, name_from_dimensions
 from ..helpers import string_to_bool, string_to_display_icon
 from ...mvcmodels.empty_row_model import EmptyRowModel

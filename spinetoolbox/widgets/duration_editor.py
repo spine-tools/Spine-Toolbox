@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-An editor widget for editing duration database (relationship) parameter values.
-"""
-
+"""An editor widget for editing duration database (relationship) parameter values."""
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 from spinedb_api import Duration, duration_to_relativedelta, ParameterValueFormatError

@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains SpineEngineManagerBase.
-"""
+"""Contains SpineEngineManagerBase."""
 import queue
 import threading
 import json

@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-An editor widget for editing plain number database (relationship) parameter values.
-"""
-
+"""An editor widget for editing plain number database (relationship) parameter values."""
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 from spinetoolbox.helpers import try_number_from_string

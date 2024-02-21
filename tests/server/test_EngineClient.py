@@ -10,13 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains tests for the EngineClient class.
-"""
-
-
+"""Contains tests for the EngineClient class."""
 import unittest
-import json
 import os
 from unittest import mock
 from tempfile import TemporaryDirectory
@@ -27,9 +22,7 @@ from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
 from spine_engine.execution_managers.persistent_execution_manager import PythonPersistentExecutionManager
 from spine_engine.exception import RemoteEngineInitFailed
-from spine_engine.server.util.event_data_converter import EventDataConverter
-from spine_items.tool.tool_specifications import PythonTool
-from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, add_dc, add_tool
+from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox
 
 
 client_sec_dir = os.path.join(str(Path(__file__).parent), "client_secfolder")

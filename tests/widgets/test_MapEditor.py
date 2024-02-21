@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the MapEditor widget.
-"""
-
+"""Unit tests for the MapEditor widget."""
 import unittest
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Map

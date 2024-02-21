@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QTreeView.
-"""
-
+"""Classes for custom QTreeView."""
 import os
 from PySide6.QtWidgets import QTreeView, QApplication
 from PySide6.QtCore import Signal, Qt

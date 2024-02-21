@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the IndexedValueTableModel class.
-"""
-
+"""Unit tests for the IndexedValueTableModel class."""
 import unittest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication

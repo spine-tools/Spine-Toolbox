@@ -10,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for SpineToolboxProject class.
-"""
+"""Unit tests for the SpineToolboxProject class."""
 import json
 import os.path
 from pathlib import Path
@@ -82,12 +80,11 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_data_store(self):
         name = "DS"
         add_ds(self.toolbox.project(), self.toolbox.item_factories, name)
-        # Check that an item with the created name is found from project item model
-        found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.item(found_index).project_item
-        self.assertEqual(found_item.name, name)
+        # Check that an item with the created name is in project
+        item = self.toolbox.project().get_item(name)
+        self.assertEqual(item.name, name)
         # Check that the created item is a Data Store
-        self.assertEqual(found_item.item_type(), "Data Store")
+        self.assertEqual(item.item_type(), "Data Store")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -105,36 +102,39 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_data_connection(self):
         name = "DC"
         add_dc(self.toolbox.project(), self.toolbox.item_factories, name)
-        # Check that an item with the created name is found from project item model
-        found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.item(found_index).project_item
-        self.assertEqual(found_item.name, name)
+        # Check that an item with the created name is in project
+        item = self.toolbox.project().get_item(name)
+        self.assertEqual(item.name, name)
         # Check that the created item is a Data Connection
-        self.assertEqual(found_item.item_type(), "Data Connection")
+        self.assertEqual(item.item_type(), "Data Connection")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
+        # test get_items_by_type()
+        data_connections = self.toolbox.project().get_items_by_type("Data Connection")
+        self.assertEqual(1, len(data_connections))
+        self.assertIsInstance(data_connections[0], ProjectItem)
+        tools = self.toolbox.project().get_items_by_type("Tool")
+        self.assertEqual(0, len(tools))
 
     def test_add_tool(self):
         name = "Tool"
         add_tool(self.toolbox.project(), self.toolbox.item_factories, name)
-        # Check that an item with the created name is found from project item model
-        found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.item(found_index).project_item
-        self.assertEqual(found_item.name, name)
+        # Check that an item with the created name is in project
+        item = self.toolbox.project().get_item(name)
+        self.assertEqual(item.name, name)
         # Check that the created item is a Tool
-        self.assertEqual(found_item.item_type(), "Tool")
+        self.assertEqual(item.item_type(), "Tool")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
     def test_add_view(self):
         name = "View"
         add_view(self.toolbox.project(), self.toolbox.item_factories, name)
-        # Check that an item with the created name is found from project item model
-        found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.item(found_index).project_item
-        self.assertEqual(found_item.name, name)
+        # Check that an item with the created name is in project
+        item = self.toolbox.project().get_item(name)
+        self.assertEqual(item.name, name)
         # Check that the created item is a View
-        self.assertEqual(found_item.item_type(), "View")
+        self.assertEqual(item.item_type(), "View")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -173,6 +173,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(exporter_name, exporter.name)
         merger = p.get_item(merger_name)
         self.assertEqual(merger_name, merger.name)
+        # Test has_items(), and get_items()
+        self.assertTrue(p.has_items())
+        self.assertEqual(8, len(p.get_items()))
         # DAG handler should now have eight graphs, each with one item
         dags = [dag for dag in self.toolbox.project()._dag_iterator()]
         self.assertEqual(8, len(dags))
@@ -197,10 +200,10 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_remove_item_by_name(self):
         view_name = "View"
         add_view(self.toolbox.project(), self.toolbox.item_factories, view_name)
-        view = self.toolbox.project_item_model.get_item(view_name)
+        view = self.toolbox.project().get_item(view_name)
         self.assertEqual(view_name, view.name)
         self.toolbox.project().remove_item_by_name(view_name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 0)
+        self.assertEqual(self.toolbox.project().n_items, 0)
 
     def test_remove_item_by_name_removes_outgoing_connections(self):
         project = self.toolbox.project()
@@ -209,16 +212,16 @@ class TestSpineToolboxProject(unittest.TestCase):
         view2_name = "View 2"
         add_view(project, self.toolbox.item_factories, view2_name)
         project.add_connection(LoggingConnection(view1_name, "top", view2_name, "bottom", toolbox=self.toolbox))
-        view = self.toolbox.project_item_model.get_item(view1_name)
+        view = self.toolbox.project().get_item(view1_name)
         self.assertEqual(view1_name, view.name)
-        view = self.toolbox.project_item_model.get_item(view2_name)
+        view = self.toolbox.project().get_item(view2_name)
         self.assertEqual(view2_name, view.name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
+        self.assertEqual(self.toolbox.project().n_items, 2)
         self.assertEqual(len(project.connections), 1)
         project.remove_item_by_name(view1_name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
+        self.assertEqual(self.toolbox.project().n_items, 1)
         self.assertEqual(len(project.connections), 0)
-        view = self.toolbox.project_item_model.get_item(view2_name)
+        view = self.toolbox.project().get_item(view2_name)
         self.assertEqual(view2_name, view.name)
         self.assertTrue(self.node_is_isolated(project, view2_name))
 
@@ -229,16 +232,16 @@ class TestSpineToolboxProject(unittest.TestCase):
         view2_name = "View 2"
         add_view(project, self.toolbox.item_factories, view2_name)
         project.add_connection(LoggingConnection(view1_name, "top", view2_name, "bottom", toolbox=self.toolbox))
-        view = self.toolbox.project_item_model.get_item(view1_name)
+        view = self.toolbox.project().get_item(view1_name)
         self.assertEqual(view1_name, view.name)
-        view = self.toolbox.project_item_model.get_item(view2_name)
+        view = self.toolbox.project().get_item(view2_name)
         self.assertEqual(view2_name, view.name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
+        self.assertEqual(self.toolbox.project().n_items, 2)
         self.assertEqual(len(project.connections), 1)
         project.remove_item_by_name(view2_name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
+        self.assertEqual(self.toolbox.project().n_items, 1)
         self.assertEqual(len(project.connections), 0)
-        view = self.toolbox.project_item_model.get_item(view1_name)
+        view = self.toolbox.project().get_item(view1_name)
         self.assertEqual(view1_name, view.name)
         self.assertTrue(self.node_is_isolated(project, view1_name))
 
@@ -596,7 +599,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_and_save_specification_with_local_data(self):
         project = self.toolbox.project()
         specification = _MockSpecificationWithLocalData(
-            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "a specification", "Specification for testing.", "Tester", "my precious data"
         )
         project.add_specification(specification)
         self.assertTrue(specification.is_equivalent(project.get_specification("a specification")))
@@ -621,13 +624,13 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_renaming_specification_with_local_data_updates_local_data_file(self):
         project = self.toolbox.project()
         original_specification = _MockSpecificationWithLocalData(
-            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "a specification", "Specification for testing.", "Tester", "my precious data"
         )
         project.add_specification(original_specification)
         local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
         self.assertTrue(local_data_file.exists())
         specification = _MockSpecificationWithLocalData(
-            "another specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "another specification", "Specification for testing.", "Tester", "my precious data"
         )
         project.replace_specification("a specification", specification)
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
@@ -648,7 +651,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_replace_specification_with_local_data_by_one_without_removes_local_data_from_the_file(self):
         project = self.toolbox.project()
         specification_with_local_data = _MockSpecificationWithLocalData(
-            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "a specification", "Specification for testing.", "Tester", "my precious data"
         )
         project.add_specification(specification_with_local_data)
         local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
@@ -671,7 +674,7 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def _make_mock_executable(self, item):
         item_name = item.name
-        item = self.toolbox.project_item_model.get_item(item_name).project_item
+        item = self.toolbox.project().get_item(item_name)
         item_executable = _MockExecutableItem(item_name, self.toolbox.project().project_dir, self.toolbox)
         animation = QVariantAnimation()
         animation.setDuration(0)
@@ -720,10 +723,6 @@ class _MockItemWithLocalData(ProjectItem):
     def item_type():
         return "Tester"
 
-    @staticmethod
-    def item_category():
-        return "Tools"
-
     def set_rank(self, rank):
         pass
 
@@ -748,8 +747,8 @@ class _MockSpecification(ProjectItemSpecification):
 
 
 class _MockSpecificationWithLocalData(ProjectItemSpecification):
-    def __init__(self, name, description, item_type, item_category, local_data):
-        super().__init__(name, description, item_type, item_category)
+    def __init__(self, name, description, item_type, local_data):
+        super().__init__(name, description, item_type)
         self._local_data = local_data
 
     def to_dict(self):

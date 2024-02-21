@@ -10,11 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains machinery to deal with item metadata editor.
-"""
+"""Contains machinery to deal with item metadata editor."""
 from PySide6.QtCore import Slot, QModelIndex
-
 from ..mvcmodels.entity_tree_item import EntityItem
 from ..mvcmodels.item_metadata_table_model import ItemMetadataTableModel
 
