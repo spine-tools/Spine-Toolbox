@@ -6,7 +6,7 @@ on:
   push:
     paths:
       - "**.py"
-      - ".github/workflows/*.yml"
+      - ".github/workflows/test_runner.yml"
       - "requirements.txt"
       - "pyproject.toml"
       - "execution_tests/**"
