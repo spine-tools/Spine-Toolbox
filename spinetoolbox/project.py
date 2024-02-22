@@ -1121,12 +1121,12 @@ class SpineToolboxProject(MetaObject):
         for dag in [dag for dag in self._dag_iterator() if set(names) & dag.nodes]:
             more_dags = self._split_to_subdags(dag, names)
             dags += more_dags
+        valid_dags = self._validate_dags(dags)
         execution_permit_list = list()
-        for dag in dags:
+        for dag in valid_dags:
             execution_permits = {name: name in names for name in dag.nodes}
             execution_permit_list.append(execution_permits)
-        self._validate_dags(dags)
-        self.execute_dags(dags, execution_permit_list, "Executing Selected Directed Acyclic Graphs")
+        self.execute_dags(valid_dags, execution_permit_list, "Executing Selected Directed Acyclic Graphs")
 
     def _split_to_subdags(self, dag, selected_items):
         """Checks if given dag contains weakly connected components. If it does,
@@ -1142,8 +1142,13 @@ class SpineToolboxProject(MetaObject):
         """
         if len(dag.nodes) == 1:
             return [dag]
+        # Get selected items that are in current dag
+        selected_items_in_this_dag = list()
+        for selected_item in list(selected_items):
+            if selected_item in list(dag.nodes()):
+                selected_items_in_this_dag.append(selected_item)
         # List of Connections that have a selected item as its source or destination item
-        connections = connections_to_selected_items(self._connections, set(selected_items))
+        connections = connections_to_selected_items(self._connections, set(selected_items_in_this_dag))
         edges = dag_edges(connections)
         d = make_dag(edges)  # Make DAG as SpineEngine does it
         if nx.number_weakly_connected_components(d) > 1:
