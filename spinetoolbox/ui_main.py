@@ -737,7 +737,7 @@ class ToolboxUI(QMainWindow):
         self._project.tear_down()
         self._project = None
         self._disable_project_actions()
-        self.undo_stack.setClean()
+        self.undo_stack.clear()
         self.update_window_title()
         if clear_event_log:
             self.ui.textBrowser_eventlog.clear()
@@ -1727,6 +1727,15 @@ class ToolboxUI(QMainWindow):
         remove and rename actions in File-Edit menu, project tree view
         context menu, and in Design View context menus just before the
         menus are shown to user."""
+        if not self.project():
+            self.ui.actionCopy.setEnabled(False)
+            self.ui.actionPaste.setEnabled(False)
+            self.ui.actionPasteAndDuplicateFiles.setEnabled(False)
+            self.ui.actionDuplicate.setEnabled(False)
+            self.ui.actionDuplicateAndDuplicateFiles.setEnabled(False)
+            self.ui.actionRemove.setEnabled(False)
+            self.ui.actionRemove_all.setEnabled(False)
+            return
         clipboard = QApplication.clipboard()
         byte_data = clipboard.mimeData().data("application/vnd.spinetoolbox.ProjectItem")
         can_paste = not byte_data.isNull()
