@@ -297,7 +297,7 @@ class _SpecNameDescriptionToolbar(QToolBar):
         self.addWidget(widget)
         toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
         self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (Ctrl+ESC)")
-        self.show_toolbox_action.setShortcut(Qt.CTRL | Qt.Key_Escape)
+        self.show_toolbox_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_Escape.value))
         self.menu = self._make_main_menu()
         self.save_action = self.menu.addAction("Save")
         self.duplicate_action = self.menu.addAction("Duplicate")
@@ -306,7 +306,7 @@ class _SpecNameDescriptionToolbar(QToolBar):
         self.duplicate_action.setEnabled(self._parent.specification is not None)
         self.save_action.setShortcut(QKeySequence.Save)
         self.save_action.setIcon(QIcon(":/icons/menu_icons/save_solid.svg"))
-        self.duplicate_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_D))
+        self.duplicate_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_D.value))
         self.duplicate_action.setIcon(QIcon(":/icons/menu_icons/copy.svg"))
         self.close_action.setShortcut(QKeySequence.Close)
         self.close_action.setIcon(QIcon(":/icons/menu_icons/window-close.svg"))
@@ -325,7 +325,10 @@ class _SpecNameDescriptionToolbar(QToolBar):
         menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         action = QAction(self)
         action.triggered.connect(menu_button.showMenu)
-        keys = [QKeySequence(Qt.ALT | Qt.Key_F), QKeySequence(Qt.ALT | Qt.Key_E)]
+        keys = [
+            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_F.value),
+            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_E.value),
+        ]
         action.setShortcuts(keys)
         self._parent.addAction(action)
         keys_str = ", ".join([key.toString() for key in keys])
