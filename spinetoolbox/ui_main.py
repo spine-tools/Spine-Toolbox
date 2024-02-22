@@ -209,8 +209,6 @@ class ToolboxUI(QMainWindow):
         self.set_debug_qactions()
         # Finalize init
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
-        self.restore_dock_widgets()
-        self.restore_ui()
         self.ui.listView_console_executions.hide()
         self.ui.listView_console_executions.installEventFilter(self)
         self.parse_project_item_modules()
@@ -229,6 +227,9 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._plugin_manager = PluginManager(self)
         self._plugin_manager.load_installed_plugins()
+        self.refresh_toolbars()
+        self.restore_dock_widgets()
+        self.restore_ui()
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
@@ -648,13 +649,15 @@ class ToolboxUI(QMainWindow):
 
     def refresh_toolbars(self):
         """Set toolbars' color using the highest possible contrast."""
+        self.execute_toolbar.set_color(QColor("silver"))
+        if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
+            self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
         all_toolbars = list(self._toolbars())
         for k, toolbar in enumerate(all_toolbars):
             color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
             toolbar.set_color(color)
-            self.addToolBar(Qt.TopToolBarArea, toolbar)
-        self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
-        self.execute_toolbar.set_color(QColor("silver"))
+            if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
+                self.addToolBar(Qt.TopToolBarArea, toolbar)
 
     @Slot()
     def show_recent_projects_menu(self):

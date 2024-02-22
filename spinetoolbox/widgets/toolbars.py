@@ -98,16 +98,34 @@ class ToolBar(QToolBar):
         for button in self.findChildren(NiceButton):
             button.setEnabled(enabled)
 
+    def _process_tool_button(self, button):
+        button.set_orientation(self.orientation())
+        self.orientationChanged.connect(button.set_orientation)
+
+    def _insert_tool_button(self, before, button):
+        """Inserts button into the toolbar.
+
+        Args:
+            before (QWidget): insert before this widget
+            button (QToolButton): button to add
+
+        Returns:
+            QAction
+        """
+        self._process_tool_button(button)
+        return self.insertWidget(before, button)
+
     def _add_tool_button(self, button):
         """Adds a button to the toolbar.
 
         Args:
             button (QToolButton): button to add
+
+        Returns:
+            QAction
         """
-        button.setStyleSheet("QToolButton{padding: 2px}")
-        button.set_orientation(self.orientation())
-        self.orientationChanged.connect(button.set_orientation)
-        self.addWidget(button)
+        self._process_tool_button(button)
+        return self.addWidget(button)
 
     def _make_tool_button(self, icon, text, slot=None, tip=None):
         """Makes a new tool button and adds it to the toolbar.
@@ -171,7 +189,7 @@ class PluginToolBar(ToolBar):
                 button.setIconSize(self.iconSize())
                 if spec.name in disabled_names:
                     button.setEnabled(False)
-                self.addWidget(button)
+                self._add_tool_button(button)
                 self._buttons[spec.name] = button
 
     @Slot(str, str)
@@ -211,7 +229,11 @@ class SpecToolBar(ToolBar):
         icon = self._icon_from_factory(factory)
         button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
         button.setIconSize(self.iconSize())
-        action = self.insertWidget(self._actions[next_spec.name], button) if next_spec else self.addWidget(button)
+        action = (
+            self._insert_tool_button(self._actions[next_spec.name], button)
+            if next_spec
+            else self._add_tool_button(button)
+        )
         self._actions[spec.name] = action
 
     @Slot(QModelIndex, int, int)
@@ -296,9 +318,7 @@ class ItemsToolBar(ToolBar):
             return
         icon = self._icon_from_factory(factory)
         button = ProjectItemButton(self._toolbox, item_type, icon)
-        button.set_orientation(self.orientation())
-        self.orientationChanged.connect(button.set_orientation)
-        self.addWidget(button)
+        self._add_tool_button(button)
         self._buttons.append(button)
 
     def dragLeaveEvent(self, event):
