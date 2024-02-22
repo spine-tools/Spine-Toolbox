@@ -13,8 +13,8 @@
 """Classes for custom QListView."""
 from textwrap import fill
 from PySide6.QtCore import Qt, Signal, Slot, QMimeData
-from PySide6.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QIconEngine
-from PySide6.QtWidgets import QToolButton, QApplication
+from PySide6.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QIconEngine, QCursor
+from PySide6.QtWidgets import QToolButton, QApplication, QToolTip
 
 
 class ProjectItemDragMixin:
@@ -93,6 +93,11 @@ class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
         self.setMouseTracking(True)
         self.drag_about_to_start.connect(self._handle_drag_about_to_start)
         self.setStyleSheet("QToolButton{padding: 2px}")
+        self.clicked.connect(self._show_tool_tip)
+
+    @Slot(bool)
+    def _show_tool_tip(self, _=False):
+        QToolTip.showText(QCursor.pos(), self.toolTip())
 
     def set_colored_icons(self, colored):
         self._icon.set_colored(colored)

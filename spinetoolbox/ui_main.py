@@ -31,7 +31,17 @@ from PySide6.QtCore import (
     QUrl,
     QEvent,
 )
-from PySide6.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow, QAction, QUndoStack
+from PySide6.QtGui import (
+    QDesktopServices,
+    QGuiApplication,
+    QKeySequence,
+    QIcon,
+    QCursor,
+    QWindow,
+    QAction,
+    QUndoStack,
+    QColor,
+)
 from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -172,8 +182,8 @@ class ToolboxUI(QMainWindow):
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         self.kernels_menu = KernelsPopupMenu(self)
         # Make and initialize toolbars
-        self.base_toolbar = toolbars.BaseToolBar(self)
-        self.project_toolbar = toolbars.ProjectToolBar(self)
+        self.items_toolbar = toolbars.ItemsToolBar(self)
+        self.spec_toolbar = toolbars.SpecToolBar(self)
         self.execute_toolbar = toolbars.ExecuteToolBar(
             self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
         )
@@ -206,8 +216,8 @@ class ToolboxUI(QMainWindow):
         self.parse_project_item_modules()
         self.init_specification_model()
         self.make_item_properties_uis()
-        self.base_toolbar.setup()
-        self.project_toolbar.setup()
+        self.items_toolbar.setup()
+        self.spec_toolbar.setup()
         self.execute_toolbar.setup()
         self.link_properties_widgets = {
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
@@ -350,9 +360,7 @@ class ToolboxUI(QMainWindow):
 
     def _update_execute_enabled(self):
         enabled_by_project = self._project.settings.enable_execute_all if self._project is not None else False
-        self.ui.actionExecute_project.setEnabled(
-            enabled_by_project and not self.execution_in_progress
-        )
+        self.ui.actionExecute_project.setEnabled(enabled_by_project and not self.execution_in_progress)
         if not enabled_by_project:
             self.ui.actionExecute_project.setToolTip("Executing entire project disabled by project settings.")
         else:
@@ -603,8 +611,8 @@ class ToolboxUI(QMainWindow):
 
     def _toolbars(self):
         """Yields all toolbars in the window."""
-        yield self.base_toolbar
-        yield self.project_toolbar
+        yield self.items_toolbar
+        yield self.spec_toolbar
         yield from self._plugin_manager.plugin_toolbars.values()
 
     def set_toolbar_colored_icons(self, checked):
@@ -646,6 +654,7 @@ class ToolboxUI(QMainWindow):
             toolbar.set_color(color)
             self.addToolBar(Qt.TopToolBarArea, toolbar)
         self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
+        self.execute_toolbar.set_color(QColor("silver"))
 
     @Slot()
     def show_recent_projects_menu(self):
@@ -1353,8 +1362,8 @@ class ToolboxUI(QMainWindow):
 
     def add_menu_actions(self):
         """Adds extra actions to Edit and View menu."""
-        self.ui.menuToolbars.addAction(self.base_toolbar.toggleViewAction())
-        self.ui.menuToolbars.addAction(self.project_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.items_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.spec_toolbar.toggleViewAction())
         self.ui.menuToolbars.addAction(self.execute_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
@@ -1746,10 +1755,7 @@ class ToolboxUI(QMainWindow):
         can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
         has_items = self.project().n_items > 0
         selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
-        _methods = [
-            getattr(self.project().get_item(x.name()), "copy_local_data")
-            for x in selected_project_items
-        ]
+        _methods = [getattr(self.project().get_item(x.name()), "copy_local_data") for x in selected_project_items]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
         # Renaming an item should always be allowed except when it's a Data Store that is open in an editor
         for item in (self.project().get_item(x.name()) for x in selected_project_items):
@@ -1955,7 +1961,7 @@ class ToolboxUI(QMainWindow):
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             self.update_recent_projects()
-        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.base_toolbar.icon_ordering())
+        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))

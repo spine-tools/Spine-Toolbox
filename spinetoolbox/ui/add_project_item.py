@@ -159,6 +159,7 @@ class Ui_Form(object):
         self.lineEdit_description.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Item description (optional)</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_description.setPlaceholderText(QCoreApplication.translate("Form", u"Type item description here...", None))
+        self.comboBox_specification.setPlaceholderText(QCoreApplication.translate("Form", u"Select specification...", None))
 #if QT_CONFIG(tooltip)
         self.label_folder.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Folder name that is created to project folder</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)

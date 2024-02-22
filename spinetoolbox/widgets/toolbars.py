@@ -14,9 +14,9 @@
 Functions to make and handle QToolBars.
 """
 
-from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtCore import Qt, Slot, QModelIndex, QPoint
 from PySide6.QtWidgets import QToolBar, QToolButton, QMenu
-from PySide6.QtGui import QIcon, QPainter, QFontMetrics
+from PySide6.QtGui import QIcon, QPainter, QFontMetrics, QPainterPath
 from ..helpers import make_icon_toolbar_ss, ColoredIcon, CharIconEngine
 from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton
 
@@ -35,8 +35,6 @@ class ToolBar(QToolBar):
         self.setObjectName(name.replace(" ", "_"))
         self._toolbox = toolbox
         self._title_font = self.font()
-        self._title_font.setItalic(True)
-        self._title_font.setBold(True)
         self._title_font.setPointSize(self._title_font.pointSize() - 2)
         self._title_height = QFontMetrics(self._title_font).height()
         self._title_margin = 0.25 * self._title_height
@@ -67,8 +65,15 @@ class ToolBar(QToolBar):
                     w.move(pos.x(), pos.y() + adjustment)
         super().paintEvent(ev)
         painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
         painter.setFont(self._title_font)
-        painter.drawText(2 * self._title_margin, self._title_height + self._title_margin, self.name())
+        point = QPoint(2 * self._title_margin, self._title_height + self._title_margin)
+        path = QPainterPath()
+        path.addText(point, self._title_font, self.name())
+        painter.setPen(Qt.white)
+        painter.drawPath(path)
+        painter.setPen(Qt.black)
+        painter.drawText(point, self.name())
         painter.end()
 
     def set_colored_icons(self, colored):
@@ -178,14 +183,11 @@ class PluginToolBar(ToolBar):
         button.spec_name = new_name
 
 
-class ProjectToolBar(ToolBar):
+class SpecToolBar(ToolBar):
     def __init__(self, parent):
-        super().__init__("Project specific", parent)  # Inherits stylesheet from ToolboxUI
+        super().__init__("Specifications", parent)  # Inherits stylesheet from ToolboxUI
         self._actions = {}
         self._model = None
-
-    def name(self):
-        return self._name + " items"
 
     def buttons(self):
         return (self.widgetForAction(a) for a in self._actions.values())
@@ -254,7 +256,7 @@ class ProjectToolBar(ToolBar):
         button.setMenu(menu)
 
 
-class BaseToolBar(ToolBar):
+class ItemsToolBar(ToolBar):
     """The base items"""
 
     _SEPARATOR = ";;"
@@ -264,14 +266,11 @@ class BaseToolBar(ToolBar):
         Args:
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__("Generic", parent)  # Inherits stylesheet from ToolboxUI
+        super().__init__("Generic items", parent)  # Inherits stylesheet from ToolboxUI
         self._buttons = []
         self._drop_source_action = None
         self._drop_target_action = None
         self.setAcceptDrops(True)
-
-    def name(self):
-        return self._name + " items"
 
     def buttons(self):
         return self._buttons
@@ -293,7 +292,7 @@ class BaseToolBar(ToolBar):
             self._add_project_item_button(item_type, factory)
 
     def _add_project_item_button(self, item_type, factory):
-        if factory.is_deprecated() or self._toolbox.supports_specification(item_type):
+        if factory.is_deprecated():
             return
         icon = self._icon_from_factory(factory)
         button = ProjectItemButton(self._toolbox, item_type, icon)
