@@ -233,7 +233,6 @@ class TestToolboxUI(unittest.TestCase):
             self.toolbox.show_project_or_item_context_menu(QPoint(0, 0), dc)
 
     def test_refresh_edit_action_states(self):
-        QApplication.clipboard().clear()
         self.toolbox.refresh_edit_action_states()
         # No project
         self.assertFalse(self.toolbox.ui.actionCopy.isEnabled())
@@ -257,7 +256,9 @@ class TestToolboxUI(unittest.TestCase):
         dc = self.toolbox.project().get_item("DC")
         icon = dc.get_icon()
         icon.setSelected(True)
-        self.toolbox.refresh_edit_action_states()
+        with mock.patch("spinetoolbox.ui_main.QApplication.clipboard") as mock_clipboard:
+            self.toolbox.refresh_edit_action_states()
+            mock_clipboard.assert_called()
         self.assertTrue(self.toolbox.ui.actionCopy.isEnabled())
         self.assertFalse(self.toolbox.ui.actionPaste.isEnabled())
         self.assertFalse(self.toolbox.ui.actionPasteAndDuplicateFiles.isEnabled())
