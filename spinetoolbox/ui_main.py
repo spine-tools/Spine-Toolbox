@@ -737,7 +737,7 @@ class ToolboxUI(QMainWindow):
         self._project.tear_down()
         self._project = None
         self._disable_project_actions()
-        self.undo_stack.setClean()
+        self.undo_stack.clear()
         self.update_window_title()
         if clear_event_log:
             self.ui.textBrowser_eventlog.clear()
@@ -1727,6 +1727,9 @@ class ToolboxUI(QMainWindow):
         remove and rename actions in File-Edit menu, project tree view
         context menu, and in Design View context menus just before the
         menus are shown to user."""
+        if not self.project():
+            self.disable_edit_actions()
+            return
         clipboard = QApplication.clipboard()
         byte_data = clipboard.mimeData().data("application/vnd.spinetoolbox.ProjectItem")
         can_paste = not byte_data.isNull()
@@ -1757,6 +1760,16 @@ class ToolboxUI(QMainWindow):
         self.ui.actionRemove.setEnabled(bool(selected_items))
         self.ui.actionRemove_all.setEnabled(has_items)
 
+    def disable_edit_actions(self):
+        """Disables edit actions."""
+        self.ui.actionCopy.setEnabled(False)
+        self.ui.actionPaste.setEnabled(False)
+        self.ui.actionPasteAndDuplicateFiles.setEnabled(False)
+        self.ui.actionDuplicate.setEnabled(False)
+        self.ui.actionDuplicateAndDuplicateFiles.setEnabled(False)
+        self.ui.actionRemove.setEnabled(False)
+        self.ui.actionRemove_all.setEnabled(False)
+
     @Slot()
     def enable_edit_actions(self):
         """Enables project item edit actions after a QMenu has been shown.
@@ -1767,6 +1780,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionPasteAndDuplicateFiles.setEnabled(True)
         self.ui.actionDuplicate.setEnabled(True)
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(True)
+        self.ui.actionRemove.setEnabled(True)
 
     def _tasks_before_exit(self):
         """Returns a list of tasks to perform before exiting the application.

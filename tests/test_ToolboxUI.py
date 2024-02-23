@@ -232,6 +232,50 @@ class TestToolboxUI(unittest.TestCase):
             dc = self.toolbox.project().get_item("DC")
             self.toolbox.show_project_or_item_context_menu(QPoint(0, 0), dc)
 
+    def test_refresh_edit_action_states(self):
+        self.toolbox.refresh_edit_action_states()
+        # No project
+        self.assertFalse(self.toolbox.ui.actionCopy.isEnabled())
+        self.assertFalse(self.toolbox.ui.actionPaste.isEnabled())
+        self.assertFalse(self.toolbox.ui.actionPasteAndDuplicateFiles.isEnabled())
+        self.assertFalse(self.toolbox.ui.actionDuplicate.isEnabled())
+        self.assertFalse(self.toolbox.ui.actionDuplicateAndDuplicateFiles.isEnabled())
+        self.assertFalse(self.toolbox.ui.actionRemove.isEnabled())
+        self.assertFalse(self.toolbox.ui.actionRemove_all.isEnabled())
+        # Make project
+        self._temp_dir = TemporaryDirectory()
+        with mock.patch("spinetoolbox.ui_main.QSettings.setValue") as mock_set_value, mock.patch(
+            "spinetoolbox.ui_main.QSettings.sync"
+        ) as mock_sync, mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+            mock_dir_getter.return_value = self._temp_dir.name
+            self.toolbox.new_project()
+            mock_set_value.assert_called()
+            mock_sync.assert_called()
+            mock_dir_getter.assert_called()
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        dc = self.toolbox.project().get_item("DC")
+        icon = dc.get_icon()
+        icon.setSelected(True)
+        with mock.patch("spinetoolbox.ui_main.QApplication.clipboard") as mock_clipboard:
+            self.toolbox.refresh_edit_action_states()
+            mock_clipboard.assert_called()
+        self.assertTrue(self.toolbox.ui.actionCopy.isEnabled())
+        self.assertFalse(self.toolbox.ui.actionPaste.isEnabled())
+        self.assertFalse(self.toolbox.ui.actionPasteAndDuplicateFiles.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionDuplicate.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionDuplicateAndDuplicateFiles.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionRemove.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionRemove_all.isEnabled())
+        # Cover enable_edit_actions()
+        self.toolbox.enable_edit_actions()
+        self.assertTrue(self.toolbox.ui.actionCopy.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionPaste.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionPasteAndDuplicateFiles.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionDuplicate.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionDuplicateAndDuplicateFiles.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionRemove.isEnabled())
+        self.assertTrue(self.toolbox.ui.actionRemove_all.isEnabled())
+
     def test_selection_in_design_view_1(self):
         """Test item selection in Design View. Simulates mouse click on a Data Connection item.
         Test a single item selection.
