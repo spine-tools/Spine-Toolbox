@@ -233,6 +233,7 @@ class TestToolboxUI(unittest.TestCase):
             self.toolbox.show_project_or_item_context_menu(QPoint(0, 0), dc)
 
     def test_refresh_edit_action_states(self):
+        QApplication.clipboard().clear()
         self.toolbox.refresh_edit_action_states()
         # No project
         self.assertFalse(self.toolbox.ui.actionCopy.isEnabled())
