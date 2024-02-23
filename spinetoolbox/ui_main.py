@@ -1718,7 +1718,8 @@ class ToolboxUI(QMainWindow):
         action = menu.exec(pos)
         if action is self.ui.actionTake_link:
             self.ui.graphicsView.take_link(link)
-        self.refresh_edit_action_states()
+        self.refresh_edit_action_states()  # Disables actionRemove because take_link clears selections
+        self.ui.actionRemove.setEnabled(True)
         menu.deleteLater()
 
     @Slot()
