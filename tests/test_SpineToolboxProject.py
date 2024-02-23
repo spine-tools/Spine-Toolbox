@@ -368,17 +368,23 @@ class TestSpineToolboxProject(unittest.TestCase):
             self.assertTrue(dc3_executable.execute_called)
             self.assertTrue(dc5_executable.execute_called)
 
-    def test_executing_cyclic_dag_fails_graciously(self):
+    def test_making_a_cyclic_dag_is_not_allowed(self):
         item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
         item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
         self.toolbox.project().add_connection(
             LoggingConnection(item1.name, "right", item2.name, "left", toolbox=self.toolbox)
         )
-        self.toolbox.project().add_connection(
-            LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
-        )
-        self.toolbox.project().execute_project()
-        self.assertFalse(self.toolbox.project()._execution_in_progress)
+        with mock.patch("spinetoolbox.project.Notification.show") as mock_show_notification:
+            mock_show_notification.return_value = True
+            self.toolbox.project().add_connection(
+                LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
+            )
+            mock_show_notification.assert_called()
+        # There should be only one connection in the project, because the second add_connection
+        # creates a loop, which is not allowed
+        self.assertEqual(1, len(self.toolbox.project().connections))
+        self.assertEqual("DC", self.toolbox.project().connections[0].source)
+        self.assertEqual("View", self.toolbox.project().connections[0].destination)
 
     def test_rename_project(self):
         new_name = "New Project Name"

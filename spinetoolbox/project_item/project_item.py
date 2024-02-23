@@ -299,23 +299,6 @@ class ProjectItem(LogMixin, MetaObject):
             new (list of ProjectItemResource): new resources
         """
 
-    def invalidate_workflow(self, edges):
-        """Notifies that this item's workflow is not acyclic.
-
-        Args:
-            edges (list): A list of edges that make the graph acyclic after removing them.
-        """
-        edges = ", ".join("{0} -> {1}".format(*edge) for edge in edges)
-        self.clear_notifications()
-        self.set_rank(None)
-        self.add_notification(
-            "The workflow defined for this item has loops and thus cannot be executed. "
-            f"Possible fix: remove link(s) {edges}."
-        )
-
-    def revalidate_workflow(self):
-        self.remove_notification("The workflow defined for this item has loops and thus cannot be executed.")
-
     def item_dict(self):
         """Returns a dictionary corresponding to this item.
 
