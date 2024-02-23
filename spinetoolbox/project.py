@@ -34,6 +34,7 @@ from spine_engine.utils.helpers import (
 )
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_engine.server.util.zip_handler import ZipHandler
+from .widgets.notification import Notification
 from .project_settings import ProjectSettings
 from .server.engine_client import EngineClient
 from .metaobject import MetaObject
@@ -761,7 +762,13 @@ class SpineToolboxProject(MetaObject):
         self.connection_established.emit(connection)
         self._update_jump_icons()
         if not self._is_dag_valid(dag):
-            return True  # Connection was added successfully even though DAG is not valid.
+            self.remove_connection(connection)
+            n = Notification(
+                self._toolbox,
+                "Feedback loops not allowed. Draw the link again with the ALT key pressed to make a Jump link.",
+            )
+            n.show()
+            return False
         destination = self._project_items[connection.destination]
         source = self._project_items[connection.source]
         if notify_resource_changes:
@@ -1432,12 +1439,7 @@ class SpineToolboxProject(MetaObject):
 
     def _is_dag_valid(self, dag):
         if not nx.is_directed_acyclic_graph(dag):
-            edges = _edges_causing_loops(dag)
-            for node in dag.nodes:
-                self._project_items[node].invalidate_workflow(edges)
             return False
-        for node in dag.nodes:
-            self._project_items[node].revalidate_workflow()
         return True
 
     def _update_ranks(self, dag):
@@ -1560,31 +1562,8 @@ def node_successors(g):
     return {n: list(g.successors(n)) for n in nx.topological_sort(g)}
 
 
-def _edges_causing_loops(g):
-    """Returns a list of edges whose removal from g results in it becoming acyclic.
-
-    Args:
-        g (DiGraph)
-
-    Returns:
-        list
-    """
-    result = list()
-    h = g.copy()  # Let's work on a copy of the graph
-    while True:
-        try:
-            cycle = list(nx.find_cycle(h))
-        except nx.NetworkXNoCycle:
-            break
-        edge = random.choice(cycle)
-        h.remove_edge(*edge)
-        result.append(edge)
-    return result
-
-
 def _ranks(node_successors):
-    """
-    Calculates node ranks.
+    """Calculates node ranks.
 
     Args:
         node_successors (dict): a mapping from successor name to a list of predecessor names
