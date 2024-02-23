@@ -87,13 +87,13 @@ class OpenProjectDialog(QDialog):
 
     def set_keyboard_shortcuts(self):
         """Creates keyboard shortcuts for the 'Root', 'Home', etc. buttons."""
-        self.go_root_action.setShortcut(QKeySequence(Qt.Key_F1))
+        self.go_root_action.setShortcut(QKeySequence(Qt.Key.Key_F1))
         self.addAction(self.go_root_action)
-        self.go_home_action.setShortcut(QKeySequence(Qt.Key_F2))
+        self.go_home_action.setShortcut(QKeySequence(Qt.Key.Key_F2))
         self.addAction(self.go_home_action)
-        self.go_documents_action.setShortcut(QKeySequence(Qt.Key_F3))
+        self.go_documents_action.setShortcut(QKeySequence(Qt.Key.Key_F3))
         self.addAction(self.go_documents_action)
-        self.go_desktop_action.setShortcut(QKeySequence(Qt.Key_F4))
+        self.go_desktop_action.setShortcut(QKeySequence(Qt.Key.Key_F4))
         self.addAction(self.go_desktop_action)
 
     def connect_signals(self):

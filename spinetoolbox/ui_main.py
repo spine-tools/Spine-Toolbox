@@ -1336,8 +1336,8 @@ class ToolboxUI(QMainWindow):
 
     def set_debug_qactions(self):
         """Sets shortcuts for QActions that may be needed in debugging."""
-        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_0))
-        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_8))
+        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_0.value))
+        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_8.value))
         self.addAction(self.show_properties_tabbar)
         self.addAction(self.show_supported_img_formats)
 
