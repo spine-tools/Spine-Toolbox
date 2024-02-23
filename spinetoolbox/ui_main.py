@@ -652,12 +652,13 @@ class ToolboxUI(QMainWindow):
         self.execute_toolbar.set_color(QColor("silver"))
         if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
             self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
+            self.addToolBarBreak(Qt.TopToolBarArea)
         all_toolbars = list(self._toolbars())
         for k, toolbar in enumerate(all_toolbars):
             color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
             toolbar.set_color(color)
             if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
-                self.addToolBar(Qt.TopToolBarArea, toolbar)
+                self.addToolBar(Qt.LeftToolBarArea, toolbar)
 
     @Slot()
     def show_recent_projects_menu(self):

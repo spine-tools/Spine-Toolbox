@@ -35,7 +35,7 @@ class ToolBar(QToolBar):
         self.setObjectName(name.replace(" ", "_"))
         self._toolbox = toolbox
         self._title_font = self.font()
-        self._title_font.setPointSize(self._title_font.pointSize() - 2)
+        self._title_font.setPointSize(self._title_font.pointSize() - 3)
         self._title_height = QFontMetrics(self._title_font).height()
         self._title_margin = 0.25 * self._title_height
 
