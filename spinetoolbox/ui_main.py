@@ -31,7 +31,17 @@ from PySide6.QtCore import (
     QUrl,
     QEvent,
 )
-from PySide6.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow, QAction, QUndoStack
+from PySide6.QtGui import (
+    QDesktopServices,
+    QGuiApplication,
+    QKeySequence,
+    QIcon,
+    QCursor,
+    QWindow,
+    QAction,
+    QUndoStack,
+    QColor,
+)
 from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -172,10 +182,11 @@ class ToolboxUI(QMainWindow):
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         self.kernels_menu = KernelsPopupMenu(self)
         # Make and initialize toolbars
-        self.main_toolbar = toolbars.MainToolBar(
+        self.items_toolbar = toolbars.ItemsToolBar(self)
+        self.spec_toolbar = toolbars.SpecToolBar(self)
+        self.execute_toolbar = toolbars.ExecuteToolBar(
             self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
         )
-        self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self._original_execute_project_action_tooltip = self.ui.actionExecute_project.toolTip()
         self.setStatusBar(None)
         # Additional consoles for item execution
@@ -198,14 +209,14 @@ class ToolboxUI(QMainWindow):
         self.set_debug_qactions()
         # Finalize init
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
-        self.restore_dock_widgets()
-        self.restore_ui()
         self.ui.listView_console_executions.hide()
         self.ui.listView_console_executions.installEventFilter(self)
         self.parse_project_item_modules()
         self.init_specification_model()
         self.make_item_properties_uis()
-        self.main_toolbar.setup()
+        self.items_toolbar.setup()
+        self.spec_toolbar.setup()
+        self.execute_toolbar.setup()
         self.link_properties_widgets = {
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
@@ -216,6 +227,9 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._plugin_manager = PluginManager(self)
         self._plugin_manager.load_installed_plugins()
+        self.refresh_toolbars()
+        self.restore_dock_widgets()
+        self.restore_ui()
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
@@ -347,9 +361,7 @@ class ToolboxUI(QMainWindow):
 
     def _update_execute_enabled(self):
         enabled_by_project = self._project.settings.enable_execute_all if self._project is not None else False
-        self.ui.actionExecute_project.setEnabled(
-            enabled_by_project and not self.execution_in_progress
-        )
+        self.ui.actionExecute_project.setEnabled(enabled_by_project and not self.execution_in_progress)
         if not enabled_by_project:
             self.ui.actionExecute_project.setToolTip("Executing entire project disabled by project settings.")
         else:
@@ -600,8 +612,13 @@ class ToolboxUI(QMainWindow):
 
     def _toolbars(self):
         """Yields all toolbars in the window."""
-        yield self.main_toolbar
+        yield self.items_toolbar
+        yield self.spec_toolbar
         yield from self._plugin_manager.plugin_toolbars.values()
+
+    def set_toolbar_colored_icons(self, checked):
+        for toolbar in self._toolbars():
+            toolbar.set_colored_icons(checked)
 
     def _disable_project_actions(self):
         """Disables all project-related actions, except
@@ -632,10 +649,16 @@ class ToolboxUI(QMainWindow):
 
     def refresh_toolbars(self):
         """Set toolbars' color using the highest possible contrast."""
+        self.execute_toolbar.set_color(QColor("silver"))
+        if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
+            self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
+            self.addToolBarBreak(Qt.TopToolBarArea)
         all_toolbars = list(self._toolbars())
         for k, toolbar in enumerate(all_toolbars):
             color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
             toolbar.set_color(color)
+            if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
+                self.addToolBar(Qt.LeftToolBarArea, toolbar)
 
     @Slot()
     def show_recent_projects_menu(self):
@@ -1343,7 +1366,9 @@ class ToolboxUI(QMainWindow):
 
     def add_menu_actions(self):
         """Adds extra actions to Edit and View menu."""
-        self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.items_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.spec_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.execute_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
@@ -1738,10 +1763,7 @@ class ToolboxUI(QMainWindow):
         can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
         has_items = self.project().n_items > 0
         selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
-        _methods = [
-            getattr(self.project().get_item(x.name()), "copy_local_data")
-            for x in selected_project_items
-        ]
+        _methods = [getattr(self.project().get_item(x.name()), "copy_local_data") for x in selected_project_items]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
         # Renaming an item should always be allowed except when it's a Data Store that is open in an editor
         for item in (self.project().get_item(x.name()) for x in selected_project_items):
@@ -1958,7 +1980,7 @@ class ToolboxUI(QMainWindow):
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             self.update_recent_projects()
-        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.main_toolbar.icon_ordering())
+        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))

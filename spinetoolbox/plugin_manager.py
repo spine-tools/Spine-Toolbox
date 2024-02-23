@@ -104,7 +104,6 @@ class PluginManager:
         local_data = load_specification_local_data(project.config_dir) if project else {}
         for plugin_dir in plugins_dirs(self._toolbox.qsettings()):
             self.load_individual_plugin(plugin_dir, local_data)
-        self._toolbox.refresh_toolbars()
 
     def reload_plugins_with_local_data(self):
         """Reloads plugins that have project specific local data."""
@@ -152,7 +151,6 @@ class PluginManager:
         self._plugin_specs.update(plugin_specs)
         toolbar = self._plugin_toolbars[name] = PluginToolBar(name, parent=self._toolbox)
         toolbar.setup(plugin_specs, disabled_plugins)
-        self._toolbox.addToolBar(Qt.TopToolBarArea, toolbar)
 
     def _create_worker(self):
         worker = _PluginWorker()
