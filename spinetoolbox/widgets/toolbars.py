@@ -14,11 +14,53 @@
 Functions to make and handle QToolBars.
 """
 
-from PySide6.QtCore import Qt, Slot, QModelIndex, QPoint
-from PySide6.QtWidgets import QToolBar, QToolButton, QMenu
+from PySide6.QtCore import Qt, Slot, QModelIndex, QPoint, QSize
+from PySide6.QtWidgets import QToolBar, QToolButton, QMenu, QWidget
 from PySide6.QtGui import QIcon, QPainter, QFontMetrics, QPainterPath
 from ..helpers import make_icon_toolbar_ss, ColoredIcon, CharIconEngine
 from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton
+
+
+class _TitleWidget(QWidget):
+    def __init__(self, title, toolbar):
+        self._toolbar = toolbar
+        super().__init__()
+        self._title = title
+        font = self.font()
+        font.setPointSize(8)
+        self.setFont(font)
+        self.setMaximumSize(1, 1)
+        fm = QFontMetrics(self.font())
+        height = fm.height()
+        self.margin = 0.25 * height
+        self.desired_height = height + 2 * self.margin
+        self.desired_width = fm.horizontalAdvance(self._title) + 2 * self.margin
+
+    def sizeHint(self):
+        if self._toolbar.orientation() == Qt.Horizontal:
+            return QSize(1, 1)
+        return QSize(self.desired_width, self.desired_height)
+
+    def paintEvent(self, ev):
+        self.setFixedSize(self.sizeHint())
+        painter = QPainter(self)
+        self.do_paint(painter)
+        painter.end()
+
+    def do_paint(self, painter, x=None):
+        if x is None:
+            x = self.margin
+        pos = QPoint(x, self.desired_height - self.margin)
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setFont(self.font())
+        path = QPainterPath()
+        path.addText(pos, self.font(), self._title)
+        painter.setPen(Qt.white)
+        painter.drawPath(path)
+        painter.setPen(Qt.black)
+        painter.drawText(pos, self._title)
+        painter.restore()
 
 
 class ToolBar(QToolBar):
@@ -34,46 +76,41 @@ class ToolBar(QToolBar):
         self._name = name
         self.setObjectName(name.replace(" ", "_"))
         self._toolbox = toolbox
-        self._title_font = self.font()
-        self._title_font.setPointSize(8)
-        self._title_height = QFontMetrics(self._title_font).height()
-        self._title_margin = 0.25 * self._title_height
+        self.addWidget(_TitleWidget(self.name(), self))
 
     def name(self):
         return self._name
 
     def sizeHint(self):
         size = super().sizeHint()
-        title_width = QFontMetrics(self._title_font).horizontalAdvance(self.name())
-        size.setWidth(max(size.width(), 2 * self._title_margin + title_width))
-        size.setHeight(size.height() + self._title_height + self._title_margin)
+        layout = self.layout()
+        titles = [w for i in range(layout.count()) if isinstance((w := layout.itemAt(i).widget()), _TitleWidget)]
+        max_title_width = max(w.desired_width for w in titles)
+        size.setWidth(max(size.width(), max_title_width))
+        if self.orientation() == Qt.Horizontal:
+            max_title_height = max(w.desired_height for w in titles)
+            size.setHeight(size.height() + max_title_height)
         return size
 
     def paintEvent(self, ev):
+        if self.orientation() == Qt.Vertical:
+            super().paintEvent(ev)
+            return
         layout = self.layout()
-        widgets = [w for i in range(layout.count()) if isinstance((w := layout.itemAt(i).widget()), NiceButton)]
-        height = self._title_height + 3 * self._title_margin
-        if self.orientation() == Qt.Horizontal:
-            for w in widgets:
-                w.move(w.pos().x(), height)
-        elif self.orientation() == Qt.Vertical:
-            top_w = min(widgets, key=lambda w: w.pos().y())
-            adjustment = height - top_w.pos().y()
-            if adjustment > 0:
-                for w in widgets:
-                    pos = w.pos()
-                    w.move(pos.x(), pos.y() + adjustment)
+        titles = (w for i in range(layout.count()) if isinstance((w := layout.itemAt(i).widget()), _TitleWidget))
+        widgets = (w for i in range(layout.count()) if isinstance((w := layout.itemAt(i).widget()), NiceButton))
+        delta = max(w.desired_height + w.margin for w in titles)
+        for w in widgets:
+            w.move(w.pos().x(), delta)
         super().paintEvent(ev)
+        title_pos_x = (
+            (w, layout.itemAt(i + 1).widget().pos().x())
+            for i in range(layout.count())
+            if isinstance((w := layout.itemAt(i).widget()), _TitleWidget)
+        )
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.setFont(self._title_font)
-        point = QPoint(2 * self._title_margin, self._title_height + self._title_margin)
-        path = QPainterPath()
-        path.addText(point, self._title_font, self.name())
-        painter.setPen(Qt.white)
-        painter.drawPath(path)
-        painter.setPen(Qt.black)
-        painter.drawText(point, self.name())
+        for w, x in title_pos_x:
+            w.do_paint(painter, x)
         painter.end()
 
     def set_colored_icons(self, colored):
@@ -390,25 +427,14 @@ class ItemsToolBar(ToolBar):
         painter.end()
 
     def _drop_line(self):
-        widget = self.widgetForAction(self._drop_target_action) if self._drop_target_action is not None else None
+        target_widget = self.widgetForAction(self._drop_target_action) if self._drop_target_action is not None else None
+        last_widget = self.widgetForAction(self.actions()[-1])
         margins = self.layout().contentsMargins()
         if self.orientation() == Qt.Orientation.Horizontal:
-            x = (
-                widget.geometry().left()
-                if widget is not None
-                else self.widgetForAction(self.actions()[-1]).geometry().right()
-            ) - 1
-            return (
-                x,
-                self._title_height + 2 * self._title_margin + margins.top(),
-                x,
-                self.height() - self._title_margin - margins.bottom(),
-            )
-        y = (
-            widget.geometry().top()
-            if widget is not None
-            else self.widgetForAction(self.actions()[-1]).geometry().bottom()
-        ) - 1
+            x = (target_widget.geometry().left() if target_widget is not None else last_widget.geometry().right()) - 1
+            widget = target_widget or last_widget
+            return (x, widget.geometry().top(), x, self.height() - margins.bottom())
+        y = (target_widget.geometry().top() if target_widget is not None else last_widget.geometry().bottom()) - 1
         return margins.left(), y, self.width() - margins.right(), y
 
     def icon_ordering(self):
