@@ -184,9 +184,7 @@ class ToolboxUI(QMainWindow):
         # Make and initialize toolbars
         self.items_toolbar = toolbars.ItemsToolBar(self)
         self.spec_toolbar = toolbars.SpecToolBar(self)
-        self.execute_toolbar = toolbars.ExecuteToolBar(
-            self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
-        )
+        self.execute_toolbar = toolbars.ExecuteToolBar(self)
         self._original_execute_project_action_tooltip = self.ui.actionExecute_project.toolTip()
         self.setStatusBar(None)
         # Additional consoles for item execution

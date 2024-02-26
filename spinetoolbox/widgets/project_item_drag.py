@@ -71,7 +71,6 @@ class NiceButton(QToolButton):
         font = self.font()
         font.setPointSize(9)
         self.setFont(font)
-        self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
     def setText(self, text):
         super().setText(fill(text, width=12, break_long_words=False))
@@ -79,8 +78,10 @@ class NiceButton(QToolButton):
     def set_orientation(self, orientation):
         if orientation == Qt.Orientation.Horizontal:
             self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+            self.setStyleSheet("QToolButton{margin: 16px 2px 2px 2px;}")
         else:
             self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+            self.setStyleSheet("QToolButton{margin: 2px;}")
 
 
 class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
@@ -92,7 +93,6 @@ class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
         self.setIcon(icon)
         self.setMouseTracking(True)
         self.drag_about_to_start.connect(self._handle_drag_about_to_start)
-        self.setStyleSheet("QToolButton{padding: 2px}")
         self.clicked.connect(self._show_tool_tip)
 
     @Slot(bool)

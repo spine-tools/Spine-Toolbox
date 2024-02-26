@@ -81,28 +81,11 @@ class ToolBar(QToolBar):
     def name(self):
         return self._name
 
-    def sizeHint(self):
-        size = super().sizeHint()
-        layout = self.layout()
-        titles = [w for i in range(layout.count()) if isinstance((w := layout.itemAt(i).widget()), _TitleWidget)]
-        max_title_width = max(w.desired_width for w in titles)
-        size.setWidth(max(size.width(), max_title_width))
-        if self.orientation() == Qt.Horizontal:
-            max_title_height = max(w.desired_height for w in titles)
-            size.setHeight(size.height() + max_title_height)
-        return size
-
     def paintEvent(self, ev):
+        super().paintEvent(ev)
         if self.orientation() == Qt.Vertical:
-            super().paintEvent(ev)
             return
         layout = self.layout()
-        titles = (w for i in range(layout.count()) if isinstance((w := layout.itemAt(i).widget()), _TitleWidget))
-        widgets = (w for i in range(layout.count()) if isinstance((w := layout.itemAt(i).widget()), NiceButton))
-        delta = max(w.desired_height + w.margin for w in titles)
-        for w in widgets:
-            w.move(w.pos().x(), delta)
-        super().paintEvent(ev)
         title_pos_x = (
             (w, layout.itemAt(i + 1).widget().pos().x())
             for i in range(layout.count())
@@ -448,35 +431,23 @@ class ItemsToolBar(ToolBar):
 
 
 class ExecuteToolBar(ToolBar):
-    def __init__(self, execute_project_action, execute_selection_action, stop_execution_action, parent):
+    def __init__(self, parent):
         """
         Args:
-            execute_project_action (QAction): action to execute project
-            execute_selection_action (QAction): action to execute selected items
-            stop_execution_action (QAction): action to stop execution
             parent (ToolboxUI): QMainWindow instance
         """
         super().__init__("Execute", parent)  # Inherits stylesheet from ToolboxUI
-        self._execute_project_action = execute_project_action
-        self.execute_project_button = None
-        self._execute_selection_action = execute_selection_action
-        self.execute_selection_button = None
-        self._stop_execution_action = stop_execution_action
-        self.stop_execution_button = None
-        self.setAcceptDrops(False)
 
     def setup(self):
-        self.add_execute_buttons()
+        self._add_buttons()
 
-    def add_execute_buttons(self):
-        """Adds project execution buttons to the toolbar."""
-        self.execute_project_button = NiceButton()
-        self.execute_project_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-        self.execute_project_button.setDefaultAction(self._execute_project_action)
-        self._add_tool_button(self.execute_project_button)
-        self.execute_selection_button = NiceButton()
-        self.execute_selection_button.setDefaultAction(self._execute_selection_action)
-        self._add_tool_button(self.execute_selection_button)
-        self.stop_execution_button = NiceButton()
-        self.stop_execution_button.setDefaultAction(self._stop_execution_action)
-        self._add_tool_button(self.stop_execution_button)
+    def _add_button_from_action(self, action):
+        button = NiceButton()
+        button.setDefaultAction(action)
+        self._add_tool_button(button)
+
+    def _add_buttons(self):
+        """Adds buttons to the toolbar."""
+        self._add_button_from_action(self._toolbox.ui.actionExecute_project)
+        self._add_button_from_action(self._toolbox.ui.actionExecute_selection)
+        self._add_button_from_action(self._toolbox.ui.actionStop_execution)
