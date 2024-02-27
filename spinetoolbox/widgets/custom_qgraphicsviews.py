@@ -14,7 +14,7 @@
 import math
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
 from PySide6.QtGui import QCursor
-from PySide6.QtCore import Slot, Qt, QTimeLine, QRectF
+from PySide6.QtCore import QTimer, Slot, Qt, QTimeLine, QRectF
 from ..project_item_icon import ProjectItemIcon
 from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
 from ..link import Link, JumpLink
@@ -23,14 +23,13 @@ from .custom_qgraphicsscene import DesignGraphicsScene
 
 
 class CustomQGraphicsView(QGraphicsView):
-    """Super class for Design and Entity QGraphicsViews.
-
-    Attributes:
-        parent (QWidget): Parent widget
-    """
+    """Super class for Design and Entity QGraphicsViews."""
 
     def __init__(self, parent):
-        """Init CustomQGraphicsView."""
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent=parent)
         self._zoom_factor_base = 1.0015
         self._angle = 120
@@ -187,7 +186,7 @@ class CustomQGraphicsView(QGraphicsView):
         Sets a new scene to this view.
 
         Args:
-            scene (ShrinkingScene): a new scene
+            scene (DesignGraphicsScene): a new scene
         """
         super().setScene(scene)
         scene.item_move_finished.connect(self._handle_item_move_finished)
@@ -315,8 +314,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             parent (QWidget): parent widget
         """
-        super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
+        super().__init__(parent=parent)
         self._toolbox = None
+        self._enabled_context_menu_policy = self.contextMenuPolicy()
 
     @property
     def _qsettings(self):
@@ -325,7 +325,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def set_ui(self, toolbox):
         """Set a new scene into the Design View when app is started."""
         self._toolbox = toolbox
-        self.setScene(DesignGraphicsScene(self, toolbox))
+        scene = DesignGraphicsScene(self, toolbox)
+        scene.link_about_to_be_drawn.connect(self.disable_context_menu)
+        scene.link_drawing_finished.connect(self.enable_context_menu)
+        self.setScene(scene)
 
     def reset_zoom(self):
         super().reset_zoom()
@@ -532,3 +535,16 @@ class DesignQGraphicsView(CustomQGraphicsView):
             event.accept()
             global_pos = self.viewport().mapToGlobal(event.pos())
             self._toolbox.show_project_or_item_context_menu(global_pos, None)
+
+    @Slot()
+    def disable_context_menu(self):
+        """Disables the context menu."""
+        self._enabled_context_menu_policy = self.contextMenuPolicy()
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
+
+    @Slot()
+    def enable_context_menu(self):
+        """Enables the context menu."""
+        # We use timer here to delay setting the policy.
+        # Otherwise, using right-click to cancel link drawing would still open the context menu.
+        QTimer.singleShot(0, lambda: self.setContextMenuPolicy(self._enabled_context_menu_policy))

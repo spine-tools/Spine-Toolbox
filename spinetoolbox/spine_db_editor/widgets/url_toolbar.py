@@ -108,7 +108,10 @@ class UrlToolBar(QToolBar):
         menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         action = QAction(self)
         action.triggered.connect(menu_button.showMenu)
-        keys = [QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_F.value), QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_E.value)]
+        keys = [
+            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_F.value),
+            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_E.value),
+        ]
         action.setShortcuts(keys)
         keys_str = ", ".join([key.toString() for key in keys])
         menu_button.setToolTip(f"<p>Customize and control Spine DB Editor ({keys_str})</p>")

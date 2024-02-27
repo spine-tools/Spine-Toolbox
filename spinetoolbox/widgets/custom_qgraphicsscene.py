@@ -44,6 +44,9 @@ class DesignGraphicsScene(CustomGraphicsScene):
     Mainly, it handles drag and drop events of ProjectItemDragMixin sources.
     """
 
+    link_about_to_be_drawn = Signal()
+    link_drawing_finished = Signal()
+
     def __init__(self, parent, toolbox):
         """
         Args:
@@ -94,25 +97,35 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     def mousePressEvent(self, event):
         """Puts link drawer to sleep and logs message if it looks like the user doesn't know what they're doing."""
-        if (
-            self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false"
-            and self._finish_link()
-        ):
-            return
+        if self.link_drawer is not None:
+            if event.button() == Qt.MouseButton.RightButton:
+                return
+            if (
+                self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false"
+                and event.button() == Qt.MouseButton.LeftButton
+                and self._finish_link()
+            ):
+                event.accept()
+                return
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
-        """Makes link if drawer is released over a valid connector button."""
-        if (
-            self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true"
-            and self._finish_link()
-        ):
-            return
+        """Makes link if drawer is released over a valid connector button or cancel link drawing on right button."""
+        if self.link_drawer is not None:
+            if event.button() == Qt.MouseButton.RightButton:
+                self.link_drawer.sleep()
+                event.accept()
+                return
+            if (
+                self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true"
+                and event.button() == Qt.MouseButton.LeftButton
+                and self._finish_link()
+            ):
+                event.accept()
+                return
         super().mouseReleaseEvent(event)
 
     def _finish_link(self):
-        if self.link_drawer is None:
-            return False
         if self.link_drawer.src_connector.isUnderMouse():
             self.link_drawer.sleep()
             return False
