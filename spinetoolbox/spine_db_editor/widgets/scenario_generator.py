@@ -171,7 +171,7 @@ class ScenarioGenerator(QWidget):
         Args:
             check_box_state (int): state of 'Use base alternative' check box
         """
-        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.CheckState.Checked)
+        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.CheckState.Checked.value)
 
     def _insert_base_alternative(self, scenario_alternatives):
         """Prepends base alternative to scenario alternatives if it has been enabled.
