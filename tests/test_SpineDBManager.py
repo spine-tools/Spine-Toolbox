@@ -325,5 +325,78 @@ class TestOpenDBEditor(unittest.TestCase):
                 running = False
 
 
+class TestDuplicateEntity(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.db_codename = cls.__name__ + "_db"
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        self._db_mngr = SpineDBManager(QSettings(), None)
+        logger = MagicMock()
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+
+    def _assert_success(self, result):
+        item, error = result
+        self.assertIsNone(error)
+        return item
+
+    def test_duplicates_parameter_values_and_entity_alternatives(self):
+        self._assert_success(self._db_map.add_alternative_item(name="low highs"))
+        self._assert_success(self._db_map.add_entity_class_item(name="Widget"))
+        self._assert_success(self._db_map.add_parameter_definition_item(name="x", entity_class_name="Widget"))
+        self._assert_success(self._db_map.add_entity_item(name="capital W", entity_class_name="Widget"))
+        self._assert_success(
+            self._db_map.add_entity_alternative_item(
+                entity_class_name="Widget", entity_byname=("capital W",), alternative_name="Base", active=False
+            )
+        )
+        self._assert_success(
+            self._db_map.add_entity_alternative_item(
+                entity_class_name="Widget", entity_byname=("capital W",), alternative_name="low highs", active=True
+            )
+        )
+        value, value_type = to_database(2.3)
+        self._assert_success(
+            self._db_map.add_parameter_value_item(
+                entity_class_name="Widget",
+                parameter_definition_name="x",
+                entity_byname=("capital W",),
+                alternative_name="low highs",
+                type=value_type,
+                value=value,
+            )
+        )
+        self._db_mngr.duplicate_entity("capital W", "lower case w", "Widget", [self._db_map])
+        entities = self._db_map.get_entity_items()
+        self.assertEqual(len(entities), 2)
+        self.assertEqual({e["name"] for e in entities}, {"capital W", "lower case w"})
+        self.assertEqual({e["entity_class_name"] for e in entities}, {"Widget"})
+        entity_alternatives = self._db_map.get_entity_alternative_items()
+        self.assertEqual(len(entity_alternatives), 4)
+        self.assertEqual(
+            {(ea["entity_byname"], ea["alternative_name"], ea["active"]) for ea in entity_alternatives},
+            {
+                (("capital W",), "Base", False),
+                (("capital W",), "low highs", True),
+                (("lower case w",), "Base", False),
+                (("lower case w",), "low highs", True),
+            },
+        )
+        values = self._db_map.get_parameter_value_items()
+        self.assertEqual(len(values), 2)
+        self.assertEqual({v["entity_class_name"] for v in values}, {"Widget"})
+        self.assertEqual({v["parameter_definition_name"] for v in values}, {"x"})
+        self.assertEqual({v["entity_byname"] for v in values}, {("capital W",), ("lower case w",)})
+        self.assertEqual({v["alternative_name"] for v in values}, {"low highs"})
+
+
 if __name__ == '__main__':
     unittest.main()
