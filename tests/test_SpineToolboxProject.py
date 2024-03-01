@@ -18,6 +18,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide6.QtCore import QVariantAnimation
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
 import networkx as nx
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
@@ -586,8 +587,16 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_and_save_specification(self):
         project = self.toolbox.project()
+        self.toolbox.item_factories = {"Tester": ProjectItemFactory()}
         specification = _MockSpecification("a specification", "Specification for testing.", "Tester")
-        project.add_specification(specification)
+        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
+            mock_icon.return_value = ":/icons/item_icons/hammer.svg"
+            mock_icon_color.return_value = QColor("white")
+            project.add_specification(specification)
+            mock_icon.assert_called()
+            mock_icon_color.assert_called()
         self.assertTrue(specification.is_equivalent(project.get_specification("a specification")))
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
         self.assertTrue(specification_dir.exists())
@@ -602,10 +611,18 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_and_save_specification_with_local_data(self):
         project = self.toolbox.project()
+        self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests}
         specification = _MockSpecificationWithLocalData(
             "a specification", "Specification for testing.", "Tester", "my precious data"
         )
-        project.add_specification(specification)
+        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
+            mock_icon.return_value = ":/icons/item_icons/hammer.svg"
+            mock_icon_color.return_value = QColor("white")
+            project.add_specification(specification)
+            mock_icon.assert_called()
+            mock_icon_color.assert_called()
         self.assertTrue(specification.is_equivalent(project.get_specification("a specification")))
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
         self.assertTrue(specification_dir.exists())
@@ -627,16 +644,24 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_renaming_specification_with_local_data_updates_local_data_file(self):
         project = self.toolbox.project()
+        self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests}
         original_specification = _MockSpecificationWithLocalData(
             "a specification", "Specification for testing.", "Tester", "my precious data"
         )
-        project.add_specification(original_specification)
-        local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
-        self.assertTrue(local_data_file.exists())
-        specification = _MockSpecificationWithLocalData(
-            "another specification", "Specification for testing.", "Tester", "my precious data"
-        )
-        project.replace_specification("a specification", specification)
+        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
+            mock_icon.return_value = ":/icons/item_icons/hammer.svg"
+            mock_icon_color.return_value = QColor("white")
+            project.add_specification(original_specification)
+            local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
+            self.assertTrue(local_data_file.exists())
+            specification = _MockSpecificationWithLocalData(
+                "another specification", "Specification for testing.", "Tester", "my precious data"
+            )
+            project.replace_specification("a specification", specification)
+            mock_icon.assert_called()
+            mock_icon_color.assert_called()
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
         self.assertTrue(specification_dir.exists())
         specification_file = specification_dir / (specification.short_name + ".json")
@@ -654,14 +679,22 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_replace_specification_with_local_data_by_one_without_removes_local_data_from_the_file(self):
         project = self.toolbox.project()
+        self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests}
         specification_with_local_data = _MockSpecificationWithLocalData(
             "a specification", "Specification for testing.", "Tester", "my precious data"
         )
-        project.add_specification(specification_with_local_data)
-        local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
-        self.assertTrue(local_data_file.exists())
-        specification = _MockSpecification("another specification", "Specification without local data", "Tester")
-        project.replace_specification("a specification", specification)
+        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
+            mock_icon.return_value = ":/icons/item_icons/hammer.svg"
+            mock_icon_color.return_value = QColor("white")
+            project.add_specification(specification_with_local_data)
+            local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
+            self.assertTrue(local_data_file.exists())
+            specification = _MockSpecification("another specification", "Specification without local data", "Tester")
+            project.replace_specification("a specification", specification)
+            mock_icon.assert_called()
+            mock_icon_color.assert_called()
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
         self.assertTrue(specification_dir.exists())
         specification_file = specification_dir / (specification.short_name + ".json")
