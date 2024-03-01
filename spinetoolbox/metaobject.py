@@ -16,9 +16,10 @@ from spine_engine.utils.helpers import shorten
 
 
 class MetaObject(QObject):
-    def __init__(self, name, description):
-        """Class for an object which has a name, type, and some description.
+    """Class for an object which has a name, type, and some description."""
 
+    def __init__(self, name, description):
+        """
         Args:
             name (str): Object name
             description (str): Object description

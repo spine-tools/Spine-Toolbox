@@ -112,8 +112,9 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             mock_icon_color.return_value = QColor("white")
             self._toolbox.item_factories = {"Mock": ProjectItemFactory()}
             window = SpecificationEditorWindowBase(self._toolbox)
-            window._spec_toolbar._line_edit_name.setText("spec name")
-            window._spec_toolbar._line_edit_name.editingFinished.emit()
+            name_edit = window._spec_toolbar._line_edit_name
+            name_edit.setText("spec name")
+            name_edit.textEdited.emit(name_edit.text())
             window._spec_toolbar.save_action.trigger()
             mock_settings_group.assert_called()
             mock_make_specification.assert_called()
@@ -143,10 +144,12 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             self._toolbox.item_factories = {"Mock": ProjectItemFactory()}
             project_item = _MockProjectItem("item name", "item description", 0.0, 0.0, self._toolbox.project())
             project_item._toolbox = self._toolbox
+            self._toolbox.project().add_item(project_item)
             window = SpecificationEditorWindowBase(self._toolbox, item=project_item)
             self.assertIs(window.item, project_item)
-            window._spec_toolbar._line_edit_name.setText("spec name")
-            window._spec_toolbar._line_edit_name.editingFinished.emit()
+            name_edit = window._spec_toolbar._line_edit_name
+            name_edit.setText("spec name")
+            name_edit.textEdited.emit(name_edit.text())
             window._spec_toolbar.save_action.trigger()
             self.assertIs(project_item.specification(), specification)
             mock_settings_group.assert_called()
@@ -188,8 +191,9 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
                 name, window._spec_toolbar.description(), "Mock"
             )
             mock_save.return_value = {}
-            window._spec_toolbar._line_edit_name.setText("new spec name")
-            window._spec_toolbar._line_edit_name.editingFinished.emit()
+            name_edit = window._spec_toolbar._line_edit_name
+            name_edit.setText("new spec name")
+            name_edit.textEdited.emit(name_edit.text())
             window._spec_toolbar.save_action.trigger()
             item_specification = project_item.specification()
             self.assertEqual(item_specification.name, "new spec name")
@@ -208,6 +212,9 @@ class _MockProjectItem(ProjectItem):
     @staticmethod
     def item_type():
         return "Mock"
+
+    def get_icon(self):
+        return ProjectItemIcon(self._toolbox, ":/icons/item_icons/hammer.svg", QColor("white"))
 
 
 if __name__ == "__main__":

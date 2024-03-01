@@ -50,6 +50,7 @@ from PySide6.QtGui import (
     QColor,
     QFont,
     QPainter,
+    QUndoCommand,
 )
 from spine_engine.utils.serialization import deserialize_path
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
@@ -1622,3 +1623,21 @@ def remove_first(lst, items):
             break
         except ValueError:
             pass
+
+
+class SealCommand(QUndoCommand):
+    """A 'meta' command that does not store undo data but can be used in mergeWith methods of other commands."""
+
+    def __init__(self, command_id=1):
+        """
+        Args:
+            command_id (int): command id
+        """
+        super().__init__("")
+        self._id = command_id
+
+    def redo(self):
+        self.setObsolete(True)
+
+    def id(self):
+        return self._id
