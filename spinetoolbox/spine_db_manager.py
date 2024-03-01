@@ -1516,6 +1516,12 @@ class SpineDBManager(QObject):
                     )
                 )
             dup_import_data[db_map].update(parameter_values=dup_value_import_data)
+            dup_entity_alternative_import_data = []
+            for item in db_map.get_entity_alternative_items(entity_class_name=class_name, entity_name=orig_name):
+                dup_entity_alternative_import_data.append(
+                    (class_name, dup_name, item["alternative_name"], item["active"])
+                )
+            dup_import_data[db_map]["entity_alternatives"] = dup_entity_alternative_import_data
         self.import_data(dup_import_data, command_text="Duplicate entity")
 
     def _get_data_for_export(self, db_map_item_ids):
