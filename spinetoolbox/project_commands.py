@@ -108,20 +108,18 @@ class SetProjectDescriptionCommand(SpineToolboxCommand):
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, items_dict, item_factories, silent=True):
+    def __init__(self, project, items_dict, item_factories):
         """Command to add items.
 
         Args:
             project (SpineToolboxProject): the project
             items_dict (dict): a mapping from item name to item dict
             item_factories (dict): a mapping from item type to ProjectItemFactory
-            silent (bool): If True, suppress messages
         """
         super().__init__()
         self._project = project
         self._items_dict = items_dict
         self._item_factories = item_factories
-        self._silent = silent
         if not items_dict:
             self.setObsolete(True)
         elif len(items_dict) == 1:
@@ -130,7 +128,7 @@ class AddProjectItemsCommand(SpineToolboxCommand):
             self.setText("add multiple items")
 
     def redo(self):
-        self._project.restore_project_items(self._items_dict, self._item_factories, self._silent)
+        self._project.restore_project_items(self._items_dict, self._item_factories)
 
     def undo(self):
         for item_name in self._items_dict:
@@ -159,7 +157,7 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
             self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
+        self._project.restore_project_items(self._items_dict, self._item_factories)
         for connection_dict in self._connection_dicts:
             self._project.add_connection(self._project.connection_from_dict(connection_dict), silent=True)
 
@@ -198,7 +196,7 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
             self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
+        self._project.restore_project_items(self._items_dict, self._item_factories)
         for connection_dict in self._connection_dicts:
             self._project.add_connection(self._project.connection_from_dict(connection_dict), silent=True)
         for jump_dict in self._jump_dicts:

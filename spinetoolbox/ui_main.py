@@ -799,16 +799,15 @@ class ToolboxUI(QMainWindow):
         layout.addWidget(properties_ui)
         return tab
 
-    def add_project_items(self, items_dict, silent=False):
+    def add_project_items(self, items_dict):
         """Pushes an AddProjectItemsCommand to the undo stack.
 
         Args:
             items_dict (dict): mapping from item name to item dictionary
-            silent (bool): if True, suppress log messages
         """
         if self._project is None or not items_dict:
             return
-        self.undo_stack.push(AddProjectItemsCommand(self._project, items_dict, self.item_factories, silent))
+        self.undo_stack.push(AddProjectItemsCommand(self._project, items_dict, self.item_factories))
 
     def supports_specifications(self, item_type):
         """Returns True if given project item type supports specifications.
@@ -1567,10 +1566,6 @@ class ToolboxUI(QMainWindow):
             return
         if not self.supports_specification(item_type):
             return
-        msg = f"Opening {item_type} specification editor"
-        if specification:
-            msg += f" for {specification.name}"
-        self.msg.emit(msg)
         multi_tab_editor = next(self.get_all_multi_tab_spec_editors(item_type), None)
         if multi_tab_editor is None:
             multi_tab_editor = MultiTabSpecEditor(self, item_type)
@@ -2073,7 +2068,7 @@ class ToolboxUI(QMainWindow):
             else:
                 final_items_dict[name] = item_dict
             self._set_deserialized_item_position(item_dict, shift_x, shift_y, scene_rect)
-        self.add_project_items(final_items_dict, silent=True)
+        self.add_project_items(final_items_dict)
 
     @Slot()
     def project_item_to_clipboard(self):
