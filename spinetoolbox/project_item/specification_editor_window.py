@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains SpecificationEditorWindowBase and ChangeSpecPropertyCommand"""
+from enum import IntEnum, unique
 from PySide6.QtGui import QKeySequence, QIcon, QUndoStack, QAction, QUndoCommand
 from PySide6.QtCore import Signal, Slot, Qt
 from PySide6.QtWidgets import (
@@ -27,19 +28,42 @@ from PySide6.QtWidgets import (
     QToolButton,
 )
 from spinetoolbox.widgets.notification import ChangeNotifier, Notification
-from spinetoolbox.helpers import CharIconEngine, restore_ui, save_ui
+from spinetoolbox.helpers import CharIconEngine, restore_ui, save_ui, SealCommand
+
+
+class UniqueCommandId:
+    _NEXT_ID = 1
+
+    @classmethod
+    def unique_id(cls):
+        """Returns a new unique command id.
+
+        Returns:
+            int: unique id
+        """
+        new_id = cls._NEXT_ID
+        cls._NEXT_ID += 1
+        return new_id
+
+
+@unique
+class CommandId(IntEnum):
+    NONE = -1
+    NAME_UPDATE = UniqueCommandId.unique_id()
+    DESCRIPTION_UPDATE = UniqueCommandId.unique_id()
 
 
 class ChangeSpecPropertyCommand(QUndoCommand):
     """Command to set specification properties."""
 
-    def __init__(self, callback, new_value, old_value, cmd_name):
+    def __init__(self, callback, new_value, old_value, cmd_name, command_id=CommandId.NONE):
         """
         Args:
-            callback (function): Function to call to set the spec property.
-            new_value (any): new value
-            old_value (any): old value
+            callback (Callable): Function to call to set the spec property.
+            new_value (Any): new value
+            old_value (Any): old value
             cmd_name (str): command name
+            command_id (IntEnum): command id
         """
         super().__init__()
         self._callback = callback
@@ -47,12 +71,29 @@ class ChangeSpecPropertyCommand(QUndoCommand):
         self._old_value = old_value
         self.setText(cmd_name)
         self.setObsolete(new_value == old_value)
+        self._id = command_id
+        self._sealed = False
 
     def redo(self):
         self._callback(self._new_value)
 
     def undo(self):
         self._callback(self._old_value)
+
+    def id(self):
+        return self._id.value
+
+    def mergeWith(self, other):
+        if not isinstance(other, ChangeSpecPropertyCommand):
+            self._sealed = True
+            return False
+        if self._sealed or self.id() != other.id():
+            return False
+        if self._old_value == other._new_value:
+            self.setObsolete(True)
+        else:
+            self._new_value = other._new_value
+        return True
 
 
 class SpecificationEditorWindowBase(QMainWindow):
@@ -287,9 +328,9 @@ class _SpecNameDescriptionToolbar(QToolBar):
         self.setMovable(False)
         widget = QWidget()
         layout = QHBoxLayout(widget)
-        layout.addWidget(QLabel("Name"))
+        layout.addWidget(QLabel("Name:"))
         layout.addWidget(self._line_edit_name)
-        layout.addWidget(QLabel("Description"))
+        layout.addWidget(QLabel("Description:"))
         layout.addWidget(self._line_edit_description)
         layout.setContentsMargins(3, 3, 3, 3)
         layout.setStretchFactor(self._line_edit_name, 1)
@@ -314,8 +355,10 @@ class _SpecNameDescriptionToolbar(QToolBar):
         if spec:
             self.do_set_name(spec.name)
             self.do_set_description(spec.description)
-        self._line_edit_name.editingFinished.connect(self._set_name)
-        self._line_edit_description.editingFinished.connect(self._set_description)
+        self._line_edit_name.textEdited.connect(self._update_name)
+        self._line_edit_name.editingFinished.connect(self._finish_name_editing)
+        self._line_edit_description.textEdited.connect(self._update_description)
+        self._line_edit_description.editingFinished.connect(self._finish_description_editing)
 
     def _make_main_menu(self):
         menu = QMenu(self)
@@ -335,33 +378,56 @@ class _SpecNameDescriptionToolbar(QToolBar):
         menu_button.setToolTip(f"<p>Main menu ({keys_str})</p>")
         return menu
 
-    @Slot()
-    def _set_name(self):
-        if self.name() == self._current_name:
-            return
+    @Slot(str)
+    def _update_name(self, name):
+        """Pushes a command to undo stack that updates the specification name.
+
+        Args:
+            name (str): updated name
+        """
         self._undo_stack.push(
-            ChangeSpecPropertyCommand(self.do_set_name, self.name(), self._current_name, "change specification name")
+            ChangeSpecPropertyCommand(
+                self.do_set_name, name, self._current_name, "change specification name", CommandId.NAME_UPDATE
+            )
         )
 
     @Slot()
-    def _set_description(self):
-        if self.description() == self._current_description:
-            return
+    def _finish_name_editing(self):
+        """Seals the last undo command."""
+        self._undo_stack.push(SealCommand(CommandId.NAME_UPDATE.value))
+
+    @Slot(str)
+    def _update_description(self, description):
+        """Pushes a command to undo stack that updates the specification description.
+
+        Args:
+            description (str): updated description
+        """
         self._undo_stack.push(
             ChangeSpecPropertyCommand(
                 self.do_set_description,
                 self.description(),
                 self._current_description,
                 "change specification description",
+                CommandId.DESCRIPTION_UPDATE,
             )
         )
 
+    @Slot()
+    def _finish_description_editing(self):
+        """Seals the last undo command."""
+        self._undo_stack.push(SealCommand(CommandId.DESCRIPTION_UPDATE.value))
+
     def do_set_name(self, name):
+        self.name_changed.emit(name)
+        if self._line_edit_name.text() == name:
+            return
         self._current_name = name
         self._line_edit_name.setText(name)
-        self.name_changed.emit(name)
 
     def do_set_description(self, description):
+        if self._line_edit_description.text() == description:
+            return
         self._current_description = description
         self._line_edit_description.setText(description)
 

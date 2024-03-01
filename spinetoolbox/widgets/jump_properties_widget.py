@@ -86,7 +86,7 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
             return
         condition = self._make_condition_from_ui()
         if self._jump.condition != condition:
-            self._toolbox.undo_stack.push(SetJumpConditionCommand(self, self._jump, condition))
+            self._toolbox.undo_stack.push(SetJumpConditionCommand(self._toolbox.project(), self._jump, self, condition))
 
     @Slot(bool)
     def _show_tool_spec_form(self, _checked=False):
@@ -123,7 +123,9 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
     @Slot(list)
     def _push_update_cmd_line_args_command(self, cmd_line_args):
         if self._jump.cmd_line_args != cmd_line_args:
-            self._toolbox.undo_stack.push(UpdateJumpCmdLineArgsCommand(self, self._jump, cmd_line_args))
+            self._toolbox.undo_stack.push(
+                UpdateJumpCmdLineArgsCommand(self._toolbox.project(), self._jump, self, cmd_line_args)
+            )
 
     @Slot(bool)
     def _remove_arg(self, _=False):
