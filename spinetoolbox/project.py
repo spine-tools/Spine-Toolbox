@@ -358,7 +358,7 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("Loading project items...")
         if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
-        self.restore_project_items(items_dict, item_factories, silent=True)
+        self.restore_project_items(items_dict, item_factories)
         self._logger.msg.emit("Restoring connections...")
         connection_dicts = project_info["project"]["connections"]
         connections = list(map(self.connection_from_dict, connection_dicts))
@@ -617,12 +617,11 @@ class SpineToolboxProject(MetaObject):
                 return None
         return candidate_path
 
-    def add_item(self, item, silent=True):
-        """Adds a project to item project.
+    def add_item(self, item):
+        """Adds a project item to project.
 
         Args:
             item (ProjectItem): item to add
-            silent (bool): if True, don't log messages
         """
         if item.name in self._project_items:
             raise RuntimeError("Item already in project.")
@@ -630,8 +629,6 @@ class SpineToolboxProject(MetaObject):
         name = item.name
         self.item_added.emit(name)
         item.set_up()
-        if not silent:
-            self._logger.msg.emit(f"{item.item_type()} <b>{name}</b> added to project")
 
     def rename_item(self, previous_name, new_name, rename_data_dir_message):
         """Renames a project item
@@ -928,13 +925,12 @@ class SpineToolboxProject(MetaObject):
         """Returns the DiGraph that contains the given node (project item) name (str)."""
         return next((x for x in self._dag_iterator() if x.has_node(node)), None)
 
-    def restore_project_items(self, items_dict, item_factories, silent):
+    def restore_project_items(self, items_dict, item_factories):
         """Restores project items from dictionary.
 
         Args:
             items_dict (dict): a mapping from item name to item dict
             item_factories (dict): a mapping from item type to ProjectItemFactory
-            silent (bool): if True, suppress a log messages
         """
         for item_name, item_dict in items_dict.items():
             try:
@@ -962,7 +958,7 @@ class SpineToolboxProject(MetaObject):
                 )
                 continue
             project_item.copy_local_data(item_dict)
-            self.add_item(project_item, silent)
+            self.add_item(project_item)
 
     def remove_item_by_name(self, item_name, delete_data=False):
         """Removes project item by its name.
