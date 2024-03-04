@@ -276,7 +276,3 @@ class FilterMenuBase(QMenu):
 
     def emit_filter_changed(self, valid_values):
         raise NotImplementedError()
-
-    def wipe_out(self):
-        self._filter._filter_model.set_list(set())
-        self.deleteLater()

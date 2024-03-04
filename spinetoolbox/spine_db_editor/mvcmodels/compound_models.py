@@ -116,7 +116,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         self.empty_model.fetchMore(QModelIndex())
         while self._auto_filter_menus:
             _, menu = self._auto_filter_menus.popitem()
-            menu.wipe_out()
+            menu.deleteLater()
 
     def get_auto_filter_menu(self, logical_index):
         """Returns auto filter menu for given logical index from header view.

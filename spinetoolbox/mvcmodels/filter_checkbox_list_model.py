@@ -12,7 +12,7 @@
 
 """Provides FilterCheckboxListModel for FilterWidget."""
 import re
-from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel
+from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel, Slot
 from spinetoolbox.helpers import bisect_chunks
 
 
