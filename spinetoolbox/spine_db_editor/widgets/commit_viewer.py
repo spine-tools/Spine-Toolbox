@@ -35,6 +35,7 @@ class _DBCommitViewer(QWidget):
         self._commit_list.setHeaderLabel("Commits")
         self._commit_list.setIndentation(0)
         self.splitter = QSplitter(self)
+        self.splitter.setChildrenCollapsible(False)
         self.splitter.setSizes([0.3, 0.7])
         self._affected_items = QTreeWidget(self)
         self._affected_items.setHeaderLabel("Affected items")
