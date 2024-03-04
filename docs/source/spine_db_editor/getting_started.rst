@@ -170,7 +170,7 @@ Undo and redo
 
 Whenever changes are made to the data in the Spine Database Editor, the changes get stored into memory. This
 allows undoing and redoing the operations made in the editor. Buttons for these operations can be found in the
-hamburger menu and the usual shortcuts **CTRL+Z** and **CTRL+Y** work also. However if the changes are committed,
+hamburger menu and the usual shortcuts **Ctrl+Z** and **Ctrl+Y** work also. However if the changes are committed,
 the memory for the changes gets cleared meaning that the changes before the commit can't be undone anymore.
 
 Views and trees
@@ -195,8 +195,8 @@ Spine Database Editor has the following main UI components:
          menu can be used to enable and disable the different UI components listed above.
 
 Items from the trees can be selected by clicking them with the left mouse button and the views will react to
-the changes. By default, multiple items can be selected at the same time across the trees by holding down **CTRL**
-while making the selections. This behavior can be flipped from the editor settings (**CTRL+,**) by toggling the
+the changes. By default, multiple items can be selected at the same time across the trees by holding down **Ctrl**
+while making the selections. This behavior can be flipped from the editor settings (**Ctrl+,**) by toggling the
 *Sticky selection* -setting.
 
 In the next section you will learn more about the different UI components and views available in the editor

@@ -83,7 +83,7 @@ To remove parameter definitions or values,
 go to the relevant **Table View** and select any cell in the row corresponding to the items
 you want to remove. Then, right-click on the selection and select the **Remove row(s)**
 option from the context menu. Multiple selection is supported and the removal can also be
-performed by pressing **CTRL+DEL**.
+performed by pressing **Ctrl+Del**.
 
 From **Pivot View**
 ~~~~~~~~~~~~~~~~~~~
