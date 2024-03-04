@@ -70,7 +70,7 @@ class StackedViewMixin:
             model.init_model()
         self._set_default_parameter_data()
 
-    @Slot(QModelIndex, int, object)
+    @Slot(QModelIndex, object, object)
     def show_element_name_list_editor(self, index, entity_class_id, db_map):
         """Shows the element name list editor.
 

@@ -319,7 +319,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         """
         super().__init__(parent=parent)
         self._show_filter_menu_action = QAction(self)
-        self._show_filter_menu_action.setShortcut(Qt.ALT | Qt.Key_Down)
+        self._show_filter_menu_action.setShortcut(QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_Down.value))
         self._show_filter_menu_action.setShortcutContext(Qt.WidgetShortcut)
         self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
         self.addAction(self._show_filter_menu_action)

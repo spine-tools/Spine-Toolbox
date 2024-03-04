@@ -343,7 +343,7 @@ class _MenuToolBar(QToolBar):
         for i in range(layout.count()):
             item = layout.itemAt(i)
             if item.widget() in self._buttons:
-                layout.itemAt(i).setAlignment(Qt.AlignBottom)
+                item.setAlignment(Qt.AlignBottom)
 
     def add_frame(self, left, right, title):
         """Add frame around given actions, with given title.
@@ -381,7 +381,7 @@ class _MenuToolBar(QToolBar):
         """Make room for frames if needed."""
         size = super().sizeHint()
         if self._frames:
-            size = QSize(size.width(), size.height() + self.fontMetrics().height())
+            size.setHeight(size.height() + self.fontMetrics().height())
         return size
 
     def paintEvent(self, ev):

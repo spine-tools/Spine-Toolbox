@@ -104,7 +104,7 @@ def add_ds(project, item_factories, name, x=0.0, y=0.0):
         DataStore: added project item
     """
     item_dict = {name: {"type": "Data Store", "description": "", "url": dict(), "x": x, "y": y}}
-    project.restore_project_items(item_dict, item_factories, silent=True)
+    project.restore_project_items(item_dict, item_factories)
     return project.get_item(name)
 
 
@@ -124,7 +124,7 @@ def add_dc(project, item_factories, name, x=0, y=0, file_refs=None):
     """
     frefs = list() if not file_refs else file_refs
     item_dict = {name: {"type": "Data Connection", "description": "", "references": frefs, "x": x, "y": y}}
-    project.restore_project_items(item_dict, item_factories, silent=True)
+    project.restore_project_items(item_dict, item_factories)
     return project.get_item(name)
 
 
@@ -145,7 +145,7 @@ def add_tool(project, item_factories, name, tool_spec="", x=0, y=0):
     item = {
         name: {"type": "Tool", "description": "", "specification": tool_spec, "execute_in_work": False, "x": x, "y": y}
     }
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -163,7 +163,7 @@ def add_view(project, item_factories, name, x=0, y=0):
         View: added project item
     """
     item = {name: {"type": "View", "description": "", "x": x, "y": y}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -181,7 +181,7 @@ def add_importer(project, item_factories, name, x=0, y=0):
         Importer: added project item
     """
     item = {name: {"type": "Importer", "description": "", "specification": "", "x": x, "y": y}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -199,7 +199,7 @@ def add_data_transformer(project, item_factories, name, x=0, y=0):
         DataTransformer: added project item
     """
     item = {name: {"type": "Data Transformer", "description": "", "x": x, "y": y, "specification": ""}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -217,7 +217,7 @@ def add_exporter(project, item_factories, name, x=0, y=0):
         Exporter: added project item
     """
     item = {name: {"type": "Exporter", "description": "", "x": x, "y": y, "specification": None}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -235,7 +235,7 @@ def add_merger(project, item_factories, name, x=0, y=0):
         Merger: added project item
     """
     item = {name: {"type": "Merger", "description": "", "x": x, "y": y}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 

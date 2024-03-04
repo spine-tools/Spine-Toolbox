@@ -368,7 +368,7 @@ class JumpOrLink(LinkBase):
         if icon_count == 1:
             self._icons[0].setPos(center - offset)
             return
-        points = list(_regular_poligon_points(icon_count, icon_extent, self._guide_path.angleAtPercent(0.5)))
+        points = list(_regular_polygon_points(icon_count, icon_extent, self._guide_path.angleAtPercent(0.5)))
         points_center = functools.reduce(lambda a, b: a + b, points) / icon_count
         offset += points_center - center
         scale = icon_extent / self._icon_extent
@@ -626,12 +626,14 @@ class LinkDrawerBase(LinkBase):
         view = self._toolbox.ui.graphicsView
         self.tip = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         self.src_connector = src_connector
-        self.src_connector.scene().addItem(self)
+        scene = self.src_connector.scene()
+        scene.addItem(self)
         self._stroker.setWidth(self.magic_number)
         self._pen.setWidthF(self.magic_number)
         self.setPen(self._pen)
         self.update_geometry()
         self.show()
+        scene.link_about_to_be_drawn.emit()
 
     def sleep(self):
         """Removes this drawer from the scene, clears its source and destination connectors, and hides it.
@@ -641,6 +643,7 @@ class LinkDrawerBase(LinkBase):
         scene.removeItem(self)
         scene.link_drawer = self.src_connector = self.dst_connector = self.tip = None
         self.hide()
+        scene.link_drawing_finished.emit()
 
 
 class ConnectionLinkDrawer(LinkDrawerBase):
@@ -687,7 +690,7 @@ class JumpLinkDrawer(LinkDrawerBase):
         self.sleep()
 
 
-def _regular_poligon_points(n, side, initial_angle=0):
+def _regular_polygon_points(n, side, initial_angle=0):
     internal_angle = 180 * (n - 2) / n
     angle_inc = 180 - internal_angle
     current_angle = initial_angle

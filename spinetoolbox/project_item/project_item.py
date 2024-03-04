@@ -158,7 +158,9 @@ class ProjectItem(LogMixin, MetaObject):
         """Pushes a new SetItemSpecificationCommand to the toolbox' undo stack."""
         if specification == self._specification:
             return
-        self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification, self.undo_specification()))
+        self._toolbox.undo_stack.push(
+            SetItemSpecificationCommand(self.name, specification, self.undo_specification(), self._project)
+        )
 
     def do_set_specification(self, specification):
         """Sets specification for this item. Removes specification if None given as argument.
@@ -298,23 +300,6 @@ class ProjectItem(LogMixin, MetaObject):
             old (list of ProjectItemResource): old resources
             new (list of ProjectItemResource): new resources
         """
-
-    def invalidate_workflow(self, edges):
-        """Notifies that this item's workflow is not acyclic.
-
-        Args:
-            edges (list): A list of edges that make the graph acyclic after removing them.
-        """
-        edges = ", ".join("{0} -> {1}".format(*edge) for edge in edges)
-        self.clear_notifications()
-        self.set_rank(None)
-        self.add_notification(
-            "The workflow defined for this item has loops and thus cannot be executed. "
-            f"Possible fix: remove link(s) {edges}."
-        )
-
-    def revalidate_workflow(self):
-        self.remove_notification("The workflow defined for this item has loops and thus cannot be executed.")
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item.

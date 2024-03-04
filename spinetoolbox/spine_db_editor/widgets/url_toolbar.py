@@ -51,7 +51,7 @@ class UrlToolBar(QToolBar):
             QIcon(CharIconEngine("\uf061")), "Go forward", db_editor.load_next_urls
         )
         self.reload_action = self.addAction(QIcon(CharIconEngine("\uf021")), "Reload", db_editor.refresh_session)
-        self.reload_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_R))
+        self.reload_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_R.value))
         self._go_back_action.setEnabled(False)
         self._go_forward_action.setEnabled(False)
         self.reload_action.setEnabled(False)
@@ -64,7 +64,7 @@ class UrlToolBar(QToolBar):
         self.addWidget(self._line_edit)
         toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
         self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (Ctrl+ESC)")
-        self.show_toolbox_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Escape))
+        self.show_toolbox_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_Escape.value))
         self.setMovable(False)
         self.setIconSize(QSize(20, 20))
 
@@ -108,7 +108,10 @@ class UrlToolBar(QToolBar):
         menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         action = QAction(self)
         action.triggered.connect(menu_button.showMenu)
-        keys = [QKeySequence(Qt.ALT | Qt.Key_F), QKeySequence(Qt.ALT | Qt.Key_E)]
+        keys = [
+            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_F.value),
+            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_E.value),
+        ]
         action.setShortcuts(keys)
         keys_str = ", ".join([key.toString() for key in keys])
         menu_button.setToolTip(f"<p>Customize and control Spine DB Editor ({keys_str})</p>")

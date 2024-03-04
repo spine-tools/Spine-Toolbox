@@ -121,7 +121,7 @@ class StackedTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         self._menu.addAction("Clear all filters", self._spine_db_editor.clear_all_filters)
         self._menu.addSeparator()
         # Shortcuts
-        remove_rows_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Delete))
+        remove_rows_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_Delete.value))
         remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
         self.addAction(remove_rows_action)
 

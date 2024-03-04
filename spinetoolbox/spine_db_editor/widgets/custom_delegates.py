@@ -435,7 +435,7 @@ class ParameterNameDelegate(TableDelegate):
 class EntityBynameDelegate(TableDelegate):
     """A delegate for the entity byname."""
 
-    element_name_list_editor_requested = Signal(QModelIndex, int, object)
+    element_name_list_editor_requested = Signal(QModelIndex, object, object)
 
     def createEditor(self, parent, option, index):
         """Returns editor."""

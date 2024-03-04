@@ -31,7 +31,17 @@ from PySide6.QtCore import (
     QUrl,
     QEvent,
 )
-from PySide6.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow, QAction, QUndoStack
+from PySide6.QtGui import (
+    QDesktopServices,
+    QGuiApplication,
+    QKeySequence,
+    QIcon,
+    QCursor,
+    QWindow,
+    QAction,
+    QUndoStack,
+    QColor,
+)
 from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -172,10 +182,9 @@ class ToolboxUI(QMainWindow):
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         self.kernels_menu = KernelsPopupMenu(self)
         # Make and initialize toolbars
-        self.main_toolbar = toolbars.MainToolBar(
-            self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
-        )
-        self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
+        self.items_toolbar = toolbars.ItemsToolBar(self)
+        self.spec_toolbar = toolbars.SpecToolBar(self)
+        self.execute_toolbar = toolbars.ExecuteToolBar(self)
         self._original_execute_project_action_tooltip = self.ui.actionExecute_project.toolTip()
         self.setStatusBar(None)
         # Additional consoles for item execution
@@ -198,14 +207,14 @@ class ToolboxUI(QMainWindow):
         self.set_debug_qactions()
         # Finalize init
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
-        self.restore_dock_widgets()
-        self.restore_ui()
         self.ui.listView_console_executions.hide()
         self.ui.listView_console_executions.installEventFilter(self)
         self.parse_project_item_modules()
         self.init_specification_model()
         self.make_item_properties_uis()
-        self.main_toolbar.setup()
+        self.items_toolbar.setup()
+        self.spec_toolbar.setup()
+        self.execute_toolbar.setup()
         self.link_properties_widgets = {
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
@@ -216,6 +225,9 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._plugin_manager = PluginManager(self)
         self._plugin_manager.load_installed_plugins()
+        self.refresh_toolbars()
+        self.restore_dock_widgets()
+        self.restore_ui()
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
@@ -347,9 +359,7 @@ class ToolboxUI(QMainWindow):
 
     def _update_execute_enabled(self):
         enabled_by_project = self._project.settings.enable_execute_all if self._project is not None else False
-        self.ui.actionExecute_project.setEnabled(
-            enabled_by_project and not self.execution_in_progress
-        )
+        self.ui.actionExecute_project.setEnabled(enabled_by_project and not self.execution_in_progress)
         if not enabled_by_project:
             self.ui.actionExecute_project.setToolTip("Executing entire project disabled by project settings.")
         else:
@@ -600,8 +610,13 @@ class ToolboxUI(QMainWindow):
 
     def _toolbars(self):
         """Yields all toolbars in the window."""
-        yield self.main_toolbar
+        yield self.items_toolbar
+        yield self.spec_toolbar
         yield from self._plugin_manager.plugin_toolbars.values()
+
+    def set_toolbar_colored_icons(self, checked):
+        for toolbar in self._toolbars():
+            toolbar.set_colored_icons(checked)
 
     def _disable_project_actions(self):
         """Disables all project-related actions, except
@@ -636,6 +651,11 @@ class ToolboxUI(QMainWindow):
         for k, toolbar in enumerate(all_toolbars):
             color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
             toolbar.set_color(color)
+            if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
+                self.addToolBar(Qt.TopToolBarArea, toolbar)
+        self.execute_toolbar.set_color(QColor("silver"))
+        if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
+            self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
 
     @Slot()
     def show_recent_projects_menu(self):
@@ -737,7 +757,7 @@ class ToolboxUI(QMainWindow):
         self._project.tear_down()
         self._project = None
         self._disable_project_actions()
-        self.undo_stack.setClean()
+        self.undo_stack.clear()
         self.update_window_title()
         if clear_event_log:
             self.ui.textBrowser_eventlog.clear()
@@ -779,16 +799,15 @@ class ToolboxUI(QMainWindow):
         layout.addWidget(properties_ui)
         return tab
 
-    def add_project_items(self, items_dict, silent=False):
+    def add_project_items(self, items_dict):
         """Pushes an AddProjectItemsCommand to the undo stack.
 
         Args:
             items_dict (dict): mapping from item name to item dictionary
-            silent (bool): if True, suppress log messages
         """
         if self._project is None or not items_dict:
             return
-        self.undo_stack.push(AddProjectItemsCommand(self._project, items_dict, self.item_factories, silent))
+        self.undo_stack.push(AddProjectItemsCommand(self._project, items_dict, self.item_factories))
 
     def supports_specifications(self, item_type):
         """Returns True if given project item type supports specifications.
@@ -1336,14 +1355,16 @@ class ToolboxUI(QMainWindow):
 
     def set_debug_qactions(self):
         """Sets shortcuts for QActions that may be needed in debugging."""
-        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_0))
-        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_8))
+        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_0.value))
+        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_8.value))
         self.addAction(self.show_properties_tabbar)
         self.addAction(self.show_supported_img_formats)
 
     def add_menu_actions(self):
         """Adds extra actions to Edit and View menu."""
-        self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.items_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.spec_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.execute_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
@@ -1545,10 +1566,6 @@ class ToolboxUI(QMainWindow):
             return
         if not self.supports_specification(item_type):
             return
-        msg = f"Opening {item_type} specification editor"
-        if specification:
-            msg += f" for {specification.name}"
-        self.msg.emit(msg)
         multi_tab_editor = next(self.get_all_multi_tab_spec_editors(item_type), None)
         if multi_tab_editor is None:
             multi_tab_editor = MultiTabSpecEditor(self, item_type)
@@ -1718,7 +1735,8 @@ class ToolboxUI(QMainWindow):
         action = menu.exec(pos)
         if action is self.ui.actionTake_link:
             self.ui.graphicsView.take_link(link)
-        self.refresh_edit_action_states()
+        self.refresh_edit_action_states()  # Disables actionRemove because take_link clears selections
+        self.ui.actionRemove.setEnabled(True)
         menu.deleteLater()
 
     @Slot()
@@ -1727,6 +1745,9 @@ class ToolboxUI(QMainWindow):
         remove and rename actions in File-Edit menu, project tree view
         context menu, and in Design View context menus just before the
         menus are shown to user."""
+        if not self.project():
+            self.disable_edit_actions()
+            return
         clipboard = QApplication.clipboard()
         byte_data = clipboard.mimeData().data("application/vnd.spinetoolbox.ProjectItem")
         can_paste = not byte_data.isNull()
@@ -1734,10 +1755,7 @@ class ToolboxUI(QMainWindow):
         can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
         has_items = self.project().n_items > 0
         selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
-        _methods = [
-            getattr(self.project().get_item(x.name()), "copy_local_data")
-            for x in selected_project_items
-        ]
+        _methods = [getattr(self.project().get_item(x.name()), "copy_local_data") for x in selected_project_items]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
         # Renaming an item should always be allowed except when it's a Data Store that is open in an editor
         for item in (self.project().get_item(x.name()) for x in selected_project_items):
@@ -1757,6 +1775,16 @@ class ToolboxUI(QMainWindow):
         self.ui.actionRemove.setEnabled(bool(selected_items))
         self.ui.actionRemove_all.setEnabled(has_items)
 
+    def disable_edit_actions(self):
+        """Disables edit actions."""
+        self.ui.actionCopy.setEnabled(False)
+        self.ui.actionPaste.setEnabled(False)
+        self.ui.actionPasteAndDuplicateFiles.setEnabled(False)
+        self.ui.actionDuplicate.setEnabled(False)
+        self.ui.actionDuplicateAndDuplicateFiles.setEnabled(False)
+        self.ui.actionRemove.setEnabled(False)
+        self.ui.actionRemove_all.setEnabled(False)
+
     @Slot()
     def enable_edit_actions(self):
         """Enables project item edit actions after a QMenu has been shown.
@@ -1767,6 +1795,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionPasteAndDuplicateFiles.setEnabled(True)
         self.ui.actionDuplicate.setEnabled(True)
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(True)
+        self.ui.actionRemove.setEnabled(True)
 
     def _tasks_before_exit(self):
         """Returns a list of tasks to perform before exiting the application.
@@ -1943,7 +1972,7 @@ class ToolboxUI(QMainWindow):
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             self.update_recent_projects()
-        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.main_toolbar.icon_ordering())
+        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
@@ -2039,7 +2068,7 @@ class ToolboxUI(QMainWindow):
             else:
                 final_items_dict[name] = item_dict
             self._set_deserialized_item_position(item_dict, shift_x, shift_y, scene_rect)
-        self.add_project_items(final_items_dict, silent=True)
+        self.add_project_items(final_items_dict)
 
     @Slot()
     def project_item_to_clipboard(self):
