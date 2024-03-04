@@ -17,7 +17,7 @@ An asterisk (*) in a tab of Spine Database Editor indicates that the session has
 .. image:: img/dirty_db.png
    :align: center
 
-To commit your changes, select **Session -> Commit** from the hamburger menu or press **CTRL+ENTER** while the
+To commit your changes, select **Session -> Commit** from the hamburger menu or press **Ctrl+Enter** while the
 Spine Database Editor -window is active to open the commit dialog:
 
 .. image:: img/commit_dialog.png
@@ -43,7 +43,7 @@ Rollback
 --------
 
 To undo *all* changes since the last commit, select **Session -> Rollback** from the hamburger menu or press
-**CTRL+BACKSPACE** while the Spine Database Editor -window is active. A dialog confirming the rollback action
+**Ctrl+Backspace** while the Spine Database Editor -window is active. A dialog confirming the rollback action
 will open. From there, select **Rollback** to proceed.
 
 .. tip:: To undo/redo individual changes, use the **Edit -> Undo** and **Edit -> Redo** actions from the hamburger menu.

@@ -13,8 +13,8 @@
 """Classes for custom QGraphicsViews for the Design and Graph views."""
 import math
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
-from PySide6.QtGui import QCursor
-from PySide6.QtCore import QTimer, Slot, Qt, QTimeLine, QRectF
+from PySide6.QtGui import QCursor, QMouseEvent
+from PySide6.QtCore import QEvent, QTimer, Slot, Qt, QTimeLine, QRectF
 from ..project_item_icon import ProjectItemIcon
 from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
 from ..link import Link, JumpLink
@@ -24,6 +24,8 @@ from .custom_qgraphicsscene import DesignGraphicsScene
 
 class CustomQGraphicsView(QGraphicsView):
     """Super class for Design and Entity QGraphicsViews."""
+
+    DRAG_MIN_DURATION = 150
 
     def __init__(self, parent):
         """
@@ -39,6 +41,8 @@ class CustomQGraphicsView(QGraphicsView):
         self._max_zoom = 10.0
         self._min_zoom = 0.1
         self._previous_mouse_pos = None
+        self._last_right_mouse_press = None
+        self._enabled_context_menu_policy = self.contextMenuPolicy()
 
     @property
     def _qsettings(self):
@@ -56,11 +60,10 @@ class CustomQGraphicsView(QGraphicsView):
         self._set_preferred_scene_rect()
 
     def keyPressEvent(self, event):
-        """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
-        Send event downstream to QGraphicsItems if pressed key is not handled here.
+        """Enables zooming with plus and minus keys (comma resets zoom).
 
         Args:
-            event (QKeyEvent): Pressed key
+            event (QKeyEvent): key press event
         """
         if event.key() == Qt.Key_Plus:
             self.zoom_in()
@@ -72,39 +75,59 @@ class CustomQGraphicsView(QGraphicsView):
             super().keyPressEvent(event)
 
     def mousePressEvent(self, event):
-        """Set rubber band selection mode if Control pressed.
-        Enable resetting the zoom factor from the middle mouse button.
+        """Sets rubber band selection mode if Control or right mouse button is pressed.
+        Enables resetting the zoom factor from the middle mouse button.
         """
         self._previous_mouse_pos = event.position().toPoint()
         item = self.itemAt(event.position().toPoint())
         if not item or not item.acceptedMouseButtons() & event.buttons():
-            if event.modifiers() & Qt.ControlModifier:
+            button = event.button()
+            if button == Qt.MouseButton.LeftButton:
                 self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
                 self.viewport().setCursor(Qt.CrossCursor)
-            if event.button() == Qt.MiddleButton:
+            elif button == Qt.MouseButton.MiddleButton:
                 self.reset_zoom()
+            if button == Qt.MouseButton.RightButton:
+                self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+                self._last_right_mouse_press = event.timestamp()
+                event = QMouseEvent(
+                    event.type(),
+                    event.pos(),
+                    Qt.MouseButton.LeftButton,
+                    Qt.MouseButton.LeftButton,
+                    Qt.KeyboardModifier.NoModifier,
+                )
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
         if (
-            not self.itemAt(event.position().toPoint())
-            and (event.buttons() & Qt.LeftButton)
-            and self.dragMode() != QGraphicsView.DragMode.RubberBandDrag
+            event.buttons() & Qt.MouseButton.RightButton
+            and self.dragMode() == QGraphicsView.DragMode.ScrollHandDrag
+            and self._drag_duration_passed(event)
         ):
             if self._previous_mouse_pos is not None:
                 delta = event.position().toPoint() - self._previous_mouse_pos
                 self._scroll_scene_by(delta.x(), delta.y())
             self._previous_mouse_pos = event.position().toPoint()
+            event = _fake_left_button_event(event)
+        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         """Reestablish scroll hand drag mode."""
+        was_scroll_hand_drag = self.dragMode() == QGraphicsView.DragMode.ScrollHandDrag and self._drag_duration_passed(
+            event
+        )
+        if was_scroll_hand_drag:
+            self.disable_context_menu()
+            event = _fake_left_button_event(event)
         super().mouseReleaseEvent(event)
         self._previous_mouse_pos = None
         item = next(iter([x for x in self.items(event.position().toPoint()) if x.hasCursor()]), None)
-        was_not_rubber_band_drag = self.dragMode() != QGraphicsView.DragMode.RubberBandDrag
-        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        if item and was_not_rubber_band_drag:
+        if was_scroll_hand_drag:
+            self._last_right_mouse_press = None
+            self.enable_context_menu()
+            self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        if item:
             self.viewport().setCursor(item.cursor())
         else:
             self.viewport().setCursor(Qt.ArrowCursor)
@@ -129,6 +152,18 @@ class CustomQGraphicsView(QGraphicsView):
 
     def _use_smooth_zoom(self):
         return self._qsettings.value("appSettings/smoothZoom", defaultValue="false") == "true"
+
+    def _drag_duration_passed(self, mouse_event):
+        """Test is drag duration has passed.
+
+        Args:
+            mouse_event (QMouseEvent): current mouse event
+        """
+        return (
+            mouse_event.timestamp() - self._last_right_mouse_press > self.DRAG_MIN_DURATION
+            if self._last_right_mouse_press is not None
+            else False
+        )
 
     def wheelEvent(self, event):
         """Zooms in/out.
@@ -305,6 +340,19 @@ class CustomQGraphicsView(QGraphicsView):
         items_scene_rect = self.scene().itemsBoundingRect()
         self.scene().setSceneRect(viewport_scene_rect.united(items_scene_rect))
 
+    @Slot()
+    def disable_context_menu(self):
+        """Disables the context menu."""
+        self._enabled_context_menu_policy = self.contextMenuPolicy()
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
+
+    @Slot()
+    def enable_context_menu(self):
+        """Enables the context menu."""
+        # We use timer here to delay setting the policy.
+        # Otherwise, using right-click to cancel link drawing would still open the context menu.
+        QTimer.singleShot(0, lambda: self.setContextMenuPolicy(self._enabled_context_menu_policy))
+
 
 class DesignQGraphicsView(CustomQGraphicsView):
     """QGraphicsView for the Design View."""
@@ -316,7 +364,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """
         super().__init__(parent=parent)
         self._toolbox = None
-        self._enabled_context_menu_policy = self.contextMenuPolicy()
 
     @property
     def _qsettings(self):
@@ -536,15 +583,20 @@ class DesignQGraphicsView(CustomQGraphicsView):
             global_pos = self.viewport().mapToGlobal(event.pos())
             self._toolbox.show_project_or_item_context_menu(global_pos, None)
 
-    @Slot()
-    def disable_context_menu(self):
-        """Disables the context menu."""
-        self._enabled_context_menu_policy = self.contextMenuPolicy()
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
 
-    @Slot()
-    def enable_context_menu(self):
-        """Enables the context menu."""
-        # We use timer here to delay setting the policy.
-        # Otherwise, using right-click to cancel link drawing would still open the context menu.
-        QTimer.singleShot(0, lambda: self.setContextMenuPolicy(self._enabled_context_menu_policy))
+def _fake_left_button_event(mouse_event):
+    """Makes a left-click mouse event that is otherwise close of given event.
+
+    Args:
+        mouse_event (QMouseEvent): mouse event
+
+    Returns:
+        QMouseEvent: left-click mouse event
+    """
+    return QMouseEvent(
+        mouse_event.type(),
+        mouse_event.pos(),
+        Qt.MouseButton.LeftButton,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+    )

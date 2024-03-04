@@ -83,7 +83,7 @@ What is included in the graph depends on the specific selection you make in the 
 
 - To include all entities from the database, select the root item.
 - To include all entities of an entity class, select the corresponding class item.
-- To include specific entities, select them by holding down **CTRL**.
+- To include specific entities, select them by holding down **Ctrl**.
 
 .. note:: In **Graph View**, a small unnamed vertex represents a multidimensional entity with multiple elements,
    whereas a bigger named vertex represents a zero dimensional entity. An arc between entities indicates that
@@ -98,8 +98,7 @@ Manipulating the graph
 **********************
 
 You can move items in the graph by dragging them with your mouse. By default, each items moves individually.
-Like in the **Design view**, multiple items can be moved at once by selecting them with the **CTRL** key
-pressed down.
+Like in the **Design view**, multiple items can be moved at once by selecting them first.
 
 To display **Graph View**'s context menu, just right-click on an empty space in the graph.
 The context menu has the following options:
@@ -147,9 +146,8 @@ The context menu has the following options:
 
 
 .. note:: **Graph View** supports extended selection and rubber-band selection.
-   To extend a selection, press and hold **CTRL** while clicking on the items.
-   To perform rubber-band selection, press and hold **CTRL** while dragging your mouse
-   around the items you want to select.
+   To extend a selection, press and hold **Ctrl** while clicking on the items.
+   To perform rubber-band selection, drag your mouse around the items you want to select.
 
 .. note:: Pruned items are remembered across graph builds.
 

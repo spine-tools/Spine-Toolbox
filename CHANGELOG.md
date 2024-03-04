@@ -32,6 +32,8 @@ Many parts of the Spine data structure have been redesigned.
 
 #### Miscellaneous changes
 
+- "Rubber band" selection of items in Design and Graph views is now done with **left mouse button**
+  (no need to press Ctrl anymore). The views can be dragged around by holding the **right mouse button**.
 - You can now select a different Julia executable & project or Julia kernel for each Tool spec.
   This overrides the global setting from Toolbox Settings.
 - Headless mode now supports remote execution (see 'python -m spinetoolbox --help')

@@ -137,7 +137,7 @@ The **Add entity group** dialog will pop up:
 
 Enter the name of the group, and select the database where you want the group to be created.
 Select the members under *Non members*, and press (|add|>>) to add the members and (|remove| <<) to remove them.
-Multiple selection is supported with **CTRL** and **SHIFT**. Finally press **OK** to create the group.
+Multiple selection is supported with **Ctrl** and **Shift**. Finally press **OK** to create the group.
 
 When you're happy with your selections, press **OK** to add the group to the database.
 
@@ -209,9 +209,9 @@ bring the corresponding class to **Pivot View** using the **Value** input type
 Then, enter the parameter value in the corresponding cell in the table body.
 
 .. tip:: All **Tables Views** and **Pivot Views** support pasting tabular (e.g., spreadsheet) data from the clipboard.
-   Just select any cell in the table and press **CTRL+V**.
+   Just select any cell in the table and press **Ctrl+V**.
    If needed, **Table Views** will grow to accommodate the exceeding data.
-   To paste data on multiple cells, select all the cells you want to paste on and press **CTRL+V**.
+   To paste data on multiple cells, select all the cells you want to paste on and press **Ctrl+V**.
 
 
 Adding entity alternatives
@@ -279,7 +279,7 @@ From **Generate scenarios**
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Scenarios can be added also by automatically generating them from existing alternatives.
-Select the alternatives in **Alternative** (using **CTRL** and **SHIFT** while clicking the items),
+Select the alternatives in **Alternative** (using **Ctrl** and **Shift** while clicking the items),
 then right click to open a context menu.
 Select **Generate scenarios...**
 

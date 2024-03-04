@@ -339,7 +339,7 @@ class Ui_MainWindow(object):
         self.graphicsView.setFrameShape(QFrame.NoFrame)
         self.graphicsView.setFrameShadow(QFrame.Raised)
         self.graphicsView.setRenderHints(QPainter.Antialiasing|QPainter.TextAntialiasing)
-        self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.graphicsView.setDragMode(QGraphicsView.RubberBandDrag)
         self.graphicsView.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.graphicsView.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         self.graphicsView.setRubberBandSelectionMode(Qt.ContainsItemBoundingRect)
