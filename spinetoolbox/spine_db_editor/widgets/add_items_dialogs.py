@@ -578,6 +578,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         layout.addWidget(QLabel("Database", self))
         layout.addWidget(self.db_combo_box)
         self.splitter = QSplitter(self)
+        self.splitter.setChildrenCollapsible(False)
         self.add_button = QToolButton(self)
         self.add_button.setToolTip("<p>Add entities by combining selected available elements.</p>")
         self.add_button.setIcon(QIcon(":/icons/menu_icons/cubes_plus.svg"))
