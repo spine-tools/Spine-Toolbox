@@ -155,7 +155,10 @@ class TabularViewMixin:
 
     def init_models(self):
         """Initializes models."""
-        super().init_models()
+        with disconnect(
+            self.ui.treeView_entity.tree_selection_changed, self._handle_entity_tree_selection_changed_in_pivot_table
+        ):
+            super().init_models()
         self.current_class_id = {}
         self.current_class_name = None
         self.clear_pivot_table()
@@ -202,6 +205,7 @@ class TabularViewMixin:
 
         Args:
             index (QModelIndex): index from object or relationship tree
+
         Returns:
             bool
         """
@@ -507,27 +511,6 @@ class TabularViewMixin:
             for index in self._indexes(value)
         }
 
-    def load_parameter_value_data(self):
-        """Returns a dict that merges empty and full parameter_value data.
-
-        Returns:
-            dict: Key is a tuple object_id, ..., parameter_id, value is the parameter_value or None if not specified.
-        """
-        data = self.load_empty_parameter_value_data()
-        data.update(self.load_full_parameter_value_data())
-        return data
-
-    def load_expanded_parameter_value_data(self):
-        """
-        Returns all permutations of entities as well as parameter indexes and values for the current class.
-
-        Returns:
-            dict: Key is a tuple object_id, ..., index, while value is None.
-        """
-        data = self.load_empty_expanded_parameter_value_data()
-        data.update(self.load_full_expanded_parameter_value_data())
-        return data
-
     def get_pivot_preferences(self):
         """Returns saved pivot preferences.
 
@@ -577,7 +560,9 @@ class TabularViewMixin:
     def clear_pivot_table(self):
         self.wipe_out_headers()
         if self.pivot_table_model:
-            self.pivot_table_model.clear_model()
+            with disconnect(self.pivot_table_model.modelReset, self.make_pivot_headers):
+                self.pivot_table_model.clear_model()
+            self.pivot_table_model.set_fetch_parents_non_obsolete()
             self.pivot_table_proxy.clear_filter()
             self.pivot_table_model.modelReset.disconnect(self.make_pivot_headers)
             self.pivot_table_model.modelReset.disconnect(self.reload_frozen_table)
