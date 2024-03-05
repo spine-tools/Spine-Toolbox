@@ -16,9 +16,9 @@ from itertools import chain
 import os
 from pathlib import Path
 import json
-import random
 from PySide6.QtCore import Signal, QCoreApplication
 from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QMessageBox
 import networkx as nx
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
@@ -34,7 +34,6 @@ from spine_engine.utils.helpers import (
 )
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_engine.server.util.zip_handler import ZipHandler
-from .widgets.notification import Notification
 from .project_settings import ProjectSettings
 from .server.engine_client import EngineClient
 from .metaobject import MetaObject
@@ -760,11 +759,22 @@ class SpineToolboxProject(MetaObject):
         self._update_jump_icons()
         if not self._is_dag_valid(dag):
             self.remove_connection(connection)
-            n = Notification(
-                self._toolbox,
-                "Feedback loops not allowed. Draw the link again with the ALT key pressed to make a Jump link.",
+            msg = "This connection creates a cycle into the DAG.\n\nWould you like to add a Loop connection?"
+            title = f"Add Loop?"
+            message_box = QMessageBox(
+                QMessageBox.Icon.Question,
+                title,
+                msg,
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self._toolbox,
             )
-            n.show()
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Add Loop")
+            answer = message_box.exec()
+            if answer == QMessageBox.StandardButton.Cancel:
+                return False
+            src_conn = self.get_item(connection.source).get_icon().conn_button(connection.source_position)
+            dst_conn = (self.get_item(connection.destination).get_icon().conn_button(connection.destination_position))
+            self._toolbox.ui.graphicsView.add_jump(src_conn, dst_conn)
             return False
         destination = self._project_items[connection.destination]
         source = self._project_items[connection.source]

@@ -19,7 +19,7 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QVariantAnimation
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 import networkx as nx
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.spine_engine import ItemExecutionFinishState
@@ -28,7 +28,7 @@ from spine_engine.utils.helpers import shorten
 from spinetoolbox.helpers import SignalWaiter
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
-from spinetoolbox.project_item.logging_connection import LoggingConnection
+from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.config import LATEST_PROJECT_VERSION, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.project import node_successors
 from tests.mock_helpers import (
@@ -369,23 +369,42 @@ class TestSpineToolboxProject(unittest.TestCase):
             self.assertTrue(dc3_executable.execute_called)
             self.assertTrue(dc5_executable.execute_called)
 
-    def test_making_a_cyclic_dag_is_not_allowed(self):
+    def test_making_a_yellow_feedback_loop_makes_a_jump_instead(self):
         item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
         item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
         self.toolbox.project().add_connection(
             LoggingConnection(item1.name, "right", item2.name, "left", toolbox=self.toolbox)
         )
-        with mock.patch("spinetoolbox.project.Notification.show") as mock_show_notification:
-            mock_show_notification.return_value = True
-            self.toolbox.project().add_connection(
-                LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
-            )
-            mock_show_notification.assert_called()
-        # There should be only one connection in the project, because the second add_connection
-        # creates a loop, which is not allowed
+        # There should be one connection and no jumps in the project
         self.assertEqual(1, len(self.toolbox.project().connections))
         self.assertEqual("DC", self.toolbox.project().connections[0].source)
         self.assertEqual("View", self.toolbox.project().connections[0].destination)
+        self.assertEqual(0, len(self.toolbox.project()._jumps))
+        with mock.patch("PySide6.QtWidgets.QMessageBox.exec") as mock_msgbox_exec:
+            mock_msgbox_exec.return_value = QMessageBox.StandardButton.Cancel
+            self.toolbox.project().add_connection(
+                LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
+            )
+            # Operation was cancelled
+            self.assertEqual(1, len(self.toolbox.project().connections))
+            self.assertEqual(0, len(self.toolbox.project()._jumps))
+            # Do again but click Ok (Add Loop)
+            mock_msgbox_exec.assert_called()
+            self.assertEqual(1, mock_msgbox_exec.call_count)
+            mock_msgbox_exec.return_value = QMessageBox.StandardButton.Ok
+            self.toolbox.project().add_connection(
+                LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
+            )
+            self.assertEqual(2, mock_msgbox_exec.call_count)
+            # There should be one connection and one jump in the project
+            self.assertEqual(1, len(self.toolbox.project().connections))
+            self.assertIsInstance(self.toolbox.project().connections[0], LoggingConnection)
+            self.assertEqual("DC", self.toolbox.project().connections[0].source)
+            self.assertEqual("View", self.toolbox.project().connections[0].destination)
+            self.assertEqual(1, len(self.toolbox.project()._jumps))
+            self.assertIsInstance(self.toolbox.project()._jumps[0], LoggingJump)
+            self.assertEqual("View", self.toolbox.project()._jumps[0].source)
+            self.assertEqual("DC", self.toolbox.project()._jumps[0].destination)
 
     def test_rename_project(self):
         new_name = "New Project Name"
