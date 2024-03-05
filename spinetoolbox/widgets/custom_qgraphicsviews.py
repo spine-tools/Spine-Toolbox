@@ -13,8 +13,8 @@
 """Classes for custom QGraphicsViews for the Design and Graph views."""
 import math
 from PySide6.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
-from PySide6.QtGui import QCursor, QMouseEvent
-from PySide6.QtCore import QEvent, QTimer, Slot, Qt, QTimeLine, QRectF
+from PySide6.QtGui import QContextMenuEvent, QCursor, QMouseEvent
+from PySide6.QtCore import QTimer, Slot, Qt, QTimeLine, QRectF
 from ..project_item_icon import ProjectItemIcon
 from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
 from ..link import Link, JumpLink
@@ -83,25 +83,18 @@ class CustomQGraphicsView(QGraphicsView):
         if not item or not item.acceptedMouseButtons() & event.buttons():
             button = event.button()
             if button == Qt.MouseButton.LeftButton:
-                self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
                 self.viewport().setCursor(Qt.CrossCursor)
             elif button == Qt.MouseButton.MiddleButton:
                 self.reset_zoom()
             if button == Qt.MouseButton.RightButton:
                 self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
                 self._last_right_mouse_press = event.timestamp()
-                event = QMouseEvent(
-                    event.type(),
-                    event.pos(),
-                    Qt.MouseButton.LeftButton,
-                    Qt.MouseButton.LeftButton,
-                    Qt.KeyboardModifier.NoModifier,
-                )
+                event = _fake_left_button_event(event)
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if (
-            event.buttons() & Qt.MouseButton.RightButton
+            event.buttons() & Qt.MouseButton.RightButton == Qt.MouseButton.RightButton
             and self.dragMode() == QGraphicsView.DragMode.ScrollHandDrag
             and self._drag_duration_passed(event)
         ):
@@ -114,19 +107,23 @@ class CustomQGraphicsView(QGraphicsView):
 
     def mouseReleaseEvent(self, event):
         """Reestablish scroll hand drag mode."""
-        was_scroll_hand_drag = self.dragMode() == QGraphicsView.DragMode.ScrollHandDrag and self._drag_duration_passed(
-            event
-        )
-        if was_scroll_hand_drag:
-            self.disable_context_menu()
+        context_menu_disabled = False
+        if self.dragMode() == QGraphicsView.DragMode.ScrollHandDrag:
+            if self._drag_duration_passed(event):
+                context_menu_disabled = True
+                self.disable_context_menu()
+            else:
+                self.contextMenuEvent(
+                    QContextMenuEvent(QContextMenuEvent.Reason.Mouse, event.pos(), event.globalPos(), event.modifiers())
+                )
             event = _fake_left_button_event(event)
         super().mouseReleaseEvent(event)
+        self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         self._previous_mouse_pos = None
-        item = next(iter([x for x in self.items(event.position().toPoint()) if x.hasCursor()]), None)
-        if was_scroll_hand_drag:
-            self._last_right_mouse_press = None
+        self._last_right_mouse_press = None
+        if context_menu_disabled:
             self.enable_context_menu()
-            self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+        item = next(iter([x for x in self.items(event.position().toPoint()) if x.hasCursor()]), None)
         if item:
             self.viewport().setCursor(item.cursor())
         else:
