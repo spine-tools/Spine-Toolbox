@@ -758,8 +758,6 @@ class SpineToolboxProject(MetaObject):
         self.connection_established.emit(connection)
         self._update_jump_icons()
         if not self._is_dag_valid(dag):
-            src = connection.source
-            dst = connection.destination
             self.remove_connection(connection)
             msg = "This connection creates a cycle into the DAG.\n\nWould you like to add a Loop connection?"
             title = f"Add Loop?"
@@ -774,9 +772,9 @@ class SpineToolboxProject(MetaObject):
             answer = message_box.exec()
             if answer == QMessageBox.StandardButton.Cancel:
                 return False
-            source_connector = self.get_item(src).get_icon().conn_button(args[1])  # args[1]: jump.source_position
-            destination_connector = self.get_item(dst).get_icon().conn_button(args[3])  # args[3]: jump.dst_position)
-            self._toolbox.ui.graphicsView.add_jump(source_connector, destination_connector)
+            src_conn = self.get_item(connection.source).get_icon().conn_button(connection.source_position)
+            dst_conn = (self.get_item(connection.destination).get_icon().conn_button(connection.destination_position))
+            self._toolbox.ui.graphicsView.add_jump(src_conn, dst_conn)
             return False
         destination = self._project_items[connection.destination]
         source = self._project_items[connection.source]
