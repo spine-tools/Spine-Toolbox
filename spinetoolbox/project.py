@@ -773,7 +773,7 @@ class SpineToolboxProject(MetaObject):
             if answer == QMessageBox.StandardButton.Cancel:
                 return False
             src_conn = self.get_item(connection.source).get_icon().conn_button(connection.source_position)
-            dst_conn = (self.get_item(connection.destination).get_icon().conn_button(connection.destination_position))
+            dst_conn = self.get_item(connection.destination).get_icon().conn_button(connection.destination_position)
             self._toolbox.ui.graphicsView.add_jump(src_conn, dst_conn)
             return False
         destination = self._project_items[connection.destination]
