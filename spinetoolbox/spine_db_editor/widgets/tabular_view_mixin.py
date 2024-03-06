@@ -99,6 +99,9 @@ class TabularViewMixin:
         self.frozen_table_model.selected_row_changed.connect(
             self._change_frozen_value, Qt.ConnectionType.QueuedConnection
         )
+        self.frozen_table_model.selected_row_changed.connect(
+            self._update_current_index_if_need
+        )
         self.pivot_action_group.triggered.connect(self._handle_pivot_action_triggered)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.db_mngr.items_updated.connect(self._reload_pivot_table_if_needed)
@@ -769,6 +772,24 @@ class TabularViewMixin:
             return
         with self._frozen_table_reload_disabled():
             self.frozen_table_model.set_selected(row)
+
+    @Slot()
+    def _update_current_index_if_need(self):
+        """Ensures selected frozen row corresponds to current index.
+
+        Frozen table gets sorted from time to time possibly changing the selected row.
+        """
+        selected_row = self.frozen_table_model.get_selected()
+        selection_model = self.ui.frozen_table.selectionModel()
+        current_index = selection_model.currentIndex()
+        if (selected_row is None and not current_index.isValid()) or selected_row == current_index.row():
+            return
+        with disconnect(selection_model.currentChanged, self._change_selected_frozen_row):
+            if selected_row is None:
+                index = QModelIndex()
+            else:
+                index = self.frozen_table_model.index(selected_row, current_index.column())
+            self.ui.frozen_table.setCurrentIndex(index)
 
     @Slot(str, set, bool)
     def change_filter(self, identifier, valid_values, has_filter):

@@ -87,10 +87,12 @@ class FrozenTableModel(QAbstractTableModel):
             del self._data[first : last + 1]
             self.endRemoveRows()
         if self._selected_row in removed_rows:
+            original = self._selected_row
             self._selected_row = min(self._selected_row, len(self._data) - 1)
             if self._selected_row == 0:
                 self._selected_row = None
-            self.selected_row_changed.emit()
+            if self._selected_row != original:
+                self.selected_row_changed.emit()
         elif frozen_value is not None:
             selected_row = self._find_first(frozen_value)
             if selected_row != self._selected_row:
@@ -122,6 +124,14 @@ class FrozenTableModel(QAbstractTableModel):
         new_bottom_right = self.index(self._selected_row, last_column)
         self.dataChanged.emit(new_bottom_right, new_top_left, [Qt.ItemDataRole.BackgroundRole])
         self.selected_row_changed.emit()
+
+    def get_selected(self):
+        """Returns selected row.
+
+        Returns:
+            int: row index or None if no row is selected
+        """
+        return self._selected_row
 
     def get_frozen_value(self):
         """Return currently selected frozen value.
@@ -230,11 +240,17 @@ class FrozenTableModel(QAbstractTableModel):
             key=lambda x: tuple(self._name_from_data(x[column], header[column]) for column in range(column_count)),
         )
         self._data[1:] = data
+        selected_row_changed = False
         if frozen_value is not None:
-            self._selected_row = self._find_first(frozen_value)
+            candidate = self._find_first(frozen_value)
+            if self._selected_row != candidate:
+                self._selected_row = candidate
+                selected_row_changed = True
         self.layoutChanged["QList<QPersistentModelIndex>", "QAbstractItemModel::LayoutChangeHint"].emit(
             [], QAbstractTableModel.LayoutChangeHint.VerticalSortHint
         )
+        if selected_row_changed:
+            self.selected_row_changed.emit()
 
     def _unique_values(self):
         """Turns non-header data into sets of unique values on each column.

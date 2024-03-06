@@ -207,10 +207,10 @@ class PivotModel:
         Args:
             value (list of str):
         """
-        if len(value) != len(self.pivot_frozen):
-            raise ValueError("'value' must have same length as 'self.pivot_frozen'")
         if value == self.frozen_value:
             return
+        if len(value) != len(self.pivot_frozen):
+            raise ValueError("'value' must have same length as 'self.pivot_frozen'")
         self.set_pivot(self.pivot_rows, self.pivot_columns, self.pivot_frozen, value)
 
     def set_frozen(self, frozen):
