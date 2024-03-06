@@ -174,7 +174,8 @@ class PivotModel:
                 header = headers[header_name]
                 if not header.accepts(header_id):
                     break
-                sort_keys.append(header.header_data(header_id))
+                sort_key = header.header_data(header_id)
+                sort_keys.append(sort_key if sort_key is not None else "")
             else:
                 accepted[x] = sort_keys
         return [item[0] for item in sorted(accepted.items(), key=operator.itemgetter(1))]
