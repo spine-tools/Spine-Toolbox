@@ -69,7 +69,8 @@ class FrozenTableModel(QAbstractTableModel):
         self.beginInsertRows(QModelIndex(), old_size, old_size + len(new_values) - 1)
         self._data += new_values
         self.endInsertRows()
-        self._keep_sorted()
+        had_data_before = bool(unique_data)
+        self._keep_sorted(update_selected_row=had_data_before)
 
     def remove_values(self, data):
         """Removes frozen values from the table.
@@ -225,7 +226,7 @@ class FrozenTableModel(QAbstractTableModel):
         self._keep_sorted()
         return True
 
-    def _keep_sorted(self):
+    def _keep_sorted(self, update_selected_row=True):
         """Sorts the data table."""
         if len(self._data) < 3:
             return
@@ -242,9 +243,13 @@ class FrozenTableModel(QAbstractTableModel):
         self._data[1:] = data
         selected_row_changed = False
         if frozen_value is not None:
-            candidate = self._find_first(frozen_value)
-            if self._selected_row != candidate:
-                self._selected_row = candidate
+            if update_selected_row:
+                candidate = self._find_first(frozen_value)
+                if self._selected_row != candidate:
+                    self._selected_row = candidate
+                    selected_row_changed = True
+            elif frozen_value != self.get_frozen_value():
+                # The row did not change but the frozen value did.
                 selected_row_changed = True
         self.layoutChanged["QList<QPersistentModelIndex>", "QAbstractItemModel::LayoutChangeHint"].emit(
             [], QAbstractTableModel.LayoutChangeHint.VerticalSortHint

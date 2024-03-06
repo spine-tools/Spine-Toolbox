@@ -99,9 +99,7 @@ class TabularViewMixin:
         self.frozen_table_model.selected_row_changed.connect(
             self._change_frozen_value, Qt.ConnectionType.QueuedConnection
         )
-        self.frozen_table_model.selected_row_changed.connect(
-            self._update_current_index_if_need
-        )
+        self.frozen_table_model.selected_row_changed.connect(self._update_current_index_if_need)
         self.pivot_action_group.triggered.connect(self._handle_pivot_action_triggered)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.db_mngr.items_updated.connect(self._reload_pivot_table_if_needed)
