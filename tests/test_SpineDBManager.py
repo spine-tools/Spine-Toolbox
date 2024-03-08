@@ -27,6 +27,8 @@ from spinedb_api import (
 )
 from spinedb_api.parameter_value import join_value_and_type, from_database, ParameterValueFormatError
 from spinedb_api import import_functions
+from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.helpers import signal_waiter
 
@@ -234,7 +236,7 @@ class TestAddItems(unittest.TestCase):
         )
 
 
-class TestImportData(unittest.TestCase):
+class TestImportExportData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -245,6 +247,7 @@ class TestImportData(unittest.TestCase):
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
         self._db_mngr = SpineDBManager(mock_settings, None)
         logger = MagicMock()
+        self.editor = MagicMock()
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + self._temp_dir.name + "/db.sqlite"
         self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=True)
@@ -255,6 +258,56 @@ class TestImportData(unittest.TestCase):
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._temp_dir.cleanup()
+
+    def test_export_then_import_time_series_parameter_value(self):
+        file_path = self._temp_dir.name + r"\test.xlsx"
+        data = {
+            'entity_classes': [('A', (), None, None, False)],
+            'entities': [('A', 'aa', None)],
+            'parameter_definitions': [('A', 'test1', None, None, None)],
+            'parameter_values': [(
+                'A',
+                'aa',
+                'test1',
+                {
+                    'type': 'time_series',
+                    'index': {
+                        'start': '2000-01-01 00:00:00',
+                        'resolution': '1h',
+                        'ignore_year': False,
+                        'repeat': False
+                    },
+                    'data': [0.0, 1.0, 2.0, 4.0, 8.0, 0.0]
+                },
+                'Base'
+            )],
+            'alternatives': [('Base', 'Base alternative')],
+        }
+
+        self._db_mngr.export_to_excel(file_path, data, self.editor)
+
+        mapped_data, errors = get_mapped_data_from_xlsx(file_path)
+        self.assertEqual(errors, [])
+
+        self._db_mngr.import_data({self._db_map: mapped_data})
+        self._db_map.commit_session("imported items")
+
+        value = self._db_map.query(self._db_map.entity_parameter_value_sq).one()
+        time_series = from_database(value.value, value.type)
+        expected_result = TimeSeriesVariableResolution(
+            (
+                '2000-01-01T00:00:00',
+                '2000-01-01T01:00:00',
+                '2000-01-01T02:00:00',
+                '2000-01-01T03:00:00',
+                '2000-01-01T04:00:00',
+                '2000-01-01T05:00:00',
+            ),
+            (0.0, 1.0, 2.0, 4.0, 8.0, 0.0),
+            False,
+            False
+        )
+        self.assertEqual(time_series, expected_result)
 
     def test_import_parameter_value_lists(self):
         with signal_waiter(
