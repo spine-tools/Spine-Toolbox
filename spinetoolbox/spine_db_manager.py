@@ -38,7 +38,7 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     to_database,
 )
-from spinedb_api.parameter_value import load_db_value
+from spinedb_api.parameter_value import load_db_value, dump_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.helpers import remove_credentials_from_url
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
@@ -1579,7 +1579,7 @@ class SpineDBManager(QObject):
         # NOTE: We import data into an in-memory Spine db and then export that to excel.
         url = URL("sqlite", database="")
         with DatabaseMapping(url, create=True) as db_map:
-            import_data(db_map, **data_for_export)
+            import_data(db_map, **data_for_export, unparse_value=dump_db_value)
             db_map.commit_session("Added data for exporting.")
             file_name = os.path.split(file_path)[1]
             if os.path.exists(file_path):
