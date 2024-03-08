@@ -14,6 +14,8 @@
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
+
+from spinedb_api.temp_id import TempId
 from spinetoolbox.spine_db_editor.widgets.mass_select_items_dialogs import MassRemoveItemsDialog
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -43,7 +45,7 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
         self._db_mngr.clean_up()
 
     def test_stored_state(self):
-        state = {"databases": {"database": True}, "items": {"object": True, "relationship": False}}
+        state = {"databases": {self._db_map: True}, "items": {"entity": True, "entity_class": True}}
         dialog = MassRemoveItemsDialog(None, self._db_mngr, self._db_map, stored_state=state)
         self.assertEqual(
             dialog._item_check_boxes_widget.checked_states(),
@@ -51,45 +53,45 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
                 "alternative": False,
                 "entity_group": False,
                 "entity_metadata": False,
-                "feature": False,
+                "list_value": False,
                 "metadata": False,
-                "object": True,
-                "object_class": False,
+                "entity": True,
+                "entity_alternative": False,
+                "entity_class": True,
                 "parameter_definition": False,
                 "parameter_value": False,
                 "parameter_value_list": False,
                 "parameter_value_metadata": False,
-                "relationship": False,
-                "entity_class": False,
                 "scenario": False,
                 "scenario_alternative": False,
-                "tool": False,
-                "tool_feature": False,
-                "tool_feature_method": False,
+                "superclass_subclass": False,
             },
         )
-        self.assertTrue(dialog._db_map_check_boxes[self._db_map].isChecked())
+        self.assertTrue(dialog._database_check_boxes_widget._check_boxes[self._db_map].isChecked())
 
     def test_purge_objects(self):
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class"}]})
-        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "my_object"}]})
-        self.assertEqual(
-            self._db_mngr.get_items(self._db_map, "object"),
+        classes = self._db_mngr.get_items(self._db_map, "entity_class")
+        class_id = classes[0]["id"]
+        self._db_mngr.add_entities({self._db_map: [{"class_id": class_id, "name": "my_object"}]})
+        entities = [item._asdict() for item in self._db_mngr.get_items(self._db_map, "entity")]
+        self.assertEqual(len(entities), 1)
+        entity_id = entities[0]["id"]
+        self.assertEqual(entities
+            ,
             [
                 {
-                    'class_id': 1,
-                    'entity_class_name': 'my_class',
-                    'commit_id': None,
-                    'group_id': None,
-                    'id': 1,
+                    'class_id': class_id,
+                    "description": None,
+                    'id': entity_id,
                     'name': 'my_object',
-                    'type_id': 1,
+                    "element_id_list": (),
                 }
             ],
         )
         dialog = MassRemoveItemsDialog(None, self._db_mngr, self._db_map)
-        dialog._db_map_check_boxes[self._db_map].setChecked(True)
-        dialog._item_check_boxes_widget._item_check_boxes["object"].setChecked(True)
+        dialog._database_check_boxes_widget._check_boxes[self._db_map].setChecked(True)
+        dialog._item_check_boxes_widget._item_check_boxes["entity"].setChecked(True)
         dialog._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).click()
         self.assertEqual(self._db_mngr.get_items(self._db_map, "entity"), [])
 
