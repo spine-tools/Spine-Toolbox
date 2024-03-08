@@ -174,7 +174,8 @@ class PivotModel:
                 header = headers[header_name]
                 if not header.accepts(header_id):
                     break
-                sort_keys.append(header.header_data(header_id))
+                sort_key = header.header_data(header_id)
+                sort_keys.append(sort_key if sort_key is not None else "")
             else:
                 accepted[x] = sort_keys
         return [item[0] for item in sorted(accepted.items(), key=operator.itemgetter(1))]
@@ -206,10 +207,10 @@ class PivotModel:
         Args:
             value (list of str):
         """
-        if len(value) != len(self.pivot_frozen):
-            raise ValueError("'value' must have same length as 'self.pivot_frozen'")
         if value == self.frozen_value:
             return
+        if len(value) != len(self.pivot_frozen):
+            raise ValueError("'value' must have same length as 'self.pivot_frozen'")
         self.set_pivot(self.pivot_rows, self.pivot_columns, self.pivot_frozen, value)
 
     def set_frozen(self, frozen):

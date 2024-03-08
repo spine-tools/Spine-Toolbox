@@ -371,6 +371,10 @@ class PivotTableModelBase(QAbstractTableModel):
         for parent in self._fetch_parents():
             parent.reset()
 
+    def set_fetch_parents_non_obsolete(self):
+        for parent in self._fetch_parents():
+            parent.set_obsolete(False)
+
     def _fetch_parents(self):
         """Yields fetch parents for this model.
 
@@ -384,8 +388,9 @@ class PivotTableModelBase(QAbstractTableModel):
             return False
         result = False
         for fetch_parent in self._fetch_parents():
-            for db_map in self._parent.db_maps:
-                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
+            if not fetch_parent.is_fetched:
+                for db_map in self._parent.db_maps:
+                    result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
         return result
 
     def fetchMore(self, _):

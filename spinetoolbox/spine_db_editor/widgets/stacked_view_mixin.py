@@ -107,7 +107,7 @@ class StackedViewMixin:
         """Sets default rows for parameter models according to given index.
 
         Args:
-            index (QModelIndex): and index of the object or relationship tree
+            index (QModelIndex): an index of the entity tree
         """
         if index is None or not index.isValid():
             default_db_map = next(iter(self.db_maps))

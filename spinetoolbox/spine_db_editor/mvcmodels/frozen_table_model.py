@@ -69,7 +69,8 @@ class FrozenTableModel(QAbstractTableModel):
         self.beginInsertRows(QModelIndex(), old_size, old_size + len(new_values) - 1)
         self._data += new_values
         self.endInsertRows()
-        self._keep_sorted()
+        had_data_before = bool(unique_data)
+        self._keep_sorted(update_selected_row=had_data_before)
 
     def remove_values(self, data):
         """Removes frozen values from the table.
@@ -80,22 +81,22 @@ class FrozenTableModel(QAbstractTableModel):
         removed_rows = {i + 1 for i, val in enumerate(self._data[1:]) if val in data}
         if not removed_rows:
             return
-        frozen_value = self._data[self._selected_row] if self._selected_row is not None else None
+        if self._selected_row is not None and self._selected_row not in removed_rows:
+            frozen_value = self._data[self._selected_row]
+        else:
+            frozen_value = None
         for first, count in reversed(rows_to_row_count_tuples(removed_rows)):
             last = first + count - 1
             self.beginRemoveRows(QModelIndex(), first, last)
             del self._data[first : last + 1]
             self.endRemoveRows()
-        if self._selected_row in removed_rows:
-            self._selected_row = min(self._selected_row, len(self._data) - 1)
-            if self._selected_row == 0:
-                self._selected_row = None
-            self.selected_row_changed.emit()
-        elif frozen_value is not None:
+        if frozen_value is not None:
             selected_row = self._find_first(frozen_value)
-            if selected_row != self._selected_row:
-                self._selected_row = selected_row
-                self.selected_row_changed.emit()
+        else:
+            selected_row = 1 if len(self._data) > 1 else None
+        if selected_row != self._selected_row:
+            self._selected_row = selected_row
+            self.selected_row_changed.emit()
 
     def clear_selected(self):
         """Clears selected row."""
@@ -122,6 +123,14 @@ class FrozenTableModel(QAbstractTableModel):
         new_bottom_right = self.index(self._selected_row, last_column)
         self.dataChanged.emit(new_bottom_right, new_top_left, [Qt.ItemDataRole.BackgroundRole])
         self.selected_row_changed.emit()
+
+    def get_selected(self):
+        """Returns selected row.
+
+        Returns:
+            int: row index or None if no row is selected
+        """
+        return self._selected_row
 
     def get_frozen_value(self):
         """Return currently selected frozen value.
@@ -215,7 +224,7 @@ class FrozenTableModel(QAbstractTableModel):
         self._keep_sorted()
         return True
 
-    def _keep_sorted(self):
+    def _keep_sorted(self, update_selected_row=True):
         """Sorts the data table."""
         if len(self._data) < 3:
             return
@@ -230,11 +239,21 @@ class FrozenTableModel(QAbstractTableModel):
             key=lambda x: tuple(self._name_from_data(x[column], header[column]) for column in range(column_count)),
         )
         self._data[1:] = data
+        selected_row_changed = False
         if frozen_value is not None:
-            self._selected_row = self._find_first(frozen_value)
+            if update_selected_row:
+                candidate = self._find_first(frozen_value)
+                if self._selected_row != candidate:
+                    self._selected_row = candidate
+                    selected_row_changed = True
+            elif frozen_value != self.get_frozen_value():
+                # The row did not change but the frozen value did.
+                selected_row_changed = True
         self.layoutChanged["QList<QPersistentModelIndex>", "QAbstractItemModel::LayoutChangeHint"].emit(
             [], QAbstractTableModel.LayoutChangeHint.VerticalSortHint
         )
+        if selected_row_changed:
+            self.selected_row_changed.emit()
 
     def _unique_values(self):
         """Turns non-header data into sets of unique values on each column.

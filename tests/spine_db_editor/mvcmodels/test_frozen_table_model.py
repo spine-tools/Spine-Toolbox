@@ -94,6 +94,27 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.get_frozen_value(), ((self._db_map, frozen_alternative_id), self._db_map))
 
+    def test_remove_selected_row_when_selected_row_gets_updated_during_removal(self):
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        alternatives = self._db_mngr.get_items(self._db_map, "alternative")
+        ids = {item["id"] for item in alternatives}
+        self._model.set_headers(["alternative", "database"])
+        values = {((self._db_map, id_), self._db_map) for id_ in ids}
+        self._model.add_values(values)
+        self.assertEqual(self._model.rowCount(), 3)
+        self._model.set_selected(2)
+        # Simulate tabular_view_mixin and frozen table view here.
+        row_removal_handler = MagicMock()
+        row_removal_handler.side_effect = lambda *args: self._model.set_selected(1)
+        self._model.rowsAboutToBeRemoved.connect(row_removal_handler)
+        frozen_value = self._model.get_frozen_value()
+        id_to_remove = frozen_value[0][1]
+        self._model.remove_values({((self._db_map, id_to_remove), self._db_map)})
+        row_removal_handler.assert_called_once()
+        self.assertEqual(self._model.rowCount(), 2)
+        base_alternative_id = self._db_map.get_alternative_item(name="Base")["id"]
+        self.assertEqual(self._model.get_frozen_value(), ((self._db_map, base_alternative_id), self._db_map))
+
     def test_remove_values_after_selected_row(self):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
         alternatives = self._db_mngr.get_items(self._db_map, "alternative")

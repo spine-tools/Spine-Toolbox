@@ -132,6 +132,7 @@ class FilterWidget(QWidget):
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
         self._filter_model = make_filter_model(*args, **kwargs)
+        self._filter_model.setParent(self)
         self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
         self.connect_signals()

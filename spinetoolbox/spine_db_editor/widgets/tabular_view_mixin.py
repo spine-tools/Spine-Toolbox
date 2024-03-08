@@ -12,7 +12,7 @@
 
 """Contains TabularViewMixin class."""
 from contextlib import contextmanager
-from itertools import product
+from itertools import chain, product
 from collections import namedtuple
 from PySide6.QtCore import QModelIndex, Qt, Slot, QTimer
 from PySide6.QtGui import QAction, QIcon, QActionGroup
@@ -99,6 +99,7 @@ class TabularViewMixin:
         self.frozen_table_model.selected_row_changed.connect(
             self._change_frozen_value, Qt.ConnectionType.QueuedConnection
         )
+        self.frozen_table_model.selected_row_changed.connect(self._update_current_index_if_need)
         self.pivot_action_group.triggered.connect(self._handle_pivot_action_triggered)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.db_mngr.items_updated.connect(self._reload_pivot_table_if_needed)
@@ -155,8 +156,11 @@ class TabularViewMixin:
 
     def init_models(self):
         """Initializes models."""
-        super().init_models()
-        self.current_class_id.clear()
+        with disconnect(
+            self.ui.treeView_entity.tree_selection_changed, self._handle_entity_tree_selection_changed_in_pivot_table
+        ):
+            super().init_models()
+        self.current_class_id = {}
         self.current_class_name = None
         self.clear_pivot_table()
 
@@ -202,6 +206,7 @@ class TabularViewMixin:
 
         Args:
             index (QModelIndex): index from object or relationship tree
+
         Returns:
             bool
         """
@@ -232,9 +237,11 @@ class TabularViewMixin:
             self.do_reload_pivot_table()
 
     def _update_class_attributes(self, current_index):
-        """Updates current class (type and id) and reloads pivot table for it."""
+        """Updates current class id and name."""
         current_class_item = self._get_current_class_item(current_index)
         if current_class_item is None:
+            self.current_class_id = {}
+            self.current_class_name = None
             return
         class_id = current_class_item.db_map_ids
         if self.current_class_id == class_id:
@@ -505,27 +512,6 @@ class TabularViewMixin:
             for index in self._indexes(value)
         }
 
-    def load_parameter_value_data(self):
-        """Returns a dict that merges empty and full parameter_value data.
-
-        Returns:
-            dict: Key is a tuple object_id, ..., parameter_id, value is the parameter_value or None if not specified.
-        """
-        data = self.load_empty_parameter_value_data()
-        data.update(self.load_full_parameter_value_data())
-        return data
-
-    def load_expanded_parameter_value_data(self):
-        """
-        Returns all permutations of entities as well as parameter indexes and values for the current class.
-
-        Returns:
-            dict: Key is a tuple object_id, ..., index, while value is None.
-        """
-        data = self.load_empty_expanded_parameter_value_data()
-        data.update(self.load_full_expanded_parameter_value_data())
-        return data
-
     def get_pivot_preferences(self):
         """Returns saved pivot preferences.
 
@@ -533,18 +519,17 @@ class TabularViewMixin:
             tuple, NoneType: pivot tuple, or None if no preference stored
         """
         selection_key = (self.current_class_name, self.current_input_type)
-        if selection_key in self.class_pivot_preferences:
-            rows = self.class_pivot_preferences[selection_key].index
-            columns = self.class_pivot_preferences[selection_key].columns
-            frozen = self.class_pivot_preferences[selection_key].frozen
-            frozen_value = self.class_pivot_preferences[selection_key].frozen_value
-            return (rows, columns, frozen, frozen_value)
-        return None
+        preferences = self.class_pivot_preferences.get(selection_key)
+        if preferences is None:
+            return None
+        return preferences.index, preferences.columns, preferences.frozen, preferences.frozen_value
 
     @busy_effect
     def do_reload_pivot_table(self):
         """Reloads pivot table."""
         if not self._can_build_pivot_table():
+            if self.pivot_table_model:
+                self.clear_pivot_table()
             return
         if not self.ui.dockWidget_pivot_table.isVisible():
             self._pending_reload = True
@@ -563,7 +548,6 @@ class TabularViewMixin:
             delegate = self.pivot_table_model.make_delegate(self)
             self.ui.pivot_table.setItemDelegate(delegate)
         pivot = self.get_pivot_preferences()
-        self.wipe_out_filter_menus()
         self.pivot_table_model.call_reset_model(pivot)
         self.pivot_table_proxy.clear_filter()
 
@@ -575,9 +559,11 @@ class TabularViewMixin:
         return True
 
     def clear_pivot_table(self):
-        self.wipe_out_filter_menus()
+        self.wipe_out_headers()
         if self.pivot_table_model:
-            self.pivot_table_model.clear_model()
+            with disconnect(self.pivot_table_model.modelReset, self.make_pivot_headers):
+                self.pivot_table_model.clear_model()
+            self.pivot_table_model.set_fetch_parents_non_obsolete()
             self.pivot_table_proxy.clear_filter()
             self.pivot_table_model.modelReset.disconnect(self.make_pivot_headers)
             self.pivot_table_model.modelReset.disconnect(self.reload_frozen_table)
@@ -586,10 +572,17 @@ class TabularViewMixin:
             self.pivot_table_model = None
         self.frozen_table_model.clear_model()
 
-    def wipe_out_filter_menus(self):
+    def wipe_out_headers(self):
+        if self.pivot_table_model is not None:
+            for index in chain(*self.pivot_table_model.top_left_indexes()):
+                proxy_index = self.pivot_table_proxy.mapFromSource(index)
+                self.ui.pivot_table.setIndexWidget(proxy_index, None)
+        for column in range(self.frozen_table_model.columnCount()):
+            index = self.frozen_table_model.index(0, column)
+            self.ui.frozen_table.setIndexWidget(index, None)
         while self.filter_menus:
             _, menu = self.filter_menus.popitem()
-            menu.wipe_out()
+            menu.deleteLater()
 
     @Slot()
     def make_pivot_headers(self):
@@ -660,26 +653,26 @@ class TabularViewMixin:
             TabularViewDBItemFilterMenu: filter menu corresponding to identifier
         """
         if identifier not in self.filter_menus:
-            header = self.pivot_table_model.top_left_headers[identifier]
-            if header.header_type == "parameter":
-                item_type = "parameter_definition"
-            elif header.header_type == "index":
-                item_type = "parameter_value"
-            else:
-                item_type = header.header_type
-            if header.header_type == "entity":
-                accepts_item = (
-                    lambda item, db_map: self.accepts_ith_element_item(header.rank, item, db_map)
-                    if self.first_current_entity_class["dimension_id_list"]
-                    else self.accepts_entity_item
-                )
-            elif header.header_type == "parameter":
-                accepts_item = self.accepts_parameter_item
-            else:
-                accepts_item = None
             if identifier == "database":
                 menu = TabularViewCodenameFilterMenu(self, self.db_maps, identifier, show_empty=False)
             else:
+                header = self.pivot_table_model.top_left_headers[identifier]
+                if header.header_type == "parameter":
+                    item_type = "parameter_definition"
+                elif header.header_type == "index":
+                    item_type = "parameter_value"
+                else:
+                    item_type = header.header_type
+                if header.header_type == "entity":
+                    accepts_item = (
+                        lambda item, db_map: self.accepts_ith_element_item(header.rank, item, db_map)
+                        if self.first_current_entity_class["dimension_id_list"]
+                        else self.accepts_entity_item
+                    )
+                elif header.header_type == "parameter":
+                    accepts_item = self.accepts_parameter_item
+                else:
+                    accepts_item = None
                 menu = TabularViewDBItemFilterMenu(
                     self, self.db_mngr, self.db_maps, item_type, accepts_item, identifier, show_empty=False
                 )
@@ -777,6 +770,24 @@ class TabularViewMixin:
             return
         with self._frozen_table_reload_disabled():
             self.frozen_table_model.set_selected(row)
+
+    @Slot()
+    def _update_current_index_if_need(self):
+        """Ensures selected frozen row corresponds to current index.
+
+        Frozen table gets sorted from time to time possibly changing the selected row.
+        """
+        selected_row = self.frozen_table_model.get_selected()
+        selection_model = self.ui.frozen_table.selectionModel()
+        current_index = selection_model.currentIndex()
+        if (selected_row is None and not current_index.isValid()) or selected_row == current_index.row():
+            return
+        with disconnect(selection_model.currentChanged, self._change_selected_frozen_row):
+            if selected_row is None:
+                index = QModelIndex()
+            else:
+                index = self.frozen_table_model.index(selected_row, current_index.column())
+            self.ui.frozen_table.setCurrentIndex(index)
 
     @Slot(str, set, bool)
     def change_filter(self, identifier, valid_values, has_filter):
