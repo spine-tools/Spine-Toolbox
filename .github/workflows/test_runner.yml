@@ -31,6 +31,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: pip
+        cache-dependency-path: |
+          requirements.txt
+          pyproject.toml
     - name: Display Python version
       run:
          python -c "import sys; print(sys.version)"
@@ -79,6 +82,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         cache: pip
+        cache-dependency-path: |
+          requirements.txt
+          pyproject.toml
     - name: Install additional packages for Linux
       if: runner.os == 'Linux'
       run: |
