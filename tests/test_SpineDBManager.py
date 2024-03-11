@@ -260,7 +260,7 @@ class TestImportExportData(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_export_then_import_time_series_parameter_value(self):
-        file_path = self._temp_dir.name + r"\test.xlsx"
+        file_path = str(Path(self._temp_dir.name) / "test.xlsx")
         data = {
             'entity_classes': [('A', (), None, None, False)],
             'entities': [('A', 'aa', None)],
@@ -285,15 +285,11 @@ class TestImportExportData(unittest.TestCase):
             ],
             'alternatives': [('Base', 'Base alternative')],
         }
-
         self._db_mngr.export_to_excel(file_path, data, self.editor)
-
         mapped_data, errors = get_mapped_data_from_xlsx(file_path)
         self.assertEqual(errors, [])
-
         self._db_mngr.import_data({self._db_map: mapped_data})
         self._db_map.commit_session("imported items")
-
         value = self._db_map.query(self._db_map.entity_parameter_value_sq).one()
         time_series = from_database(value.value, value.type)
         expected_result = TimeSeriesVariableResolution(
@@ -310,6 +306,14 @@ class TestImportExportData(unittest.TestCase):
             False,
         )
         self.assertEqual(time_series, expected_result)
+
+    def test_export_empty_data_does_not_traceback_because_there_is_nothing_to_commit(self):
+        file_path = str(Path(self._temp_dir.name) / "test.xlsx")
+        data = {}
+        self._db_mngr.export_to_excel(file_path, data, self.editor)
+        mapped_data, errors = get_mapped_data_from_xlsx(file_path)
+        self.assertEqual(errors, [])
+        self.assertEqual(mapped_data, {"alternatives": ["Base"]})
 
     def test_import_parameter_value_lists(self):
         with signal_waiter(
