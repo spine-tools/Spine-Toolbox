@@ -1567,21 +1567,33 @@ class SpineDBManager(QObject):
         finally:
             db_map.close()
 
-    def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+    @staticmethod
+    def export_to_json(file_path, data_for_export, caller):
         """Exports given data into JSON file."""
         json_data = json.dumps(data_for_export, indent=4)
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
         caller.file_exported.emit(file_path, 1.0, False)
 
-    def export_to_excel(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+    @staticmethod
+    def export_to_excel(file_path, data_for_export, caller):
         """Exports given data into Excel file."""
         # NOTE: We import data into an in-memory Spine db and then export that to excel.
         url = URL("sqlite", database="")
         with DatabaseMapping(url, create=True) as db_map:
-            import_data(db_map, **data_for_export, unparse_value=dump_db_value)
-            db_map.commit_session("Added data for exporting.")
+            count, errors = import_data(db_map, **data_for_export, unparse_value=dump_db_value)
             file_name = os.path.split(file_path)[1]
+            if errors:
+                error_msg = {
+                    None: [
+                        f"Unable to export file <b>{file_name}</b>."
+                        "<br/>Failed to copy the data to temporary database."
+                    ]
+                }
+                caller.msg_error.emit(error_msg)
+                return
+            if count > 0:
+                db_map.commit_session("Added data for exporting.")
             if os.path.exists(file_path):
                 os.remove(file_path)
             try:
