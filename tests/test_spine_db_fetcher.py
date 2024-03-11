@@ -39,7 +39,6 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._logger = MagicMock()  # Collects error messages therefore handy for debugging.
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="db_fetcher_test_db", create=True)
-        self._temp_id_reset = False
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -58,10 +57,6 @@ class TestSpineDBFetcher(unittest.TestCase):
             fetcher.set_obsolete(True)
 
     def _import_data(self, **data):
-        if self._temp_id_reset:
-            raise RuntimeError("_import_data can be called only once per test since it resets TempId counters")
-        self._temp_id_reset = True
-        TempId._next_id = {}
         import_data(self._db_map, **data)
         self._db_map.commit_session("ddd")
 
