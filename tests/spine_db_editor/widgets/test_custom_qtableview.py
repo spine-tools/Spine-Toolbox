@@ -34,6 +34,28 @@ class TestParameterTableView(TestBase):
     def tearDown(self):
         self._common_tear_down()
 
+    def test_paste_empty_string_to_entity_byname_column(self):
+        table_view = self._db_editor.ui.tableView_parameter_value
+        model = table_view.model()
+        byname_column = model.header.index("entity_byname")
+        table_view.selectionModel().setCurrentIndex(
+            model.index(0, byname_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        mock_clipboard = mock.MagicMock()
+        mock_clipboard.text.return_value = "''"
+        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            clipboard.return_value = mock_clipboard
+            self.assertTrue(table_view.paste())
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.columnCount(), 6)
+        expected = [
+            [None, "", None, None, None, "TestParameterTableView_db"],
+        ]
+        for row in range(model.rowCount()):
+            for column in range(model.columnCount()):
+                with self.subTest(row=row, column=column):
+                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+
     def test_remove_last_empty_row(self):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()

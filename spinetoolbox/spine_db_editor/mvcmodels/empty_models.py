@@ -201,8 +201,8 @@ class EntityMixin:
 
     def _make_item(self, row):
         item = super()._make_item(row)
-        if item["entity_byname"]:
-            item["entity_byname"] = tuple(item["entity_byname"].split(DB_ITEM_SEPARATOR))
+        byname = item["entity_byname"]
+        item["entity_byname"] = tuple(byname.split(DB_ITEM_SEPARATOR)) if byname else ()
         return item
 
     @staticmethod

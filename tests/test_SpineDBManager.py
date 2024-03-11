@@ -265,22 +265,24 @@ class TestImportExportData(unittest.TestCase):
             'entity_classes': [('A', (), None, None, False)],
             'entities': [('A', 'aa', None)],
             'parameter_definitions': [('A', 'test1', None, None, None)],
-            'parameter_values': [(
-                'A',
-                'aa',
-                'test1',
-                {
-                    'type': 'time_series',
-                    'index': {
-                        'start': '2000-01-01 00:00:00',
-                        'resolution': '1h',
-                        'ignore_year': False,
-                        'repeat': False
+            'parameter_values': [
+                (
+                    'A',
+                    'aa',
+                    'test1',
+                    {
+                        'type': 'time_series',
+                        'index': {
+                            'start': '2000-01-01 00:00:00',
+                            'resolution': '1h',
+                            'ignore_year': False,
+                            'repeat': False,
+                        },
+                        'data': [0.0, 1.0, 2.0, 4.0, 8.0, 0.0],
                     },
-                    'data': [0.0, 1.0, 2.0, 4.0, 8.0, 0.0]
-                },
-                'Base'
-            )],
+                    'Base',
+                )
+            ],
             'alternatives': [('Base', 'Base alternative')],
         }
 
@@ -305,7 +307,7 @@ class TestImportExportData(unittest.TestCase):
             ),
             (0.0, 1.0, 2.0, 4.0, 8.0, 0.0),
             False,
-            False
+            False,
         )
         self.assertEqual(time_series, expected_result)
 
