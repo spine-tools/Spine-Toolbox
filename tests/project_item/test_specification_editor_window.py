@@ -131,17 +131,23 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
         ) as mock_make_specification, patch.object(
             ProjectItemSpecification, "save"
         ) as mock_save, patch.object(
+            ProjectItemFactory, "make_icon"
+        ) as mock_make_icon, patch.object(
             ProjectItemFactory, "icon"
         ) as mock_icon, patch.object(
             ProjectItemFactory, "icon_color"
         ) as mock_icon_color:
             mock_settings_group.return_value = "settings group"
+            mock_make_icon.return_value = ProjectItemIcon(
+                self._toolbox, ":/icons/item_icons/hammer.svg", QColor("white")
+            )
             specification = ProjectItemSpecification("spec name", "spec description", "Mock")
             mock_make_specification.return_value = specification
             mock_save.return_value = {}
             mock_icon.return_value = ":/icons/item_icons/hammer.svg"
             mock_icon_color.return_value = QColor("white")
             self._toolbox.item_factories = {"Mock": ProjectItemFactory()}
+            self._toolbox._item_properties_uis = {"Mock": MagicMock()}
             project_item = _MockProjectItem("item name", "item description", 0.0, 0.0, self._toolbox.project())
             project_item._toolbox = self._toolbox
             self._toolbox.project().add_item(project_item)
@@ -184,8 +190,8 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             specification = ProjectItemSpecification("spec name", "spec description", "Mock")
             project_item = _MockProjectItem("item name", "item description", 0.0, 0.0, self._toolbox.project())
             project_item._toolbox = self._toolbox
-            project_item.set_specification(specification)
             self._toolbox.project().add_item(project_item)
+            project_item.set_specification(specification)
             window = SpecificationEditorWindowBase(self._toolbox, item=project_item)
             mock_make_specification.side_effect = lambda name: ProjectItemSpecification(
                 name, window._spec_toolbar.description(), "Mock"
