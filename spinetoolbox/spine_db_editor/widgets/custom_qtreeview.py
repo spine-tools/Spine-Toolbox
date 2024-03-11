@@ -11,12 +11,11 @@
 ######################################################################################################################
 
 """Classes for custom QTreeView."""
-from PySide6.QtWidgets import QApplication, QMenu, QAbstractItemView
+from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
 from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
-from spinetoolbox.widgets.custom_qwidgets import ResizingViewMixin
 from .custom_delegates import ScenarioDelegate, AlternativeDelegate, ParameterValueListDelegate
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels import mime_types
@@ -24,13 +23,8 @@ from ..mvcmodels.alternative_item import AlternativeItem
 from ..mvcmodels.scenario_item import ScenarioDBItem, ScenarioAlternativeItem, ScenarioItem
 
 
-class ResizableTreeView(ResizingViewMixin, CopyPasteTreeView):
-    def _do_resize(self):
-        self.resizeColumnToContents(0)
-
-
-class EntityTreeView(ResizableTreeView):
-    """Tree view base class for object and relationship tree views."""
+class EntityTreeView(CopyPasteTreeView):
+    """Tree view for entity classes and entities."""
 
     tree_selection_changed = Signal(dict)
 
@@ -67,6 +61,8 @@ class EntityTreeView(ResizableTreeView):
         self._find_next_action = None
         self._hide_empty_classes_action = None
         self._entity_index = None
+        header = self.header()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
     def reset(self):
         super().reset()
@@ -339,7 +335,7 @@ class EntityTreeView(ResizableTreeView):
         self._spine_db_editor.show_select_superclass_form(self._context_item)
 
 
-class ItemTreeView(ResizableTreeView):
+class ItemTreeView(CopyPasteTreeView):
     """Base class for all non-entity tree views."""
 
     def __init__(self, parent):
@@ -350,6 +346,8 @@ class ItemTreeView(ResizableTreeView):
         super().__init__(parent=parent)
         self._spine_db_editor = None
         self._menu = QMenu(self)
+        header = self.header()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)

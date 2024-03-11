@@ -13,7 +13,7 @@
 """Custom QTableView classes that support copy-paste and the like."""
 from dataclasses import replace
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint, QItemSelection, QItemSelectionModel
-from PySide6.QtWidgets import QTableView, QMenu, QWidget
+from PySide6.QtWidgets import QHeaderView, QTableView, QMenu, QWidget
 from PySide6.QtGui import QKeySequence, QAction
 from .scenario_generator import ScenarioGenerator
 from ..helpers import string_to_bool
@@ -27,7 +27,7 @@ from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
-from ...widgets.custom_qwidgets import TitleWidgetAction, ResizingViewMixin
+from ...widgets.custom_qwidgets import TitleWidgetAction
 from ...plotting import (
     PlottingError,
     ParameterTableHeaderSection,
@@ -63,17 +63,19 @@ def _set_data(index, new_value):
     index.model().setData(index, new_value)
 
 
-class StackedTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
+class StackedTableView(AutoFilterCopyPasteTableView):
     """Base stacked view."""
 
     def __init__(self, parent):
         """
         Args:
-            parent (QObject): parent object
+            parent (QWidget): parent widget
         """
         super().__init__(parent=parent)
         self._menu = QMenu(self)
         self._spine_db_editor = None
+        header = self.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -193,9 +195,6 @@ class StackedTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
             db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
         model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
-
-    def _do_resize(self):
-        self.resizeColumnsToContents()
 
     @Slot(QModelIndex, QModelIndex)
     def _refresh_copy_paste_actions(self, _, __):
@@ -379,7 +378,7 @@ class EntityAlternativeTableView(StackedTableView):
         self._make_delegate("active", BooleanValueDelegate)
 
 
-class PivotTableView(ResizingViewMixin, CopyPasteTableView):
+class PivotTableView(CopyPasteTableView):
     """Custom QTableView class with pivot capabilities.
 
     Uses 'contexts' to provide different UI elements (table headers, context menus,...) depending on what
@@ -801,9 +800,8 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self.viewport().stackUnder(header_table)
         for header_table in (self._top_header_table, self._left_header_table):
             header_table.setAttribute(Qt.WA_TransparentForMouseEvents)
-
-    def _do_resize(self):
-        self.resizeColumnsToContents()
+        header = self.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
     @property
     def source_model(self):
@@ -879,6 +877,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
         self._top_left_header_table.setIndexWidget(proxy_index, widget)
 
     def setHorizontalHeader(self, horizontal_header):
+        horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         super().setHorizontalHeader(horizontal_header)
         horizontal_header.sectionResized.connect(self._update_section_width)
         for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
@@ -951,6 +950,14 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
 class FrozenTableView(QTableView):
     header_dropped = Signal(QWidget, QWidget)
 
+    def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
+        super().__init__(parent)
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+
     @property
     def area(self):
         return "frozen"
@@ -976,6 +983,7 @@ class MetadataTableViewBase(CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
         self._menu = QMenu(self)
         self._db_editor = None
