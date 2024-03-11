@@ -77,8 +77,8 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
         entities = [item._asdict() for item in self._db_mngr.get_items(self._db_map, "entity")]
         self.assertEqual(len(entities), 1)
         entity_id = entities[0]["id"]
-        self.assertEqual(entities
-            ,
+        self.assertEqual(
+            entities,
             [
                 {
                     'class_id': class_id,
