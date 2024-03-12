@@ -14,7 +14,7 @@
 import os
 import json
 from PySide6.QtCore import Qt, QObject, Signal, Slot
-from PySide6.QtWidgets import QMessageBox, QWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 from PySide6.QtGui import QFontMetrics, QFont, QWindow
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
@@ -560,28 +560,25 @@ class SpineDBManager(QObject):
             bool
         """
         try:
-            transformations, info = db_map.commit_session(commit_msg)
+            transformations, info = db_map.commit_session(commit_msg, apply_compatibility_transforms=False)
             self.undo_stack[db_map].setClean()
             if info:
                 info = "".join(f"- {x}\n" for x in info)
-                if (
-                    QMessageBox.question(
-                        self.parent(),
-                        "Your data has been refitted",
-                        f"Some of the data committed to the DB at '{db_map.db_url}' "
-                        "used an old format and needed to be refitted. "
-                        f"The following transformations were applied:\n\n{info}\n"
-                        "Do you want to view these changes in your current session too?\n\n"
-                        "WARNING: If you choose 'Yes', you won't be able to undo/redo your previous edits.",
-                    )
-                    == QMessageBox.StandardButton.Yes
-                ):
-                    identifier = self.get_command_identifier()
-                    for tablename, (items_to_add, items_to_update, ids_to_remove) in transformations:
-                        self.remove_items({db_map: {tablename: ids_to_remove}}, identifier=identifier)
-                        self.update_items(tablename, {db_map: items_to_update}, identifier=identifier)
-                        self.add_items(tablename, {db_map: items_to_add}, identifier=identifier)
-                    self.undo_stack[db_map].clear()
+                QMessageBox.warning(
+                    QApplication.activeWindow(),
+                    "Your data needs to be refitted",
+                    f"Some of the data committed to the DB at '{db_map.db_url}' "
+                    "uses an old format and needs to be refitted. "
+                    f"The following transformations will be applied:\n\n{info}\n"
+                    "Afterwards, you can review the changes "
+                    "and either commit or rollback.",
+                    buttons=QMessageBox.StandardButton.Apply,
+                )
+                identifier = self.get_command_identifier()
+                for tablename, (items_to_add, items_to_update, ids_to_remove) in transformations:
+                    self.remove_items({db_map: {tablename: ids_to_remove}}, identifier=identifier)
+                    self.update_items(tablename, {db_map: items_to_update}, identifier=identifier)
+                    self.add_items(tablename, {db_map: items_to_add}, identifier=identifier)
             self.receive_session_committed({db_map}, cookie)
             return True
         except SpineDBAPIError as err:
