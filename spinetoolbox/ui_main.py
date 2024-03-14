@@ -58,6 +58,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QVBoxLayout,
     QHBoxLayout,
+    QDialog,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from .project_item_icon import ProjectItemIcon
@@ -65,6 +66,8 @@ from .load_project_items import load_project_items
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .project_settings import ProjectSettings
+from .startup_box_old import StartUpMainWindow
+from .widgets.startup_box_widget import StartupBoxWidget
 from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
@@ -231,6 +234,17 @@ class ToolboxUI(QMainWindow):
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
+
+
+        #startbox = StartUpMainWindow(self)
+        #startbox.project_load_requested.connect(self.restore_project)
+        #startbox.show()
+
+        self.startup_box_widget = StartupBoxWidget(self)
+        self.startup_box_widget.project_load_requested.connect(self.restore_project)
+        self.startup_box_widget.show()
+
+
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
@@ -2512,3 +2526,6 @@ class ToolboxUI(QMainWindow):
             message (str): formatted message
         """
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)
+
+    def open_from_startbox(self, path_to_project):
+        self.restore_project(path_to_project)
