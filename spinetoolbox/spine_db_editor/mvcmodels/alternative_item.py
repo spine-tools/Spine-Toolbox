@@ -46,10 +46,10 @@ class AlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def icon_code(self):
         return _ALTERNATIVE_ICON
 
-    @property
-    def tool_tip(self):
-        if self.id:
+    def tool_tip(self, column):
+        if column == 0 and self.id:
             return "<p>Drag this item on a <b>scenario</b> item in Scenario tree to add it to that scenario.</p>"
+        return super().tool_tip(column)
 
     def add_item_to_db(self, db_item):
         self.db_mngr.add_alternatives({self.db_map: [db_item]})

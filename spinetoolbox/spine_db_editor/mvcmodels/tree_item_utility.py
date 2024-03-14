@@ -14,7 +14,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine, bisect_chunks
+from spinetoolbox.helpers import CharIconEngine, bisect_chunks, plain_to_tool_tip
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 
 
@@ -37,8 +37,7 @@ class StandardTreeItem(TreeItem):
     def icon_code(self):
         return None
 
-    @property
-    def tool_tip(self):
+    def tool_tip(self, column):
         return None
 
     @property
@@ -49,15 +48,15 @@ class StandardTreeItem(TreeItem):
         return QIcon(engine.pixmap())
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.ToolTipRole:
+            return self.tool_tip(column)
         if column != 0:
             return None
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return self.display_data
         if role == Qt.ItemDataRole.DecorationRole:
             return self.display_icon
-        if role == Qt.ItemDataRole.ToolTipRole:
-            return self.tool_tip
-        return super().data(column, role)
+        return super().data(0, role)
 
     def set_data(self, column, value, role=Qt.ItemDataRole.DisplayRole):
         return False
@@ -282,6 +281,11 @@ class LeafItem(StandardTreeItem):
     @property
     def name(self):
         return self.item_data["name"]
+
+    def tool_tip(self, column):
+        if column != 0 and (header_data := self.header_data(column)) == "description":
+            return plain_to_tool_tip(self.item_data.get(header_data))
+        return super().tool_tip(column)
 
     def add_item_to_db(self, db_item):
         raise NotImplementedError()
