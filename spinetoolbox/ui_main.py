@@ -51,6 +51,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QVBoxLayout,
     QHBoxLayout,
+    QPushButton,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
@@ -574,7 +575,10 @@ class ToolboxUI(QMainWindow):
                     return False  # Cancelled
         return self.restore_project(load_dir)
 
+
     def restore_project(self, project_dir, ask_confirmation=True):
+        print("Dir is: ")
+        print(project_dir)
         """Initializes UI, Creates project, models, connections, etc., when opening a project.
 
         Args:
@@ -606,6 +610,7 @@ class ToolboxUI(QMainWindow):
         success = self._project.load(self._item_specification_factories, self.item_factories)
         if not success:
             self.remove_path_from_recent_projects(self._project.project_dir)
+            print('here we are 2')
             return False
         self._plugin_manager.reload_plugins_with_local_data()
         self.ui.treeView_project.expandAll()
@@ -613,6 +618,7 @@ class ToolboxUI(QMainWindow):
         self.ui.graphicsView.reset_zoom()
         self.update_recent_projects()
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
+        print('here we are 3')
         return True
 
     def _toolbars(self):
@@ -2558,3 +2564,60 @@ class ToolboxUI(QMainWindow):
             message (str): formatted message
         """
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)
+
+    def open_from_startbox(self, path_to_project):
+        print("open_from_startbox executed")
+        #path_to_project = "C:\\Users\ErmannoLoCascio\Desktop\eScience - Mopo\spine_projects\Simple Tutorial 4"
+
+        restoration_result = self.restore_project(path_to_project)
+        print("Restoration result:", restoration_result)
+
+
+
+'''
+This will likely be eliminated
+class StartUpWindow(QWidget):
+    """
+    This "window" is a QWidget. If it has no parent, it
+    will appear as a free-floating window as we want.
+    """
+    def __init__(self):
+        super().__init__()
+
+        # Left bar menu
+        left_menu = QWidget()
+        left_menu.setFixedWidth(100)  # Set the width as desired, for example, 100 pixels
+        left_layout = QVBoxLayout()
+        # Button
+        button = QPushButton("Click me!")
+        button.clicked.connect(self.open_tutorial)  # Connect clicked signal to open_tutorial function
+        left_layout.addWidget(button)
+
+        left_layout.addWidget(QPushButton("Button 1"))
+        left_layout.addWidget(QPushButton("Button 2"))
+        left_menu.setLayout(left_layout)
+
+        # Central layout
+        central_layout = QVBoxLayout()
+        self.label = QLabel("Start Up window")
+        central_layout.addWidget(self.label)
+
+        # Main layout combining left bar menu and central layout
+        main_layout = QHBoxLayout()
+        main_layout.addWidget(left_menu)
+        main_layout.addLayout(central_layout)
+        self.setLayout(main_layout)
+
+        self.setWindowTitle("Spine - Magic ToolBox")
+        # Set the window icon to the PNG version
+        self.setWindowIcon(QIcon("image/spinetoolbox_on_wht.png"))
+        self.resize(1000, 800)
+
+    def open_tutorial(self, path_to_project):
+        print("open_from_startbox executed")
+
+        ww = ToolboxUI()
+        #ww.open_from_startbox(path_to_project)
+        kk = ww.restore_project(path_to_project, ask_confirmation=False)
+        print(kk)
+'''
