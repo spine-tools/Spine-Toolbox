@@ -12,7 +12,7 @@
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
 from PySide6.QtCore import Qt
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin
 from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
@@ -194,7 +194,6 @@ class SingleModelBase(HalfSortedTableModel):
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         field = self.header[index.column()]
-        # Background role
         if role == Qt.ItemDataRole.BackgroundRole and field in self.fixed_fields:
             return FIXED_FIELD_COLOR
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole):
@@ -205,7 +204,7 @@ class SingleModelBase(HalfSortedTableModel):
             if role == Qt.ItemDataRole.ToolTipRole:
                 description = self._get_ref(item, field).get("description")
                 if description:
-                    return description
+                    return plain_to_rich(description)
             mapped_field = self._mapped_field(field)
             data = item.get(mapped_field)
             if data and field in self.group_fields:

@@ -14,7 +14,7 @@
 from itertools import product
 from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel, Signal
 from .colors import SELECTED_COLOR
-from ...helpers import rows_to_row_count_tuples
+from ...helpers import plain_to_tool_tip, rows_to_row_count_tuples
 
 
 class FrozenTableModel(QAbstractTableModel):
@@ -323,16 +323,20 @@ class FrozenTableModel(QAbstractTableModel):
         header = self._data[0][column]
         if header == "parameter":
             db_map, id_ = value
-            return self.db_mngr.get_item(db_map, "parameter_definition", id_)["description"]
-        if header == "alternative":
+            tool_tip = self.db_mngr.get_item(db_map, "parameter_definition", id_)["description"]
+        elif header == "alternative":
             db_map, id_ = value
-            return self.db_mngr.get_item(db_map, "alternative", id_)["description"]
-        if header == "index":
-            return str(value[1])
-        if header == "database":
-            return value.codename
-        db_map, id_ = value
-        return self.db_mngr.get_item(db_map, "object", id_)["description"]
+            tool_tip = self.db_mngr.get_item(db_map, "alternative", id_)["description"]
+        elif header == "index":
+            tool_tip = str(value[1])
+        elif header == "database":
+            tool_tip = value.codename
+        elif header == "entity":
+            db_map, id_ = value
+            tool_tip = self.db_mngr.get_item(db_map, "entity", id_)["description"]
+        else:
+            raise RuntimeError(f"Logic error: unknown header '{header}'")
+        return plain_to_tool_tip(tool_tip)
 
     def _name_from_data(self, value, header):
         """Resolves item name.

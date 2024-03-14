@@ -32,10 +32,13 @@ from spinetoolbox.helpers import (
     format_string_list,
     get_datetime,
     interpret_icon_id,
+    list_to_rich_text,
     load_specification_from_file,
     make_icon_id,
+    plain_to_tool_tip,
     recursive_overwrite,
     rename_dir,
+    plain_to_rich,
     rows_to_row_count_tuples,
     select_julia_executable,
     select_julia_project,
@@ -350,6 +353,29 @@ class TestHTMLTagFilter(unittest.TestCase):
         tag_filter = HTMLTagFilter()
         tag_filter.feed("First line<br>second line")
         self.assertEqual(tag_filter.drain(), "First line\nsecond line")
+
+
+class TestPlainToRich(unittest.TestCase):
+    def test_final_string_is_rich_text(self):
+        self.assertEqual(plain_to_rich(""), "<qt></qt>")
+        self.assertEqual(
+            plain_to_rich("Just a plain string making its way to rich."),
+            "<qt>Just a plain string making its way to rich.</qt>",
+        )
+
+
+class TestListToRichText(unittest.TestCase):
+    def test_makes_rich_text(self):
+        self.assertEqual(list_to_rich_text([]), "<qt></qt>")
+        self.assertEqual(list_to_rich_text(["single"]), "<qt>single</qt>")
+        self.assertEqual(list_to_rich_text(["first", "second"]), "<qt>first<br>second</qt>")
+
+
+class TestPlainToToolTip(unittest.TestCase):
+    def test_makes_tool_tips(self):
+        self.assertIsNone(plain_to_tool_tip(None))
+        self.assertIsNone(plain_to_tool_tip(""))
+        self.assertEqual(plain_to_tool_tip("Is not None."), plain_to_rich("Is not None."))
 
 
 if __name__ == "__main__":

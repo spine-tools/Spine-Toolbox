@@ -159,7 +159,7 @@ class ParameterMixin:
         if self.header[index.column()] == self.value_field and role in (
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.ToolTipRole,
-            Qt.TextAlignmentRole,
+            Qt.ItemDataRole.TextAlignmentRole,
             PARSED_ROLE,
         ):
             data = super().data(index, role=Qt.ItemDataRole.EditRole)

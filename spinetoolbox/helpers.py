@@ -27,6 +27,8 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import tempfile
+from typing import Sequence
+
 import matplotlib
 from PySide6.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide6.QtCore import __version__ as qt_version
@@ -1641,3 +1643,39 @@ class SealCommand(QUndoCommand):
 
     def id(self):
         return self._id
+
+
+def plain_to_rich(text):
+    """Turns plain strings into rich text.
+
+    Args:
+        text (str): string to convert
+
+    Returns:
+        str: rich text string
+    """
+    return "<qt>" + text + "</qt>"
+
+
+def list_to_rich_text(data):
+    """Turns a sequence of strings into rich text list.
+
+    Args:
+        data (Sequence of str): iterable to convert
+
+    Returns:
+        str: rich text string
+    """
+    return plain_to_rich("<br>".join(data))
+
+
+def plain_to_tool_tip(text):
+    """Turns plain strings into rich text and empty strings/Nones to None.
+
+    Args:
+        text (str, optional): string to convert
+
+    Returns:
+        str or NoneType: rich text string or None
+    """
+    return plain_to_rich(text) if text else None
