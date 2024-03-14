@@ -1,0 +1,18 @@
+# Workflow stub to build Toolbox bundles.
+name: PyInstaller Bundle
+
+on: workflow_dispatch
+
+jobs:
+  bundle:
+    name: Bundle
+    strategy:
+      fail-fast: True
+      matrix:
+        python-version: ["3.11"]
+        os: [windows-latest]
+    runs-on: windows-latest
+    steps:
+      - name: Print notification
+        run: |
+          echo "This workflow is stub and does not do anything meaningful."
