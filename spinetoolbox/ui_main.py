@@ -51,7 +51,9 @@ from PySide6.QtWidgets import (
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
-from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
+from .config import SPINE_TOOLBOX_REPO_URL
+from .widgets.startup_box_widget import StartupBoxWidget
+from .config import MAINWINDOW_SS, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
     add_keyboard_shortcuts_to_action_tool_tips,
@@ -223,6 +225,17 @@ class ToolboxUI(QMainWindow):
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
+
+
+        #startbox = StartUpMainWindow(self)
+        #startbox.project_load_requested.connect(self.restore_project)
+        #startbox.show()
+
+        self.startup_box_widget = StartupBoxWidget(self)
+        self.startup_box_widget.project_load_requested.connect(self.restore_project)
+        self.startup_box_widget.show()
+
+
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
@@ -2539,3 +2552,6 @@ class ToolboxUI(QMainWindow):
             message (str): formatted message
         """
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)
+
+    def open_from_startbox(self, path_to_project):
+        self.restore_project(path_to_project)

@@ -36,6 +36,7 @@ from . import resources_icons_rc  # pylint: disable=unused-import  # isort: skip
 from spine_items import resources_icons_rc  # pylint: disable=unused-import  # isort: skip
 
 
+
 def main():
     """Creates main window GUI and starts main event loop."""
     multiprocessing.freeze_support()
