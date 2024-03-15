@@ -17,6 +17,7 @@ import numpy
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from spinedb_api import Array, from_database, ParameterValueFormatError, SpineDBAPIError
 from .indexed_value_table_model import EXPANSE_COLOR
+from ..helpers import plain_to_tool_tip
 
 
 class ArrayModel(QAbstractTableModel):
@@ -144,7 +145,7 @@ class ArrayModel(QAbstractTableModel):
             if row == len(self._data):
                 return None
             element = self._data[row]
-            return str(element)
+            return plain_to_tool_tip(str(element))
         if role == Qt.ItemDataRole.BackgroundRole and row == len(self._data):
             return EXPANSE_COLOR
         return None

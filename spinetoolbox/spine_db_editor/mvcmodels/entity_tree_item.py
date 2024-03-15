@@ -13,7 +13,7 @@
 """Classes to represent entities in a tree."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QBrush, QIcon
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, plain_to_tool_tip
 from spinetoolbox.fetch_parent import FlexibleFetchParent, FetchIndex
 from .multi_db_tree_item import MultiDBTreeItem
 
@@ -126,14 +126,15 @@ class EntityClassItem(MultiDBTreeItem):
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
         if role == Qt.ItemDataRole.ToolTipRole:
-            return self.db_map_data_field(self.first_db_map, "description")
-        if role == Qt.ItemDataRole.FontRole and column == 0:
-            bold_font = QFont()
-            bold_font.setBold(True)
-            return bold_font
-        if role == Qt.ForegroundRole and column == 0:
-            if not self.has_children():
-                return QBrush(Qt.gray)
+            return plain_to_tool_tip(self.db_map_data_field(self.first_db_map, "description"))
+        if column == 0:
+            if role == Qt.ItemDataRole.FontRole:
+                bold_font = QFont()
+                bold_font.setBold(True)
+                return bold_font
+            if role == Qt.ItemDataRole.ForegroundRole:
+                if not self.has_children():
+                    return QBrush(Qt.gray)
         return super().data(column, role)
 
     def _key_for_index(self, db_map):
@@ -239,7 +240,7 @@ class EntityItem(MultiDBTreeItem):
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.ToolTipRole:
-            return self.db_map_data_field(self.first_db_map, "description")
+            return plain_to_tool_tip(self.db_map_data_field(self.first_db_map, "description"))
         return super().data(column, role)
 
     def set_data(self, column, value, role):

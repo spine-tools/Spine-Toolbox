@@ -20,7 +20,7 @@ from PySide6.QtGui import QFont
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_elements
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, plain_to_tool_tip
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from .colors import FIXED_FIELD_COLOR, PIVOT_TABLE_HEADER_COLOR
 from .pivot_model import PivotModel
@@ -57,7 +57,7 @@ class TopLeftHeaderItem:
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return item.get(field_name)
         if role == Qt.ItemDataRole.ToolTipRole:
-            return item.get("description", "No description")
+            return plain_to_tool_tip(item.get("description", "No description."))
 
     @staticmethod
     def accepts(header_id):
@@ -799,7 +799,7 @@ class PivotTableModelBase(QAbstractTableModel):
     def _text_alignment_data(self, index):  # pylint: disable=no-self-use
         return None
 
-    def _header_data(self, index, role=Qt.ItemDataRole.DisplayRole):
+    def _header_data(self, index):
         header_id = self._header_id(index)
         top_left_id = self.top_left_id(index)
         return self._header_name(top_left_id, header_id)
@@ -817,7 +817,7 @@ class PivotTableModelBase(QAbstractTableModel):
             if self.index_in_left(index):
                 return self.model.pivot_columns[index.row()]
             if self.index_in_headers(index):
-                return self._header_data(index, role)
+                return self._header_data(index)
             if self.index_in_data(index):
                 return self._data(index, role)
             if "database" not in self.model.pivot_frozen:

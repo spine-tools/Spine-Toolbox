@@ -15,7 +15,7 @@ import os
 import json
 from PySide6.QtCore import Qt, QObject, Signal, Slot
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
-from PySide6.QtGui import QFontMetrics, QFont, QWindow
+from PySide6.QtGui import QWindow
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
     Array,
@@ -54,7 +54,7 @@ from .spine_db_commands import (
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.options_dialog import OptionsDialog
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import busy_effect
+from .helpers import busy_effect, plain_to_tool_tip
 
 
 @busy_effect
@@ -729,9 +729,6 @@ class SpineDBManager(QObject):
             display_data = "Error"
         else:
             display_data = str(parsed_data)
-        if isinstance(display_data, str):
-            fm = QFontMetrics(QFont("", 0))
-            display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
         return display_data
 
     @staticmethod
@@ -740,21 +737,18 @@ class SpineDBManager(QObject):
         if isinstance(parsed_data, TimeSeriesFixedResolution):
             resolution = [relativedelta_to_duration(r) for r in parsed_data.resolution]
             resolution = ', '.join(resolution)
-            tool_tip_data = "Start: {}, resolution: [{}], length: {}".format(
+            tool_tip_data = "Start: {}<br>resolution: [{}]<br>length: {}".format(
                 parsed_data.start, resolution, len(parsed_data)
             )
         elif isinstance(parsed_data, TimeSeriesVariableResolution):
-            tool_tip_data = "Start: {}, resolution: variable, length: {}".format(
+            tool_tip_data = "Start: {}<br>resolution: variable<br>length: {}".format(
                 parsed_data.indexes[0], len(parsed_data)
             )
         elif isinstance(parsed_data, ParameterValueFormatError):
             tool_tip_data = str(parsed_data)
         else:
             tool_tip_data = None
-        if isinstance(tool_tip_data, str):
-            fm = QFontMetrics(QFont("", 0))
-            tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
-        return tool_tip_data
+        return plain_to_tool_tip(tool_tip_data)
 
     def _format_list_value(self, db_map, item_type, value, list_value_id):
         list_value = self.get_item(db_map, "list_value", list_value_id)

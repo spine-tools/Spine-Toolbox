@@ -161,11 +161,11 @@ class TestParameterValueFormatting(unittest.TestCase):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", ["7 hours", "12 hours"], [1.1, 2.2, 3.3], False, False)
         self.db_mngr.get_item.side_effect = self._make_get_item_side_effect(*to_database(value))
         formatted = self.get_value(Qt.ItemDataRole.ToolTipRole)
-        self.assertEqual(formatted, "Start: 2019-07-12 08:00:00, resolution: [7h, 12h], length: 3")
+        self.assertEqual(formatted, "<qt>Start: 2019-07-12 08:00:00<br>resolution: [7h, 12h]<br>length: 3</qt>")
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
         self.db_mngr.get_item.side_effect = self._make_get_item_side_effect(*to_database(value))
         formatted = self.get_value(Qt.ItemDataRole.ToolTipRole)
-        self.assertEqual(formatted, "Start: 2019-07-12T08:00:00, resolution: variable, length: 2")
+        self.assertEqual(formatted, "<qt>Start: 2019-07-12T08:00:00<br>resolution: variable<br>length: 2</qt>")
 
     def test_broken_value_in_display_role(self):
         value = b"dubbidubbidu"
@@ -183,7 +183,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         value = b"diibadaaba"
         self.db_mngr.get_item.side_effect = self._make_get_item_side_effect(value, None)
         formatted = self.get_value(Qt.ItemDataRole.ToolTipRole)
-        self.assertTrue(formatted.startswith('Could not decode the value'))
+        self.assertTrue(formatted.startswith('<qt>Could not decode the value'))
 
 
 class TestAddItems(unittest.TestCase):
