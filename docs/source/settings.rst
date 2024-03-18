@@ -172,6 +172,8 @@ Db editor Settings
 This tab contains settings for the Spine Database editor. The same settings can be accessed directly
 from the Database editor itself.
 
+Settings in the **General** group:
+
 - **Commit session before closing** This checkbox controls what happens when you close a
   database editor which has uncommitted changes. When this is unchecked, all changes are discarded without
   notice. When this is partially checked (default), a message box warning you about uncommitted
@@ -181,28 +183,39 @@ from the Database editor itself.
 - **Show undo notifications** Checking this will show undo notification boxes in the editor
   every time something undoable happens. Unchecking hides the notifications.
 
+Settings in the **Entity tree** group:
+
 - **Sticky selection in entity trees** Controls how selecting items in Spine database editor's
   Object and Relationships trees using the left mouse button works.
   If checked, multiple selection is enabled and pressing **Ctrl** enables single selection.
   If unchecked, single selection is enabled and pressing **Ctrl** enables multiple selection.
 
-- **Move relationships along with objects in Entity graph** This controls how relationship nodes
-  behave on the Graph view when object nodes are moved around.
-  If checked, connected relationship nodes move along with the object node.
-  If unchecked, connected relationship nodes remain where they are when objects nodes are moved.
+Settings in the **Entity graph** group:
 
-- **Smooth Entity graph zoom** Checking this enables smooth zoom on the Graph view.
-
-- **Smooth Entity graph rotation** Checking this enables smooth rotation on the Graph view.
-
-- **Auto-expand objects by default in Entity graph** This checkbox controls which relationship
+- **Auto-expand entities** This checkbox controls which relationship
   nodes to show on the Graph view.
   If checked, all relationships that contain a visible object node are included.
   If unchecked, relationship nodes are included only if all their objects are show on the Graph view.
 
-- **Merge databases by default in Entity graph** If checked, Graph view will combine all databases
+- **Merge databases** If checked, Graph view will combine all databases
   that are open on the same table into a single graph if they contains common object nodes.
   If unchecked, a separate graph will be drawn for each database.
+
+- **Snap entities to grid** Makes it so that the placement of the entities can’t be arbitrary anymore
+  but instead they can only lay on a grid.
+
+- **Smooth zoom** Checking this enables smooth zoom on the Graph view.
+
+- **Smooth rotation** Checking this enables smooth rotation on the Graph view.
+
+- **Max. entity dimension count** Defines a cutoff for the number of dimensions an entity can have and still be drawn.
+
+- **Number of build iterations** Defines the maximum numbers of iterations the layout generation algorithm can make.
+
+- **Minimum distance between nodes (%)** Used for setting the ideal distance between entities in the graph.
+
+- **Decay rate of attraction with distance** The higher this number, the lesser the attraction between
+  distant vertices when drawing the graph.
 
 Spec. editor Settings
 ---------------------
