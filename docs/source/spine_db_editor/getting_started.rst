@@ -7,6 +7,9 @@
 Getting started
 ***************
 
+This section gives a short outline on how to get started using the editor and how to navigate the ui.
+Information about the settings for the editor can be found in :ref:`DB editor settings`.
+
 .. contents::
    :local:
 
@@ -151,7 +154,8 @@ Other
 ~~~~~
 
 In the bottom part of the hamburger menu there is a button to open the User Guide in a web browser, **Settings**
-button to open the Spine Database Editor settings and a **Close** button for closing the editor.
+button to open the Spine Database Editor settings and a **Close** button for closing the editor. More information
+about the settings can be found in :ref:`DB editor settings`.
 
 Filter
 ======

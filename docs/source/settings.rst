@@ -163,6 +163,8 @@ Settings in the **Conda** group:
 
 See :ref:`Setting up Consoles and External Tools` for more information and examples.
 
+.. _DB editor settings:
+
 Db editor Settings
 ------------------
 
