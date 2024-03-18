@@ -69,53 +69,48 @@ question so it is easier to visualize how the importer is handling the data.
 Importer specification editor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The left side of the **Importer Specification Editor** contains four dock widgets that deal with the input source data.
-**Source files** contains the filepath to the current input file.
-**Source tables** contains the different tables the file has or that user has set up.
-**Source options** has a few options on how to handle the incoming data.
-The available options depend on the connector type.
-**Source data** allows for previewing of the data selected in **Source files**
-and also of the currently selected mapping.
-
-The right side of the spec editor shows import mappings for the table selected in **Source tables**.
-**Mappings** lets you add, duplicate and remove mappings or
-select a mapping to modify its options. **Mapping options** allow you to specify things like what item type
-you are importing. In **Mapping specification** you can select the specific places in the source data where the
-object names, values etc. will be taken from.
+In the upper part of the specification editor, the name and description for the specification can be set.
+Underneath, the filepath is shown and it is allowed to br modified. Next to the filepath the used connector type
+is shown. On the left side, the different tables the file has or that user has set up are shown. Next to that
+there are the connector specific options and underneath that a preview of the selected table is shown. The items in
+the table are highlighted according to the selected mapping. The mappings are listed on the right side of the editor.
+underneath, the to be imported item types can be specified and other options set. Below that
+you can select the specific places in the source data where the entity names, values etc. will be taken from.
 
 .. image:: img/import_editor_window.png
    :align: center
 
-All tables available in the file selected in **Source files** are listed in **Source tables**.
+All tables available in the file selected in **File path** are listed in the leftmost dock widget.
 If the file does not have tables or the file type does not support them (e.g. CSV), all of the file's data will be
 in a single table called 'data'.
 The tables can be selected and deselected using the check boxes
 and only the selected ones will be imported.
 The option *Select All* is useful for selecting or deselecting all tables.
-If the Importer is opened in `anonymous mode`_, there is also the option to add tables.
+If the Importer is opened in `anonymous mode`_, there is also the option to add tables
 
 .. tip:: Multiple CSV files can be bundled into a *datapackage* which uses its own connector in Importer.
    Specifically, each CSV file in the datapackage shows up as a separate table in **Source tables**.
    See :ref:`Setting up datapackages in Links` for more information on how to pack CSVs into a datapackage
    automatically within your workflow.
 
-**Source options** contains options to "format" the incoming data. The available options can differ depending on the
-selected connector. The above picture shows the available options for Excel files. **Max rows** specifies the amount of
-rows from the input data that are considered by the Importer. The option **Has header** converts the first row into
-headers. **Skip rows** and **Skip columns** skip the first *N* specified rows or columns from the table.
-If the table has empty rows or columns and some other data after that that you don't want to use,
-**Read until empty row/column on first column/row** options can be used to "crop" the imported data to the
-first relevant block of information. Other possible options for different connector types include
-**Encoding**, **Delimiter**, **Custom Delimiter**, **Quotechar** and **Maximum Depth**.
-**Load default mapping** sets all of the selections in the spec editor
-to their default values. Be careful not to press this button unless you want to wipe the whole specification clean.
+Next to the table dock widget, there is a small dock widget that allows to "format" the incoming data.
+The available options can differ depending on the selected connector. The above picture shows the available
+options for Excel files. **Max rows** specifies the amount of rows from the input data that are considered
+by the Importer. The option **Has header** converts the first row into headers. **Skip rows** and **Skip columns**
+skip the first *N* specified rows or columns from the table. If the table has empty rows or columns and some
+other data after that that you don't want to use, **Read until empty row/column on first column/row** options
+can be used to "crop" the imported data to the first relevant block of information. Other possible options for
+different connector types include **Encoding**, **Delimiter**, **Custom Delimiter**, **Quotechar** and
+**Maximum Depth**. **Load default mapping** sets all of the selections in the spec editor to their default values.
+Be careful not to press this button unless you want to wipe the whole specification clean.
 
 .. note:: If you are working on a specification and accidentally press the *load default mapping* button
           you can undo previous changes for the specification from the hamburger menu or by pressing **Ctrl+Z**.
           To redo actions, or press **Crl+Y**.
 
-**Source data** shows the selected table's data and a preview of how the selected mapping will import the data.
-An important aspect of data import is whether each item in the input data should be read as a string, a number,
+When a table is selected, it's data and a preview of how the selected mapping will
+import the data will be presented under the options dock widget. An important aspect of data import is
+whether each item in the input data should be read as a string, a number,
 a time stamp or something else. By default all input data is read as strings.
 However, more often than not things like parameter values are actually numbers. Though types are usually casted automatically,
 it is possible to manually control what type of data each column (and sometimes each row) contains from the preview table.
@@ -127,26 +122,27 @@ Right clicking the column/row header also gives the opportunity to change the da
 
 Under **Mappings** you can manage mappings by adding new ones and removing or duplicating existing ones.
 Each table has it's own mappings and every mapping has its own options. In **Mappings** you can select the mapping
-that you want to start modifying. Having multiple mappings for a single table allows to for example import relationship
-classes and object classes at the same time from a single table in a file.
+that you want to start modifying. Having multiple mappings for a single table allows to for example import
+multiple item types at the same time from a single table in a file.
 
-**Mapping options** helps the importer get a feel for what kind of data it will be importing.
-The available *item type* options are *Object class, Relationship class, Object group, Alternative, Scenario,
-Scenario alternative, Parameter value list, Feature, Tool, Tool feature* and *Tool feature method*. The other available
-options are dependent on the Item type. *Import objects* allows to import objects alongside relationships
-or object groups. *Parameter type* is used to specify what type of parameters, if any, the sheet contains. It has options
+Underneath **Mappings** there are options that help the importer get a feel for what kind of data it will be importing.
+The available *item type* options are *Entity class, Entity group, Alternative, Scenario,
+Scenario alternative* and *Parameter value list*. The other available
+options are dependent on the Item type. *Import entities* allows to import entities alongside
+or entity groups. *Parameter type* is used to specify what type of parameters, if any, the sheet contains. It has options
 *Value, Definition* and *None*. If *Value* or *Definition* is selected
 the value or respectively the default value type can be set from the drop-down list. *Use before alternative* is only
 available for *Scenario alternative* -item type. *Read data from row* lets you specify the row where the importer
 starts to read the data. *Ignore columns* allow you to select individual columns that you want to exclude from the
-whole importing process. *Number of dimensions* sets the amount of dimensions the relationship to be imported has.
+whole importing process. *Number of dimensions* sets the amount of dimensions the entity to be imported has.
 *Repeat time series* sets the repeat flag to true when importing time series. *Map dimensions* sets the
-number of map indexes when importing map values.
+number of map indexes when importing map values. *Use before alternative* maps scenario before alternatives when
+importing scenario alternatives. *Compress Maps* can be used to compress value maps.
 
-Once everything in **Mapping options** is in order, the next step is to set the mapping specification.
-**Mapping specification** is the part where the decisions are made on how the input data is interpreted:
+Once everything in the before mentioned options is in order, the next step is to set the mapping specification.
+Below the options there is the part where the decisions are made on how the input data is interpreted:
 which row or column contains the entity class names, parameter values, time stamps and so on.
-The **Mapping specification** dock widget contains all of the targets that the selected mapping options specify.
+The dock widget contains all of the targets that the selected mapping options specify.
 Each target has a *Source reference* and a *Source type*. *Source type* specifies if the data for the target
 is coming in the form of a column, row, table name etc. In the *Source ref.* section you can pinpoint to the
 exact row, column etc. to use as the data. The *Filter* section can be used to further specify which values to
@@ -172,12 +168,12 @@ opening the spec editor from Toolbox **Main Toolbar**.
 .. image:: img/importer_spec_editor_anonymous_mode.png
    :align: center
 
-In anonymous mode new tables can be created in **Source tables** by double clicking *<rename this to add table>*
-and writing in a name for the new table. The **Source data** will contain an infinite grid of cells on which you
+In anonymous mode new tables can be created by double clicking *<rename this to add table>*
+and writing in a name for the new table. The preview will show an infinite grid of cells on which you
 can create different mappings.
 
 .. note:: You can exit the Anonymous mode by browsing to and selecting an existing file using the controls in
-   **Source files** dock.
+   *File path*.
 
 Exporting data with Exporter
 ****************************
