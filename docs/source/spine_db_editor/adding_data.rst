@@ -49,7 +49,7 @@ representation of the class can be modified:
 
 The boolean value of **active by default** will determine whether the entities created under the created class
 will have the value under entity alternative set as true or false by default. Finally, select the databases where
-you want to add the relationship classes under **databases**.
+you want to add the entity classes under **databases**.
 
 Multiple additions can be at once. When some information is inserted into the preceding row, a new empty row will
 appear in the dialog where a new class with the same dimensions can be defined. Delete entire rows from the dialog
