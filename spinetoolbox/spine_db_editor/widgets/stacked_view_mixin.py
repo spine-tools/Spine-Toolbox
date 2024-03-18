@@ -44,10 +44,8 @@ class StackedViewMixin:
         for model, view in self._all_stacked_models.items():
             view.setModel(model)
             view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
-            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-            view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-            view.horizontalHeader().setStretchLastSection(True)
-            view.horizontalHeader().setSectionsMovable(True)
+            horizontal_header = view.horizontalHeader()
+            horizontal_header.setSectionsMovable(True)
             view.connect_spine_db_editor(self)
 
     def connect_signals(self):
