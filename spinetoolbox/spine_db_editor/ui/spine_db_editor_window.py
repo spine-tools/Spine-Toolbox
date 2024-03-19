@@ -220,7 +220,6 @@ class Ui_MainWindow(object):
         self.tableView_parameter_value.setSortingEnabled(False)
         self.tableView_parameter_value.setWordWrap(False)
         self.tableView_parameter_value.horizontalHeader().setHighlightSections(False)
-        self.tableView_parameter_value.horizontalHeader().setStretchLastSection(True)
         self.tableView_parameter_value.verticalHeader().setVisible(False)
         self.tableView_parameter_value.verticalHeader().setHighlightSections(False)
 
@@ -239,13 +238,11 @@ class Ui_MainWindow(object):
         self.tableView_parameter_definition = ParameterDefinitionTableView(self.dockWidgetContents_5)
         self.tableView_parameter_definition.setObjectName(u"tableView_parameter_definition")
         self.tableView_parameter_definition.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.tableView_parameter_definition.setLayoutDirection(Qt.LeftToRight)
         self.tableView_parameter_definition.setTabKeyNavigation(False)
         self.tableView_parameter_definition.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.tableView_parameter_definition.setSortingEnabled(False)
         self.tableView_parameter_definition.setWordWrap(False)
         self.tableView_parameter_definition.horizontalHeader().setHighlightSections(False)
-        self.tableView_parameter_definition.horizontalHeader().setStretchLastSection(True)
         self.tableView_parameter_definition.verticalHeader().setVisible(False)
         self.tableView_parameter_definition.verticalHeader().setHighlightSections(False)
 
@@ -329,6 +326,8 @@ class Ui_MainWindow(object):
         self.pivot_table.setObjectName(u"pivot_table")
         self.pivot_table.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.pivot_table.setTabKeyNavigation(False)
+        self.pivot_table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.pivot_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
 
         self.verticalLayout_13.addWidget(self.pivot_table)
 

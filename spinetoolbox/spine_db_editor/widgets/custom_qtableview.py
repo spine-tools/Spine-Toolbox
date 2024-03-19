@@ -12,7 +12,16 @@
 
 """Custom QTableView classes that support copy-paste and the like."""
 from dataclasses import replace
-from PySide6.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint, QItemSelection, QItemSelectionModel
+from PySide6.QtCore import (
+    Qt,
+    Signal,
+    Slot,
+    QTimer,
+    QModelIndex,
+    QPoint,
+    QItemSelection,
+    QItemSelectionModel,
+)
 from PySide6.QtWidgets import QHeaderView, QTableView, QMenu, QWidget
 from PySide6.QtGui import QKeySequence, QAction
 from .scenario_generator import ScenarioGenerator
@@ -66,6 +75,9 @@ def _set_data(index, new_value):
 class StackedTableView(AutoFilterCopyPasteTableView):
     """Base stacked view."""
 
+    _EXPECTED_COLUMN_COUNT = NotImplemented
+    _STRETCH_COLUMNS = set()
+
     def __init__(self, parent):
         """
         Args:
@@ -75,7 +87,7 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self._menu = QMenu(self)
         self._spine_db_editor = None
         header = self.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.sectionCountChanged.connect(self._set_column_resize_modes)
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -201,15 +213,26 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         """Enables or disables copy and paste actions."""
         self._spine_db_editor.refresh_copy_paste_actions()
 
+    @Slot(int, int)
+    def _set_column_resize_modes(self, old_column_count, new_column_count):
+        if new_column_count != self._EXPECTED_COLUMN_COUNT:
+            return
+        header = self.horizontalHeader()
+        model = header.model()
+        for column in range(model.columnCount()):
+            data = model.headerData(column, Qt.Orientation.Horizontal)
+            if data in self._STRETCH_COLUMNS:
+                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
+
 
 class ParameterTableView(StackedTableView):
     value_column_header: str = NotImplemented
-    """Either "default value" or "value". Used to identify the value column for advanced editing and plotting."""
+    """Either "default_value" or "value". Used to identify the value column for advanced editing and plotting."""
 
     def __init__(self, parent):
         """
         Args:
-            parent (QObject): parent object
+            parent (QWidget): parent widget
         """
         super().__init__(parent=parent)
         self._open_in_editor_action = None
@@ -292,6 +315,9 @@ class ParameterTableView(StackedTableView):
 class ParameterDefinitionTableView(ParameterTableView):
     value_column_header = "default_value"
 
+    _EXPECTED_COLUMN_COUNT = 6
+    _STRETCH_COLUMNS = {"description"}
+
     def create_delegates(self):
         super().create_delegates()
         self._make_delegate("value_list_name", ValueListDelegate)
@@ -317,6 +343,9 @@ class ParameterDefinitionTableView(ParameterTableView):
 
 class ParameterValueTableView(ParameterTableView):
     value_column_header = "value"
+
+    _EXPECTED_COLUMN_COUNT = 6
+    _STRETCH_COLUMNS = {"entity_class_name", "entity_byname", "parameter_name", "alternative_name", "value"}
 
     def connect_spine_db_editor(self, spine_db_editor):
         super().connect_spine_db_editor(spine_db_editor)
@@ -365,6 +394,9 @@ class ParameterValueTableView(ParameterTableView):
 
 class EntityAlternativeTableView(StackedTableView):
     """Visualize entities and their alternatives."""
+
+    _EXPECTED_COLUMN_COUNT = 5
+    _STRETCH_COLUMNS = {"entity_class_name", "entity_byname", "alternative_name"}
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -766,8 +798,6 @@ class PivotTableView(CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
-        self.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
-        self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         # NOTE: order of creation of header tables is important for them to stack properly
         self._left_header_table = CopyPasteTableView(self)
         self._top_header_table = CopyPasteTableView(self)
@@ -801,7 +831,7 @@ class PivotTableView(CopyPasteTableView):
         for header_table in (self._top_header_table, self._left_header_table):
             header_table.setAttribute(Qt.WA_TransparentForMouseEvents)
         header = self.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
     @property
     def source_model(self):
@@ -877,21 +907,38 @@ class PivotTableView(CopyPasteTableView):
         self._top_left_header_table.setIndexWidget(proxy_index, widget)
 
     def setHorizontalHeader(self, horizontal_header):
-        horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         super().setHorizontalHeader(horizontal_header)
         horizontal_header.sectionResized.connect(self._update_section_width)
+        resize_precision = horizontal_header.resizeContentsPrecision()
         for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
-            header_table.horizontalHeader().setResizeContentsPrecision(horizontal_header.resizeContentsPrecision())
+            header_table.horizontalHeader().setResizeContentsPrecision(resize_precision)
 
     def setVerticalHeader(self, vertical_header):
         super().setVerticalHeader(vertical_header)
         vertical_header.sectionResized.connect(self._update_section_height)
+        default_section_size = vertical_header.defaultSectionSize()
         for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
-            header_table.verticalHeader().setDefaultSectionSize(vertical_header.defaultSectionSize())
+            header_table.verticalHeader().setDefaultSectionSize(default_section_size)
 
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
         self._update_header_tables_geometry()
+
+    def sizeHintForColumn(self, column):
+        base_size = super().sizeHintForColumn(column)
+        proxy_model = self.model()
+        source_model = proxy_model.sourceModel()
+        if column >= source_model.headerColumnCount():
+            return base_size
+        max_width = base_size
+        for row in range(source_model.headerRowCount()):
+            source_index = proxy_model.index(row, column)
+            index_widget = self._top_left_header_table.indexWidget(source_index)
+            if index_widget is None:
+                continue
+            max_width = max(max_width, index_widget.sizeHint().width())
+        return max_width
 
     def _fetch_more_visible(self):
         model = self.model()
@@ -983,8 +1030,9 @@ class MetadataTableViewBase(CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
-        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
+        horizontal_header = self.horizontalHeader()
+        horizontal_header.sectionCountChanged.connect(self._set_horizontal_header_resize_modes)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self._menu = QMenu(self)
         self._db_editor = None
 
@@ -1041,6 +1089,12 @@ class MetadataTableViewBase(CopyPasteTableView):
     @Slot(QModelIndex, QModelIndex)
     def _refresh_copy_paste_actions(self):
         self._db_editor.refresh_copy_paste_actions()
+
+    @Slot(int, int)
+    def _set_horizontal_header_resize_modes(self, old_column_count, new_column_count):
+        if new_column_count != 3:
+            return
+        self.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
 
 
 class MetadataTableView(MetadataTableViewBase):
