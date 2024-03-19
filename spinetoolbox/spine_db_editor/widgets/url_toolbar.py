@@ -99,7 +99,7 @@ class UrlToolBar(QToolBar):
     @Slot(QAction)
     def _open_ds_url(self, action):
         url = self._project_urls[action.text()]
-        self._db_editor.load_db_urls({url: action.text()})
+        self._db_editor.db_mngr.open_db_editor({url: action.text()}, True)
 
     def add_main_menu(self, menu):
         menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "")

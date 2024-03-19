@@ -12,7 +12,7 @@
 
 """Contains the MultiSpineDBEditor class."""
 import os
-from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton, QMessageBox
+from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton
 from PySide6.QtCore import Slot, QPoint
 from PySide6.QtGui import QIcon, QFont
 from .spine_db_editor import SpineDBEditor
@@ -103,7 +103,7 @@ class MultiSpineDBEditor(MultiTabWindow):
             return
         menu = QMenu(self)
         for name, url in ds_urls.items():
-            action = menu.addAction(name, lambda name=name, url=url: self.add_new_tab({url: name}))
+            action = menu.addAction(name, lambda name=name, url=url: self.db_mngr.open_db_editor({url: name}, True))
             action.setEnabled(url is not None and is_url_validated[name])
         menu.popup(global_pos)
         menu.aboutToHide.connect(menu.deleteLater)
