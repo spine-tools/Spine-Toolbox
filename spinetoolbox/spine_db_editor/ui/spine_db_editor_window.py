@@ -326,6 +326,8 @@ class Ui_MainWindow(object):
         self.pivot_table.setObjectName(u"pivot_table")
         self.pivot_table.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.pivot_table.setTabKeyNavigation(False)
+        self.pivot_table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.pivot_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
 
         self.verticalLayout_13.addWidget(self.pivot_table)
 

@@ -798,8 +798,6 @@ class PivotTableView(CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
-        self.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
-        self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         # NOTE: order of creation of header tables is important for them to stack properly
         self._left_header_table = CopyPasteTableView(self)
         self._top_header_table = CopyPasteTableView(self)
@@ -833,7 +831,7 @@ class PivotTableView(CopyPasteTableView):
         for header_table in (self._top_header_table, self._left_header_table):
             header_table.setAttribute(Qt.WA_TransparentForMouseEvents)
         header = self.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
     @property
     def source_model(self):
@@ -909,21 +907,38 @@ class PivotTableView(CopyPasteTableView):
         self._top_left_header_table.setIndexWidget(proxy_index, widget)
 
     def setHorizontalHeader(self, horizontal_header):
-        horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         super().setHorizontalHeader(horizontal_header)
         horizontal_header.sectionResized.connect(self._update_section_width)
+        resize_precision = horizontal_header.resizeContentsPrecision()
         for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
-            header_table.horizontalHeader().setResizeContentsPrecision(horizontal_header.resizeContentsPrecision())
+            header_table.horizontalHeader().setResizeContentsPrecision(resize_precision)
 
     def setVerticalHeader(self, vertical_header):
         super().setVerticalHeader(vertical_header)
         vertical_header.sectionResized.connect(self._update_section_height)
+        default_section_size = vertical_header.defaultSectionSize()
         for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
-            header_table.verticalHeader().setDefaultSectionSize(vertical_header.defaultSectionSize())
+            header_table.verticalHeader().setDefaultSectionSize(default_section_size)
 
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
         self._update_header_tables_geometry()
+
+    def sizeHintForColumn(self, column):
+        base_size = super().sizeHintForColumn(column)
+        proxy_model = self.model()
+        source_model = proxy_model.sourceModel()
+        if column >= source_model.headerColumnCount():
+            return base_size
+        max_width = base_size
+        for row in range(source_model.headerRowCount()):
+            source_index = proxy_model.index(row, column)
+            index_widget = self._top_left_header_table.indexWidget(source_index)
+            if index_widget is None:
+                continue
+            max_width = max(max_width, index_widget.sizeHint().width())
+        return max_width
 
     def _fetch_more_visible(self):
         model = self.model()
