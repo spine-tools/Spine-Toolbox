@@ -26,8 +26,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHeaderView, QLabel, QSizePolicy,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QHeaderView, QLabel,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
 
@@ -46,6 +46,7 @@ class Ui_TimePatternEditor(object):
 
         self.pattern_edit_table = IndexedValueTableView(TimePatternEditor)
         self.pattern_edit_table.setObjectName(u"pattern_edit_table")
+        self.pattern_edit_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.pattern_edit_table.horizontalHeader().setStretchLastSection(True)
 
         self.verticalLayout.addWidget(self.pattern_edit_table)

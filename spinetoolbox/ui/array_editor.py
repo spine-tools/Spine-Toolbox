@@ -26,9 +26,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFormLayout, QHBoxLayout,
-    QHeaderView, QLabel, QSizePolicy, QSpacerItem,
-    QSplitter, QStackedWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFormLayout,
+    QHBoxLayout, QHeaderView, QLabel, QSizePolicy,
+    QSpacerItem, QSplitter, QStackedWidget, QVBoxLayout,
+    QWidget)
 
 from spinetoolbox.widgets.custom_qtableview import ArrayTableView
 from spinetoolbox.widgets.plot_widget import PlotWidget
@@ -70,6 +71,8 @@ class Ui_Form(object):
 
         self.array_table_view = ArrayTableView(self.verticalLayoutWidget)
         self.array_table_view.setObjectName(u"array_table_view")
+        self.array_table_view.setMinimumSize(QSize(250, 0))
+        self.array_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.array_table_view.horizontalHeader().setStretchLastSection(True)
         self.array_table_view.verticalHeader().setVisible(False)
 

@@ -64,6 +64,7 @@ class MapEditor(QWidget):
     def set_value(self, value):
         """Sets the parameter_value to be edited."""
         self._model.reset(value)
+        self._ui.map_table_view.resizeColumnsToContents()
 
     def value(self):
         """Returns the parameter_value currently being edited."""
