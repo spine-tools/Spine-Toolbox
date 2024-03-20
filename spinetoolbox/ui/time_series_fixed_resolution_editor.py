@@ -26,10 +26,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QFormLayout, QHBoxLayout,
-    QHeaderView, QLabel, QLineEdit, QPushButton,
-    QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QFormLayout,
+    QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
+    QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_qtableview import TimeSeriesFixedResolutionTableView
 from spinetoolbox.widgets.plot_widget import PlotWidget
@@ -126,6 +126,8 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
 
         self.time_series_table = TimeSeriesFixedResolutionTableView(self.verticalLayoutWidget)
         self.time_series_table.setObjectName(u"time_series_table")
+        self.time_series_table.setMinimumSize(QSize(250, 0))
+        self.time_series_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.time_series_table.horizontalHeader().setStretchLastSection(True)
 
         self.left_layout.addWidget(self.time_series_table)

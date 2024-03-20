@@ -12,7 +12,7 @@
 
 """Contains logic for the variable resolution time series editor widget."""
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import TimeSeriesVariableResolution
 from ..plotting import add_time_series_plot
 from ..mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
@@ -49,7 +49,9 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._ui.time_series_table.setModel(self._model)
         self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
-        self._ui.time_series_table.horizontalHeader().sectionDoubleClicked.connect(self._open_header_editor)
+        header = self._ui.time_series_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.sectionDoubleClicked.connect(self._open_header_editor)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)

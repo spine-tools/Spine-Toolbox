@@ -13,7 +13,8 @@
 """Contains logic for the fixed step time series editor widget."""
 from datetime import datetime
 from PySide6.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
-from PySide6.QtWidgets import QCalendarWidget, QWidget
+from PySide6.QtGui import QFontMetrics
+from PySide6.QtWidgets import QCalendarWidget, QHeaderView, QWidget
 from spinedb_api import (
     duration_to_relativedelta,
     ParameterValueFormatError,
@@ -71,6 +72,8 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.setupUi(self)
         self._ui.start_time_edit.setText(str(initial_value.start))
         self._ui.start_time_edit.editingFinished.connect(self._start_time_changed)
+        edit_min_width = self._ui.start_time_edit.fontMetrics().horizontalAdvance("YYYY-DD-MMTHH:MM:SS")
+        self._ui.start_time_edit.setMinimumWidth(edit_min_width + 10)
         self._ui.calendar_button.clicked.connect(self._show_calendar)
         self._ui.resolution_edit.setText(_resolution_to_text(initial_value.resolution))
         self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
@@ -78,7 +81,9 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.time_series_table.setModel(self._model)
         self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
-        self._ui.time_series_table.horizontalHeader().sectionDoubleClicked.connect(self._open_header_editor)
+        header = self._ui.time_series_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.sectionDoubleClicked.connect(self._open_header_editor)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
