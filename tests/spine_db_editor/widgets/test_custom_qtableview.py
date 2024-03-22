@@ -19,10 +19,10 @@ from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import DatabaseMapping, import_functions
+from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import (
     add_entity,
     add_zero_dimension_entity_class,
-    TestBase,
     EditorDelegateMocking,
 )
 

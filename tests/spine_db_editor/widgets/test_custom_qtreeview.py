@@ -30,12 +30,12 @@ from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
     EditEntitiesDialog,
     RemoveEntitiesDialog,
 )
+from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import (
     EditorDelegateMocking,
     add_entity_tree_item,
     add_zero_dimension_entity_class,
     add_entity,
-    TestBase,
 )
 
 

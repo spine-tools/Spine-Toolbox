@@ -491,8 +491,10 @@ class EditParameterValueMixin:
             return ""
         database = self.index(index.row(), self.columnCount() - 1).data()
         if self.item_type == "parameter_definition":
+            parameter_name = item["name"]
             names = [item["entity_class_name"]]
         elif self.item_type == "parameter_value":
+            parameter_name = item["parameter_name"]
             names = list(item["entity_byname"])
         else:
             raise ValueError(
@@ -501,7 +503,7 @@ class EditParameterValueMixin:
         alternative_name = {"parameter_definition": lambda x: None, "parameter_value": lambda x: x["alternative_name"]}[
             self.item_type
         ](item)
-        return parameter_identifier(database, item["parameter_name"], names, alternative_name)
+        return parameter_identifier(database, parameter_name, names, alternative_name)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,

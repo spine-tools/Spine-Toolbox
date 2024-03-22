@@ -19,7 +19,7 @@ from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, ManageElementsDialog
-from tests.spine_db_editor.widgets.helpers import TestBase
+from tests.spine_db_editor.helpers import TestBase
 
 
 class TestAddItemsDialog(unittest.TestCase):

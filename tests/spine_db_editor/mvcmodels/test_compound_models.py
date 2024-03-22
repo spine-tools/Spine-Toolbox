@@ -10,45 +10,20 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Unit tests for the models in ``compound_parameter_models`` module."""
+"""Unit tests for the models in ``compound_models`` module."""
 import unittest
-from unittest.mock import MagicMock, patch
-from PySide6.QtWidgets import QApplication
-from spinedb_api import to_database
+from spinedb_api import Array, to_database
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
 )
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager, fetch_model
+from tests.mock_helpers import fetch_model
+from ..helpers import TestBase
 
 
-class TestCompoundParameterDefinitionModel(unittest.TestCase):
-    db_codename = "compound_parameter_definition_model_test_db"
-
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestCompoundParameterDefinitionModel(TestBase):
     def setUp(self):
-        app_settings = MagicMock()
-        logger = MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.db_codename})
-
-    def tearDown(self):
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
-        ):
-            self._db_editor.close()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
-        self._db_editor.deleteLater()
+        self._common_setup("sqlite://", create=True)
 
     def test_horizontal_header(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -93,8 +68,7 @@ class TestCompoundParameterDefinitionModel(unittest.TestCase):
     def test_model_updates_when_entity_class_is_removed(self):
         self._db_map.add_entity_class_item(name="oc1")
         self._db_map.add_parameter_definition_item(entity_class_name="oc1", name="x")
-        entity_class_2, error = self._db_map.add_entity_class_item(name="oc2")
-        self.assertIsNone(error)
+        entity_class_2 = self.assert_success(self._db_map.add_entity_class_item(name="oc2"))
         self._db_map.add_parameter_definition_item(entity_class_name="oc2", name="x")
         self._db_map.add_entity_class_item(name="rc", dimension_name_list=("oc1", "oc2"))
         self._db_map.add_parameter_definition_item(entity_class_name="rc", name="x")
@@ -106,34 +80,26 @@ class TestCompoundParameterDefinitionModel(unittest.TestCase):
         self._db_mngr.remove_items({self._db_map: {"entity_class": [entity_class_2["id"]]}})
         self.assertEqual(model.rowCount(), 1)
 
+    def test_index_name_returns_sane_label(self):
+        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
+        value, value_type = to_database(Array([2.3]))
+        self.assert_success(
+            self._db_map.add_parameter_definition_item(
+                name="x", entity_class_name="Object", default_value=value, default_type=value_type
+            )
+        )
+        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+        model.init_model()
+        fetch_model(model)
+        index = model.index(0, 3)
+        self.assertEqual(model.index_name(index), "TestCompoundParameterDefinitionModel_db - x - Object")
 
-class TestCompoundParameterValueModel(unittest.TestCase):
+
+class TestCompoundParameterValueModel(TestBase):
     db_codename = "compound_parameter_value_model_test_db"
 
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
     def setUp(self):
-        app_settings = MagicMock()
-        logger = MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
-        self._db_map.fetch_all()
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.db_codename})
-
-    def tearDown(self):
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
-        ):
-            self._db_editor.close()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
-        self._db_editor.deleteLater()
+        self._common_setup("sqlite://", create=True)
 
     def test_horizontal_header(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -208,6 +174,27 @@ class TestCompoundParameterValueModel(unittest.TestCase):
         row = [model.index(0, column).data() for column in range(model.columnCount())]
         expected = ["rc", "o", "p", "Base", "23.0", self.db_codename]
         self.assertEqual(row, expected)
+
+    def test_index_name_returns_sane_label(self):
+        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
+        self.assert_success(self._db_map.add_parameter_definition_item(name="x", entity_class_name="Object"))
+        self.assert_success(self._db_map.add_entity_item(name="mysterious cube", entity_class_name="Object"))
+        value, value_type = to_database(Array([2.3]))
+        self.assert_success(
+            self._db_map.add_parameter_value_item(
+                entity_class_name="Object",
+                entity_byname=("mysterious cube",),
+                parameter_definition_name="x",
+                alternative_name="Base",
+                value=value,
+                type=value_type,
+            )
+        )
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        model.init_model()
+        fetch_model(model)
+        index = model.index(0, 3)
+        self.assertEqual(model.index_name(index), "TestCompoundParameterValueModel_db - x - Base - mysterious cube")
 
 
 if __name__ == '__main__':
