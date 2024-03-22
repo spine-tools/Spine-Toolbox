@@ -21,12 +21,6 @@ from tests.spine_db_editor.helpers import TestBase
 
 
 class TestParameterValuePivotTableModel(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def _fill_model_with_data(self):
         data = {
             "entity_classes": (("class1",),),
@@ -202,9 +196,6 @@ class TestIndexExpansionPivotTableModel(TestBase):
         self._model.beginResetModel()
         self._model.endResetModel()
         qApp.processEvents()
-
-    def tearDown(self):
-        self._common_tear_down()
 
     def test_data(self):
         self.assertEqual(self._model.rowCount(), 11)

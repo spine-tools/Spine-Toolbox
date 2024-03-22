@@ -29,6 +29,12 @@ class TestBase(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
+    def setUp(self):
+        self._common_setup("sqlite://", create=True)
+
+    def tearDown(self):
+        self._common_tear_down()
+
     def _common_setup(self, url, create):
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"

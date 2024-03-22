@@ -140,12 +140,6 @@ class TestAddItemsDialog(unittest.TestCase):
 
 
 class TestManageElementsDialog(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def test_add_relationship_among_existing_ones(self):
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1", "id": 1}, {"name": "Object_2", "id": 2}]})
         self._db_mngr.add_entities(

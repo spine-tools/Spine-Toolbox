@@ -13,10 +13,10 @@
 """Unit tests for the plotting module."""
 import unittest
 from contextlib import contextmanager
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import patch
 import numpy
 from PySide6.QtCore import QModelIndex, QItemSelectionModel, QObject
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QApplication
 from matplotlib.gridspec import GridSpec
 from spinedb_api import (
     DateTime,
@@ -28,6 +28,7 @@ from spinedb_api import (
     Array,
 )
 from spinetoolbox.plotting import (
+    plot_parameter_table_selection,
     PlottingError,
     convert_indexed_value_to_tree,
     TreeNode,
@@ -42,41 +43,10 @@ from spinetoolbox.plotting import (
     add_row_to_exception,
     IndexName,
 )
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager
+from tests.spine_db_editor.helpers import TestBase
 
 
-class TestBase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
-    def setUp(self):
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
-        ):
-            mock_settings = Mock()
-            mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = TestSpineDBManager(mock_settings, None)
-            logger = MagicMock()
-            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test database", create=True)
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test database"})
-
-    def tearDown(self):
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as message_box:
-            message_box.exec.return_value = QMessageBox.StandardButton.Ok
-            self._db_editor.rollback_session()
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
-            "spinetoolbox.spine_db_manager.QMessageBox"
-        ):
-            self._db_editor.close()
-        while not self._db_map.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
-        self._db_editor.deleteLater()
-        self._db_editor = None
-
+class TestPlotPivotTableSelection(TestBase):
     def _add_object_parameter_values(self, values):
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "class", "id": 1}]})
         self._db_mngr.add_parameter_definitions(
@@ -118,8 +88,6 @@ class TestBase(unittest.TestCase):
             )
             at_filter_refresh.wait()
 
-
-class TestPlotPivotTableSelection(TestBase):
     def _fill_pivot(self, values):
         self._add_object_parameter_values(values)
         self.assertEqual(self._db_editor.current_input_type, self._db_editor._PARAMETER_VALUE)
@@ -146,7 +114,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | floats")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | floats")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "floats")
             legend = plot_widget.canvas.legend_axes.get_legend()
@@ -169,7 +137,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | ints")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
@@ -195,7 +163,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | series | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | series | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "series")
             legend = plot_widget.canvas.legend_axes.get_legend()
@@ -230,7 +198,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | floats")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | floats")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "floats")
             legend = plot_widget.canvas.legend_axes.get_legend()
@@ -253,7 +221,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | ints")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | ints")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
@@ -276,7 +244,7 @@ class TestPlotPivotTableSelection(TestBase):
         selected_indexes = [model.index(row, column) for column in range(1, 3) for row in range(2, 5)]
         plot_widget = plot_pivot_table_selection(model, selected_indexes)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "floats")
             self.assertTrue(plot_widget.canvas.has_twinned_axes())
@@ -312,7 +280,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | a-ints | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | a-ints | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "b-floats")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "a-ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
@@ -338,7 +306,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | a-ints")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | a-ints")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "a-ints")
             legend = plot_widget.canvas.legend_axes.get_legend()
@@ -366,7 +334,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = [model.index(first_data_row + 1, 1)]
         plot_pivot_table_selection(model, selection, plot_widget)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | series | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | series | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "series")
             legend = plot_widget.canvas.legend_axes.get_legend()
@@ -408,7 +376,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = [model.index(2, 1)]
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | maps | o1 | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | maps | o1 | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
             self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
@@ -438,7 +406,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = [model.index(2, 1)]
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | maps | o1 | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | maps | o1 | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
             legend = plot_widget.canvas.legend_axes.get_legend()
@@ -498,7 +466,7 @@ class TestPlotPivotTableSelection(TestBase):
         selection = [model.index(2, 1)]
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "test database | maps | o1 | Base")
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | maps | o1 | Base")
             self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
             legend = plot_widget.canvas.legend_axes.get_legend()

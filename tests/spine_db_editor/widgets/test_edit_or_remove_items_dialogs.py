@@ -20,12 +20,6 @@ from tests.spine_db_editor.helpers import TestBase
 
 
 class TestEditEntityClassesDialog(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def test_pasting_gibberish_to_active_by_default_column_gives_false(self):
         self._db_map.add_entity_class_item(name="Object")
         entity_tree = self._db_editor.ui.treeView_entity

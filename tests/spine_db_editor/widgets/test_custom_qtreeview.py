@@ -121,12 +121,6 @@ def _append_table_row(view, row):
 
 
 class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def test_empty_view(self):
         view = self._db_editor.ui.treeView_entity
         model = view.model()
@@ -297,7 +291,6 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
             QApplication.processEvents()
 
     def tearDown(self):
-        # QApplication.processEvents()
         self._common_tear_down()
         self._temp_dir.cleanup()
 
@@ -683,9 +676,6 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
     def setUp(self):
         self._common_setup("sqlite://", create=True)
         self._edits = _ParameterValueListEdits(self._db_editor.ui.treeView_parameter_value_list)
-
-    def tearDown(self):
-        self._common_tear_down()
 
     def test_empty_tree_has_correct_contents(self):
         model = self._db_editor.ui.treeView_parameter_value_list.model()
