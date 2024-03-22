@@ -17,7 +17,7 @@ from unittest.mock import patch
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Map
 from tests.mock_helpers import fetch_model
-from tests.spine_db_editor.widgets.helpers import TestBase
+from tests.spine_db_editor.helpers import TestBase
 
 
 class TestParameterValuePivotTableModel(TestBase):

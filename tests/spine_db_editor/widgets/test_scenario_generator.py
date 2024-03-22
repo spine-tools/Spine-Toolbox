@@ -14,7 +14,7 @@
 import unittest
 from PySide6.QtCore import Qt
 from spinetoolbox.spine_db_editor.widgets.scenario_generator import ScenarioGenerator
-from .helpers import TestBase
+from tests.spine_db_editor.helpers import TestBase
 
 
 class TestScenarioGenerator(TestBase):

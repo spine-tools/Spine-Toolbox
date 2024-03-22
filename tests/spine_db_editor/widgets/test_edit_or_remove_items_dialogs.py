@@ -16,7 +16,7 @@ from unittest import mock
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import EditEntityClassesDialog
-from tests.spine_db_editor.widgets.helpers import TestBase
+from tests.spine_db_editor.helpers import TestBase
 
 
 class TestEditEntityClassesDialog(TestBase):
