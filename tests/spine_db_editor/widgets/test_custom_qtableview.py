@@ -18,7 +18,8 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
-from spinedb_api import DatabaseMapping, import_functions
+from spinedb_api import Array, DatabaseMapping, import_functions, to_database
+from tests.mock_helpers import fetch_model
 from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import (
     add_entity,
@@ -27,13 +28,35 @@ from tests.spine_db_editor.widgets.helpers import (
 )
 
 
-class TestParameterTableView(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
+class TestParameterDefinitionTableView(TestBase):
+    def test_plotting(self):
+        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
+        value, value_type = to_database(Array([2.3, 23.0]))
+        self.assert_success(
+            self._db_map.add_parameter_definition_item(
+                name="q", entity_class_name="Object", default_value=value, default_type=value_type
+            )
+        )
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        model = table_view.model()
+        fetch_model(model)
+        index = model.index(0, 3)
+        plot_widget = table_view._plot_selection([index])
+        try:
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestParameterDefinitionTableView_db | Object | q")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "i")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "q")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            self.assertIsNone(legend)
+            lines = plot_widget.canvas.axes.get_lines()
+            self.assertEqual(len(lines), 1)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), [0, 1])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 23.0])
+        finally:
+            plot_widget.deleteLater()
 
-    def tearDown(self):
-        self._common_tear_down()
 
+class TestParameterValueTableView(TestBase):
     def test_paste_empty_string_to_entity_byname_column(self):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
@@ -49,7 +72,7 @@ class TestParameterTableView(TestBase):
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 6)
         expected = [
-            [None, "", None, None, None, "TestParameterTableView_db"],
+            [None, "", None, None, None, "TestParameterValueTableView_db"],
         ]
         for row in range(model.rowCount()):
             for column in range(model.columnCount()):
@@ -223,8 +246,44 @@ class TestParameterTableView(TestBase):
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
+    def test_plotting(self):
+        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
+        self.assert_success(self._db_map.add_parameter_definition_item(name="q", entity_class_name="Object"))
+        self.assert_success(self._db_map.add_entity_item(name="baffling sphere", entity_class_name="Object"))
+        value, value_type = to_database(Array([2.3, 23.0]))
+        self.assert_success(
+            self._db_map.add_parameter_value_item(
+                entity_class_name="Object",
+                entity_byname=("baffling sphere",),
+                parameter_definition_name="q",
+                alternative_name="Base",
+                value=value,
+                type=value_type,
+            )
+        )
+        table_view = self._db_editor.ui.tableView_parameter_value
+        model = table_view.model()
+        fetch_model(model)
+        index = model.index(0, 4)
+        plot_widget = table_view._plot_selection([index])
+        try:
+            self.assertEqual(
+                plot_widget.canvas.axes.get_title(),
+                "TestParameterValueTableView_db | Object | baffling sphere | q | Base",
+            )
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "i")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "q")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            self.assertIsNone(legend)
+            lines = plot_widget.canvas.axes.get_lines()
+            self.assertEqual(len(lines), 1)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), [0, 1])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 23.0])
+        finally:
+            plot_widget.deleteLater()
 
-class TestParameterTableWithExistingData(TestBase):
+
+class TestParameterValueTableWithExistingData(TestBase):
     _CHUNK_SIZE = 100  # This has to be large enough, so the chunk won't 'fit' into the table view.
 
     @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=_CHUNK_SIZE)
@@ -342,12 +401,6 @@ class TestParameterTableWithExistingData(TestBase):
 
 
 class TestEntityAlternativeTableView(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def test_pasting_gibberish_to_the_active_column_converts_to_false(self):
         self._db_map.add_entity_class_item(name="Object")
         self._db_map.add_entity_item(entity_class_name="Object", name="spoon")

@@ -22,9 +22,6 @@ from ..helpers import TestBase
 
 
 class TestCompoundParameterDefinitionModel(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
     def test_horizontal_header(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
@@ -96,11 +93,6 @@ class TestCompoundParameterDefinitionModel(TestBase):
 
 
 class TestCompoundParameterValueModel(TestBase):
-    db_codename = "compound_parameter_value_model_test_db"
-
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
     def test_horizontal_header(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()

@@ -22,14 +22,6 @@ from tests.spine_db_editor.helpers import TestBase
 
 
 class TestPivotHeaderDraggingAndDropping(TestBase):
-    db_codename = "pivot_header_dragging_and_dropping_test_db"
-
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def _add_entity_class_data(self):
         data = {
             "entity_classes": (("class1",),),

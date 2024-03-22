@@ -329,13 +329,8 @@ class ParameterDefinitionTableView(ParameterTableView):
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
         header_sections = [
-            ParameterTableHeaderSection(label)
-            for label in ("database", "entity_class_name", "dimension_name_list", "parameter_name")
+            ParameterTableHeaderSection(label) for label in ("database", "entity_class_name", "parameter_name")
         ]
-        for i, section in enumerate(header_sections):
-            if section.label == "dimension_name_list":
-                header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
-                break
         return plot_parameter_table_selection(
             self.model(), selection, header_sections, self.value_column_header, plot_widget
         )

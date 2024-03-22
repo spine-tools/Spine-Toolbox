@@ -18,12 +18,6 @@ from tests.spine_db_editor.helpers import TestBase
 
 
 class TestScenarioGenerator(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def test_alternative_list_contains_alternatives(self):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alt1"}]})
         alternatives = self._db_mngr.get_items(self._db_map, "alternative")
