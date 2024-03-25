@@ -352,6 +352,22 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         self.assertEqual(self.model._selected_filtered, set(self.data[4:]))
         self.assertTrue(self.model._all_selected)
 
+    def test_half_finished_expression_does_not_raise_exception(self):
+        self.model.set_list(self.data)
+        self.model.set_filter("[")
+        self.assertEqual(
+            [self.model.index(row, 0).data() for row in range(self.model.rowCount())],
+            ["(Select all)", "(Empty)"] + self.data,
+        )
+
+    def test_only_whitespaces_in_filter_expression_does_not_filter(self):
+        self.model.set_list(self.data)
+        self.model.set_filter("   ")
+        self.assertEqual(
+            [self.model.index(row, 0).data() for row in range(self.model.rowCount())],
+            ["(Select all)", "(Empty)"] + self.data,
+        )
+
 
 if __name__ == '__main__':
     unittest.main()
