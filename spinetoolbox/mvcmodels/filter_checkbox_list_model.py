@@ -178,9 +178,13 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         return self._data_set.difference(self._selected)
 
     def set_filter(self, filter_expression):
-        if filter_expression and (isinstance(filter_expression, str) and not filter_expression.isspace()):
+        filter_expression = filter_expression.strip()
+        if filter_expression:
+            try:
+                self._filter_expression = re.compile(filter_expression)
+            except re.error:
+                return
             self._action_rows[0] = self._SELECT_ALL_STR
-            self._filter_expression = re.compile(filter_expression)
             self._filter_index = [i for i, item in enumerate(self._data) if self.search_filter_expression(item)]
             self._selected_filtered = set(self._data[i] for i in self._filter_index)
             self._add_to_selection = False
