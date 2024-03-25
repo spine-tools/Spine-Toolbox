@@ -1551,7 +1551,7 @@ class SpineDBManager(QObject):
         try:
             db_map.commit_session("Export data from Spine Toolbox.")
         except SpineDBAPIError as err:
-            error_msg = {None: [f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"]}
+            error_msg = f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"
             caller.msg_error.emit(error_msg)
         else:
             caller.file_exported.emit(file_path, 1.0, True)
