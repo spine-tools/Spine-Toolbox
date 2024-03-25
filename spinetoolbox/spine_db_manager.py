@@ -1551,7 +1551,7 @@ class SpineDBManager(QObject):
         try:
             db_map.commit_session("Export data from Spine Toolbox.")
         except SpineDBAPIError as err:
-            error_msg = {None: [f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"]}
+            error_msg = f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"
             caller.msg_error.emit(error_msg)
         else:
             caller.file_exported.emit(file_path, 1.0, True)
@@ -1575,12 +1575,7 @@ class SpineDBManager(QObject):
             count, errors = import_data(db_map, **data_for_export, unparse_value=dump_db_value)
             file_name = os.path.split(file_path)[1]
             if errors:
-                error_msg = {
-                    None: [
-                        f"Unable to export file <b>{file_name}</b>."
-                        "<br/>Failed to copy the data to temporary database."
-                    ]
-                }
+                error_msg = f"Unable to export file <b>{file_name}</b>. Failed to copy the data to temporary database."
                 caller.msg_error.emit(error_msg)
                 return
             if count > 0:
@@ -1590,12 +1585,10 @@ class SpineDBManager(QObject):
             try:
                 export_spine_database_to_xlsx(db_map, file_path)
             except PermissionError:
-                error_msg = {
-                    None: [f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."]
-                }
+                error_msg = f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."
                 caller.msg_error.emit(error_msg)
             except OSError:
-                error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
+                error_msg = f"[OSError] Unable to export file <b>{file_name}</b>."
                 caller.msg_error.emit(error_msg)
             else:
                 caller.file_exported.emit(file_path, 1.0, False)
