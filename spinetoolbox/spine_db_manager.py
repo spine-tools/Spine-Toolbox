@@ -1575,7 +1575,10 @@ class SpineDBManager(QObject):
             count, errors = import_data(db_map, **data_for_export, unparse_value=dump_db_value)
             file_name = os.path.split(file_path)[1]
             if errors:
-                error_msg = f"Unable to export file <b>{file_name}</b>. Failed to copy the data to temporary database."
+                error_msg = (
+                    f"Unable to export file <b>{file_name}</b>."
+                    f"Failed to copy the data to temporary database: <p>{errors}</p>"
+                )
                 caller.msg_error.emit(error_msg)
                 return
             if count > 0:
