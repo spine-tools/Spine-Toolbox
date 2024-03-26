@@ -50,6 +50,7 @@ We provide three options for installing Spine Toolbox. The first two options als
 the Pre-installation steps**: 
 - [Python/pipx](#installation-with-python-and-pipx) (we intend to make stable releases every month or so)
 - [From source files](#installation-from-sources-using-git) (this is the cutting edge - and more likely to have bugs)
+- [Windows executable as .zip bundle](https://spine-tools.github.io/Downloads/) (requires only unzipping the downloaded .zip file)
 - [Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
 
 ### Pre-installation
