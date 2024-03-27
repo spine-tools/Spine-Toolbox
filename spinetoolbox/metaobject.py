@@ -28,9 +28,10 @@ class MetaObject(QObject):
         self.name = name
         self.short_name = shorten(name)
         self.description = description
+        self._version = None
 
     def set_name(self, name):
-        """Set object name and short name.
+        """Sets object name and short name.
         Note: Check conflicts (e.g. name already exists)
         before calling this method.
 
@@ -41,9 +42,25 @@ class MetaObject(QObject):
         self.short_name = shorten(name)
 
     def set_description(self, description):
-        """Set object description.
+        """Sets object description.
 
         Args:
             description (str): Object description
         """
         self.description = description
+
+    def version(self):
+        """Returns object version.
+
+        Returns:
+            str or None: Version string or None if version is not set.
+        """
+        return self._version
+
+    def set_version(self, version):
+        """Sets object version.
+
+        Args:
+            version (str): Version string
+        """
+        self._version = version

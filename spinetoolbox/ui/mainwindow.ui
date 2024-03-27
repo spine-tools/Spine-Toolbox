@@ -56,6 +56,7 @@
     <addaction name="actionSave_As"/>
     <addaction name="actionClose"/>
     <addaction name="actionSet_description"/>
+    <addaction name="actionVersionInspector"/>
     <addaction name="separator"/>
     <addaction name="actionNew_DB_editor"/>
     <addaction name="separator"/>
@@ -867,6 +868,17 @@
    </property>
    <property name="text">
     <string>Start Jupyter Console</string>
+   </property>
+  </action>
+  <action name="actionVersionInspector">
+   <property name="text">
+    <string>Version Inspector</string>
+   </property>
+   <property name="shortcut">
+    <string>F10</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::TextHeuristicRole</enum>
    </property>
   </action>
  </widget>

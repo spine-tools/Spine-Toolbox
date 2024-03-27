@@ -70,6 +70,7 @@ from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import RecentProjectsPopupMenu, KernelsPopupMenu
 from .widgets.settings_widget import SettingsWidget
+from .widgets.version_inspector_widget import VersionInspectorWidget
 from .widgets.custom_qwidgets import ToolBarWidgetAction
 from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets.persistent_console_widget import PersistentConsoleWidget
@@ -178,6 +179,7 @@ class ToolboxUI(QMainWindow):
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
         self.settings_form = None
+        self.version_inspector_form = None
         self.add_project_item_form = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         self.kernels_menu = KernelsPopupMenu(self)
@@ -280,6 +282,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSet_description.triggered.connect(self.set_project_description)
         self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
+        self.ui.actionVersionInspector.triggered.connect(self.show_version_inspector)
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionInstall_plugin.triggered.connect(self._plugin_manager.show_install_plugin_dialog)
@@ -1603,6 +1606,12 @@ class ToolboxUI(QMainWindow):
         """Shows the Settings widget."""
         self.settings_form = SettingsWidget(self)
         self.settings_form.show()
+
+    @Slot()
+    def show_version_inspector(self):
+        """Shows the Project and Item version inspector widget."""
+        self.version_inspector_form = VersionInspectorWidget(self)
+        self.version_inspector_form.show()
 
     @Slot()
     def show_about(self):
