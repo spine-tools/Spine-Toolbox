@@ -805,8 +805,7 @@ class SpineDBManager(QObject):
         else:
             tool_tip_data = None
         if isinstance(tool_tip_data, str):
-            fm = QFontMetrics(QFont("", 0))
-            tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
+            tool_tip_data = "<qt>" + tool_tip_data + "</qt>"
         return tool_tip_data
 
     def _format_list_value(self, db_map, item_type, value, list_value_id):
