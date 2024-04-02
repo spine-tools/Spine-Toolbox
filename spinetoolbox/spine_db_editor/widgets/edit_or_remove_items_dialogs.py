@@ -59,14 +59,14 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         self.table_view.setItemDelegate(ManageEntityClassesDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(
-            ['entity class name', 'description', 'display icon', "active by default", 'databases']
+            ["entity class name", "description", "display icon", "active by default", "databases"]
         )
         self.orig_data = list()
         self.default_display_icon = default_icon_id()
         model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
-            row_data = [item.name, data['description'], data['display_icon'], data["active_by_default"]]
+            row_data = [item.name, data["description"], data["display_icon"], data["active_by_default"]]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -107,9 +107,9 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
             for db_map in db_maps:
                 db_item = {
                     "id": item.db_map_id(db_map),
-                    'name': name,
-                    'description': description,
-                    'display_icon': display_icon,
+                    "name": name,
+                    "description": description,
+                    "display_icon": display_icon,
                     "active_by_default": active_by_default,
                 }
                 db_map_data.setdefault(db_map, []).append(db_item)
@@ -142,7 +142,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         self.keyed_db_maps = {x.codename: x for x in self.db_maps}
         self.class_key = class_key
         self.model.set_horizontal_header_labels(
-            [x + ' byname' for x in self.dimension_name_list] + ['entity name', 'databases']
+            [x + " byname" for x in self.dimension_name_list] + ["entity name", "databases"]
         )
         self.orig_data = []
         model_data = []
@@ -182,7 +182,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
                 db_maps.append(db_map)
-            pre_db_item = {'name': name}
+            pre_db_item = {"name": name}
             for db_map in db_maps:
                 id_ = item.db_map_id(db_map)
                 # Find dimension_id_list
@@ -206,7 +206,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
                     element_id = entities[dimension_id, element_name]["id"]
                     element_id_list.append(element_id)
                 db_item = pre_db_item.copy()
-                db_item.update({'id': id_, 'element_id_list': element_id_list})
+                db_item.update({"id": id_, "element_id_list": element_id_list})
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to update")
@@ -231,7 +231,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(RemoveEntitiesDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['type', 'name', 'databases'])
+        self.model.set_horizontal_header_labels(["type", "name", "databases"])
         model_data = list()
         for item_type, items in selected.items():
             for item in items:

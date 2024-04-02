@@ -85,7 +85,7 @@ class SpineDBIconManager:
 
     def _create_icon_renderer(self, icon_code, color_code):
         scene = QGraphicsScene()
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         text_item = scene.addText(icon_code, font)
         text_item.setDefaultTextColor(color_code)
         _align_text_in_item(text_item)
@@ -111,7 +111,7 @@ class SpineDBIconManager:
         if not any(dimension_name_list):
             self._multi_class_renderers[dimension_name_list] = self.icon_renderer("\uf1b3", 0)
             return
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         scene = QGraphicsScene()
         x = 0
         for j, dimension_name in enumerate(dimension_name_list):
@@ -146,7 +146,7 @@ class SpineDBIconManager:
     def _create_group_renderer(self, class_name):
         display_icon = self.display_icons.get(class_name, -1)
         icon_code, color_code = interpret_icon_id(display_icon)
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         scene = QGraphicsScene()
         x = 0
         for _ in range(2):

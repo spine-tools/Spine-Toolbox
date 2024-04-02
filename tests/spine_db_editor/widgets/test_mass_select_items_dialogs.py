@@ -81,10 +81,10 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
             entities,
             [
                 {
-                    'class_id': class_id,
+                    "class_id": class_id,
                     "description": None,
-                    'id': entity_id,
-                    'name': 'my_object',
+                    "id": entity_id,
+                    "name": "my_object",
                     "element_id_list": (),
                 }
             ],

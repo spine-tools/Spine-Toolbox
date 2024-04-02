@@ -43,5 +43,5 @@ class TestPlainParameterValueEditor(unittest.TestCase):
         self.assertEqual(editor.value(), "2022")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

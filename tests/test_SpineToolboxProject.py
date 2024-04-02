@@ -585,7 +585,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         )
         with Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME).open() as fp:
             local_data_dict = json.load(fp)
-        self.assertEqual(local_data_dict, {'items': {'test item': {'a': {'b': 1, 'd': 3}}}})
+        self.assertEqual(local_data_dict, {"items": {"test item": {"a": {"b": 1, "d": 3}}}})
 
     def test_load_when_storing_item_local_data(self):
         project = self.toolbox.project()
@@ -823,5 +823,5 @@ class _MockSpecificationWithLocalData(ProjectItemSpecification):
         return [("data",)]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -101,5 +101,5 @@ def resource_filter_model(connection, project, undo_stack, logger):
         model.deleteLater()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -214,5 +214,5 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

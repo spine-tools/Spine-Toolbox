@@ -205,5 +205,5 @@ def _fetch_all_recursively(model):
             qApp.processEvents()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -42,5 +42,5 @@ class TestAboutWidget(unittest.TestCase):
         w.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

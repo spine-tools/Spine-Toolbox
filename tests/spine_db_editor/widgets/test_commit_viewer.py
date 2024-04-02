@@ -59,5 +59,5 @@ class TestCommitViewer(unittest.TestCase):
         self.assertEqual(self._commit_viewer.centralWidget().count(), 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

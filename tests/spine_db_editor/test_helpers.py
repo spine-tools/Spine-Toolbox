@@ -30,5 +30,5 @@ class TestStringToBool(unittest.TestCase):
         self.assertFalse(string_to_bool(""))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

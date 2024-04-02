@@ -39,8 +39,8 @@ class TestProjectUpgrader(unittest.TestCase):
         logging.basicConfig(
             stream=sys.stderr,
             level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
     def setUp(self):
@@ -136,7 +136,7 @@ class TestProjectUpgrader(unittest.TestCase):
             ) as mock_backup, mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
-                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 2
+                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 2
             ), mock.patch(
                 "spinetoolbox.project_upgrader.QMessageBox.question"
             ) as mock_mb:
@@ -167,7 +167,7 @@ class TestProjectUpgrader(unittest.TestCase):
             ) as mock_backup, mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
-                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 3
+                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 3
             ), mock.patch(
                 "spinetoolbox.project_upgrader.QMessageBox.question"
             ) as mock_mb:
@@ -201,7 +201,7 @@ class TestProjectUpgrader(unittest.TestCase):
             ) as mock_backup, mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
-                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 4
+                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 4
             ), mock.patch(
                 "spinetoolbox.project_upgrader.QMessageBox.question"
             ) as mock_mb:
@@ -235,7 +235,7 @@ class TestProjectUpgrader(unittest.TestCase):
             ) as mock_backup, mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
-                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 5
+                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 5
             ), mock.patch(
                 "spinetoolbox.project_upgrader.QMessageBox.question"
             ) as mock_mb:
@@ -278,7 +278,7 @@ class TestProjectUpgrader(unittest.TestCase):
             ) as mock_backup, mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
-                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 10
+                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 10
             ), mock.patch(
                 "spinetoolbox.project_upgrader.QMessageBox.question"
             ) as mock_mb:
@@ -322,7 +322,7 @@ class TestProjectUpgrader(unittest.TestCase):
             ) as mock_backup, mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
-                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 11
+                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 11
             ), mock.patch(
                 "spinetoolbox.project_upgrader.QMessageBox.question"
             ) as mock_mb:
@@ -350,7 +350,7 @@ class TestProjectUpgrader(unittest.TestCase):
             ) as mock_backup, mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
             ) as mock_force_save, mock.patch(
-                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 12
+                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 12
             ), mock.patch(
                 "spinetoolbox.project_upgrader.QMessageBox.question"
             ) as mock_mb:

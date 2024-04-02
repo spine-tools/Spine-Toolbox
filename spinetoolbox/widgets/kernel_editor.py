@@ -186,8 +186,8 @@ class KernelEditorBase(QDialog):
         Returns:
             (bool): True if installed, False if not
         """
-        response = subprocess.check_output([python_path, '-m', 'pip', 'freeze', '-q'])
-        installed_packages = [r.decode().split('==')[0] for r in response.split()]
+        response = subprocess.check_output([python_path, "-m", "pip", "freeze", "-q"])
+        installed_packages = [r.decode().split("==")[0] for r in response.split()]
         return package_name in installed_packages
 
     @busy_effect

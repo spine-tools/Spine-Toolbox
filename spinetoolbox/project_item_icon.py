@@ -589,7 +589,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._parent = parent
         self._execution_state = "not started"
         self._text_item = QGraphicsTextItem(self)
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         self._text_item.setFont(font)
         parent_rect = parent.rect()
         self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
@@ -664,7 +664,7 @@ class ExclamationIcon(QGraphicsTextItem):
         super().__init__(parent)
         self._parent = parent
         self._notifications = list()
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         font.setPixelSize(self.FONT_SIZE_PIXELS)
         self.setFont(font)
         self.setDefaultTextColor(QColor("red"))

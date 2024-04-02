@@ -236,7 +236,7 @@ class FilterMenuBase(QMenu):
         """
         super().__init__(parent)
         self._filter = None
-        self._remove_filter = QAction('Remove filters', None)
+        self._remove_filter = QAction("Remove filters", None)
         self._filter_action = QWidgetAction(self)
         self.addAction(self._remove_filter)
 

@@ -64,9 +64,9 @@ class TestAddItemsDialog(unittest.TestCase):
         model = dialog.model
         header = model.header
         model.fetchMore(QModelIndex())
-        self.assertEqual(header, ['entity class name', 'description', 'display icon', "active by default", 'databases'])
-        indexes = [model.index(0, header.index(field)) for field in ('entity class name', 'databases')]
-        values = ['fish', 'mock_db']
+        self.assertEqual(header, ["entity class name", "description", "display icon", "active by default", "databases"])
+        indexes = [model.index(0, header.index(field)) for field in ("entity class name", "databases")]
+        values = ["fish", "mock_db"]
         model.batch_set_data(indexes, values)
         dialog.accept()
         self._commit_changes_to_database("Add object class.")
@@ -84,9 +84,9 @@ class TestAddItemsDialog(unittest.TestCase):
         model = dialog.model
         header = model.header
         model.fetchMore(QModelIndex())
-        self.assertEqual(header, ['entity class name', 'description', 'display icon', "active by default", 'databases'])
-        indexes = [model.index(0, header.index(field)) for field in ('entity class name', 'databases')]
-        values = ['fish', 'gibberish']
+        self.assertEqual(header, ["entity class name", "description", "display icon", "active by default", "databases"])
+        indexes = [model.index(0, header.index(field)) for field in ("entity class name", "databases")]
+        values = ["fish", "gibberish"]
         model.batch_set_data(indexes, values)
         dialog.accept()
         self._db_editor.msg_error.emit.assert_called_with("Invalid database gibberish at row 1")
@@ -98,7 +98,7 @@ class TestAddItemsDialog(unittest.TestCase):
         model = dialog.model
         header = model.header
         model.fetchMore(QModelIndex())
-        self.assertEqual(header, ['entity class name', 'description', 'display icon', "active by default", 'databases'])
+        self.assertEqual(header, ["entity class name", "description", "display icon", "active by default", "databases"])
         active_by_default_column = header.index("active by default")
         index = model.index(0, active_by_default_column)
         self.assertFalse(index.data())
@@ -115,7 +115,7 @@ class TestAddItemsDialog(unittest.TestCase):
         model = dialog.model
         header = model.header
         model.fetchMore(QModelIndex())
-        self.assertEqual(header, ['entity class name', 'description', 'display icon', "active by default", 'databases'])
+        self.assertEqual(header, ["entity class name", "description", "display icon", "active by default", "databases"])
         display_icon_column = header.index("display icon")
         index = model.index(0, display_icon_column)
         self.assertIsNone(index.data())
@@ -219,9 +219,9 @@ class TestManageElementsDialog(TestBase):
         relationships = [x.resolve() for x in self._db_mngr.get_items(self._db_map, "entity") if x["element_id_list"]]
         self.assertEqual(
             relationships,
-            [{'class_id': 3, 'description': None, 'id': 5, 'name': 'r21', 'element_id_list': (2, 3)}],
+            [{"class_id": 3, "description": None, "id": 5, "name": "r21", "element_id_list": (2, 3)}],
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

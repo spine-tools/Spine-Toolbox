@@ -34,8 +34,8 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         logging.basicConfig(
             stream=sys.stderr,
             level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
     def setUp(self):
@@ -117,5 +117,5 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
                     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

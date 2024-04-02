@@ -123,5 +123,5 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
             self.assertEqual(model.index(0, 0).data(DB_MAP_ROLE), self._db_map)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

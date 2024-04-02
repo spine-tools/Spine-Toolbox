@@ -430,5 +430,5 @@ def _set_row_data(view, model, row, data, delegate_mock):
         delegate_mock.write_to_index(view, model.index(row, column), cell_data)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

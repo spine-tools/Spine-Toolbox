@@ -229,5 +229,5 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self.assertEqual(self._model.rowCount(), 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

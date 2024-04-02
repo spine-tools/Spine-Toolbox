@@ -43,8 +43,8 @@ def main():
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
-        format='%(asctime)s %(levelname)s: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
+        format="%(asctime)s %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
     if not pyside6_version_check():
         return 1

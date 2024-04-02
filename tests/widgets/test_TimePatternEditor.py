@@ -34,5 +34,5 @@ class TestTimePatternEditor(unittest.TestCase):
         self.assertEqual(editor.value(), TimePattern(["D1-5", "D6-10"], [2.2, 2.1]))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

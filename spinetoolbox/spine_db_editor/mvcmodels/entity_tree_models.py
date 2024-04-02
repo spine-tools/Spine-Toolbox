@@ -42,9 +42,9 @@ class EntityTreeModel(MultiDBTreeModel):
             ent_data = ent_item.db_map_data(db_map)
             el_data = el_item.db_map_data(db_map)
             # Get specific data for our searches
-            el_id = el_data['id']
-            element_ids = list(reversed(ent_data['element_id_list']))
-            dimension_ids = list(reversed(ent_data['dimension_id_list']))
+            el_id = el_data["id"]
+            element_ids = list(reversed(ent_data["element_id_list"]))
+            dimension_ids = list(reversed(ent_data["dimension_id_list"]))
             # Find position in the entity of the (grand parent) element,
             # then use it to determine dimension and element id to look for
             pos = element_ids.index(el_id) - 1

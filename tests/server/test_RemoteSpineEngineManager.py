@@ -62,36 +62,36 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
         # Convert some events fresh from SpineEngine first into
         # (bytes) json strings to simulate events that arrive to EngineClient
         engine_events = [
-            ('exec_started', {'item_name': 'Data Connection 1', 'direction': 'BACKWARD'}),
+            ("exec_started", {"item_name": "Data Connection 1", "direction": "BACKWARD"}),
             (
-                'exec_finished',
+                "exec_finished",
                 {
-                    'item_name': 'Data Connection 1',
-                    'direction': 'BACKWARD',
-                    'state': 'RUNNING',
-                    'item_state': ItemExecutionFinishState.SUCCESS,
+                    "item_name": "Data Connection 1",
+                    "direction": "BACKWARD",
+                    "state": "RUNNING",
+                    "item_state": ItemExecutionFinishState.SUCCESS,
                 },
             ),
-            ('exec_started', {'item_name': 'Data Connection 1', 'direction': 'FORWARD'}),
+            ("exec_started", {"item_name": "Data Connection 1", "direction": "FORWARD"}),
             (
-                'event_msg',
+                "event_msg",
                 {
-                    'item_name': 'Data Connection 1',
-                    'filter_id': '',
-                    'msg_type': 'msg_success',
-                    'msg_text': 'Executing Data Connection Data Connection 1 finished',
+                    "item_name": "Data Connection 1",
+                    "filter_id": "",
+                    "msg_type": "msg_success",
+                    "msg_text": "Executing Data Connection Data Connection 1 finished",
                 },
             ),
             (
-                'exec_finished',
+                "exec_finished",
                 {
-                    'item_name': 'Data Connection 1',
-                    'direction': 'FORWARD',
-                    'state': 'RUNNING',
-                    'item_state': ItemExecutionFinishState.SUCCESS,
+                    "item_name": "Data Connection 1",
+                    "direction": "FORWARD",
+                    "state": "RUNNING",
+                    "item_state": ItemExecutionFinishState.SUCCESS,
                 },
             ),
-            ('dag_exec_finished', 'COMPLETED'),
+            ("dag_exec_finished", "COMPLETED"),
         ]
         rcv_events_list = list()
         for event_type, data in engine_events:
@@ -104,36 +104,36 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
     def yield_events_dag_fails():
         """Received event generator. Yields events that look like they were PULLed from server."""
         engine_events = [
-            ('exec_started', {'item_name': 'Data Connection 1', 'direction': 'BACKWARD'}),
+            ("exec_started", {"item_name": "Data Connection 1", "direction": "BACKWARD"}),
             (
-                'exec_finished',
+                "exec_finished",
                 {
-                    'item_name': 'Data Connection 1',
-                    'direction': 'BACKWARD',
-                    'state': 'RUNNING',
-                    'item_state': ItemExecutionFinishState.FAILURE,
+                    "item_name": "Data Connection 1",
+                    "direction": "BACKWARD",
+                    "state": "RUNNING",
+                    "item_state": ItemExecutionFinishState.FAILURE,
                 },
             ),
-            ('exec_started', {'item_name': 'Data Connection 1', 'direction': 'FORWARD'}),
+            ("exec_started", {"item_name": "Data Connection 1", "direction": "FORWARD"}),
             (
-                'event_msg',
+                "event_msg",
                 {
-                    'item_name': 'Data Connection 1',
-                    'filter_id': '',
-                    'msg_type': 'msg_success',
-                    'msg_text': 'Executing Data Connection Data Connection 1 finished',
+                    "item_name": "Data Connection 1",
+                    "filter_id": "",
+                    "msg_type": "msg_success",
+                    "msg_text": "Executing Data Connection Data Connection 1 finished",
                 },
             ),
             (
-                'exec_finished',
+                "exec_finished",
                 {
-                    'item_name': 'Data Connection 1',
-                    'direction': 'FORWARD',
-                    'state': 'RUNNING',
-                    'item_state': ItemExecutionFinishState.FAILURE,
+                    "item_name": "Data Connection 1",
+                    "direction": "FORWARD",
+                    "state": "RUNNING",
+                    "item_state": ItemExecutionFinishState.FAILURE,
                 },
             ),
-            ('dag_exec_finished', 'FAILED'),
+            ("dag_exec_finished", "FAILED"),
         ]
         rcv_events_list = list()
         for event_type, data in engine_events:

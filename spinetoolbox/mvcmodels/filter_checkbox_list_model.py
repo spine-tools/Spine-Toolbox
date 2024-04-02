@@ -17,10 +17,10 @@ from spinetoolbox.helpers import bisect_chunks
 
 
 class SimpleFilterCheckboxListModel(QAbstractListModel):
-    _SELECT_ALL_STR = '(Select all)'
-    _SELECT_ALL_FILTERED_STR = '(Select all filtered)'
-    _EMPTY_STR = '(Empty)'
-    _ADD_TO_SELECTION_STR = 'Add current selection to filter'
+    _SELECT_ALL_STR = "(Select all)"
+    _SELECT_ALL_FILTERED_STR = "(Select all filtered)"
+    _EMPTY_STR = "(Empty)"
+    _ADD_TO_SELECTION_STR = "Add current selection to filter"
 
     def __init__(self, parent, show_empty=True):
         """

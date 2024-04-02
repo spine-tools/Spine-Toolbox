@@ -194,7 +194,7 @@ class _CustomStatusBar(QStatusBar):
             """
         )
         self._hide_button.setText("\uf00d")
-        self._hide_button.setFont(QFont('Font Awesome 5 Free Solid'))
+        self._hide_button.setFont(QFont("Font Awesome 5 Free Solid"))
         self._hide_button.setFixedSize(24, 24)
         self.insertPermanentWidget(0, self._hide_button)
         self.setSizeGripEnabled(False)

@@ -65,7 +65,7 @@ class TestArrayTableView(unittest.TestCase):
         table_view.selectionModel().select(index, QItemSelectionModel.Select)
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
-        array = [row for row in csv.reader(clip, delimiter='\t')]
+        array = [row for row in csv.reader(clip, delimiter="\t")]
         with system_lc_numeric():
             self.assertEqual(array, [[locale.str(5.5)]])
         table_view.deleteLater()
@@ -80,7 +80,7 @@ class TestArrayTableView(unittest.TestCase):
                 table_view.selectionModel().select(model.index(row, column), QItemSelectionModel.Select)
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
-        array = [row for row in csv.reader(clip, delimiter='\t')]
+        array = [row for row in csv.reader(clip, delimiter="\t")]
         with system_lc_numeric():
             self.assertEqual(array, [["0", locale.str(5.5)]])
         table_view.deleteLater()

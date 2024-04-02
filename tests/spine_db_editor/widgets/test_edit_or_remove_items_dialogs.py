@@ -84,5 +84,5 @@ class TestEditEntityClassesDialog(TestBase):
         self.assertEqual(data_table, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

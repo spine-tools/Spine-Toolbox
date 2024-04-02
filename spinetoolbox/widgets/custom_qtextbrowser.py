@@ -122,7 +122,7 @@ class CustomQTextBrowser(QTextBrowser):
 
     @staticmethod
     def _make_log_entry_title(title):
-        return f'<b>{title}</b>'
+        return f"<b>{title}</b>"
 
     def make_log_entry_point(self, timestamp):
         """Creates cursors (log entry points) for given items in event log.
