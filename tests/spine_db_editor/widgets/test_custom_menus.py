@@ -57,5 +57,5 @@ class TestTabularViewCodenameFilterMenu(unittest.TestCase):
             self.assertEqual(waiter.args, ("database", {None, "db map 1", "db map 2"}, False))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

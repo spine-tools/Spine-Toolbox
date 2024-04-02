@@ -207,7 +207,7 @@ class _FilterArrayWidget(QWidget):
         self._offset = 0
         self._db_map = db_map
         self._filter_widgets = []
-        active_filter_configs = {cfg['type']: cfg for cfg in filter_configs(db_map.db_url)}
+        active_filter_configs = {cfg["type"]: cfg for cfg in filter_configs(db_map.db_url)}
         for item_type, filter_type in (("scenario", SCENARIO_FILTER_TYPE),):
             active_cfg = active_filter_configs.get(filter_type, {})
             active_item = name_from_dict(active_cfg) if active_cfg else None

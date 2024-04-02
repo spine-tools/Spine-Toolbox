@@ -71,5 +71,5 @@ class TestPlotWidget(unittest.TestCase):
         self.assertEqual(repr(plot_widget.canvas.legend_axes.get_gridspec()), repr(GridSpec(1, 2, width_ratios=[1, 0])))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

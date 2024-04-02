@@ -72,12 +72,12 @@ class InstallJuliaWizard(QWizard):
 
     def set_julia_exe(self):
         basename = next(
-            (file for file in os.listdir(self.field('symlink_dir')) if file.lower().startswith("julia")), None
+            (file for file in os.listdir(self.field("symlink_dir")) if file.lower().startswith("julia")), None
         )
         if basename is None:
             self.julia_exe = None
             return
-        self.julia_exe = os.path.join(self.field('symlink_dir'), basename)
+        self.julia_exe = os.path.join(self.field("symlink_dir"), basename)
 
     def accept(self):
         super().accept()
@@ -89,7 +89,7 @@ class JillNotFoundPage(QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Unable to find jill")
-        conda_env = os.environ.get('CONDA_DEFAULT_ENV', 'base')
+        conda_env = os.environ.get("CONDA_DEFAULT_ENV", "base")
         toolbox_dir = os.path.dirname(APPLICATION_PATH)
         header = (
             "<p>Spine Toolbox needs the <a href='https://pypi.org/project/jill/'>jill</a> package "

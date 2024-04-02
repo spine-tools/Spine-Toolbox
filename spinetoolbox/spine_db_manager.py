@@ -736,7 +736,7 @@ class SpineDBManager(QObject):
         """Returns the value's database representation formatted for Qt.ItemDataRole.ToolTipRole."""
         if isinstance(parsed_data, TimeSeriesFixedResolution):
             resolution = [relativedelta_to_duration(r) for r in parsed_data.resolution]
-            resolution = ', '.join(resolution)
+            resolution = ", ".join(resolution)
             tool_tip_data = "Start: {}<br>resolution: [{}]<br>length: {}".format(
                 parsed_data.start, resolution, len(parsed_data)
             )
@@ -1562,7 +1562,7 @@ class SpineDBManager(QObject):
     def export_to_json(file_path, data_for_export, caller):
         """Exports given data into JSON file."""
         json_data = json.dumps(data_for_export, indent=4)
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(json_data)
         caller.file_exported.emit(file_path, 1.0, False)
 

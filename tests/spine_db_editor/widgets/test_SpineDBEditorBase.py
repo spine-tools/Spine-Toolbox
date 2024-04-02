@@ -88,5 +88,5 @@ class TestSpineDBEditorBase(unittest.TestCase):
             mock_import_from_json.assert_called_once_with("my_json_file.json")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -23,7 +23,7 @@ def main():
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
         logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
-    locale.setlocale(locale.LC_NUMERIC, 'C')
+    locale.setlocale(locale.LC_NUMERIC, "C")
     settings = QSettings("SpineProject", "Spine Toolbox")
     db_mngr = SpineDBManager(settings, None)
     editor = MultiSpineDBEditor(db_mngr)
@@ -49,5 +49,5 @@ def _make_argument_parser():
     return parser
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

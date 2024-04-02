@@ -261,5 +261,5 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(4, 2).data(), self.db_codename)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -62,7 +62,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self._q = multiprocessing.Queue()
         self._logger = QueueLogger(self._q, "DetachedPythonConsole", None, dict())
         self.normal_cursor = self._control.viewport().cursor()
-        self._copy_input_action = QAction('Copy (Only Input)', self)
+        self._copy_input_action = QAction("Copy (Only Input)", self)
         self._copy_input_action.triggered.connect(lambda checked: self.copy_input())
         self._copy_input_action.setEnabled(False)
         self.copy_available.connect(self._copy_input_action.setEnabled)
@@ -252,7 +252,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         """Reimplemented to add actions to console context-menus."""
         menu = super()._context_menu_make(pos)
         for before_action in menu.actions():
-            if before_action.text() == 'Copy (Raw Text)':
+            if before_action.text() == "Copy (Raw Text)":
                 menu.insertAction(before_action, self._copy_input_action)
                 break
         first_action = menu.actions()[0]
@@ -279,9 +279,9 @@ class JupyterConsoleWidget(RichJupyterWidget):
             if m:
                 useful_lines.append(line[len(m.group(0)) :])
                 continue
-        text = '\n'.join(useful_lines)
+        text = "\n".join(useful_lines)
         try:
-            was_newline = text[-1] == '\n'
+            was_newline = text[-1] == "\n"
         except IndexError:
             was_newline = False
         if was_newline:  # user doesn't need newline

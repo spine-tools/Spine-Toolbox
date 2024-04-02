@@ -183,7 +183,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         value = b"diibadaaba"
         self.db_mngr.get_item.side_effect = self._make_get_item_side_effect(value, None)
         formatted = self.get_value(Qt.ItemDataRole.ToolTipRole)
-        self.assertTrue(formatted.startswith('<qt>Could not decode the value'))
+        self.assertTrue(formatted.startswith("<qt>Could not decode the value"))
 
 
 class TestAddItems(unittest.TestCase):
@@ -219,7 +219,7 @@ class TestAddItems(unittest.TestCase):
         self._db_mngr.add_items("metadata", db_map_data)
         self.assertEqual(
             self._db_mngr.get_item(db_map, "metadata", 1).resolve(),
-            {'name': 'my_metadata', 'value': 'Metadata value.', 'id': 1},
+            {"name": "my_metadata", "value": "Metadata value.", "id": 1},
         )
 
     def test_add_object_metadata(self):
@@ -232,7 +232,7 @@ class TestAddItems(unittest.TestCase):
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1, "id": 1}]}
         self._db_mngr.add_items("entity_metadata", db_map_data)
         self.assertEqual(
-            self._db_mngr.get_item(db_map, "entity_metadata", 1).resolve(), {'entity_id': 1, 'metadata_id': 1, 'id': 1}
+            self._db_mngr.get_item(db_map, "entity_metadata", 1).resolve(), {"entity_id": 1, "metadata_id": 1, "id": 1}
         )
 
 
@@ -262,28 +262,28 @@ class TestImportExportData(unittest.TestCase):
     def test_export_then_import_time_series_parameter_value(self):
         file_path = str(Path(self._temp_dir.name) / "test.xlsx")
         data = {
-            'entity_classes': [('A', (), None, None, False)],
-            'entities': [('A', 'aa', None)],
-            'parameter_definitions': [('A', 'test1', None, None, None)],
-            'parameter_values': [
+            "entity_classes": [("A", (), None, None, False)],
+            "entities": [("A", "aa", None)],
+            "parameter_definitions": [("A", "test1", None, None, None)],
+            "parameter_values": [
                 (
-                    'A',
-                    'aa',
-                    'test1',
+                    "A",
+                    "aa",
+                    "test1",
                     {
-                        'type': 'time_series',
-                        'index': {
-                            'start': '2000-01-01 00:00:00',
-                            'resolution': '1h',
-                            'ignore_year': False,
-                            'repeat': False,
+                        "type": "time_series",
+                        "index": {
+                            "start": "2000-01-01 00:00:00",
+                            "resolution": "1h",
+                            "ignore_year": False,
+                            "repeat": False,
                         },
-                        'data': [0.0, 1.0, 2.0, 4.0, 8.0, 0.0],
+                        "data": [0.0, 1.0, 2.0, 4.0, 8.0, 0.0],
                     },
-                    'Base',
+                    "Base",
                 )
             ],
-            'alternatives': [('Base', 'Base alternative')],
+            "alternatives": [("Base", "Base alternative")],
         }
         self._db_mngr.export_to_excel(file_path, data, self.editor)
         mapped_data, errors = get_mapped_data_from_xlsx(file_path)
@@ -294,12 +294,12 @@ class TestImportExportData(unittest.TestCase):
         time_series = from_database(value.value, value.type)
         expected_result = TimeSeriesVariableResolution(
             (
-                '2000-01-01T00:00:00',
-                '2000-01-01T01:00:00',
-                '2000-01-01T02:00:00',
-                '2000-01-01T03:00:00',
-                '2000-01-01T04:00:00',
-                '2000-01-01T05:00:00',
+                "2000-01-01T00:00:00",
+                "2000-01-01T01:00:00",
+                "2000-01-01T02:00:00",
+                "2000-01-01T03:00:00",
+                "2000-01-01T04:00:00",
+                "2000-01-01T05:00:00",
             ),
             (0.0, 1.0, 2.0, 4.0, 8.0, 0.0),
             False,
@@ -457,5 +457,5 @@ class TestDuplicateEntity(unittest.TestCase):
         self.assertEqual({v["alternative_name"] for v in values}, {"low highs"})
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

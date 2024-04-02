@@ -36,7 +36,7 @@ class InstallPluginDialog(QDialog):
         """Initialize class"""
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
-        self.setWindowTitle('Install plugin')
+        self.setWindowTitle("Install plugin")
         QVBoxLayout(self)
         self._line_edit = QLineEdit(self)
         self._line_edit.setPlaceholderText("Search registry...")
@@ -100,7 +100,7 @@ class ManagePluginsDialog(QDialog):
         """Initialize class"""
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
-        self.setWindowTitle('Manage plugins')
+        self.setWindowTitle("Manage plugins")
         QVBoxLayout(self)
         self._list_view = QListView(self)
         self._model = _ManagePluginsModel(self)

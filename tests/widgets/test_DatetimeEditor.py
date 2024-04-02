@@ -34,5 +34,5 @@ class TestDatetimeEditor(unittest.TestCase):
         self.assertEqual(editor.value(), DateTime("2000-02-02T20:02"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

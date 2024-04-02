@@ -199,5 +199,5 @@ class _DataStorePropertiesWidget(PropertiesWidgetBase):
         self.ui = object()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

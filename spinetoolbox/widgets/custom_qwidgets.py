@@ -117,13 +117,13 @@ class FilterWidget(QWidget):
         # parameters
         self._filter_state = set()
         self._filter_empty_state = None
-        self._search_text = ''
+        self._search_text = ""
         self.search_delay = 200
         # create ui elements
         self._ui_vertical_layout = QVBoxLayout(self)
         self._ui_list = QListView()
         self._ui_edit = QLineEdit()
-        self._ui_edit.setPlaceholderText('Search')
+        self._ui_edit.setPlaceholderText("Search")
         self._ui_edit.setClearButtonEnabled(True)
         self._ui_buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         self._ui_vertical_layout.addWidget(self._ui_edit)
@@ -172,14 +172,14 @@ class FilterWidget(QWidget):
         """Apply current filter and save state."""
         self._filter_model.apply_filter()
         self.save_state()
-        self._ui_edit.setText('')
+        self._ui_edit.setText("")
         self.okPressed.emit()
 
     def _cancel_filter(self):
         """Cancel current edit of filter and set the state to the stored state."""
         self._filter_model.remove_filter()
         self.reset_state()
-        self._ui_edit.setText('')
+        self._ui_edit.setText("")
         self.cancelPressed.emit()
 
     def _filter_list(self):
@@ -542,7 +542,7 @@ class QWizardProcessPage(QWizardPage):
 
         def __set_name__(self, owner, name):
             self.public_name = name
-            self.private_name = '_' + name
+            self.private_name = "_" + name
 
         def __get__(self, obj, objtype=None):
             return getattr(obj, self.private_name)
@@ -633,7 +633,7 @@ class LabelWithCopyButton(QWidget):
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         line_edit.setFont(font)
         button = QToolButton()
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         button.setFont(font)
         button.setText("\uf0c5")
         button.setToolTip("Copy text")

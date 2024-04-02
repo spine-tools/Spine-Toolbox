@@ -68,7 +68,7 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
         selection_model.select(model.index(3, 1), QItemSelectionModel.Select)
-        copied_data = locale.str(-4.4) + '\n' + locale.str(-5.5)
+        copied_data = locale.str(-4.4) + "\n" + locale.str(-5.5)
         QApplication.clipboard().setText(copied_data)
         self._table_view.paste()
         series = TimeSeriesFixedResolution("2019-08-08T15:00", "1h", [1.1, 2.2, 3.3, -4.4, -5.5], False, False)
@@ -79,7 +79,7 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         model = self._table_view.model()
         selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
         selection_model.select(model.index(1, 1), QItemSelectionModel.Select)
-        copied_data = locale.str(-1.1) + '\n' + locale.str(-2.2) + '\n' + locale.str(-3.3)
+        copied_data = locale.str(-1.1) + "\n" + locale.str(-2.2) + "\n" + locale.str(-3.3)
         QApplication.clipboard().setText(copied_data)
         self._table_view.paste()
         series = TimeSeriesFixedResolution("2019-08-08T15:00", "1h", [-1.1, -2.2, 3.3, 4.4], False, False)
@@ -100,7 +100,7 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
         selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
-        copied_data = locale.str(-1.1) + '\n' + locale.str(-2.2)
+        copied_data = locale.str(-1.1) + "\n" + locale.str(-2.2)
         QApplication.clipboard().setText(copied_data)
         self._table_view.paste()
         selected_indexes = selection_model.selectedIndexes()
@@ -109,5 +109,5 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         self.assertTrue(model.index(1, 1) in selected_indexes)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

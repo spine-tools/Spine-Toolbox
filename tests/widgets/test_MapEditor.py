@@ -34,5 +34,5 @@ class TestDictionaryEditor(unittest.TestCase):
         self.assertEqual(editor.value(), Map(["A", "B"], [2.2, 2.1]))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

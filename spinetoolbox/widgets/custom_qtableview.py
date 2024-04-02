@@ -388,7 +388,7 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
             else:
                 data_values[row - row_first] = data
         with io.StringIO() as output:
-            writer = csv.writer(output, delimiter='\t')
+            writer = csv.writer(output, delimiter="\t")
             with system_lc_numeric():
                 if all(stamp is None for stamp in data_indexes):
                     for value in data_values:
@@ -427,7 +427,7 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if 'text/plain' not in data_formats:
+        if "text/plain" not in data_formats:
             return False
         try:
             pasted_table = self._read_pasted_text(clipboard.text())
@@ -467,7 +467,7 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
             list of float: A list of floats
         """
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t")
             with system_lc_numeric():
                 return [locale.atof(row[0]) for row in reader if row]
 
@@ -504,7 +504,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if 'text/plain' not in data_formats:
+        if "text/plain" not in data_formats:
             return False
         try:
             pasted_table = self._read_pasted_text(clipboard.text())
@@ -601,7 +601,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             tuple: a tuple (data indexes, data values)
         """
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t")
             single_column = list()
             data_indexes = list()
             data_values = list()
@@ -650,7 +650,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
                 row_values["x" if index.column() == 0 else "y"] = index.data(Qt.ItemDataRole.EditRole)
             with system_lc_numeric():
                 with io.StringIO() as output:
-                    writer = csv.writer(output, delimiter='\t')
+                    writer = csv.writer(output, delimiter="\t")
                     for row_values in values.values():
                         x = row_values.get("x", "")
                         y = row_values.get("y", "")
@@ -660,7 +660,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
         else:
             with system_lc_numeric():
                 with io.StringIO() as output:
-                    writer = csv.writer(output, delimiter='\t')
+                    writer = csv.writer(output, delimiter="\t")
                     for index in selected_indexes:
                         y = index.data(Qt.ItemDataRole.EditRole)
                         writer.writerow([locale.str(y) if isinstance(y, Number) else y])
@@ -676,7 +676,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if 'text/plain' not in data_formats:
+        if "text/plain" not in data_formats:
             return False
         try:
             pasted_table = self._read_pasted_text(clipboard.text())
@@ -721,7 +721,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
             list of str: data column
         """
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t")
             column = [row[0] for row in reader if row]
         return column
 
@@ -796,7 +796,7 @@ class MapTableView(CopyPasteTableView):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if 'text/plain' not in data_formats:
+        if "text/plain" not in data_formats:
             return False
         pasted_table = self._read_pasted_text(clipboard.text())
         paste_length = len(pasted_table)
@@ -841,7 +841,7 @@ class MapTableView(CopyPasteTableView):
         """
         data = list()
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t")
             with system_lc_numeric():
                 for row in reader:
                     data_row = list()

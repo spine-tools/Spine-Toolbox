@@ -60,5 +60,5 @@ class TestBooleanValueDelegate(unittest.TestCase):
             data_committed_signal.emit.assert_not_called()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

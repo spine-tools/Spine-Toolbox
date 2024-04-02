@@ -76,10 +76,10 @@ class TestParameterValuePivotTableModel(TestBase):
         self._start()
         self.assertEqual(self._model.rowCount(), 5)
         self.assertEqual(self._model.columnCount(), 4)
-        self.assertEqual(self._model.header_name(self._model.index(2, 0)), 'object1')
-        self.assertEqual(self._model.header_name(self._model.index(0, 1)), 'parameter1')
-        self.assertEqual(self._model.header_name(self._model.index(3, 0)), 'object2')
-        self.assertEqual(self._model.header_name(self._model.index(0, 2)), 'parameter2')
+        self.assertEqual(self._model.header_name(self._model.index(2, 0)), "object1")
+        self.assertEqual(self._model.header_name(self._model.index(0, 1)), "parameter1")
+        self.assertEqual(self._model.header_name(self._model.index(3, 0)), "object2")
+        self.assertEqual(self._model.header_name(self._model.index(0, 2)), "parameter2")
 
     def test_data(self):
         self._fill_model_with_data()
@@ -220,5 +220,5 @@ class TestIndexExpansionPivotTableModel(TestBase):
         self.assertEqual(model_data, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

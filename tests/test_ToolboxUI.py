@@ -53,8 +53,8 @@ class TestToolboxUI(unittest.TestCase):
         logging.basicConfig(
             stream=sys.stderr,
             level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
     def setUp(self):
@@ -442,7 +442,7 @@ class TestToolboxUI(unittest.TestCase):
         pos = QPoint(0, 0)
         event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
         with mock.patch(
-            'PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source'
+            "PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source"
         ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
             self.toolbox, "show_add_project_item_form"
         ) as mock_show_add_project_item_form:
@@ -461,7 +461,7 @@ class TestToolboxUI(unittest.TestCase):
         pos = gv.mapFromScene(scene_pos)
         event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
         with mock.patch(
-            'PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source'
+            "PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source"
         ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
             self.toolbox, "show_add_project_item_form"
         ) as mock_show_add_project_item_form:
@@ -833,5 +833,5 @@ class MockQMenu(QMenu):
         return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

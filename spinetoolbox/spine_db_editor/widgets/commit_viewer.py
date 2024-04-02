@@ -122,7 +122,7 @@ class _AffectedItemsFromOneTable(QTreeWidget):
     @staticmethod
     def _parse_value(value):
         if isinstance(value, bytes):
-            return value.decode('utf-8')
+            return value.decode("utf-8")
         if isinstance(value, (tuple, list)):
             return DB_ITEM_SEPARATOR.join(value)
         return value

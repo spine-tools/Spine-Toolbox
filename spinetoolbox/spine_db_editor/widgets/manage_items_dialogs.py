@@ -165,7 +165,7 @@ class GetEntityClassesMixin:
         """Return a list of entity class names present in all databases selected for given row.
         Used by `ManageEntityClassesDelegate`.
         """
-        db_column = self.model.header.index('databases')
+        db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
         return self._entity_class_name_list_from_db_maps(*db_maps)
@@ -232,7 +232,7 @@ class GetEntitiesMixin:
         """Return a list of alternative names present in all databases selected for given row.
         Used by `ManageEntitiesDelegate`.
         """
-        db_column = self.model.header.index('databases')
+        db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
         return sorted(set(x for db_map in db_maps for x in self.db_map_alt_id_lookup[db_map]))
@@ -241,7 +241,7 @@ class GetEntitiesMixin:
         """Return a list of entity names present in all databases selected for given row.
         Used by `ManageEntitiesDelegate`.
         """
-        db_column = self.model.header.index('databases')
+        db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
         entity_name_lists = []

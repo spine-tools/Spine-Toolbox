@@ -58,5 +58,5 @@ class TestTwoColumnAsCsv(unittest.TestCase):
         self.assertEqual(as_csv, "12\r\n22\r\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

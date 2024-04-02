@@ -69,7 +69,7 @@ from .config import (
 if os.name == "nt":
     import ctypes
 
-matplotlib.use('Qt5Agg')
+matplotlib.use("Qt5Agg")
 matplotlib.rcParams.update({"font.size": 8})
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 _matplotlib_version = [int(x) for x in matplotlib.__version__.split(".") if x.isdigit()]
@@ -241,7 +241,7 @@ def set_taskbar_icon():
 def supported_img_formats():
     """Checks if reading .ico files is supported."""
     img_formats = QImageReader().supportedImageFormats()
-    img_formats_str = '\n'.join(str(x) for x in img_formats)
+    img_formats_str = "\n".join(str(x) for x in img_formats)
     logging.debug("Supported Image formats:\n%s", img_formats_str)
 
 
@@ -303,7 +303,7 @@ def copy_files(src_dir, dst_dir, includes=None, excludes=None):
         count (int): Number of files copied
     """
     if includes is None:
-        includes = ['*']
+        includes = ["*"]
     if excludes is None:
         excludes = []
     src_files = []
@@ -506,7 +506,7 @@ class CharIconEngine(TransparentIconEngine):
         super().__init__()
         self.char = char
         self.color = QColor(color)
-        self.font = QFont('Font Awesome 5 Free Solid')
+        self.font = QFont("Font Awesome 5 Free Solid")
 
     def paint(self, painter, rect, mode=None, state=None):
         painter.save()
@@ -1333,17 +1333,17 @@ class CustomSyntaxHighlighter(QSyntaxHighlighter):
         self._formats.clear()
         for ttype, tstyle in style:
             text_format = self._formats[ttype] = QTextCharFormat()
-            if tstyle['color']:
-                brush = QBrush(QColor("#" + tstyle['color']))
+            if tstyle["color"]:
+                brush = QBrush(QColor("#" + tstyle["color"]))
                 text_format.setForeground(brush)
-            if tstyle['bgcolor']:
-                brush = QBrush(QColor("#" + tstyle['bgcolor']))
+            if tstyle["bgcolor"]:
+                brush = QBrush(QColor("#" + tstyle["bgcolor"]))
                 text_format.setBackground(brush)
-            if tstyle['bold']:
+            if tstyle["bold"]:
                 text_format.setFontWeight(QFont.Bold)
-            if tstyle['italic']:
+            if tstyle["italic"]:
                 text_format.setFontItalic(True)
-            if tstyle['underline']:
+            if tstyle["underline"]:
                 text_format.setFontUnderline(True)
 
     def yield_formats(self, text):
@@ -1395,7 +1395,7 @@ def restore_ui(window, app_settings, settings_group):
     window_size = app_settings.value("windowSize")
     window_pos = app_settings.value("windowPosition")
     window_state = app_settings.value("windowState")
-    window_maximized = app_settings.value("windowMaximized", defaultValue='false')
+    window_maximized = app_settings.value("windowMaximized", defaultValue="false")
     n_screens = app_settings.value("n_screens", defaultValue=1)
     splitter_states = {
         splitter: app_settings.value(splitter.objectName() + "State") for splitter in window.findChildren(QSplitter)
@@ -1415,7 +1415,7 @@ def restore_ui(window, app_settings, settings_group):
     for splitter, state in splitter_states.items():
         splitter.restoreState(state)
     ensure_window_is_on_screen(window, original_size)
-    if window_maximized == 'true':
+    if window_maximized == "true":
         window.setWindowState(Qt.WindowMaximized)
 
 

@@ -567,5 +567,5 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(1, 3).data(), "")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

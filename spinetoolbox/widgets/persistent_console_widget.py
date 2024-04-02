@@ -383,8 +383,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         if self._text_buffer:
             address = uuid.uuid4().hex
             char_format = cursor.charFormat()
-            char_format.setBackground(QColor('white'))
-            char_format.setForeground(QColor('blue'))
+            char_format.setBackground(QColor("white"))
+            char_format.setForeground(QColor("blue"))
             char_format.setAnchor(True)
             char_format.setAnchorHref(address)
             self._skipped[address] = self._text_buffer[-self._MAX_LINES_COUNT :]
