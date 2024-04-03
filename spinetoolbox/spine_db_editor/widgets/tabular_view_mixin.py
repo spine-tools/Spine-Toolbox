@@ -818,7 +818,9 @@ class TabularViewMixin:
         if self._disable_frozen_table_reload or not self.pivot_table_model:
             return
         frozen = self.pivot_table_model.model.pivot_frozen
-        self.frozen_table_model.set_headers(frozen)
+        frozen_model_reset = self.frozen_table_model.set_headers(frozen)
+        if not frozen_model_reset:
+            self.pivot_table_model.model.set_frozen_value(self.frozen_table_model.get_frozen_value())
 
     def find_frozen_values(self, frozen):
         """Returns a list of tuples containing unique values for the frozen indexes.

@@ -40,14 +40,18 @@ class FrozenTableModel(QAbstractTableModel):
 
         Args:
             headers (Iterable of str): headers
+
+        Returns:
+            bool: True if model was reset, False otherwise
         """
         headers = list(headers)
         if self._data and headers == self._data[0]:
-            return
+            return False
         self.beginResetModel()
         self._data = [headers]
         self._selected_row = None
         self.endResetModel()
+        return True
 
     def clear_model(self):
         self.beginResetModel()
