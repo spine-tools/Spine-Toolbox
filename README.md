@@ -22,11 +22,10 @@ You can have your local workflow, but work as a team through version control and
 
 - Python 3.8*
 - Python 3.9
-- Python 3.10**
-- Python 3.11**
+- Python 3.10
+- Python 3.11
 
 *Python 3.8.0 is not supported (use Python 3.8.1 or later).<br>
-**Python 3.10 and Python 3.11 require Microsoft Visual C++ 14.0 or greater on Windows.
 
 ## License
 
@@ -58,9 +57,8 @@ the Pre-installation steps**:
 These steps apply to both [Python/pipx](#installation-with-python-and-pipx) option and to 
 [From source files](#installation-from-sources-using-git) option.
 
-1. If you don't have Python installed, please install e.g. **Python 3.9**
-   from [Python.org](https://www.python.org/downloads/release/python-3913/). If you have other than Python 3.9 
-installed, consider installing also 3.9 or make sure you can fix the issues mentioned with the other Python versions.
+1. If you don't have Python installed, please install e.g. **Python 3.11** from 
+[Python.org](https://www.python.org/downloads/release/python-3117/).
 
 2. Test that python is now in your PATH. Open a new terminal (e.g. Command Prompt) window and type 
 
@@ -72,19 +70,16 @@ you need to add the Python installation folder into the PATH environment variabl
 from Windows Control Panel (use search with 'environment').
 [See specific instructions for all operating systems from this link](https://realpython.com/add-python-to-path/).
 
-3. If you want to use Python 3.10 or 3.11 on Windows, please install **Microsoft Visual C++ 14.0 or greater**. 
-Get it with *Microsoft C++ Build Tools*: https://visualstudio.microsoft.com/visual-cpp-build-tools/.
+3. Install Git. Windows version can be found here: https://git-scm.com/download/win.
 
-4. Install Git. Windows version can be found here: https://git-scm.com/download/win.
-
-5. Test that Git is now in your PATH. Open a new terminal after installing Git and type
+4. Test that Git is now in your PATH. Open a new terminal after installing Git and type
 
        git --version
 
     If the output from this command is not the Git version, you need to add  `<git-install-path>/Git/cmd` into 
 your PATH environment variable.
 
-6. Upgrade `pip` to the latest version (pip is a package manager for Python)
+5. Upgrade `pip` to the latest version (pip is a package manager for Python)
 
        python -m pip install --upgrade pip
 
@@ -155,10 +150,10 @@ anywhere on your system. <br><br>
     Optional: Instead of venv, one can also use a
 [miniconda](https://docs.conda.io/projects/conda/en/stable/glossary.html#miniconda-glossary) environment. 
 You can [download miniconda from here](https://docs.conda.io/en/latest/miniconda.html). **Note: Anaconda 
-environments are not supported.** Create a new Python 3.9 miniconda environment without linking packages from the 
+environments are not supported.** Create a new Python 3.11 miniconda environment without linking packages from the 
 base environment using
 
-        conda create -n spinetoolbox python=3.9
+        conda create -n spinetoolbox python=3.11
 
 4. Activate the venv environment on Windows (provided that you are in `Spine-Toolbox` directory) using
 
@@ -286,9 +281,6 @@ also [Problems in starting the application](#problems-in-starting-the-applicatio
 #### Installation fails
 
 Please make sure you are using Python 3.8, 3.9, 3.10, or 3.11 to install the requirements.
-
-If you are on **Python 3.10 or 3.11**, please install **Microsoft Visual C++ 14.0 or greater** on Windows. 
-Get it with *Microsoft C++ Build Tools*: https://visualstudio.microsoft.com/visual-cpp-build-tools/.
 
 #### 'No Python' error when installing with pipx
 
