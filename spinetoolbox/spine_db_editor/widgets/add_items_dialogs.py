@@ -274,19 +274,20 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.ItemDataRole.EditRole not in roles:
             return
-        top = top_left.row()
         left = top_left.column()
-        bottom = bottom_right.row()
+        if left >= self.number_of_dimensions:
+            return
         right = bottom_right.column()
+        if right >= self.number_of_dimensions:
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
         for row in range(top, bottom + 1):
-            for column in range(left, right + 1):
-                if column >= self.number_of_dimensions:
-                    break
-            else:
-                col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
-                obj_cls_names = [col_data(j) for j in range(self.number_of_dimensions) if col_data(j)]
-                relationship_class_name = name_from_dimensions(obj_cls_names)
-                self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
+            obj_cls_names = [
+                name for j in range(self.number_of_dimensions) if (name := self.model.index(row, j).data())
+            ]
+            relationship_class_name = name_from_dimensions(obj_cls_names)
+            self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
 
     @Slot()
     def accept(self):
@@ -405,21 +406,24 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
 
     @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        if roles and Qt.ItemDataRole.EditRole not in roles:
+        if roles and Qt.ItemDataRole.EditRole not in roles or self.entity_class is None:
             return
-        if self.entity_class is None:
+        dimension_count = len(self.dimension_name_list)
+        if dimension_count == 0:
             return
         header = self.model.horizontal_header_labels()
-        top = top_left.row()
         left = top_left.column()
-        bottom = bottom_right.row()
         right = bottom_right.column()
-        dimension_count = len(self.dimension_name_list)
+        if left <= header.index("entity name") <= right:
+            return
+        if "databases" in header and left == right == header.index("databases"):
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
         for row in range(top, bottom + 1):
-            if header.index("entity name") not in range(left, right + 1):
-                el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
-                entity_name = name_from_elements(el_names)
-                self.model.setData(self.model.index(row, dimension_count), entity_name)
+            el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
+            entity_name = name_from_elements(el_names)
+            self.model.setData(self.model.index(row, dimension_count), entity_name)
 
 
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
