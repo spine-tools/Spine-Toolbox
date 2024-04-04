@@ -25,21 +25,23 @@ from spinetoolbox.widgets.kernel_editor import KernelEditorBase
 
 
 class MockSettingsWidget(QWidget):
-    qsettings = MagicMock()
+    def __init__(self):
+        super().__init__()
+        self.qsettings = MagicMock()
 
 
 class TestKernelEditorBase(unittest.TestCase):
-    _settings_widget = None
 
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
-        cls._settings_widget = MockSettingsWidget()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls._settings_widget.deleteLater()
+    def setUp(self):
+        self._settings_widget = MockSettingsWidget()
+
+    def tearDown(self):
+        self._settings_widget.deleteLater()
 
     def test_is_package_installed(self):
         self.assertTrue(KernelEditorBase.is_package_installed(sys.executable, "PySide6"))
