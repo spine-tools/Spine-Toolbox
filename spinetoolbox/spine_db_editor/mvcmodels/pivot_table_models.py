@@ -14,6 +14,7 @@
 from collections import defaultdict
 from contextlib import suppress
 from functools import partial
+from itertools import product
 from typing import Iterable
 from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide6.QtGui import QFont
@@ -807,6 +808,17 @@ class PivotTableModelBase(QAbstractTableModel):
     def _header_name(self, top_left_id, header_id):
         return self.top_left_headers[top_left_id].header_data(header_id)
 
+    def get_db_map_entities(self):
+        """Returns a dict mapping db maps to a list of dict entity items in the current class.
+
+        Returns:
+            dict
+        """
+        return {
+            db_map: self.db_mngr.get_items_by_field(db_map, "entity", "class_id", class_id)
+            for db_map, class_id in self._parent.current_class_id.items()
+        }
+
     def _data(self, index, role):
         raise NotImplementedError()
 
@@ -1040,11 +1052,79 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         data = self._load_empty_parameter_value_data(db_map_alternative_ids=db_map_alternative_ids)
         self.remove_from_model(data)
 
-    def _load_empty_parameter_value_data(self, *args, **kwargs):
-        return self._parent.load_empty_parameter_value_data(*args, **kwargs)
+    def _load_empty_parameter_value_data(
+        self, db_map_entities=None, db_map_parameter_ids=None, db_map_alternative_ids=None
+    ):
+        """Returns a dict containing all possible combinations of entities and parameters for the current class
+        in all db_maps.
 
-    def _load_full_parameter_value_data(self, *args, **kwargs):
-        return self._parent.load_full_parameter_value_data(*args, **kwargs)
+        Args:
+            db_map_entities (dict, optional): if given, only load data for these db maps and entities
+            db_map_parameter_ids (dict, optional): if given, only load data for these db maps and parameter definitions
+            db_map_alternative_ids (dict, optional): if given, only load data for these db maps and alternatives
+
+        Returns:
+            dict: Key is a tuple object_id, ..., parameter_id, value is None.
+        """
+        if db_map_entities is None:
+            db_map_entities = self.get_db_map_entities()
+        if db_map_parameter_ids is None:
+            db_map_parameter_ids = {
+                db_map: [(db_map, id_) for id_ in ids]
+                for db_map, ids in self._get_db_map_parameter_value_or_def_ids("parameter_definition").items()
+            }
+        if db_map_alternative_ids is None:
+            db_map_alternative_ids = {
+                db_map: [
+                    (db_map, id_) for a in self.db_mngr.get_items(db_map, "alternative") if (id_ := a["id"]) is not None
+                ]
+                for db_map in self.db_maps
+            }
+        db_map_entity_ids = {
+            db_map: [
+                id_tuple
+                for e in entities
+                if (id_tuple := tuple((db_map, id_) for id_ in e["element_id_list"] or (e["id"],)))
+            ]
+            for db_map, entities in db_map_entities.items()
+        }
+        if not any(db_map_entity_ids.values()) and (
+            current_dimension_id_list := self._parent.current_dimension_id_list
+        ):
+            db_map_entity_ids = {
+                db_map: [tuple((db_map, None) for _ in current_dimension_id_list)] for db_map in self.db_maps
+            }
+        if not any(db_map_parameter_ids.values()):
+            db_map_parameter_ids = {db_map: [(db_map, None)] for db_map in self.db_maps}
+        if not any(db_map_alternative_ids.values()):
+            db_map_alternative_ids = {db_map: [(db_map, None)] for db_map in self.db_maps}
+        return {
+            entity_id + (parameter_id, alt_id, db_map): None
+            for db_map in self.db_maps
+            for entity_id in db_map_entity_ids.get(db_map, [])
+            for parameter_id in db_map_parameter_ids.get(db_map, [])
+            for alt_id in db_map_alternative_ids.get(db_map, [])
+        }
+
+    def _load_full_parameter_value_data(self, db_map_parameter_values=None, action="add"):
+        """Returns a dict of parameter values for the current class.
+
+        Args:
+            db_map_parameter_values (list, optional)
+            action (str)
+
+        Returns:
+            dict: Key is a tuple object_id, ..., parameter_id, value is the parameter_value.
+        """
+        if db_map_parameter_values is None:
+            db_map_parameter_values = self._get_db_map_parameter_values_or_defs("parameter_value")
+        get_id = _make_get_id(action)
+        return {
+            tuple((db_map, id_) for id_ in x["element_id_list"] or (x["entity_id"],))
+            + ((db_map, x["parameter_id"]), (db_map, x["alternative_id"]), db_map): get_id(db_map, x)
+            for db_map, items in db_map_parameter_values.items()
+            for x in items
+        }
 
     @property
     def item_type(self):
@@ -1068,14 +1148,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         Returns db_map and entity ids for given indexes. Used by PivotTableView.
 
         Args:
-            list(QModelIndex): indexes corresponding to entity items
+            indexes (list of QModelIndex): indexes corresponding to entity items
 
         Returns:
             dict: mapping DatabaseMapping to set of entity ids
         """
         db_map_entity_lookup = {
             db_map: {ent["element_id_list"]: ent["id"] for ent in ents}
-            for db_map, ents in self._parent.get_db_map_entities().items()
+            for db_map, ents in self.get_db_map_entities().items()
         }
         db_map_entity_ids = {}
         for index in indexes:
@@ -1282,9 +1362,60 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             {db_map: [self._parameter_value_to_update(id_, header_ids, join_value_and_type(*value_type_tup))]}
         )
 
+    def _get_db_map_parameter_value_or_def_ids(self, item_type):
+        """Returns a dict mapping db maps to a list of integer parameter (value or def) ids from the current class.
+
+        Args:
+            item_type (str): either "parameter_value" or "parameter_definition"
+
+        Returns:
+            dict
+        """
+        current_class_id = self._parent.current_class_id
+        return {
+            db_map: [x["id"] for x in self.db_mngr.get_items_by_field(db_map, item_type, "entity_class_id", class_id)]
+            for db_map, class_id in current_class_id.items()
+        }
+
+    def _get_db_map_parameter_values_or_defs(self, item_type):
+        """Returns a dict mapping db maps to list of dict parameter (value or def) items from the current class.
+
+        Args:
+            item_type (str): either "parameter_value" or "parameter_definition"
+
+        Returns:
+            dict
+        """
+        db_map_ids = self._get_db_map_parameter_value_or_def_ids(item_type)
+        return {
+            db_map: [self.db_mngr.get_item(db_map, item_type, id_) for id_ in ids] for db_map, ids in db_map_ids.items()
+        }
+
+    def load_full_parameter_value_data(self, db_map_parameter_values=None, action="add"):
+        """Returns a dict of parameter values for the current class.
+
+        Args:
+            db_map_parameter_values (list, optional)
+            action (str)
+
+        Returns:
+            dict: Key is a tuple object_id, ..., parameter_id, value is the parameter_value.
+        """
+        if db_map_parameter_values is None:
+            db_map_parameter_values = self._get_db_map_parameter_values_or_defs("parameter_value")
+        get_id = _make_get_id(action)
+        return {
+            tuple((db_map, id_) for id_ in x["element_id_list"] or (x["entity_id"],))
+            + ((db_map, x["parameter_id"]), (db_map, x["alternative_id"]), db_map): get_id(db_map, x)
+            for db_map, items in db_map_parameter_values.items()
+            for x in items
+        }
+
 
 class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
     """A model for the pivot table in parameter index expansion input type."""
+
+    INDEX_INSERTION_POINT = -3
 
     def __init__(self, parent):
         """
@@ -1341,11 +1472,45 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             # The parameter index is not a column (it's either a row or frozen)
             return False
 
-    def _load_empty_parameter_value_data(self, *args, **kwargs):
-        return self._parent.load_empty_expanded_parameter_value_data(*args, **kwargs)
+    def _load_empty_parameter_value_data(
+        self, db_map_entities=None, db_map_parameter_ids=None, db_map_alternative_ids=None
+    ):
+        """Makes a dict of expanded parameter values for the current class.
 
-    def _load_full_parameter_value_data(self, *args, **kwargs):
-        return self._parent.load_full_expanded_parameter_value_data(*args, **kwargs)
+        Args:
+            db_map_entities (dict, optional): mapping from database map to iterable of entity items
+            db_map_parameter_ids (dict, optional): mapping from database map
+                to iterable of parameter definition id tuples
+            db_map_alternative_ids (dict, optional): mapping from database map to iterable of alternative id tuples
+
+        Returns:
+            dict: mapping from unique value id tuple to value tuple
+        """
+        data = super()._load_empty_parameter_value_data(db_map_entities, db_map_parameter_ids, db_map_alternative_ids)
+        insert = self.INDEX_INSERTION_POINT
+        return {
+            key[:insert] + ((None, index),) + key[insert:]: value
+            for key, value in data.items()
+            for index in self._indexes(value)
+        }
+
+    def _load_full_parameter_value_data(self, db_map_parameter_values=None, action="add"):
+        """Makes a dict of expanded parameter values for the current class.
+
+        Args:
+            db_map_parameter_values (list, optional)
+            action (str)
+
+        Returns:
+            dict: mapping from unique value id tuple to value tuple
+        """
+        data = super()._load_full_parameter_value_data(db_map_parameter_values, action)
+        insert = self.INDEX_INSERTION_POINT
+        return {
+            key[:insert] + ((None, index),) + key[insert:]: value
+            for key, value in data.items()
+            for index in self._indexes(value)
+        }
 
     def _data(self, index, role):
         row, column = self.map_to_pivot(index)
@@ -1361,10 +1526,21 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
     @staticmethod
     def _parameter_value_to_update(id_, header_ids, value_and_type):
         value, value_type = split_value_and_type(value_and_type)
-        return {"id": id_, "value": value, "type": value_type, "index": header_ids[-3]}
+        return {
+            "id": id_,
+            "value": value,
+            "type": value_type,
+            "index": header_ids[IndexExpansionPivotTableModel.INDEX_INSERTION_POINT],
+        }
 
     def _update_parameter_values(self, db_map_data):
         self.db_mngr.update_expanded_parameter_values(db_map_data)
+
+    def _indexes(self, value):
+        if value is None:
+            return []
+        db_map, id_ = value
+        return self.db_mngr.get_value_indexes(db_map, "parameter_value", id_)
 
 
 class ElementPivotTableModel(PivotTableModelBase):
@@ -1395,20 +1571,42 @@ class ElementPivotTableModel(PivotTableModelBase):
         )
 
     def _handle_entities_added(self, db_map_data):
-        data = self._parent.load_full_element_data(db_map_entities=db_map_data, action="add")
+        data = self._load_full_element_data(db_map_entities=db_map_data, action="add")
         self.update_model(data)
 
     def _handle_entities_removed(self, db_map_data):
-        data = self._parent.load_full_element_data(db_map_entities=db_map_data, action="remove")
+        data = self._load_full_element_data(db_map_entities=db_map_data, action="remove")
         self.update_model(data)
 
     def _load_empty_element_data(self, db_map_data):
+        if not self._parent.first_current_entity_class["dimension_id_list"]:
+            return {}
         db_map_class_entities = {}
         for db_map, items in db_map_data.items():
             class_entities = db_map_class_entities[db_map] = {}
             for item in items:
                 class_entities.setdefault(item["class_id"], []).append(item)
-        return self._parent.load_empty_element_data(db_map_class_entities=db_map_class_entities)
+        data = {}
+        for db_map in self.db_maps:
+            element_id_lists = []
+            all_given_ids = set()
+            for db_map_dimension_id in self._parent.current_dimension_id_list:
+                dim_id = db_map_dimension_id.get(db_map)
+                elements = self.db_mngr.get_items_by_field(db_map, "entity", "class_id", dim_id)
+                ids = {item["id"]: None for item in elements}
+                given_elements = db_map_class_entities.get(db_map, {}).get(dim_id)
+                if given_elements is not None:
+                    given_ids = {item["id"]: None for item in given_elements}
+                    ids.update(given_ids)
+                    all_given_ids.update(given_ids.keys())
+                element_id_lists.append(list(ids.keys()))
+            db_map_data = {
+                tuple((db_map, id_) for id_ in element_ids) + (db_map,): None
+                for element_ids in product(*element_id_lists)
+                if not all_given_ids or all_given_ids.intersection(element_ids)
+            }
+            data.update(db_map_data)
+        return data
 
     def _handle_elements_added(self, db_map_data):
         data = self._load_empty_element_data(db_map_data)
@@ -1489,6 +1687,27 @@ class ElementPivotTableModel(PivotTableModelBase):
             self.db_mngr.remove_items(to_remove)
         return True
 
+    def _load_full_element_data(self, db_map_entities=None, action="add"):
+        """Returns a dict of entity elements in the current class.
+
+        Args:
+            db_map_entities (dict, optional): a mapping from database map to entities in the current entity class
+            action (str): 'add' or 'remove'
+
+        Returns:
+            dict: Key is db_map-object id tuple, value is relationship id.
+        """
+        if not self._parent.first_current_entity_class.get("dimension_id_list", None):
+            return {}
+        if db_map_entities is None:
+            db_map_entities = self.get_db_map_entities()
+        get_id = _make_get_id(action)
+        return {
+            tuple((db_map, id_) for id_ in ent["element_id_list"]) + (db_map,): get_id(db_map, ent)
+            for db_map, entities in db_map_entities.items()
+            for ent in entities
+        }
+
 
 class ScenarioAlternativePivotTableModel(PivotTableModelBase):
     """A model for the pivot table in scenario alternative input type."""
@@ -1522,19 +1741,19 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         )
 
     def _handle_scenarios_added(self, db_map_data):
-        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
+        data = self._load_scenario_alternative_data(db_map_scenarios=db_map_data)
         self.add_to_model(data)
 
     def _handle_scenarios_removed(self, db_map_data):
-        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
+        data = self._load_scenario_alternative_data(db_map_scenarios=db_map_data)
         self.remove_from_model(data)
 
     def _handle_alternatives_added(self, db_map_data):
-        data = self._parent.load_scenario_alternative_data(db_map_alternatives=db_map_data)
+        data = self._load_scenario_alternative_data(db_map_alternatives=db_map_data)
         self.add_to_model(data)
 
     def _handle_alternatives_removed(self, db_map_data):
-        data = self._parent.load_scenario_alternative_data(db_map_alternatives=db_map_data)
+        data = self._load_scenario_alternative_data(db_map_alternatives=db_map_data)
         self.remove_from_model(data)
 
     def _handle_scenario_alternatives_changed(self, db_map_data):
@@ -1542,7 +1761,7 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             db_map: [self.db_mngr.get_item(db_map, "scenario", x["scenario_id"]) for x in items]
             for db_map, items in db_map_data.items()
         }
-        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_scenarios)
+        data = self._load_scenario_alternative_data(db_map_scenarios=db_map_scenarios)
         self.update_model(data)
 
     @property
@@ -1627,6 +1846,34 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         self.db_mngr.set_scenario_alternatives(db_map_items)
         return True
 
+    def _load_scenario_alternative_data(self, db_map_scenarios=None, db_map_alternatives=None):
+        """Returns a dict containing all scenario alternatives.
+
+        Returns:
+            dict: Key is db_map-id tuple, value is None or rank.
+        """
+        if db_map_scenarios is None:
+            db_map_scenarios = {db_map: self.db_mngr.get_items(db_map, "scenario") for db_map in self.db_maps}
+        if db_map_alternatives is None:
+            db_map_alternatives = {db_map: self.db_mngr.get_items(db_map, "alternative") for db_map in self.db_maps}
+        data = {}
+        for db_map in self.db_maps:
+            scenario_alternative_ranks = {
+                x["id"]: {
+                    alt_id: k + 1
+                    for k, alt_id in enumerate(self.db_mngr.get_scenario_alternative_id_list(db_map, x["id"]))
+                }
+                for x in db_map_scenarios.get(db_map, [])
+            }
+            alternative_ids = [x["id"] for x in db_map_alternatives.get(db_map, [])]
+            db_map_data = {
+                ((db_map, scen_id), (db_map, alt_id), db_map): alternative_ranks.get(alt_id)
+                for scen_id, alternative_ranks in scenario_alternative_ranks.items()
+                for alt_id in alternative_ids
+            }
+            data.update(db_map_data)
+        return data
+
 
 class PivotTableSortFilterProxy(QSortFilterProxyModel):
     model_data_changed = Signal()
@@ -1695,3 +1942,15 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
     def batch_set_data(self, indexes, values):
         indexes = [self.mapToSource(index) for index in indexes]
         return self.sourceModel().batch_set_data(indexes, values)
+
+
+def _make_get_id(action):
+    """Returns a function to compute the db_map-id tuple of an item.
+
+    Args:
+        action (str): "add" or "remove"
+
+    Returns:
+        Callable: function to compute db_map-id tuples
+    """
+    return {"add": lambda db_map, x: (db_map, x["id"]), "remove": lambda db_map, x: None}[action]
