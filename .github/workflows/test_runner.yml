@@ -55,6 +55,9 @@ jobs:
       run: |
         python -m pip install ipykernel
         python -m ipykernel install --user
+    - name: Install coverage
+      run: |
+        python -m pip install coverage
     - name: Run tests
       run: |
         if [ "$RUNNER_OS" != "Windows" ]; then
