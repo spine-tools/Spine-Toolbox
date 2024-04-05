@@ -34,9 +34,6 @@ dependencies = [
 Documentation = "https://spine-toolbox.readthedocs.io/"
 Repository = "https://github.com/spine-tools/Spine-Toolbox"
 
-[project.optional-dependencies]
-dev = ["coverage[toml]"]
-
 [project.scripts]
 spinetoolbox = "spinetoolbox.main:main"
 spine-db-editor = "spinetoolbox.spine_db_editor.main:main"
