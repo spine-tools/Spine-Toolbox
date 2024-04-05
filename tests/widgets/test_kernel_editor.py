@@ -31,7 +31,6 @@ class MockSettingsWidget(QWidget):
 
 
 class TestKernelEditorBase(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
