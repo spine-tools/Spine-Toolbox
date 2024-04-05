@@ -327,17 +327,17 @@ class FrozenTableModel(QAbstractTableModel):
         header = self._data[0][column]
         if header == "parameter":
             db_map, id_ = value
-            tool_tip = self.db_mngr.get_item(db_map, "parameter_definition", id_)["description"]
+            tool_tip = self.db_mngr.get_item(db_map, "parameter_definition", id_).get("description")
         elif header == "alternative":
             db_map, id_ = value
-            tool_tip = self.db_mngr.get_item(db_map, "alternative", id_)["description"]
+            tool_tip = self.db_mngr.get_item(db_map, "alternative", id_).get("description")
         elif header == "index":
             tool_tip = str(value[1])
         elif header == "database":
             tool_tip = value.codename
         elif header == "entity":
             db_map, id_ = value
-            tool_tip = self.db_mngr.get_item(db_map, "entity", id_)["description"]
+            tool_tip = self.db_mngr.get_item(db_map, "entity", id_).get("description")
         else:
             raise RuntimeError(f"Logic error: unknown header '{header}'")
         return plain_to_tool_tip(tool_tip)
