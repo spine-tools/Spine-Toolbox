@@ -20,7 +20,7 @@ from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModel
 from PySide6.QtGui import QFont
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_elements
-from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
+from spinedb_api.parameter_value import IndexedValue, join_value_and_type, split_value_and_type
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, plain_to_tool_tip
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from .colors import FIXED_FIELD_COLOR, PIVOT_TABLE_HEADER_COLOR
@@ -1040,7 +1040,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
     def _handle_parameter_values_removed(self, db_map_data):
         data = self._load_full_parameter_value_data(db_map_parameter_values=db_map_data, action="remove")
-        self.remove_from_model(data)
+        self.update_model(data)
 
     def _handle_alternatives_added(self, db_map_data):
         db_map_alternative_ids = {db_map: [(db_map, a["id"]) for a in items] for db_map, items in db_map_data.items()}
@@ -1066,6 +1066,22 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         Returns:
             dict: Key is a tuple object_id, ..., parameter_id, value is None.
         """
+        (
+            db_map_entity_ids,
+            db_map_parameter_ids,
+            db_map_alternative_ids,
+        ) = self._all_combination_for_empty_parameter_value(
+            db_map_entities, db_map_parameter_ids, db_map_alternative_ids
+        )
+        return {
+            entity_id + (parameter_id, alt_id, db_map): None
+            for db_map in self.db_maps
+            for entity_id in db_map_entity_ids.get(db_map, [])
+            for parameter_id in db_map_parameter_ids.get(db_map, [])
+            for alt_id in db_map_alternative_ids.get(db_map, [])
+        }
+
+    def _all_combination_for_empty_parameter_value(self, db_map_entities, db_map_parameter_ids, db_map_alternative_ids):
         if db_map_entities is None:
             db_map_entities = self.get_db_map_entities()
         if db_map_parameter_ids is None:
@@ -1098,13 +1114,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             db_map_parameter_ids = {db_map: [(db_map, None)] for db_map in self.db_maps}
         if not any(db_map_alternative_ids.values()):
             db_map_alternative_ids = {db_map: [(db_map, None)] for db_map in self.db_maps}
-        return {
-            entity_id + (parameter_id, alt_id, db_map): None
-            for db_map in self.db_maps
-            for entity_id in db_map_entity_ids.get(db_map, [])
-            for parameter_id in db_map_parameter_ids.get(db_map, [])
-            for alt_id in db_map_alternative_ids.get(db_map, [])
-        }
+        return db_map_entity_ids, db_map_parameter_ids, db_map_alternative_ids
 
     def _load_full_parameter_value_data(self, db_map_parameter_values=None, action="add"):
         """Returns a dict of parameter values for the current class.
@@ -1451,6 +1461,12 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             # The parameter index is not a column (it's either a row or frozen)
             pass
 
+    def emptyRowCount(self):
+        return 0
+
+    def emptyColumnCount(self):
+        return 0
+
     def flags(self, index):
         """Roles for data"""
         if self.index_in_data(index):
@@ -1472,10 +1488,14 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             # The parameter index is not a column (it's either a row or frozen)
             return False
 
+    def _handle_parameter_values_removed(self, db_map_data):
+        data = self._load_full_parameter_value_data(db_map_parameter_values=db_map_data, action="remove")
+        self.remove_from_model(data)
+
     def _load_empty_parameter_value_data(
         self, db_map_entities=None, db_map_parameter_ids=None, db_map_alternative_ids=None
     ):
-        """Makes a dict of expanded parameter values for the current class.
+        """Does not load the data since adding values in index expansion mode is disabled.
 
         Args:
             db_map_entities (dict, optional): mapping from database map to iterable of entity items
@@ -1484,15 +1504,9 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             db_map_alternative_ids (dict, optional): mapping from database map to iterable of alternative id tuples
 
         Returns:
-            dict: mapping from unique value id tuple to value tuple
+            dict: empty data
         """
-        data = super()._load_empty_parameter_value_data(db_map_entities, db_map_parameter_ids, db_map_alternative_ids)
-        insert = self.INDEX_INSERTION_POINT
-        return {
-            key[:insert] + ((None, index),) + key[insert:]: value
-            for key, value in data.items()
-            for index in self._indexes(value)
-        }
+        return {}
 
     def _load_full_parameter_value_data(self, db_map_parameter_values=None, action="add"):
         """Makes a dict of expanded parameter values for the current class.
@@ -1504,13 +1518,27 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         Returns:
             dict: mapping from unique value id tuple to value tuple
         """
-        data = super()._load_full_parameter_value_data(db_map_parameter_values, action)
-        insert = self.INDEX_INSERTION_POINT
-        return {
-            key[:insert] + ((None, index),) + key[insert:]: value
-            for key, value in data.items()
-            for index in self._indexes(value)
-        }
+        if db_map_parameter_values is None:
+            db_map_parameter_values = self._get_db_map_parameter_values_or_defs("parameter_value")
+        full_data = {}
+        get_id = _make_get_id(action)
+        for db_map, items in db_map_parameter_values.items():
+            for item in items:
+                element_ids = tuple((db_map, id_) for id_ in item["element_id_list"])
+                if not element_ids:
+                    element_ids = ((db_map, item["entity_id"]),)
+                parameter_id = (db_map, item["parameter_id"])
+                parsed_value = item["parsed_value"]
+                if isinstance(parsed_value, IndexedValue):
+                    value_indexes = parsed_value.indexes
+                else:
+                    value_indexes = ("",)
+                alternative_ids = (db_map, item["alternative_id"])
+                for value_index in value_indexes:
+                    full_data[element_ids + ((None, value_index), parameter_id, alternative_ids, db_map)] = get_id(
+                        db_map, item
+                    )
+        return full_data
 
     def _data(self, index, role):
         row, column = self.map_to_pivot(index)
