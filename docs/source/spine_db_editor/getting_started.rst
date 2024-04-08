@@ -75,8 +75,8 @@ like this:
 
 The dock widgets can be scaled by dragging them from the sides and moved around by dragging them from their
 darker colored headers. Like with other widgets, Toolbox remembers the customizations and the editor will
-open in the same configuration when it is opened the next time. If the view is changed from the hamburger
-menu, the modifications will be lost and the UI will be reverted back to default.
+open in the same configuration when it is opened the next time. The dock configurations are URL specific.
+the configurations for the URL can be restored back to default from the hamburger menu **View->Docks...->Reset docks**.
 
 Tab bar
 =======

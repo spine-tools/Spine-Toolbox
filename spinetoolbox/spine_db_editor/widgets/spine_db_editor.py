@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QToolButton,
 )
 from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
-from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon
+from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QAction
 from spinedb_api import import_data, export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
@@ -183,7 +183,8 @@ class SpineDBEditorBase(QMainWindow):
         self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
-        self.restore_ui()
+        self.update_last_view()
+        self.restore_ui(self.last_view, fresh=True)
         self.update_commit_enabled()
         return True
 
@@ -244,6 +245,16 @@ class SpineDBEditorBase(QMainWindow):
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None}, create=True)
 
+    def reset_docs(self):
+        """Resets the layout of the dock widgets for this URL"""
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        self.qsettings.remove("")
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()
+        self.last_view = None
+        self.apply_stacked_style()
+
     def _make_docks_menu(self):
         """Returns a menu with all dock toggle/view actions. Called by ``self.add_main_menu()``.
 
@@ -251,6 +262,11 @@ class SpineDBEditorBase(QMainWindow):
             QMenu
         """
         menu = QMenu(self)
+        reset_docs_action = QAction("Reset docs", self)
+        reset_docs_action.triggered.connect(self.reset_docs)
+        menu.addAction(reset_docs_action)
+        menu.addAction(self.ui.dockWidget_entity_tree.toggleViewAction())
+        menu.addSeparator()
         menu.addAction(self.ui.dockWidget_entity_tree.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_parameter_value.toggleViewAction())
@@ -762,21 +778,51 @@ class SpineDBEditorBase(QMainWindow):
         msg = f"Successfully removed {count} {item_type} item(s)"
         self._log_items_change(msg)
 
-    def restore_ui(self):
-        """Restore UI state from previous session."""
-        self.qsettings.beginGroup(self.settings_group)
-        self.qsettings.beginGroup(self.settings_subgroup)
-        window_state = self.qsettings.value("windowState")
-        self.qsettings.endGroup()
-        self.qsettings.endGroup()
+    def restore_ui(self, view_type, fresh=False):
+        """Restore UI state from previous session.
+
+        Args:
+            view_type (str): What the selected view type is.
+            fresh (bool, optional): If true, the view specified with subgroup will be applied,
+                instead of loading the previous window state of the said view.
+        """
+        if fresh and view_type:
+            # Apply the view instead of loading the window state
+            self.last_view = None
+            options = {
+                "stacked": self.apply_stacked_style,
+                "graph": self.apply_graph_style,
+            }
+            func = options[view_type] if view_type in options else self.apply_pivot_style
+            func(view_type)
+            return
+        window_state = None
+        if view_type:
+            self.qsettings.beginGroup(self.settings_group)
+            self.qsettings.beginGroup(self.settings_subgroup)
+            self.qsettings.beginGroup(view_type)
+            window_state = self.qsettings.value("windowState")
+            self.qsettings.endGroup()
+            self.qsettings.endGroup()
+            self.qsettings.endGroup()
+        else:
+            # To ensure that the first time changes of a window are saved.
+            self.last_view = "stacked"
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
 
     def save_window_state(self):
         """Save window state parameters (size, position, state) via QSettings."""
+        if not self.db_maps or len(self.db_urls) != 1:
+            print(9)
+            # Only save window sates of single db tabs
+            return
         self.qsettings.beginGroup(self.settings_group)
         self.qsettings.beginGroup(self.settings_subgroup)
+        self.qsettings.setValue("last_open", self.last_view)
+        self.qsettings.beginGroup(self.last_view)
         self.qsettings.setValue("windowState", self.saveState(version=1))
+        self.qsettings.endGroup()
         self.qsettings.endGroup()
         self.qsettings.endGroup()
 
@@ -925,6 +971,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._timer_refresh_tab_order.setSingleShot(True)
         self.add_main_menu()
         self.connect_signals()
+        self.last_view = None
         self.apply_stacked_style()
         if db_url_codenames is not None:
             self.load_db_urls(db_url_codenames)
@@ -1003,6 +1050,14 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
             dock.setVisible(True)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
+    def update_last_view(self):
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        last_view = self.qsettings.value("last_open")
+        self.last_view = last_view
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()
+
     def begin_style_change(self):
         """Begins a style change operation."""
         self._original_size = self.size()
@@ -1024,9 +1079,12 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.ui.dockWidget_exports.hide()
         self.resize(self._original_size)
 
-    @Slot(bool)
-    def apply_stacked_style(self, _checked=False):
+    @Slot(object)
+    def apply_stacked_style(self, _checked=None):
         """Applies the stacked style, inspired in the former tree view."""
+        if self.last_view:
+            self.save_window_state()
+        self.last_view = "stacked"
         self.begin_style_change()
         self.splitDockWidget(
             self.ui.dockWidget_entity_tree, self.ui.dockWidget_parameter_value, Qt.Orientation.Horizontal
@@ -1037,6 +1095,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._finish_stacked_style()
         self.ui.dockWidget_entity_graph.hide()
         self.end_style_change()
+        self.restore_ui(self.last_view)
 
     def _finish_stacked_style(self):
         # right-side
@@ -1061,9 +1120,13 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Orientation.Horizontal)
 
-    @Slot(bool)
-    def apply_pivot_style(self, _checked=False):
+    @Slot(object)
+    def apply_pivot_style(self, _checked=None):
         """Applies the pivot style, inspired in the former tabular view."""
+        if self.last_view:
+            self.save_window_state()
+        self.last_view = _checked if isinstance(_checked, str) else _checked.text()
+        self.current_input_type = self.last_view
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, Qt.Orientation.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Orientation.Horizontal)
@@ -1082,10 +1145,14 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.65 * width, 0.15 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
+        self.restore_ui(self.last_view)
 
-    @Slot(bool)
-    def apply_graph_style(self, _checked=False):
+    @Slot(object)
+    def apply_graph_style(self, _checked=None):
         """Applies the graph style, inspired in the former graph view."""
+        if self.last_view:
+            self.save_window_state()
+        self.last_view = "graph"
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_entity_graph, Qt.Orientation.Horizontal)
         self.splitDockWidget(
@@ -1100,6 +1167,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Orientation.Vertical)
         self.end_style_change()
+        self.restore_ui(self.last_view)
         self.ui.graphicsView.reset_zoom()
 
     @staticmethod

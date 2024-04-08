@@ -41,6 +41,18 @@ class TestSpineDBEditor(DBEditorTestBase):
             row_data.append(tuple(model.index(row, h(field)).data() for field in ("entity_class_name", "database")))
         self.assertIn(("fish", "database"), row_data)
 
+    def test_save_window_state(self):
+        self.spine_db_editor.db_maps = [self.mock_db_map]
+        self.spine_db_editor.db_urls = [""]
+        self.spine_db_editor.save_window_state()
+        self.spine_db_editor.qsettings.beginGroup.assert_has_calls([mock.call("spineDBEditor"), mock.call("")])
+        self.spine_db_editor.qsettings.endGroup.assert_has_calls([mock.call(), mock.call()])
+        qsettings_save_calls = self.spine_db_editor.qsettings.setValue.call_args_list
+        self.assertEqual(len(qsettings_save_calls), 2)
+        saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
+        self.assertIn("windowState", saved_dict)
+        self.assertIn("last_open", saved_dict)
+
 
 class TestClosingDBEditors(unittest.TestCase):
     @classmethod
