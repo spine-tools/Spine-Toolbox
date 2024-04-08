@@ -287,6 +287,11 @@ class TabularViewMixin:
         self._pending_reload = False
         pivot_table_model = self._pivot_table_models[self.current_input_type]
         if self.pivot_table_model is not pivot_table_model:
+            if self.pivot_table_model is not None:
+                self.pivot_table_model.modelReset.disconnect(self.make_pivot_headers)
+                self.pivot_table_model.modelReset.disconnect(self.reload_frozen_table)
+                self.pivot_table_model.frozen_values_added.disconnect(self._add_values_to_frozen_table)
+                self.pivot_table_model.frozen_values_removed.disconnect(self._remove_values_from_frozen_table)
             self.pivot_table_model = pivot_table_model
             self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
             self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
