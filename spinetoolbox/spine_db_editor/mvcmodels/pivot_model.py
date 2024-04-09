@@ -205,7 +205,7 @@ class PivotModel:
         """Sets values for the frozen indexes.
 
         Args:
-            value (list of str):
+            value (tuple of str):
         """
         if value == self.frozen_value:
             return

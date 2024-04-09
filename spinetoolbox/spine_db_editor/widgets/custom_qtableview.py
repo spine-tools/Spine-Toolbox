@@ -655,12 +655,17 @@ class PivotTableView(CopyPasteTableView):
 
         def _update_actions_availability(self):
             """See base class."""
-            self._open_in_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
-            self._plot_action.setEnabled(bool(self._selected_value_indexes))
-            self._remove_values_action.setEnabled(bool(self._selected_value_indexes))
-            self._remove_parameters_action.setEnabled(bool(self._selected_parameter_indexes))
-            self._remove_entities_action.setEnabled(bool(self._selected_entity_indexes))
-            self._remove_alternatives_action.setEnabled(bool(self._selected_alternative_indexes))
+            is_single_editable_selection = (
+                len(self._selected_value_indexes) == 1
+                and (self._selected_value_indexes[0].flags() & Qt.ItemFlag.ItemIsEditable) != Qt.ItemFlag.NoItemFlags
+            )
+            self._open_in_editor_action.setEnabled(is_single_editable_selection)
+            has_selection = bool(self._selected_value_indexes)
+            self._plot_action.setEnabled(has_selection)
+            self._remove_values_action.setEnabled(has_selection)
+            self._remove_parameters_action.setEnabled(has_selection)
+            self._remove_entities_action.setEnabled(has_selection)
+            self._remove_alternatives_action.setEnabled(has_selection)
 
     class _IndexExpansionContext(_ParameterValueContext):
         """Context for expanded parameter values"""

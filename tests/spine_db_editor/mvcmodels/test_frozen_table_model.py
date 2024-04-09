@@ -13,10 +13,10 @@
 """Contains unit tests for the ``frozen_table_model`` module."""
 import unittest
 from unittest.mock import MagicMock
-from PySide6.QtCore import QModelIndex, QObject
+from PySide6.QtCore import QModelIndex, QObject, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.frozen_table_model import FrozenTableModel
-from tests.mock_helpers import TestSpineDBManager
+from tests.mock_helpers import model_data_to_table, TestSpineDBManager
 
 
 class TestFrozenTableModel(unittest.TestCase):
@@ -259,6 +259,18 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(4, 0).data(), "spoon")
         self.assertEqual(self._model.index(4, 1).data(), "alternative_1")
         self.assertEqual(self._model.index(4, 2).data(), self.db_codename)
+
+    def test_tooltips_work_when_no_data_is_available(self):
+        self._model.insert_column_data("database", {self._db_map}, 0)
+        self._db_mngr.remove_items({self._db_map: {"alternative": [1]}})
+        self._model.insert_column_data("alternative", {(self._db_map, None)}, 1)
+        self.assertEqual(self._model.headers, ["database", "alternative"])
+        model_data = model_data_to_table(self._model)
+        expected = [["database", "alternative"], [self.db_codename, None]]
+        self.assertEqual(model_data, expected)
+        tool_tip_data = model_data_to_table(self._model, QModelIndex(), Qt.ItemDataRole.ToolTipRole)
+        expected = [["database", "alternative"], [f"<qt>{self.db_codename}</qt>", None]]
+        self.assertEqual(tool_tip_data, expected)
 
 
 if __name__ == "__main__":

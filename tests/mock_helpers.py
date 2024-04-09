@@ -13,7 +13,7 @@
 """Classes and functions that can be shared among unit test modules."""
 from contextlib import contextmanager
 from unittest import mock
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
@@ -318,6 +318,23 @@ def model_data_to_dict(model, parent=QModelIndex()):
             row_data.append({index.data(): child_data} if child_data else index.data())
         rows.append(row_data)
     return rows
+
+
+def model_data_to_table(model, parent=QModelIndex(), role=Qt.ItemDataRole.DisplayRole):
+    """Puts model data into Python table.
+
+    Args:
+        model (QAbstractItemModel): model to process
+        parent (QModelIndex): parent index
+        role (Qt.ItemDataRole): data role
+
+    Returns:
+        list of list: model data
+    """
+    data = []
+    for row in range(model.rowCount()):
+        data.append([model.index(row, column, parent).data(role) for column in range(model.columnCount())])
+    return data
 
 
 def fetch_model(model):

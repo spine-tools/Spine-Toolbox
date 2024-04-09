@@ -38,7 +38,7 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     to_database,
 )
-from spinedb_api.parameter_value import load_db_value, dump_db_value
+from spinedb_api.parameter_value import deep_copy_value, load_db_value, dump_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.helpers import remove_credentials_from_url
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
@@ -1126,6 +1126,7 @@ class SpineDBManager(QObject):
             for id_, indexed_values in packed_data.items():
                 parsed_value = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
                 if isinstance(parsed_value, IndexedValue):
+                    parsed_value = deep_copy_value(parsed_value)
                     for index, (val, typ) in indexed_values.items():
                         parsed_val = from_database(val, typ)
                         parsed_value.set_value(index, parsed_val)
