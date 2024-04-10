@@ -3,6 +3,19 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [Unreleased]
+
+### Changed
+
+- Microsoft build tools are not needed anymore when installing Toolbox requirements on Python 3.10 and up.
+
+## [0.7.3]
+
+### Added
+
+- On Toolbox startup, a link appears in Event log that opens Upgrade notification window
+  offering information about the upcoming 0.8 update.
+
 ## [0.7.2]
 
 ### Added
