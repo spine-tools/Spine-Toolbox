@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.6.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -157,7 +157,7 @@ class Ui_MainWindow(object):
         self.actionVacuum.setIcon(icon17)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
@@ -261,7 +261,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.treeView_entity = EntityTreeView(self.dockWidgetContents_6)
         self.treeView_entity.setObjectName(u"treeView_entity")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy1.setHorizontalStretch(1)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.treeView_entity.sizePolicy().hasHeightForWidth())
@@ -286,7 +286,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.graphicsView = EntityQGraphicsView(self.dockWidgetContents_8)
         self.graphicsView.setObjectName(u"graphicsView")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy2.setHorizontalStretch(2)
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
@@ -368,7 +368,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_exports = QHBoxLayout()
         self.horizontalLayout_exports.setSpacing(1)
         self.horizontalLayout_exports.setObjectName(u"horizontalLayout_exports")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_exports.addItem(self.horizontalSpacer)
 
