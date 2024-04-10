@@ -50,7 +50,7 @@ To add multiple entities at the same time,
 select multiple elements for one or more of the classes. All possible permutations
 of the selected elements will be added to *Existing entities*.
 
-.. tip:: To *extend* the selection of objects for a class, 
+.. tip:: To *extend* the selection of entities for a class,
    press and hold the **Ctrl** key while clicking on more items. Holding down **Shift**
    allows to select an area of items by clicking the start and end of the selection.
 

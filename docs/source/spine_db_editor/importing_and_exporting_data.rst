@@ -119,11 +119,11 @@ The JSON format consists of a single JSON object with the following ``OPTIONAL``
   Each element in this array ``MUST`` be itself a JSON array and ``MUST`` have three elements:
 
   - The first element ``MUST`` be a JSON string, indicating the entity class name.
-  - The second element ``MUST`` be a JSON array, indicating the member object classes. Each element in
-    this array ``MUST`` be a JSON string, indicating the object class name. In case of 0-D entity class,
+  - The second element ``MUST`` be a JSON array, indicating the member entity classes. Each element in
+    this array ``MUST`` be a JSON string, indicating the entity class name. In case of 0-D entity class,
     the array is empty.
-  - The third element ``MUST`` be either a JSON string, indicating the object class description, or null.
-  - The fourth element ``MUST`` be either a JSON integer, indicating the object class icon code, or null.
+  - The third element ``MUST`` be either a JSON string, indicating the entity class description, or null.
+  - The fourth element ``MUST`` be either a JSON integer, indicating the entity class icon code, or null.
   - The fourth element ``MUST`` be a JSON boolean, indicating the state of active by default.
 
 - **superclass_subclasses**: the value of this key ``MUST`` be a JSON array,
@@ -134,14 +134,14 @@ The JSON format consists of a single JSON object with the following ``OPTIONAL``
   - The second element ``MUST`` be a JSON string, indicating the subclass name.
 
 - **entities**: the value of this key ``MUST`` be a JSON array,
-  representing a list of objects.
+  representing a list of entities.
   Each element in this array ``MUST`` be itself a JSON array and ``MUST`` have three elements:
 
   - The first element ``MUST`` be a JSON string, indicating the entity class name.
   - The second element ``MUST`` be a JSON array, if the entity is N-dimensional. In this case each element in
     the array ``MUST`` be a JSON string itself, each being an element of the entity. If the entity class is 0-D,
     this element ``MUST`` be a JSON string, indicating the entity name.
-  - The third element ``MUST`` be either a JSON string, indicating the object description, or null.
+  - The third element ``MUST`` be either a JSON string, indicating the entity description, or null.
 
 - **Entity alternatives**: the value of this key ``MUST`` be a JSON array,
   representing a list of entity alternatives.
@@ -181,7 +181,7 @@ The JSON format consists of a single JSON object with the following ``OPTIONAL``
   - The fifth element ``MUST`` be either a JSON string, indicating the parameter description, or null.
 
 - **parameter_values**: the value of this key ``MUST`` be a JSON array,
-  representing a list of object parameter values.
+  representing a list of entity parameter values.
   Each element in this array ``MUST`` be itself a JSON array and ``MUST`` have four elements:
 
   - The first element ``MUST`` be a JSON string, indicating the entity class name.
