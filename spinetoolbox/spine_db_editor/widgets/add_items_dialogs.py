@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,11 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs to add items to databases.
-
-"""
-
+""" Classes for custom QDialogs to add items to databases. """
+from contextlib import suppress
 from itertools import product
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -36,8 +34,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Slot, Qt, QSize, QModelIndex
 from PySide6.QtGui import QIcon
-
 from spinedb_api.helpers import name_from_elements, name_from_dimensions
+from ..helpers import string_to_bool, string_to_display_icon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
@@ -136,7 +134,7 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
                 continue
             element_byname_list = tuple(self.entities[row])
             byname = tuple(x for byname in element_byname_list for x in byname)
-            data.append({"class_name": self.entity_class["name"], "byname": byname})
+            data.append({"entity_class_name": self.entity_class["name"], "entity_byname": byname})
         return {db_map: data for db_map in self.db_maps}
 
 
@@ -193,6 +191,8 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Add entity classes")
+        self.table_view.set_column_converter_for_pasting("display icon", string_to_display_icon)
+        self.table_view.set_column_converter_for_pasting("active by default", string_to_bool)
         self.model = EmptyRowModel(self)
         self.model.force_default = force_default
         self.table_view.setModel(self.model)
@@ -209,16 +209,17 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         self.number_of_dimensions = 1 if dimension_one_name is not None else 0
         self.spin_box.setValue(self.number_of_dimensions)
         self.connect_signals()
-        labels = ['dimension name (1)'] if dimension_one_name is not None else []
-        labels += ['entity class name', 'description', 'display icon', 'databases']
+        labels = ["dimension name (1)"] if dimension_one_name is not None else []
+        labels += ["entity class name", "description", "display icon", "active by default", "databases"]
         self.model.set_horizontal_header_labels(labels)
         db_names = ",".join(x.codename for x in item.db_maps)
         self.default_display_icon = None
         self.model.set_default_row(
             **{
-                'dimension name (1)': dimension_one_name,
-                'display_icon': self.default_display_icon,
-                'databases': db_names,
+                "dimension name (1)": dimension_one_name,
+                "display icon": self.default_display_icon,
+                "active by default": self.number_of_dimensions != 0,
+                "databases": db_names,
             }
         )
         self.model.clear()
@@ -245,6 +246,13 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             self.insert_column()
         elif i < self.number_of_dimensions:
             self.remove_column()
+        default_value = self.number_of_dimensions != 0
+        self.model.default_row["active by default"] = default_value
+        column = self.model.horizontal_header_labels().index("active by default")
+        last_row = self.model.rowCount() - 1
+        index = self.model.index(last_row, column)
+        if index.data() != default_value:
+            self.model.setData(index, default_value)
         self.spin_box.setEnabled(True)
         self.resize_window_to_columns()
 
@@ -266,28 +274,31 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.ItemDataRole.EditRole not in roles:
             return
-        top = top_left.row()
         left = top_left.column()
-        bottom = bottom_right.row()
+        if left >= self.number_of_dimensions:
+            return
         right = bottom_right.column()
+        if right >= self.number_of_dimensions:
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
         for row in range(top, bottom + 1):
-            for column in range(left, right + 1):
-                if column >= self.number_of_dimensions:
-                    break
-            else:
-                col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
-                obj_cls_names = [col_data(j) for j in range(self.number_of_dimensions) if col_data(j)]
-                relationship_class_name = name_from_dimensions(obj_cls_names)
-                self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
+            obj_cls_names = [
+                name for j in range(self.number_of_dimensions) if (name := self.model.index(row, j).data())
+            ]
+            relationship_class_name = name_from_dimensions(obj_cls_names)
+            self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
 
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
-        name_column = self.model.horizontal_header_labels().index("entity class name")
-        description_column = self.model.horizontal_header_labels().index("description")
-        display_icon_column = self.model.horizontal_header_labels().index("display icon")
-        db_column = self.model.horizontal_header_labels().index("databases")
+        header_labels = self.model.horizontal_header_labels()
+        name_column = header_labels.index("entity class name")
+        description_column = header_labels.index("description")
+        display_icon_column = header_labels.index("display icon")
+        active_by_default_column = header_labels.index("active by default")
+        db_column = header_labels.index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
             entity_class_name = row_data[name_column]
@@ -298,7 +309,13 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             display_icon = row_data[display_icon_column]
             if not display_icon:
                 display_icon = self.default_display_icon
-            pre_item = {'name': entity_class_name, 'description': description, 'display_icon': display_icon}
+            active_by_default = row_data[active_by_default_column]
+            pre_item = {
+                "name": entity_class_name,
+                "description": description,
+                "display_icon": display_icon,
+                "active_by_default": active_by_default,
+            }
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""
@@ -319,7 +336,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
                     dimension_id = entity_classes[dimension_name]["id"]
                     dimension_id_list.append(dimension_id)
                 item = pre_item.copy()
-                item['dimension_id_list'] = dimension_id_list
+                item["dimension_id_list"] = dimension_id_list
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
@@ -389,21 +406,24 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
 
     @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        if roles and Qt.ItemDataRole.EditRole not in roles:
+        if roles and Qt.ItemDataRole.EditRole not in roles or self.entity_class is None:
             return
-        if self.entity_class is None:
+        dimension_count = len(self.dimension_name_list)
+        if dimension_count == 0:
             return
         header = self.model.horizontal_header_labels()
-        top = top_left.row()
         left = top_left.column()
-        bottom = bottom_right.row()
         right = bottom_right.column()
-        dimension_count = len(self.dimension_name_list)
+        if left <= header.index("entity name") <= right:
+            return
+        if "databases" in header and left == right == header.index("databases"):
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
         for row in range(top, bottom + 1):
-            if header.index('entity name') not in range(left, right + 1):
-                el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
-                entity_name = name_from_elements(el_names)
-                self.model.setData(self.model.index(row, dimension_count), entity_name)
+            el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
+            entity_name = name_from_elements(el_names)
+            self.model.setData(self.model.index(row, dimension_count), entity_name)
 
 
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
@@ -471,11 +491,11 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         return EmptyRowModel(self)
 
     def _do_reset_model(self):
-        header = self.dimension_name_list + ('entity name', 'databases')
+        header = self.dimension_name_list + ("entity name", "databases")
         self.model.set_horizontal_header_labels(header)
         default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self.class_key in keys]
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
-        defaults = {'databases': db_names}
+        defaults = {"databases": db_names}
         defaults.update(self.entity_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
@@ -491,7 +511,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             if not entity_name:
                 self.parent().msg_error.emit(f"Entity missing at row {i + 1}")
                 return
-            pre_item = {'name': entity_name}
+            pre_item = {"name": entity_name}
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""
@@ -515,7 +535,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                     element_id = entities[entity_class_id, element_byname]["id"]
                     element_id_list.append(element_id)
                 item = pre_item.copy()
-                item.update({'element_id_list': element_id_list, 'class_id': class_id})
+                item.update({"element_id_list": element_id_list, "class_id": class_id})
                 db_map_data.setdefault(db_map, []).append(item)
         return db_map_data
 
@@ -562,6 +582,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         layout.addWidget(QLabel("Database", self))
         layout.addWidget(self.db_combo_box)
         self.splitter = QSplitter(self)
+        self.splitter.setChildrenCollapsible(False)
         self.add_button = QToolButton(self)
         self.add_button.setToolTip("<p>Add entities by combining selected available elements.</p>")
         self.add_button.setIcon(QIcon(":/icons/menu_icons/cubes_plus.svg"))
@@ -677,10 +698,10 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             tree_widget.setHeaderItem(header_item)
             elements = [
                 x
-                for k in ("class_name", "superclass_name")
+                for k in ("entity_class_name", "superclass_name")
                 for x in self.db_mngr.get_items_by_field(self.db_map, "entity", k, name)
             ]
-            items = [QTreeWidgetItem([DB_ITEM_SEPARATOR.join(el["byname"])]) for el in elements]
+            items = [QTreeWidgetItem([DB_ITEM_SEPARATOR.join(el["entity_byname"])]) for el in elements]
             tree_widget.addTopLevelItems(items)
             tree_widget.resizeColumnToContents(0)
             self.splitter.addWidget(tree_widget)
@@ -720,8 +741,8 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
                 to_update.append({"id": id_, "name": new_name})
         to_add = [
             {
-                "class_name": self.class_name,
-                "byname": tuple(x for byname in row[:-1] for x in byname.split(DB_ITEM_SEPARATOR)),
+                "entity_class_name": self.class_name,
+                "entity_byname": tuple(x for byname in row[:-1] for x in byname.split(DB_ITEM_SEPARATOR)),
                 "name": row[-1],
             }
             for row in self.new_items_model._main_data

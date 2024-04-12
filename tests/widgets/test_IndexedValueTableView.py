@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for IndexedValueTableView class.
-"""
-
+"""Unit tests for IndexedValueTableView class."""
 import locale
 import unittest
 from PySide6.QtCore import QItemSelectionModel
@@ -172,7 +170,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
         selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
-        copied_data = locale.str(-1.1) + '\n' + locale.str(-2.2)
+        copied_data = locale.str(-1.1) + "\n" + locale.str(-2.2)
         QApplication.clipboard().setText(copied_data)
         self._table_view.paste()
         selected_indexes = selection_model.selectedIndexes()
@@ -181,5 +179,5 @@ class TestIndexedValueTableView(unittest.TestCase):
         self.assertTrue(model.index(1, 1) in selected_indexes)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

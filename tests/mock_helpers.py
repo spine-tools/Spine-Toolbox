@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,13 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes and functions that can be shared among unit test modules.
-"""
+"""Classes and functions that can be shared among unit test modules."""
 from contextlib import contextmanager
 from unittest import mock
-
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
@@ -106,7 +104,7 @@ def add_ds(project, item_factories, name, x=0.0, y=0.0):
         DataStore: added project item
     """
     item_dict = {name: {"type": "Data Store", "description": "", "url": dict(), "x": x, "y": y}}
-    project.restore_project_items(item_dict, item_factories, silent=True)
+    project.restore_project_items(item_dict, item_factories)
     return project.get_item(name)
 
 
@@ -126,7 +124,7 @@ def add_dc(project, item_factories, name, x=0, y=0, file_refs=None):
     """
     frefs = list() if not file_refs else file_refs
     item_dict = {name: {"type": "Data Connection", "description": "", "references": frefs, "x": x, "y": y}}
-    project.restore_project_items(item_dict, item_factories, silent=True)
+    project.restore_project_items(item_dict, item_factories)
     return project.get_item(name)
 
 
@@ -147,7 +145,7 @@ def add_tool(project, item_factories, name, tool_spec="", x=0, y=0):
     item = {
         name: {"type": "Tool", "description": "", "specification": tool_spec, "execute_in_work": False, "x": x, "y": y}
     }
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -165,7 +163,7 @@ def add_view(project, item_factories, name, x=0, y=0):
         View: added project item
     """
     item = {name: {"type": "View", "description": "", "x": x, "y": y}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -183,7 +181,7 @@ def add_importer(project, item_factories, name, x=0, y=0):
         Importer: added project item
     """
     item = {name: {"type": "Importer", "description": "", "specification": "", "x": x, "y": y}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -201,7 +199,7 @@ def add_data_transformer(project, item_factories, name, x=0, y=0):
         DataTransformer: added project item
     """
     item = {name: {"type": "Data Transformer", "description": "", "x": x, "y": y, "specification": ""}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -219,7 +217,7 @@ def add_exporter(project, item_factories, name, x=0, y=0):
         Exporter: added project item
     """
     item = {name: {"type": "Exporter", "description": "", "x": x, "y": y, "specification": None}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -237,7 +235,7 @@ def add_merger(project, item_factories, name, x=0, y=0):
         Merger: added project item
     """
     item = {name: {"type": "Merger", "description": "", "x": x, "y": y}}
-    project.restore_project_items(item, item_factories, silent=True)
+    project.restore_project_items(item, item_factories)
     return project.get_item(name)
 
 
@@ -322,7 +320,41 @@ def model_data_to_dict(model, parent=QModelIndex()):
     return rows
 
 
+def model_data_to_table(model, parent=QModelIndex(), role=Qt.ItemDataRole.DisplayRole):
+    """Puts model data into Python table.
+
+    Args:
+        model (QAbstractItemModel): model to process
+        parent (QModelIndex): parent index
+        role (Qt.ItemDataRole): data role
+
+    Returns:
+        list of list: model data
+    """
+    data = []
+    for row in range(model.rowCount()):
+        data.append([model.index(row, column, parent).data(role) for column in range(model.columnCount())])
+    return data
+
+
 def fetch_model(model):
     while model.canFetchMore(QModelIndex()):
         model.fetchMore(QModelIndex())
         qApp.processEvents()
+
+
+class FakeDataStore:
+    def __init__(self, n):
+        self.name = n
+
+    def item_type(self):
+        return "Data Store"
+
+    def sql_alchemy_url(self):
+        return f"{self.name}_sql_alchemy_url"
+
+    def is_url_validated(self):
+        return True
+
+    def tear_down(self):
+        return True

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,16 +10,13 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for DB editor's custom ``QTreeView`` classes.
-"""
+"""Unit tests for DB editor's custom ``QTreeView`` classes."""
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide6.QtCore import Qt, QItemSelectionModel
 from PySide6.QtWidgets import QApplication
-
 from spinedb_api import (
     DatabaseMapping,
     from_database,
@@ -32,12 +30,12 @@ from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
     EditEntitiesDialog,
     RemoveEntitiesDialog,
 )
+from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import (
     EditorDelegateMocking,
     add_entity_tree_item,
     add_zero_dimension_entity_class,
     add_entity,
-    TestBase,
 )
 
 
@@ -123,12 +121,6 @@ def _append_table_row(view, row):
 
 
 class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def test_empty_view(self):
         view = self._db_editor.ui.treeView_entity
         model = view.model()
@@ -299,7 +291,6 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
             QApplication.processEvents()
 
     def tearDown(self):
-        # QApplication.processEvents()
         self._common_tear_down()
         self._temp_dir.cleanup()
 
@@ -686,9 +677,6 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
         self._common_setup("sqlite://", create=True)
         self._edits = _ParameterValueListEdits(self._db_editor.ui.treeView_parameter_value_list)
 
-    def tearDown(self):
-        self._common_tear_down()
-
     def test_empty_tree_has_correct_contents(self):
         model = self._db_editor.ui.treeView_parameter_value_list.model()
         root_index = model.index(0, 0)
@@ -874,5 +862,5 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
             self.assertEqual(from_database(data[i].value), expected_value)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

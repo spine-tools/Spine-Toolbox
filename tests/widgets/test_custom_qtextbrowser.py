@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,17 +10,12 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the custom QTextBrowser.
-"""
-
+"""Unit tests for the custom QTextBrowser."""
 import logging
 import unittest
 import sys
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
-
-# XXX: This modules just tests QTextBrowser.maximumBlockCount, so maybe we can remove it?
 
 
 class TestCustomQTextBrowser(unittest.TestCase):
@@ -35,8 +31,8 @@ class TestCustomQTextBrowser(unittest.TestCase):
         logging.basicConfig(
             stream=sys.stderr,
             level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
     def test_default_max_blocks(self):
@@ -48,17 +44,17 @@ class TestCustomQTextBrowser(unittest.TestCase):
         self.assertEqual(browser.document().blockCount(), 1)
         browser.document().setMaximumBlockCount(5)
         for _ in range(5):
-            browser.append('test text')
+            browser.append("test text")
         self.assertEqual(browser.document().blockCount(), 5)
         for _ in range(5):
-            browser.append('new text')
+            browser.append("new text")
         self.assertEqual(browser.document().blockCount(), 5)
 
     def test_extra_blocks_removed_from_start(self):
         browser = CustomQTextBrowser(None)
         self.assertEqual(browser.document().blockCount(), 1)
         browser.document().setMaximumBlockCount(3)
-        texts = ['1', '2', '3', '4', '5']
+        texts = ["1", "2", "3", "4", "5"]
         for t in texts:
             browser.append(t)
         self.assertEqual(browser.document().blockCount(), 3)
@@ -68,5 +64,5 @@ class TestCustomQTextBrowser(unittest.TestCase):
             text_block = text_block.next()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

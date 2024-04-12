@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,13 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Base classes to represent items from multiple databases in a tree.
-"""
+"""Base classes to represent items from multiple databases in a tree."""
 from operator import attrgetter
-
 from PySide6.QtCore import Qt
-
 from ...helpers import rows_to_row_count_tuples, bisect_chunks
 from ...fetch_parent import FlexibleFetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
@@ -201,7 +198,7 @@ class MultiDBTreeItem(TreeItem):
     def deep_merge(self, other):
         """Merges another item and all its descendants into this one."""
         if not isinstance(other, type(self)):
-            raise ValueError(f"Can't merge an instance of {type(other)} into a MultiDBTreeItem.")
+            raise ValueError(f"Can't merge an instance of {type(other).__name__} into a MultiDBTreeItem.")
         for db_map in other.db_maps:
             self.add_db_map_id(db_map, other.db_map_id(db_map))
         self._merge_children(other.children)

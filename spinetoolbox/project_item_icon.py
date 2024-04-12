@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,21 +10,16 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for drawing graphics items on QGraphicsScene.
-"""
-
+"""Classes for drawing graphics items on QGraphicsScene."""
 import math
 from PySide6.QtCore import Qt, QPointF, QRectF, QLineF
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
-    QGraphicsSimpleTextItem,
     QGraphicsPathItem,
     QGraphicsEllipseItem,
     QGraphicsColorizeEffect,
     QGraphicsDropShadowEffect,
-    QApplication,
     QToolTip,
     QStyle,
 )
@@ -32,7 +28,6 @@ from PySide6.QtGui import (
     QPen,
     QBrush,
     QTextCursor,
-    QPalette,
     QTextBlockFormat,
     QFont,
     QPainterPath,
@@ -81,9 +76,11 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.rank_icon = RankIcon(self)
         # Make item name graphics item.
         self._name = ""
-        self.name_item = QGraphicsSimpleTextItem(self._name)
+        self.name_item = QGraphicsTextItem(self._name)
         self.name_item.setZValue(100)
         self.set_name_attributes()  # Set font, size, position, etc.
+        self.spec_item = None  # For displaying Tool Spec icon
+        self.spec_item_renderer = None
         # Make connector buttons
         self.connectors = dict(
             bottom=ConnectorButton(toolbox, self, position="bottom"),
@@ -96,6 +93,31 @@ class ProjectItemIcon(QGraphicsPathItem):
         shadow_effect.setEnabled(False)
         self.setGraphicsEffect(shadow_effect)
         self._update_path()
+
+    def add_specification_icon(self, spec_icon_path):
+        """Adds an SVG icon to bottom left corner of the item icon based on Tool Specification type.
+
+        Args:
+            spec_icon_path (str): Path to icon resource file.
+        """
+        self.spec_item = QGraphicsSvgItem(self)
+        self.spec_item_renderer = QSvgRenderer()
+        loading_ok = self.spec_item_renderer.load(spec_icon_path)
+        if not loading_ok:
+            self._toolbox.msg_error.emit(f"Loading SVG icon from resource {spec_icon_path} failed")
+            return
+        size = self.spec_item_renderer.defaultSize()
+        self.spec_item.setSharedRenderer(self.spec_item_renderer)
+        self.spec_item.setElementId("")
+        dim_max = max(size.width(), size.height())
+        rect_w = 0.3 * self.rect().width()  # Parent rect width
+        self.spec_item.setScale(rect_w / dim_max)
+        self.spec_item.setPos(self.sceneBoundingRect().bottomLeft() - self.spec_item.sceneBoundingRect().center())
+
+    def remove_specification_icon(self):
+        """Removes the specification icon SVG from the scene."""
+        self.spec_item.setParentItem(None)
+        self.spec_item = None
 
     def rect(self):
         return self._rect
@@ -126,8 +148,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self._selection_halo.setPen(selection_pen)
 
     def finalize(self, name, x, y):
-        """
-        Names the icon and moves it by given amount.
+        """Names the icon and moves it by a given amount.
 
         Args:
             name (str): icon's name
@@ -138,7 +159,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.update_name_item(name)
 
     def _setup(self):
-        """Setup item's attributes."""
+        """Sets up item attributes."""
         self.colorizer.setColor(self._icon_color)
         background_color = fix_lightness_color(self._icon_color)
         gradient = QRadialGradient(self._rect.center(), 1 * self._rect.width())
@@ -187,25 +208,28 @@ class ProjectItemIcon(QGraphicsPathItem):
         return self._name
 
     def update_name_item(self, new_name):
-        """Set a new text to name item.
+        """Sets a new text to name item.
 
         Args:
             new_name (str): icon's name
         """
         self._name = new_name
-        self.name_item.setText(new_name)
+        self.name_item.setPlainText(new_name)
         self._reposition_name_item()
+        self.name_item.setTextWidth(100)
 
     def set_name_attributes(self):
-        """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
-        # Set font size and style
+        """Sets name item attributes (font, size, style, alignment)."""
         font = self.name_item.font()
         font.setPixelSize(self.FONT_SIZE_PIXELS)
         font.setBold(True)
         self.name_item.setFont(font)
+        option = self.name_item.document().defaultTextOption()
+        option.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_item.document().setDefaultTextOption(option)
 
     def _reposition_name_item(self):
-        """Set name item position (centered on top of the master icon)."""
+        """Sets name item position (centered on top of the master icon)."""
         main_rect = self.sceneBoundingRect()
         name_rect = self.name_item.sceneBoundingRect()
         self.name_item.setPos(main_rect.center().x() - name_rect.width() / 2, main_rect.y() - name_rect.height() - 4)
@@ -328,14 +352,14 @@ class ProjectItemIcon(QGraphicsPathItem):
         event.accept()
         self.scene().clearSelection()
         self.setSelected(True)
-        ind = self._toolbox.project_item_model.find_item(self.name())
-        self._toolbox.show_project_or_item_context_menu(event.screenPos(), ind)
+        item = self._toolbox.project().get_item(self.name())
+        self._toolbox.show_project_or_item_context_menu(event.screenPos(), item)
 
     def itemChange(self, change, value):
         """
         Reacts to item removal and position changes.
 
-        In particular, destroys the drop shadow effect when the items is removed from a scene
+        In particular, destroys the drop shadow effect when the item is removed from a scene
         and keeps track of item's movements on the scene.
 
         Args:
@@ -413,11 +437,6 @@ class ProjectItemIcon(QGraphicsPathItem):
         except RuntimeError:
             pass
         return restablished
-
-    def select_item(self):
-        """Update GUI to show the details of the selected item."""
-        ind = self._toolbox.project_item_model.find_item(self.name())
-        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
     def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
@@ -501,7 +520,6 @@ class ConnectorButton(QGraphicsPathItem):
         if event.button() != Qt.LeftButton:
             event.accept()
             return
-        self._parent.select_item()
         self._start_link(event)
 
     def _start_link(self, event):
@@ -571,7 +589,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._parent = parent
         self._execution_state = "not started"
         self._text_item = QGraphicsTextItem(self)
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         self._text_item.setFont(font)
         parent_rect = parent.rect()
         self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
@@ -646,7 +664,7 @@ class ExclamationIcon(QGraphicsTextItem):
         super().__init__(parent)
         self._parent = parent
         self._notifications = list()
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         font.setPixelSize(self.FONT_SIZE_PIXELS)
         self.setFont(font)
         self.setDefaultTextColor(QColor("red"))
@@ -715,7 +733,7 @@ class RankIcon(QGraphicsTextItem):
         self._parent = parent
         self._rect = parent.component_rect
         self.bg = QGraphicsPathItem(self)
-        bg_brush = QApplication.palette().brush(QPalette.ToolTipBase)
+        bg_brush = QBrush(QColor(Qt.GlobalColor.white))
         self.bg.setBrush(bg_brush)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)

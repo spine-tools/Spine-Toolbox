@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,9 +9,9 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Contains scenario tree model."""
 import pickle
-
 from PySide6.QtCore import QMimeData, Qt, QByteArray
 from spinetoolbox.helpers import unique_name
 from .tree_model_base import TreeModelBase
@@ -143,7 +144,10 @@ class ScenarioModel(TreeModelBase):
             if target_db_map != scenario_item.db_map:
                 continue
             for name in alternative_names:
-                new_alternative_ids.append(scenario_item.db_map.get_alternative_item(name=name)["id"])
+                if isinstance(name, str):
+                    new_alternative_ids.append(scenario_item.db_map.get_alternative_item(name=name)["id"])
+                else:  # When rearranging alternatives in a scenario, the id is given straight
+                    new_alternative_ids.append(name)
         alternative_id_list = [id_ for id_ in old_alternative_id_list[:row] if id_ not in new_alternative_ids]
         alternative_id_list += new_alternative_ids
         alternative_id_list += [id_ for id_ in old_alternative_id_list[row:] if id_ not in new_alternative_ids]

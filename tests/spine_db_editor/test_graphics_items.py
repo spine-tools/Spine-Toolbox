@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for Database editor's ``graphics_items`` module.
-"""
+"""Unit tests for Database editor's ``graphics_items`` module."""
 import unittest
 from unittest import mock
 from PySide6.QtCore import QPointF
@@ -51,7 +50,7 @@ class TestEntityItem(unittest.TestCase):
                         "name": "r",
                         "id": 2,
                         "class_id": 2,
-                        "class_name": "rc",
+                        "entity_class_name": "rc",
                         "element_id_list": [1],
                     }
                 ]
@@ -75,11 +74,11 @@ class TestEntityItem(unittest.TestCase):
         self._spine_db_editor.deleteLater()
         self._spine_db_editor = None
 
-    def test_entity_name(self):
-        self.assertEqual(self._item.entity_name, "r")
+    def test_name(self):
+        self.assertEqual(self._item.name, "r")
 
     def test_entity_class_id(self):
-        self.assertEqual(self._item.entity_class_id(self._db_map), 2)
+        self.assertEqual(self._item.entity_class_id(self._db_map), self._db_map.get_entity_class_item(id=2)["id"])
 
     def test_entity_class_name(self):
         self.assertEqual(self._item.entity_class_name, "rc")
@@ -104,14 +103,14 @@ class TestEntityItem(unittest.TestCase):
 
     def test_db_map_data(self):
         self.assertEqual(
-            self._item.db_map_data(self._db_map)._asdict(),
+            self._item.db_map_data(self._db_map).resolve(),
             {
-                'name': 'r',
-                'id': 2,
-                'class_id': 2,
-                'class_name': 'rc',
-                'element_id_list': (1,),
-                'description': None,
+                "name": "r",
+                "id": 2,
+                "class_id": 2,
+                "entity_class_name": "rc",
+                "element_id_list": (1,),
+                "description": None,
             },
         )
 

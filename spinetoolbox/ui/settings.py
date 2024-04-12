@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -13,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.6.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -34,7 +35,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QAbstractScro
     QSpinBox, QSplitter, QStackedWidget, QToolButton,
     QVBoxLayout, QWidget)
 
-from spinetoolbox.widgets.custom_qcombobox import CustomQComboBox
+from spinetoolbox.widgets.custom_combobox import CustomQComboBox
 from spinetoolbox import resources_icons_rc
 
 class Ui_SettingsForm(object):
@@ -43,7 +44,7 @@ class Ui_SettingsForm(object):
             SettingsForm.setObjectName(u"SettingsForm")
         SettingsForm.setWindowModality(Qt.ApplicationModal)
         SettingsForm.resize(783, 692)
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(SettingsForm.sizePolicy().hasHeightForWidth())
@@ -83,7 +84,7 @@ class Ui_SettingsForm(object):
         __qlistwidgetitem4 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem4.setIcon(icon4);
         self.listWidget.setObjectName(u"listWidget")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy1.setHorizontalStretch(1)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.listWidget.sizePolicy().hasHeightForWidth())
@@ -107,7 +108,7 @@ class Ui_SettingsForm(object):
         self.splitter.addWidget(self.listWidget)
         self.stackedWidget = QStackedWidget(self.splitter)
         self.stackedWidget.setObjectName(u"stackedWidget")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy2.setHorizontalStretch(2)
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.stackedWidget.sizePolicy().hasHeightForWidth())
@@ -118,7 +119,7 @@ class Ui_SettingsForm(object):
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
         self.groupBox_general = QGroupBox(self.General)
         self.groupBox_general.setObjectName(u"groupBox_general")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy3.setHorizontalStretch(0)
         sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.groupBox_general.sizePolicy().hasHeightForWidth())
@@ -146,7 +147,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_work = QToolButton(self.groupBox_general)
         self.toolButton_browse_work.setObjectName(u"toolButton_browse_work")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy4.setHorizontalStretch(0)
         sizePolicy4.setVerticalStretch(0)
         sizePolicy4.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
@@ -196,7 +197,7 @@ class Ui_SettingsForm(object):
 
         self.checkBox_open_previous_project = QCheckBox(self.groupBox_general)
         self.checkBox_open_previous_project.setObjectName(u"checkBox_open_previous_project")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         sizePolicy5.setHorizontalStretch(0)
         sizePolicy5.setVerticalStretch(0)
         sizePolicy5.setHeightForWidth(self.checkBox_open_previous_project.sizePolicy().hasHeightForWidth())
@@ -276,7 +277,7 @@ class Ui_SettingsForm(object):
 
         self.horizontalLayout_4.addWidget(self.radioButton_bg_solid)
 
-        self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_4.addItem(self.horizontalSpacer_4)
 
@@ -346,7 +347,7 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_6.addWidget(self.groupBox_ui)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_6.addItem(self.verticalSpacer)
 
@@ -383,8 +384,9 @@ class Ui_SettingsForm(object):
 
         self.groupBox_julia = QGroupBox(self.ExternalTools)
         self.groupBox_julia.setObjectName(u"groupBox_julia")
-        self.verticalLayout_16 = QVBoxLayout(self.groupBox_julia)
-        self.verticalLayout_16.setObjectName(u"verticalLayout_16")
+        self.verticalLayout_10 = QVBoxLayout(self.groupBox_julia)
+        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
+        self.verticalLayout_10.setContentsMargins(-1, 9, -1, -1)
         self.horizontalLayout_14 = QHBoxLayout()
         self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
         self.verticalLayout = QVBoxLayout()
@@ -451,7 +453,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.comboBox_julia_kernel = CustomQComboBox(self.groupBox_julia)
         self.comboBox_julia_kernel.setObjectName(u"comboBox_julia_kernel")
-        sizePolicy6 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         sizePolicy6.setHorizontalStretch(0)
         sizePolicy6.setVerticalStretch(0)
         sizePolicy6.setHeightForWidth(self.comboBox_julia_kernel.sizePolicy().hasHeightForWidth())
@@ -475,14 +477,14 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_14.addLayout(self.verticalLayout_15)
 
 
-        self.verticalLayout_16.addLayout(self.horizontalLayout_14)
+        self.verticalLayout_10.addLayout(self.horizontalLayout_14)
 
         self.line = QFrame(self.groupBox_julia)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.HLine)
         self.line.setFrameShadow(QFrame.Sunken)
 
-        self.verticalLayout_16.addWidget(self.line)
+        self.verticalLayout_10.addWidget(self.line)
 
         self.horizontalLayout_12 = QHBoxLayout()
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
@@ -491,7 +493,7 @@ class Ui_SettingsForm(object):
 
         self.horizontalLayout_12.addWidget(self.pushButton_install_julia)
 
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_12.addItem(self.horizontalSpacer)
 
@@ -501,7 +503,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_12.addWidget(self.pushButton_add_up_spine_opt)
 
 
-        self.verticalLayout_16.addLayout(self.horizontalLayout_12)
+        self.verticalLayout_10.addLayout(self.horizontalLayout_12)
 
 
         self.verticalLayout_13.addWidget(self.groupBox_julia)
@@ -511,8 +513,11 @@ class Ui_SettingsForm(object):
         sizePolicy.setHeightForWidth(self.groupBox_python.sizePolicy().hasHeightForWidth())
         self.groupBox_python.setSizePolicy(sizePolicy)
         self.groupBox_python.setMinimumSize(QSize(0, 95))
-        self.horizontalLayout_3 = QHBoxLayout(self.groupBox_python)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.verticalLayout_16 = QVBoxLayout(self.groupBox_python)
+        self.verticalLayout_16.setObjectName(u"verticalLayout_16")
+        self.verticalLayout_16.setContentsMargins(-1, 9, -1, -1)
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.verticalLayout_14 = QVBoxLayout()
         self.verticalLayout_14.setObjectName(u"verticalLayout_14")
         self.radioButton_use_python_basic_console = QRadioButton(self.groupBox_python)
@@ -526,14 +531,14 @@ class Ui_SettingsForm(object):
         self.verticalLayout_14.addWidget(self.radioButton_use_python_jupyter_console)
 
 
-        self.horizontalLayout_3.addLayout(self.verticalLayout_14)
+        self.horizontalLayout_5.addLayout(self.verticalLayout_14)
 
         self.line_2 = QFrame(self.groupBox_python)
         self.line_2.setObjectName(u"line_2")
         self.line_2.setFrameShape(QFrame.VLine)
         self.line_2.setFrameShadow(QFrame.Sunken)
 
-        self.horizontalLayout_3.addWidget(self.line_2)
+        self.horizontalLayout_5.addWidget(self.line_2)
 
         self.verticalLayout_5 = QVBoxLayout()
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
@@ -577,7 +582,10 @@ class Ui_SettingsForm(object):
         self.verticalLayout_5.addLayout(self.horizontalLayout_11)
 
 
-        self.horizontalLayout_3.addLayout(self.verticalLayout_5)
+        self.horizontalLayout_5.addLayout(self.verticalLayout_5)
+
+
+        self.verticalLayout_16.addLayout(self.horizontalLayout_5)
 
 
         self.verticalLayout_13.addWidget(self.groupBox_python)
@@ -606,7 +614,7 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_13.addWidget(self.groupBox_2)
 
-        self.verticalSpacer_2 = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer_2 = QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_13.addItem(self.verticalSpacer_2)
 
@@ -617,7 +625,7 @@ class Ui_SettingsForm(object):
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
         self.groupBox_db_editor_general = QGroupBox(self.SpineDBEditor)
         self.groupBox_db_editor_general.setObjectName(u"groupBox_db_editor_general")
-        sizePolicy7 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        sizePolicy7 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         sizePolicy7.setHorizontalStretch(0)
         sizePolicy7.setVerticalStretch(0)
         sizePolicy7.setHeightForWidth(self.groupBox_db_editor_general.sizePolicy().hasHeightForWidth())
@@ -693,7 +701,7 @@ class Ui_SettingsForm(object):
 
         self.label_6 = QLabel(self.groupBox_entity_graph)
         self.label_6.setObjectName(u"label_6")
-        sizePolicy8 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy8 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         sizePolicy8.setHorizontalStretch(2)
         sizePolicy8.setVerticalStretch(0)
         sizePolicy8.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
@@ -743,7 +751,7 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_9.addWidget(self.groupBox_entity_graph)
 
-        self.verticalSpacer_9 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer_9 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_9.addItem(self.verticalSpacer_9)
 
@@ -770,7 +778,7 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_11.addWidget(self.groupBox)
 
-        self.verticalSpacer_3 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer_3 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_11.addItem(self.verticalSpacer_3)
 
@@ -812,7 +820,7 @@ class Ui_SettingsForm(object):
 
         self.horizontalLayout_16.addWidget(self.engine_process_limit_spin_box)
 
-        self.horizontalSpacer_7 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_7 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_16.addItem(self.horizontalSpacer_7)
 
@@ -855,7 +863,7 @@ class Ui_SettingsForm(object):
 
         self.horizontalLayout_15.addWidget(self.persistent_process_limit_spin_box)
 
-        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_15.addItem(self.horizontalSpacer_6)
 
@@ -952,7 +960,7 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_19.addWidget(self.groupBox_4)
 
-        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_19.addItem(self.verticalSpacer_4)
 
@@ -1027,12 +1035,23 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.comboBox_security, self.lineEdit_secfolder)
         QWidget.setTabOrder(self.lineEdit_secfolder, self.toolButton_pick_secfolder)
         QWidget.setTabOrder(self.toolButton_pick_secfolder, self.listWidget)
+        QWidget.setTabOrder(self.listWidget, self.checkBox_entity_tree_sticky_selection)
+        QWidget.setTabOrder(self.checkBox_entity_tree_sticky_selection, self.checkBox_hide_empty_classes)
+        QWidget.setTabOrder(self.checkBox_hide_empty_classes, self.checkBox_smooth_entity_graph_rotation)
+        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_smooth_entity_graph_zoom)
+        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_zoom, self.spinBox_layout_algo_max_iterations)
+        QWidget.setTabOrder(self.spinBox_layout_algo_max_iterations, self.spinBox_layout_algo_spread_factor)
+        QWidget.setTabOrder(self.spinBox_layout_algo_spread_factor, self.checkBox_auto_expand_entities)
+        QWidget.setTabOrder(self.checkBox_auto_expand_entities, self.checkBox_snap_entities)
+        QWidget.setTabOrder(self.checkBox_snap_entities, self.checkBox_merge_dbs)
+        QWidget.setTabOrder(self.checkBox_merge_dbs, self.spinBox_layout_algo_neg_weight_exp)
+        QWidget.setTabOrder(self.spinBox_layout_algo_neg_weight_exp, self.spinBox_max_ent_dim_count)
 
         self.retranslateUi(SettingsForm)
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -1219,7 +1238,7 @@ class Ui_SettingsForm(object):
         self.label_10.setText(QCoreApplication.translate("SettingsForm", u"Minimum distance between nodes (%)", None))
         self.label_6.setText(QCoreApplication.translate("SettingsForm", u"Number of build iterations", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_auto_expand_entities.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
+        self.checkBox_auto_expand_entities.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its related N-D entities.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the elements in a N-D entity are included in the Entity graph, the graph automatically includes it.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_auto_expand_entities.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand entities", None))
         self.label_16.setText(QCoreApplication.translate("SettingsForm", u"Decay rate of attraction with distance", None))

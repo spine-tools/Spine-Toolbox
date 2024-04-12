@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for drawing graphics items on graph view's QGraphicsScene.
-"""
+"""Classes for drawing graphics items on graph view's QGraphicsScene."""
 from enum import Enum, auto
 from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF, QObject, QByteArray
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
@@ -27,7 +26,6 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction, QColor
-
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, color_from_index
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
@@ -101,7 +99,7 @@ class EntityItem(QGraphicsRectItem):
         return self._db_map_ids
 
     @property
-    def entity_name(self):
+    def name(self):
         return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("name", "")
 
     @property
@@ -120,8 +118,14 @@ class EntityItem(QGraphicsRectItem):
         )
 
     @property
+    def dimension_name_list(self):
+        return self.db_mngr.get_item(self.first_db_map, "entity_class", self.first_entity_class_id).get(
+            "dimension_name_list", ()
+        )
+
+    @property
     def byname(self):
-        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("byname", ())
+        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("entity_byname", ())
 
     @property
     def element_name_list(self):
@@ -129,6 +133,11 @@ class EntityItem(QGraphicsRectItem):
 
     def element_id_list(self, db_map):
         return self.db_mngr.get_item(db_map, "entity", self.entity_id(db_map)).get("element_id_list", ())
+
+    @property
+    def element_byname_list(self):
+        # NOTE: Needed by EditEntitiesDialog
+        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("element_byname_list", ())
 
     @property
     def first_db_map_id(self):
@@ -144,7 +153,7 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def display_data(self):
-        return self.entity_name
+        return self.name
 
     @property
     def display_database(self):
@@ -574,12 +583,19 @@ class EntityItem(QGraphicsRectItem):
 
     def _rotate_svg_item(self):
         arc_items_as_ent = [x for x in self.arc_items if x.ent_item is self]
-        if len(arc_items_as_ent) != 2:
+        if len(arc_items_as_ent) != 2 or self.first_id is None:
             self._svg_item.setRotation(0)
             return
-        arc1, arc2 = arc_items_as_ent  # pylint: disable=unbalanced-tuple-unpacking
-        obj1, obj2 = arc1.el_item, arc2.el_item
-        line = QLineF(obj1.pos(), obj2.pos())
+        first_dimension = self.dimension_name_list[0]
+        element1 = arc_items_as_ent[0].el_item
+        element2 = arc_items_as_ent[1].el_item
+        if element1.entity_class_name == first_dimension:
+            start = element1.pos()
+            end = element2.pos()
+        else:
+            start = element2.pos()
+            end = element1.pos()
+        line = QLineF(start, end)
         self._svg_item.setRotation(-line.angle())
 
     def mouseDoubleClickEvent(self, e):
@@ -685,11 +701,10 @@ class EntityItem(QGraphicsRectItem):
 
 
 class ArcItem(QGraphicsPathItem):
-    """Connects a two EntityItems."""
+    """Connects two EntityItems."""
 
     def __init__(self, ent_item, el_item, width):
-        """Initializes item.
-
+        """
         Args:
             ent_item (spinetoolbox.widgets.graph_view_graphics_items.EntityItem): entity item
             el_item (spinetoolbox.widgets.graph_view_graphics_items.EntityItem): element item
@@ -810,7 +825,7 @@ class CrossHairsItem(EntityItem):
         return None
 
     @property
-    def entity_name(self):
+    def name(self):
         return None
 
     @property

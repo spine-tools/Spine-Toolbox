@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for database item update functionality in Database editor.
-"""
-
+"""Unit tests for database item update functionality in Database editor."""
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from .spine_db_editor_test_base import DBEditorTestBase
 
@@ -36,7 +34,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
-        self.nemo_object = self._entity(1, self.fish_class["id"], 'dory')
+        self.nemo_object = self._entity(1, self.fish_class["id"], "dory")
         self.db_mngr.update_entities({self.mock_db_map: [self.nemo_object]})
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = root_item.child(1)

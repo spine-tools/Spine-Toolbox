@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,12 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A model for variable resolution time series, used by the parameter_value editors.
-"""
-
+"""A model for variable resolution time series, used by the parameter_value editors."""
 import numpy as np
-
 from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import TimeSeriesVariableResolution
 from .indexed_value_table_model import IndexedValueTableModel
@@ -63,7 +60,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             if len(old_indexes) > 1:
                 last_time_step = last_time_stamp - old_indexes[-2]
             else:
-                last_time_step = np.timedelta64(1, 'h')
+                last_time_step = np.timedelta64(1, "h")
 
             new_indexes[: len(old_indexes)] = old_indexes
             for i in range(count):
@@ -78,7 +75,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
                 if len(old_indexes) > 1:
                     time_step = old_indexes[1] - first_time_stamp
                 else:
-                    time_step = np.timedelta64(1, 'h')
+                    time_step = np.timedelta64(1, "h")
                 for i in range(count):
                     new_indexes[i] = first_time_stamp - (count - i) * time_step
                 new_indexes[count:] = old_indexes

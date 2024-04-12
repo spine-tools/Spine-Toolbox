@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,16 +9,15 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for ``scenario_model`` module."""
 from pathlib import Path
 import pickle
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-
 from PySide6.QtCore import QMimeData, Qt, QByteArray
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.scenario_model import ScenarioModel
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
@@ -143,7 +143,8 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(mime_data.text(), "Base\tBase alternative\r\n")
         self.assertTrue(mime_data.hasFormat(mime_types.ALTERNATIVE_DATA))
         data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
-        self.assertEqual(data, {self._db_mngr.db_map_key(self._db_map): [1]})
+        id_ = self._db_map.get_alternative_item(id=1)["id"]
+        self.assertEqual(data, {self._db_mngr.db_map_key(self._db_map): [id_]})
 
     def test_canDropMimeData_returns_true_when_dropping_alternative_to_empty_scenario(self):
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
@@ -258,9 +259,7 @@ class TestScenarioModel(_TestBase):
             ]
         ]
         self.assertEqual(model_data, expected)
-        mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map): ["Base"]}
-        mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
+        mime_data = model.mimeData([model.index(1, 0, scenario_index)])
         self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, 0, 0, scenario_index))
         self._fetch_recursively(model)
         model_data = model_data_to_dict(model)
@@ -547,5 +546,5 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         self.assertEqual(model_data, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

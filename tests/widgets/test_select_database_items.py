@@ -8,10 +8,10 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for ``select_database_items`` module."""
 import unittest
 from contextlib import contextmanager
-
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.select_database_items import SelectDatabaseItems
 
@@ -79,5 +79,5 @@ def _select_database_items(checked_states):
         widget.deleteLater()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

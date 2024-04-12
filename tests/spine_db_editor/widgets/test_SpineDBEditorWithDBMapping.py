@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,17 +9,16 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-""" Unit tests for SpineDBEditor classes. """
+
+"""Unit tests for SpineDBEditor classes."""
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 import logging
 import sys
-
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestSpineDBManager
 
@@ -34,8 +34,8 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         logging.basicConfig(
             stream=sys.stderr,
             level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
     def setUp(self):
@@ -117,5 +117,5 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
                     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

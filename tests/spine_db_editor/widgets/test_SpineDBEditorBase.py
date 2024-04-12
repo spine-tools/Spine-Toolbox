@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains unit tests for the SpineDBEditorBase class.
-"""
-
+"""Contains unit tests for the SpineDBEditorBase class."""
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication
@@ -56,14 +54,6 @@ class TestSpineDBEditorBase(unittest.TestCase):
         self.db_editor.deleteLater()
         self.db_editor = None
 
-    def test_save_window_state(self):
-        self.db_editor.save_window_state()
-        self.db_editor.qsettings.beginGroup.assert_has_calls([mock.call("spineDBEditor"), mock.call("")])
-        self.db_editor.qsettings.endGroup.assert_has_calls([mock.call(), mock.call()])
-        qsettings_save_calls = self.db_editor.qsettings.setValue.call_args_list
-        self.assertEqual(len(qsettings_save_calls), 1)
-        saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
-        self.assertIn("windowState", saved_dict)
 
     def test_import_file_recognizes_excel(self):
         with mock.patch.object(self.db_editor, "qsettings"), mock.patch.object(
@@ -90,5 +80,5 @@ class TestSpineDBEditorBase(unittest.TestCase):
             mock_import_from_json.assert_called_once_with("my_json_file.json")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

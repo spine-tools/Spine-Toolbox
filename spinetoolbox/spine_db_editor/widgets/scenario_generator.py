@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,13 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains a dialog for generating scenarios from selected alternatives.
-"""
+"""Contains a dialog for generating scenarios from selected alternatives."""
 from enum import auto, Enum, unique
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QWidget, QMessageBox
-
 from ...helpers import signal_waiter
 from ..scenario_generation import all_combinations, unique_alternatives
 
@@ -173,7 +171,7 @@ class ScenarioGenerator(QWidget):
         Args:
             check_box_state (int): state of 'Use base alternative' check box
         """
-        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.CheckState.Checked)
+        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.CheckState.Checked.value)
 
     def _insert_base_alternative(self, scenario_alternatives):
         """Prepends base alternative to scenario alternatives if it has been enabled.

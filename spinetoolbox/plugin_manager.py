@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains PluginManager class.
-"""
+"""Contains PluginManager class."""
 import itertools
 import os
 import json
@@ -44,7 +43,7 @@ def _download_file(remote, local):
 def _download_plugin(plugin, plugin_local_dir):
     # 1. Create paths
     plugin_remote_file = plugin["url"]
-    plugin_remote_dir = urljoin(plugin_remote_file, '.')
+    plugin_remote_dir = urljoin(plugin_remote_file, ".")
     plugin_local_file = os.path.join(plugin_local_dir, "plugin.json")
     # 2. Download and parse plugin.json file
     _download_file(plugin_remote_file, plugin_local_file)
@@ -105,7 +104,6 @@ class PluginManager:
         local_data = load_specification_local_data(project.config_dir) if project else {}
         for plugin_dir in plugins_dirs(self._toolbox.qsettings()):
             self.load_individual_plugin(plugin_dir, local_data)
-        self._toolbox.refresh_toolbars()
 
     def reload_plugins_with_local_data(self):
         """Reloads plugins that have project specific local data."""
@@ -153,7 +151,6 @@ class PluginManager:
         self._plugin_specs.update(plugin_specs)
         toolbar = self._plugin_toolbars[name] = PluginToolBar(name, parent=self._toolbox)
         toolbar.setup(plugin_specs, disabled_plugins)
-        self._toolbox.addToolBar(Qt.TopToolBarArea, toolbar)
 
     def _create_worker(self):
         worker = _PluginWorker()

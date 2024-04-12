@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs for julia setup.
-"""
-
+"""Classes for custom QDialogs for julia setup."""
 import os
 from enum import IntEnum, auto
 
@@ -34,7 +32,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, Slot, Qt
 from PySide6.QtGui import QCursor
-from spine_engine.utils.helpers import resolve_python_interpreter
+from spine_engine.utils.helpers import resolve_current_python_interpreter
 from ..execution_managers import QProcessExecutionManager
 from ..config import APPLICATION_PATH
 from .custom_qwidgets import HyperTextLabel, QWizardProcessPage, LabelWithCopyButton
@@ -74,12 +72,12 @@ class InstallJuliaWizard(QWizard):
 
     def set_julia_exe(self):
         basename = next(
-            (file for file in os.listdir(self.field('symlink_dir')) if file.lower().startswith("julia")), None
+            (file for file in os.listdir(self.field("symlink_dir")) if file.lower().startswith("julia")), None
         )
         if basename is None:
             self.julia_exe = None
             return
-        self.julia_exe = os.path.join(self.field('symlink_dir'), basename)
+        self.julia_exe = os.path.join(self.field("symlink_dir"), basename)
 
     def accept(self):
         super().accept()
@@ -91,7 +89,7 @@ class JillNotFoundPage(QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Unable to find jill")
-        conda_env = os.environ.get('CONDA_DEFAULT_ENV', 'base')
+        conda_env = os.environ.get("CONDA_DEFAULT_ENV", "base")
         toolbox_dir = os.path.dirname(APPLICATION_PATH)
         header = (
             "<p>Spine Toolbox needs the <a href='https://pypi.org/project/jill/'>jill</a> package "
@@ -210,7 +208,7 @@ class InstallJuliaPage(QWizardProcessPage):
         # 1. sys.executable when not frozen
         # 2. PATH python if frozen (This fails if no jill installed)
         # 3. If no PATH python, uses embedded python <install_dir>/tools/python.exe
-        python = resolve_python_interpreter("")
+        python = resolve_current_python_interpreter()
         self._exec_mngr = QProcessExecutionManager(self, python, args, semisilent=True)
         self.completeChanged.emit()
         self._exec_mngr.execution_finished.connect(self._handle_julia_install_finished)

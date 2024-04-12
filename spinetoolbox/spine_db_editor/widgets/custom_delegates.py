@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,17 +10,16 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom item delegates.
-"""
-
+"""Custom item delegates."""
 from numbers import Number
 from PySide6.QtCore import QModelIndex, Qt, Signal
-from PySide6.QtWidgets import QStyledItemDelegate, QComboBox
+from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
-from ...widgets.custom_editors import (
+from spinetoolbox.spine_db_editor.widgets.custom_editors import (
+    BooleanSearchBarEditor,
     CustomLineEditor,
+    CustomComboBoxEditor,
     PivotHeaderTableLineEditor,
     SearchBarEditor,
     CheckListEditor,
@@ -331,7 +331,7 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
 
     def createEditor(self, parent, option, index):
         """If the parameter has associated a value list, returns a SearchBarEditor.
-        Otherwise returns or requests a dedicated parameter_value editor.
+        Otherwise, returns or requests a dedicated parameter_value editor.
         """
         self._db_value_list_lookup = {}
         db_map = self._get_db_map(index)
@@ -435,7 +435,7 @@ class ParameterNameDelegate(TableDelegate):
 class EntityBynameDelegate(TableDelegate):
     """A delegate for the entity byname."""
 
-    element_name_list_editor_requested = Signal(QModelIndex, int, object)
+    element_name_list_editor_requested = Signal(QModelIndex, object, object)
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
@@ -474,14 +474,10 @@ class AlternativeNameDelegate(TableDelegate):
 
 
 class BooleanValueDelegate(TableDelegate):
-    TRUE = "true"
-    FALSE = "false"
-
     def setModelData(self, editor, model, index):
         """Sends signal."""
-        try:
-            value = {self.TRUE: True, self.FALSE: False}[editor.data()]
-        except KeyError:
+        value = editor.data()
+        if not isinstance(value, bool):
             return
         self.data_committed.emit(index, value)
 
@@ -490,9 +486,14 @@ class BooleanValueDelegate(TableDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        editor = SearchBarEditor(self.parent(), parent)
-        editor.set_data(str(index.data(Qt.ItemDataRole.EditRole)), [self.TRUE, self.FALSE])
+        editor = self.make_editor(self.parent(), parent, index)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
+        return editor
+
+    @classmethod
+    def make_editor(cls, parent, tutor, index):
+        editor = BooleanSearchBarEditor(parent, tutor)
+        editor.set_data(index.data(Qt.ItemDataRole.EditRole), None)
         return editor
 
 
@@ -615,6 +616,17 @@ class ScenarioDelegate(QStyledItemDelegate):
         self.setModelData(editor, index.model(), index)
 
 
+class ParameterDefinitionNameAndDescriptionDelegate(TableDelegate):
+    """A delegate for the parameter_name and description columns in Parameter Definition Table View."""
+
+    def setEditorData(self, editor, index):
+        editor.setText(index.data(Qt.ItemDataRole.DisplayRole))
+
+    def createEditor(self, parent, option, index):
+        editor = CustomLineEditor(parent)
+        return editor
+
+
 class ParameterValueListDelegate(QStyledItemDelegate):
     """A delegate for the parameter value list tree."""
 
@@ -716,7 +728,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         """Returns an editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'databases':
+        if header[index.column()] == "databases":
             editor = self._create_database_editor(parent, index)
         else:
             editor = CustomLineEditor(parent)
@@ -733,7 +745,7 @@ class ManageEntityClassesDelegate(ManageItemsDelegate):
     def paint(self, painter, option, index):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'display icon':
+        if header[index.column()] == "display icon":
             icon = object_icon(index.data())
             icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
         else:
@@ -742,14 +754,17 @@ class ManageEntityClassesDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'display icon':
+        label = header[index.column()]
+        if label == "display icon":
             self.icon_color_editor_requested.emit(index)
             editor = None
-        elif header[index.column()] in ('entity class name', 'description'):
+        elif label in ("entity class name", "description"):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
-        elif header[index.column()] == 'databases':
+        elif label == "databases":
             editor = self._create_database_editor(parent, index)
+        elif label == "active by default":
+            editor = BooleanValueDelegate.make_editor(self.parent(), parent, index)
         else:
             editor = SearchBarEditor(parent)
             entity_class_name_list = self.parent().entity_class_name_list(index.row())
@@ -764,11 +779,11 @@ class ManageEntitiesDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'entity name':
+        if header[index.column()] == "entity name":
             editor = CustomLineEditor(parent)
             data = index.data(Qt.ItemDataRole.EditRole)
             editor.set_data(data)
-        elif header[index.column()] == 'databases':
+        elif header[index.column()] == "databases":
             editor = self._create_database_editor(parent, index)
         else:
             editor = SearchBarEditor(parent)
@@ -784,10 +799,21 @@ class RemoveEntitiesDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'databases':
+        if header[index.column()] == "databases":
             editor = self._create_database_editor(parent, index)
             self.connect_editor_signals(editor, index)
             return editor
+
+
+class MetadataDelegate(QStyledItemDelegate):
+    """A delegate for the name and value columns in Metadata Table View."""
+
+    def setEditorData(self, editor, index):
+        editor.setText(index.data(Qt.ItemDataRole.DisplayRole))
+
+    def createEditor(self, parent, option, index):
+        editor = CustomLineEditor(parent)
+        return editor
 
 
 class ItemMetadataDelegate(QStyledItemDelegate):
@@ -798,7 +824,7 @@ class ItemMetadataDelegate(QStyledItemDelegate):
         Args:
             item_metadata_model (ItemMetadataModel): item metadata model
             metadata_model (MetadataTableModel): metadata model
-            column (int): item metadata table column column
+            column (int): item metadata table column
             parent (QObject, optional): parent object
         """
         super().__init__(parent)
@@ -807,7 +833,7 @@ class ItemMetadataDelegate(QStyledItemDelegate):
         self._column = column
 
     def createEditor(self, parent, option, index):
-        editor = QComboBox(parent)
+        editor = CustomComboBoxEditor(parent)
         editor.setEditable(True)
         database_codename = self._item_metadata_model.index(index.row(), MetadataColumn.DB_MAP).data()
         items = set()

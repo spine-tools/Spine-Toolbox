@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides SpineDBIconManager.
-"""
-
+"""Provides SpineDBIconManager."""
 from PySide6.QtCore import Qt, QPointF, QRectF, QBuffer
 from PySide6.QtWidgets import QGraphicsScene
 from PySide6.QtGui import QIcon, QFont, QTextOption, QPainter
@@ -87,7 +85,7 @@ class SpineDBIconManager:
 
     def _create_icon_renderer(self, icon_code, color_code):
         scene = QGraphicsScene()
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         text_item = scene.addText(icon_code, font)
         text_item.setDefaultTextColor(color_code)
         _align_text_in_item(text_item)
@@ -113,7 +111,7 @@ class SpineDBIconManager:
         if not any(dimension_name_list):
             self._multi_class_renderers[dimension_name_list] = self.icon_renderer("\uf1b3", 0)
             return
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         scene = QGraphicsScene()
         x = 0
         for j, dimension_name in enumerate(dimension_name_list):
@@ -134,8 +132,7 @@ class SpineDBIconManager:
 
     def class_renderer(self, entity_class):
         name, dimension_name_list = entity_class["name"], entity_class["dimension_name_list"]
-        display_icon = self.display_icons.get(name)
-        if display_icon:
+        if not dimension_name_list:
             if name not in self._class_renderers:
                 self._create_class_renderer(name)
             return self._class_renderers[name]
@@ -149,7 +146,7 @@ class SpineDBIconManager:
     def _create_group_renderer(self, class_name):
         display_icon = self.display_icons.get(class_name, -1)
         icon_code, color_code = interpret_icon_id(display_icon)
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         scene = QGraphicsScene()
         x = 0
         for _ in range(2):

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Functions for plotting on PlotWidget.
-"""
+"""Functions for plotting on PlotWidget."""
 import datetime
 from enum import auto, Enum, unique
 import math
@@ -20,12 +19,10 @@ from dataclasses import dataclass, field, replace
 import functools
 from operator import methodcaller, itemgetter
 from typing import Dict, List, Optional, Union
-
 from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide6.QtCore import Qt
-
 from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
 from spinedb_api import IndexedValue, DateTime
 from .mvcmodels.shared import PARSED_ROLE
@@ -299,7 +296,7 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
     plot_widget.canvas.axes.set_title(plot_title)
     for data in data_list:
         if type(data.x[0]) not in (float, np.float_, int):
-            plot_widget.canvas.axes.tick_params(axis='x', labelrotation=30)
+            plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
     if len(squeezed_data) > 1:
         plot_widget.add_legend(legend_handles)
     if needs_redraw:

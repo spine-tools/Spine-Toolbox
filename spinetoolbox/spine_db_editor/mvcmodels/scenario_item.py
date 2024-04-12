@@ -11,7 +11,6 @@
 
 """Classes to represent items in scenario tree."""
 from PySide6.QtCore import Qt
-
 from .tree_item_utility import (
     BoldTextMixin,
     EditableMixin,
@@ -58,10 +57,10 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
     def icon_code(self):
         return _SCENARIO_ICON
 
-    @property
-    def tool_tip(self):
-        if not self.id:
+    def tool_tip(self, column):
+        if column == 0 and not self.id:
             return "<p><b>Note</b>: Scenario names longer than 20 characters might appear shortened in generated files.</p>"
+        return super().tool_tip(column)
 
     def _do_set_up(self):
         """Doesn't add children to the last row."""
@@ -130,9 +129,10 @@ class ScenarioAlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def item_type(self):
         return "scenario_alternative"
 
-    @property
-    def tool_tip(self):
-        return "<p>Drag and drop this item to reorder scenario alternatives</p>"
+    def tool_tip(self, column):
+        if column == 0:
+            return "<p>Drag and drop this item to reorder scenario alternatives</p>"
+        return super().tool_tip(column)
 
     def _make_item_data(self):
         return {"name": "Type scenario alternative name here...", "description": ""}

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides PivotModel.
-"""
-
+"""Provides PivotModel."""
 import operator
 from ...helpers import tuple_itemgetter
 
@@ -147,6 +145,8 @@ class PivotModel:
             Callable: an itemgetter
         """
         keys = tuple(self.index_ids.index(i) for i in indexes if i in self.index_ids)
+        if not keys:
+            return lambda _: ()
         return tuple_itemgetter(operator.itemgetter(*keys), len(keys))
 
     def _get_unique_index_values(self, indexes):
@@ -174,7 +174,8 @@ class PivotModel:
                 header = headers[header_name]
                 if not header.accepts(header_id):
                     break
-                sort_keys.append(header.header_data(header_id))
+                sort_key = header.header_data(header_id)
+                sort_keys.append(sort_key if sort_key is not None else "")
             else:
                 accepted[x] = sort_keys
         return [item[0] for item in sorted(accepted.items(), key=operator.itemgetter(1))]
@@ -204,12 +205,12 @@ class PivotModel:
         """Sets values for the frozen indexes.
 
         Args:
-            value (list of str):
+            value (tuple of str):
         """
-        if len(value) != len(self.pivot_frozen):
-            raise ValueError("'value' must have same length as 'self.pivot_frozen'")
         if value == self.frozen_value:
             return
+        if len(value) != len(self.pivot_frozen):
+            raise ValueError("'value' must have same length as 'self.pivot_frozen'")
         self.set_pivot(self.pivot_rows, self.pivot_columns, self.pivot_frozen, value)
 
     def set_frozen(self, frozen):
@@ -260,7 +261,7 @@ class PivotModel:
             return len(self.pivot_rows) * (None,)
         if row == 0:
             return ()
-        raise IndexError('index out of range for current row pivot')
+        raise IndexError("index out of range for current row pivot")
 
     def column_key(self, column):
         if self.pivot_columns:
@@ -269,7 +270,7 @@ class PivotModel:
             return len(self.pivot_columns) * (None,)
         if column == 0:
             return ()
-        raise IndexError('index out of range for current column pivot')
+        raise IndexError("index out of range for current column pivot")
 
     @property
     def rows(self):

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,12 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom QGraphicsScene used in the Design View.
-"""
-
+"""Custom QGraphicsScene used in the Design View."""
 import math
-from PySide6.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEvent, QTimer
+from PySide6.QtCore import Qt, Signal, Slot, QPointF, QEvent, QTimer
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 from PySide6.QtGui import QColor, QPen, QBrush
 from ..project_item_icon import ProjectItemIcon
@@ -45,6 +43,9 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     Mainly, it handles drag and drop events of ProjectItemDragMixin sources.
     """
+
+    link_about_to_be_drawn = Signal()
+    link_drawing_finished = Signal()
 
     def __init__(self, parent, toolbox):
         """
@@ -95,32 +96,45 @@ class DesignGraphicsScene(CustomGraphicsScene):
         super().mouseMoveEvent(event)
 
     def mousePressEvent(self, event):
-        """Puts link drawer to sleep and log message if it looks like the user doesn't know what they're doing."""
-        if (
-            self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false"
-            and self._finish_link()
-        ):
-            return
+        """Puts link drawer to sleep and logs message if it looks like the user doesn't know what they're doing."""
+        if self.link_drawer is not None:
+            if event.button() == Qt.MouseButton.RightButton:
+                return
+            if (
+                self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false"
+                and event.button() == Qt.MouseButton.LeftButton
+                and self._finish_link()
+            ):
+                event.accept()
+                return
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
-        """Makes link if drawer is released over a valid connector button."""
-        if (
-            self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true"
-            and self._finish_link()
-        ):
-            return
+        """Makes link if drawer is released over a valid connector button or cancel link drawing on right button."""
+        if self.link_drawer is not None:
+            if event.button() == Qt.MouseButton.RightButton:
+                self.link_drawer.sleep()
+                event.accept()
+                return
+            if (
+                self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true"
+                and event.button() == Qt.MouseButton.LeftButton
+                and self._finish_link()
+            ):
+                event.accept()
+                return
         super().mouseReleaseEvent(event)
 
     def _finish_link(self):
-        if self.link_drawer is None:
-            return False
         if self.link_drawer.src_connector.isUnderMouse():
             self.link_drawer.sleep()
             return False
         if self.link_drawer.dst_connector is None:
             self.link_drawer.sleep()
             self.emit_connection_failed()
+            return False
+        if self.link_drawer.src_connector == self.link_drawer.dst_connector:
+            self.link_drawer.sleep()
             return False
         self.link_drawer.dst_connector.set_normal_brush()
         self.link_drawer.add_link()
@@ -146,7 +160,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     @Slot()
     def handle_selection_changed(self):
-        """Synchronizes selection with the project tree."""
+        """Activates items or links based on currently selected items (or links)."""
         selected_items = set(self.selectedItems())
         if self._last_selected_items == selected_items:
             return
@@ -160,23 +174,10 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 links.append(item)
         # Set active project item and active link in toolbox
         active_project_item = (
-            self._toolbox.project_item_model.get_item(project_item_icons[0].name()).project_item
-            if len(project_item_icons) == 1
-            else None
+            self._toolbox.project().get_item(project_item_icons[0].name()) if len(project_item_icons) == 1 else None
         )
         active_link_item = links[0].item if len(links) == 1 else None
-        # Sync selection with project tree view
         selected_item_names = {icon.name() for icon in project_item_icons}
-        self._toolbox.sync_item_selection_with_scene = False
-        for ind in self._toolbox.project_item_model.leaf_indexes():
-            item_name = self._toolbox.project_item_model.item(ind).name
-            cmd = QItemSelectionModel.Select if item_name in selected_item_names else QItemSelectionModel.Deselect
-            self._toolbox.ui.treeView_project.selectionModel().select(ind, cmd)
-        self._toolbox.sync_item_selection_with_scene = True
-        # Make last item selected the current index in project tree view
-        if project_item_icons:
-            last_ind = self._toolbox.project_item_model.find_item(project_item_icons[-1].name())
-            self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(last_ind, QItemSelectionModel.NoUpdate)
         selected_link_icons = [conn.parent for link in links for conn in (link.src_connector, link.dst_connector)]
         selected_item_names |= set(icon.name() for icon in selected_link_icons)
         self._toolbox.refresh_active_elements(active_project_item, active_link_item, selected_item_names)
@@ -199,7 +200,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self.bg_choice = bg_choice
 
     def dragLeaveEvent(self, event):
-        """Accept event."""
+        """Accepts event."""
         event.accept()
 
     def dragEnterEvent(self, event):

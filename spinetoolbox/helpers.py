@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-General helper functions and classes.
-"""
+"""General helper functions and classes."""
 import functools
 import time
 from enum import Enum, unique
@@ -28,6 +27,8 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import tempfile
+from typing import Sequence
+
 import matplotlib
 from PySide6.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide6.QtCore import __version__ as qt_version
@@ -51,6 +52,7 @@ from PySide6.QtGui import (
     QColor,
     QFont,
     QPainter,
+    QUndoCommand,
 )
 from spine_engine.utils.serialization import deserialize_path
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
@@ -67,7 +69,7 @@ from .config import (
 if os.name == "nt":
     import ctypes
 
-matplotlib.use('Qt5Agg')
+matplotlib.use("Qt5Agg")
 matplotlib.rcParams.update({"font.size": 8})
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 _matplotlib_version = [int(x) for x in matplotlib.__version__.split(".") if x.isdigit()]
@@ -148,7 +150,7 @@ def create_dir(base_path, folder="", verbosity=False):
 
 
 def rename_dir(old_dir, new_dir, toolbox, box_title):
-    """Renames directory. Called by ``ProjectItemModel.set_item_name()``
+    """Renames directory.
 
     Args:
         old_dir (str): Absolute path to directory that will be renamed
@@ -239,7 +241,7 @@ def set_taskbar_icon():
 def supported_img_formats():
     """Checks if reading .ico files is supported."""
     img_formats = QImageReader().supportedImageFormats()
-    img_formats_str = '\n'.join(str(x) for x in img_formats)
+    img_formats_str = "\n".join(str(x) for x in img_formats)
     logging.debug("Supported Image formats:\n%s", img_formats_str)
 
 
@@ -301,7 +303,7 @@ def copy_files(src_dir, dst_dir, includes=None, excludes=None):
         count (int): Number of files copied
     """
     if includes is None:
-        includes = ['*']
+        includes = ["*"]
     if excludes is None:
         excludes = []
     src_files = []
@@ -504,7 +506,7 @@ class CharIconEngine(TransparentIconEngine):
         super().__init__()
         self.char = char
         self.color = QColor(color)
-        self.font = QFont('Font Awesome 5 Free Solid')
+        self.font = QFont("Font Awesome 5 Free Solid")
 
     def paint(self, painter, rect, mode=None, state=None):
         painter.save()
@@ -864,13 +866,27 @@ def select_conda_executable(parent, line_edit):
     if answer[0] == "":  # Canceled
         return
     # Check that selected file at least starts with string 'conda'
-    _, selected_file = os.path.split(answer[0])
-    if not selected_file.lower().startswith("conda"):
+    if not is_valid_conda_executable(answer[0]):
+        _, selected_file = os.path.split(answer[0])
         msg = "Selected file <b>{0}</b> is not a valid Conda executable".format(selected_file)
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.warning(parent, "Invalid Conda selected", msg)
         return
     line_edit.setText(answer[0])
+
+
+def is_valid_conda_executable(p):
+    """Checks that given path points to an existing file and the file name starts with 'conda'.
+
+    Args:
+        p (str): Absolute path to a file
+    """
+    if not os.path.isfile(p):
+        return False
+    _, filename = os.path.split(p)
+    if not filename.lower().startswith("conda"):
+        return False
+    return True
 
 
 def select_certificate_directory(parent, line_edit):
@@ -1043,21 +1059,6 @@ def unique_name(prefix, existing):
             free = i
             break
     return f"{prefix} ({free})"
-
-
-def get_upgrade_db_promt_text(url, current, expected):
-    text = (
-        f"The database at <b>{url}</b> is at revision <b>{current}</b> and needs to be "
-        f"upgraded to revision <b>{expected}</b> in order to be used with the current "
-        "version of Spine Toolbox."
-    )
-    info_text = (
-        "<b>WARNING</b>: After the upgrade, "
-        "the database may no longer be used "
-        "with previous versions of Spine."
-        "<p>Do you want to upgrade the database now?"
-    )
-    return text, info_text
 
 
 def parse_specification_file(spec_path, logger):
@@ -1332,17 +1333,17 @@ class CustomSyntaxHighlighter(QSyntaxHighlighter):
         self._formats.clear()
         for ttype, tstyle in style:
             text_format = self._formats[ttype] = QTextCharFormat()
-            if tstyle['color']:
-                brush = QBrush(QColor("#" + tstyle['color']))
+            if tstyle["color"]:
+                brush = QBrush(QColor("#" + tstyle["color"]))
                 text_format.setForeground(brush)
-            if tstyle['bgcolor']:
-                brush = QBrush(QColor("#" + tstyle['bgcolor']))
+            if tstyle["bgcolor"]:
+                brush = QBrush(QColor("#" + tstyle["bgcolor"]))
                 text_format.setBackground(brush)
-            if tstyle['bold']:
+            if tstyle["bold"]:
                 text_format.setFontWeight(QFont.Bold)
-            if tstyle['italic']:
+            if tstyle["italic"]:
                 text_format.setFontItalic(True)
-            if tstyle['underline']:
+            if tstyle["underline"]:
                 text_format.setFontUnderline(True)
 
     def yield_formats(self, text):
@@ -1394,7 +1395,7 @@ def restore_ui(window, app_settings, settings_group):
     window_size = app_settings.value("windowSize")
     window_pos = app_settings.value("windowPosition")
     window_state = app_settings.value("windowState")
-    window_maximized = app_settings.value("windowMaximized", defaultValue='false')
+    window_maximized = app_settings.value("windowMaximized", defaultValue="false")
     n_screens = app_settings.value("n_screens", defaultValue=1)
     splitter_states = {
         splitter: app_settings.value(splitter.objectName() + "State") for splitter in window.findChildren(QSplitter)
@@ -1414,7 +1415,7 @@ def restore_ui(window, app_settings, settings_group):
     for splitter, state in splitter_states.items():
         splitter.restoreState(state)
     ensure_window_is_on_screen(window, original_size)
-    if window_maximized == 'true':
+    if window_maximized == "true":
         window.setWindowState(Qt.WindowMaximized)
 
 
@@ -1624,3 +1625,57 @@ def remove_first(lst, items):
             break
         except ValueError:
             pass
+
+
+class SealCommand(QUndoCommand):
+    """A 'meta' command that does not store undo data but can be used in mergeWith methods of other commands."""
+
+    def __init__(self, command_id=1):
+        """
+        Args:
+            command_id (int): command id
+        """
+        super().__init__("")
+        self._id = command_id
+
+    def redo(self):
+        self.setObsolete(True)
+
+    def id(self):
+        return self._id
+
+
+def plain_to_rich(text):
+    """Turns plain strings into rich text.
+
+    Args:
+        text (str): string to convert
+
+    Returns:
+        str: rich text string
+    """
+    return "<qt>" + text + "</qt>"
+
+
+def list_to_rich_text(data):
+    """Turns a sequence of strings into rich text list.
+
+    Args:
+        data (Sequence of str): iterable to convert
+
+    Returns:
+        str: rich text string
+    """
+    return plain_to_rich("<br>".join(data))
+
+
+def plain_to_tool_tip(text):
+    """Turns plain strings into rich text and empty strings/Nones to None.
+
+    Args:
+        text (str, optional): string to convert
+
+    Returns:
+        str or NoneType: rich text string or None
+    """
+    return plain_to_rich(text) if text else None

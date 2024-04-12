@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Compound models.
-These models concatenate several 'single' models and one 'empty' model.
-"""
+""" Compound models. These models concatenate several 'single' models and one 'empty' model. """
 from PySide6.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide6.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
@@ -32,7 +30,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Args:
             parent (SpineDBEditor): the parent object
             db_mngr (SpineDBManager): the database manager
-            *db_maps (DiffDatabaseMapping): the database maps included in the model
+            *db_maps (DatabaseMapping): the database maps included in the model
         """
         super().__init__(parent=parent, header=self._make_header())
         self._parent = parent
@@ -103,6 +101,13 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
     def shows_item(self, item, db_map):
         return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
 
+    def reset_db_maps(self, db_maps):
+        if set(db_maps) == set(self.db_maps):
+            return
+        self.db_maps = db_maps
+        self._fetch_parent.set_obsolete(False)
+        self._fetch_parent.reset()
+
     def init_model(self):
         """Initializes the model."""
         super().init_model()
@@ -111,7 +116,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         self.empty_model.fetchMore(QModelIndex())
         while self._auto_filter_menus:
             _, menu = self._auto_filter_menus.popitem()
-            menu.wipe_out()
+            menu.deleteLater()
 
     def get_auto_filter_menu(self, logical_index):
         """Returns auto filter menu for given logical index from header view.
@@ -125,6 +130,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         return self._make_auto_filter_menu(self.header[logical_index])
 
     def _make_auto_filter_menu(self, field):
+        field = self.field_map.get(field, field)
         if field not in self._auto_filter_menus:
             self._auto_filter_menus[field] = menu = AutoFilterMenu(
                 self._parent, self.db_mngr, self.db_maps, self.item_type, field, show_empty=False
@@ -134,12 +140,14 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
 
     def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""
+        field = self.header[section]
+        real_field = self.field_map.get(field, field)
         italic_font = QFont()
         italic_font.setItalic(True)
         if (
             role == Qt.ItemDataRole.FontRole
             and orientation == Qt.Orientation.Horizontal
-            and self._auto_filter.get(self.header[section], {}) != {}
+            and self._auto_filter.get(real_field, {}) != {}
         ):
             return italic_font
         return super().headerData(section, orientation, role)
@@ -272,7 +280,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         """Returns a collection of single models with given db_map.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
 
         Returns:
             list
@@ -303,7 +311,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Also notifies the empty model so it can remove rows that are already in.
 
         Args:
-            db_map_data (dict): list of added dict-items keyed by DiffDatabaseMapping
+            db_map_data (dict): list of added dict-items keyed by DatabaseMapping
         """
         for db_map, items in db_map_data.items():
             db_map_single_models = [m for m in self.single_models if m.db_map is db_map]
@@ -340,7 +348,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         """Creates new single model and resets it with the given parameter ids.
 
         Args:
-            db_map (DiffDatabaseMapping): database map
+            db_map (DatabaseMapping): database map
             entity_class_id (int): parameter's entity class id
             ids (list of int): parameter ids
             committed (bool): True if the ids have been committed, False otherwise
@@ -362,7 +370,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Emits dataChanged so the parameter_name column is refreshed.
 
         Args:
-            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
+            db_map_data (dict): list of updated dict-items keyed by DatabaseMapping
         """
         self.dataChanged.emit(
             self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1), [Qt.ItemDataRole.DisplayRole]
@@ -373,18 +381,33 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Removes the affected rows from the corresponding single models.
 
         Args:
-            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
+            db_map_data (dict): list of removed dict-items keyed by DatabaseMapping
         """
         self.layoutAboutToBeChanged.emit()
         for db_map, items in db_map_data.items():
             items_per_class = self._items_per_class(items)
-            for model in self._models_with_db_map(db_map):
-                removed_ids = [x["id"] for x in items_per_class.get(model.entity_class_id, {})]
+            emptied_single_model_indexes = []
+            for model_index, model in enumerate(self.single_models):
+                if model.db_map != db_map:
+                    continue
+                removed_ids = {x["id"] for x in items_per_class.get(model.entity_class_id, {})}
                 if not removed_ids:
                     continue
-                removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
+                removed_rows = []
+                for row in range(model.rowCount()):
+                    id_ = model._main_data[row]
+                    if id_ in removed_ids:
+                        removed_rows.append(row)
+                        removed_ids.remove(id_)
+                        if not removed_ids:
+                            break
                 for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
                     del model._main_data[row : row + count]
+                if model.rowCount() == 0:
+                    emptied_single_model_indexes.append(model_index)
+            for model_index in reversed(emptied_single_model_indexes):
+                model = self.sub_models.pop(model_index)
+                model.deleteLater()
         self._do_refresh()
         self.layoutChanged.emit()
 
@@ -426,33 +449,16 @@ class FilterEntityAlternativeMixin:
         super().__init__(*args, **kwargs)
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
-        self._filter_class_ids = {}
-        self._filter_class_ids_selected = {}
 
     def init_model(self):
         super().init_model()
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
-        self._filter_class_ids = {}
-        self._filter_class_ids_selected = {}
-
-    def set_filter_class_ids(self, class_ids):
-        if class_ids != self._filter_class_ids:
-            self._filter_class_ids = class_ids
-            for model in self.single_models:
-                model.set_filter_class_ids(class_ids)
-            self._invalidate_filter()
 
     def set_filter_entity_ids(self, entity_ids):
         self._filter_entity_ids = entity_ids
         for model in self.single_models:
             if model.set_filter_entity_ids(entity_ids):
-                self._invalidate_filter()
-
-    def set_filter_all_entity_ids(self, class_ids_selected):
-        self._filter_class_ids_selected = class_ids_selected
-        for model in self.single_models:
-            if model.set_filter_all_entity_ids(class_ids_selected):
                 self._invalidate_filter()
 
     def set_filter_alternative_ids(self, alternative_ids):
@@ -485,8 +491,10 @@ class EditParameterValueMixin:
             return ""
         database = self.index(index.row(), self.columnCount() - 1).data()
         if self.item_type == "parameter_definition":
+            parameter_name = item["name"]
             names = [item["entity_class_name"]]
         elif self.item_type == "parameter_value":
+            parameter_name = item["parameter_name"]
             names = list(item["entity_byname"])
         else:
             raise ValueError(
@@ -495,7 +503,7 @@ class EditParameterValueMixin:
         alternative_name = {"parameter_definition": lambda x: None, "parameter_value": lambda x: x["alternative_name"]}[
             self.item_type
         ](item)
-        return parameter_identifier(database, item["parameter_name"], names, alternative_name)
+        return parameter_identifier(database, parameter_name, names, alternative_name)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,

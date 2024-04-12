@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,15 +10,13 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the metadata table model.
-"""
+"""Unit tests for the metadata table model."""
 import itertools
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
@@ -276,5 +275,5 @@ class TestMetadataTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(row, Column.DB_MAP).data(), "database")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

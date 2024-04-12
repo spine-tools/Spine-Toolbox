@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the MultiSpineDBEditor class.
-"""
-
+"""Contains the MultiSpineDBEditor class."""
 import os
 from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton
 from PySide6.QtCore import Slot, QPoint
@@ -46,7 +44,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         self.statusBar().hide()
         self.tab_load_success = True
         if db_url_codenames is not None:
-            if not self.add_new_tab(db_url_codenames):
+            if not self.add_new_tab(db_url_codenames, window=True):
                 self.tab_load_success = False
 
     def _make_other(self):
@@ -87,10 +85,10 @@ class MultiSpineDBEditor(MultiTabWindow):
         tab.ui.actionClose.triggered.disconnect(self.handle_close_request_from_tab)
         return True
 
-    def _make_new_tab(self, db_url_codenames=None):  # pylint: disable=arguments-differ
+    def _make_new_tab(self, db_url_codenames=None, window=False):  # pylint: disable=arguments-differ
         """Makes a new tab, if successful return the tab, returns None otherwise"""
         tab = SpineDBEditor(self.db_mngr)
-        if not tab.load_db_urls(db_url_codenames, create=True):
+        if not tab.load_db_urls(db_url_codenames, create=True, window=window):
             return
         return tab
 
@@ -98,14 +96,14 @@ class MultiSpineDBEditor(MultiTabWindow):
         toolbox = self.db_mngr.parent()
         if toolbox is None:
             return
-        data_stores = tuple(ds_item.project_item for ds_item in toolbox.project_item_model.items("Data Stores"))
+        data_stores = toolbox.project().get_items_by_type("Data Store")
         ds_urls = {ds.name: ds.sql_alchemy_url() for ds in data_stores}
         is_url_validated = {ds.name: ds.is_url_validated() for ds in data_stores}
         if not ds_urls:
             return
         menu = QMenu(self)
         for name, url in ds_urls.items():
-            action = menu.addAction(name, lambda name=name, url=url: self.add_new_tab({url: name}))
+            action = menu.addAction(name, lambda name=name, url=url: self.db_mngr.open_db_editor({url: name}, True))
             action.setEnabled(url is not None and is_url_validated[name])
         menu.popup(global_pos)
         menu.aboutToHide.connect(menu.deleteLater)
@@ -196,7 +194,7 @@ class _CustomStatusBar(QStatusBar):
             """
         )
         self._hide_button.setText("\uf00d")
-        self._hide_button.setFont(QFont('Font Awesome 5 Free Solid'))
+        self._hide_button.setFont(QFont("Font Awesome 5 Free Solid"))
         self._hide_button.setFixedSize(24, 24)
         self.insertPermanentWidget(0, self._hide_button)
         self.setSizeGripEnabled(False)

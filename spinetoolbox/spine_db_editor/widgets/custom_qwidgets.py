@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom QWidgets.
-"""
-
+"""Custom QWidgets."""
 import os
 from PySide6.QtWidgets import (
     QWidget,
@@ -254,7 +252,7 @@ class TimeLineWidget(QWidget):
         self._min_index = None
         self._max_index = None
         self._index = None
-        self._step_len = np.timedelta64(1, 'h')
+        self._step_len = np.timedelta64(1, "h")
         self._ms_per_step = None
         self._playback_tl = QTimeLine()
         self._playback_tl.setEasingCurve(QEasingCurve(QEasingCurve.Linear))
@@ -268,7 +266,7 @@ class TimeLineWidget(QWidget):
 
     @Slot(int)
     def _update_step_len(self, value):
-        self._step_len = np.timedelta64(value, 'h')
+        self._step_len = np.timedelta64(value, "h")
         self._update_playback()
 
     def _refresh_button_icon(self):
@@ -296,7 +294,7 @@ class TimeLineWidget(QWidget):
 
     @Slot(int)
     def _handle_value_changed(self, value):
-        self._index = self._min_index + value * np.timedelta64(1, 'h')
+        self._index = self._min_index + value * np.timedelta64(1, "h")
         self.index_changed.emit(self._index)
 
     def set_index_range(self, min_index, max_index):
@@ -305,7 +303,7 @@ class TimeLineWidget(QWidget):
         self._index = self._min_index
         self.index_changed.emit(self._index)
         self.show()
-        step_count = (self._max_index - self._min_index) // np.timedelta64(1, 'h')
+        step_count = (self._max_index - self._min_index) // np.timedelta64(1, "h")
         self._playback_tl.setFrameRange(0, step_count - 1)
         self._slider.setRange(0, step_count - 1)
 

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,28 +9,19 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for ``tabular_view_mixin`` module."""
 import itertools
 import unittest
 from unittest.mock import patch
-
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
-
 from spinedb_api import Map
 from tests.mock_helpers import fetch_model
-from tests.spine_db_editor.widgets.helpers import TestBase
+from tests.spine_db_editor.helpers import TestBase
 
 
 class TestPivotHeaderDraggingAndDropping(TestBase):
-    db_codename = "pivot_header_dragging_and_dropping_test_db"
-
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def _add_entity_class_data(self):
         data = {
             "entity_classes": (("class1",),),
@@ -169,16 +161,15 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
         for filter_menu in self._db_editor.filter_menus.values():
             filter_menu._filter._filter_model.canFetchMore(None)
             filter_menu._filter._filter_model.fetchMore(None)
-        while self._db_editor.pivot_table_model.rowCount() != 7:
+        while self._db_editor.pivot_table_model.rowCount() != 6:
             QApplication.processEvents()
         expected = [
-            [None, "parameter", "parameter1", None],
-            ["class1", "index", None, None],
-            ["object1", "k1", "Map", None],
-            ["object1", "k2", "Map", None],
-            ["object2", "k1", "Map", None],
-            ["object2", "k2", "Map", None],
-            [None, None, None, None],
+            [None, "parameter", "parameter1"],
+            ["class1", "index", None],
+            ["object1", "k1", "Map"],
+            ["object1", "k2", "Map"],
+            ["object2", "k1", "Map"],
+            ["object2", "k2", "Map"],
         ]
         self._assert_model_data_equals(self._db_editor.pivot_table_model, expected)
         self._db_mngr.purge_items({self._db_map: ["entity_class"]})
@@ -222,5 +213,5 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

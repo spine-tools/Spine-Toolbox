@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Models to represent entities in a tree.
-"""
-
+"""Models to represent entities in a tree."""
 from .entity_tree_item import EntityTreeRootItem
 from .multi_db_tree_model import MultiDBTreeModel
 
@@ -44,9 +42,9 @@ class EntityTreeModel(MultiDBTreeModel):
             ent_data = ent_item.db_map_data(db_map)
             el_data = el_item.db_map_data(db_map)
             # Get specific data for our searches
-            el_id = el_data['id']
-            element_ids = list(reversed(ent_data['element_id_list']))
-            dimension_ids = list(reversed(ent_data['dimension_id_list']))
+            el_id = el_data["id"]
+            element_ids = list(reversed(ent_data["element_id_list"]))
+            dimension_ids = list(reversed(ent_data["dimension_id_list"]))
             # Find position in the entity of the (grand parent) element,
             # then use it to determine dimension and element id to look for
             pos = element_ids.index(el_id) - 1

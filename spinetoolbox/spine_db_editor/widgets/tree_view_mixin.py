@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the TreeViewMixin class.
-"""
+"""Contains the TreeViewMixin class."""
 from PySide6.QtCore import Slot
 from .add_items_dialogs import (
     AddEntityClassesDialog,
@@ -153,7 +152,7 @@ class TreeViewMixin:
         items_by_class = {}
         for item in items:
             data = item.db_map_data(item.first_db_map)
-            class_key = tuple(data[k] for k in ["class_name", "dimension_name_list", "superclass_name"])
+            class_key = tuple(data[k] for k in ["entity_class_name", "dimension_name_list", "superclass_name"])
             items_by_class.setdefault(class_key, set()).add(item)
         for class_key, classed_items in items_by_class.items():
             dialog = EditEntitiesDialog(self, self.db_mngr, classed_items, class_key)

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Empty models for parameter definitions and values.
-"""
+"""Empty models for parameter definitions and values."""
 from PySide6.QtCore import Qt
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from .single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin
@@ -160,7 +159,7 @@ class ParameterMixin:
         if self.header[index.column()] == self.value_field and role in (
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.ToolTipRole,
-            Qt.TextAlignmentRole,
+            Qt.ItemDataRole.TextAlignmentRole,
             PARSED_ROLE,
         ):
             data = super().data(index, role=Qt.ItemDataRole.EditRole)
@@ -202,13 +201,13 @@ class EntityMixin:
 
     def _make_item(self, row):
         item = super()._make_item(row)
-        if item["entity_byname"]:
-            item["entity_byname"] = tuple(item["entity_byname"].split(DB_ITEM_SEPARATOR))
+        byname = item["entity_byname"]
+        item["entity_byname"] = tuple(byname.split(DB_ITEM_SEPARATOR)) if byname else ()
         return item
 
     @staticmethod
     def _entity_class_name_candidates_by_entity(db_map, item):
-        return [x["class_name"] for x in db_map.get_items("entity", byname=item.get("entity_byname"))]
+        return [x["entity_class_name"] for x in db_map.get_items("entity", entity_byname=item.get("entity_byname"))]
 
 
 class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, EmptyModelBase):

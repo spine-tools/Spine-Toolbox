@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,13 +9,12 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for the ``utils`` module."""
 import unittest
-
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.spine_db_editor.mvcmodels.utils import two_column_as_csv
 
 
@@ -58,5 +58,5 @@ class TestTwoColumnAsCsv(unittest.TestCase):
         self.assertEqual(as_csv, "12\r\n22\r\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

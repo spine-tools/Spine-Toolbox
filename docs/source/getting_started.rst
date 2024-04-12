@@ -50,9 +50,6 @@ The central element in Spine Toolbox's interface is the **Design View**,
 which allows you to visualize and manipulate your project workflow.
 In addition to the **Design View** there are a few `dock widgets` that provide additional functionality:
 
-* **Project** provides a more concise view of your project, including the *Items* that are currently in the
-  project, grouped by category: Data Stores, Data Connections, Tools, Views, Importers, Exporters and
-  Manipulators.
 * **Properties** provides an interface to interact with the currently selected project item.
 * **Event Log** shows relevant messages about user performed actions and the status of executions.
 * **Console** allows Spine Toolbox to execute Tools written in Python, Julia or GAMS and provides an interface to
@@ -166,8 +163,7 @@ To add a Tool item drag-and-drop the Tool icon |tool_icon| from the **Toolbar** 
 
 The **Add Tool** form will popup. Change name of the Tool to 'say hello world', and select 'hello_world' from the
 dropdown list just below, and click **Ok**. Now you should see the newly added Tool item as an icon in the
-**Design View**, and also as an entry in the **Project** dock widget, under the 'Tools' category. It
-should look similar to this:
+**Design View**. It should look similar to this:
 
 .. image:: img/getting_started_first_tool_created.png
    :align: center
@@ -180,7 +176,9 @@ selected from the dropdown list.
 
 .. note:: The Tool specification is now saved to disk but the project itself is not. Remember to save the project
    every once in a while when you are working. You can do this by selecting **File -> Save project**
-   from the main window or by pressing **Ctrl+S** when the main window is active.
+   from the main window or by pressing **Ctrl+S** when the main window is active. If the project is in such a state
+   that it has unsaved changes, an asterisk `*` is visible after the project name and path in the upper left corner
+   of the main window.
 
 Executing a Tool
 ----------------
@@ -220,8 +218,7 @@ To make things more interesting, we will now specify an *input file* for our 'he
    **Data Store**, **Exporter**, and **Data Transformer** project items connected to its input.
 
 Open the Tool specification editor for the 'hello world' Tool spec. You can do this for example, by double-clicking
-the 'say hello world' Tool in **Design View**, or by right clicking the 'say hello world' -item in the **Project** dock
-widget and selecting **Specification... -> Edit specification**, or from the **Tool Properties** by clicking the
+the 'say hello world' Tool in **Design View**, or from the **Tool Properties** by clicking the
 Tool specification options button (|wrench|) next to the specification and selecting **Edit specification**.
 
 In **Input & Output files** dock widget, click the |plus| button next to the `Input Files` text. A dialog appears,
@@ -268,13 +265,12 @@ Let's add a Data Connection item to our project, so that we're able to pass the 
 onto the **Design View**.
 
 The *Add Data Connection* form will show up. Type 'pass input txt' in the name field and click **Ok**. The newly
-added Data Connection item is now in the **Design View**, and also as an entry in the **Project** dock widgets items list,
-under the 'Data Connections' category.
+added Data Connection item is now in the **Design View**.
 
 Adding Data Files to a Data Connection
 --------------------------------------
 
-Select the 'pass input txt' Data Connection item to view its properties in the *Properties* dock widget. It should look
+Select the 'pass input txt' Data Connection item to view its properties in the **Properties** dock widget. It should look
 similar to this:
 
 .. image:: img/getting_started_dc_properties.png

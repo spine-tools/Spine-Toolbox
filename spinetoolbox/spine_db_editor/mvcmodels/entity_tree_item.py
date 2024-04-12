@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,14 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes to represent entities in a tree.
-"""
-
+"""Classes to represent entities in a tree."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QBrush, QIcon
-
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, plain_to_tool_tip
 from spinetoolbox.fetch_parent import FlexibleFetchParent, FetchIndex
 from .multi_db_tree_item import MultiDBTreeItem
 
@@ -129,14 +126,15 @@ class EntityClassItem(MultiDBTreeItem):
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
         if role == Qt.ItemDataRole.ToolTipRole:
-            return self.db_map_data_field(self.first_db_map, "description")
-        if role == Qt.ItemDataRole.FontRole and column == 0:
-            bold_font = QFont()
-            bold_font.setBold(True)
-            return bold_font
-        if role == Qt.ForegroundRole and column == 0:
-            if not self.has_children():
-                return QBrush(Qt.gray)
+            return plain_to_tool_tip(self.db_map_data_field(self.first_db_map, "description"))
+        if column == 0:
+            if role == Qt.ItemDataRole.FontRole:
+                bold_font = QFont()
+                bold_font.setBold(True)
+                return bold_font
+            if role == Qt.ItemDataRole.ForegroundRole:
+                if not self.has_children():
+                    return QBrush(Qt.gray)
         return super().data(column, role)
 
     def _key_for_index(self, db_map):
@@ -164,7 +162,7 @@ class EntityClassItem(MultiDBTreeItem):
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
 
-    visual_key = ["class_name", "byname"]
+    visual_key = ["entity_class_name", "entity_byname"]
     item_type = "entity"
     _fetch_index = EntityIndex()
     _entity_group_index = EntityGroupIndex()
@@ -211,12 +209,16 @@ class EntityItem(MultiDBTreeItem):
 
     @property
     def byname(self):
-        return self.db_map_data_field(self.first_db_map, "byname", default=())
+        return self.db_map_data_field(self.first_db_map, "entity_byname", default=())
+
+    @property
+    def entity_class_name(self):
+        return self.db_map_data_field(self.first_db_map, "entity_class_name", default="")
 
     @property
     def entity_class_key(self):
         return tuple(
-            self.db_map_data_field(self.first_db_map, field) for field in ("class_name", "dimension_name_list")
+            self.db_map_data_field(self.first_db_map, field) for field in ("entity_class_name", "dimension_name_list")
         )
 
     @property
@@ -238,7 +240,7 @@ class EntityItem(MultiDBTreeItem):
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.ToolTipRole:
-            return self.db_map_data_field(self.first_db_map, "description")
+            return plain_to_tool_tip(self.db_map_data_field(self.first_db_map, "description"))
         return super().data(column, role)
 
     def set_data(self, column, value, role):
@@ -248,8 +250,8 @@ class EntityItem(MultiDBTreeItem):
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
-            entity_class_name=self.db_map_data_field(self.first_db_map, "class_name"),
-            entity_byname=DB_ITEM_SEPARATOR.join(self.db_map_data_field(self.first_db_map, "byname")),
+            entity_class_name=self.db_map_data_field(self.first_db_map, "entity_class_name"),
+            entity_byname=DB_ITEM_SEPARATOR.join(self.db_map_data_field(self.first_db_map, "entity_byname")),
             database=self.first_db_map.codename,
         )
 
@@ -307,10 +309,16 @@ class EntityItem(MultiDBTreeItem):
     def _handle_entity_group_items_removed(self, db_map_data):
         db_map_ids = {db_map: [x["member_id"] for x in data] for db_map, data in db_map_data.items()}
         self.remove_children_by_id(db_map_ids)
+        if not any(self.db_mngr.get_item(db_map, "entity", self.db_map_id(db_map)) for db_map in self.db_maps):
+            # Not an entity anymore
+            return
         if self._is_group:
-            for db_map in self.db_maps:
-                if self.db_mngr.get_items_by_field(db_map, "entity_group", "group_id", self.db_map_id(db_map)):
-                    return
+            if any(
+                self.db_mngr.get_items_by_field(db_map, "entity_group", "group_id", self.db_map_id(db_map))
+                for db_map in self.db_maps
+            ):
+                # Still a group
+                return
             self._is_group = False
             self.parent_item.reposition_child(self.child_number())
 

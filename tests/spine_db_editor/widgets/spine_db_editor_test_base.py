@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,10 +9,8 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""
-Base classes and helpers for database editor tests.
-"""
 
+"""Base classes and helpers for database editor tests."""
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication
@@ -55,9 +54,9 @@ class DBEditorTestBase(unittest.TestCase):
         cls.dog_class = cls._entity_class(2, "dog")
         cls.fish_dog_class = cls._entity_class(3, "fish__dog", [cls.fish_class["id"], cls.dog_class["id"]])
         cls.dog_fish_class = cls._entity_class(4, "dog__fish", [cls.dog_class["id"], cls.fish_class["id"]])
-        cls.nemo_object = cls._entity(1, cls.fish_class["id"], 'nemo')
-        cls.pluto_object = cls._entity(2, cls.dog_class["id"], 'pluto')
-        cls.scooby_object = cls._entity(3, cls.dog_class["id"], 'scooby')
+        cls.nemo_object = cls._entity(1, cls.fish_class["id"], "nemo")
+        cls.pluto_object = cls._entity(2, cls.dog_class["id"], "pluto")
+        cls.scooby_object = cls._entity(3, cls.dog_class["id"], "scooby")
         cls.pluto_nemo_rel = cls._entity(
             4, cls.dog_fish_class["id"], "dog__fish_pluto__nemo", [cls.pluto_object["id"], cls.nemo_object["id"]]
         )

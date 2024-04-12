@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the GraphViewMixin class.
-"""
-
+"""Contains the GraphViewMixin class."""
 import itertools
 import json
 from time import monotonic
@@ -220,6 +218,7 @@ class GraphViewMixin:
                 if not item.has_unique_key():
                     self.build_graph(persistent=True)
                     break
+                item.set_up()
 
     def _db_map_ids_by_key(self, db_map_data):
         added_db_map_ids_by_key = {}
@@ -581,7 +580,7 @@ class GraphViewMixin:
     def get_entity_key(self, db_map_entity_id):
         db_map, entity_id = db_map_entity_id
         entity = self.db_mngr.get_item(db_map, "entity", entity_id)
-        key = (entity["class_name"], entity["dimension_name_list"], entity["byname"])
+        key = (entity["entity_class_name"], entity["dimension_name_list"], entity["entity_byname"])
         if not self.ui.graphicsView.get_property("merge_dbs"):
             key += (db_map.codename,)
         return key
@@ -616,8 +615,8 @@ class GraphViewMixin:
         pv = db_map.get_item(
             "parameter_value",
             parameter_definition_name=pname,
-            entity_class_name=entity["class_name"],
-            entity_byname=entity["byname"],
+            entity_class_name=entity["entity_class_name"],
+            entity_byname=entity["entity_byname"],
             alternative_name=alternative["name"],
         )
         if not pv:
@@ -713,11 +712,14 @@ class GraphViewMixin:
         return offset
 
     def _make_new_items(self, x, y):
-        """Returns new items for the graph.
+        """Makes new items for the graph.
 
         Args:
             x (list)
             y (list)
+
+        Returns:
+            bool: True if graph contains any items after the operation, False otherwise
         """
         self.entity_items = [
             EntityItem(
@@ -775,8 +777,10 @@ class GraphViewMixin:
         for item_permutation in itertools.permutations(entity_items):
             dimension_id_lists = list(itertools.product(*[item.entity_class_ids(db_map) for item in item_permutation]))
             if tuple(entity_class["dimension_id_list"]) in dimension_id_lists:
-                element_name_list = tuple(item.entity_name for item in item_permutation)
-                if not db_map.get_item("entity", class_name=entity_class["name"], element_name_list=element_name_list):
+                element_name_list = tuple(item.name for item in item_permutation)
+                if not db_map.get_item(
+                    "entity", entity_class_name=entity_class["name"], element_name_list=element_name_list
+                ):
                     element_byname_list = tuple(item.byname for item in item_permutation)
                     entities.add(element_byname_list)
         if not entities:
@@ -862,6 +866,7 @@ class GraphViewMixin:
             self.scene.deleteLater()
         # Make sure the fetch parent isn't used to remove discarded changes after we've deleted the graph scene.
         self._entity_fetch_parent.set_obsolete(True)
+        self._parameter_value_fetch_parent.set_obsolete(True)
 
 
 class _Offset:

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,14 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains logic for the fixed step time series editor widget.
-"""
-
+"""Contains logic for the fixed step time series editor widget."""
 from datetime import datetime
 from PySide6.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
-from PySide6.QtWidgets import QCalendarWidget, QWidget
-
+from PySide6.QtGui import QFontMetrics
+from PySide6.QtWidgets import QCalendarWidget, QHeaderView, QWidget
 from spinedb_api import (
     duration_to_relativedelta,
     ParameterValueFormatError,
@@ -33,17 +31,17 @@ def _resolution_to_text(resolution):
     """Converts a list of durations into a string of comma-separated durations."""
     if len(resolution) == 1:
         return relativedelta_to_duration(resolution[0])
-    affix = ''
-    text = ''
+    affix = ""
+    text = ""
     for r in resolution:
         text = text + affix + relativedelta_to_duration(r)
-        affix = ', '
+        affix = ", "
     return text
 
 
 def _text_to_resolution(text):
     """Converts a comma-separated string of durations into a resolution array."""
-    return [token.strip() for token in text.split(',')]
+    return [token.strip() for token in text.split(",")]
 
 
 class TimeSeriesFixedResolutionEditor(QWidget):
@@ -74,6 +72,8 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.setupUi(self)
         self._ui.start_time_edit.setText(str(initial_value.start))
         self._ui.start_time_edit.editingFinished.connect(self._start_time_changed)
+        edit_min_width = self._ui.start_time_edit.fontMetrics().horizontalAdvance("YYYY-DD-MMTHH:MM:SS")
+        self._ui.start_time_edit.setMinimumWidth(edit_min_width + 10)
         self._ui.calendar_button.clicked.connect(self._show_calendar)
         self._ui.resolution_edit.setText(_resolution_to_text(initial_value.resolution))
         self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
@@ -81,7 +81,9 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.time_series_table.setModel(self._model)
         self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
-        self._ui.time_series_table.horizontalHeader().sectionDoubleClicked.connect(self._open_header_editor)
+        header = self._ui.time_series_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.sectionDoubleClicked.connect(self._open_header_editor)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
@@ -159,7 +161,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         """Updated the plot."""
         self._ui.plot_widget.canvas.axes.cla()
         add_time_series_plot(self._ui.plot_widget, self._model.value)
-        self._ui.plot_widget.canvas.axes.tick_params(axis='x', labelrotation=30)
+        self._ui.plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
         self._ui.plot_widget.canvas.draw()
 
     def value(self):

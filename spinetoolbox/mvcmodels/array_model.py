@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,15 +10,14 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains model for the Array editor widget.
-"""
+"""Contains model for the Array editor widget."""
 import locale
 from numbers import Number
 import numpy
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from spinedb_api import Array, from_database, ParameterValueFormatError, SpineDBAPIError
 from .indexed_value_table_model import EXPANSE_COLOR
+from ..helpers import plain_to_tool_tip
 
 
 class ArrayModel(QAbstractTableModel):
@@ -145,7 +145,7 @@ class ArrayModel(QAbstractTableModel):
             if row == len(self._data):
                 return None
             element = self._data[row]
-            return str(element)
+            return plain_to_tool_tip(str(element))
         if role == Qt.ItemDataRole.BackgroundRole and row == len(self._data):
             return EXPANSE_COLOR
         return None

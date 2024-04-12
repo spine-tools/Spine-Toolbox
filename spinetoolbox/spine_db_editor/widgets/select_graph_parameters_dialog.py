@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs to add items to databases.
-"""
+"""Classes for custom QDialogs to add items to databases."""
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QDialog,
@@ -21,7 +20,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QStyledItemDelegate,
 )
-from ...widgets.custom_editors import SearchBarEditor
+from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
 
 
 class SelectGraphParametersDialog(QDialog):

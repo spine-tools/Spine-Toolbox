@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the item metadata table model.
-"""
+"""Unit tests for the item metadata table model."""
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
@@ -107,7 +106,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_get_metadata_for_object(self):
-        self._model.set_entity_ids({self._db_map: 1})
+        self._model.set_entity_ids({self._db_map: self._db_map.get_entity_item(id=1)["id"]})
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of objects")
@@ -115,7 +114,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_get_metadata_for_relationship(self):
-        self._model.set_entity_ids({self._db_map: 2})
+        self._model.set_entity_ids({self._db_map: self._db_map.get_entity_item(id=2)["id"]})
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of relationships")
@@ -123,7 +122,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_get_metadata_for_object_parameter_value(self):
-        self._model.set_parameter_value_ids({self._db_map: 1})
+        self._model.set_parameter_value_ids({self._db_map: self._db_map.get_parameter_value_item(id=1)["id"]})
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of object values")
@@ -131,7 +130,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_get_metadata_for_relationship_parameter_value(self):
-        self._model.set_parameter_value_ids({self._db_map: 2})
+        self._model.set_parameter_value_ids({self._db_map: self._db_map.get_parameter_value_item(id=2)["id"]})
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of relationship values")
@@ -145,7 +144,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self.assertEqual(self._model.index(row, Column.DB_MAP).data(), "database")
 
     def test_roll_back_after_item_metadata_update(self):
-        self._model.set_entity_ids({self._db_map: 1})
+        self._model.set_entity_ids({self._db_map: self._db_map.get_entity_item(id=1)["id"]})
         index = self._model.index(0, Column.VALUE)
         self.assertTrue(self._model.setData(index, "Magician's hat"))
         self.assertEqual(self._model.rowCount(), 2)
@@ -159,7 +158,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_update_relationship_parameter_value_metadata(self):
-        self._model.set_parameter_value_ids({self._db_map: 2})
+        self._model.set_parameter_value_ids({self._db_map: self._db_map.get_parameter_value_item(id=2)["id"]})
         index = self._model.index(0, Column.VALUE)
         self.assertTrue(self._model.setData(index, "Magician's hat"))
         self.assertEqual(self._model.rowCount(), 2)
@@ -168,7 +167,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_update_relationship_metadata(self):
-        self._model.set_entity_ids({self._db_map: 2})
+        self._model.set_entity_ids({self._db_map: self._db_map.get_entity_item(id=2)["id"]})
         index = self._model.index(0, Column.VALUE)
         self.assertTrue(self._model.setData(index, "Magician's hat"))
         self.assertEqual(self._model.rowCount(), 2)
@@ -177,21 +176,14 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_add_relationship_parameter_value_metadata(self):
-        self._model.set_parameter_value_ids({self._db_map: 2})
+        self._model.set_parameter_value_ids({self._db_map: self._db_map.get_parameter_value_item(id=2)["id"]})
         index = self._model.index(1, Column.NAME)
         self.assertTrue(self._model.setData(index, "author"))
         index = self._model.index(1, Column.VALUE)
         self.assertTrue(self._model.setData(index, "Anonymous"))
         db_map_item_metadata = {
             self._db_map: [
-                {
-                    "id": 3,
-                    "metadata_id": 5,
-                    "metadata_name": "author",
-                    "metadata_value": "Anonymous",
-                    "parameter_value_id": 2,
-                    "commit_id": None,
-                }
+                {"metadata_name": "author", "metadata_value": "Anonymous", "parameter_value_id": 2, "commit_id": None}
             ]
         }
         self._db_mngr.add_parameter_value_metadata(db_map_item_metadata)
@@ -203,7 +195,7 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_add_relationship_metadata(self):
-        self._model.set_entity_ids({self._db_map: 2})
+        self._model.set_entity_ids({self._db_map: self._db_map.get_entity_item(id=2)["id"]})
         index = self._model.index(1, Column.NAME)
         self.assertTrue(self._model.setData(index, "author"))
         index = self._model.index(1, Column.VALUE)
@@ -211,8 +203,6 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         db_map_item_metadata = {
             self._db_map: [
                 {
-                    "id": 3,
-                    "metadata_id": 5,
                     "metadata_name": "author",
                     "metadata_value": "Anonymous",
                     "entity_id": 2,
@@ -229,15 +219,15 @@ class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
         self._assert_empty_last_row()
 
     def test_remove_object_metadata_row(self):
-        self._model.set_entity_ids({self._db_map: 1})
+        self._model.set_entity_ids({self._db_map: self._db_map.get_entity_item(id=1)["id"]})
         self._model.removeRows(0, 1)
         self.assertEqual(self._model.rowCount(), 1)
 
     def test_remove_object_parameter_value_metadata_row(self):
-        self._model.set_parameter_value_ids({self._db_map: 1})
+        self._model.set_parameter_value_ids({self._db_map: self._db_map.get_parameter_value_item(id=1)["id"]})
         self._model.removeRows(0, 1)
         self.assertEqual(self._model.rowCount(), 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

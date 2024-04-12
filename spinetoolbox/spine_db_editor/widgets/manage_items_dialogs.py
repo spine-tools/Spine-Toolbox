@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,24 +10,20 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs to add edit and remove database items.
-"""
-
+"""Classes for custom QDialogs to add edit and remove database items."""
 from functools import reduce, cached_property
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
 from PySide6.QtCore import Slot, Qt, QModelIndex
 from PySide6.QtGui import QAction
 from ..mvcmodels.entity_tree_item import EntityClassItem
-from ...widgets.custom_editors import IconColorEditor
+from spinetoolbox.spine_db_editor.widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
 from ...helpers import busy_effect, preferred_row_height, DB_ITEM_SEPARATOR
 
 
 class DialogWithButtons(QDialog):
     def __init__(self, parent, db_mngr):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
@@ -58,8 +55,7 @@ class DialogWithButtons(QDialog):
 
 class DialogWithTableAndButtons(DialogWithButtons):
     def __init__(self, parent, db_mngr):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
@@ -105,8 +101,7 @@ class ManageItemsDialog(DialogWithTableAndButtons):
     """
 
     def __init__(self, parent, db_mngr):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
@@ -170,7 +165,7 @@ class GetEntityClassesMixin:
         """Return a list of entity class names present in all databases selected for given row.
         Used by `ManageEntityClassesDelegate`.
         """
-        db_column = self.model.header.index('databases')
+        db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
         return self._entity_class_name_list_from_db_maps(*db_maps)
@@ -222,7 +217,7 @@ class GetEntitiesMixin:
         for db_map in self.db_maps:
             ent_lookup = db_map_ent_lookup.setdefault(db_map, {})
             for x in self.db_mngr.get_items(db_map, "entity"):
-                byname = DB_ITEM_SEPARATOR.join(x["byname"])
+                byname = DB_ITEM_SEPARATOR.join(x["entity_byname"])
                 ent_lookup[x["class_id"], byname] = ent_lookup[x["superclass_id"], byname] = x
         return db_map_ent_lookup
 
@@ -237,7 +232,7 @@ class GetEntitiesMixin:
         """Return a list of alternative names present in all databases selected for given row.
         Used by `ManageEntitiesDelegate`.
         """
-        db_column = self.model.header.index('databases')
+        db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
         return sorted(set(x for db_map in db_maps for x in self.db_map_alt_id_lookup[db_map]))
@@ -246,7 +241,7 @@ class GetEntitiesMixin:
         """Return a list of entity names present in all databases selected for given row.
         Used by `ManageEntitiesDelegate`.
         """
-        db_column = self.model.header.index('databases')
+        db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
         entity_name_lists = []

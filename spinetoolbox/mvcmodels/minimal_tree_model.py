@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Models to represent items in a tree.
-"""
+"""Models to represent items in a tree."""
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
 
 
@@ -147,7 +146,7 @@ class TreeItem:
         """
         bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
         if bad_types:
-            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
+            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self).__name__}")
         if position < 0 or position > self.child_count():
             return False
         self._polish_children(children)

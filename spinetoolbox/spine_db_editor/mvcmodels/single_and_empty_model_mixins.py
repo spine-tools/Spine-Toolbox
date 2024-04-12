@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Miscelaneous mixins for parameter models
-"""
+"""Miscellaneous mixins for parameter models."""
 
 from spinedb_api.parameter_value import split_value_and_type
 
@@ -32,7 +31,8 @@ class ConvertToDBMixin:
         """
         item = item.copy()
         for field, real_field in self.field_map.items():
-            item[real_field] = item.pop(field, None)
+            if field in item:
+                item[real_field] = item.pop(field)
         return item.copy(), []
 
 
@@ -72,5 +72,5 @@ class MakeEntityOnTheFlyMixin(ConvertToDBMixin):
         entity_byname = item.get("entity_byname")
         if not entity_byname:
             return None, []
-        item = {"class_name": entity_class_name, "byname": entity_byname}
+        item = {"entity_class_name": entity_class_name, "entity_byname": entity_byname}
         return None if db_map.get_item("entity", **item) else item, []

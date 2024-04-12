@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the StackedViewMixin class.
-"""
-
+"""Contains the StackedViewMixin class."""
 from PySide6.QtCore import Qt, Slot, QModelIndex, QSignalBlocker
 from PySide6.QtWidgets import QHeaderView
 from PySide6.QtGui import QGuiApplication
@@ -34,7 +32,6 @@ class StackedViewMixin:
         super().__init__(*args, **kwargs)
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
-        self._filter_cls_ids_selected = {}
         self._filter_alternative_ids = {}
         self.parameter_value_model = CompoundParameterValueModel(self, self.db_mngr)
         self.parameter_definition_model = CompoundParameterDefinitionModel(self, self.db_mngr)
@@ -47,10 +44,8 @@ class StackedViewMixin:
         for model, view in self._all_stacked_models.items():
             view.setModel(model)
             view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
-            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-            view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-            view.horizontalHeader().setStretchLastSection(True)
-            view.horizontalHeader().setSectionsMovable(True)
+            horizontal_header = view.horizontalHeader()
+            horizontal_header.setSectionsMovable(True)
             view.connect_spine_db_editor(self)
 
     def connect_signals(self):
@@ -69,11 +64,11 @@ class StackedViewMixin:
         """Initializes models."""
         super().init_models()
         for model in self._all_stacked_models:
-            model.db_maps = self.db_maps
+            model.reset_db_maps(self.db_maps)
             model.init_model()
         self._set_default_parameter_data()
 
-    @Slot(QModelIndex, int, object)
+    @Slot(QModelIndex, object, object)
     def show_element_name_list_editor(self, index, entity_class_id, db_map):
         """Shows the element name list editor.
 
@@ -89,7 +84,7 @@ class StackedViewMixin:
         for id_ in dimension_id_list:
             dimension_name = self.db_mngr.get_item(db_map, "entity_class", id_).get("name")
             entity_name_list = [
-                x["byname"]
+                x["entity_byname"]
                 for k in ("class_id", "superclass_id")
                 for x in self.db_mngr.get_items_by_field(db_map, "entity", k, id_)
             ]
@@ -98,7 +93,7 @@ class StackedViewMixin:
         entity_byname = index.data(Qt.ItemDataRole.EditRole)
         if entity_byname is not None:
             entity = db_map.get_item(
-                "entity", class_name=entity_class["name"], byname=tuple(entity_byname.split(DB_ITEM_SEPARATOR))
+                "entity", entity_class_name=entity_class["name"], byname=tuple(entity_byname.split(DB_ITEM_SEPARATOR))
             )
             current_element_byname_list = entity["element_byname_list"] if entity else []
         else:
@@ -110,7 +105,7 @@ class StackedViewMixin:
         """Sets default rows for parameter models according to given index.
 
         Args:
-            index (QModelIndex): and index of the object or relationship tree
+            index (QModelIndex): an index of the entity tree
         """
         if index is None or not index.isValid():
             default_db_map = next(iter(self.db_maps))
@@ -133,7 +128,6 @@ class StackedViewMixin:
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
-        self._filter_cls_ids_selected = {}
         self._reset_filters()
         trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
         for tree in trees:
@@ -143,13 +137,9 @@ class StackedViewMixin:
         """Resets filters."""
         for model in self._all_stacked_models:
             model.set_filter_class_ids(self._filter_class_ids)
-            if not model.item_type == "parameter_definition":
-                model.set_filter_all_entity_ids(self._filter_cls_ids_selected)
         for model in (self.parameter_value_model, self.entity_alternative_model):
-            model.set_filter_class_ids(self._filter_class_ids)
             model.set_filter_entity_ids(self._filter_entity_ids)
             model.set_filter_alternative_ids(self._filter_alternative_ids)
-            model.set_filter_all_entity_ids(self._filter_cls_ids_selected)
 
     @Slot(list)
     def _handle_graph_selection_changed(self, selected_items):
@@ -161,26 +151,20 @@ class StackedViewMixin:
         self._filter_class_ids = {}
         for db_map, items in active_items.items():
             self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self._filter_entity_ids = self.db_mngr.db_map_ids(active_items)
+        self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
         self._reset_filters()
 
     @Slot(dict)
     def _handle_entity_tree_selection_changed_in_parameter_tables(self, selected_indexes):
         """Resets filter according to entity tree selection."""
         ent_inds = set(selected_indexes.get("entity", {}).keys())
-        # For filtering purposes differentiate between classes that have been selected vs classes that are
-        # active due to their entities being selected.
-        ent_cls_inds_selected = set(selected_indexes.get("entity_class", {}).keys())
-        ent_cls_inds = ent_cls_inds_selected | {
+        ent_cls_inds = set(selected_indexes.get("entity_class", {}).keys()) | {
             parent_ind
             for parent_ind in (ind.parent() for ind in ent_inds)
             if self.entity_tree_model.item_from_index(parent_ind).item_type == "entity_class"
         }
         self._filter_class_ids = self._db_map_ids(ent_cls_inds)
-        self._filter_entity_ids = self._db_map_ids(ent_inds)
-        mixed_selection = bool(ent_cls_inds_selected) and bool(ent_inds)
-        # If both entity classes and entities are selected at the same time
-        self._filter_cls_ids_selected = self._db_map_ids(ent_cls_inds_selected) if mixed_selection else dict()
+        self._filter_entity_ids = self._db_map_class_ids(ent_inds)
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
             self._filter_alternative_ids.clear()
             self._clear_all_other_selections(self.ui.treeView_entity)

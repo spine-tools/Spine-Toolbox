@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the :module:`spinetoolbox.load_project_items` module.
-"""
+"""Unit tests for the :module:`spinetoolbox.load_project_items` module."""
 import unittest
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.load_project_items import load_project_items
@@ -25,24 +24,10 @@ class TestLoadProjectItems(unittest.TestCase):
             QApplication()
 
     def test_load_project_items_finds_all_default_items(self):
-        categories, factories = load_project_items("spine_items")
-        expected_categories = {
-            "Data Connection": "Data Connections",
-            "Data Transformer": "Manipulators",
-            "Merger": "Manipulators",
-            "Data Store": "Data Stores",
-            "Importer": "Importers",
-            "Exporter": "Exporters",
-            "Tool": "Tools",
-            "View": "Views",
-        }
-        self.assertEqual(categories, expected_categories)
-        self.assertEqual(len(factories), len(expected_categories))
-        for item_type in expected_categories:
-            self.assertIn(item_type, factories)
+        factories = load_project_items("spine_items")
         for factory in factories.values():
             self.assertTrue(issubclass(factory, ProjectItemFactory))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

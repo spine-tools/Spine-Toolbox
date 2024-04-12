@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for drawing graphics items on QGraphicsScene.
-"""
-
+"""Classes for drawing graphics items on QGraphicsScene."""
 import functools
 from math import sin, cos, pi, radians
 from PySide6.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
@@ -317,7 +315,7 @@ class _TextIcon(_IconBase):
     def __init__(self, parent, extent, char, tooltip=None, active=False):
         super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)
         self._text_item = QGraphicsTextItem(self)
-        font = QFont('Font Awesome 5 Free Solid', weight=QFont.Bold)
+        font = QFont("Font Awesome 5 Free Solid", weight=QFont.Bold)
         self._text_item.setFont(font)
         self._text_item.setDefaultTextColor(self._fg_color)
         self._text_item.setPlainText(char)
@@ -370,7 +368,7 @@ class JumpOrLink(LinkBase):
         if icon_count == 1:
             self._icons[0].setPos(center - offset)
             return
-        points = list(_regular_poligon_points(icon_count, icon_extent, self._guide_path.angleAtPercent(0.5)))
+        points = list(_regular_polygon_points(icon_count, icon_extent, self._guide_path.angleAtPercent(0.5)))
         points_center = functools.reduce(lambda a, b: a + b, points) / icon_count
         offset += points_center - center
         scale = icon_extent / self._icon_extent
@@ -628,12 +626,14 @@ class LinkDrawerBase(LinkBase):
         view = self._toolbox.ui.graphicsView
         self.tip = view.mapToScene(view.mapFromGlobal(QCursor.pos()))
         self.src_connector = src_connector
-        self.src_connector.scene().addItem(self)
+        scene = self.src_connector.scene()
+        scene.addItem(self)
         self._stroker.setWidth(self.magic_number)
         self._pen.setWidthF(self.magic_number)
         self.setPen(self._pen)
         self.update_geometry()
         self.show()
+        scene.link_about_to_be_drawn.emit()
 
     def sleep(self):
         """Removes this drawer from the scene, clears its source and destination connectors, and hides it.
@@ -643,6 +643,7 @@ class LinkDrawerBase(LinkBase):
         scene.removeItem(self)
         scene.link_drawer = self.src_connector = self.dst_connector = self.tip = None
         self.hide()
+        scene.link_drawing_finished.emit()
 
 
 class ConnectionLinkDrawer(LinkDrawerBase):
@@ -689,7 +690,7 @@ class JumpLinkDrawer(LinkDrawerBase):
         self.sleep()
 
 
-def _regular_poligon_points(n, side, initial_angle=0):
+def _regular_polygon_points(n, side, initial_angle=0):
     internal_angle = 180 * (n - 2) / n
     angle_inc = 180 - internal_angle
     current_angle = initial_angle

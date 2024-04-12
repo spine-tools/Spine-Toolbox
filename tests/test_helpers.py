@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,19 +10,15 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the helpers module.
-"""
+"""Unit tests for the helpers module."""
 import json
 import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication, QLineEdit
-
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
@@ -35,10 +32,13 @@ from spinetoolbox.helpers import (
     format_string_list,
     get_datetime,
     interpret_icon_id,
+    list_to_rich_text,
     load_specification_from_file,
     make_icon_id,
+    plain_to_tool_tip,
     recursive_overwrite,
     rename_dir,
+    plain_to_rich,
     rows_to_row_count_tuples,
     select_julia_executable,
     select_julia_project,
@@ -353,6 +353,29 @@ class TestHTMLTagFilter(unittest.TestCase):
         tag_filter = HTMLTagFilter()
         tag_filter.feed("First line<br>second line")
         self.assertEqual(tag_filter.drain(), "First line\nsecond line")
+
+
+class TestPlainToRich(unittest.TestCase):
+    def test_final_string_is_rich_text(self):
+        self.assertEqual(plain_to_rich(""), "<qt></qt>")
+        self.assertEqual(
+            plain_to_rich("Just a plain string making its way to rich."),
+            "<qt>Just a plain string making its way to rich.</qt>",
+        )
+
+
+class TestListToRichText(unittest.TestCase):
+    def test_makes_rich_text(self):
+        self.assertEqual(list_to_rich_text([]), "<qt></qt>")
+        self.assertEqual(list_to_rich_text(["single"]), "<qt>single</qt>")
+        self.assertEqual(list_to_rich_text(["first", "second"]), "<qt>first<br>second</qt>")
+
+
+class TestPlainToToolTip(unittest.TestCase):
+    def test_makes_tool_tips(self):
+        self.assertIsNone(plain_to_tool_tip(None))
+        self.assertIsNone(plain_to_tool_tip(""))
+        self.assertEqual(plain_to_tool_tip("Is not None."), plain_to_rich("Is not None."))
 
 
 if __name__ == "__main__":

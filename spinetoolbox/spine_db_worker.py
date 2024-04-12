@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,12 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-The SpineDBWorker class
-"""
+"""The SpineDBWorker class."""
 from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtCore import QTimer
-from spinedb_api import DatabaseMapping
+from spinedb_api import Asterisk, DatabaseMapping
 from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 from .helpers import busy_effect
 
@@ -86,6 +85,7 @@ class SpineDBWorker(QObject):
                 index.increment_position(self._db_map)
                 if not item:
                     continue
+                item.validate()
                 index.process_item(item, self._db_map)
             parent_key = parent.key_for_index(self._db_map)
             items = index.get_items(parent_key, self._db_map)[parent_pos:]
@@ -97,6 +97,7 @@ class SpineDBWorker(QObject):
             parent.increment_position(self._db_map)
             if not item:
                 continue
+            item.validate()
             if index is not None or parent.accepts_item(item, self._db_map):
                 parent.bind_item(item, self._db_map)
                 if item.is_valid():
@@ -134,11 +135,14 @@ class SpineDBWorker(QObject):
             self._do_fetch_more(parent)
 
     def _do_fetch_more(self, parent):
-        if self._iterate_mapping(parent) and not self._db_map.has_external_commits():
-            # Something fetched from mapping
-            return
         item_type = parent.fetch_item_type
-        if item_type in self._fetched_item_types:
+        fully_fetched = item_type in self._fetched_item_types
+        # Only trust mapping if no external commits or fully fetched
+        if not self._db_map.has_external_commits() or fully_fetched:
+            if self._iterate_mapping(parent):
+                # Something fetched from mapping
+                return
+        if fully_fetched:
             # Nothing left in the DB
             parent.set_fetched(True)
             return
@@ -272,6 +276,8 @@ class SpineDBWorker(QObject):
             ids (set): ids of items to restore
         """
         items = self._db_map.restore_items(item_type, *ids)
+        if Asterisk in ids:
+            items = self._db_map.get_items(item_type)
         self._db_mngr.update_icons(self._db_map, item_type, items)
         self._db_mngr.items_added.emit(item_type, {self._db_map: items})
         return items

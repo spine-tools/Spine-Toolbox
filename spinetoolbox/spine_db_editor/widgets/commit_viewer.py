@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the CommitViewer class.
-"""
-
+"""Contains the CommitViewer class."""
 from PySide6.QtWidgets import (
     QMainWindow,
     QTabWidget,
@@ -37,6 +35,7 @@ class _DBCommitViewer(QWidget):
         self._commit_list.setHeaderLabel("Commits")
         self._commit_list.setIndentation(0)
         self.splitter = QSplitter(self)
+        self.splitter.setChildrenCollapsible(False)
         self.splitter.setSizes([0.3, 0.7])
         self._affected_items = QTreeWidget(self)
         self._affected_items.setHeaderLabel("Affected items")
@@ -123,7 +122,7 @@ class _AffectedItemsFromOneTable(QTreeWidget):
     @staticmethod
     def _parse_value(value):
         if isinstance(value, bytes):
-            return value.decode('utf-8')
+            return value.decode("utf-8")
         if isinstance(value, (tuple, list)):
             return DB_ITEM_SEPARATOR.join(value)
         return value

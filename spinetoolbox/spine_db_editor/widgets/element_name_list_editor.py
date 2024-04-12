@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,16 +10,13 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the ObjectNameListEditor class.
-"""
-
+"""Contains the ObjectNameListEditor class."""
 from PySide6.QtCore import Qt, Slot, Signal, QEvent, QCoreApplication
 from PySide6.QtWidgets import QItemDelegate
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from .manage_items_dialogs import ManageItemsDialog
-from ...widgets.custom_editors import SearchBarEditor
+from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
 
 
 class SearchBarDelegate(QItemDelegate):
@@ -90,8 +88,6 @@ class ElementNameListEditor(ManageItemsDialog):
 
     @Slot()
     def accept(self):
-        x = DB_ITEM_SEPARATOR.join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
-        print(x)
         self._index.model().setData(
             self._index, DB_ITEM_SEPARATOR.join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
         )

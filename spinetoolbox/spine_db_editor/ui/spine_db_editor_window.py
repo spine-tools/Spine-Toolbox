@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -13,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.6.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -108,7 +109,7 @@ class Ui_MainWindow(object):
         self.actionMass_remove_items.setObjectName(u"actionMass_remove_items")
         self.actionMass_remove_items.setEnabled(False)
         icon10 = QIcon()
-        icon10.addFile(u":/icons/menu_icons/cube_minus.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon10.addFile(u":/icons/menu_icons/bolt-lightning.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionMass_remove_items.setIcon(icon10)
         self.actionExport_session = QAction(MainWindow)
         self.actionExport_session.setObjectName(u"actionExport_session")
@@ -156,7 +157,7 @@ class Ui_MainWindow(object):
         self.actionVacuum.setIcon(icon17)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
@@ -219,7 +220,6 @@ class Ui_MainWindow(object):
         self.tableView_parameter_value.setSortingEnabled(False)
         self.tableView_parameter_value.setWordWrap(False)
         self.tableView_parameter_value.horizontalHeader().setHighlightSections(False)
-        self.tableView_parameter_value.horizontalHeader().setStretchLastSection(True)
         self.tableView_parameter_value.verticalHeader().setVisible(False)
         self.tableView_parameter_value.verticalHeader().setHighlightSections(False)
 
@@ -238,13 +238,11 @@ class Ui_MainWindow(object):
         self.tableView_parameter_definition = ParameterDefinitionTableView(self.dockWidgetContents_5)
         self.tableView_parameter_definition.setObjectName(u"tableView_parameter_definition")
         self.tableView_parameter_definition.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.tableView_parameter_definition.setLayoutDirection(Qt.LeftToRight)
         self.tableView_parameter_definition.setTabKeyNavigation(False)
         self.tableView_parameter_definition.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.tableView_parameter_definition.setSortingEnabled(False)
         self.tableView_parameter_definition.setWordWrap(False)
         self.tableView_parameter_definition.horizontalHeader().setHighlightSections(False)
-        self.tableView_parameter_definition.horizontalHeader().setStretchLastSection(True)
         self.tableView_parameter_definition.verticalHeader().setVisible(False)
         self.tableView_parameter_definition.verticalHeader().setHighlightSections(False)
 
@@ -263,12 +261,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.treeView_entity = EntityTreeView(self.dockWidgetContents_6)
         self.treeView_entity.setObjectName(u"treeView_entity")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy1.setHorizontalStretch(1)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.treeView_entity.sizePolicy().hasHeightForWidth())
         self.treeView_entity.setSizePolicy(sizePolicy1)
-        self.treeView_entity.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.treeView_entity.setEditTriggers(QAbstractItemView.EditKeyPressed)
         self.treeView_entity.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.treeView_entity.setSelectionBehavior(QAbstractItemView.SelectItems)
@@ -289,7 +286,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.graphicsView = EntityQGraphicsView(self.dockWidgetContents_8)
         self.graphicsView.setObjectName(u"graphicsView")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy2.setHorizontalStretch(2)
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
@@ -329,6 +326,8 @@ class Ui_MainWindow(object):
         self.pivot_table.setObjectName(u"pivot_table")
         self.pivot_table.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.pivot_table.setTabKeyNavigation(False)
+        self.pivot_table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.pivot_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
 
         self.verticalLayout_13.addWidget(self.pivot_table)
 
@@ -369,7 +368,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_exports = QHBoxLayout()
         self.horizontalLayout_exports.setSpacing(1)
         self.horizontalLayout_exports.setObjectName(u"horizontalLayout_exports")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_exports.addItem(self.horizontalSpacer)
 
@@ -465,10 +464,16 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.actionCommit.setText(QCoreApplication.translate("MainWindow", u"&Commit...", None))
+#if QT_CONFIG(tooltip)
+        self.actionCommit.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Commit</p><p>Ctrl+Enter</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
         self.actionCommit.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Return", None))
 #endif // QT_CONFIG(shortcut)
         self.actionRollback.setText(QCoreApplication.translate("MainWindow", u"Roll&back", None))
+#if QT_CONFIG(tooltip)
+        self.actionRollback.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Rollback</p><p>Ctrl+Backspace</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
         self.actionRollback.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Backspace", None))
 #endif // QT_CONFIG(shortcut)
@@ -482,10 +487,16 @@ class Ui_MainWindow(object):
         self.actionExport.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Export data into file</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.actionCopy.setText(QCoreApplication.translate("MainWindow", u"Cop&y name(s) as text", None))
+#if QT_CONFIG(tooltip)
+        self.actionCopy.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Copy name(s) as text</p><p>Ctrl+C</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
         self.actionCopy.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+C", None))
 #endif // QT_CONFIG(shortcut)
         self.actionPaste.setText(QCoreApplication.translate("MainWindow", u"P&aste", None))
+#if QT_CONFIG(tooltip)
+        self.actionPaste.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Paste</p><p>Ctrl+V</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
         self.actionPaste.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+V", None))
 #endif // QT_CONFIG(shortcut)
@@ -515,7 +526,13 @@ class Ui_MainWindow(object):
         self.actionUser_guide.setShortcut(QCoreApplication.translate("MainWindow", u"F1", None))
 #endif // QT_CONFIG(shortcut)
         self.actionUndo.setText(QCoreApplication.translate("MainWindow", u"Un&do", None))
+#if QT_CONFIG(tooltip)
+        self.actionUndo.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Undo</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.actionRedo.setText(QCoreApplication.translate("MainWindow", u"&Redo", None))
+#if QT_CONFIG(tooltip)
+        self.actionRedo.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Redo</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.actionNew_db_file.setText(QCoreApplication.translate("MainWindow", u"&New...", None))
 #if QT_CONFIG(tooltip)
         self.actionNew_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>New database file</p></body></html>", None))
@@ -547,7 +564,7 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(accessibility)
         self.dockWidget_entity_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity tree", None))
 #if QT_CONFIG(accessibility)
-        self.treeView_entity.setAccessibleName(QCoreApplication.translate("MainWindow", u"object tree", None))
+        self.treeView_entity.setAccessibleName(QCoreApplication.translate("MainWindow", u"entity tree", None))
 #endif // QT_CONFIG(accessibility)
         self.dockWidget_entity_graph.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity graph", None))
         self.dockWidget_pivot_table.setWindowTitle(QCoreApplication.translate("MainWindow", u"Pivot table", None))

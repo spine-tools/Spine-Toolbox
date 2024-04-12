@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -17,22 +18,66 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
-
-from spinedb_api import DatabaseMapping, import_functions
+from spinedb_api import Array, DatabaseMapping, import_functions, to_database
+from tests.mock_helpers import fetch_model
+from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import (
     add_entity,
     add_zero_dimension_entity_class,
-    TestBase,
     EditorDelegateMocking,
 )
 
 
-class TestParameterTableView(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
+class TestParameterDefinitionTableView(TestBase):
+    def test_plotting(self):
+        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
+        value, value_type = to_database(Array([2.3, 23.0]))
+        self.assert_success(
+            self._db_map.add_parameter_definition_item(
+                name="q", entity_class_name="Object", default_value=value, default_type=value_type
+            )
+        )
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        model = table_view.model()
+        fetch_model(model)
+        index = model.index(0, 3)
+        plot_widget = table_view._plot_selection([index])
+        try:
+            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestParameterDefinitionTableView_db | Object | q")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "i")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "q")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            self.assertIsNone(legend)
+            lines = plot_widget.canvas.axes.get_lines()
+            self.assertEqual(len(lines), 1)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), [0, 1])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 23.0])
+        finally:
+            plot_widget.deleteLater()
 
-    def tearDown(self):
-        self._common_tear_down()
+
+class TestParameterValueTableView(TestBase):
+    def test_paste_empty_string_to_entity_byname_column(self):
+        table_view = self._db_editor.ui.tableView_parameter_value
+        model = table_view.model()
+        byname_column = model.header.index("entity_byname")
+        table_view.selectionModel().setCurrentIndex(
+            model.index(0, byname_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        mock_clipboard = mock.MagicMock()
+        mock_clipboard.text.return_value = "''"
+        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            clipboard.return_value = mock_clipboard
+            self.assertTrue(table_view.paste())
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.columnCount(), 6)
+        expected = [
+            [None, "", None, None, None, "TestParameterValueTableView_db"],
+        ]
+        for row in range(model.rowCount()):
+            for column in range(model.columnCount()):
+                with self.subTest(row=row, column=column):
+                    self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_remove_last_empty_row(self):
         table_view = self._db_editor.ui.tableView_parameter_value
@@ -201,8 +246,44 @@ class TestParameterTableView(TestBase):
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
+    def test_plotting(self):
+        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
+        self.assert_success(self._db_map.add_parameter_definition_item(name="q", entity_class_name="Object"))
+        self.assert_success(self._db_map.add_entity_item(name="baffling sphere", entity_class_name="Object"))
+        value, value_type = to_database(Array([2.3, 23.0]))
+        self.assert_success(
+            self._db_map.add_parameter_value_item(
+                entity_class_name="Object",
+                entity_byname=("baffling sphere",),
+                parameter_definition_name="q",
+                alternative_name="Base",
+                value=value,
+                type=value_type,
+            )
+        )
+        table_view = self._db_editor.ui.tableView_parameter_value
+        model = table_view.model()
+        fetch_model(model)
+        index = model.index(0, 4)
+        plot_widget = table_view._plot_selection([index])
+        try:
+            self.assertEqual(
+                plot_widget.canvas.axes.get_title(),
+                "TestParameterValueTableView_db | Object | baffling sphere | q | Base",
+            )
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "i")
+            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "q")
+            legend = plot_widget.canvas.legend_axes.get_legend()
+            self.assertIsNone(legend)
+            lines = plot_widget.canvas.axes.get_lines()
+            self.assertEqual(len(lines), 1)
+            self.assertEqual(list(lines[0].get_xdata(orig=True)), [0, 1])
+            self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 23.0])
+        finally:
+            plot_widget.deleteLater()
 
-class TestParameterTableWithExistingData(TestBase):
+
+class TestParameterValueTableWithExistingData(TestBase):
     _CHUNK_SIZE = 100  # This has to be large enough, so the chunk won't 'fit' into the table view.
 
     @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=_CHUNK_SIZE)
@@ -300,6 +381,7 @@ class TestParameterTableWithExistingData(TestBase):
             instance = roll_back_dialog.return_value
             instance.exec.return_value = QMessageBox.StandardButton.Ok
             self._db_editor.ui.actionRollback.trigger()
+            self._db_editor.rollback_session()
         while model.rowCount() != self._n_objects * self._n_parameters + 1:
             # Fetch the entire model, because we want to validate all the data.
             model.fetchMore(QModelIndex())
@@ -318,11 +400,35 @@ class TestParameterTableWithExistingData(TestBase):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
+class TestEntityAlternativeTableView(TestBase):
+    def test_pasting_gibberish_to_the_active_column_converts_to_false(self):
+        self._db_map.add_entity_class_item(name="Object")
+        self._db_map.add_entity_item(entity_class_name="Object", name="spoon")
+        table_view = self._db_editor.ui.tableView_entity_alternative
+        model = table_view.model()
+        table_view.selectionModel().setCurrentIndex(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        mock_clipboard = mock.MagicMock()
+        mock_clipboard.text.return_value = "Object\tspoon\tBase\tGIBBERISH"
+        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            clipboard.return_value = mock_clipboard
+            self.assertTrue(table_view.paste())
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 5)
+        expected = [
+            ["Object", "spoon", "Base", False, "TestEntityAlternativeTableView_db"],
+            [None, None, None, None, "TestEntityAlternativeTableView_db"],
+        ]
+        for row in range(model.rowCount()):
+            for column in range(model.columnCount()):
+                with self.subTest(row=row, column=column):
+                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+
 def _set_row_data(view, model, row, data, delegate_mock):
     for column, cell_data in enumerate(data):
         delegate_mock.reset()
         delegate_mock.write_to_index(view, model.index(row, column), cell_data)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

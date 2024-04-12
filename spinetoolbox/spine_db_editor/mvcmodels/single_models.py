@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,12 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Single models for parameter definitions and values (as 'for a single entity').
-"""
-
+"""Single models for parameter definitions and values (as 'for a single entity')."""
 from PySide6.QtCore import Qt
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin
 from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
@@ -196,7 +194,6 @@ class SingleModelBase(HalfSortedTableModel):
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         field = self.header[index.column()]
-        # Background role
         if role == Qt.ItemDataRole.BackgroundRole and field in self.fixed_fields:
             return FIXED_FIELD_COLOR
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole):
@@ -207,7 +204,7 @@ class SingleModelBase(HalfSortedTableModel):
             if role == Qt.ItemDataRole.ToolTipRole:
                 description = self._get_ref(item, field).get("description")
                 if description:
-                    return description
+                    return plain_to_rich(description)
             mapped_field = self._mapped_field(field)
             data = item.get(mapped_field)
             if data and field in self.group_fields:
@@ -247,49 +244,19 @@ class FilterEntityAlternativeMixin:
         super().__init__(*args, **kwargs)
         self._filter_alternative_ids = set()
         self._filter_entity_ids = set()
-        self._filter_class_ids = set()
-        self._all_entity_ids = set()
-        self._selected_classes = set()
 
-    def set_filter_entity_ids(self, db_map_entity_ids):
-        filter_entity_ids = db_map_entity_ids.get(self.db_map, set())
+    def set_filter_entity_ids(self, db_map_class_entity_ids):
+        # Don't accept entity id filters from entities that don't belong in this model
+        filter_entity_ids = set().union(
+            *(
+                ent_ids
+                for (db_map, class_id), ent_ids in db_map_class_entity_ids.items()
+                if db_map == self.db_map and (class_id == self.entity_class_id or class_id in self.dimension_id_list)
+            )
+        )
         if self._filter_entity_ids == filter_entity_ids:
             return False
         self._filter_entity_ids = filter_entity_ids
-        return True
-
-    def set_filter_class_ids(self, db_map_class_ids):
-        filter_class_ids = db_map_class_ids.get(self.db_map, set())
-        if self._filter_class_ids == filter_class_ids:
-            return False
-        self._filter_class_ids = filter_class_ids
-        return True
-
-    def set_filter_all_entity_ids(self, db_map_class_ids_selected):
-        """Creates a set containing the ids of all selected entities as well as the entities
-        belonging to selected classes."""
-        classes = set()
-        for db_map, ids in db_map_class_ids_selected.items():
-            classes |= ids
-        # Set the classes that are explicitly selected by the user.
-        self._selected_classes = classes
-        all_entity_ids = set()
-        for entity in self.db_map.get_items("entity"):
-            if entity.get("class_id", None) in self._filter_class_ids:
-                if entity.get("class_id", None) not in self._selected_classes:
-                    if bool(set(entity.get("element_id_list", None)) & self._filter_entity_ids):
-                        all_entity_ids.add(
-                            entity["id"]
-                        )  # In the case the entity class the entity belongs to isn't selected
-                        # but it is composed of at least one selected entity.
-                else:
-                    all_entity_ids.add(entity["id"])  # If the entity class it belongs to is selected.
-            else:
-                if bool(set(entity.get("element_id_list", None)) & self._filter_entity_ids):
-                    all_entity_ids.add(entity["id"])  # Adds 1D+ entities that have a selected entity in them.
-        if self._all_entity_ids == all_entity_ids | self._filter_entity_ids:
-            return False
-        self._all_entity_ids = all_entity_ids | self._filter_entity_ids
         return True
 
     def set_filter_alternative_ids(self, db_map_alternative_ids):
@@ -311,15 +278,8 @@ class FilterEntityAlternativeMixin:
         """Returns the result of the entity filter."""
         if not self._filter_entity_ids:  # If no entities are selected, only entity classes
             return True
-        entity_id = item.get(self._mapped_field("entity_id"), None)
-        class_id = item.get(self._mapped_field("entity_class_id"), None)
-        if not self._selected_classes:  # If only entities and no classes are selected
-            return entity_id in self._filter_entity_ids or bool(set(item["element_id_list"]) & self._filter_entity_ids)
-        else:  # If both entity classes and entities are selected
-            if class_id not in self._selected_classes:
-                return entity_id in self._all_entity_ids or bool(set(item["element_id_list"]) & self._all_entity_ids)
-            else:  # If the class is not selected, this is allows the non-0D entities of selected classes to show
-                return True
+        entity_id = item[self._mapped_field("entity_id")]
+        return entity_id in self._filter_entity_ids or bool(set(item["element_id_list"]) & self._filter_entity_ids)
 
     def _alternative_filter_accepts_item(self, item):
         """Returns the result of the alternative filter."""

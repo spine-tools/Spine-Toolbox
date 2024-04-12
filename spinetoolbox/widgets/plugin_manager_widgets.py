@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains PluginManager dialogs and widgets.
-"""
+"""Contains PluginManager dialogs and widgets."""
 from PySide6.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QTimer, QSize
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QListView, QDialogButtonBox
 from PySide6.QtGui import QStandardItemModel, QStandardItem
@@ -37,7 +36,7 @@ class InstallPluginDialog(QDialog):
         """Initialize class"""
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
-        self.setWindowTitle('Install plugin')
+        self.setWindowTitle("Install plugin")
         QVBoxLayout(self)
         self._line_edit = QLineEdit(self)
         self._line_edit.setPlaceholderText("Search registry...")
@@ -101,7 +100,7 @@ class ManagePluginsDialog(QDialog):
         """Initialize class"""
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
-        self.setWindowTitle('Manage plugins')
+        self.setWindowTitle("Manage plugins")
         QVBoxLayout(self)
         self._list_view = QListView(self)
         self._model = _ManagePluginsModel(self)

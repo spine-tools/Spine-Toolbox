@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,15 +10,12 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-The SpineDBManager class
-"""
-
+"""The SpineDBManager class."""
 import os
 import json
 from PySide6.QtCore import Qt, QObject, Signal, Slot
-from PySide6.QtWidgets import QMessageBox, QWidget
-from PySide6.QtGui import QFontMetrics, QFont, QWindow
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
+from PySide6.QtGui import QWindow
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
     Array,
@@ -33,7 +31,6 @@ from spinedb_api import (
     Map,
     ParameterValueFormatError,
     relativedelta_to_duration,
-    SpineDBVersionError,
     SpineDBAPIError,
     TimePattern,
     TimeSeries,
@@ -41,9 +38,9 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     to_database,
 )
-from spinedb_api.helpers import name_from_elements
-from spinedb_api.parameter_value import load_db_value
+from spinedb_api.parameter_value import deep_copy_value, load_db_value, dump_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
+from spinedb_api.helpers import remove_credentials_from_url
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
@@ -55,8 +52,9 @@ from .spine_db_commands import (
     RemoveItemsCommand,
 )
 from .mvcmodels.shared import PARSED_ROLE
+from .widgets.options_dialog import OptionsDialog
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, busy_effect
+from .helpers import busy_effect, plain_to_tool_tip
 
 
 @busy_effect
@@ -275,22 +273,22 @@ class SpineDBManager(QObject):
         url = str(url)
         return self._db_maps.get(url)
 
-    def create_new_spine_database(self, url, logger):
+    def create_new_spine_database(self, url, logger, overwrite=False):
+        if not overwrite and not is_empty(url):
+            msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
+            msg.setIcon(QMessageBox.Icon.Question)
+            msg.setWindowTitle("Database not empty")
+            msg.setText(f"The URL <b>{remove_credentials_from_url(url)}</b> points to an existing database.")
+            msg.setInformativeText("Do you want to overwrite it?")
+            overwrite_button = msg.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
+            msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+            msg.exec()
+            # We have custom buttons, exec() returns an opaque value.
+            # Let's check the clicked button explicitly instead.
+            clicked_button = msg.clickedButton()
+            if clicked_button is not overwrite_button:
+                return
         try:
-            if not is_empty(url):
-                msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
-                msg.setIcon(QMessageBox.Icon.Question)
-                msg.setWindowTitle("Database not empty")
-                msg.setText(f"The URL <b>{url}</b> points to an existing database.")
-                msg.setInformativeText("Do you want to overwrite it?")
-                overwrite_button = msg.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
-                msg.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
-                msg.exec()
-                # We have custom buttons, exec() returns an opaque value.
-                # Let's check the clicked button explicitly instead.
-                clicked_button = msg.clickedButton()
-                if clicked_button is not overwrite_button:
-                    return
             do_create_new_spine_database(url)
             logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
             db_map = self.db_map(url)
@@ -320,53 +318,52 @@ class SpineDBManager(QObject):
         for url in list(self._db_maps):
             self.close_session(url)
 
-    def get_db_map(self, url, logger, ignore_version_error=False, codename=None, create=False, upgrade=False):
+    def get_db_map(self, url, logger, ignore_version_error=False, window=False, codename=None, create=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
         Args:
             url (str, URL)
             logger (LoggerInterface)
+            ignore_version_error (bool, optional)
+            window (bool, optional)
             codename (str, NoneType, optional)
-            upgrade (bool, optional)
             create (bool, optional)
 
         Returns:
             DiffDatabaseMapping, NoneType
         """
+        url = str(url)
+        db_map = self._db_maps.get(url)
+        if db_map is not None:
+            if not window and codename is not None and db_map.codename != codename:
+                return None
+            return db_map
         try:
-            return self._do_get_db_map(url, codename, create, upgrade)
-        except SpineDBVersionError as v_err:
+            prompt_data = DatabaseMapping.get_upgrade_db_prompt_data(url, create=create)
+        except SpineDBAPIError as err:
+            logger.msg_error.emit(err.msg)
+            return None
+        if prompt_data is not None:
             if ignore_version_error:
                 return None
-            if v_err.upgrade_available:
-                text, info_text = get_upgrade_db_promt_text(url, v_err.current, v_err.expected)
-                msg = QMessageBox(self.parent() or qApp.activeWindow())  # pylint: disable=undefined-variable
-                msg.setIcon(QMessageBox.Icon.Question)
-                msg.setWindowTitle("Incompatible database version")
-                msg.setText(text)
-                msg.setInformativeText(info_text)
-                msg.addButton(QMessageBox.StandardButton.Cancel)
-                msg.addButton("Upgrade", QMessageBox.ButtonRole.YesRole)
-                ret = msg.exec()  # Show message box
-                if ret == QMessageBox.StandardButton.Cancel:
-                    return None
-                return self.get_db_map(url, logger, codename=codename, create=create, upgrade=True)
-            QMessageBox.information(
-                qApp.activeWindow(),  # pylint: disable=undefined-variable
-                "Unsupported database version",
-                f"Database at <b>{url}</b> is newer than this version of Spine Toolbox can handle.<br><br>"
-                f"The db is at revision <b>{v_err.current}</b> while this version "
-                f"of Spine Toolbox supports revisions up to <b>{v_err.expected}</b>.<br><br>"
-                "Please upgrade Spine Toolbox to open this database.",
+            title, text, option_to_kwargs, notes, preferred = prompt_data
+            kwargs = OptionsDialog.get_answer(
+                self.parent(), title, text, option_to_kwargs, notes=notes, preferred=preferred
             )
-            return None
+            if kwargs is None:
+                return None
+        else:
+            kwargs = {}
+        kwargs.update(codename=codename, create=create)
+        try:
+            return self._do_get_db_map(url, **kwargs)
         except SpineDBAPIError as err:
             logger.msg_error.emit(err.msg)
             return None
 
     @busy_effect
-    def _do_get_db_map(self, url, codename, create, upgrade):
+    def _do_get_db_map(self, url, **kwargs):
         """Returns a memorized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
@@ -379,15 +376,9 @@ class SpineDBManager(QObject):
         Returns:
             DiffDatabaseMapping
         """
-        url = str(url)
-        db_map = self._db_maps.get(url)
-        if db_map is not None:
-            if codename is not None:
-                db_map.codename = codename
-            return db_map
         worker = SpineDBWorker(self, url, synchronous=self._synchronous)
         try:
-            db_map = worker.get_db_map(codename=codename, upgrade=upgrade, create=create)
+            db_map = worker.get_db_map(**kwargs)
         except Exception as error:
             worker.clean_up()
             raise error
@@ -618,28 +609,25 @@ class SpineDBManager(QObject):
             bool
         """
         try:
-            transformations, info = db_map.commit_session(commit_msg)
+            transformations, info = db_map.commit_session(commit_msg, apply_compatibility_transforms=False)
             self.undo_stack[db_map].setClean()
             if info:
                 info = "".join(f"- {x}\n" for x in info)
-                if (
-                    QMessageBox.question(
-                        self.parent(),
-                        "Your data has been refitted",
-                        f"Some of the data committed to the DB at '{db_map.db_url}' "
-                        "used an old format and needed to be refitted. "
-                        f"The following transformations were applied:\n\n{info}\n"
-                        "Do you want to view these changes in your current session too?\n\n"
-                        "WARNING: If you choose 'Yes', you won't be able to undo/redo your previous edits.",
-                    )
-                    == QMessageBox.StandardButton.Yes
-                ):
-                    identifier = self.get_command_identifier()
-                    for tablename, (items_to_add, items_to_update, ids_to_remove) in transformations:
-                        self.remove_items({db_map: {tablename: ids_to_remove}}, identifier=identifier)
-                        self.update_items(tablename, {db_map: items_to_update}, identifier=identifier)
-                        self.add_items(tablename, {db_map: items_to_add}, identifier=identifier)
-                    self.undo_stack[db_map].clear()
+                QMessageBox.warning(
+                    QApplication.activeWindow(),
+                    "Your data needs to be refitted",
+                    f"Some of the data committed to the DB at '{db_map.db_url}' "
+                    "uses an old format and needs to be refitted. "
+                    f"The following transformations will be applied:\n\n{info}\n"
+                    "Afterwards, you can review the changes "
+                    "and either commit or rollback.",
+                    buttons=QMessageBox.StandardButton.Apply,
+                )
+                identifier = self.get_command_identifier()
+                for tablename, (items_to_add, items_to_update, ids_to_remove) in transformations:
+                    self.remove_items({db_map: {tablename: ids_to_remove}}, identifier=identifier)
+                    self.update_items(tablename, {db_map: items_to_update}, identifier=identifier)
+                    self.add_items(tablename, {db_map: items_to_add}, identifier=identifier)
             self.receive_session_committed({db_map}, cookie)
             return True
         except SpineDBAPIError as err:
@@ -790,9 +778,6 @@ class SpineDBManager(QObject):
             display_data = "Error"
         else:
             display_data = str(parsed_data)
-        if isinstance(display_data, str):
-            fm = QFontMetrics(QFont("", 0))
-            display_data = fm.elidedText(display_data, Qt.ElideRight, 500)
         return display_data
 
     @staticmethod
@@ -800,22 +785,19 @@ class SpineDBManager(QObject):
         """Returns the value's database representation formatted for Qt.ItemDataRole.ToolTipRole."""
         if isinstance(parsed_data, TimeSeriesFixedResolution):
             resolution = [relativedelta_to_duration(r) for r in parsed_data.resolution]
-            resolution = ', '.join(resolution)
-            tool_tip_data = "Start: {}, resolution: [{}], length: {}".format(
+            resolution = ", ".join(resolution)
+            tool_tip_data = "Start: {}<br>resolution: [{}]<br>length: {}".format(
                 parsed_data.start, resolution, len(parsed_data)
             )
         elif isinstance(parsed_data, TimeSeriesVariableResolution):
-            tool_tip_data = "Start: {}, resolution: variable, length: {}".format(
+            tool_tip_data = "Start: {}<br>resolution: variable<br>length: {}".format(
                 parsed_data.indexes[0], len(parsed_data)
             )
         elif isinstance(parsed_data, ParameterValueFormatError):
             tool_tip_data = str(parsed_data)
         else:
             tool_tip_data = None
-        if isinstance(tool_tip_data, str):
-            fm = QFontMetrics(QFont("", 0))
-            tool_tip_data = fm.elidedText(tool_tip_data, Qt.ElideRight, 800)
-        return tool_tip_data
+        return plain_to_tool_tip(tool_tip_data)
 
     def _format_list_value(self, db_map, item_type, value, list_value_id):
         list_value = self.get_item(db_map, "list_value", list_value_id)
@@ -1193,6 +1175,7 @@ class SpineDBManager(QObject):
             for id_, indexed_values in packed_data.items():
                 parsed_value = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
                 if isinstance(parsed_value, IndexedValue):
+                    parsed_value = deep_copy_value(parsed_value)
                     for index, (val, typ) in indexed_values.items():
                         parsed_val = from_database(val, typ)
                         parsed_value.set_value(index, parsed_val)
@@ -1453,10 +1436,11 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def db_map_class_ids(db_map_data):
-        d = dict()
+        d = {}
         for db_map, items in db_map_data.items():
             for item in items:
-                d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
+                if item:
+                    d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
         return d
 
     def find_cascading_entity_classes(self, db_map_ids):
@@ -1545,7 +1529,7 @@ class SpineDBManager(QObject):
         """
         dup_import_data = {}
         for db_map in db_maps:
-            entity = db_map.get_entity_item(class_name=class_name, name=orig_name)
+            entity = db_map.get_entity_item(entity_class_name=class_name, name=orig_name)
             element_name_list = entity["element_name_list"]
             if element_name_list:
                 first_import_entry = (class_name, dup_name, element_name_list, entity["description"])
@@ -1554,7 +1538,7 @@ class SpineDBManager(QObject):
             dup_entity_import_data = [first_import_entry]
             for item in db_map.get_entity_items():
                 element_name_list = item["element_name_list"]
-                item_class_name = item["class_name"]
+                item_class_name = item["entity_class_name"]
                 if orig_name in element_name_list and item_class_name != class_name:
                     index = item["dimension_name_list"].index(class_name)
                     name_list = element_name_list
@@ -1573,6 +1557,12 @@ class SpineDBManager(QObject):
                     )
                 )
             dup_import_data[db_map].update(parameter_values=dup_value_import_data)
+            dup_entity_alternative_import_data = []
+            for item in db_map.get_entity_alternative_items(entity_class_name=class_name, entity_name=orig_name):
+                dup_entity_alternative_import_data.append(
+                    (class_name, dup_name, item["alternative_name"], item["active"])
+                )
+            dup_import_data[db_map]["entity_alternatives"] = dup_entity_alternative_import_data
         self.import_data(dup_import_data, command_text="Duplicate entity")
 
     def _get_data_for_export(self, db_map_item_ids):
@@ -1611,39 +1601,47 @@ class SpineDBManager(QObject):
         try:
             db_map.commit_session("Export data from Spine Toolbox.")
         except SpineDBAPIError as err:
-            error_msg = {None: [f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"]}
+            error_msg = f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"
             caller.msg_error.emit(error_msg)
         else:
             caller.file_exported.emit(file_path, 1.0, True)
         finally:
             db_map.close()
 
-    def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+    @staticmethod
+    def export_to_json(file_path, data_for_export, caller):
         """Exports given data into JSON file."""
         json_data = json.dumps(data_for_export, indent=4)
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(json_data)
         caller.file_exported.emit(file_path, 1.0, False)
 
-    def export_to_excel(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+    @staticmethod
+    def export_to_excel(file_path, data_for_export, caller):
         """Exports given data into Excel file."""
         # NOTE: We import data into an in-memory Spine db and then export that to excel.
         url = URL("sqlite", database="")
         with DatabaseMapping(url, create=True) as db_map:
-            import_data(db_map, **data_for_export)
-            db_map.commit_session("Added data for exporting.")
+            count, errors = import_data(db_map, **data_for_export, unparse_value=dump_db_value)
             file_name = os.path.split(file_path)[1]
+            if errors:
+                error_msg = (
+                    f"Unable to export file <b>{file_name}</b>."
+                    f"Failed to copy the data to temporary database: <p>{errors}</p>"
+                )
+                caller.msg_error.emit(error_msg)
+                return
+            if count > 0:
+                db_map.commit_session("Added data for exporting.")
             if os.path.exists(file_path):
                 os.remove(file_path)
             try:
                 export_spine_database_to_xlsx(db_map, file_path)
             except PermissionError:
-                error_msg = {
-                    None: [f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."]
-                }
+                error_msg = f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."
                 caller.msg_error.emit(error_msg)
             except OSError:
-                error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
+                error_msg = f"[OSError] Unable to export file <b>{file_name}</b>."
                 caller.msg_error.emit(error_msg)
             else:
                 caller.file_exported.emit(file_path, 1.0, False)
@@ -1688,15 +1686,16 @@ class SpineDBManager(QObject):
                     return multi_db_editor, db_editor
         return None
 
-    def open_db_editor(self, db_url_codenames):
+    def open_db_editor(self, db_url_codenames, reuse_existing_editor):
         """Opens a SpineDBEditor with given urls. Uses an existing MultiSpineDBEditor if any.
         Also, if the same urls are open in an existing SpineDBEditor, just raises that one
         instead of creating another.
 
         Args:
             db_url_codenames (dict): mapping url to codename
+            reuse_existing_editor (bool): if True and the same URL is already open, just raise the existing window
         """
-        multi_db_editor = next(self.get_all_multi_spine_db_editors(), None)
+        multi_db_editor = next(self.get_all_multi_spine_db_editors(), None) if reuse_existing_editor else None
         if multi_db_editor is None:
             multi_db_editor = MultiSpineDBEditor(self, db_url_codenames)
             if multi_db_editor.tab_load_success:  # don't open an editor if tabs were not loaded successfully

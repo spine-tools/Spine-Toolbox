@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,14 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom context menus and pop-up menus.
-"""
-
+"""Classes for custom context menus and pop-up menus."""
 from PySide6.QtWidgets import QMenu, QWidget
 from PySide6.QtCore import Qt, QEvent, QPoint, Signal
 from PySide6.QtGui import QKeyEvent, QKeySequence
-
 from spinedb_api import IndexedValue
 from spinedb_api.db_mapping_base import PublicItem
 from ...widgets.custom_menus import FilterMenuBase
@@ -37,7 +34,7 @@ class MainMenu(QMenu):
         if ev.type() == QEvent.ShortcutOverride and ev.modifiers() == Qt.NoModifier:
             actions = self.actions() + [a for child in self.findChildren(QWidget) for a in child.actions()]
             mnemonics = [QKeySequence.mnemonic(a.text()) for a in actions]
-            key_seq = QKeySequence(Qt.ALT | Qt.Key(ev.key()))
+            key_seq = QKeySequence(Qt.Modifier.ALT.value | Qt.Key(ev.key()))
             if key_seq in mnemonics:
                 ev = QKeyEvent(QEvent.KeyPress, ev.key(), Qt.AltModifier)
                 qApp.postEvent(self, ev)  # pylint: disable=undefined-variable
@@ -223,7 +220,7 @@ class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
                     for index in item.parsed_value.indexes:
                         yield str(index), (None, index)
                 else:
-                    yield ""
+                    yield "", (None, "")
         else:
             yield item["name"], (db_map, item["id"])
 

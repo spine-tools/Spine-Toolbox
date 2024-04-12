@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,15 +9,19 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""Contains logging connection and jump classes."""
 
+"""Contains logging connection and jump classes."""
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
+from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE
 from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spine_engine.project_item.connection import ResourceConvertingConnection, Jump, ConnectionBase, FilterSettings
 from ..log_mixin import LogMixin
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
 from ..helpers import busy_effect
 from ..fetch_parent import FlexibleFetchParent
+
+
+_DATABASE_ITEM_TYPE = {ALTERNATIVE_FILTER_TYPE: "alternative", SCENARIO_FILTER_TYPE: "scenario"}
 
 
 class HeadlessConnection(ResourceConvertingConnection):
@@ -53,6 +58,15 @@ class HeadlessConnection(ResourceConvertingConnection):
             filter_type, {}
         )
         specific_filter_settings[filter_name] = enabled
+
+    def set_filter_type_enabled(self, filter_type, enabled):
+        """Enables or disables a filter type.
+
+        Args:
+            filter_type (str): filter type
+            enabled (bool): True to enable the filter type, False to disable it
+        """
+        self._filter_settings.enabled_filter_types[filter_type] = enabled
 
     def _convert_legacy_resource_filter_ids_to_filter_settings(self):
         """Converts legacy resource filter ids to filter settings.
@@ -149,7 +163,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         return self.link
 
     def has_filters(self):
-        """Returns True if connection has scenario filters.
+        """Returns True if connection has any filters.
 
         Returns:
             bool: True if connection has filters, False otherwise
@@ -161,12 +175,14 @@ class LoggingConnection(LogMixin, HeadlessConnection):
             db_map = self._get_db_map(url, ignore_version_error=True)
             if db_map is None:
                 continue
-            available_scenarios = {x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario")}
-            scenario_filters = self._filter_settings.known_filters.get(resource.label, {}).get(SCENARIO_FILTER_TYPE, {})
-            if any(enabled for s, enabled in scenario_filters.items() if s in available_scenarios):
-                return True
-            if self._filter_settings.auto_online and any(name not in scenario_filters for name in available_scenarios):
-                return True
+            known_filters = self._filter_settings.known_filters.get(resource.label, {})
+            for filter_type, item_type in _DATABASE_ITEM_TYPE.items():
+                available = {x["name"] for x in self._toolbox.db_mngr.get_items(db_map, item_type)}
+                filters = known_filters.get(filter_type, {})
+                if any(enabled for s, enabled in filters.items() if s in available):
+                    return True
+                if self._filter_settings.auto_online and any(name not in filters for name in available):
+                    return True
         return False
 
     def _get_db_map(self, url, ignore_version_error=False):
@@ -225,11 +241,12 @@ class LoggingConnection(LogMixin, HeadlessConnection):
     def receive_error_msg(self, _db_map_error_log):
         pass
 
-    def get_scenario_names(self, url):
+    def get_filter_item_names(self, filter_type, url):
         db_map = self._get_db_map(url)
         if db_map is None:
             return []
-        return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, "scenario"))
+        item_type = _DATABASE_ITEM_TYPE[filter_type]
+        return sorted(x["name"] for x in self._toolbox.db_mngr.get_items(db_map, item_type))
 
     def _do_purge_before_writing(self, resources):
         purged_urls = super()._do_purge_before_writing(resources)
@@ -306,7 +323,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
 
         Args:
             resource (str): Resource label
-            filter_type (str): Always SCENARIO_FILTER_TYPE, for now.
+            filter_type (str): filter type
             online (dict): mapping from scenario name to online flag
         """
         self._filter_settings.known_filters.setdefault(resource, {}).setdefault(filter_type, {}).update(online)
@@ -324,6 +341,13 @@ class LoggingConnection(LogMixin, HeadlessConnection):
     def refresh_resource_filter_model(self):
         """Makes resource filter mode fetch filter data from database."""
         self.resource_filter_model.build_tree()
+
+    def set_filter_type_enabled(self, filter_type, enabled):
+        """See base class."""
+        super().set_filter_type_enabled(filter_type, enabled)
+        self.resource_filter_model.set_filter_type_enabled(filter_type, enabled)
+        if self is self._toolbox.active_link_item:
+            self._toolbox.link_properties_widgets[LoggingConnection].set_filter_type_enabled(filter_type, enabled)
 
     def receive_resources_from_source(self, resources):
         """See base class."""
@@ -362,9 +386,12 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         Returns:
             FilterSettings: filter settings containing only filters that exist in source databases
         """
-        filter_settings = FilterSettings(auto_online=self._filter_settings.auto_online)
+        filter_settings = FilterSettings(
+            auto_online=self._filter_settings.auto_online,
+            enabled_filter_types=self._filter_settings.enabled_filter_types,
+        )
         for resource in self._resources:
-            for filter_type in (SCENARIO_FILTER_TYPE,):
+            for filter_type in (SCENARIO_FILTER_TYPE, ALTERNATIVE_FILTER_TYPE):
                 online_filters = self._resource_filters_online(resource, filter_type)
                 if online_filters is not None:
                     filter_settings.known_filters.setdefault(resource.label, {})[filter_type] = online_filters
@@ -377,7 +404,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         db_map = self._get_db_map(url)
         if db_map is None:
             return None
-        db_item_type = {SCENARIO_FILTER_TYPE: "scenario"}[filter_type]
+        db_item_type = _DATABASE_ITEM_TYPE[filter_type]
         available_filters = (x["name"] for x in self._toolbox.db_mngr.get_items(db_map, db_item_type))
         specific_filter_settings = self._filter_settings.known_filters.get(resource.label, {}).get(filter_type, {})
         checked_specific_filter_settings = {}

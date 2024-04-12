@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,15 +9,14 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Contains unit tests for the ``frozen_table_model`` module."""
 import unittest
 from unittest.mock import MagicMock
-
-from PySide6.QtCore import QModelIndex, QObject
+from PySide6.QtCore import QModelIndex, QObject, Qt
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.spine_db_editor.mvcmodels.frozen_table_model import FrozenTableModel
-from tests.mock_helpers import TestSpineDBManager
+from tests.mock_helpers import model_data_to_table, TestSpineDBManager
 
 
 class TestFrozenTableModel(unittest.TestCase):
@@ -93,6 +93,27 @@ class TestFrozenTableModel(unittest.TestCase):
         self._model.remove_values({((self._db_map, id_to_remove), self._db_map)})
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.get_frozen_value(), ((self._db_map, frozen_alternative_id), self._db_map))
+
+    def test_remove_selected_row_when_selected_row_gets_updated_during_removal(self):
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        alternatives = self._db_mngr.get_items(self._db_map, "alternative")
+        ids = {item["id"] for item in alternatives}
+        self._model.set_headers(["alternative", "database"])
+        values = {((self._db_map, id_), self._db_map) for id_ in ids}
+        self._model.add_values(values)
+        self.assertEqual(self._model.rowCount(), 3)
+        self._model.set_selected(2)
+        # Simulate tabular_view_mixin and frozen table view here.
+        row_removal_handler = MagicMock()
+        row_removal_handler.side_effect = lambda *args: self._model.set_selected(1)
+        self._model.rowsAboutToBeRemoved.connect(row_removal_handler)
+        frozen_value = self._model.get_frozen_value()
+        id_to_remove = frozen_value[0][1]
+        self._model.remove_values({((self._db_map, id_to_remove), self._db_map)})
+        row_removal_handler.assert_called_once()
+        self.assertEqual(self._model.rowCount(), 2)
+        base_alternative_id = self._db_map.get_alternative_item(name="Base")["id"]
+        self.assertEqual(self._model.get_frozen_value(), ((self._db_map, base_alternative_id), self._db_map))
 
     def test_remove_values_after_selected_row(self):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
@@ -239,6 +260,18 @@ class TestFrozenTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(4, 1).data(), "alternative_1")
         self.assertEqual(self._model.index(4, 2).data(), self.db_codename)
 
+    def test_tooltips_work_when_no_data_is_available(self):
+        self._model.insert_column_data("database", {self._db_map}, 0)
+        self._db_mngr.remove_items({self._db_map: {"alternative": [1]}})
+        self._model.insert_column_data("alternative", {(self._db_map, None)}, 1)
+        self.assertEqual(self._model.headers, ["database", "alternative"])
+        model_data = model_data_to_table(self._model)
+        expected = [["database", "alternative"], [self.db_codename, None]]
+        self.assertEqual(model_data, expected)
+        tool_tip_data = model_data_to_table(self._model, QModelIndex(), Qt.ItemDataRole.ToolTipRole)
+        expected = [["database", "alternative"], [f"<qt>{self.db_codename}</qt>", None]]
+        self.assertEqual(tool_tip_data, expected)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

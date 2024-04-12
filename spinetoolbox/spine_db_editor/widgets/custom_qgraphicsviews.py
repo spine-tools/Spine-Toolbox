@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QGraphicsViews for the Entity graph view.
-"""
-
+"""Classes for custom QGraphicsViews for the Entity graph view."""
 import os
 import sys
 import tempfile
@@ -368,7 +366,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if not ok:
             return
         names = [x.strip() for x in expr.split(",")]
-        items = [item for item in self.entity_items if any(n == item.entity_name for n in names)]
+        items = [item for item in self.entity_items if any(n == item.name for n in names)]
         if not items:
             return
         color = QColorDialog.getColor(Qt.yellow, self, "Choose highlight color")
@@ -406,7 +404,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def _get_selected_entity_names(self):
         if not self.selected_items:
             return ""
-        names = "'" + self.selected_items[0].entity_name + "'"
+        names = "'" + self.selected_items[0].name + "'"
         if len(self.selected_items) > 1:
             names += f" and {len(self.selected_items) - 1} other entities"
         return names
@@ -530,7 +528,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
                 )
                 data.setdefault("parameter_values", []).extend(
                     [
-                        (class_name, item.element_name_list or item.entity_name, pname, val)
+                        (class_name, item.element_name_list or item.name, pname, val)
                         for item in ent_items
                         for pname, val in zip(
                             (self.pos_x_parameter, self.pos_y_parameter),
@@ -755,7 +753,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         start, stop, step_len, fps = dialog.selections()
         start = np.datetime64(start)
         stop = np.datetime64(stop)
-        step_len = np.timedelta64(step_len, 'h')
+        step_len = np.timedelta64(step_len, "h")
         runnable = QRunnable.create(lambda: self._do_export_as_video(file_path, start, stop, step_len, fps, cv2))
         self._thread_pool.start(runnable)
 

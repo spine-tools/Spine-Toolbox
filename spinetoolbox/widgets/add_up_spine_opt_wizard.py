@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs for julia setup.
-"""
-
+"""Classes for custom QDialogs for julia setup."""
 from enum import IntEnum, auto
 from PySide6.QtWidgets import (
     QWidget,
@@ -169,11 +167,11 @@ class CheckPreviousInstallPage(QWizardPage):
         args = [
             f"--project={julia_project}",
             "-e",
-            'import Pkg; '
+            "import Pkg; "
             'manifest = joinpath(dirname(Base.active_project()), "Manifest.toml"); '
-            'pkgs = isfile(manifest) ? Pkg.TOML.parsefile(manifest) : Dict(); '
+            "pkgs = isfile(manifest) ? Pkg.TOML.parsefile(manifest) : Dict(); "
             'manifest_format = get(pkgs, "manifest_format", missing); '
-            'if manifest_format === missing '
+            "if manifest_format === missing "
             'spine_opt = get(pkgs, "SpineOpt", nothing) '
             'else spine_opt = get(pkgs["deps"], "SpineOpt", nothing) end; '
             'if spine_opt != nothing println(spine_opt[1]["version"]) end; ',
