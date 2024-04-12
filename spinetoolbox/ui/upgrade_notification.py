@@ -32,7 +32,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(550, 350)
+        Form.resize(550, 309)
         sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -67,12 +67,11 @@ class Ui_Form(object):
 "li.unchecked::marker { content: \"\\2610\"; }\n"
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Segoe UI'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
-"<h1 style=\" margin-top:18px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:xx-large; font-weight:700;\">Toolbox 0.8</span></h1>\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Spine Toolbox development team has been working hard on the 0.8 update since early 2023. While we still do not have a definitive release date, we thought it might be worth giving you a heads-up on"
-                        " what is brewing since there will be major changes to the user interface as well as to Spine data structure.</p>\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">We have tried to make sure that your projects and databases are migrated to 0.8 as painlessly as possible. We also maintain Spine-Database-API almost fully backward compatible. However, there are some changes that may break your scripts.</p>\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Head to <a href=\"https://github.com/spine-tools/Spine-Toolbox/blob/0.8-dev/CHANGELOG.md\"><span style=\" text-decoration: underline; color:#0000ff;\">CHANGELOG.md</span></a> to get familiar with the coming changes. If you are using Spine-Database-API in your scripts, it might be worth checking its <a href=\"https://github.com/spine-tools/Spine-Database-API/blob/0.8-dev/CHANGELOG.md\"><span style=\" text-decorati"
-                        "on: underline; color:#0000ff;\">CHANGELOG.md</span></a> as well.</p>\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">To try out 0.8 yourself before its release, checkout the <span style=\" font-family:'Courier New';\">0.8-dev</span> branch in Git. <span style=\" font-style:italic;\">Backup your projects and databases</span> before you do, though, as there may be bugs.  Please report all issues to our <a href=\"https://github.com/spine-tools/Spine-Toolbox/issues\"><span style=\" text-decoration: underline; color:#0000ff;\">issue tracker</span></a>.</p></body></html>", None))
+"<h1 style=\" margin-top:18px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:xx-large; font-weight:700;\">About Toolbox 0.8 update</span></h1>\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Spine Toolbox development team has been working hard on the 0.8 update since early 2023. As the release date gets close (or it may have passed already), we thought it might be worth g"
+                        "iving you a heads-up on what the update is about since there will be major changes to the user interface as well as to Spine data structure.</p>\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">We have tried to make sure that your projects and databases are migrated to 0.8 as painlessly as possible.  Still, <span style=\" font-style:italic;\">backup your projects and databases before the update</span>, as there may be bugs. We also maintain Spine-Database-API almost fully backward compatible. However, there are some changes that may break your scripts. Please report all issues to our <a href=\"https://github.com/spine-tools/Spine-Toolbox/issues\"><span style=\" text-decoration: underline; color:#0000ff;\">issue tracker</span></a>.</p>\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Head to <a href=\"https://github.com/spine-tools/Spine-Toolbox/blob/0.8-dev"
+                        "/CHANGELOG.md\"><span style=\" text-decoration: underline; color:#0000ff;\">CHANGELOG.md</span></a> to get familiar with the coming changes. If you are using Spine-Database-API in your scripts, it might be worth checking its <a href=\"https://github.com/spine-tools/Spine-Database-API/blob/0.8-dev/CHANGELOG.md\"><span style=\" text-decoration: underline; color:#0000ff;\">CHANGELOG.md</span></a> as well.</p></body></html>", None))
     # retranslateUi
 

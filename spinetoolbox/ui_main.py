@@ -459,12 +459,7 @@ class ToolboxUI(QMainWindow):
         welcome_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
             getting_started_anchor
         )
-        upgrade_notification_anchor = (
-            "<a style='color:#99CCFF;' title='Open notification dialog' "
-            + f"href='show upgrade notification dialog'>Click here</a>"
-        )
-        upgrade_msg = f"{upgrade_notification_anchor} to learn more about the upcoming <b>0.8</b> upgrade"
-        self.msg_warning.emit(upgrade_msg)
+        self._notify_about_upgrades_at_startup()
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
             if (
@@ -2566,6 +2561,21 @@ class ToolboxUI(QMainWindow):
         """
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)
 
+    def _notify_about_upgrades_at_startup(self):
+        """Shows upgrade information at application start-up."""
+        upgrade_notification_anchor = (
+            "<a style='color:#99CCFF;' title='Open notification dialog' "
+            + f"href='show upgrade notification dialog'>Click here</a>"
+        )
+        upgrade_msg = f"{upgrade_notification_anchor} to learn more about the upcoming <b>0.8</b> upgrade"
+        self.msg_warning.emit(upgrade_msg)
+        key = "appSettings/showUpgradeNotification"
+        show_notification_dialog = self._qsettings.value(key, defaultValue=True, type=bool)
+        if show_notification_dialog:
+            self._show_upgrade_notification_dialog()
+        self._qsettings.setValue(key, False)
+
     def _show_upgrade_notification_dialog(self):
+        """Shows the Upgrade notification dialog."""
         dialog = UpgradeNotificationDialog(self)
         dialog.open()
