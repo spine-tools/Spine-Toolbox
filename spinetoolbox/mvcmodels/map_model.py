@@ -183,7 +183,7 @@ class MapModel(QAbstractTableModel):
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         """Returns row numbers for vertical headers and column titles for horizontal ones."""
         if role != Qt.ItemDataRole.DisplayRole:
-            return None
+            return super().headerData(section, orientation, role)
         if orientation == Qt.Orientation.Vertical:
             if section < len(self._rows):
                 return section + 1

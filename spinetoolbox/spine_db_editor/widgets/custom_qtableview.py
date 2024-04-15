@@ -75,8 +75,8 @@ def _set_data(index, new_value):
 class StackedTableView(AutoFilterCopyPasteTableView):
     """Base stacked view."""
 
-    _EXPECTED_COLUMN_COUNT = NotImplemented
-    _STRETCH_COLUMNS = set()
+    _COLUMN_SIZE_HINTS = {}
+    _EXPECTED_COLUMN_COUNT: int = NotImplemented
 
     def __init__(self, parent):
         """
@@ -213,16 +213,19 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         """Enables or disables copy and paste actions."""
         self._spine_db_editor.refresh_copy_paste_actions()
 
+    def _initial_column_size(self, column):
+        label = (
+            self.horizontalHeader().model().headerData(column, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
+        )
+        return self._COLUMN_SIZE_HINTS.get(label, 100)
+
     @Slot(int, int)
     def _set_column_resize_modes(self, old_column_count, new_column_count):
         if new_column_count != self._EXPECTED_COLUMN_COUNT:
             return
-        header = self.horizontalHeader()
-        model = header.model()
-        for column in range(model.columnCount()):
-            data = model.headerData(column, Qt.Orientation.Horizontal)
-            if data in self._STRETCH_COLUMNS:
-                header.setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
+        for column in range(new_column_count):
+            width = self._initial_column_size(column)
+            self.horizontalHeader().resizeSection(column, width)
 
 
 class ParameterTableView(StackedTableView):
@@ -316,7 +319,7 @@ class ParameterDefinitionTableView(ParameterTableView):
     value_column_header = "default_value"
 
     _EXPECTED_COLUMN_COUNT = 6
-    _STRETCH_COLUMNS = {"description"}
+    _COLUMN_SIZE_HINTS = {"entity_class_name": 200, "parameter_name": 125, "list_value_name": 125, "description": 250}
 
     def create_delegates(self):
         super().create_delegates()
@@ -339,8 +342,13 @@ class ParameterDefinitionTableView(ParameterTableView):
 class ParameterValueTableView(ParameterTableView):
     value_column_header = "value"
 
+    _COLUMN_SIZE_HINTS = {
+        "entity_class_name": 200,
+        "entity_byname": 200,
+        "parameter_name": 125,
+        "alternative_name": 125,
+    }
     _EXPECTED_COLUMN_COUNT = 6
-    _STRETCH_COLUMNS = {"entity_class_name", "entity_byname", "parameter_name", "alternative_name", "value"}
 
     def connect_spine_db_editor(self, spine_db_editor):
         super().connect_spine_db_editor(spine_db_editor)
@@ -391,7 +399,7 @@ class EntityAlternativeTableView(StackedTableView):
     """Visualize entities and their alternatives."""
 
     _EXPECTED_COLUMN_COUNT = 5
-    _STRETCH_COLUMNS = {"entity_class_name", "entity_byname", "alternative_name"}
+    _COLUMN_SIZE_HINTS = {"entity_class_name": 200, "entity_byname": 200, "alternative_name": 125}
 
     def __init__(self, parent):
         super().__init__(parent)

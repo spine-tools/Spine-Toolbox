@@ -22,14 +22,13 @@ from ..spine_db_editor.widgets.custom_delegates import ParameterValueElementDele
 
 
 class MapEditor(QWidget):
-    """
-    A widget for editing maps.
-
-    Attributes:
-        parent (QWidget):
-    """
+    """A widget for editing maps."""
 
     def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget, optional): parent widget
+        """
         from ..ui.map_editor import Ui_MapEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
