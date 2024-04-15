@@ -755,7 +755,7 @@ class SpineDBEditorBase(QMainWindow):
         self.msg_error.emit(format_string_list(msgs))
 
     def _update_export_enabled(self):
-        """Update export enabled."""
+        """Updates export enabled."""
         # TODO: check if db_mngr has any cache or something like that
 
     def _log_items_change(self, msg):
@@ -779,11 +779,11 @@ class SpineDBEditorBase(QMainWindow):
         self._log_items_change(msg)
 
     def restore_ui(self, view_type, fresh=False):
-        """Restore UI state from previous session.
+        """Restores UI state from previous session.
 
         Args:
             view_type (str): What the selected view type is.
-            fresh (bool, optional): If true, the view specified with subgroup will be applied,
+            fresh (bool): If true, the view specified with subgroup will be applied,
                 instead of loading the previous window state of the said view.
         """
         if fresh and view_type:
@@ -812,7 +812,7 @@ class SpineDBEditorBase(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
 
     def save_window_state(self):
-        """Save window state parameters (size, position, state) via QSettings."""
+        """Saves window state parameters (size, position, state) via QSettings."""
         if not self.db_maps or len(self.db_urls) != 1:
             print(9)
             # Only save window sates of single db tabs

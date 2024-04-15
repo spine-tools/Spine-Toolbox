@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.3
+## Created by: Qt User Interface Compiler version 6.5.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -157,7 +157,7 @@ class Ui_MainWindow(object):
         self.actionVacuum.setIcon(icon17)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
@@ -217,6 +217,7 @@ class Ui_MainWindow(object):
         self.tableView_parameter_value.setLayoutDirection(Qt.LeftToRight)
         self.tableView_parameter_value.setTabKeyNavigation(False)
         self.tableView_parameter_value.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.tableView_parameter_value.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.tableView_parameter_value.setSortingEnabled(False)
         self.tableView_parameter_value.setWordWrap(False)
         self.tableView_parameter_value.horizontalHeader().setHighlightSections(False)
@@ -240,6 +241,7 @@ class Ui_MainWindow(object):
         self.tableView_parameter_definition.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.tableView_parameter_definition.setTabKeyNavigation(False)
         self.tableView_parameter_definition.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.tableView_parameter_definition.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.tableView_parameter_definition.setSortingEnabled(False)
         self.tableView_parameter_definition.setWordWrap(False)
         self.tableView_parameter_definition.horizontalHeader().setHighlightSections(False)
@@ -261,7 +263,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.treeView_entity = EntityTreeView(self.dockWidgetContents_6)
         self.treeView_entity.setObjectName(u"treeView_entity")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy1.setHorizontalStretch(1)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.treeView_entity.sizePolicy().hasHeightForWidth())
@@ -286,7 +288,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.graphicsView = EntityQGraphicsView(self.dockWidgetContents_8)
         self.graphicsView.setObjectName(u"graphicsView")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy2.setHorizontalStretch(2)
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
@@ -326,7 +328,6 @@ class Ui_MainWindow(object):
         self.pivot_table.setObjectName(u"pivot_table")
         self.pivot_table.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.pivot_table.setTabKeyNavigation(False)
-        self.pivot_table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.pivot_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
 
         self.verticalLayout_13.addWidget(self.pivot_table)
@@ -368,7 +369,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_exports = QHBoxLayout()
         self.horizontalLayout_exports.setSpacing(1)
         self.horizontalLayout_exports.setObjectName(u"horizontalLayout_exports")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         self.horizontalLayout_exports.addItem(self.horizontalSpacer)
 
@@ -445,9 +446,9 @@ class Ui_MainWindow(object):
         self.tableView_entity_alternative = EntityAlternativeTableView(self.dockWidgetContents_3)
         self.tableView_entity_alternative.setObjectName(u"tableView_entity_alternative")
         self.tableView_entity_alternative.setTabKeyNavigation(False)
+        self.tableView_entity_alternative.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.tableView_entity_alternative.setWordWrap(False)
         self.tableView_entity_alternative.horizontalHeader().setHighlightSections(False)
-        self.tableView_entity_alternative.horizontalHeader().setStretchLastSection(True)
         self.tableView_entity_alternative.verticalHeader().setVisible(False)
         self.tableView_entity_alternative.verticalHeader().setHighlightSections(False)
 
