@@ -54,7 +54,6 @@ class TestSpineDBEditorBase(unittest.TestCase):
         self.db_editor.deleteLater()
         self.db_editor = None
 
-
     def test_import_file_recognizes_excel(self):
         with mock.patch.object(self.db_editor, "qsettings"), mock.patch.object(
             self.db_editor, "import_from_excel"

@@ -108,6 +108,8 @@ class TestMetadataTableModel(unittest.TestCase):
                 self.assertTrue(self._model.setData(index, "title"))
                 index = self._model.index(1, Column.VALUE)
                 self.assertTrue(self._model.setData(index, "My precious."))
+                while self._model.rowCount() != 3:
+                    QApplication.processEvents()
             finally:
                 self._db_mngr.close_session(url)
         self.assertEqual(self._model.rowCount(), 3)
