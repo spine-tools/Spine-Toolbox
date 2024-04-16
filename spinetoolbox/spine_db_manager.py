@@ -1651,8 +1651,7 @@ class SpineDBManager(QObject):
             worker = self._get_worker(db_map)
         except KeyError:
             return {}
-        worker.fetch_all()
-        return worker.commit_cache.get(commit_id, {})
+        return worker.commit_cache.get(commit_id.db_id, {})
 
     @staticmethod
     def get_all_multi_spine_db_editors():

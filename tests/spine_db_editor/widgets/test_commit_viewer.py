@@ -13,11 +13,14 @@
 """Unit tests for ``commit_viewer`` module."""
 import unittest
 from unittest import mock
-from tempfile import TemporaryDirectory
+
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from spinetoolbox.fetch_parent import FlexibleFetchParent
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.commit_viewer import CommitViewer, QSplitter
+from tests.mock_helpers import q_object
 
 
 class TestCommitViewer(unittest.TestCase):
@@ -27,36 +30,49 @@ class TestCommitViewer(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of SpineDBEditor class."""
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = SpineDBManager(mock_settings, None)
+            self._db_mngr = SpineDBManager(mock_settings, None, synchronous=True)
             logger = mock.MagicMock()
-            self._temp_dir = TemporaryDirectory()
-            url = "sqlite:///" + self._temp_dir.name + "/db.sqlite"
+            url = "sqlite://"
             self._db_map = self._db_mngr.get_db_map(url, logger, codename="mock_db", create=True)
             with mock.patch.object(QSplitter, "restoreState"):
                 self._commit_viewer = CommitViewer(mock_settings, self._db_mngr, self._db_map)
 
     def tearDown(self):
-        """Overridden method. Runs after each test.
-        Use this to free resources after a test if needed.
-        """
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
-            self._commit_viewer.close()
+        self._commit_viewer.close()
         self._db_mngr.close_all_sessions()
         while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
-        self._commit_viewer.deleteLater()
-        self._commit_viewer = None
-        self._temp_dir.cleanup()
 
     def test_tab_count(self):
         self.assertEqual(self._commit_viewer.centralWidget().count(), 1)
+
+    def test_initial_commit_shows_in_list(self):
+        tab_widget = self._commit_viewer.centralWidget()
+        self.assertEqual(tab_widget.currentIndex(), 0)
+        current_tab = tab_widget.currentWidget()
+        commit_list = current_tab._commit_list
+        self.assertEqual(commit_list.topLevelItemCount(), 1)
+        initial_commit_item = commit_list.topLevelItem(0)
+        commit_db_items = self._db_map.get_items("commit")
+        self.assertEqual(initial_commit_item.data(0, Qt.ItemDataRole.UserRole + 1), commit_db_items[0]["id"])
+
+    def test_selecting_initial_commit_shows_base_alternative(self):
+        with q_object(FlexibleFetchParent("alternative")) as fetch_parent:
+            self._db_mngr.fetch_more(self._db_map, fetch_parent)
+            tab_widget = self._commit_viewer.centralWidget()
+            self.assertEqual(tab_widget.currentIndex(), 0)
+            current_tab = tab_widget.currentWidget()
+            commit_list = current_tab._commit_list
+            initial_commit_item = commit_list.topLevelItem(0)
+            commit_list.setCurrentItem(initial_commit_item)
+            affected_list = current_tab._affected_items
+            self.assertEqual(affected_list.topLevelItemCount(), 1)
+            affected_item = affected_list.topLevelItem(0)
+            self.assertEqual(affected_item.data(0, Qt.ItemDataRole.DisplayRole), "alternative")
 
 
 if __name__ == "__main__":
