@@ -816,7 +816,7 @@ class SpineDBManager(QObject):
         """Returns the value or default value of a parameter.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             item_type (str): either "parameter_definition", "parameter_value", or "list_value"
             id_ (int): The parameter_value or definition id
             role (int, optional)

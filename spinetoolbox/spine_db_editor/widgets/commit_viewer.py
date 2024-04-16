@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QTabWidget,
     QWidget,
-    QVBoxLayout,
     QGridLayout,
     QTreeWidget,
     QTreeWidgetItem,
@@ -28,57 +27,55 @@ from spinetoolbox.helpers import restore_ui, save_ui, busy_effect, DB_ITEM_SEPAR
 
 class _DBCommitViewer(QWidget):
     def __init__(self, db_mngr, db_map, parent=None):
+        from ..ui.db_commit_viewer import Ui_DBCommitViewer
+
         super().__init__(parent=parent)
+        self._ui = Ui_DBCommitViewer()
+        self._ui.setupUi(self)
         self._db_mngr = db_mngr
         self._db_map = db_map
-        self._commit_list = QTreeWidget(self)
-        self._commit_list.setHeaderLabel("Commits")
-        self._commit_list.setIndentation(0)
-        self.splitter = QSplitter(self)
-        self.splitter.setChildrenCollapsible(False)
-        self.splitter.setSizes([0.3, 0.7])
-        self._affected_items = QTreeWidget(self)
-        self._affected_items.setHeaderLabel("Affected items")
-        self.splitter.addWidget(self._commit_list)
-        self.splitter.addWidget(self._affected_items)
-        self.splitter.setStretchFactor(0, 0)
-        self.splitter.setStretchFactor(1, 1)
-        layout = QVBoxLayout(self)
-        self.setLayout(layout)
-        layout = self.layout()
-        layout.addWidget(self.splitter)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        self._ui.commit_list.setHeaderLabel("Commits")
+        self._ui.commit_list.setIndentation(0)
+        self._ui.affected_items.setHeaderLabel("Affected items")
+        self._ui.splitter.setSizes([0.3, 0.7])
+        self._ui.splitter.setStretchFactor(0, 0)
+        self._ui.splitter.setStretchFactor(1, 1)
         for commit in reversed(db_map.get_items("commit")):
-            tree_item = QTreeWidgetItem(self._commit_list)
+            tree_item = QTreeWidgetItem(self._ui.commit_list)
             tree_item.setData(0, Qt.ItemDataRole.UserRole + 1, commit["id"])
-            self._commit_list.addTopLevelItem(tree_item)
-            index = self._commit_list.indexFromItem(tree_item)
+            self._ui.commit_list.addTopLevelItem(tree_item)
+            index = self._ui.commit_list.indexFromItem(tree_item)
             widget = _CommitItem(commit)
-            self._commit_list.setIndexWidget(index, widget)
-        self._commit_list.currentItemChanged.connect(self._select_commit)
+            self._ui.commit_list.setIndexWidget(index, widget)
+        self._ui.commit_list.currentItemChanged.connect(self._select_commit)
+
+    @property
+    def splitter(self) -> QSplitter:
+        return self._ui.splitter
 
     @Slot(QTreeWidgetItem, QTreeWidgetItem)
     def _select_commit(self, current, previous):
-        self._commit_list.setDisabled(True)
+        self._ui.commit_list.setDisabled(True)
         self._do_select_commit(current)
-        self._commit_list.setEnabled(True)
+        self._ui.commit_list.setEnabled(True)
 
     @busy_effect
     def _do_select_commit(self, current):
         commit_id = current.data(0, Qt.ItemDataRole.UserRole + 1)
-        self._affected_items.clear()
-        # TODO: If no items, show message that data was overwritten by a further commit
+        self._ui.affected_items_widget_stack.setCurrentIndex(0)
+        self._ui.affected_items.clear()
         for item_type, ids in self._db_mngr.get_items_for_commit(self._db_map, commit_id).items():
             top_level_item = QTreeWidgetItem([item_type])
-            self._affected_items.addTopLevelItem(top_level_item)
+            self._ui.affected_items.addTopLevelItem(top_level_item)
             bottom_level_item = QTreeWidgetItem(top_level_item)
             bottom_level_item.setFlags(bottom_level_item.flags() & ~Qt.ItemIsSelectable)
-            index = self._affected_items.indexFromItem(bottom_level_item)
+            index = self._ui.affected_items.indexFromItem(bottom_level_item)
             items = [self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids]
-            widget = _AffectedItemsFromOneTable(items, parent=self._affected_items)
-            self._affected_items.setIndexWidget(index, widget)
+            widget = _AffectedItemsFromOneTable(items, parent=self._ui.affected_items)
+            self._ui.affected_items.setIndexWidget(index, widget)
             top_level_item.setExpanded(True)
+        if self._ui.affected_items.topLevelItemCount() == 0:
+            self._ui.affected_items_widget_stack.setCurrentIndex(1)
 
 
 class _CommitItem(QWidget):

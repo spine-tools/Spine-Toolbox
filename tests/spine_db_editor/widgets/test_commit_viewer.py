@@ -54,7 +54,7 @@ class TestCommitViewer(unittest.TestCase):
         tab_widget = self._commit_viewer.centralWidget()
         self.assertEqual(tab_widget.currentIndex(), 0)
         current_tab = tab_widget.currentWidget()
-        commit_list = current_tab._commit_list
+        commit_list = current_tab._ui.commit_list
         self.assertEqual(commit_list.topLevelItemCount(), 1)
         initial_commit_item = commit_list.topLevelItem(0)
         commit_db_items = self._db_map.get_items("commit")
@@ -66,10 +66,10 @@ class TestCommitViewer(unittest.TestCase):
             tab_widget = self._commit_viewer.centralWidget()
             self.assertEqual(tab_widget.currentIndex(), 0)
             current_tab = tab_widget.currentWidget()
-            commit_list = current_tab._commit_list
+            commit_list = current_tab._ui.commit_list
             initial_commit_item = commit_list.topLevelItem(0)
             commit_list.setCurrentItem(initial_commit_item)
-            affected_list = current_tab._affected_items
+            affected_list = current_tab._ui.affected_items
             self.assertEqual(affected_list.topLevelItemCount(), 1)
             affected_item = affected_list.topLevelItem(0)
             self.assertEqual(affected_item.data(0, Qt.ItemDataRole.DisplayRole), "alternative")
