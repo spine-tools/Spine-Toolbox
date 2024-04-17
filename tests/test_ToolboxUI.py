@@ -35,6 +35,7 @@ from .mock_helpers import (
     create_toolboxui,
     create_project,
     add_dc,
+    add_dc_trough_undo_stack,
     add_tool,
     qsettings_value_side_effect,
 )
@@ -181,7 +182,8 @@ class TestToolboxUI(unittest.TestCase):
         ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        add_dc_trough_undo_stack(self.toolbox, "DC")
+        self.assertFalse(self.toolbox.undo_stack.isClean())
         self.toolbox.save_project()
         self.assertTrue(self.toolbox.undo_stack.isClean())
         with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
@@ -197,6 +199,43 @@ class TestToolboxUI(unittest.TestCase):
             self.toolbox.open_project(self._temp_dir.name)
         self.assertIsNotNone(self.toolbox.project())
         self.assertEqual(self.toolbox.project().get_item("DC").name, "DC")
+
+    def test_prevent_project_closing_with_unsaved_changes(self):
+        self._temp_dir = TemporaryDirectory()
+        with mock.patch("spinetoolbox.ui_main.QSettings.setValue"), mock.patch(
+            "spinetoolbox.ui_main.QSettings.sync"
+        ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+            mock_dir_getter.return_value = self._temp_dir.name
+            self.toolbox.new_project()
+        add_dc_trough_undo_stack(self.toolbox, "DC1")
+        self.toolbox.save_project()
+        self.assertTrue(self.toolbox.undo_stack.isClean())
+        self.assertEqual(self.toolbox.project().get_item("DC1").name, "DC1")
+        add_dc_trough_undo_stack(self.toolbox, "DC2")
+        self.assertFalse(self.toolbox.undo_stack.isClean())
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            # Make sure that the test uses LocalSpineEngineManager
+            mock_qsettings_value.side_effect = qsettings_value_side_effect
+            # Selecting cancel on the project close confirmation
+            with mock.patch.object(QMessageBox, 'exec', return_value=QMessageBox.Cancel):
+                self.assertFalse(self.toolbox.close_project())
+            mock_qsettings_value.assert_called()
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
+            "spinetoolbox.project.create_dir"
+        ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
+            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+        ), mock.patch.object(QMessageBox, 'exec', return_value=QMessageBox.Cancel):
+            # Selecting cancel on the project close confirmation
+            with mock.patch("spinetoolbox.ui_main.ToolboxUI.add_warning_message") as warning_msg:
+                # trying to open the same project but selecting cancel when asked about unsaved changes
+                self.assertFalse(self.toolbox.open_project(self._temp_dir.name))
+                warning_msg.assert_called_with(
+                    f"Cancelled opening project {self._temp_dir.name}. Current project has unsaved changes."
+                )
+        self.assertIsNotNone(self.toolbox.project())
+        self.assertEqual(self.toolbox.project().get_item("DC1").name, "DC1")
+        self.assertEqual(self.toolbox.project().get_item("DC2").name, "DC2")
+
 
     def test_close_project(self):
         self.assertIsNone(self.toolbox.project())

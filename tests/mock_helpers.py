@@ -108,6 +108,28 @@ def add_ds(project, item_factories, name, x=0.0, y=0.0):
     return project.get_item(name)
 
 
+def add_dc_trough_undo_stack(toolbox, name, x=0, y=0, file_refs=None):
+    """Helper function to create a Data Connection to currently opened project through the undo stack.
+
+    Args:
+        toolbox (ToolboxUI): The toolbox main UI
+        name (str): item's name
+        x (float): item's x coordinate
+        y (float): item's y coordinate
+        file_refs (list): File references
+
+    Returns:
+        DataConnection: added project item
+    """
+    frefs = list() if not file_refs else file_refs
+    item_dict = {name: {"type": "Data Connection", "description": "", "references": frefs, "x": x, "y": y}}
+    if toolbox:  # This way the changes are pushed to the undo stack of ToolboxUI
+        toolbox.add_project_items(item_dict)
+    else:
+        toolbox._project.restore_project_items(item_dict, toolbox.item_factories)
+    return toolbox._project.get_item(name)
+
+
 def add_dc(project, item_factories, name, x=0, y=0, file_refs=None):
     """Helper function to create a Data Connection to given project.
 
