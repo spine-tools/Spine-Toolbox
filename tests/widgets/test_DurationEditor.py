@@ -34,5 +34,5 @@ class TestDurationEditor(unittest.TestCase):
         self.assertEqual(editor.value(), Duration("3M"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

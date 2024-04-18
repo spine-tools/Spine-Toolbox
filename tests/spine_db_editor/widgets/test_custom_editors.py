@@ -140,5 +140,5 @@ class TestEditors(unittest.TestCase):
             self.assertEqual(True, retval)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

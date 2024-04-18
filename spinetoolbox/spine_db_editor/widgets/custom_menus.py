@@ -220,7 +220,7 @@ class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
                     for index in item.parsed_value.indexes:
                         yield str(index), (None, index)
                 else:
-                    yield ""
+                    yield "", (None, "")
         else:
             yield item["name"], (db_map, item["id"])
 

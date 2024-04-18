@@ -22,7 +22,7 @@ from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
 class _MockModel(QAbstractTableModel):
     def __init__(self):
         super().__init__()
-        self._data = [['a', 'b', '1.1'], ['c', 'd', '2.2'], ['e', 'f', '3.3']]
+        self._data = [["a", "b", "1.1"], ["c", "d", "2.2"], ["e", "f", "3.3"]]
 
     def batch_set_data(self, indexes, data):
         for index, value in zip(indexes, data):
@@ -44,8 +44,8 @@ class _MockModel(QAbstractTableModel):
         if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return None
         if orientation == Qt.Orientation.Horizontal:
-            return 'Column {}'.format(section)
-        return 'Row {}'.format(section)
+            return "Column {}".format(section)
+        return "Row {}".format(section)
 
     def insertColumns(self, column, count, parent=QModelIndex()):
         self.beginInsertColumns(parent, column, column + count)
@@ -71,12 +71,12 @@ class _MockModel(QAbstractTableModel):
 
 
 def delocalize_comma_decimal_separator(x):
-    return x.replace(',', '.')
+    return x.replace(",", ".")
 
 
 def str_with_comma_decimal_separator(x):
     string = str(x)
-    return string.replace('.', ',')
+    return string.replace(".", ",")
 
 
 class TestCopyPasteTableView(unittest.TestCase):
@@ -85,7 +85,7 @@ class TestCopyPasteTableView(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
-    @patch('spinetoolbox.widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
+    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
     def test_copy_single_number(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -97,7 +97,7 @@ class TestCopyPasteTableView(unittest.TestCase):
         copied = clipboard.text()
         self.assertEqual(copied, "1,1\r\n")
 
-    @patch('spinetoolbox.widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
+    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
     def test_copy_row_with_hidden_column(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -110,9 +110,9 @@ class TestCopyPasteTableView(unittest.TestCase):
         copied = clipboard.text()
         self.assertEqual(copied, "a\t1,1\r\n")
 
-    @patch('locale.str', str_with_comma_decimal_separator)
-    @patch('spinetoolbox.widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
-    @patch('spinetoolbox.widgets.custom_qtableview.locale.delocalize', delocalize_comma_decimal_separator)
+    @patch("locale.str", str_with_comma_decimal_separator)
+    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
+    @patch("spinetoolbox.widgets.custom_qtableview.locale.delocalize", delocalize_comma_decimal_separator)
     def test_paste_single_localized_number(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -122,9 +122,9 @@ class TestCopyPasteTableView(unittest.TestCase):
         self.assertTrue(view.paste())
         self.assertEqual(model.index(0, 2).data(), "-1.1")
 
-    @patch('locale.str', str_with_comma_decimal_separator)
-    @patch('spinetoolbox.widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
-    @patch('spinetoolbox.widgets.custom_qtableview.locale.delocalize', delocalize_comma_decimal_separator)
+    @patch("locale.str", str_with_comma_decimal_separator)
+    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
+    @patch("spinetoolbox.widgets.custom_qtableview.locale.delocalize", delocalize_comma_decimal_separator)
     def test_paste_single_localized_row(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -137,9 +137,9 @@ class TestCopyPasteTableView(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), "B")
         self.assertEqual(model.index(0, 2).data(), "-1.1")
 
-    @patch('locale.str', str_with_comma_decimal_separator)
-    @patch('spinetoolbox.widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
-    @patch('spinetoolbox.widgets.custom_qtableview.locale.delocalize', delocalize_comma_decimal_separator)
+    @patch("locale.str", str_with_comma_decimal_separator)
+    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
+    @patch("spinetoolbox.widgets.custom_qtableview.locale.delocalize", delocalize_comma_decimal_separator)
     def test_paste_single_comma_separated_string(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -182,5 +182,5 @@ class TestCopyPasteTableView(unittest.TestCase):
         self.assertEqual(data, ["G", "H", 3.14])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

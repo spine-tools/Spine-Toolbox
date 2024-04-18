@@ -170,7 +170,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
         selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
-        copied_data = locale.str(-1.1) + '\n' + locale.str(-2.2)
+        copied_data = locale.str(-1.1) + "\n" + locale.str(-2.2)
         QApplication.clipboard().setText(copied_data)
         self._table_view.paste()
         selected_indexes = selection_model.selectedIndexes()
@@ -179,5 +179,5 @@ class TestIndexedValueTableView(unittest.TestCase):
         self.assertTrue(model.index(1, 1) in selected_indexes)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

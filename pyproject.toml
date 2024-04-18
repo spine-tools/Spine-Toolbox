@@ -13,7 +13,7 @@ classifiers = [
 ]
 requires-python = ">=3.8.1, <3.12"
 dependencies = [
-    "pyside6 >= 6.5.0, != 6.5.3, < 6.6",
+    "pyside6 >= 6.5.0, != 6.5.3, != 6.6.3",
     "jupyter-client >=6.0",
     "qtconsole >=5.1",
     "sqlalchemy >=1.3",
@@ -33,9 +33,6 @@ dependencies = [
 [project.urls]
 Documentation = "https://spine-toolbox.readthedocs.io/"
 Repository = "https://github.com/spine-tools/Spine-Toolbox"
-
-[project.optional-dependencies]
-dev = ["coverage[toml]"]
 
 [project.scripts]
 spinetoolbox = "spinetoolbox.main:main"
@@ -71,7 +68,7 @@ branch = true
 
 [tool.coverage.report]
 ignore_errors = true
+
 [tool.black]
 line-length = 120
-skip-string-normalization = true
 exclude = '\.git|ui|resources_icons_rc.py|resources_logos_rc.py'

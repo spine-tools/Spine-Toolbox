@@ -34,8 +34,8 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         logging.basicConfig(
             stream=sys.stderr,
             level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
     def setUp(self):
@@ -70,12 +70,13 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         self.spine_db_editor = None
         self._temp_dir.cleanup()
 
-    def fetch_object_tree_model(self):
+    def fetch_entity_tree_model(self):
         for item in self.spine_db_editor.entity_tree_model.visit_all():
-            if item.can_fetch_more():
+            while item.can_fetch_more():
                 item.fetch_more()
+                QApplication.processEvents()
 
-    def test_duplicate_object_in_object_tree_model(self):
+    def test_duplicate_zero_dimensional_entity_in_entity_tree_model(self):
         data = {
             "entity_classes": [("fish",), ("dog",), ("fish__dog", ("fish", "dog"))],
             "entities": [("fish", "nemo"), ("dog", "pluto"), ("fish__dog", ("nemo", "pluto"))],
@@ -83,7 +84,7 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
             "parameter_values": [("fish", "nemo", "color", "orange")],
         }
         self.db_mngr.import_data({self.db_map: data})
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
         nemo_item = fish_item.child(0)
@@ -117,5 +118,5 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
                     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

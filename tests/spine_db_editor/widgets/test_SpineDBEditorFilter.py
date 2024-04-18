@@ -62,8 +62,8 @@ class TestSpineDBEditorFilter(DBEditorTestBase):
         selection_model.setCurrentIndex(fish_index, QItemSelectionModel.NoUpdate)
         selection_model.select(fish_index, QItemSelectionModel.Select)
         filtered_values = {
-            self.spine_db_editor.parameter_definition_model: [('dog',)],
-            self.spine_db_editor.parameter_value_model: [('dog', 'pluto'), ('dog', 'scooby')],
+            self.spine_db_editor.parameter_definition_model: [("dog",)],
+            self.spine_db_editor.parameter_value_model: [("dog", "pluto"), ("dog", "scooby")],
         }
         self._assert_filter(filtered_values)
 
@@ -80,12 +80,12 @@ class TestSpineDBEditorFilter(DBEditorTestBase):
         selection_model.setCurrentIndex(fish_dog_index, QItemSelectionModel.NoUpdate)
         selection_model.select(fish_dog_index, QItemSelectionModel.Select)
         filtered_values = {
-            self.spine_db_editor.parameter_definition_model: [('dog',), ('fish',), ('dog__fish',)],
+            self.spine_db_editor.parameter_definition_model: [("dog",), ("fish",), ("dog__fish",)],
             self.spine_db_editor.parameter_value_model: [
-                ('dog__fish', DB_ITEM_SEPARATOR.join(['pluto', 'nemo'])),
-                ('fish', 'nemo'),
-                ('dog', 'pluto'),
-                ('dog', 'scooby'),
+                ("dog__fish", DB_ITEM_SEPARATOR.join(["pluto", "nemo"])),
+                ("fish", "nemo"),
+                ("dog", "pluto"),
+                ("dog", "scooby"),
             ],
         }
         self._assert_filter(filtered_values)
@@ -109,9 +109,9 @@ class TestSpineDBEditorFilter(DBEditorTestBase):
         filtered_values = {
             self.spine_db_editor.parameter_definition_model: [],
             self.spine_db_editor.parameter_value_model: [
-                ('dog', 'pluto'),
-                ('fish__dog', 'nemo ǀ pluto'),
-                ('dog__fish', 'pluto ǀ nemo'),
+                ("dog", "pluto"),
+                ("fish__dog", "nemo ǀ pluto"),
+                ("dog__fish", "pluto ǀ nemo"),
             ],
         }
         self._assert_filter(filtered_values)
@@ -130,11 +130,11 @@ class TestSpineDBEditorFilter(DBEditorTestBase):
         selection_model.setCurrentIndex(pluto_index, QItemSelectionModel.NoUpdate)
         selection_model.select(pluto_index, QItemSelectionModel.Select)
         filtered_values = {
-            self.spine_db_editor.parameter_definition_model: [('fish',)],
+            self.spine_db_editor.parameter_definition_model: [("fish",)],
             self.spine_db_editor.parameter_value_model: [
-                ('fish__dog', DB_ITEM_SEPARATOR.join(['nemo', 'scooby'])),
-                ('fish', 'nemo'),
-                ('dog', 'scooby'),
+                ("fish__dog", DB_ITEM_SEPARATOR.join(["nemo", "scooby"])),
+                ("fish", "nemo"),
+                ("dog", "scooby"),
             ],
         }
         self._assert_filter(filtered_values)

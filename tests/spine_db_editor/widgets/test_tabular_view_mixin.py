@@ -161,16 +161,15 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
         for filter_menu in self._db_editor.filter_menus.values():
             filter_menu._filter._filter_model.canFetchMore(None)
             filter_menu._filter._filter_model.fetchMore(None)
-        while self._db_editor.pivot_table_model.rowCount() != 7:
+        while self._db_editor.pivot_table_model.rowCount() != 6:
             QApplication.processEvents()
         expected = [
-            [None, "parameter", "parameter1", None],
-            ["class1", "index", None, None],
-            ["object1", "k1", "Map", None],
-            ["object1", "k2", "Map", None],
-            ["object2", "k1", "Map", None],
-            ["object2", "k2", "Map", None],
-            [None, None, None, None],
+            [None, "parameter", "parameter1"],
+            ["class1", "index", None],
+            ["object1", "k1", "Map"],
+            ["object1", "k2", "Map"],
+            ["object2", "k1", "Map"],
+            ["object2", "k2", "Map"],
         ]
         self._assert_model_data_equals(self._db_editor.pivot_table_model, expected)
         self._db_mngr.purge_items({self._db_map: ["entity_class"]})
@@ -214,5 +213,5 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

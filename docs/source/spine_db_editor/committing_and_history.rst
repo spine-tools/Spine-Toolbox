@@ -17,6 +17,9 @@ An asterisk (*) in a tab of Spine Database Editor indicates that the session has
 .. image:: img/dirty_db.png
    :align: center
 
+If the database is opened from a Data Store, the corresponding project item will also have a notification in its
+upper right corner indicating that the database has uncommitted changes.
+
 To commit your changes, select **Session -> Commit** from the hamburger menu or press **Ctrl+Enter** while the
 Spine Database Editor -window is active to open the commit dialog:
 

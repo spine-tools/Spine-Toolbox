@@ -31,17 +31,17 @@ def _resolution_to_text(resolution):
     """Converts a list of durations into a string of comma-separated durations."""
     if len(resolution) == 1:
         return relativedelta_to_duration(resolution[0])
-    affix = ''
-    text = ''
+    affix = ""
+    text = ""
     for r in resolution:
         text = text + affix + relativedelta_to_duration(r)
-        affix = ', '
+        affix = ", "
     return text
 
 
 def _text_to_resolution(text):
     """Converts a comma-separated string of durations into a resolution array."""
-    return [token.strip() for token in text.split(',')]
+    return [token.strip() for token in text.split(",")]
 
 
 class TimeSeriesFixedResolutionEditor(QWidget):
@@ -161,7 +161,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         """Updated the plot."""
         self._ui.plot_widget.canvas.axes.cla()
         add_time_series_plot(self._ui.plot_widget, self._model.value)
-        self._ui.plot_widget.canvas.axes.tick_params(axis='x', labelrotation=30)
+        self._ui.plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
         self._ui.plot_widget.canvas.draw()
 
     def value(self):

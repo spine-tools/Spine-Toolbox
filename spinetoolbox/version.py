@@ -30,9 +30,9 @@ class VersionInfo(NamedTuple):
     def __str__(self) -> str:
         """Create a version string following PEP 440"""
         version = f"{self.major}.{self.minor}.{self.micro}"
-        if self.releaselevel == 'final':  # pylint: disable=no-else-return
+        if self.releaselevel == "final":  # pylint: disable=no-else-return
             return version
-        elif self.releaselevel.startswith('dev'):
+        elif self.releaselevel.startswith("dev"):
             return version + f".dev{self.serial}"
         else:
             return version + f"-{self.releaselevel}.{self.serial}"

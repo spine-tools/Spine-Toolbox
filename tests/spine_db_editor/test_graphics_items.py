@@ -105,12 +105,12 @@ class TestEntityItem(unittest.TestCase):
         self.assertEqual(
             self._item.db_map_data(self._db_map).resolve(),
             {
-                'name': 'r',
-                'id': 2,
-                'class_id': 2,
-                'entity_class_name': 'rc',
-                'element_id_list': (1,),
-                'description': None,
+                "name": "r",
+                "id": 2,
+                "class_id": 2,
+                "entity_class_name": "rc",
+                "element_id_list": (1,),
+                "description": None,
             },
         )
 

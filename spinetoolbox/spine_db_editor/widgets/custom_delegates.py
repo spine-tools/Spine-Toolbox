@@ -728,7 +728,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         """Returns an editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'databases':
+        if header[index.column()] == "databases":
             editor = self._create_database_editor(parent, index)
         else:
             editor = CustomLineEditor(parent)
@@ -745,7 +745,7 @@ class ManageEntityClassesDelegate(ManageItemsDelegate):
     def paint(self, painter, option, index):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'display icon':
+        if header[index.column()] == "display icon":
             icon = object_icon(index.data())
             icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
         else:
@@ -755,13 +755,13 @@ class ManageEntityClassesDelegate(ManageItemsDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         label = header[index.column()]
-        if label == 'display icon':
+        if label == "display icon":
             self.icon_color_editor_requested.emit(index)
             editor = None
-        elif label in ('entity class name', 'description'):
+        elif label in ("entity class name", "description"):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.ItemDataRole.EditRole))
-        elif label == 'databases':
+        elif label == "databases":
             editor = self._create_database_editor(parent, index)
         elif label == "active by default":
             editor = BooleanValueDelegate.make_editor(self.parent(), parent, index)
@@ -779,11 +779,11 @@ class ManageEntitiesDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'entity name':
+        if header[index.column()] == "entity name":
             editor = CustomLineEditor(parent)
             data = index.data(Qt.ItemDataRole.EditRole)
             editor.set_data(data)
-        elif header[index.column()] == 'databases':
+        elif header[index.column()] == "databases":
             editor = self._create_database_editor(parent, index)
         else:
             editor = SearchBarEditor(parent)
@@ -799,7 +799,7 @@ class RemoveEntitiesDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'databases':
+        if header[index.column()] == "databases":
             editor = self._create_database_editor(parent, index)
             self.connect_editor_signals(editor, index)
             return editor

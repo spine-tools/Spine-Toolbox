@@ -565,8 +565,10 @@ class ToolboxUI(QMainWindow):
                 load_dir = QFileDialog.getExistingDirectory(self, caption="Open Spine Toolbox Project", dir=start_dir)
                 if not load_dir:
                     return False  # Cancelled
-        success = self.restore_project(load_dir)
-        if not success:
+        if not self.restore_project(load_dir):
+            if not self.undo_stack.isClean():  # If current project not saved, don't exit it
+                self.msg_warning.emit(f"Cancelled opening project {load_dir}. Current project has unsaved changes.")
+                return False
             # If opening project failed, don't clear the event log so that the error message is visible
             self.close_project(ask_confirmation=False, clear_event_log=False)
             return False

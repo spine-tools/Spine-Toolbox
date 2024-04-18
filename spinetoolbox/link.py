@@ -315,7 +315,7 @@ class _TextIcon(_IconBase):
     def __init__(self, parent, extent, char, tooltip=None, active=False):
         super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)
         self._text_item = QGraphicsTextItem(self)
-        font = QFont('Font Awesome 5 Free Solid', weight=QFont.Bold)
+        font = QFont("Font Awesome 5 Free Solid", weight=QFont.Bold)
         self._text_item.setFont(font)
         self._text_item.setDefaultTextColor(self._fg_color)
         self._text_item.setPlainText(char)

@@ -631,7 +631,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Open file browser where user can select the path to wanted work directory."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getExistingDirectory(self, "Select Work Directory", home_dir())
-        if answer == '':  # Cancel button clicked
+        if answer == "":  # Cancel button clicked
             return
         selected_path = os.path.abspath(answer)
         self.ui.lineEdit_work_dir.setText(selected_path)

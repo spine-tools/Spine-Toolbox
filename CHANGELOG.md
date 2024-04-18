@@ -29,11 +29,20 @@ Many parts of the Spine data structure have been redesigned.
   The functionality that was previously implemented using the is_active parameter
   has been replaced by *entity alternatives*.
   Entity classes have a default setting for the entity alternative called *active by default*.
+  Database migration should automatically replace tools, features and methods
+  by entity alternatives and set active by default to whatever default value `is_active`
+  or similar parameter had.
+  The `is_active` parameter is not removed from entity classes but its values are.
+- Note that new zero-dimensional entity classes have *active by default* set to `false` initially.
+  This means that the entities of those classes are hidden when using scenario filters
+  unless specifically shown using entity alternatives.
 
 #### Miscellaneous changes
 
 - "Rubber band" selection of items in Design and Graph views is now done with **left mouse button**
   (no need to press Ctrl anymore). The views can be dragged around by holding the **right mouse button**.
+- Spine Database Editor now remembers the configuration of the docs in each view for a specific URL. The docks
+  can be reset from the hamburger menu **View->Docks...->Reset docks**.
 - You can now select a different Julia executable & project or Julia kernel for each Tool spec.
   This overrides the global setting from Toolbox Settings.
 - Headless mode now supports remote execution (see 'python -m spinetoolbox --help')

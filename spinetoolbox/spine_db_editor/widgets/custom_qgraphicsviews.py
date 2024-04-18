@@ -753,7 +753,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         start, stop, step_len, fps = dialog.selections()
         start = np.datetime64(start)
         stop = np.datetime64(stop)
-        step_len = np.timedelta64(step_len, 'h')
+        step_len = np.timedelta64(step_len, "h")
         runnable = QRunnable.create(lambda: self._do_export_as_video(file_path, start, stop, step_len, fps, cv2))
         self._thread_pool.start(runnable)
 

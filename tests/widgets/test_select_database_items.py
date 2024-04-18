@@ -79,5 +79,5 @@ def _select_database_items(checked_states):
         widget.deleteLater()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

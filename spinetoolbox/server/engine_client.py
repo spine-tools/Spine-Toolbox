@@ -54,9 +54,9 @@ class EngineClient:
             # implementation below based on https://github.com/zeromq/pyzmq/blob/main/examples/security/stonehouse.py
             # prepare folders
             base_dir = sec_folder
-            secret_keys_dir = os.path.join(base_dir, 'private_keys')
-            keys_dir = os.path.join(base_dir, 'certificates')
-            public_keys_dir = os.path.join(base_dir, 'public_keys')
+            secret_keys_dir = os.path.join(base_dir, "private_keys")
+            keys_dir = os.path.join(base_dir, "certificates")
+            public_keys_dir = os.path.join(base_dir, "public_keys")
             # We need two certificates, one for the client and one for
             # the server. The client must know the server's public key
             # to make a CURVE connection.

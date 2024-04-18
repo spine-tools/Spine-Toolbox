@@ -188,19 +188,18 @@ Settings in the **General** group:
 Settings in the **Entity tree** group:
 
 - **Sticky selection in entity trees** Controls how selecting items in Spine database editor's
-  Object and Relationships trees using the left mouse button works.
+  **Entity Tree** using the left mouse button works.
   If checked, multiple selection is enabled and pressing **Ctrl** enables single selection.
   If unchecked, single selection is enabled and pressing **Ctrl** enables multiple selection.
 
 Settings in the **Entity graph** group:
 
-- **Auto-expand entities** This checkbox controls which relationship
-  nodes to show on the Graph view.
-  If checked, all relationships that contain a visible object node are included.
-  If unchecked, relationship nodes are included only if all their objects are show on the Graph view.
+- **Auto-expand entities** This checkbox controls which N-D entities are automatically shown on the Graph view.
+  If checked, all N-D entities that are related to the selection are included automatically.
+  If unchecked, only N-D entities that have all the elements visible in the graph are shown automatically.
 
 - **Merge databases** If checked, Graph view will combine all databases
-  that are open on the same table into a single graph if they contains common object nodes.
+  that are open on the same table into a single graph if they contains common entity nodes.
   If unchecked, a separate graph will be drawn for each database.
 
 - **Snap entities to grid** Makes it so that the placement of the entities can’t be arbitrary anymore

@@ -54,5 +54,5 @@ class TestSortsChildrenMixin(unittest.TestCase):
         self.assertEqual(sorter.child_ns(), [2, 3, 4, 6, 7, 9])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

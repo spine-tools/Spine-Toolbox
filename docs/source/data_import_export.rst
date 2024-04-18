@@ -287,18 +287,18 @@ The currently selected mapping is edited using the controls in *Mapping options*
 The *Mapping options* dock contains controls that apply to the mapping as a whole, e.g. what data the output tables
 contain. It is important to choose *Item type* correctly since it determines what database items the mapping outputs
 and also dictates the mapping types that will be visible in the *Mapping specification* dock widget. It has options
-*Object class, Relationship class, Relationship class with object parameter, Object group, Alternative, Scenario,
-Scenario alternative, Parameter value list, Feature, Tool, Tool feature* and *Tool feature method*. The rest of the
+*Entity class, Entity class with dimension parameter, Entity group, Alternative, Scenario,
+Scenario alternative* and *Parameter value list*. The rest of the
 options besides *Group function* are item type specific and may not be available for all selections.
 
 .. image:: img/exporter_mapping_options_dock.png
    :align: center
 
 Checking the *Always export header* checkbox outputs a table that has fixed headers even if the table is
-otherwise empty. If *Item type* is Relationship class, the *Relationship dimensions* spinbox can be used
-to specify the maximum number of relationships' dimensions that the mapping is able to handle.
-*Selected dimensions* option is only available for the *Relationship class with object parameter* item
-type and it is used to specify the relationship dimension where the object parameters are selected from.
+otherwise empty. If *Item type* is Entity class, the *Entity dimensions* spinbox can be used
+to specify the maximum number of entity's dimensions that the mapping is able to handle.
+*Selected dimensions* option is only available for the *Entity class with dimension parameter* item
+type and it is used to specify the entity dimension where the entity parameters are selected from.
 Parameters can be outputted by choosing their value type using the *Parameter type* combobox. The *Value*
 choice adds rows to *Mapping specification* for parameter values associated with individual entities while
 *Default value* allows outputting parameters' default values. The maximum number of value dimensions in
@@ -318,7 +318,7 @@ Mapping specification
 *Mapping specification* contains a table which defines the structure of the mapping's output tables.
 Like mentioned before, the contents of the table depends on choices on *Mapping options*,
 e.g. the item type, parameter type or dimensions.
-Each row corresponds to an item in the database: object class names, object names, parameter values etc.
+Each row corresponds to an item in the database: entity class names, entity names, parameter values etc.
 The item's name is given in the *Mapping type* column.
 The colors help to identify the corresponding elements in the preview.
 
@@ -327,16 +327,16 @@ that is, where the item is written or otherwise used when the output tables are 
 By default, a plain integral number in this column means that the item is written to that column in the output table.
 From the other choices, *hidden* means that the item will not show on the output.
 *Table name*, on the other hand, uses the item as output table names.
-For example, outputting object classes as table names will generate one new table for every object class
+For example, outputting entity classes as table names will generate one new table for every entity class
 in the database, each named after the class.
-Each table in turn will contain the parameters and objects of the table's object class.
+Each table in turn will contain the parameters and entities of the table's entity class.
 If multiple mappings generate a table with a common name then each mapping appends to the same table
 in the order specified by the *Write order* column on *Mappings* dock.
 
 The *column header* position makes the item a column header for a **buddy item**.
 Buddy items have some kind of logical relationship with their column header,
-for instance the buddy of an object class is its objects;
-setting the object class to *column header* will write the name of the class as the objects' column header.
+for instance the buddy of an entity class is its entities;
+setting the entity class to *column header* will write the name of the class as the entity's column header.
 
 .. note::
    Currently, buddies are fixed and defined only for a small set database items.
@@ -353,12 +353,12 @@ They then act as a pivot header for the data item which is the last non-hidden i
 Once checked as pivoted, an item's position column defines a pivot header row instead of output column.
 
 By default a row ends up in the output table only when all mapping items yield some data.
-For example, when exporting object classes and objects, only classes that have objects get written to output.
-However, sometimes it is useful to export 'empty' object classes as well.
+For example, when exporting entity classes and entities, only classes that have entities get written to output.
+However, sometimes it is useful to export 'empty' entity classes as well.
 For this purpose a mapping can be set as **nullable** in the *Nullable* column.
-Continuing the example, checking the *Nullable* checkbox for *Objects* would produce an output table with
-all object classes including ones without objects.
-The position where objects would normally be outputted are left empty for those classes.
+Continuing the example, checking the *Nullable* checkbox for *Entities* would produce an output table with
+all entity classes including ones without entities.
+The position where entities would normally be outputted are left empty for those classes.
 
 Besides the *column header* position it is possible to give fixed column headers to items
 using the *Header* column in *Mapping specification* dock.
@@ -453,11 +453,11 @@ for these applications.
 
 *Single item*
     Writing the item's name to the field filters out all other items.
-    For example, to output the object class called 'node' only, write :literal:`node` to the *Filter* field.
+    For example, to output the entity class called 'node' only, write :literal:`node` to the *Filter* field.
 
 *OR operator*
     The vertical bar :literal:`|` serves as the OR operator.
-    :literal:`node|unit` as a filter for object classes would output classes named 'node' and 'unit'.
+    :literal:`node|unit` as a filter for entity classes would output classes named 'node' and 'unit'.
 
 *Excluding an item*
     While perhaps not the most suitable task for regular expressions it is still possible to 'negate' a filter.

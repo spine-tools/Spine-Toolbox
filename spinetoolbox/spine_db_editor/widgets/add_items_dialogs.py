@@ -209,17 +209,17 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         self.number_of_dimensions = 1 if dimension_one_name is not None else 0
         self.spin_box.setValue(self.number_of_dimensions)
         self.connect_signals()
-        labels = ['dimension name (1)'] if dimension_one_name is not None else []
-        labels += ['entity class name', 'description', 'display icon', "active by default", 'databases']
+        labels = ["dimension name (1)"] if dimension_one_name is not None else []
+        labels += ["entity class name", "description", "display icon", "active by default", "databases"]
         self.model.set_horizontal_header_labels(labels)
         db_names = ",".join(x.codename for x in item.db_maps)
         self.default_display_icon = None
         self.model.set_default_row(
             **{
-                'dimension name (1)': dimension_one_name,
-                'display icon': self.default_display_icon,
+                "dimension name (1)": dimension_one_name,
+                "display icon": self.default_display_icon,
                 "active by default": self.number_of_dimensions != 0,
-                'databases': db_names,
+                "databases": db_names,
             }
         )
         self.model.clear()
@@ -274,19 +274,20 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.ItemDataRole.EditRole not in roles:
             return
-        top = top_left.row()
         left = top_left.column()
-        bottom = bottom_right.row()
+        if left >= self.number_of_dimensions:
+            return
         right = bottom_right.column()
+        if right >= self.number_of_dimensions:
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
         for row in range(top, bottom + 1):
-            for column in range(left, right + 1):
-                if column >= self.number_of_dimensions:
-                    break
-            else:
-                col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
-                obj_cls_names = [col_data(j) for j in range(self.number_of_dimensions) if col_data(j)]
-                relationship_class_name = name_from_dimensions(obj_cls_names)
-                self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
+            obj_cls_names = [
+                name for j in range(self.number_of_dimensions) if (name := self.model.index(row, j).data())
+            ]
+            relationship_class_name = name_from_dimensions(obj_cls_names)
+            self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
 
     @Slot()
     def accept(self):
@@ -310,9 +311,9 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
                 display_icon = self.default_display_icon
             active_by_default = row_data[active_by_default_column]
             pre_item = {
-                'name': entity_class_name,
-                'description': description,
-                'display_icon': display_icon,
+                "name": entity_class_name,
+                "description": description,
+                "display_icon": display_icon,
                 "active_by_default": active_by_default,
             }
             db_names = row_data[db_column]
@@ -335,7 +336,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
                     dimension_id = entity_classes[dimension_name]["id"]
                     dimension_id_list.append(dimension_id)
                 item = pre_item.copy()
-                item['dimension_id_list'] = dimension_id_list
+                item["dimension_id_list"] = dimension_id_list
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
@@ -405,21 +406,24 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
 
     @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        if roles and Qt.ItemDataRole.EditRole not in roles:
+        if roles and Qt.ItemDataRole.EditRole not in roles or self.entity_class is None:
             return
-        if self.entity_class is None:
+        dimension_count = len(self.dimension_name_list)
+        if dimension_count == 0:
             return
         header = self.model.horizontal_header_labels()
-        top = top_left.row()
         left = top_left.column()
-        bottom = bottom_right.row()
         right = bottom_right.column()
-        dimension_count = len(self.dimension_name_list)
+        if left <= header.index("entity name") <= right:
+            return
+        if "databases" in header and left == right == header.index("databases"):
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
         for row in range(top, bottom + 1):
-            if header.index('entity name') not in range(left, right + 1):
-                el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
-                entity_name = name_from_elements(el_names)
-                self.model.setData(self.model.index(row, dimension_count), entity_name)
+            el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
+            entity_name = name_from_elements(el_names)
+            self.model.setData(self.model.index(row, dimension_count), entity_name)
 
 
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
@@ -487,11 +491,11 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         return EmptyRowModel(self)
 
     def _do_reset_model(self):
-        header = self.dimension_name_list + ('entity name', 'databases')
+        header = self.dimension_name_list + ("entity name", "databases")
         self.model.set_horizontal_header_labels(header)
         default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self.class_key in keys]
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
-        defaults = {'databases': db_names}
+        defaults = {"databases": db_names}
         defaults.update(self.entity_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
@@ -507,7 +511,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             if not entity_name:
                 self.parent().msg_error.emit(f"Entity missing at row {i + 1}")
                 return
-            pre_item = {'name': entity_name}
+            pre_item = {"name": entity_name}
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""
@@ -531,7 +535,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                     element_id = entities[entity_class_id, element_byname]["id"]
                     element_id_list.append(element_id)
                 item = pre_item.copy()
-                item.update({'element_id_list': element_id_list, 'class_id': class_id})
+                item.update({"element_id_list": element_id_list, "class_id": class_id})
                 db_map_data.setdefault(db_map, []).append(item)
         return db_map_data
 

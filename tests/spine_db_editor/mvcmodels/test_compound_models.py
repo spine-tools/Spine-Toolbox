@@ -189,5 +189,5 @@ class TestCompoundParameterValueModel(TestBase):
         self.assertEqual(model.index_name(index), "TestCompoundParameterValueModel_db - x - Base - mysterious cube")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

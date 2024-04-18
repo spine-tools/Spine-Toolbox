@@ -122,5 +122,5 @@ class TestArrayModel(unittest.TestCase):
         self.assertEqual(model.array().index_name, "new index")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

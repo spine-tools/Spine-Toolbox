@@ -23,9 +23,9 @@ REQUIRED_SPINE_OPT_VERSION = "0.6.9"
 # Invalid characters for directory names
 # NOTE: "." is actually valid in a directory name but this is
 # to prevent the user from creating directories like /..../
-INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
+INVALID_CHARS = ["<", ">", ":", '"', "/", "\\", "|", "?", "*", "."]
 # Invalid characters for file names
-INVALID_FILENAME_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*"]
+INVALID_FILENAME_CHARS = ["<", ">", ":", '"', "/", "\\", "|", "?", "*"]
 
 # Paths to application, configuration file, default project and work dirs, and documentation index page
 _frozen = getattr(sys, "frozen", False)

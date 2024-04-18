@@ -925,18 +925,18 @@ class TestRaiseIfIncompatibleX(unittest.TestCase):
             XYData(
                 x=[1.0, 2.0, 3.0],
                 y=[5.0, 2.0, -1.0],
-                x_label=IndexName('x', 0),
-                y_label='',
-                data_index=['1d_map'],
-                index_names=[IndexName('parameter_name', 0)],
+                x_label=IndexName("x", 0),
+                y_label="",
+                data_index=["1d_map"],
+                index_names=[IndexName("parameter_name", 0)],
             ),
             XYData(
-                x=['t1', 't2'],
+                x=["t1", "t2"],
                 y=[13.0, 7.0],
-                x_label=IndexName('x', 2),
-                y_label='',
-                data_index=['uneven_map', 'A1'],
-                index_names=[IndexName('parameter_name', 0), IndexName('x', 1)],
+                x_label=IndexName("x", 2),
+                y_label="",
+                data_index=["uneven_map", "A1"],
+                index_names=[IndexName("parameter_name", 0), IndexName("x", 1)],
             ),
         ]
         self.assertRaises(PlottingError, raise_if_incompatible_x, data_list)
@@ -989,5 +989,5 @@ def multi_signal_waiter(signals):
         waiter.deleteLater()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

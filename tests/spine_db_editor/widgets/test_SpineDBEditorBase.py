@@ -54,15 +54,6 @@ class TestSpineDBEditorBase(unittest.TestCase):
         self.db_editor.deleteLater()
         self.db_editor = None
 
-    def test_save_window_state(self):
-        self.db_editor.save_window_state()
-        self.db_editor.qsettings.beginGroup.assert_has_calls([mock.call("spineDBEditor"), mock.call("")])
-        self.db_editor.qsettings.endGroup.assert_has_calls([mock.call(), mock.call()])
-        qsettings_save_calls = self.db_editor.qsettings.setValue.call_args_list
-        self.assertEqual(len(qsettings_save_calls), 1)
-        saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
-        self.assertIn("windowState", saved_dict)
-
     def test_import_file_recognizes_excel(self):
         with mock.patch.object(self.db_editor, "qsettings"), mock.patch.object(
             self.db_editor, "import_from_excel"
@@ -88,5 +79,5 @@ class TestSpineDBEditorBase(unittest.TestCase):
             mock_import_from_json.assert_called_once_with("my_json_file.json")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

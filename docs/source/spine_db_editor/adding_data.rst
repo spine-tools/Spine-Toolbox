@@ -80,7 +80,7 @@ in the **Entity Tree**. This way the class will be preselected from the list and
 other classes that are relevant to the selected class.
 
 Enter the names of the entities under **entity name**. Finally, select the databases where you want to add the
-objects under **databases**. When you're ready, press **Ok**. Rows can once again be deleted with the
+entities under **databases**. When you're ready, press **Ok**. Rows can once again be deleted with the
 **Remove selected rows** -button.
 
 With N-D entity classes, the elements need to be specified. After defining the elements the entity's name can be
@@ -90,7 +90,7 @@ modified:
    :align: center
 
 New entities for an existing N-D entity class can also be created easily from the **Graph view**.
-Make sure all the objects you want as members in the new entity are in the graph.
+Make sure all the entities you want as members in the new entity are in the graph.
 To start the new N-D entity, either double click on one of the entity items in the graph,
 or right click on it to display the context menu, and choose the class from **Connect entities**.
 After selecting the class the mouse cursor will adopt a cross-hairs shape.
@@ -106,7 +106,7 @@ entities you want to add, and press **OK**.
 From **Pivot View**
 ~~~~~~~~~~~~~~~~~~~
 
-To add an object to a specific 0-D entity class, bring the class to **Pivot View** using either **Value** or **Index**
+To add an entity to a specific 0-D entity class, bring the class to **Pivot View** using either **Value** or **Index**
 (see :ref:`using_pivot_table_and_frozen_table`). There under the class name just type a new name and the new entity
 will be added under the class. Note that is only possible to add 0-D entities this way even if you have selected
 an N-D class from the **Entity Tree**.
@@ -119,7 +119,7 @@ Duplicating entities
 ~~~~~~~~~~~~~~~~~~~~
 
 To duplicate an existing entity with all its parameter values and other associated data, right-click over the
-corresponding entity item in **Entity Tree** to display the context menu, and select **Duplicate object**. The
+corresponding entity item in **Entity Tree** to display the context menu, and select **Duplicate entity**. The
 new entity will have the same name with an added (1) to indicate that it is a copy of the original entity. It
 can be renamed to be something else afterwards.
 
@@ -127,7 +127,7 @@ can be renamed to be something else afterwards.
 Adding entity groups
 ====================
 
-Right-click on an object class item in **Entity Tree**,
+Right-click on an entity class item in **Entity Tree**,
 and select **Add entity group** from the context menu.
 
 The **Add entity group** dialog will pop up:
@@ -186,12 +186,12 @@ From *Table View*
 ~~~~~~~~~~~~~~~~~~~~~
 
 To add new parameter values for an entity, just fill the last empty row of the *Parameter value* -table.
-Enter the name of the class under *entity_class_name*, the name of the object under *entity_byname*,
+Enter the name of the class under *entity_class_name*, the name of the entity under *entity_byname*,
 the name of the parameter under *parameter_name*, and the name of the alternative under *alternative_name*.
 Optionally, you can also specify the parameter value right away under the *value* column. The database where
 the value will be added to is displayed in the last column of the table. To display a list of available
 entity classes, entities, parameters, or alternatives, just start typing or double click under the appropriate
-column. The parameter value is added when the background of the cells under *object_class_name* and *database*
+column. The parameter value is added when the background of the cells under *entity_class_name* and *database*
 become gray.
 
 .. note:: To add parameter values for a 0-D entity, the entity has to exist beforehand.

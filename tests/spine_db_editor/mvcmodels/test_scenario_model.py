@@ -546,5 +546,5 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         self.assertEqual(model_data, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

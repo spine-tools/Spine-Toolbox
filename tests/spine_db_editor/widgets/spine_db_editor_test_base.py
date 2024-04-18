@@ -54,9 +54,9 @@ class DBEditorTestBase(unittest.TestCase):
         cls.dog_class = cls._entity_class(2, "dog")
         cls.fish_dog_class = cls._entity_class(3, "fish__dog", [cls.fish_class["id"], cls.dog_class["id"]])
         cls.dog_fish_class = cls._entity_class(4, "dog__fish", [cls.dog_class["id"], cls.fish_class["id"]])
-        cls.nemo_object = cls._entity(1, cls.fish_class["id"], 'nemo')
-        cls.pluto_object = cls._entity(2, cls.dog_class["id"], 'pluto')
-        cls.scooby_object = cls._entity(3, cls.dog_class["id"], 'scooby')
+        cls.nemo_object = cls._entity(1, cls.fish_class["id"], "nemo")
+        cls.pluto_object = cls._entity(2, cls.dog_class["id"], "pluto")
+        cls.scooby_object = cls._entity(3, cls.dog_class["id"], "scooby")
         cls.pluto_nemo_rel = cls._entity(
             4, cls.dog_fish_class["id"], "dog__fish_pluto__nemo", [cls.pluto_object["id"], cls.nemo_object["id"]]
         )

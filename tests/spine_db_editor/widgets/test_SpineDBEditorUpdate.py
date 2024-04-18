@@ -34,7 +34,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
-        self.nemo_object = self._entity(1, self.fish_class["id"], 'dory')
+        self.nemo_object = self._entity(1, self.fish_class["id"], "dory")
         self.db_mngr.update_entities({self.mock_db_map: [self.nemo_object]})
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = root_item.child(1)

@@ -136,6 +136,8 @@ class SpineDBWorker(QObject):
 
     def _do_fetch_more(self, parent):
         item_type = parent.fetch_item_type
+        if parent in self._parents_fetching.get(item_type, set()):
+            return
         fully_fetched = item_type in self._fetched_item_types
         # Only trust mapping if no external commits or fully fetched
         if not self._db_map.has_external_commits() or fully_fetched:

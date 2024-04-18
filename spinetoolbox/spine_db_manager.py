@@ -38,7 +38,7 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     to_database,
 )
-from spinedb_api.parameter_value import load_db_value, dump_db_value
+from spinedb_api.parameter_value import deep_copy_value, load_db_value, dump_db_value
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.helpers import remove_credentials_from_url
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
@@ -109,6 +109,7 @@ class SpineDBManager(QObject):
         self._connect_signals()
         self._cmd_id = 0
         self._synchronous = synchronous
+        self.data_stores = dict()
 
     def _connect_signals(self):
         self.error_msg.connect(self.receive_error_msg)
@@ -413,6 +414,7 @@ class SpineDBManager(QObject):
             listener (object)
             db_maps (DiffDatabaseMapping)
         """
+        self.update_data_store_db_maps()
         for db_map in db_maps:
             self.add_db_map_listener(db_map, listener)
             stack = self.undo_stack[db_map]
@@ -420,6 +422,11 @@ class SpineDBManager(QObject):
                 stack.canRedoChanged.connect(listener.update_undo_redo_actions)
                 stack.canUndoChanged.connect(listener.update_undo_redo_actions)
                 stack.cleanChanged.connect(listener.update_commit_enabled)
+                stores = self.data_stores.get(db_map)
+                if not stores:
+                    continue
+                for store in stores:
+                    self.undo_stack[db_map].cleanChanged.connect(store.notify_about_dirtiness)
             except AttributeError:
                 pass
 
@@ -443,6 +450,17 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].canRedoChanged.disconnect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].canUndoChanged.disconnect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
+                if not self.db_map_listeners(db_map) == 1:
+                    # Unregister the dirty listeners for every data store ONLY when the last editor
+                    # for that db map is closed. This way the dirtiness state of a data store that is
+                    # not open in a db editor can still be affected.
+                    continue
+                stores = self.data_stores.get(db_map)
+                if not stores:
+                    continue
+                for store in stores:
+                    self.undo_stack[db_map].cleanChanged.disconnect(store.notify_about_dirtiness)
+                    store.notify_about_dirtiness(True)
             except AttributeError:
                 pass
         if dirty_db_maps:
@@ -457,12 +475,43 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].canRedoChanged.connect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].canUndoChanged.connect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].cleanChanged.connect(listener.update_commit_enabled)
+                stores = self.data_stores.get(db_map)
+                if not stores:
+                    continue
+                for store in stores:
+                    self.undo_stack[db_map].cleanChanged.connect(store.notify_about_dirtiness)
             except AttributeError:
                 pass
         for db_map in db_maps:
             if not self.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
         return failed_db_maps
+
+    def add_data_store_db_map(self, db_map, store):
+        """Adds a Data Store instance under a db_map into memory"""
+        if db_map in self.data_stores:
+            self.data_stores[db_map].append(store)
+        else:
+            self.data_stores[db_map] = [store]
+
+    def remove_data_store_db_map(self, db_map, store):
+        """Removes a Data Store instance from memory"""
+        if self.data_stores.get(db_map):
+            self.data_stores[db_map].remove(store)
+
+    def update_data_store_db_maps(self):
+        """Updates the db maps of the dict that maps db_maps to Data Stores"""
+        new_data_stores = {}
+        old_stores = []
+        for store in self.data_stores.values():
+            old_stores.extend(store)
+        for store in old_stores:
+            db_map = store.get_db_map_for_ds()
+            if db_map in new_data_stores:
+                new_data_stores[db_map].append(store)
+            else:
+                new_data_stores[db_map] = [store]
+        self.data_stores = new_data_stores
 
     def is_dirty(self, db_map):
         """Returns True if mapping has pending changes.
@@ -736,7 +785,7 @@ class SpineDBManager(QObject):
         """Returns the value's database representation formatted for Qt.ItemDataRole.ToolTipRole."""
         if isinstance(parsed_data, TimeSeriesFixedResolution):
             resolution = [relativedelta_to_duration(r) for r in parsed_data.resolution]
-            resolution = ', '.join(resolution)
+            resolution = ", ".join(resolution)
             tool_tip_data = "Start: {}<br>resolution: [{}]<br>length: {}".format(
                 parsed_data.start, resolution, len(parsed_data)
             )
@@ -1126,6 +1175,7 @@ class SpineDBManager(QObject):
             for id_, indexed_values in packed_data.items():
                 parsed_value = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
                 if isinstance(parsed_value, IndexedValue):
+                    parsed_value = deep_copy_value(parsed_value)
                     for index, (val, typ) in indexed_values.items():
                         parsed_val = from_database(val, typ)
                         parsed_value.set_value(index, parsed_val)
@@ -1562,7 +1612,7 @@ class SpineDBManager(QObject):
     def export_to_json(file_path, data_for_export, caller):
         """Exports given data into JSON file."""
         json_data = json.dumps(data_for_export, indent=4)
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(json_data)
         caller.file_exported.emit(file_path, 1.0, False)
 

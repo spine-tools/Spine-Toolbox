@@ -205,7 +205,7 @@ class PivotModel:
         """Sets values for the frozen indexes.
 
         Args:
-            value (list of str):
+            value (tuple of str):
         """
         if value == self.frozen_value:
             return
@@ -261,7 +261,7 @@ class PivotModel:
             return len(self.pivot_rows) * (None,)
         if row == 0:
             return ()
-        raise IndexError('index out of range for current row pivot')
+        raise IndexError("index out of range for current row pivot")
 
     def column_key(self, column):
         if self.pivot_columns:
@@ -270,7 +270,7 @@ class PivotModel:
             return len(self.pivot_columns) * (None,)
         if column == 0:
             return ()
-        raise IndexError('index out of range for current column pivot')
+        raise IndexError("index out of range for current column pivot")
 
     @property
     def rows(self):

@@ -43,7 +43,7 @@ def _download_file(remote, local):
 def _download_plugin(plugin, plugin_local_dir):
     # 1. Create paths
     plugin_remote_file = plugin["url"]
-    plugin_remote_dir = urljoin(plugin_remote_file, '.')
+    plugin_remote_dir = urljoin(plugin_remote_file, ".")
     plugin_local_file = os.path.join(plugin_local_dir, "plugin.json")
     # 2. Download and parse plugin.json file
     _download_file(plugin_remote_file, plugin_local_file)

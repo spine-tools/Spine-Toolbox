@@ -1051,7 +1051,7 @@ class Ui_SettingsForm(object):
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(1)
+        self.stackedWidget.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -1238,7 +1238,7 @@ class Ui_SettingsForm(object):
         self.label_10.setText(QCoreApplication.translate("SettingsForm", u"Minimum distance between nodes (%)", None))
         self.label_6.setText(QCoreApplication.translate("SettingsForm", u"Number of build iterations", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_auto_expand_entities.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
+        self.checkBox_auto_expand_entities.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its related N-D entities.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the elements in a N-D entity are included in the Entity graph, the graph automatically includes it.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_auto_expand_entities.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand entities", None))
         self.label_16.setText(QCoreApplication.translate("SettingsForm", u"Decay rate of attraction with distance", None))

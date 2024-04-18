@@ -247,5 +247,5 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(model.value, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

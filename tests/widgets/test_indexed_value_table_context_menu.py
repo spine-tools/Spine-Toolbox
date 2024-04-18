@@ -388,5 +388,5 @@ def _find_action(menu, text):
     return None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

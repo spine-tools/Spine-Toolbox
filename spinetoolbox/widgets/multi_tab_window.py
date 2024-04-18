@@ -414,7 +414,7 @@ class MultiTabWindow(QMainWindow):
         window_size = self.qsettings.value("windowSize")
         window_pos = self.qsettings.value("windowPosition")
         window_state = self.qsettings.value("windowState")
-        window_maximized = self.qsettings.value("windowMaximized", defaultValue='false')
+        window_maximized = self.qsettings.value("windowMaximized", defaultValue="false")
         n_screens = self.qsettings.value("n_screens", defaultValue=1)
         self.qsettings.endGroup()
         original_size = self.size()
@@ -428,7 +428,7 @@ class MultiTabWindow(QMainWindow):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
         ensure_window_is_on_screen(self, original_size)
-        if window_maximized == 'true':
+        if window_maximized == "true":
             self.setWindowState(Qt.WindowMaximized)
 
     def save_window_state(self):

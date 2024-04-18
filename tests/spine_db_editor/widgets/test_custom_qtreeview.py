@@ -862,5 +862,5 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
             self.assertEqual(from_database(data[i].value), expected_value)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

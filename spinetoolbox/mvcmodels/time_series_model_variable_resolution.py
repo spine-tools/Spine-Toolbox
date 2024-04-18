@@ -60,7 +60,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             if len(old_indexes) > 1:
                 last_time_step = last_time_stamp - old_indexes[-2]
             else:
-                last_time_step = np.timedelta64(1, 'h')
+                last_time_step = np.timedelta64(1, "h")
 
             new_indexes[: len(old_indexes)] = old_indexes
             for i in range(count):
@@ -75,7 +75,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
                 if len(old_indexes) > 1:
                     time_step = old_indexes[1] - first_time_stamp
                 else:
-                    time_step = np.timedelta64(1, 'h')
+                    time_step = np.timedelta64(1, "h")
                 for i in range(count):
                     new_indexes[i] = first_time_stamp - (count - i) * time_step
                 new_indexes[count:] = old_indexes
