@@ -73,29 +73,29 @@ class SpineDBManager(QObject):
 
     Args:
         str: item type, such as "object_class"
-        dict: mapping DiffDatabaseMapping to list of added dict-items.
+        dict: mapping DatabaseMapping to list of added dict-items.
     """
     items_updated = Signal(str, dict)
     """Emitted whenever items are updated in a DB.
 
     Args:
         str: item type, such as "object_class"
-        dict: mapping DiffDatabaseMapping to list of updated dict-items.
+        dict: mapping DatabaseMapping to list of updated dict-items.
     """
     items_removed = Signal(str, dict)
     """Emitted whenever items are removed from a DB.
 
     Args:
         str: item type, such as "object_class"
-        dict: mapping DiffDatabaseMapping to list of updated dict-items.
+        dict: mapping DatabaseMapping to list of updated dict-items.
     """
 
     def __init__(self, settings, parent, synchronous=False):
-        """Initializes the instance.
-
+        """
         Args:
             settings (QSettings): Toolbox settings
             parent (QObject, optional): parent object
+            synchronous (bool): If True, fetch database synchronously
         """
         super().__init__(parent)
         self.qsettings = settings
@@ -197,7 +197,7 @@ class SpineDBManager(QObject):
         """Fetches more items of given type from given db.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             parent (FetchParent): The object that requests the fetching.
         """
         if db_map.closed:
@@ -212,7 +212,7 @@ class SpineDBManager(QObject):
         """Returns an icon manager for given db_map.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
 
         Returns:
             SpineDBIconManager
@@ -235,7 +235,7 @@ class SpineDBManager(QObject):
         """Creates an identifier for given db_map.
 
         Args:
-            db_map (DiffDatabaseMapping): database mapping
+            db_map (DatabaseMapping): database mapping
 
         Returns:
             int: identification key
@@ -249,7 +249,7 @@ class SpineDBManager(QObject):
             key (int): identification key
 
         Returns:
-            DiffDatabaseMapping: database mapping
+            DatabaseMapping: database mapping
 
         Raises:
             KeyError: raised if database map is not found
@@ -268,7 +268,7 @@ class SpineDBManager(QObject):
             url (str): a database URL
 
         Returns:
-            DiffDatabaseMapping: a database map or None if not found
+            DatabaseMapping: a database map or None if not found
         """
         url = str(url)
         return self._db_maps.get(url)
@@ -319,7 +319,7 @@ class SpineDBManager(QObject):
             self.close_session(url)
 
     def get_db_map(self, url, logger, ignore_version_error=False, window=False, codename=None, create=False):
-        """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
+        """Returns a DatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
         Args:
@@ -331,7 +331,7 @@ class SpineDBManager(QObject):
             create (bool, optional)
 
         Returns:
-            DiffDatabaseMapping, NoneType
+            DatabaseMapping, NoneType
         """
         url = str(url)
         db_map = self._db_maps.get(url)
@@ -364,7 +364,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def _do_get_db_map(self, url, **kwargs):
-        """Returns a memorized DiffDatabaseMapping instance from url.
+        """Returns a memorized DatabaseMapping instance from url.
         Called by `get_db_map`.
 
         Args:
@@ -374,7 +374,7 @@ class SpineDBManager(QObject):
             create (bool)
 
         Returns:
-            DiffDatabaseMapping
+            DatabaseMapping
         """
         worker = SpineDBWorker(self, url, synchronous=self._synchronous)
         try:
@@ -412,7 +412,7 @@ class SpineDBManager(QObject):
 
         Args:
             listener (object)
-            db_maps (DiffDatabaseMapping)
+            *db_maps
         """
         self.update_data_store_db_maps()
         for db_map in db_maps:
@@ -436,7 +436,7 @@ class SpineDBManager(QObject):
 
         Args:
             listener (object)
-            *db_maps (DiffDatabaseMapping)
+            *db_maps
             commit_dirty (bool): True to commit dirty database mapping, False to roll back
             commit_msg (str): commit message
 
@@ -517,7 +517,7 @@ class SpineDBManager(QObject):
         """Returns True if mapping has pending changes.
 
         Args:
-            db_map (DiffDatabaseMapping): database mapping
+            db_map (DatabaseMapping): database mapping
 
         Returns:
             bool: True if db_map has pending changes, False otherwise
@@ -531,7 +531,7 @@ class SpineDBManager(QObject):
             *db_maps: mappings to check
 
         Return:
-            list of DiffDatabaseMapping: dirty  mappings
+            list of DatabaseMapping: dirty  mappings
         """
         return [db_map for db_map in db_maps if self.is_dirty(db_map)]
 
@@ -543,7 +543,7 @@ class SpineDBManager(QObject):
             *db_maps: mappings to check
 
         Return:
-            list of DiffDatabaseMapping: mappings that are dirty and don't have editors
+            list of DatabaseMapping: mappings that are dirty and don't have editors
         """
 
         def has_editors(db_map):
@@ -670,7 +670,7 @@ class SpineDBManager(QObject):
         """Returns an icon renderer for a given entity class.
 
         Args:
-            db_map (DiffDatabaseMapping): database map
+            db_map (DatabaseMapping): database map
             entity_class_id (int): entity class id
             for_group (bool): if True, return the group object icon instead
 
@@ -691,7 +691,7 @@ class SpineDBManager(QObject):
         """Returns an appropriate icon for a given entity class.
 
         Args:
-            db_map (DiffDatabaseMapping): database map
+            db_map (DatabaseMapping): database map
             entity_class_id (int): entity class' id
             for_group (bool): if True, return the group object icon instead
 
@@ -707,7 +707,7 @@ class SpineDBManager(QObject):
         or an empty dict if not found.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             item_type (str)
             id_ (int)
 
@@ -724,7 +724,7 @@ class SpineDBManager(QObject):
         """Returns a list of the items of the given type in the given db map.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             item_type (str)
 
         Returns:
@@ -737,7 +737,7 @@ class SpineDBManager(QObject):
         for the given field.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             item_type (str)
             field (str)
             value
@@ -753,7 +753,7 @@ class SpineDBManager(QObject):
         Returns an empty dictionary if none found.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             item_type (str)
             field (str)
             value
@@ -812,30 +812,28 @@ class SpineDBManager(QObject):
             formatted_value = value_list_name + formatted_value
         return formatted_value
 
-    def get_value(self, db_map, item_type, id_, role=Qt.ItemDataRole.DisplayRole):
+    def get_value(self, db_map, item, role=Qt.ItemDataRole.DisplayRole):
         """Returns the value or default value of a parameter.
 
         Args:
-            db_map (DatabaseMapping)
-            item_type (str): either "parameter_definition", "parameter_value", or "list_value"
-            id_ (int): The parameter_value or definition id
-            role (int, optional)
+            db_map (DatabaseMapping): database mapping
+            item (PublicItem): parameter value item, parameter definition item, or list value item
+            role (Qt.ItemDataRole): data role
 
         Returns:
             any
         """
-        item = self.get_item(db_map, item_type, id_)
         if not item:
             return None
         value_field, type_field = {
             "parameter_value": ("value", "type"),
             "list_value": ("value", "type"),
             "parameter_definition": ("default_value", "default_type"),
-        }[item_type]
-        list_value_id = id_ if item_type == "list_value" else item["list_value_id"]
+        }[item.item_type]
+        list_value_id = item["id"] if item.item_type == "list_value" else item["list_value_id"]
         complex_types = {"array": "Array", "time_series": "Time series", "time_pattern": "Time pattern", "map": "Map"}
         if role == Qt.ItemDataRole.DisplayRole and item[type_field] in complex_types:
-            return self._format_list_value(db_map, item_type, complex_types[item[type_field]], list_value_id)
+            return self._format_list_value(db_map, item.item_type, complex_types[item[type_field]], list_value_id)
         if role == Qt.ItemDataRole.EditRole:
             return join_value_and_type(item[value_field], item[type_field])
         return self._format_value(item["parsed_value"], role=role)
@@ -886,11 +884,12 @@ class SpineDBManager(QObject):
         """Returns the value or default value indexes of a parameter.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             item_type (str): either "parameter_definition" or "parameter_value"
             id_ (int): The parameter_value or definition id
         """
-        parsed_value = self.get_value(db_map, item_type, id_, role=PARSED_ROLE)
+        item = self.get_item(db_map, item_type, id_)
+        parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
         if isinstance(parsed_value, IndexedValue):
             return parsed_value.indexes
         return [""]
@@ -899,13 +898,14 @@ class SpineDBManager(QObject):
         """Returns the value or default value of a parameter for a given index.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             item_type (str): either "parameter_definition" or "parameter_value"
             id_ (int): The parameter_value or definition id
             index: The index to retrieve
             role (int, optional)
         """
-        parsed_value = self.get_value(db_map, item_type, id_, role=PARSED_ROLE)
+        item = self.get_item(db_map, item_type, id_)
+        parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
         if isinstance(parsed_value, IndexedValue):
             parsed_value = parsed_value.get_value(index)
         if role == Qt.ItemDataRole.EditRole:
@@ -922,7 +922,7 @@ class SpineDBManager(QObject):
         """Returns one value item of a parameter_value_list.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             id_ (int): The parameter_value_list id
             index (int): The value item index
             role (int, optional)
@@ -936,12 +936,12 @@ class SpineDBManager(QObject):
         """Returns a parameter_value_list formatted for the given role.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             id_ (int): The parameter_value_list id
             role (int, optional)
         """
         return [
-            self.get_value(db_map, "list_value", item["id"], role=role)
+            self.get_value(db_map, item, role=role)
             for item in self.get_items_by_field(db_map, "list_value", "parameter_value_list_id", id_)
         ]
 
@@ -954,7 +954,7 @@ class SpineDBManager(QObject):
         Condenses all in a single command for undo/redo.
 
         Args:
-            db_map_data (dict(DiffDatabaseMapping, dict())): Maps dbs to data to be passed as keyword arguments
+            db_map_data (dict(DatabaseMapping, dict())): Maps dbs to data to be passed as keyword arguments
                 to `get_data_for_import`
             command_text (str, optional): What to call the command that condenses the operation.
         """
@@ -981,7 +981,7 @@ class SpineDBManager(QObject):
         """Adds alternatives to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("alternative", db_map_data)
 
@@ -989,7 +989,7 @@ class SpineDBManager(QObject):
         """Adds scenarios to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("scenario", db_map_data)
 
@@ -997,7 +997,7 @@ class SpineDBManager(QObject):
         """Adds entity classes to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("entity_class", db_map_data)
 
@@ -1005,7 +1005,7 @@ class SpineDBManager(QObject):
         """Adds entities to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("entity", db_map_data)
 
@@ -1013,7 +1013,7 @@ class SpineDBManager(QObject):
         """Adds entity groups to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("entity_group", db_map_data)
 
@@ -1021,7 +1021,7 @@ class SpineDBManager(QObject):
         """Adds entity alternatives to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("entity_alternative", db_map_data)
 
@@ -1029,7 +1029,7 @@ class SpineDBManager(QObject):
         """Adds parameter definitions to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("parameter_definition", db_map_data)
 
@@ -1037,7 +1037,7 @@ class SpineDBManager(QObject):
         """Adds parameter values to db without checking integrity.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("parameter_value", db_map_data)
 
@@ -1045,7 +1045,7 @@ class SpineDBManager(QObject):
         """Adds parameter_value lists to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("parameter_value_list", db_map_data)
 
@@ -1053,7 +1053,7 @@ class SpineDBManager(QObject):
         """Adds parameter_value list values to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("list_value", db_map_data)
 
@@ -1061,7 +1061,7 @@ class SpineDBManager(QObject):
         """Adds metadata to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("metadata", db_map_data)
 
@@ -1069,7 +1069,7 @@ class SpineDBManager(QObject):
         """Adds entity metadata to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("entity_metadata", db_map_data)
 
@@ -1077,7 +1077,7 @@ class SpineDBManager(QObject):
         """Adds parameter value metadata to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self.add_items("parameter_value_metadata", db_map_data)
 
@@ -1093,7 +1093,7 @@ class SpineDBManager(QObject):
         """Adds entity metadata together with all necessary metadata to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self._add_ext_item_metadata(db_map_data, "entity_metadata")
 
@@ -1101,7 +1101,7 @@ class SpineDBManager(QObject):
         """Adds parameter value metadata together with all necessary metadata to db.
 
         Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to add keyed by DatabaseMapping
         """
         self._add_ext_item_metadata(db_map_data, "parameter_value_metadata")
 
@@ -1109,7 +1109,7 @@ class SpineDBManager(QObject):
         """Updates alternatives in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("alternative", db_map_data)
 
@@ -1117,7 +1117,7 @@ class SpineDBManager(QObject):
         """Updates scenarios in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("scenario", db_map_data)
 
@@ -1125,7 +1125,7 @@ class SpineDBManager(QObject):
         """Updates entity classes in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("entity_class", db_map_data)
 
@@ -1133,7 +1133,7 @@ class SpineDBManager(QObject):
         """Updates entities in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("entity", db_map_data)
 
@@ -1141,7 +1141,7 @@ class SpineDBManager(QObject):
         """Updates entity alternatives in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("entity_alternative", db_map_data)
 
@@ -1149,7 +1149,7 @@ class SpineDBManager(QObject):
         """Updates parameter definitions in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("parameter_definition", db_map_data)
 
@@ -1157,7 +1157,7 @@ class SpineDBManager(QObject):
         """Updates parameter values in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("parameter_value", db_map_data)
 
@@ -1165,7 +1165,7 @@ class SpineDBManager(QObject):
         """Updates expanded parameter values in db.
 
         Args:
-            db_map_data (dict): lists of expanded items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of expanded items to update keyed by DatabaseMapping
         """
         for db_map, expanded_data in db_map_data.items():
             packed_data = {}
@@ -1173,7 +1173,8 @@ class SpineDBManager(QObject):
                 packed_data.setdefault(item["id"], {})[item["index"]] = (item["value"], item["type"])
             items = []
             for id_, indexed_values in packed_data.items():
-                parsed_value = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
+                item = self.get_item(db_map, "parameter_value", id_)
+                parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
                 if isinstance(parsed_value, IndexedValue):
                     parsed_value = deep_copy_value(parsed_value)
                     for index, (val, typ) in indexed_values.items():
@@ -1190,7 +1191,7 @@ class SpineDBManager(QObject):
         """Updates parameter_value lists in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("parameter_value_list", db_map_data)
 
@@ -1198,7 +1199,7 @@ class SpineDBManager(QObject):
         """Updates parameter_value list values in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("list_value", db_map_data)
 
@@ -1206,7 +1207,7 @@ class SpineDBManager(QObject):
         """Updates metadata in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("metadata", db_map_data)
 
@@ -1214,7 +1215,7 @@ class SpineDBManager(QObject):
         """Updates entity metadata in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("entity_metadata", db_map_data)
 
@@ -1222,7 +1223,7 @@ class SpineDBManager(QObject):
         """Updates parameter value metadata in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self.update_items("parameter_value_metadata", db_map_data)
 
@@ -1238,7 +1239,7 @@ class SpineDBManager(QObject):
         """Updates entity metadata in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self._update_ext_item_metadata(db_map_data, "entity_metadata")
 
@@ -1246,7 +1247,7 @@ class SpineDBManager(QObject):
         """Updates parameter value metadata in db.
 
         Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to update keyed by DatabaseMapping
         """
         self._update_ext_item_metadata(db_map_data, "parameter_value_metadata")
 
@@ -1254,7 +1255,7 @@ class SpineDBManager(QObject):
         """Sets scenario alternatives in db.
 
         Args:
-            db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of items to set keyed by DatabaseMapping
         """
         db_map_error_log = {}
         for db_map, data in db_map_data.items():

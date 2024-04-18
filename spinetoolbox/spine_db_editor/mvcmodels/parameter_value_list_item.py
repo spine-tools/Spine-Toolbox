@@ -104,7 +104,8 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
         if role == Qt.ItemDataRole.DisplayRole and not self.id:
             return "Enter new list value here..."
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole, PARSED_ROLE):
-            return self.db_mngr.get_value(self.db_map, self.item_type, self.id, role=role)
+            item = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+            return self.db_mngr.get_value(self.db_map, item, role=role)
         return super().data(column, role)
 
     def list_index(self):

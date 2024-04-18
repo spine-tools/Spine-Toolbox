@@ -329,7 +329,8 @@ class ParameterMixin:
             PARSED_ROLE,
         ):
             id_ = self._main_data[index.row()]
-            return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
+            item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+            return self.db_mngr.get_value(self.db_map, item, role)
         return super().data(index, role)
 
 

@@ -90,7 +90,7 @@ class AutoFilterMenu(FilterMenuBase):
 
     def _get_display_value(self, item, db_map):
         if self._field in ("value", "default_value"):
-            return self._db_mngr.get_value(db_map, self._item_type, item["id"], role=Qt.DisplayRole)
+            return self._db_mngr.get_value(db_map, item, role=Qt.DisplayRole)
         if self._field == "entity_byname":
             return DB_ITEM_SEPARATOR.join(item[self._field])
         return self._get_value(item, db_map) or "(empty)"

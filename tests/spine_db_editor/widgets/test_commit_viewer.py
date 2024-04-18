@@ -69,10 +69,21 @@ class TestCommitViewer(unittest.TestCase):
             commit_list = current_tab._ui.commit_list
             initial_commit_item = commit_list.topLevelItem(0)
             commit_list.setCurrentItem(initial_commit_item)
-            affected_list = current_tab._ui.affected_items
-            self.assertEqual(affected_list.topLevelItemCount(), 1)
-            affected_item = affected_list.topLevelItem(0)
-            self.assertEqual(affected_item.data(0, Qt.ItemDataRole.DisplayRole), "alternative")
+            affected_item_tab_widget = current_tab._ui.affected_item_tab_widget
+            while affected_item_tab_widget.count() != 1:
+                QApplication.processEvents()
+            affected_items_table = affected_item_tab_widget.widget(0).table
+            while affected_items_table.rowCount() != 1:
+                QApplication.processEvents()
+            self.assertEqual(affected_items_table.columnCount(), 2)
+            self.assertEqual(affected_items_table.horizontalHeaderItem(0).text(), "name")
+            self.assertEqual(affected_items_table.horizontalHeaderItem(1).text(), "description")
+            expected = [["Base", "Base alternative"]]
+            for row in range(affected_items_table.rowCount()):
+                expected_row = expected[row]
+                for column in range(affected_items_table.columnCount()):
+                    with self.subTest(row=row, column=column):
+                        self.assertEqual(affected_items_table.item(row, column).text(), expected_row[column])
 
 
 if __name__ == "__main__":
