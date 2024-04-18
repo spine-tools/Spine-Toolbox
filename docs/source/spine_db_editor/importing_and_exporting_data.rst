@@ -192,7 +192,8 @@ The JSON format consists of a single JSON object with the following ``OPTIONAL``
   - The fourth element ``MUST`` be either a JSON object, string, number, or null,
     indicating the parameter value.
 
-  There is one ``OPTIONAL`` element
+  There is one ``OPTIONAL`` element:
+
   - The fifth element ``MUST`` either be a JSON string indicating the alternative, or null. If this element
     is not present, an alternative named Base will be created if it doesn't exist and the values will be set
     in that alternative.
