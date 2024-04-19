@@ -12,7 +12,7 @@
 
 """Custom QGraphicsScene used in the Design View."""
 import math
-from PySide6.QtCore import Qt, Signal, Slot, QPointF, QEvent, QTimer
+from PySide6.QtCore import Qt, Signal, Slot, QPointF, QEvent
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 from PySide6.QtGui import QColor, QPen, QBrush
 from ..project_item_icon import ProjectItemIcon
@@ -68,19 +68,8 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self._jump_drawer.hide()
         self.link_drawer = None
         self.icon_group = set()  # Group of project item icons that are moving together
-        self.dirty_links = set()
-        self._timer = QTimer(self)
-        self._timer.setInterval(5)
-        self._timer.timeout.connect(self._handle_timeout)
-        self._timer.start()
         self._cat = Cat(self)
         self.connect_signals()
-
-    @Slot()
-    def _handle_timeout(self):
-        for link in self.dirty_links:
-            link.update_geometry()
-        self.dirty_links.clear()
 
     def clear_icons_and_links(self):
         for item in self.items():

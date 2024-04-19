@@ -323,9 +323,13 @@ class ProjectItemIcon(QGraphicsPathItem):
         if not scene:
             return
         icon_group = scene.icon_group | {self}
-        scene.dirty_links |= set(
-            link for icon in icon_group for conn in icon.connectors.values() for link in conn.links
-        )
+        dirty_links = set(link for icon in icon_group for conn in icon.connectors.values() for link in conn.links)
+        if not dirty_links:
+            return
+        qsettings = self._toolbox.qsettings()
+        curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
+        for link in dirty_links:
+            link.update_geometry(curved_links)
 
     def mouseReleaseEvent(self, event):
         """Clears pre-bump rects, and pushes a move icon command if necessary."""
