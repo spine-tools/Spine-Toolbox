@@ -217,14 +217,16 @@ class TestToolboxUI(unittest.TestCase):
             # Make sure that the test uses LocalSpineEngineManager
             mock_qsettings_value.side_effect = qsettings_value_side_effect
             # Selecting cancel on the project close confirmation
-            with mock.patch.object(QMessageBox, 'exec', return_value=QMessageBox.Cancel):
+            with mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.Cancel):
                 self.assertFalse(self.toolbox.close_project())
             mock_qsettings_value.assert_called()
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.project.create_dir"
         ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
-        ), mock.patch.object(QMessageBox, 'exec', return_value=QMessageBox.Cancel):
+        ), mock.patch.object(
+            QMessageBox, "exec", return_value=QMessageBox.Cancel
+        ):
             # Selecting cancel on the project close confirmation
             with mock.patch("spinetoolbox.ui_main.ToolboxUI.add_warning_message") as warning_msg:
                 # trying to open the same project but selecting cancel when asked about unsaved changes
@@ -235,7 +237,6 @@ class TestToolboxUI(unittest.TestCase):
         self.assertIsNotNone(self.toolbox.project())
         self.assertEqual(self.toolbox.project().get_item("DC1").name, "DC1")
         self.assertEqual(self.toolbox.project().get_item("DC2").name, "DC2")
-
 
     def test_close_project(self):
         self.assertIsNone(self.toolbox.project())
