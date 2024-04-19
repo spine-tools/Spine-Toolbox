@@ -28,7 +28,7 @@ class MetaObject(QObject):
         self.name = name
         self.short_name = shorten(name)
         self.description = description
-        self._version = None
+        self._version = "NA"
 
     def set_name(self, name):
         """Sets object name and short name.

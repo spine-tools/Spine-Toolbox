@@ -53,6 +53,7 @@ class VersionInspectorWidget(QWidget):
         self.setWindowTitle(f"{self.windowTitle()}" + f" - {self._proj_dir}")
         self._remote_url = self._get_remote_url()
         self.populate_model()
+        self._current_versions = self.get_current_versions()
         self.ui.tableView.resizeColumnsToContents()
         self.connect_signals()
 
@@ -91,6 +92,18 @@ class VersionInspectorWidget(QWidget):
                     self.model.setItem(i, self.model.columnCount()-1, QStandardItem(v))
             i+=1
         self._rows_at_start = self.model.rowCount()
+
+    def get_current_versions(self):
+        """Returns a dict containing project version, spec versions, and item versions."""
+        d = dict()
+        current_project_version = self._toolbox.project().version()
+        print(f"current project version: {current_project_version}")
+        # TODO: Spec versions
+
+        items = self._toolbox.project().get_items()
+        item_versions = {item.name: "NA" if not item.version() else item.version() for item in items}
+        print(f"Item versions:{item_versions}")
+        return d
 
     @Slot(bool)
     def add_row(self, _=False):
@@ -170,7 +183,7 @@ class VersionInspectorWidget(QWidget):
         return True
 
     def _get_remote_url(self):
-        """Get project remote URL."""
+        """Returns the remote URL of the current project if it's in Git, None otherwise."""
         if not self._git_available:
             self.statusbar.showMessage("No Git found")
             return None
@@ -212,7 +225,7 @@ class VersionInspectorWidget(QWidget):
         return True
 
     def _load_version_registry_file(self):
-        """Opens and reads project registry file and returns it's contents."""
+        """Opens and reads project registry file and returns its contents."""
         try:
             with open(LOCAL_PROJECT_REGISTRY_FILEPATH, "r") as fh:
                 try:

@@ -119,6 +119,8 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v11_to_v12(project_dict)
             elif v == 12:
                 project_dict = self.upgrade_v12_to_v13(project_dict)
+            elif v == 13:
+                project_dict = self.upgrade_v13_to_v14(project_dict)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -578,6 +580,24 @@ class ProjectUpgrader:
         return new
 
     @staticmethod
+    def upgrade_v13_to_v14(old):
+        """Upgrades version 13 project dictionary to version 14.
+
+        Changes:
+            1. Add support for project version ('revision') and Item versions.
+            No changes to project dict. Versions come from the MetaObject() instances.
+
+        Args:
+            old (dict): Version 13 project dictionary
+
+        Returns:
+            dict: Version 14 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 14
+        return new
+
+    @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
 
@@ -633,8 +653,8 @@ class ProjectUpgrader:
             return self.is_valid_v2_to_v8(p, v)
         if 9 <= v <= 10:
             return self.is_valid_v9_to_v10(p)
-        if 11 <= v <= 13:
-            return self.is_valid_v11_to_v12(p)
+        if 11 <= v <= 14:
+            return self.is_valid_v11_to_v14(p)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -763,9 +783,9 @@ class ProjectUpgrader:
                 return False
         return True
 
-    def is_valid_v11_to_v12(self, p):
+    def is_valid_v11_to_v14(self, p):
         """Checks that the given project JSON dictionary contains
-        a valid version 11 or 12 Spine Toolbox project. Valid meaning, that
+        a valid version 11->14 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct
         type.
 
@@ -814,9 +834,7 @@ class ProjectUpgrader:
 
 
 def _fix_1d_array_to_array(mappings):
-    """
-    Replaces '1d array' with 'array' for parameter type in Importer mappings.
-
+    """Replaces '1d array' with 'array' for parameter type in Importer mappings.
     With spinedb_api >= 0.3, '1d array' parameter type was replaced by 'array'.
     Other settings in a mapping are backwards compatible except the name.
     """

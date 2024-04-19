@@ -92,26 +92,31 @@ class MoveIconCommand(SpineToolboxCommand):
         self._representative.notify_item_move()
 
 
-class SetProjectDescriptionCommand(SpineToolboxCommand):
-    """Command to set the project description."""
+class SetProjectDescriptionAndRevisionCommand(SpineToolboxCommand):
+    """Command to set the project description and revision."""
 
-    def __init__(self, project, description):
+    def __init__(self, project, description, revision):
         """
         Args:
-            project (SpineToolboxProject): the project
+            project (SpineToolboxProject): The project
             description (str): The new description
+            revision (str): The new revision
         """
         super().__init__()
         self.project = project
         self.redo_desc = description
         self.undo_desc = self.project.description
-        self.setText("set project description")
+        self.redo_revision = revision
+        self.undo_revision = self.project.version()
+        self.setText("update project description and revision")
 
     def redo(self):
         self.project.set_description(self.redo_desc)
+        self.project.set_version(self.redo_revision)
 
     def undo(self):
         self.project.set_description(self.undo_desc)
+        self.project.set_version(self.undo_revision)
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):

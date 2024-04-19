@@ -12,7 +12,7 @@
 
 """A widget for editing project description."""
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QDialog, QFormLayout, QLabel, QPlainTextEdit, QDialogButtonBox
+from PySide6.QtWidgets import QDialog, QFormLayout, QLabel, QPlainTextEdit, QDialogButtonBox, QLineEdit
 
 
 class SetDescriptionDialog(QDialog):
@@ -23,25 +23,30 @@ class SetDescriptionDialog(QDialog):
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject)
+            project (SpineToolboxProject): Current project
         """
-        super().__init__(parent=toolbox, f=Qt.Popup)
+        super().__init__(parent=toolbox)
         self._project = project
         self._toolbox = toolbox
         layout = QFormLayout(self)
         self._name_label = QLabel(self)
         self._name_label.setText(self._project.name)
+        self._revision_le = QLineEdit(self)
+        # self._current_project_revision = self._project.version()
+        self._revision_le.setText(self._project.version())
         self._description_te = QPlainTextEdit(self)
         self._description_te.setPlainText(self._project.description)
         button_box = QDialogButtonBox(self)
         button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         layout.addRow("Project name", self._name_label)
+        layout.addRow("Revision", self._revision_le)
         layout.addRow("Description", self._description_te)
         layout.addRow(button_box)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         self._ok_button = button_box.button(QDialogButtonBox.StandardButton.Ok)
         self._ok_button.setEnabled(False)
+        self._revision_le.textChanged.connect(self._set_ok_enabled)
         self._description_te.textChanged.connect(self._set_ok_enabled)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -49,10 +54,14 @@ class SetDescriptionDialog(QDialog):
     def description(self):
         return self._description_te.toPlainText().strip()
 
+    @property
+    def revision(self):
+        return self._revision_le.text().strip()
+
     @Slot()
     def _set_ok_enabled(self):
-        self._ok_button.setEnabled(self.description != self._project.description)
+        self._ok_button.setEnabled(self.description != self._project.description or self.revision != self._project.version())
 
     def accept(self):
         super().accept()
-        self._project.call_set_description(self.description)
+        self._project.call_set_description_and_revision(self.description, self.revision)

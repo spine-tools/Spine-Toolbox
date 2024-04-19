@@ -59,7 +59,7 @@ from .config import (
     SPECIFICATION_LOCAL_DATA_FILENAME,
     PROJECT_ZIP_FILENAME,
 )
-from .project_commands import SetProjectDescriptionCommand
+from .project_commands import SetProjectDescriptionAndRevisionCommand
 from .spine_engine_worker import SpineEngineWorker
 
 
@@ -221,8 +221,8 @@ class SpineToolboxProject(MetaObject):
                 return False
         return True
 
-    def call_set_description(self, description):
-        self._toolbox.undo_stack.push(SetProjectDescriptionCommand(self, description))
+    def call_set_description_and_revision(self, description, revision):
+        self._toolbox.undo_stack.push(SetProjectDescriptionAndRevisionCommand(self, description, revision))
 
     def set_description(self, description):
         if description == self.description:
@@ -242,6 +242,7 @@ class SpineToolboxProject(MetaObject):
         serialized_spec_paths = self._save_all_specifications(local_path)
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
+            "revision": self.version(),
             "description": self.description,
             "settings": self._settings.to_dict(),
             "specifications": serialized_spec_paths,
@@ -339,6 +340,7 @@ class SpineToolboxProject(MetaObject):
         local_data_dict = load_local_project_data(self.config_dir, self._logger)
         self._merge_local_data_to_project_info(local_data_dict, project_info)
         # Parse project info
+        # self.set_version(project_info["project"]["revision"])
         self.set_description(project_info["project"]["description"])
         self._settings = ProjectSettings.from_dict(project_info["project"]["settings"])
         spec_paths_per_type = project_info["project"]["specifications"]
