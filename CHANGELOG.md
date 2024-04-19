@@ -46,6 +46,7 @@ Many parts of the Spine data structure have been redesigned.
 - You can now select a different Julia executable & project or Julia kernel for each Tool spec.
   This overrides the global setting from Toolbox Settings.
 - Headless mode now supports remote execution (see 'python -m spinetoolbox --help')
+- Commit Viewer's UI has undergone some redesigning and can now handle large databases.
 
 ### Deprecated
 

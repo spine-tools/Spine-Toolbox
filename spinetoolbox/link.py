@@ -286,7 +286,7 @@ class _IconBase(QGraphicsEllipseItem):
 
 
 class _SvgIcon(_IconBase):
-    """A svg icon to show over a Link."""
+    """An SVG icon to show over a Link."""
 
     def __init__(self, parent, extent, path, tooltip=None, active=False):
         super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)

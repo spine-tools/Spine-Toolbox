@@ -10,81 +10,191 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Contains the CommitViewer class."""
+"""Contains Database editor's Commit viewer."""
 from PySide6.QtWidgets import (
     QMainWindow,
+    QTableWidget,
+    QTableWidgetItem,
     QTabWidget,
     QWidget,
-    QVBoxLayout,
     QGridLayout,
-    QTreeWidget,
     QTreeWidgetItem,
     QSplitter,
     QLabel,
 )
-from PySide6.QtCore import Qt, Slot
-from spinetoolbox.helpers import restore_ui, save_ui, busy_effect, DB_ITEM_SEPARATOR
+from PySide6.QtCore import QEventLoop, QObject, Qt, QThread, Signal, Slot
+from spinetoolbox.helpers import restore_ui, save_ui, DB_ITEM_SEPARATOR
 
 
 class _DBCommitViewer(QWidget):
+    """Commit viewer's central widget."""
+
     def __init__(self, db_mngr, db_map, parent=None):
+        """
+        Args:
+            db_mngr (SpineDBManager): database manager
+            db_map (DatabaseMapping): database mapping
+            parent (QWidget, optional): parent widget
+        """
+        from ..ui.db_commit_viewer import Ui_DBCommitViewer
+
         super().__init__(parent=parent)
+        self._ui = Ui_DBCommitViewer()
+        self._ui.setupUi(self)
         self._db_mngr = db_mngr
         self._db_map = db_map
-        self._commit_list = QTreeWidget(self)
-        self._commit_list.setHeaderLabel("Commits")
-        self._commit_list.setIndentation(0)
-        self.splitter = QSplitter(self)
-        self.splitter.setChildrenCollapsible(False)
-        self.splitter.setSizes([0.3, 0.7])
-        self._affected_items = QTreeWidget(self)
-        self._affected_items.setHeaderLabel("Affected items")
-        self.splitter.addWidget(self._commit_list)
-        self.splitter.addWidget(self._affected_items)
-        self.splitter.setStretchFactor(0, 0)
-        self.splitter.setStretchFactor(1, 1)
-        layout = QVBoxLayout(self)
-        self.setLayout(layout)
-        layout = self.layout()
-        layout.addWidget(self.splitter)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        self._ui.commit_list.setHeaderLabel("Commits")
+        self._ui.commit_list.setIndentation(0)
+        self._ui.splitter.setSizes([0.3, 0.7])
+        self._ui.splitter.setStretchFactor(0, 0)
+        self._ui.splitter.setStretchFactor(1, 1)
+        self._ui.affected_items_widget_stack.setCurrentIndex(3)
         for commit in reversed(db_map.get_items("commit")):
-            tree_item = QTreeWidgetItem(self._commit_list)
+            tree_item = QTreeWidgetItem(self._ui.commit_list)
             tree_item.setData(0, Qt.ItemDataRole.UserRole + 1, commit["id"])
-            self._commit_list.addTopLevelItem(tree_item)
-            index = self._commit_list.indexFromItem(tree_item)
+            self._ui.commit_list.addTopLevelItem(tree_item)
+            index = self._ui.commit_list.indexFromItem(tree_item)
             widget = _CommitItem(commit)
-            self._commit_list.setIndexWidget(index, widget)
-        self._commit_list.currentItemChanged.connect(self._select_commit)
+            self._ui.commit_list.setIndexWidget(index, widget)
+        self._ui.commit_list.currentItemChanged.connect(self._select_commit)
+        self._ui.affected_item_tab_widget.tabBarClicked.connect(self._set_preferred_item_type)
+        self._affected_item_widgets = {}
+        self._preferred_affected_item_type = None
+        self._thread = None
+        self._worker = None
+
+    @property
+    def splitter(self) -> QSplitter:
+        return self._ui.splitter
 
     @Slot(QTreeWidgetItem, QTreeWidgetItem)
     def _select_commit(self, current, previous):
-        self._commit_list.setDisabled(True)
-        self._do_select_commit(current)
-        self._commit_list.setEnabled(True)
+        """Start a worker thread that fetches affected items for the selected commit.
 
-    @busy_effect
-    def _do_select_commit(self, current):
+        Args:
+            current (QTreeWidgetItem): currently selected commit item
+            previous (QTreeWidgetItem): previously selected commit item
+        """
         commit_id = current.data(0, Qt.ItemDataRole.UserRole + 1)
-        self._affected_items.clear()
-        # TODO: If no items, show message that data was overwritten by a further commit
-        for item_type, ids in self._db_mngr.get_items_for_commit(self._db_map, commit_id).items():
-            top_level_item = QTreeWidgetItem([item_type])
-            self._affected_items.addTopLevelItem(top_level_item)
-            bottom_level_item = QTreeWidgetItem(top_level_item)
-            bottom_level_item.setFlags(bottom_level_item.flags() & ~Qt.ItemIsSelectable)
-            index = self._affected_items.indexFromItem(bottom_level_item)
-            items = [self._db_mngr.get_item(self._db_map, item_type, id_) for id_ in ids]
-            widget = _AffectedItemsFromOneTable(items, parent=self._affected_items)
-            self._affected_items.setIndexWidget(index, widget)
-            top_level_item.setExpanded(True)
+        self._ui.affected_items_widget_stack.setCurrentIndex(2)
+        self._ui.affected_item_tab_widget.clear()
+        for widget in self._affected_item_widgets.values():
+            widget.table.setRowCount(0)
+        self._launch_new_worker(commit_id)
+
+    def _launch_new_worker(self, commit_id):
+        """Starts a new worker thread.
+
+        If a thread is already running, it is quite before starting a new one.
+
+        Args:
+            commit_id (TempId): commit id
+        """
+        if self._thread is not None:
+            self._thread.quit()
+            self._thread.wait()
+        self._thread = QThread(self)
+        self._worker = Worker(self._db_mngr, self._db_map, commit_id)
+        self._worker.moveToThread(self._thread)
+        self._thread.started.connect(self._worker.run)
+        self._worker.chunk_ready.connect(self._process_affected_items)
+        self._worker.max_ids_reached.connect(self._max_affected_items_fetched)
+        self._worker.all_ids_fetched.connect(self._all_affected_items_fetched)
+        self._worker.finished.connect(self._finish_work)
+        self._thread.start()
+
+    @Slot(str, list, list)
+    def _process_affected_items(self, item_type, keys, items):
+        """Adds a fetched chunk of affected items to appropriate table view.
+
+        Args:
+            item_type (str): fethced item type
+            keys (Sequence of str): item keys
+            items (Sequence of Sequence): list of items, each item being a list of labels;
+                items must have the same length as keys
+        """
+        affected_items_widget = self._affected_item_widgets.get(item_type)
+        if affected_items_widget is None:
+            affected_items_widget = _AffectedItemsWidget()
+            self._affected_item_widgets[item_type] = affected_items_widget
+            item_table = affected_items_widget.table
+            item_table.setColumnCount(len(keys))
+            item_table.setHorizontalHeaderLabels(keys)
+        else:
+            item_table = affected_items_widget.table
+        if self._ui.affected_item_tab_widget.indexOf(affected_items_widget) == -1:
+            self._ui.affected_item_tab_widget.addTab(affected_items_widget, item_type)
+            if self._preferred_affected_item_type is None:
+                self._preferred_affected_item_type = item_type
+            if item_type == self._preferred_affected_item_type:
+                self._ui.affected_item_tab_widget.setCurrentWidget(affected_items_widget)
+        if self._ui.affected_items_widget_stack.currentIndex() != 0:
+            self._ui.affected_items_widget_stack.setCurrentIndex(0)
+        for item in items:
+            row = item_table.rowCount()
+            item_table.insertRow(row)
+            for column, label in enumerate(item):
+                cell = QTableWidgetItem(label)
+                cell.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+                item_table.setItem(row, column, cell)
+
+    @Slot(str, int)
+    def _max_affected_items_fetched(self, item_type, still_available):
+        """Updates the fetch status label.
+
+        Args:
+            item_type (str): item type
+            still_available (int): number of items left unfetched
+        """
+        label = self._affected_item_widgets[item_type].label
+        label.setVisible(True)
+        label.setText(f"...and {still_available} {item_type} items more.")
+
+    @Slot(str)
+    def _all_affected_items_fetched(self, item_type):
+        """Hides the fetch status label.
+
+        Args:
+            item_type (str): item type
+        """
+        label = self._affected_item_widgets[item_type].label.setVisible(False)
+
+    @Slot()
+    def _finish_work(self):
+        """Quits the worker thread if it is running."""
+        if self._thread is not None:
+            self._thread.quit()
+            self._thread.wait()
+            self._worker = None
+            self._thread = None
+            if self._ui.affected_item_tab_widget.count() == 0:
+                self._ui.affected_items_widget_stack.setCurrentIndex(1)
+
+    def tear_down(self):
+        """Tears down the widget."""
+        self._finish_work()
+
+    @Slot(int)
+    def _set_preferred_item_type(self, preferred_tab_index):
+        """Sets the preferred item type for affected items.
+
+        The tab showing the preferred type is selected automatically as the current tab when/if it gets fetched.
+
+        Args:
+            preferred_tab_index (int): index of the preferred tab
+        """
+        self._preferred_affected_item_type = self._ui.affected_item_tab_widget.tabText(preferred_tab_index)
 
 
 class _CommitItem(QWidget):
     """A widget to show commit message, author and data on a QTreeWidget."""
 
     def __init__(self, commit, parent=None):
+        """
+        Args:
+            commit (dict): commit database item
+            parent (QWidget, optional): parent widget
+        """
         super().__init__(parent=parent)
         comment = QLabel(str(commit["comment"]) or "<no comment>")
         user = QLabel(str(commit["user"]))
@@ -99,54 +209,29 @@ class _CommitItem(QWidget):
         layout.addWidget(date, 1, 1)
 
 
-class _AffectedItemsFromOneTable(QTreeWidget):
-    """A widget to show all the items from one table that are affected by a commit."""
+class _AffectedItemsWidget(QWidget):
+    """A composite widget that contains a table and a label."""
 
-    def __init__(self, items, parent=None):
-        super().__init__(parent=parent)
-        self.setIndentation(0)
-        first = next(iter(items), None)
-        if first is None:
-            return
-        self._margin = 6
-        keys = [key for key in first._extended() if not any(word in key for word in ("id", "parsed"))]
-        self.setHeaderLabels(keys)
-        tree_items = [QTreeWidgetItem([self._parse_value(item[key]) for key in keys]) for item in items]
-        self.addTopLevelItems(tree_items)
-        last = tree_items[-1]
-        rect = self.visualItemRect(last)
-        self._height = rect.bottom()
-        for k, _ in enumerate(keys):
-            self.resizeColumnToContents(k)
+    def __init__(self):
+        from ..ui.commit_viewer_affected_item_info import Ui_Form
 
-    @staticmethod
-    def _parse_value(value):
-        if isinstance(value, bytes):
-            return value.decode("utf-8")
-        if isinstance(value, (tuple, list)):
-            return DB_ITEM_SEPARATOR.join(value)
-        return value
+        super().__init__()
+        self._ui = Ui_Form()
+        self._ui.setupUi(self)
+        self._ui.fetch_status_label.setVisible(False)
 
-    def moveEvent(self, ev):
-        if ev.pos().x() > 0:
-            self.move(self._margin, ev.pos().y())
-            offset = ev.pos().x() - self._margin
-            self.resize(self.size().width() + offset - 2, self.size().height())
-            return
-        super().moveEvent(ev)
+    @property
+    def table(self) -> QTableWidget:
+        return self._ui.affected_items_table
 
-    def sizeHint(self):
-        size = super().sizeHint()
-        height = self._height + self.frameWidth() * 2 + self.header().height() + self._margin
-        scroll_bar = self.horizontalScrollBar()
-        if scroll_bar.isVisible():
-            height += scroll_bar.height()
-        height = min(size.height(), height)
-        size.setHeight(height)
-        return size
+    @property
+    def label(self) -> QLabel:
+        return self._ui.fetch_status_label
 
 
 class CommitViewer(QMainWindow):
+    """Commit viewer window."""
+
     def __init__(self, qsettings, db_mngr, *db_maps, parent=None):
         """
         Args:
@@ -176,6 +261,11 @@ class CommitViewer(QMainWindow):
 
     @Slot(int)
     def _carry_splitter_state(self, index):
+        """Ensures that splitters have the same state in all tabs.
+
+        Args:
+            index (int): current database tab index
+        """
         previous = self.centralWidget().widget(self._current_index)
         current = self.centralWidget().widget(index)
         self._current_index = index
@@ -185,7 +275,95 @@ class CommitViewer(QMainWindow):
     def closeEvent(self, ev):
         super().closeEvent(ev)
         save_ui(self, self._qsettings, "commitViewer")
-        current = self.centralWidget().widget(self._current_index)
+        tab_view: QTabWidget = self.centralWidget()
+        current = tab_view.widget(self._current_index)
         self._qsettings.beginGroup("commitViewer")
         self._qsettings.setValue("splitterState", current.splitter.saveState())
         self._qsettings.endGroup()
+        for tab_index in range(tab_view.count()):
+            commit_widget = tab_view.widget(tab_index)
+            commit_widget.tear_down()
+
+
+class Worker(QObject):
+    """Worker that fetches affected items.
+
+    The items are fetched in chunks which makes it possible to quit the thread mid-execution.
+    There is also a hard limit to how many items are fetched.
+    """
+
+    SOFT_MAX_IDS = 400
+    HARD_EXTRA_ID_LIMIT = 100
+    CHUNK_SIZE = 50
+
+    max_ids_reached = Signal(str, int)
+    all_ids_fetched = Signal(str)
+    chunk_ready = Signal(str, list, list)
+    finished = Signal()
+
+    def __init__(self, db_mngr, db_map, commit_id):
+        """
+        Args:
+            db_mngr (SpineDBManager): database manager
+            db_map (DatabaseMapping): database mapping
+            commit_id (TempId): commit id
+        """
+        super().__init__()
+        self._db_mngr = db_mngr
+        self._db_map = db_map
+        self._commit_id = commit_id
+
+    @Slot()
+    def run(self):
+        """Fetches affected items."""
+        try:
+            for item_type, ids in self._db_mngr.get_items_for_commit(self._db_map, self._commit_id).items():
+                items = []
+                keys = None
+                max_reached = False
+                id_count = 0
+                for id_count, id_ in enumerate(ids):
+                    db_item = self._db_mngr.get_item(self._db_map, item_type, id_)
+                    if keys is None:
+                        keys = [key for key in db_item._extended() if not any(word in key for word in ("id", "parsed"))]
+                    items.append([self._parse_value(self._db_mngr, self._db_map, db_item, key) for key in keys])
+                    if id_count % self.CHUNK_SIZE == 0:
+                        self.thread().eventDispatcher().processEvents(QEventLoop.ProcessEventsFlag.AllEvents)
+                        QThread.yieldCurrentThread()
+                        if id_count != 0:
+                            self.chunk_ready.emit(item_type, keys, items)
+                            items = []
+                    if id_count + 1 >= self.SOFT_MAX_IDS and len(ids) - id_count > self.HARD_EXTRA_ID_LIMIT:
+                        max_reached = True
+                        break
+                if items:
+                    self.chunk_ready.emit(item_type, keys, items)
+                if max_reached:
+                    self.max_ids_reached.emit(item_type, len(ids) - id_count - 1)
+                else:
+                    self.all_ids_fetched.emit(item_type)
+        finally:
+            self.finished.emit()
+
+    @staticmethod
+    def _parse_value(db_mngr, db_map, item, key):
+        """Converts item field values to something more displayable.
+
+        Args:
+            db_mngr (SpineDBManager): database manager
+            db_map (DatabaseMapping): database mapping
+            item (PublicItem): database item
+            key (str): value's key
+
+        Returns:
+            str: displayable presentation of the value
+        """
+        if item.item_type in ("parameter_definition", "parameter_value", "list_value") and key in (
+            "value",
+            "default_value",
+        ):
+            return db_mngr.get_value(db_map, item, role=Qt.ItemDataRole.DisplayRole)
+        value = item[key]
+        if isinstance(value, (tuple, list)):
+            return DB_ITEM_SEPARATOR.join(value)
+        return value
