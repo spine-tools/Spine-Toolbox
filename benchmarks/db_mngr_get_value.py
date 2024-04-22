@@ -1,5 +1,5 @@
 """
-This script benchmarks SpineDatabaseManager.get_item().
+This script benchmarks SpineDBManager.get_item().
 """
 import os
 import sys
@@ -58,7 +58,7 @@ def run_benchmark(output_file: Optional[str]):
         value_items.append(item)
     runner = pyperf.Runner()
     benchmark = runner.bench_time_func(
-        "SpineDatabaseManager.get_value[parameter_value, DisplayRole]",
+        "SpineDBManager.get_value[parameter_value, DisplayRole]",
         db_mngr_get_value,
         db_mngr,
         db_map,
