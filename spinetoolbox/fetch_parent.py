@@ -154,10 +154,10 @@ class FetchParent(QObject):
         """Returns the key for this parent in the index.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
 
         Returns:
-            any
+            Any
         """
         return None
 
@@ -171,7 +171,7 @@ class FetchParent(QObject):
 
         Args:
             item (dict): The item
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
 
         Returns:
             bool
@@ -185,7 +185,7 @@ class FetchParent(QObject):
 
         Args:
             item (dict): The item
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
 
         Returns:
             bool
@@ -237,7 +237,7 @@ class FetchParent(QObject):
         Called by SpineDBWorker when items are added to the DB.
 
         Args:
-            db_map_data (dict): Mapping DiffDatabaseMapping instances to list of dict-items for which
+            db_map_data (dict): Mapping DatabaseMapping instances to list of dict-items for which
                 ``accepts_item()`` returns True.
         """
         raise NotImplementedError(self.fetch_item_type)
@@ -247,7 +247,7 @@ class FetchParent(QObject):
         Called by SpineDBWorker when items are removed from the DB.
 
         Args:
-            db_map_data (dict): Mapping DiffDatabaseMapping instances to list of dict-items for which
+            db_map_data (dict): Mapping DatabaseMapping instances to list of dict-items for which
                 ``accepts_item()`` returns True.
         """
         raise NotImplementedError(self.fetch_item_type)
@@ -257,7 +257,7 @@ class FetchParent(QObject):
         Called by SpineDBWorker when items are updated in the DB.
 
         Args:
-            db_map_data (dict): Mapping DiffDatabaseMapping instances to list of dict-items for which
+            db_map_data (dict): Mapping DatabaseMapping instances to list of dict-items for which
                 ``accepts_item()`` returns True.
         """
         raise NotImplementedError(self.fetch_item_type)

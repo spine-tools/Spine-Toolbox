@@ -814,7 +814,6 @@ class SpineDBEditorBase(QMainWindow):
     def save_window_state(self):
         """Saves window state parameters (size, position, state) via QSettings."""
         if not self.db_maps or len(self.db_urls) != 1:
-            print(9)
             # Only save window sates of single db tabs
             return
         self.qsettings.beginGroup(self.settings_group)

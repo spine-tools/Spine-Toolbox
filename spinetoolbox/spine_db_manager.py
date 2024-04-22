@@ -673,6 +673,7 @@ class SpineDBManager(QObject):
             db_map (DatabaseMapping): database map
             entity_class_id (int): entity class id
             for_group (bool): if True, return the group object icon instead
+            color (QColor, optional): icon color
 
         Returns:
             QSvgRenderer: requested renderer or None if no entity class was found
