@@ -314,6 +314,8 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
             db_map_data (dict): list of added dict-items keyed by DatabaseMapping
         """
         for db_map, items in db_map_data.items():
+            if db_map not in self.db_maps:
+                continue
             db_map_single_models = [m for m in self.single_models if m.db_map is db_map]
             existing_ids = set().union(*(m.item_ids() for m in db_map_single_models))
             items_per_class = self._items_per_class(items)
@@ -372,6 +374,8 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Args:
             db_map_data (dict): list of updated dict-items keyed by DatabaseMapping
         """
+        if all(db_map not in self.db_maps for db_map in db_map_data):
+            return
         self.dataChanged.emit(
             self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1), [Qt.ItemDataRole.DisplayRole]
         )
@@ -385,6 +389,8 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         """
         self.layoutAboutToBeChanged.emit()
         for db_map, items in db_map_data.items():
+            if db_map not in self.db_maps:
+                continue
             items_per_class = self._items_per_class(items)
             emptied_single_model_indexes = []
             for model_index, model in enumerate(self.single_models):
