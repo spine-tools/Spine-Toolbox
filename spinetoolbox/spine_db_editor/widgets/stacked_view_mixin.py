@@ -75,7 +75,7 @@ class StackedViewMixin:
         Args:
             index (QModelIndex)
             entity_class_id (int)
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
         """
         entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
         dimension_id_list = entity_class.get("dimension_id_list", ())
@@ -93,7 +93,9 @@ class StackedViewMixin:
         entity_byname = index.data(Qt.ItemDataRole.EditRole)
         if entity_byname is not None:
             entity = db_map.get_item(
-                "entity", entity_class_name=entity_class["name"], byname=tuple(entity_byname.split(DB_ITEM_SEPARATOR))
+                "entity",
+                entity_class_name=entity_class["name"],
+                entity_byname=tuple(entity_byname.split(DB_ITEM_SEPARATOR)),
             )
             current_element_byname_list = entity["element_byname_list"] if entity else []
         else:

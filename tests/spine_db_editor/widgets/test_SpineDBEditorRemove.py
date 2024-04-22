@@ -19,7 +19,7 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         """Test that object classes are removed from the object tree model."""
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         self.assertEqual(root_item.child_count(), 2)
         self.db_mngr.remove_items({self.mock_db_map: {"entity_class": {self.fish_class["id"]}}})
@@ -32,7 +32,7 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = root_item.child(1)
         self.assertEqual(fish_item.child_count(), 1)
@@ -45,7 +45,7 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         self.assertEqual(root_item.child_count(), 4)
         self.db_mngr.remove_items({self.mock_db_map: {"entity_class": {self.fish_dog_class["id"]}}})
@@ -58,7 +58,7 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationships_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
         nemo_item = fish_item.child(0)
@@ -78,7 +78,7 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.water_parameter["id"]}}})
         h = model.header.index
         parameters = []
@@ -99,7 +99,7 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.relative_speed_parameter["id"]}}})
         h = model.header.index
         parameters = []
@@ -118,7 +118,7 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.put_mock_objects_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_water["id"]}}})
         h = model.header.index
         parameters = []
