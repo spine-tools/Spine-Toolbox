@@ -16,6 +16,7 @@ from unittest import mock
 from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager
 from spine_engine import ItemExecutionFinishState
 from spine_engine.server.util.event_data_converter import EventDataConverter
+from spine_engine.utils.helpers import ExecutionDirection
 
 
 class TestRemoteSpineEngineManager(unittest.TestCase):
@@ -62,17 +63,17 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
         # Convert some events fresh from SpineEngine first into
         # (bytes) json strings to simulate events that arrive to EngineClient
         engine_events = [
-            ("exec_started", {"item_name": "Data Connection 1", "direction": "BACKWARD"}),
+            ("exec_started", {"item_name": "Data Connection 1", "direction": ExecutionDirection.BACKWARD}),
             (
                 "exec_finished",
                 {
                     "item_name": "Data Connection 1",
-                    "direction": "BACKWARD",
+                    "direction": ExecutionDirection.BACKWARD,
                     "state": "RUNNING",
                     "item_state": ItemExecutionFinishState.SUCCESS,
                 },
             ),
-            ("exec_started", {"item_name": "Data Connection 1", "direction": "FORWARD"}),
+            ("exec_started", {"item_name": "Data Connection 1", "direction": ExecutionDirection.FORWARD}),
             (
                 "event_msg",
                 {
@@ -86,7 +87,7 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
                 "exec_finished",
                 {
                     "item_name": "Data Connection 1",
-                    "direction": "FORWARD",
+                    "direction": ExecutionDirection.FORWARD,
                     "state": "RUNNING",
                     "item_state": ItemExecutionFinishState.SUCCESS,
                 },
@@ -104,17 +105,17 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
     def yield_events_dag_fails():
         """Received event generator. Yields events that look like they were PULLed from server."""
         engine_events = [
-            ("exec_started", {"item_name": "Data Connection 1", "direction": "BACKWARD"}),
+            ("exec_started", {"item_name": "Data Connection 1", "direction": ExecutionDirection.BACKWARD}),
             (
                 "exec_finished",
                 {
                     "item_name": "Data Connection 1",
-                    "direction": "BACKWARD",
+                    "direction": ExecutionDirection.BACKWARD,
                     "state": "RUNNING",
                     "item_state": ItemExecutionFinishState.FAILURE,
                 },
             ),
-            ("exec_started", {"item_name": "Data Connection 1", "direction": "FORWARD"}),
+            ("exec_started", {"item_name": "Data Connection 1", "direction": ExecutionDirection.FORWARD}),
             (
                 "event_msg",
                 {
@@ -128,7 +129,7 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
                 "exec_finished",
                 {
                     "item_name": "Data Connection 1",
-                    "direction": "FORWARD",
+                    "direction": ExecutionDirection.FORWARD,
                     "state": "RUNNING",
                     "item_state": ItemExecutionFinishState.FAILURE,
                 },
