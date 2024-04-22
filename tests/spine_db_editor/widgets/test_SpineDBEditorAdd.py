@@ -22,7 +22,7 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         """Test that object classes are added to the object tree model."""
         root_item = self.spine_db_editor.entity_tree_model.root_item
         self.put_mock_object_classes_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         dog_item = next(x for x in root_item.children if x.display_data == "dog")
         fish_item = next(x for x in root_item.children if x.display_data == "fish")
         self.assertEqual(fish_item.item_type, "entity_class")
@@ -36,7 +36,7 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         dog_item = next(x for x in root_item.children if x.display_data == "dog")
         fish_item = next(x for x in root_item.children if x.display_data == "fish")
@@ -54,7 +54,7 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
     def test_add_relationship_classes_to_object_tree_model(self):
         """Test that entity classes are added to the object tree model."""
         self.spine_db_editor.init_models()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
@@ -74,7 +74,7 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationships_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         dog_item = next(x for x in root_item.children if x.display_data == "dog")
         fish_item = next(x for x in root_item.children if x.display_data == "fish")
