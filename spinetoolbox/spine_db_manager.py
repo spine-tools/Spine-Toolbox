@@ -710,12 +710,13 @@ class SpineDBManager(QObject):
         Args:
             db_map (DatabaseMapping)
             item_type (str)
-            id_ (int)
+            id_ (TempId)
 
         Returns:
             PublicItem: the item
         """
-        return db_map.get_item(item_type, id=id_)
+        mapped_table = db_map.mapped_table(item_type)
+        return mapped_table.find_item_by_id(id_)
 
     def get_field(self, db_map, item_type, id_, field):
         return self.get_item(db_map, item_type, id_).get(field)
