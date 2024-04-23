@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'version_inspector.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -34,58 +34,71 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(750, 300)
-        self.verticalLayout_2 = QVBoxLayout(Form)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout = QVBoxLayout()
+        Form.resize(750, 477)
+        self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(9, 9, 9, 9)
         self.tableView = QTableView(Form)
         self.tableView.setObjectName(u"tableView")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.tableView.sizePolicy().hasHeightForWidth())
+        self.tableView.setSizePolicy(sizePolicy)
+        self.tableView.horizontalHeader().setProperty("showSortIndicator", True)
 
         self.verticalLayout.addWidget(self.tableView)
 
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.pushButton_add_row = QPushButton(Form)
-        self.pushButton_add_row.setObjectName(u"pushButton_add_row")
-
-        self.horizontalLayout.addWidget(self.pushButton_add_row)
-
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.pushButton_refresh = QPushButton(Form)
         self.pushButton_refresh.setObjectName(u"pushButton_refresh")
 
-        self.horizontalLayout.addWidget(self.pushButton_refresh)
+        self.horizontalLayout_2.addWidget(self.pushButton_refresh)
 
+        self.pushButton_pull = QPushButton(Form)
+        self.pushButton_pull.setObjectName(u"pushButton_pull")
+
+        self.horizontalLayout_2.addWidget(self.pushButton_pull)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
+
+        self.tableView_current = QTableView(Form)
+        self.tableView_current.setObjectName(u"tableView_current")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.tableView_current.sizePolicy().hasHeightForWidth())
+        self.tableView_current.setSizePolicy(sizePolicy1)
+        self.tableView_current.setMaximumSize(QSize(16777215, 80))
+        self.tableView_current.setCornerButtonEnabled(False)
+
+        self.verticalLayout.addWidget(self.tableView_current)
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.pushButton_commit = QPushButton(Form)
         self.pushButton_commit.setObjectName(u"pushButton_commit")
 
         self.horizontalLayout.addWidget(self.pushButton_commit)
 
-        self.pushButton_pull = QPushButton(Form)
-        self.pushButton_pull.setObjectName(u"pushButton_pull")
-
-        self.horizontalLayout.addWidget(self.pushButton_pull)
-
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout)
 
-
-        self.verticalLayout_2.addLayout(self.verticalLayout)
-
         self.horizontalLayout_statusbar = QHBoxLayout()
         self.horizontalLayout_statusbar.setObjectName(u"horizontalLayout_statusbar")
 
-        self.verticalLayout_2.addLayout(self.horizontalLayout_statusbar)
+        self.verticalLayout.addLayout(self.horizontalLayout_statusbar)
 
-        QWidget.setTabOrder(self.tableView, self.pushButton_add_row)
-        QWidget.setTabOrder(self.pushButton_add_row, self.pushButton_refresh)
-        QWidget.setTabOrder(self.pushButton_refresh, self.pushButton_commit)
+        QWidget.setTabOrder(self.tableView, self.tableView_current)
 
         self.retranslateUi(Form)
 
@@ -94,9 +107,8 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Version Inspector", None))
-        self.pushButton_add_row.setText(QCoreApplication.translate("Form", u"Add row", None))
         self.pushButton_refresh.setText(QCoreApplication.translate("Form", u"Refresh", None))
-        self.pushButton_commit.setText(QCoreApplication.translate("Form", u"Commit", None))
         self.pushButton_pull.setText(QCoreApplication.translate("Form", u"Pull", None))
+        self.pushButton_commit.setText(QCoreApplication.translate("Form", u"Commit", None))
     # retranslateUi
 

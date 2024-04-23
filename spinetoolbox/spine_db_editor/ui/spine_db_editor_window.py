@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -157,7 +157,7 @@ class Ui_MainWindow(object):
         self.actionVacuum.setIcon(icon17)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
@@ -183,7 +183,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_18.addWidget(self.alternative_tree_view)
 
         self.alternative_dock_widget.setWidget(self.dockWidgetContents_15)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.alternative_dock_widget)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.alternative_dock_widget)
         self.dockWidget_parameter_value_list = QDockWidget(MainWindow)
         self.dockWidget_parameter_value_list.setObjectName(u"dockWidget_parameter_value_list")
         self.dockWidgetContents = QWidget()
@@ -201,7 +201,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.addWidget(self.treeView_parameter_value_list)
 
         self.dockWidget_parameter_value_list.setWidget(self.dockWidgetContents)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_parameter_value_list)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_parameter_value_list)
         self.dockWidget_parameter_value = QDockWidget(MainWindow)
         self.dockWidget_parameter_value.setObjectName(u"dockWidget_parameter_value")
         self.dockWidgetContents_2 = QWidget()
@@ -227,7 +227,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.addWidget(self.tableView_parameter_value)
 
         self.dockWidget_parameter_value.setWidget(self.dockWidgetContents_2)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_parameter_value)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_parameter_value)
         self.dockWidget_parameter_definition = QDockWidget(MainWindow)
         self.dockWidget_parameter_definition.setObjectName(u"dockWidget_parameter_definition")
         self.dockWidgetContents_5 = QWidget()
@@ -251,7 +251,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.tableView_parameter_definition)
 
         self.dockWidget_parameter_definition.setWidget(self.dockWidgetContents_5)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_parameter_definition)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_parameter_definition)
         self.dockWidget_entity_tree = QDockWidget(MainWindow)
         self.dockWidget_entity_tree.setObjectName(u"dockWidget_entity_tree")
         self.dockWidget_entity_tree.setAllowedAreas(Qt.AllDockWidgetAreas)
@@ -263,7 +263,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.treeView_entity = EntityTreeView(self.dockWidgetContents_6)
         self.treeView_entity.setObjectName(u"treeView_entity")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy1.setHorizontalStretch(1)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.treeView_entity.sizePolicy().hasHeightForWidth())
@@ -277,7 +277,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.treeView_entity)
 
         self.dockWidget_entity_tree.setWidget(self.dockWidgetContents_6)
-        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_entity_tree)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dockWidget_entity_tree)
         self.dockWidget_entity_graph = QDockWidget(MainWindow)
         self.dockWidget_entity_graph.setObjectName(u"dockWidget_entity_graph")
         self.dockWidgetContents_8 = QWidget()
@@ -288,7 +288,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.graphicsView = EntityQGraphicsView(self.dockWidgetContents_8)
         self.graphicsView.setObjectName(u"graphicsView")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy2.setHorizontalStretch(2)
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
@@ -315,7 +315,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.addWidget(self.progress_bar_widget)
 
         self.dockWidget_entity_graph.setWidget(self.dockWidgetContents_8)
-        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_entity_graph)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dockWidget_entity_graph)
         self.dockWidget_pivot_table = QDockWidget(MainWindow)
         self.dockWidget_pivot_table.setObjectName(u"dockWidget_pivot_table")
         self.dockWidgetContents_10 = QWidget()
@@ -333,7 +333,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_13.addWidget(self.pivot_table)
 
         self.dockWidget_pivot_table.setWidget(self.dockWidgetContents_10)
-        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_pivot_table)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dockWidget_pivot_table)
         self.dockWidget_frozen_table = QDockWidget(MainWindow)
         self.dockWidget_frozen_table.setObjectName(u"dockWidget_frozen_table")
         self.dockWidgetContents_11 = QWidget()
@@ -354,7 +354,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_14.addWidget(self.frozen_table)
 
         self.dockWidget_frozen_table.setWidget(self.dockWidgetContents_11)
-        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_frozen_table)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.dockWidget_frozen_table)
         self.dockWidget_exports = QDockWidget(MainWindow)
         self.dockWidget_exports.setObjectName(u"dockWidget_exports")
         self.dockWidget_exports.setMaximumSize(QSize(524287, 64))
@@ -369,7 +369,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_exports = QHBoxLayout()
         self.horizontalLayout_exports.setSpacing(1)
         self.horizontalLayout_exports.setObjectName(u"horizontalLayout_exports")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_exports.addItem(self.horizontalSpacer)
 
@@ -377,7 +377,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.addLayout(self.horizontalLayout_exports)
 
         self.dockWidget_exports.setWidget(self.dockWidgetContents_12)
-        MainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.dockWidget_exports)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.dockWidget_exports)
         self.metadata_dock_widget = QDockWidget(MainWindow)
         self.metadata_dock_widget.setObjectName(u"metadata_dock_widget")
         self.metadata_dock_contents = QWidget()
@@ -394,7 +394,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_11.addWidget(self.metadata_table_view)
 
         self.metadata_dock_widget.setWidget(self.metadata_dock_contents)
-        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.metadata_dock_widget)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.metadata_dock_widget)
         self.item_metadata_dock_widget = QDockWidget(MainWindow)
         self.item_metadata_dock_widget.setObjectName(u"item_metadata_dock_widget")
         self.item_metadata_dock_contents = QWidget()
@@ -412,7 +412,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_9.addWidget(self.item_metadata_table_view)
 
         self.item_metadata_dock_widget.setWidget(self.item_metadata_dock_contents)
-        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.item_metadata_dock_widget)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.item_metadata_dock_widget)
         self.scenario_dock_widget = QDockWidget(MainWindow)
         self.scenario_dock_widget.setObjectName(u"scenario_dock_widget")
         self.dockWidgetContents_9 = QWidget()
@@ -434,7 +434,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_12.addWidget(self.scenario_tree_view)
 
         self.scenario_dock_widget.setWidget(self.dockWidgetContents_9)
-        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.scenario_dock_widget)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.scenario_dock_widget)
         self.dockWidget_entity_alternative = QDockWidget(MainWindow)
         self.dockWidget_entity_alternative.setObjectName(u"dockWidget_entity_alternative")
         self.dockWidgetContents_3 = QWidget()
@@ -455,7 +455,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.addWidget(self.tableView_entity_alternative)
 
         self.dockWidget_entity_alternative.setWidget(self.dockWidgetContents_3)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_entity_alternative)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_entity_alternative)
 
         self.retranslateUi(MainWindow)
 

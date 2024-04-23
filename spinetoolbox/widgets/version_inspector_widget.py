@@ -42,8 +42,10 @@ class VersionInspectorWidget(QWidget):
         self.ui = version_inspector.Ui_Form()  # Set up the user interface from Designer file.
         self.ui.setupUi(self)
         self.setAttribute(Qt.WA_DeleteOnClose)  # Ensure this window gets garbage-collected when closed
+        self.current_model = QStandardItemModel()
         self.model = QStandardItemModel()
         self._make_statusbar()
+        self.ui.tableView_current.setModel(self.current_model)
         self.ui.tableView.setModel(self.model)
         self._git_available = self._is_git_available()
         self._reg = self._pull_version_registry()
@@ -52,14 +54,27 @@ class VersionInspectorWidget(QWidget):
         self._proj_dir = self._toolbox.project().project_dir
         self.setWindowTitle(f"{self.windowTitle()}" + f" - {self._proj_dir}")
         self._remote_url = self._get_remote_url()
-        self.populate_model()
         self._current_versions = self.get_current_versions()
+        self.populate_current_model()
+        self.populate_model()
         self.ui.tableView.resizeColumnsToContents()
         self.connect_signals()
 
     def connect_signals(self):
-        self.ui.pushButton_add_row.clicked.connect(self.add_row)
         self.ui.pushButton_commit.clicked.connect(self.commit)
+
+    def populate_current_model(self):
+        current_project_version = self._toolbox.project().version()
+        self.current_model.setHorizontalHeaderItem(0, QStandardItem("project"))
+        self.current_model.setItem(0, 0, QStandardItem(current_project_version))
+        column = 1
+        for item_name, v in self._current_versions.items():
+            self.current_model.setHorizontalHeaderItem(column, QStandardItem(item_name))
+            self.current_model.setItem(0, column, QStandardItem(v))
+            column += 1
+        # items = self._toolbox.project().get_items()
+        # item_names = [item.name for item in items]
+        # item_versions = ["NA" if not item.version() else item.version() for item in items]
 
     def populate_model(self):
         if not self._remote_url:
@@ -67,7 +82,6 @@ class VersionInspectorWidget(QWidget):
             return
         items = self._toolbox.project().get_items()
         item_names = [item.name for item in items]
-        item_versions = ["NA" if not item.version() else item.version() for item in items]
         self.model.setHorizontalHeaderItem(0, QStandardItem("project"))
         for j in range(len(item_names)):
             self.model.setHorizontalHeaderItem(j + 1, QStandardItem(item_names[j]))
@@ -99,11 +113,10 @@ class VersionInspectorWidget(QWidget):
         current_project_version = self._toolbox.project().version()
         print(f"current project version: {current_project_version}")
         # TODO: Spec versions
-
         items = self._toolbox.project().get_items()
         item_versions = {item.name: "NA" if not item.version() else item.version() for item in items}
         print(f"Item versions:{item_versions}")
-        return d
+        return item_versions
 
     @Slot(bool)
     def add_row(self, _=False):
