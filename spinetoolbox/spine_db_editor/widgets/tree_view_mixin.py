@@ -28,7 +28,7 @@ from .edit_or_remove_items_dialogs import (
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.alternative_model import AlternativeModel
 from ..mvcmodels.scenario_model import ScenarioModel
-from ..mvcmodels.entity_tree_models import EntityTreeModel
+from ..mvcmodels.entity_tree_models import EntityTreeModel, group_items_by_db_map
 from ...spine_db_parcel import SpineDBParcel
 
 
@@ -68,29 +68,8 @@ class TreeViewMixin:
                 index = view.model().index_from_item(item)
                 view.expand(index)
 
-    @staticmethod
-    def _db_map_items(indexes):
-        """Groups items from given tree indexes by db map.
-
-        Returns:
-            dict: lists of dictionary items keyed by DiffDatabaseMapping
-        """
-        d = {}
-        for index in indexes:
-            if index.model() is None:
-                continue
-            item = index.model().item_from_index(index)
-            if item.item_type == "root":
-                continue
-            for db_map in item.db_maps:
-                d.setdefault(db_map, []).append(item.db_map_data(db_map))
-        return d
-
     def _db_map_ids(self, indexes):
-        return self.db_mngr.db_map_ids(self._db_map_items(indexes))
-
-    def _db_map_class_ids(self, indexes):
-        return self.db_mngr.db_map_class_ids(self._db_map_items(indexes))
+        return self.db_mngr.db_map_ids(group_items_by_db_map(indexes))
 
     def export_selected(self, selected_indexes):
         """Exports data from given indexes in the entity tree."""

@@ -22,8 +22,7 @@ class EmptyModelBase(EmptyRowModel):
     """Base class for all empty models that go in a CompoundModelBase subclass."""
 
     def __init__(self, parent):
-        """Initialize class.
-
+        """
         Args:
             parent (CompoundModelBase): the parent model
         """

@@ -43,8 +43,7 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
     """A dialog to query user's preferences for updating entity classes."""
 
     def __init__(self, parent, db_mngr, selected):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
@@ -124,8 +123,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
     """A dialog to query user's preferences for updating entities."""
 
     def __init__(self, parent, db_mngr, selected, class_key):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
