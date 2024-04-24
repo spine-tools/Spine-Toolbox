@@ -1,6 +1,8 @@
 name: PyInstaller Bundle
 
-on: workflow_dispatch
+on:
+  schedule:
+    - cron: "15 9 * * 2"
 
 jobs:
   bundle:
