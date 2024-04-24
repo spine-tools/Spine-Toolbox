@@ -5,6 +5,20 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.7.4]
+
 ### Changed
 
 - Microsoft build tools are not needed anymore when installing Toolbox requirements on Python 3.10 and up.
