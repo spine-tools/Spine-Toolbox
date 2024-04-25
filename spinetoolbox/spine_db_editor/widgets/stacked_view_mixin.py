@@ -20,6 +20,7 @@ from ..mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,
     CompoundEntityAlternativeModel,
 )
+from ..mvcmodels.entity_tree_models import group_items_by_db_map
 from ...helpers import preferred_row_height, DB_ITEM_SEPARATOR
 
 
@@ -159,14 +160,19 @@ class StackedViewMixin:
     @Slot(dict)
     def _handle_entity_tree_selection_changed_in_parameter_tables(self, selected_indexes):
         """Resets filter according to entity tree selection."""
-        ent_inds = set(selected_indexes.get("entity", {}).keys())
-        ent_cls_inds = set(selected_indexes.get("entity_class", {}).keys()) | {
+        entity_indexes = set(selected_indexes.get("entity", {}).keys())
+        entity_indexes |= {
+            parent
+            for parent in (i.parent() for i in entity_indexes)
+            if self.entity_tree_model.item_from_index(parent).item_type == "entity"
+        }
+        entity_class_indexes = set(selected_indexes.get("entity_class", {}).keys()) | {
             parent_ind
-            for parent_ind in (ind.parent() for ind in ent_inds)
+            for parent_ind in (ind.parent() for ind in entity_indexes)
             if self.entity_tree_model.item_from_index(parent_ind).item_type == "entity_class"
         }
-        self._filter_class_ids = self._db_map_ids(ent_cls_inds)
-        self._filter_entity_ids = self._db_map_class_ids(ent_inds)
+        self._filter_class_ids = self._db_map_ids(entity_class_indexes)
+        self._filter_entity_ids = self.db_mngr.db_map_class_ids(group_items_by_db_map(entity_indexes))
         if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
             self._filter_alternative_ids.clear()
             self._clear_all_other_selections(self.ui.treeView_entity)

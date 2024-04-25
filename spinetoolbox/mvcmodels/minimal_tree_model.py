@@ -293,7 +293,14 @@ class MinimalTreeModel(QAbstractItemModel):
             current = parent_item
 
     def item_from_index(self, index):
-        """Return the item corresponding to the given index."""
+        """Return the item corresponding to the given index.
+
+        Args:
+            index (QModelIndex): model index
+
+        Returns:
+            TreeItem: item at index
+        """
         if index.isValid():
             return index.internalPointer()
         return self._invisible_root_item

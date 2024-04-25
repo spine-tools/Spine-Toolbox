@@ -164,7 +164,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         """Returns a boolean indicating whether the given model passes the filter for compound model.
 
         Args:
-            model (SingleParameterModel, EmptyParameterModel)
+            model (SingleModelBase or EmptyModelBase)
 
         Returns:
             bool
@@ -180,9 +180,8 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
     def _class_filter_accepts_model(self, model):
         if not self._filter_class_ids:
             return True
-        return model.entity_class_id in self._filter_class_ids.get(model.db_map, set()) or bool(
-            set(model.dimension_id_list) & self._filter_class_ids.get(model.db_map, set())
-        )
+        class_ids = self._filter_class_ids.get(model.db_map, set())
+        return model.entity_class_id in class_ids or bool(set(model.dimension_id_list) & class_ids)
 
     def _auto_filter_accepts_model(self, model):
         if None in self._auto_filter.values():

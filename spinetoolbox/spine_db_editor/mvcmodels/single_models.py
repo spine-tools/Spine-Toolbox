@@ -45,8 +45,7 @@ class SingleModelBase(HalfSortedTableModel):
     """Base class for all single models that go in a CompoundModelBase subclass."""
 
     def __init__(self, parent, db_map, entity_class_id, committed, lazy=False):
-        """Init class.
-
+        """
         Args:
             parent (CompoundModelBase): the parent model
             db_map (DatabaseMapping)

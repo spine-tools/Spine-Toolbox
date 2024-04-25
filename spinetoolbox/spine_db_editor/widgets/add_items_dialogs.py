@@ -704,6 +704,7 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
             items = [QTreeWidgetItem([DB_ITEM_SEPARATOR.join(el["entity_byname"])]) for el in elements]
             tree_widget.addTopLevelItems(items)
             tree_widget.resizeColumnToContents(0)
+            tree_widget.setMinimumWidth(tree_widget.columnWidth(0) + 10)
             self.splitter.addWidget(tree_widget)
         sizes = [wg.columnWidth(0) for wg in self.splitter_widgets()]
         self.splitter.setSizes(sizes)
