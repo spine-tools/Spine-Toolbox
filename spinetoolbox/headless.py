@@ -23,7 +23,7 @@ from spine_engine import SpineEngineState
 from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import deserialize_path
-from spine_engine.utils.helpers import get_file_size
+from spine_engine.utils.helpers import get_file_size, ExecutionDirection
 from spine_engine.server.util.zip_handler import ZipHandler
 from .server.engine_client import EngineClient, RemoteEngineInitFailed, ClientSecurityModel
 from .project_item.logging_connection import HeadlessConnection
@@ -424,7 +424,7 @@ class ActionsWithProject(QObject):
         Args:
             data (dict): execution start data
         """
-        if data["direction"] == "BACKWARD":
+        if data["direction"] == ExecutionDirection.BACKWARD:
             # Currently there are no interesting messages when executing backwards.
             return
         self._node_messages[data["item_name"]] = dict()
