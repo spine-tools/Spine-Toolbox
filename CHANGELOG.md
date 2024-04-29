@@ -52,6 +52,7 @@ Many parts of the Spine data structure have been redesigned.
 
 ### Removed
 - Project dock widget
+- Dependency on Dagster
 
 ### Fixed
 

@@ -25,7 +25,7 @@ class TestSpineDBEditor(DBEditorTestBase):
         """Test that defaults are set in object parameter_definition models according the object tree selection."""
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         # Select fish item in object tree
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = root_item.child(1)
@@ -52,6 +52,34 @@ class TestSpineDBEditor(DBEditorTestBase):
         saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
         self.assertIn("windowState", saved_dict)
         self.assertIn("last_open", saved_dict)
+
+    def test_open_element_name_list_editor(self):
+        self.spine_db_editor.init_models()
+        self.put_mock_dataset_in_db_mngr()
+        self.fetch_entity_tree_model()
+        entity_model = self.spine_db_editor.entity_tree_model
+        entity_tree_root = entity_model.index(0, 0)
+        class_index = entity_model.index(3, 0, entity_tree_root)
+        self.assertEqual(class_index.data(), "fish__dog")
+        self.spine_db_editor.ui.treeView_entity.setCurrentIndex(class_index)
+        while self.spine_db_editor.parameter_value_model.rowCount() != 3:
+            QApplication.processEvents()
+        model = self.spine_db_editor.parameter_value_model
+        index = model.index(0, 1)
+        with mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.stacked_view_mixin.ElementNameListEditor"
+        ) as editor_constructor:
+            editor = mock.MagicMock()
+            editor_constructor.return_value = editor
+            self.spine_db_editor.show_element_name_list_editor(index, self.fish_dog_class["id"], self.mock_db_map)
+            editor_constructor.assert_called_with(
+                self.spine_db_editor,
+                index,
+                ["fish", "dog"],
+                [[("nemo",)], [("pluto",), ("scooby",)]],
+                (("nemo",), ("pluto",)),
+            )
+            editor.show.assert_called_once()
 
 
 class TestClosingDBEditors(unittest.TestCase):

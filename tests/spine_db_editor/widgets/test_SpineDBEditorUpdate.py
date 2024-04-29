@@ -20,7 +20,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         """Test that object classes are updated in the object tree model."""
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.fish_class = self._entity_class(1, "octopus")
         self.db_mngr.update_entity_classes({self.mock_db_map: [self.fish_class]})
         root_item = self.spine_db_editor.entity_tree_model.root_item
@@ -33,7 +33,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.nemo_object = self._entity(1, self.fish_class["id"], "dory")
         self.db_mngr.update_entities({self.mock_db_map: [self.nemo_object]})
         root_item = self.spine_db_editor.entity_tree_model.root_item
@@ -48,7 +48,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.fish_dog_class = {"id": 3, "name": "octopus__dog"}
         self.db_mngr.update_entity_classes({self.mock_db_map: [self.fish_dog_class]})
         root_item = self.spine_db_editor.entity_tree_model.root_item
@@ -64,7 +64,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.water_parameter = self._parameter_definition(1, self.fish_class["id"], "fire")
         self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.water_parameter]})
         h = model.header.index
@@ -85,7 +85,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.relative_speed_parameter = self._parameter_definition(3, self.fish_dog_class["id"], "each_others_opinion")
         self.db_mngr.update_parameter_definitions({self.mock_db_map: [self.relative_speed_parameter]})
         h = model.header.index
@@ -106,7 +106,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         self.put_mock_objects_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
-        self.fetch_object_tree_model()
+        self.fetch_entity_tree_model()
         self.nemo_water = self._parameter_value(
             1, self.fish_class["id"], self.nemo_object["id"], self.water_parameter["id"], 1, b'"pepper"', None
         )

@@ -59,12 +59,12 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
         self._ui.condition_script_edit.set_enabled_with_greyed(condition["type"] == "python-script")
         self._ui.comboBox_tool_spec.setEnabled(condition["type"] == "tool-specification")
         self._ui.toolButton_edit_tool_spec.setEnabled(condition["type"] == "tool-specification")
-        self._ui.condition_script_edit.setPlainText(condition["script"])
-        self._ui.comboBox_tool_spec.setCurrentText(condition["specification"])
         if condition["type"] == "python-script":
             self._ui.radioButton_py_script.setChecked(True)
+            self._ui.condition_script_edit.setPlainText(condition["script"])
         elif condition["type"] == "tool-specification":
             self._ui.radioButton_tool_spec.setChecked(True)
+            self._ui.comboBox_tool_spec.setCurrentText(condition["specification"])
         self._track_changes = True
 
     def _make_condition_from_ui(self):
