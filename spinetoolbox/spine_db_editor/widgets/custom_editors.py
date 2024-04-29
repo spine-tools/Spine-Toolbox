@@ -453,6 +453,8 @@ class _IconPainterDelegate(QStyledItemDelegate):
 class IconColorEditor(QDialog):
     """An editor to let the user select an icon and a color for an object_class."""
 
+    reset_pressed = Signal(object)
+
     def __init__(self, parent):
         """
         Args:
@@ -482,13 +484,20 @@ class IconColorEditor(QDialog):
         self.color_dialog.setOption(QColorDialog.DontUseNativeDialog, True)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
+        self.button_box_reset = QDialogButtonBox(self)
+        self.button_box_reset.setStandardButtons(QDialogButtonBox.StandardButton.Reset)
+        self.button_box_reset.setToolTip("Resets to default icon and closes the window.")
         top_widget = QWidget(self)
         top_layout = QHBoxLayout(top_widget)
         top_layout.addWidget(self.icon_widget)
         top_layout.addWidget(self.color_dialog)
+        bottom_widget = QWidget(self)
+        bottom_layout = QHBoxLayout(bottom_widget)
+        bottom_layout.addWidget(self.button_box_reset)
+        bottom_layout.addWidget(self.button_box)
         layout = QVBoxLayout(self)
         layout.addWidget(top_widget)
-        layout.addWidget(self.button_box)
+        layout.addWidget(bottom_widget)
         self.proxy_model = QSortFilterProxyModel(self)
         self.proxy_model.setSourceModel(self.icon_mngr.model)
         self.proxy_model.filterAcceptsRow = self._proxy_model_filter_accepts_row
@@ -517,6 +526,7 @@ class IconColorEditor(QDialog):
         self.line_edit.textEdited.connect(self.proxy_model.invalidateFilter)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
+        self.button_box_reset.clicked.connect(lambda: self.reset_pressed.emit(self))
 
     def set_data(self, data):
         """Sets current icon data.
