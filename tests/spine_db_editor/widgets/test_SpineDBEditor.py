@@ -11,10 +11,14 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
+import pathlib
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtCore import QModelIndex, QItemSelectionModel
+
+from spinedb_api import Duration
+from spinedb_api.helpers import name_from_elements
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from .spine_db_editor_test_base import DBEditorTestBase
 from tests.mock_helpers import TestSpineDBManager
@@ -80,6 +84,44 @@ class TestSpineDBEditor(DBEditorTestBase):
                 (("nemo",), ("pluto",)),
             )
             editor.show.assert_called_once()
+
+    def test_import_spineopt_basic_model_template(self):
+        self.spine_db_editor.init_models()
+        resource_path = pathlib.Path(__file__).parent.parent.parent / "test_resources"
+        template_path = resource_path / "spineopt_template.json"
+        self.spine_db_editor.import_from_json(str(template_path))
+        model_path = resource_path / "basic_model_template.json"
+        self.spine_db_editor.import_from_json(str(model_path))
+        expected_entities = {
+            "model": {"simple"},
+            "report": {"report1"},
+            "stochastic_scenario": {"realization"},
+            "stochastic_structure": {"deterministic"},
+            "temporal_block": {"flat"},
+            "model__default_stochastic_structure": {name_from_elements(("simple", "deterministic"))},
+            "model__default_temporal_block": {name_from_elements(("simple", "flat"))},
+            "model__report": {name_from_elements(("simple", "report1"))},
+            "stochastic_structure__stochastic_scenario": {name_from_elements(("deterministic", "realization"))},
+        }
+        for class_name, expected_names in expected_entities.items():
+            with self.subTest(entity_class=class_name):
+                entities = self.mock_db_map.get_entity_items(entity_class_name=class_name)
+                self.assertEqual(len(entities), len(expected_names))
+                names = {entity["name"] for entity in entities}
+                self.assertEqual(names, expected_names)
+        expected_parameter_values = {("temporal_block", "flat", "resolution", "Base"): Duration("1D")}
+        for unique_id, expected_value in expected_parameter_values.items():
+            class_name, entity_name, definition_name, alternative_name = unique_id
+            with self.subTest(
+                entity_class=class_name, entity=entity_name, parameter=definition_name, alternative=alternative_name
+            ):
+                value = self.mock_db_map.get_parameter_value_item(
+                    entity_class_name=class_name,
+                    entity_byname=(entity_name,),
+                    parameter_definition_name=definition_name,
+                    alternative_name=alternative_name,
+                )
+                self.assertEqual(value["parsed_value"], expected_value)
 
 
 class TestClosingDBEditors(unittest.TestCase):

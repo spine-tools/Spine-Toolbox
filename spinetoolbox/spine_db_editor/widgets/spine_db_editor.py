@@ -460,8 +460,12 @@ class SpineDBEditorBase(QMainWindow):
         """Pastes data from clipboard."""
         call_on_focused_widget(self, "paste")
 
-    @Slot(dict)
     def import_data(self, data):
+        """Imports data to all database mappings open in the editor.
+
+        Args:
+            data (dict): data to import
+        """
         self.db_mngr.import_data({db_map: data for db_map in self.db_maps})
 
     @Slot(bool)
@@ -498,10 +502,17 @@ class SpineDBEditorBase(QMainWindow):
             except json.decoder.JSONDecodeError as err:
                 self.msg_error.emit(f"File {file_path} is not a valid json: {err}")
                 return
-        with DatabaseMapping("sqlite://", create=True) as db_map:
-            import_data(db_map, **data)
-            data = export_data(db_map)
-        self.import_data(data)
+        sanitized_data = {}
+        for item_type, items in data.items():
+            try:
+                sanitized_items = tuple(
+                    tuple(x if not isinstance(x, list) else tuple(x) for x in item) for item in items
+                )
+            except TypeError:
+                self.msg_error.emit(f"Data in {file_path} is not valid for importing.")
+                return
+            sanitized_data[item_type] = sanitized_items
+        self.import_data(sanitized_data)
         filename = os.path.split(file_path)[1]
         self.msg.emit(f"File {filename} successfully imported.")
 

@@ -970,8 +970,6 @@ class SpineDBManager(QObject):
                 continue
             identifier = self.get_command_identifier()
             for item_type, items in data_for_import:
-                if item_type in ("object_class", "relationship_class", "object", "relationship"):
-                    continue
                 if isinstance(items, tuple):
                     items, errors = items
                     db_map_error_log.setdefault(db_map, []).extend(errors)
